@@ -95,45 +95,47 @@ const config = {
     plugins: [mirrorPlugin],
 };
 
+// Anything missing here reaches the user as a package that installs cleanly and misbehaves at
+// runtime — no index.html throws DirectoryNotFoundException, no diff2html.min.css renders
+// side-by-side diffs as stacked blocks, no logo shows a broken image. Skipping the copy quietly
+// (`if (existsSync(src))`) is what let two of those ship: the build stayed green and a stale dist/
+// from an earlier run hid the gap until someone cleaned it.
+async function copyRequired(src, dest) {
+    if (!existsSync(src)) {
+        throw new Error(`[esbuild] missing ${src} — the VSIX would ship without it`);
+    }
+    await mkdir(path.dirname(dest), { recursive: true });
+    await copyFile(src, dest);
+}
+
 async function copyStatic() {
-    if (!existsSync('dist')) {
-        await mkdir('dist', { recursive: true });
-    }
-    if (existsSync('index.html')) {
-        await copyFile('index.html', path.join('dist', 'index.html'));
-    }
+    await mkdir('dist', { recursive: true });
+    await copyRequired('index.html', path.join('dist', 'index.html'));
+
     // highlight.js themes — loaded as <link> in index.html, toggled via the
     // `disabled` attribute on theme change. Copy them out of node_modules
     // so the VSIX content can pick them up.
-    const hljsDir = path.join('dist', 'hljs');
-    if (!existsSync(hljsDir)) {
-        await mkdir(hljsDir, { recursive: true });
-    }
     for (const f of ['vs.min.css', 'vs2015.min.css']) {
-        const src = path.join('node_modules', 'highlight.js', 'styles', f);
-        if (existsSync(src)) {
-            await copyFile(src, path.join(hljsDir, f));
-        }
+        await copyRequired(path.join('node_modules', 'highlight.js', 'styles', f), path.join('dist', 'hljs', f));
     }
+
     // diff2html layout CSS (`.d2h-files-diff` flex, `.d2h-file-side-diff`
     // inline-block 50%, etc). Without it side-by-side renders as two stacked
     // full-width blocks instead of a real split view.
-    const d2hSrc = path.join('node_modules', 'diff2html', 'bundles', 'css', 'diff2html.min.css');
-    if (existsSync(d2hSrc)) {
-        await copyFile(d2hSrc, path.join('dist', 'diff2html.min.css'));
+    await copyRequired(
+        path.join('node_modules', 'diff2html', 'bundles', 'css', 'diff2html.min.css'),
+        path.join('dist', 'diff2html.min.css'),
+    );
+
+    // Images the WebView loads by relative path (cv-welcome's logo). Copy the whole folder rather
+    // than naming files: a list means a new image silently stays out of dist/ — and out of the VSIX,
+    // since the .csproj packages dist/ wholesale. Resources/ is the single source of truth, shared
+    // with the WPF side, which embeds the same files in the assembly for pack:// URIs.
+    const resources = path.join('..', '..', 'Resources');
+    if (!existsSync(resources)) {
+        throw new Error(`[esbuild] missing ${resources} — the VSIX would ship without it`);
     }
-    // About-dialog logos. They live in the repo root (single source of
-    // truth, also used by README/marketplace).
-    const imagesDir = path.join('dist', 'images');
-    if (!existsSync(imagesDir)) {
-        await mkdir(imagesDir, { recursive: true });
-    }
-    for (const f of ['plugin-logo.png', 'corsinvest-logo.png']) {
-        const src = path.join('..', '..', '..', f);
-        if (existsSync(src)) {
-            await copyFile(src, path.join(imagesDir, f));
-        }
-    }
+    await cp(resources, path.join('dist', 'images'), { recursive: true });
 }
 
 if (watch) {

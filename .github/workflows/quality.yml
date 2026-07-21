@@ -105,26 +105,38 @@ jobs:
               exit 1
           }
 
-      # A VSIX missing the WebView2 folder installs without complaint and then throws
-      # DirectoryNotFoundException the moment the chat pane opens. That shipped once already,
-      # because a green build is not evidence the package is usable -- so check the artifact
-      # itself, not just the exit code.
+      # A VSIX missing part of the WebView installs without complaint and breaks at runtime: no
+      # index.html throws DirectoryNotFoundException when the chat pane opens, a missing logo just
+      # renders as a broken image. Both shipped once already -- a green build says nothing about
+      # whether the package is usable.
+      #
+      # Compare the whole of dist\ against the package rather than a list of names: the list would
+      # need updating every time the WebView gains a file, and the one that goes unlisted is exactly
+      # the one that gets dropped.
       - name: Verify VSIX contains the WebView
         shell: pwsh
         run: |
+          $dist = 'src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/dist'
+          $expected = Get-ChildItem $dist -Recurse -File |
+              ForEach-Object { 'WebView2/' + $_.FullName.Substring((Resolve-Path $dist).Path.Length + 1).Replace('\', '/') }
+          if (-not $expected) {
+              Write-Host "::error::$dist is empty — the WebView was never built"
+              exit 1
+          }
+
           $vsix = Get-ChildItem src/Corsinvest.VisualStudio.Agents/bin/Release/*.vsix | Select-Object -First 1
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           $zip = [IO.Compression.ZipFile]::OpenRead($vsix.FullName)
           $entries = $zip.Entries.FullName
           $zip.Dispose()
-          $required = @('WebView2/index.html', 'WebView2/bundle.js', 'WebView2/bundle.css')
-          $missing = $required | Where-Object { $_ -notin $entries }
+
+          $missing = $expected | Where-Object { $_ -notin $entries }
           if ($missing) {
-              Write-Host "::error::VSIX is missing: $($missing -join ', ')"
+              Write-Host "::error::VSIX is missing $($missing.Count) of $($expected.Count) WebView files: $($missing -join ', ')"
               $entries | Sort-Object | ForEach-Object { Write-Host "  $_" }
               exit 1
           }
-          Write-Host "VSIX OK: $($entries.Count) entries, WebView2 present."
+          Write-Host "VSIX OK: $($entries.Count) entries, all $($expected.Count) WebView files present."
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
