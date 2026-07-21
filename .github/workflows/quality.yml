@@ -77,6 +77,13 @@ jobs:
           cache: npm
           cache-dependency-path: src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/package-lock.json
 
+      # The Contracts project regenerates core/generated/*.ts from the C# DTOs on every build,
+      # through a global tool. Without it installed the Exec fails with 9009, ContinueOnError
+      # swallows it, and codegen silently does not run -- so the staleness check below would
+      # compare the committed files against themselves and always pass.
+      - name: Install TypeGen
+        run: dotnet tool install -g dotnet-typegen
+
       - name: Restore
         run: msbuild cv4vs-agents.sln -t:Restore -p:Configuration=Release -v:minimal
 
@@ -84,6 +91,19 @@ jobs:
       # Directory.Build.props, the manifest and AssemblyInfo have drifted apart.
       - name: Build
         run: msbuild cv4vs-agents.sln -t:Build -p:Configuration=Release -p:DeployExtension=false -v:minimal
+
+      # The build just regenerated these from the C# DTOs. If they differ from what is committed,
+      # someone changed a DTO without regenerating -- the TS side would keep compiling against the
+      # old shape and mismatch the wire at runtime. Same gate the WebView job applies to
+      # bridge-messages.ts.
+      - name: Generated DTOs are up to date
+        shell: pwsh
+        run: |
+          git diff --exit-code -- src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/core/generated/
+          if ($LASTEXITCODE -ne 0) {
+              Write-Host "::error::core/generated/*.ts is stale — rebuild the solution and commit the regenerated files"
+              exit 1
+          }
 
       # A VSIX missing the WebView2 folder installs without complaint and then throws
       # DirectoryNotFoundException the moment the chat pane opens. That shipped once already,
