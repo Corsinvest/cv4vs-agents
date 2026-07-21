@@ -1,22 +1,13 @@
-﻿<div align="center">
+# cv4vs Agents — Claude Code for Visual Studio
 
 <img src="docs/images/logo.png" alt="cv4vs Agents" width="128">
 
-# cv4vs Agents — Claude Code for Visual Studio
-
+**Claude Code inside Visual Studio.**
 *Built by a developer, for developers. Made in Italy.* 🇮🇹
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Visual Studio](https://img.shields.io/badge/Visual%20Studio-2022%20%7C%202026-5C2D91.svg)](https://visualstudio.microsoft.com/)
-[![Requires](https://img.shields.io/badge/requires-Claude%20Code%20CLI-d97757.svg)](https://docs.claude.com/en/docs/claude-code/setup)
-[![Status](https://img.shields.io/badge/status-work%20in%20progress-yellow.svg)](#known-issues)
-
-</div>
-
-<!-- Add once published to the Marketplace (the badges 404 until then):
-[![Version](https://img.shields.io/visual-studio-marketplace/v/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
-[![Downloads](https://img.shields.io/visual-studio-marketplace/d/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
--->
+[![Marketplace installs](https://img.shields.io/visual-studio-marketplace/i/Corsinvest.cv4vs-agents?label=marketplace%20installs)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
 
 A Visual Studio 2022 / 2026 extension that brings the **Claude Code** CLI inside the IDE — a rich
 chat experience plus an interactive terminal, both wired into Visual Studio's editor,
@@ -70,9 +61,11 @@ winget install Anthropic.ClaudeCode
 Other platforms and installation methods are in Anthropic's
 [official setup guide](https://docs.claude.com/en/docs/claude-code/setup).
 
-**2. Install the extension** — search *cv4vs Agents* in **Extensions → Manage Extensions**, or
-double-click the `.vsix` from the [Releases](https://github.com/Corsinvest/cv4vs-agents/releases)
-page.
+**2. Install the extension** — from the
+[Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents),
+or search *cv4vs Agents* in **Extensions → Manage Extensions** inside the IDE. You can also
+double-click the `.vsix` from the
+[Releases](https://github.com/Corsinvest/cv4vs-agents/releases) page.
 
 Then, in Visual Studio: **View → cv4vs Agents → Claude**. Type in the chat, or open a **CLI**
 pane for the interactive terminal. The IDE tools (navigation, diagnostics, debugger) are wired
@@ -424,9 +417,32 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for current limitations (mostly
 
 ---
 
+## Support
+
+- **Report a bug**: [bug report form](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=bug_report.yml)
+  — also under **View → cv4vs Agents → Help & Feedback**, which pre-fills the version for you
+- **Request a feature**: [feature request form](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feature_request.yml)
+- **Feedback**: [tell us how it's going](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feedback.yml)
+- **Marketplace listing**: [cv4vs Agents](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
+- **Website**: [www.corsinvest.it](https://www.corsinvest.it)
+
+Problems in `claude.exe` itself belong to
+[the CLI's own tracker](https://github.com/anthropics/claude-code/issues) — this extension drives
+the CLI, it doesn't ship it.
+
+---
+
 ## Credits
 
 Artwork by [filocorsa](https://github.com/filocorsa) — thank you.
+
+---
+
+## Trademarks
+
+**Claude** and **Claude Code** are trademarks of Anthropic, PBC. **Visual Studio** is a trademark
+of Microsoft Corporation. This is an independent extension by Corsinvest Srl, not affiliated with
+or endorsed by either company; the names are used only to describe what it works with.
 
 ---
 
