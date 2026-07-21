@@ -8,6 +8,7 @@ using Corsinvest.VisualStudio.Agents.Options;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.ComponentModel.Design;
+using System.Reflection;
 using Task = System.Threading.Tasks.Task;
 
 namespace Corsinvest.VisualStudio.Agents.Menu;
@@ -35,15 +36,32 @@ internal static class GlobalMenuCommands
         Add(svc, PackageIds.DataFolderCommandId, () => ShellHelpers.OpenExternal(AppPaths.DataFolder));
         Add(svc, PackageIds.OutputLogCommandId, OutputWindowLogger.ActivatePane);
         Add(svc, PackageIds.DocumentationCommandId, () => ShellHelpers.OpenExternal(RepoUrl));
-        // Template names must match the files in .github/ISSUE_TEMPLATE — GitHub silently ignores
-        // an unknown one and opens a blank issue instead.
-        Add(svc, PackageIds.ReportBugCommandId,
-            () => ShellHelpers.OpenExternal($"{RepoUrl}/issues/new?template=bug_report.yml"));
-        Add(svc, PackageIds.RequestFeatureCommandId,
-            () => ShellHelpers.OpenExternal($"{RepoUrl}/issues/new?template=feature_request.yml"));
-        Add(svc, PackageIds.FeedbackCommandId,
-            () => ShellHelpers.OpenExternal($"{RepoUrl}/issues/new?template=feedback.yml"));
+        Add(svc, PackageIds.ReportBugCommandId, () => OpenIssue("bug_report.yml", withVersion: true));
+        Add(svc, PackageIds.RequestFeatureCommandId, () => OpenIssue("feature_request.yml"));
+        Add(svc, PackageIds.FeedbackCommandId, () => OpenIssue("feedback.yml", withVersion: true));
         Add(svc, PackageIds.AboutCommandId, () => new AboutDialog().ShowDialog());
+    }
+
+    /// <summary>Open a GitHub issue form. The template name must match a file in
+    /// .github/ISSUE_TEMPLATE — GitHub silently ignores an unknown one and opens a blank issue.
+    /// Query-string keys match the field ids in the YAML, so GitHub pre-fills them: the version is
+    /// where every investigation starts, and asking the user to look it up is how it goes missing.</summary>
+    private static void OpenIssue(string template, bool withVersion = false)
+    {
+        var url = $"{RepoUrl}/issues/new?template={template}";
+        if (withVersion)
+        {
+            url += $"&version={Uri.EscapeDataString(AppVersion())}";
+        }
+        ShellHelpers.OpenExternal(url);
+    }
+
+    private static string AppVersion()
+    {
+        var asm = typeof(GlobalMenuCommands).Assembly;
+        return asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+               ?? asm.GetName().Version?.ToString()
+               ?? "";
     }
 
     /// <summary>One place for the try/catch: a menu action must never take VS down.</summary>
