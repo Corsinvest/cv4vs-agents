@@ -107,7 +107,14 @@ jobs:
         run: |
           $version = '${{ steps.version.outputs.version }}'
           $lines = Get-Content CHANGELOG.md
+
+          # A preview describes the release it is a candidate for, so v1.0.0-rc1 falls back to the
+          # [1.0.0] section rather than demanding one per candidate.
           $start = ($lines | Select-String -Pattern "^## \[$([regex]::Escape($version))\]" | Select-Object -First 1).LineNumber
+          if (-not $start) {
+              $base = ($version -split '-')[0]
+              $start = ($lines | Select-String -Pattern "^## \[$([regex]::Escape($base))\]" | Select-Object -First 1).LineNumber
+          }
           if (-not $start) {
               Write-Host "::error::CHANGELOG.md has no section for $version"
               exit 1
