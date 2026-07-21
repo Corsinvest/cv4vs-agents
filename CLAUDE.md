@@ -21,6 +21,12 @@ msbuild cv4vs-agents.sln /t:Build /p:Configuration=Debug   # WebView build is ho
 WebView (`src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/`): `npm run build` / `dev` /
 `typecheck` / `lint`.
 
+**Installs stack up.** VS keys extensions by `Identity Id`, so a build with a changed identity —
+or a changed display name — installs *alongside* the old one: duplicate menu entries, two MCP
+servers, and symptoms that look like bugs in the code. `tools\extension.ps1` is the test cycle
+(remove every copy, then install into the Exp hives); `-Uninstall` clears them and refreshes the
+hives, which deleting the folder alone does not — VS keeps serving the cached menu entries.
+
 **No test project.** The gate is a green MSBuild plus manual verification in the Exp instance
 (F5 → `devenv /rootsuffix Exp`). A green build proves less than it looks: XAML `x:Class`, `.vsct`
 ids and the manifest fail at *runtime*, not compile time — a mismatched `.vsct` id gives a silent
