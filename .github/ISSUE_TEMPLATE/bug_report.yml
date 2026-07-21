@@ -13,7 +13,7 @@ body:
     id: version
     attributes:
       label: Extension version
-      description: Tools → Options → cv4vs Agents, or Help → About
+      description: Pre-filled when you report from Help & Feedback in the IDE.
       placeholder: "e.g. 1.0.0"
     validations:
       required: true

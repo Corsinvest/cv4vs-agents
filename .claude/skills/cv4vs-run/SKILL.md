@@ -1,4 +1,4 @@
-﻿---
+---
 name: cv4vs-run
 description: Build, compile and drive cv4vs-agents, the Visual Studio 2022 (VSIX) extension for Claude Code. Use when asked to "run", "build", "compile", "launch", "test" or "screenshot" the extension, the chat WebView, or to drive claude.exe's control protocol. Verified surfaces: WebView build (TypeScript+Lit), VSIX build (MSBuild), CLI drive via probe.
 ---
