@@ -56,6 +56,10 @@
 
 .EXAMPLE
     .\tools\extension.ps1 -Install -Normal
+
+.EXAMPLE
+    .\tools\extension.ps1 -Reinstall -Path C:\temp\Corsinvest.VisualStudio.Agents.vsix
+    Installs a .vsix from elsewhere -- a CI artifact, say -- instead of the local build output.
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
