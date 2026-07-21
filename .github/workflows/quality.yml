@@ -1,0 +1,96 @@
+name: Quality
+
+on:
+  pull_request:
+    branches: ["master"]
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+jobs:
+  webview:
+    name: WebView (TypeScript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/package-lock.json
+
+      # ci, not install: fails if package.json and the lockfile disagree, which is the point of
+      # committing the lockfile in the first place.
+      - run: npm ci
+
+      # bridge-messages.ts is generated from Host/BridgeMessages.cs and committed. Nothing stops
+      # someone editing the C# and forgetting to regenerate: the stale .ts would still typecheck.
+      # Regenerating and diffing catches that.
+      - name: Bridge messages are up to date
+        run: |
+          npm run gen-bridge
+          git diff --exit-code -- core/bridge-messages.ts \
+            || { echo "::error::bridge-messages.ts is stale — run 'npm run build' and commit it"; exit 1; }
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      # devDependency advisories don't reach the shipped bundle, so they don't fail the build --
+      # but they should be visible in the log rather than found by someone reading the repo.
+      - name: Audit (advisory only)
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  build:
+    name: Build VSIX
+    # A VSIX needs MSBuild and the VS SDK: .NET Framework 4.8 can't be built on Linux.
+    runs-on: windows-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # CodeQL needs to watch the compiler work, so it wraps the build below rather than
+      # running on its own.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/package-lock.json
+
+      - name: Restore
+        run: msbuild cv4vs-agents.sln -t:Restore -p:Configuration=Release -v:minimal
+
+      # Release also runs the version guard in Directory.Build.targets: the build fails if
+      # Directory.Build.props, the manifest and AssemblyInfo have drifted apart.
+      - name: Build
+        run: msbuild cv4vs-agents.sln -t:Build -p:Configuration=Release -p:DeployExtension=false -v:minimal
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+      - name: Upload VSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: cv4vs-agents-vsix
+          path: src/Corsinvest.VisualStudio.Agents/bin/Release/*.vsix
+          if-no-files-found: error
