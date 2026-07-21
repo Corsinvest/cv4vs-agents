@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Wire contracts (DTOs) shared C#<->TS. Kept in a separate, dependency-free
+    netstandard2.0 project so TypeGen (net10 CLI) can reflect over a small clean
+    DLL — the main VSIX assembly drags in WPF/EnvDTE/VS-Toolkit which the tool
+    can't load in isolation. This project is also not locked while the extension
+    runs, so it rebuilds independently for codegen.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <RootNamespace>Corsinvest.VisualStudio.Agents.Contracts</RootNamespace>
+  </PropertyGroup>
+
+  <!-- No symbols in ship builds: IncludeDebugSymbolsInVSIXContainer only covers the VSIX project
+       itself, so this referenced project's .pdb rode along into the package. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <!-- TypeGen attributes/GenerationSpec base type. Codegen-only: the generation runs at build
+       time through the dotnet-typegen tool, so the assembly must not ship in the VSIX. -->
+  <ItemGroup>
+    <PackageReference Include="TypeGen" Version="7.0.0" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <!-- Regenerate the .ts interfaces from these DTOs on every build (reads the freshly
+       built DLL via tgconfig.json). Needs the global tool: dotnet tool install -g dotnet-typegen. -->
+  <Target Name="GenerateBridgeDtoTs" AfterTargets="Build">
+    <Exec Command="dotnet-typegen generate" WorkingDirectory="$(ProjectDir)" ContinueOnError="true" />
+  </Target>
+
+</Project>

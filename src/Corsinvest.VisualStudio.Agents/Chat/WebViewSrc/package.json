@@ -1,0 +1,40 @@
+{
+    "name": "cv4vs-agents-webview",
+    "private": true,
+    "version": "0.0.0",
+    "description": "WebView UI for the cv4vs Agents Visual Studio extension (TypeScript + Lit).",
+    "type": "module",
+    "scripts": {
+        "gen-bridge": "node tools/gen-bridge.mjs",
+        "build": "node tools/gen-bridge.mjs && node esbuild.config.mjs",
+        "dev": "node tools/gen-bridge.mjs && node esbuild.config.mjs --watch",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint \"{core,ui}/**/*.ts\"",
+        "lint:fix": "eslint --fix \"{core,ui}/**/*.ts\"",
+        "format": "prettier --write \"{core,ui}/**/*.ts\" \"*.ts\"",
+        "format:check": "prettier --check \"{core,ui}/**/*.ts\" \"*.ts\""
+    },
+    "dependencies": {
+        "@fluentui/svg-icons": "^1.1.331",
+        "@fluentui/web-components": "3.0.2",
+        "@microsoft/fast-element": "^3.0.0",
+        "diff": "^9.0.0",
+        "diff2html": "^3.4.55",
+        "dompurify": "^3.4.12",
+        "fuse.js": "^7.5.0",
+        "highlight.js": "^11.11.1",
+        "lit": "^3.3.3",
+        "marked": "^18.0.7"
+    },
+    "devDependencies": {
+        "@types/diff": "^7.0.2",
+        "@types/dompurify": "^3.0.5",
+        "@typescript-eslint/eslint-plugin": "^8.65.0",
+        "@typescript-eslint/parser": "^8.65.0",
+        "esbuild": "^0.28.1",
+        "eslint": "^8.57.0",
+        "eslint-config-prettier": "^10.1.8",
+        "prettier": "^3.9.6",
+        "typescript": "^6.0.3"
+    }
+}

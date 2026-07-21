@@ -1,0 +1,43 @@
+name: 💬 Feedback
+description: Share how it's going — what works, what doesn't
+title: "[Feedback]: "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Not a bug and not a request — just how the extension feels in real use. That's the kind of
+        thing that's hardest to find out from the inside.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: What kind of feedback?
+      options:
+        - Something that works well
+        - Something that gets in the way
+        - Confusing or hard to discover
+        - Performance
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Your feedback
+      placeholder: Be as blunt as you like.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Extension version
+      placeholder: "e.g. 1.0.0"
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context

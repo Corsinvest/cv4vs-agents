@@ -1,0 +1,740 @@
+/*
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
+#messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: clip;
+    padding: 12px 12px 4px;
+    display: block;
+    scroll-behavior: smooth;
+    overflow-anchor: auto;
+}
+
+.cv-message {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Empty chat placeholder: logo + title + subtitle, gentle fade-in (no pulse —
+ * a perpetual animation on an idle view distracts). Hidden once a message
+ * arrives. */
+/* cv-welcome (empty-chat screen) styling now lives in its static styles (Shadow DOM). */
+
+.cv-message.user {
+    display: block;
+    align-self: stretch;
+    background: var(--colorNeutralBackground3);
+    color: var(--colorNeutralForeground1);
+    border: none;
+    border-left: 3px solid var(--colorBrandBackground);
+    padding: 8px 12px;
+    border-radius: 4px;
+    word-break: break-word;
+    font-size: 13px;
+    /* Explicit so the collapse math in updated() matches the rendered height. */
+    line-height: 18px;
+    position: relative;
+}
+/* Container above a user bubble for parsed <ide_*> refs (cv-message renders the
+ * cv-attach-chip IDE chips into it). Lives here (not prompt.css) since cv-message
+ * is light DOM and the composer moved to Shadow DOM. */
+.cv-ide-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+/* The composer's outer wrapper — rendered by cv-app (light DOM), holding the
+ * permission banner + <cv-prompt>. The prompt's own chrome is Shadow DOM. */
+#composer-area {
+    position: relative;
+    flex-shrink: 0;
+    border-top: 1px solid var(--colorNeutralStroke2);
+    padding: 8px;
+    background: var(--colorNeutralBackground2);
+}
+/* A stopped turn ("[Request interrupted…]") gets an orange bar instead of the blue
+   brand bar, so it reads as an interruption rather than a normal user prompt. */
+.cv-message.user.interrupted {
+    border-left-color: var(--colorPaletteDarkOrangeBorderActive, #da3b01);
+}
+/* Each user/assistant exchange is wrapped in <section class="cv-exchange">.
+ * position:relative limits the sticky scope so each user bubble pins only
+ * to the top of its own exchange, not the whole scroll area. */
+.cv-exchange {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+    position: relative;
+}
+/* Pin only when the exchange's first message is a REAL user bubble. A history page can
+ * start on a synthetic role:user line (tool_result / meta-injection) that renders as a
+ * tool/other; the [role="user"] guard keeps that leading group from pinning wrongly. */
+body.sticky-user .cv-exchange > cv-message[role="user"]:first-child {
+    position: sticky;
+    top: -12px;
+    padding-top: 12px;
+    margin-top: -12px;
+    z-index: 2;
+    background: var(--colorNeutralBackground1);
+}
+body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.user {
+    background: var(--colorNeutralBackground3);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+/* Clip + fade only when truncated; on a short bubble the gradient would clip descenders. */
+.cv-message.user.collapsible.is-overflowing {
+    overflow: hidden;
+}
+.cv-message.user.collapsible.is-overflowing::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 16px;
+    background: linear-gradient(transparent, var(--colorNeutralBackground3));
+    pointer-events: none;
+}
+.cv-message.user:hover.collapsible.is-overflowing::after {
+    background: linear-gradient(transparent, var(--colorNeutralBackground4));
+}
+.cv-message.user.expanded {
+    max-height: none;
+    overflow: visible;
+}
+
+/* Assistant block: same inline dot + flex layout as a tool row, so the dots align. */
+.cv-message.assistant {
+    align-self: stretch;
+    background: transparent;
+    border: none;
+    padding: 1px 0;
+    max-width: 100%;
+    word-break: break-word;
+    min-width: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row; /* override .cv-message's column */
+    align-items: flex-start;
+    gap: 6px;
+    position: relative; /* anchor for the absolute .cv-msg-actions (copy) */
+}
+.cv-message.assistant .md > :first-child {
+    margin-top: 0;
+}
+
+@keyframes dotBlink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0;
+    }
+}
+
+.cv-msg-body {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cv-tool-row {
+    display: flex;
+    /* Top-align so the dot/name stay on the first line when the detail wraps
+     * (long paths). The dot is positioned to the first line's center via its
+     * own line-height box (see .cv-tool-row-dot). */
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--colorNeutralForeground3);
+    font-family: var(--fontFamilyBase);
+    padding: 1px 0;
+    min-width: 0;
+}
+.cv-tool-row:hover .cv-tool-row-detail {
+    color: var(--colorNeutralForeground1);
+}
+/* Grep/Glob: header is not clickable (only the count is). Reset both
+ * pointer and hover highlight so it doesn't look interactive. */
+.cv-tool-wrap.no-row-click .cv-tool-row-detail {
+    cursor: default;
+}
+.cv-tool-wrap.no-row-click .cv-tool-row:hover .cv-tool-row-detail {
+    color: var(--colorNeutralForeground3);
+}
+
+/* The dot is a box one text-line tall (18px) that centers a crisp 7px circle
+ * (its ::before). The box height lines the circle up with the first text line
+ * even when the detail wraps; the circle itself is the original solid 7×7
+ * (border-radius, not a fuzzy gradient — so it isn't visually larger). */
+.cv-tool-row-dot {
+    width: 7px;
+    height: 18px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+.cv-tool-row-dot::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+.cv-tool-row-dot.spinning {
+    color: var(--colorBrandBackground);
+    animation: dotBlink 1s linear infinite;
+}
+.cv-tool-row-dot.dot-done {
+    color: var(--colorPaletteGreenForeground1);
+}
+.cv-tool-row-dot.dot-error {
+    color: var(--colorPaletteRedForeground1);
+}
+.cv-tool-row-dot.dot-gray {
+    color: var(--colorNeutralForeground3);
+}
+
+.cv-tool-row-name {
+    font-weight: 500;
+    color: var(--colorNeutralForeground1);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.cv-tool-row-detail {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    cursor: pointer;
+}
+.cv-tool-row-detail > span,
+.cv-tool-row-detail > a {
+    overflow: hidden;
+    word-break: break-all;
+}
+.cv-tool-row-count {
+    display: block;
+    color: var(--colorNeutralForeground3);
+    font-size: 11px;
+    opacity: 0.8;
+    /* Align under the tool name (4px wrap padding + 7px dot + 6px gap = 17px) */
+    padding-left: 17px;
+    margin-top: 2px;
+}
+.cv-tool-row-progress {
+    color: var(--colorNeutralForeground3);
+    font-size: 10px;
+    margin-left: 6px;
+    font-family: var(--fontFamilyMonospace);
+    opacity: 0.7;
+}
+/* Error icon lives inside `.cv-tool-actions` so it shares the exact
+ * hover/opacity behavior of "Open in VS" — same fade-in on hover, same
+ * position. Force the SVG fill to red (Fluent's `<fluent-button>` doesn't
+ * pipe `color` through to slotted SVGs reliably). */
+.cv-tool-actions-error svg,
+.cv-tool-actions-error svg path {
+    fill: var(--colorPaletteRedForeground1);
+}
+/* "Open diff in Visual Studio" icon: tinted purple to echo the slash-cmd
+ * band ("special action" colour) — the SVG uses stroke currentColor, so
+ * we just set color on the host. */
+.cv-tool-actions-vs svg,
+.cv-tool-actions-vs svg path {
+    stroke: var(--colorPaletteBerryBorderActive);
+}
+/* Tool rows produced by a sub-agent (Agent / Skill) — indented and
+ * separated by a left border to show the parent/child relationship. */
+.cv-subagent-children {
+    margin-left: 16px;
+    padding-left: 8px;
+    border-left: 2px solid var(--colorNeutralStroke1);
+    margin-top: 2px;
+}
+/* Fixed toolbar above the nested box: title left, controls right. */
+.cv-subagent-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 16px;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--colorNeutralForeground3);
+}
+/* Copy + expand reveal on hover over the sub-agent block (like the message copy). The
+ * title stays; only the action buttons fade in. cv-tool-wrap is the hover scope. */
+.cv-subagent-toolbar cv-copy-btn,
+.cv-subagent-toolbar fluent-button {
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.cv-tool-wrap:hover .cv-subagent-toolbar cv-copy-btn,
+.cv-tool-wrap:hover .cv-subagent-toolbar fluent-button {
+    opacity: 1;
+}
+/* "…" marker above the collapsed list = "there are earlier tools". */
+.cv-subagent-more {
+    color: var(--colorNeutralForeground4);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 0 2px 2px;
+    cursor: default;
+    user-select: none;
+}
+.cv-subagent-toolbar-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+    color: var(--colorNeutralForeground2);
+}
+.cv-tool-row-count-clickable {
+    cursor: pointer;
+}
+.cv-tool-row-count-clickable:hover {
+    text-decoration: underline;
+    color: var(--colorBrandForegroundLink);
+}
+
+.cv-tool-row-link {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+.cv-tool-row-link:hover {
+    text-decoration: underline;
+    color: inherit;
+}
+
+.cv-tool-row-chev {
+    flex-shrink: 0;
+    color: var(--colorNeutralForeground3);
+    opacity: 0;
+    transition:
+        transform 0.15s,
+        opacity 0.15s;
+    display: flex;
+    align-items: center;
+    /* Match the first text line so it stays aligned with the dot/name. */
+    height: 18px;
+}
+.cv-tool-wrap:hover .cv-tool-row-chev {
+    opacity: 1;
+}
+.cv-tool-row-chev.expanded {
+    transform: rotate(180deg);
+    opacity: 1;
+}
+.cv-tool-actions {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 2;
+    /* Opaque chat-coloured background so the icons don't blend with the
+     * tool body text underneath. */
+    background: var(--colorNeutralBackground1);
+    border-radius: var(--borderRadiusSmall);
+    padding: 2px;
+}
+.cv-tool-wrap {
+    position: relative;
+}
+.cv-tool-wrap:hover .cv-tool-actions {
+    opacity: 1;
+}
+
+.cv-tool-body {
+    margin: 2px 0 4px 0;
+    border-left: 2px solid var(--colorNeutralStroke1);
+    padding-left: 8px;
+    overflow-x: hidden;
+}
+.cv-tool-body-pre {
+    font-family: var(--fontFamilyMonospace);
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--colorNeutralForeground1);
+    white-space: pre;
+    overflow-x: auto;
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+}
+.cv-tool-body-error {
+    margin-top: 4px;
+    padding: 6px 8px;
+    color: var(--colorPaletteRedForeground1);
+    background: var(--colorPaletteRedBackground1);
+    border-radius: var(--borderRadiusSmall);
+    font-family: var(--fontFamilyMonospace);
+    font-size: var(--fontSizeBase200);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.cv-tool-body-result {
+    margin: 0;
+}
+/* Copy button on each IN/OUT cell of the tool body. `cv-copy-btn` is
+ * display:contents, so we position its inner button via ::part. The button
+ * sits ON TOP of the monospace pre — so it needs an opaque background to
+ * mask the text behind it (otherwise the icon overlaps the code). */
+.cv-tool-body-copy-btn::part(button) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+    background: var(--colorNeutralBackground1);
+    border-radius: var(--borderRadiusSmall);
+}
+.cv-tool-body-row:hover .cv-tool-body-copy-btn::part(button) {
+    opacity: 1;
+}
+
+.cv-todo-list {
+    padding: 2px 0;
+}
+.cv-todo-item {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 11px;
+    font-family: var(--fontFamilyMonospace);
+    padding: 1px 0;
+}
+.cv-todo-icon {
+    flex-shrink: 0;
+    width: 12px;
+    text-align: center;
+}
+.cv-todo-done .cv-todo-text {
+    text-decoration: line-through;
+    color: var(--colorNeutralForeground3);
+}
+.cv-todo-done .cv-todo-icon {
+    color: var(--colorPaletteGreenForeground1);
+}
+.cv-todo-progress .cv-todo-icon {
+    color: var(--colorBrandBackground);
+}
+.cv-todo-pending .cv-todo-icon {
+    color: var(--colorNeutralForeground3);
+}
+
+/* AskUserQuestion body — one block per question, each with a header chip,
+ * the question text and the offered options. The option the user picked is
+ * highlighted (`.chosen`). */
+.cv-question-list {
+    padding: 2px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+/* Copy-answer button: hover-reveal in the top-right of the Ask body, like the
+ * OUT copy on other tool rows. Copies the raw answer (tool result). cv-copy-btn
+ * is display:contents, so position its inner button via ::part. */
+.cv-tool-body:has(.cv-question-copy) {
+    position: relative;
+}
+.cv-question-copy::part(button) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+    background: var(--colorNeutralBackground1);
+    border-radius: var(--borderRadiusSmall);
+}
+.cv-tool-body:hover .cv-question-copy::part(button) {
+    opacity: 1;
+}
+.cv-question-head {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+.cv-question-chip {
+    flex-shrink: 0;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: var(--borderRadiusMedium);
+    background: var(--colorNeutralBackground4);
+    color: var(--colorNeutralForeground3);
+}
+.cv-question-text {
+    font-size: 12px;
+    font-weight: var(--fontWeightSemibold);
+    color: var(--colorNeutralForeground1);
+}
+/* Compact answered view: one row per question, "header chip → chosen value". */
+.cv-question-compact {
+    gap: 4px;
+}
+.cv-question-answer {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+.cv-question-answer-val {
+    font-size: 12px;
+    font-weight: var(--fontWeightSemibold);
+    color: var(--colorNeutralForeground1);
+}
+.cv-question-opt {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 11px;
+    padding: 2px 0 2px 8px;
+}
+.cv-question-opt-mark {
+    flex-shrink: 0;
+    color: var(--colorNeutralForeground3);
+    font-size: 15px;
+    line-height: 1;
+}
+.cv-question-opt.chosen .cv-question-opt-mark {
+    color: var(--colorBrandBackground);
+    /* ● renders smaller than ○ at the same size — bump it to match visually. */
+    font-size: 22px;
+}
+.cv-question-opt-text {
+    display: flex;
+    flex-direction: column;
+}
+.cv-question-opt-label {
+    color: var(--colorNeutralForeground2);
+}
+.cv-question-opt.chosen .cv-question-opt-label {
+    color: var(--colorNeutralForeground1);
+    font-weight: var(--fontWeightSemibold);
+}
+.cv-question-opt-desc {
+    color: var(--colorNeutralForeground3);
+    line-height: var(--lineHeightBase200);
+}
+
+/* IN/OUT box (VS Code-like): bordered container with two rows; the label
+ * sits in a fixed left column, the content fills the rest of the row. */
+.cv-tool-body-box {
+    border: 1px solid var(--colorNeutralStroke1);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--colorNeutralBackground1);
+}
+.cv-tool-body-row {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    align-items: start;
+    padding: 6px 8px;
+    gap: 8px;
+}
+.cv-tool-body-row-in + .cv-tool-body-row-out {
+    border-top: 1px solid var(--colorNeutralStroke1);
+}
+.cv-tool-body-row-out:hover {
+    background: color-mix(in srgb, var(--colorBrandBackground) 4%, transparent);
+}
+.cv-tool-body-cell {
+    position: relative;
+    min-width: 0;
+}
+.cv-tool-body-label {
+    font-family: var(--fontFamilyMonospace);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--colorNeutralForeground3);
+    letter-spacing: 0.05em;
+    padding-top: 2px;
+}
+
+/* Actions overlay on user messages */
+.cv-message.user:hover {
+    background: var(--colorNeutralBackground4);
+}
+.cv-msg-actions {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 2;
+    /* Opaque chat-coloured background so the icons don't blend with the
+     * cv-message text underneath (icons sit above the bubble content). */
+    background: var(--colorNeutralBackground1);
+    border-radius: var(--borderRadiusSmall);
+    padding: 2px;
+}
+.cv-message.user:hover .cv-msg-actions,
+.cv-message.assistant:hover .cv-msg-actions {
+    opacity: 1;
+}
+/* Status messages — a whole assistant turn that is ONLY italic text (e.g.
+ * "*Thinking…*"): small and greyed. The `:has` must match a message whose
+ * entire body is a single italic paragraph, NOT any message that merely
+ * contains an <em> somewhere — otherwise normal answers with an italic word
+ * get greyed out wholesale. */
+.cv-message.assistant .md:has(> p:only-child > em:only-child) {
+    color: var(--colorNeutralForeground3);
+    font-size: 12px;
+}
+
+.cv-message.result {
+    align-self: flex-end;
+    font-size: 11px;
+    color: var(--colorNeutralForeground3);
+    padding: 2px 4px;
+}
+/* A slash command's local output (<local-command-stdout>, e.g. "Set model to X"): a centered
+ * berry/purple pill with hairline rules either side — same "special action" language as the
+ * model-switch notice, and centered like the VS Code compact divider. stderr → red. */
+.cv-message.slash-result {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    color: var(--colorPaletteBerryBorderActive);
+    font-size: 11px;
+    font-family: var(--fontFamilyMonospace, monospace);
+}
+.cv-message.slash-result::before,
+.cv-message.slash-result::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 30%, transparent);
+}
+.cv-message.slash-result pre {
+    margin: 0;
+    padding: 1px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--colorPaletteBerryBorderActive) 35%, transparent);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.cv-message.slash-result.error {
+    color: var(--colorPaletteRedForeground1);
+}
+.cv-message.slash-result.error pre {
+    background: color-mix(in srgb, var(--colorPaletteRedForeground1) 12%, transparent);
+    border-color: color-mix(in srgb, var(--colorPaletteRedForeground1) 35%, transparent);
+}
+
+.cv-message.error {
+    align-self: flex-start;
+    background: color-mix(in srgb, var(--colorPaletteRedForeground1) 15%, var(--colorNeutralBackground2));
+    border-left: 3px solid var(--colorPaletteRedForeground1);
+    border-radius: 0 var(--borderRadiusMedium) var(--borderRadiusMedium) 0;
+    padding: 8px 12px;
+    max-width: 95%;
+}
+
+/* Compact separator (centered with wavy side rules) */
+.cv-compact-separator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    color: var(--colorPaletteBerryBorderActive);
+    font-size: 11px;
+}
+.cv-compact-separator::before,
+.cv-compact-separator::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 30%, transparent);
+}
+.cv-compact-separator span {
+    padding: 1px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--colorPaletteBerryBorderActive) 35%, transparent);
+    white-space: nowrap;
+}
+/* Expandable variant: the separator pill IS the <summary>. Drop the browser's
+ * default disclosure triangle (it clashes with the pill) and show the summary
+ * text in a themed, readable body, closed by default. */
+.cv-compact-details > summary { list-style: none; cursor: pointer; }
+.cv-compact-details > summary::-webkit-details-marker { display: none; }
+.cv-compact-details > summary span::after { content: ' ▾'; opacity: 0.6; }
+.cv-compact-details[open] > summary span::after { content: ' ▴'; }
+.cv-compact-summary {
+    margin: 4px 12px 8px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--colorNeutralBackground2);
+    color: var(--colorNeutralForeground2);
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* "Switched to <model>" notice: a centered berry/purple pill (echoes the
+ * slash-cmd band and the diff-in-VS icon — the "special action" colour),
+ * with hairline rules either side. No status dot. */
+.cv-model-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 6px 0;
+    color: var(--colorPaletteBerryBorderActive);
+    font-size: 11px;
+}
+.cv-model-switch::before,
+.cv-model-switch::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 30%, transparent);
+}
+.cv-model-switch .cv-model-switch-pill {
+    padding: 1px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--colorPaletteBerryBorderActive) 35%, transparent);
+    white-space: nowrap;
+}
+
+/* cv-spinner styling now lives in its static styles (Shadow DOM). */
+
+/* cv-subagent-chip styling now lives in its static styles (Shadow DOM). The
+ * .cv-subagent-children / -toolbar / -more classes above belong to cv-tool-row. */
+
+/* Elapsed time on a running Agent row (the dot handles the spinner). */
+.cv-agent-time { margin-left: 4px; font-size: 11px; opacity: 0.7; }

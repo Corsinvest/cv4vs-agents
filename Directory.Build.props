@@ -1,0 +1,34 @@
+<Project>
+
+  <!--
+    Single source of truth for the product version.
+
+    Bump it here and nowhere else. Two places must agree with it and neither is generated:
+      - src/Corsinvest.VisualStudio.Agents/Properties/AssemblyInfo.cs (legacy project, hand-written)
+      - src/Corsinvest.VisualStudio.Agents/source.extension.vsixmanifest (<Identity Version>)
+    The Release build checks both and fails if they drifted — see Directory.Build.targets.
+
+    The Marketplace rejects an upload whose version was already published, so a mismatch caught
+    at build time is the cheap version of that failure.
+  -->
+  <PropertyGroup>
+    <VsixVersion>1.0.0</VsixVersion>
+  </PropertyGroup>
+
+  <!--
+    Only the SDK-style project (Contracts) picks these up: it generates its AssemblyInfo from
+    MSBuild properties. The main VSIX project is a legacy csproj with a hand-written
+    AssemblyInfo.cs, which owns its own attributes — putting Company/Product/Copyright here
+    would look authoritative while doing nothing for it.
+
+    Package-level metadata (PackageLicenseExpression, RepositoryUrl, …) is deliberately absent:
+    nothing here ships to NuGet. The VSIX equivalents — licence, repo link, description, tags —
+    live in source.extension.vsixmanifest, which is what the Marketplace reads.
+  -->
+  <PropertyGroup>
+    <Version>$(VsixVersion)</Version>
+    <AssemblyVersion>$(VsixVersion).0</AssemblyVersion>
+    <FileVersion>$(VsixVersion).0</FileVersion>
+  </PropertyGroup>
+
+</Project>

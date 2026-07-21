@@ -1,0 +1,111 @@
+﻿<UserControl x:Class="Corsinvest.VisualStudio.Agents.Options.ProfilesControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog">
+  <Grid Margin="8">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="200" />
+      <ColumnDefinition Width="8" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <!-- LEFT: master list of profiles -->
+    <Grid Grid.Column="0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+
+      <ListBox Grid.Row="0" x:Name="ProfilesList"
+               SelectionChanged="OnProfileSelectionChanged">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Orientation="Horizontal">
+              <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}"
+                        VerticalAlignment="Center"
+                        Margin="0,0,6,0"
+                        Click="OnProfileEnabledClick" />
+              <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <DockPanel Grid.Row="1" Margin="0,6,0,0" LastChildFill="False">
+        <!-- CRUD on the left -->
+        <Button x:Name="AddProfile" DockPanel.Dock="Left" Padding="6,2" Click="OnAddProfileClick" ToolTip="Add profile">
+          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Add}" />
+        </Button>
+        <Button x:Name="RemoveProfile" DockPanel.Dock="Left" Padding="6,2" Margin="6,0,0,0" Click="OnRemoveProfileClick" ToolTip="Delete profile">
+          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.DeleteListItem}" />
+        </Button>
+        <!-- Reorder on the right -->
+        <Button x:Name="MoveProfileDown" DockPanel.Dock="Right" Padding="6,2" Click="OnMoveProfileDownClick" ToolTip="Move down">
+          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.MoveDown}" />
+        </Button>
+        <Button x:Name="MoveProfileUp" DockPanel.Dock="Right" Padding="6,2" Margin="0,0,6,0" Click="OnMoveProfileUpClick" ToolTip="Move up">
+          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.MoveUp}" />
+        </Button>
+      </DockPanel>
+    </Grid>
+
+    <!-- RIGHT: detail of selected profile -->
+    <Grid Grid.Column="2" x:Name="DetailPanel" IsEnabled="False">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <TextBlock Grid.Row="0" Text="Name" Margin="0,0,0,2" />
+      <TextBox Grid.Row="1" x:Name="NameBox" TextChanged="OnNameChanged" />
+      <TextBlock Grid.Row="2" x:Name="NameError"
+                 Text="Name is empty or a duplicate (case-insensitive)."
+                 Foreground="Red"
+                 Margin="0,2,0,0"
+                 Visibility="Collapsed" />
+
+      <TextBlock Grid.Row="3" Text="Description" Margin="0,8,0,2" />
+      <TextBox Grid.Row="4" x:Name="DescriptionBox" TextChanged="OnDescriptionChanged" />
+
+      <Grid Grid.Row="5">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="200" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Grid.Row="0" Text="Environment variables" Margin="0,0,0,2" />
+        <DataGrid Grid.Row="1" x:Name="EnvGrid"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="True"
+                  CellEditEnding="OnEnvGridCellEditEnding"
+                  RowEditEnding="OnEnvGridRowEditEnding">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Key" Binding="{Binding Key, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+            <DataGridTextColumn Header="Value" Binding="{Binding Value, UpdateSourceTrigger=PropertyChanged}" Width="*" />
+          </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,0">
+          <Button x:Name="AddEnvRow" Padding="6,2" Click="OnAddEnvRowClick" ToolTip="Add variable">
+            <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Add}" />
+          </Button>
+          <Button x:Name="RemoveEnvRow" Padding="6,2" Margin="6,0,0,0" Click="OnRemoveEnvRowClick" ToolTip="Delete selected variable">
+            <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.DeleteListItem}" />
+          </Button>
+          <Button x:Name="PasteJson" Padding="6,2" Margin="12,0,0,0" Click="OnPasteJsonClick" ToolTip="Paste environment variables from a JSON block on the clipboard">
+            <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Paste}" />
+          </Button>
+          <TextBlock VerticalAlignment="Center" Margin="12,0,0,0">
+            <Hyperlink NavigateUri="https://code.claude.com/docs/en/env-vars"
+                       RequestNavigate="OnEnvVarsLinkClick">Available environment variables</Hyperlink>
+          </TextBlock>
+        </StackPanel>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>
