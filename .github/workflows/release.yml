@@ -45,7 +45,10 @@ jobs:
         shell: pwsh
         run: |
           $props = [xml](Get-Content Directory.Build.props)
-          $projectVersion = ($props.Project.PropertyGroup.VsixVersion | Where-Object { $_ }).Trim()
+          $group = $props.Project.PropertyGroup | Where-Object { $_.VsixVersion }
+          $numeric = "$($group.VsixVersion)".Trim()
+          $suffix = "$($group.VsixPrerelease)".Trim()
+          $projectVersion = if ($suffix) { "$numeric-$suffix" } else { $numeric }
 
           $tag = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ github.event.inputs.tag }}' }
                  else { '${{ github.ref_name }}' }
@@ -54,17 +57,15 @@ jobs:
           Write-Host "Project version: $projectVersion"
           Write-Host "Tag version    : $tagVersion"
 
-          # A prerelease tag (v1.1.0-rc1) carries a suffix the manifest cannot: Identity Version
-          # takes digits only. Compare the numeric part and let the suffix live on the tag alone.
-          $tagNumeric = ($tagVersion -split '-')[0]
-          if ($projectVersion -ne $tagNumeric) {
-              Write-Host "::error::Version mismatch — Directory.Build.props says $projectVersion, tag says $tagVersion"
+          if ($projectVersion -ne $tagVersion) {
+              Write-Host "::error::Version mismatch — Directory.Build.props says $projectVersion, tag says $tagVersion. Set VsixVersion and VsixPrerelease to match the tag, or tag v$projectVersion."
               exit 1
           }
 
           "version=$tagVersion" >> $env:GITHUB_OUTPUT
-          "prerelease=$(if ($tagVersion -match '-') { 'true' } else { 'false' })" >> $env:GITHUB_OUTPUT
-          Write-Host "Version validated: $tagVersion"
+          "numeric=$numeric" >> $env:GITHUB_OUTPUT
+          "prerelease=$(if ($suffix) { 'true' } else { 'false' })" >> $env:GITHUB_OUTPUT
+          Write-Host "Version validated: $projectVersion"
 
       - name: Restore
         run: msbuild cv4vs-agents.sln -t:Restore -p:Configuration=Release -v:minimal
@@ -112,8 +113,7 @@ jobs:
           # [1.0.0] section rather than demanding one per candidate.
           $start = ($lines | Select-String -Pattern "^## \[$([regex]::Escape($version))\]" | Select-Object -First 1).LineNumber
           if (-not $start) {
-              $base = ($version -split '-')[0]
-              $start = ($lines | Select-String -Pattern "^## \[$([regex]::Escape($base))\]" | Select-Object -First 1).LineNumber
+              $start = ($lines | Select-String -Pattern "^## \[$([regex]::Escape('${{ steps.version.outputs.numeric }}'))\]" | Select-Object -First 1).LineNumber
           }
           if (-not $start) {
               Write-Host "::error::CHANGELOG.md has no section for $version"

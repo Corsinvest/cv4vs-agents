@@ -13,6 +13,16 @@
   -->
   <PropertyGroup>
     <VsixVersion>1.0.0</VsixVersion>
+
+    <!--
+      Preview label, empty for a stable release. A VSIX Identity Version is digits only, so the
+      suffix cannot go in VsixVersion: it lives here and is joined back on for the one place that
+      wants the whole thing — the release tag. Tag v1.0.0-rc1 means VsixPrerelease is rc1; ship
+      1.0.0 by clearing it.
+    -->
+    <VsixPrerelease>rc1</VsixPrerelease>
+    <VsixFullVersion Condition="'$(VsixPrerelease)' != ''">$(VsixVersion)-$(VsixPrerelease)</VsixFullVersion>
+    <VsixFullVersion Condition="'$(VsixPrerelease)' == ''">$(VsixVersion)</VsixFullVersion>
   </PropertyGroup>
 
   <!--
