@@ -27,10 +27,16 @@
     <PackageReference Include="TypeGen" Version="7.0.0" ExcludeAssets="runtime" />
   </ItemGroup>
 
-  <!-- Regenerate the .ts interfaces from these DTOs on every build (reads the freshly
-       built DLL via tgconfig.json). Needs the global tool: dotnet tool install -g dotnet-typegen. -->
+  <!-- Regenerate the .ts interfaces from these DTOs on every build, reading the DLL this build
+       just produced. Needs the global tool: dotnet tool install -g dotnet-typegen.
+
+       -p resolves the config's relative paths against the output folder, so tgconfig.json names
+       the DLL sitting next to it and the same config serves Debug and Release without hardcoding
+       either. The config stays at the project root and out of the build output: the VSIX packages
+       whatever a referenced project emits, and a codegen input has no business shipping to
+       users. -->
   <Target Name="GenerateBridgeDtoTs" AfterTargets="Build">
-    <Exec Command="dotnet-typegen generate" WorkingDirectory="$(ProjectDir)" ContinueOnError="true" />
+    <Exec Command="dotnet-typegen generate -p &quot;$(OutputPath.TrimEnd('\'))&quot; -c &quot;$(ProjectDir)tgconfig.json&quot;" WorkingDirectory="$(ProjectDir)" ContinueOnError="true" />
   </Target>
 
 </Project>

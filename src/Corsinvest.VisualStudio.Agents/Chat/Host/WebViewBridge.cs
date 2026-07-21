@@ -99,6 +99,12 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2 
             // (browser warnings, hljs CSS silently ignored). Virtual host gives same-origin + correct MIME.
             var indexPath = AppPaths.WebViewHtml();
             var folder = Path.GetDirectoryName(indexPath);
+            if (!File.Exists(indexPath))
+            {
+                // Mapping a missing folder throws a bare DirectoryNotFoundException that names
+                // nothing — say which path we resolved before it does.
+                OutputWindowLogger.Warn($"[webview] index.html not found at '{indexPath}' — the chat can't load");
+            }
             webView.CoreWebView2.SetVirtualHostNameToFolderMapping("cv4vs.local", folder, CoreWebView2HostResourceAccessKind.Allow);
 
             // Lazy-served icons: virtual-host would serve from disk and 404 on not-yet-generated PNGs,
