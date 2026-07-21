@@ -1,0 +1,94 @@
+name: 🐛 Bug Report
+description: Report a bug or issue with cv4vs Agents
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this! The **Info** entry in a pane's ⋯ menu copies the
+        session id, working directory and CLI path — handy for the fields below.
+
+  - type: input
+    id: version
+    attributes:
+      label: Extension version
+      description: Tools → Options → cv4vs Agents, or Help → About
+      placeholder: "e.g. 1.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: vs-version
+    attributes:
+      label: Visual Studio
+      options:
+        - Visual Studio 2022 (17.x)
+        - Visual Studio 2026 (18.x)
+    validations:
+      required: true
+
+  - type: input
+    id: cli-version
+    attributes:
+      label: Claude Code CLI version
+      description: Run `claude --version`
+      placeholder: "e.g. 2.1.216"
+
+  - type: dropdown
+    id: pane
+    attributes:
+      label: Where does it happen?
+      options:
+        - Chat pane
+        - CLI pane
+        - Both
+        - Elsewhere (menu, options, dialogs)
+
+  - type: input
+    id: provider
+    attributes:
+      label: Provider / profile
+      description: Native Claude, or a profile (z.ai, MiniMax, a gateway…). Never paste API keys.
+      placeholder: "e.g. native Claude, or GLM via z.ai"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      placeholder: What went wrong?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a Chat pane on '...'
+        2. Ask it to '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behaviour
+      placeholder: What should have happened?
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output window log
+      description: >
+        Set Tools → Options → cv4vs Agents → Debug → Log level to **Debug** (or **Trace** for wire
+        traffic), reproduce, then paste from Output → cv4vs Agents.
+        **Check for tokens or file paths you would rather not share before pasting.**
+      render: shell
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Screenshots, or anything else that might help

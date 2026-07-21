@@ -1,0 +1,56 @@
+﻿<vsui:DialogWindow x:Class="Corsinvest.VisualStudio.Agents.Menu.AboutDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+        xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
+        toolkit:Themes.UseVsTheme="True"
+        Title="About Claude Code"
+        Width="380" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        HasMaximizeButton="False"
+        HasMinimizeButton="False"
+        HasHelpButton="False">
+  <StackPanel Margin="24,20,24,20" HorizontalAlignment="Center">
+
+    <Image Source="pack://application:,,,/Corsinvest.VisualStudio.Agents;component/Resources/plugin-logo.png"
+           Width="64" Height="64"
+           HorizontalAlignment="Center"
+           Margin="0,0,0,8" />
+
+    <TextBlock Text="Claude Code for Visual Studio"
+               FontSize="14" FontWeight="SemiBold"
+               HorizontalAlignment="Center"
+               Margin="0,0,0,2" />
+    <TextBlock x:Name="TxtVersion" FontSize="11"
+               HorizontalAlignment="Center"
+               Margin="0,0,0,12"
+               Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.SystemGrayTextBrushKey}}" />
+
+    <TextBlock Text="Claude Code AI assistant for Visual Studio"
+               TextWrapping="Wrap"
+               TextAlignment="Center"
+               Margin="0,0,0,12" />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
+      <TextBlock>
+        <Hyperlink x:Name="LnkRepo" Click="OnLink_Click">GitHub</Hyperlink>
+      </TextBlock>
+      <TextBlock Text="·" Margin="8,0" Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.SystemGrayTextBrushKey}}" />
+      <TextBlock>
+        <Hyperlink x:Name="LnkCorsinvest" Click="OnLink_Click">corsinvest.it</Hyperlink>
+      </TextBlock>
+    </StackPanel>
+
+    <Image Source="pack://application:,,,/Corsinvest.VisualStudio.Agents;component/Resources/corsinvest-logo.png"
+           Height="24"
+           HorizontalAlignment="Center"
+           Margin="0,0,0,4" />
+
+    <TextBlock Text="© Corsinvest Srl"
+               FontSize="11"
+               HorizontalAlignment="Center"
+               Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.SystemGrayTextBrushKey}}" />
+  </StackPanel>
+</vsui:DialogWindow>

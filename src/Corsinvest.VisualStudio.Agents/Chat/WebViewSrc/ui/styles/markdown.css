@@ -1,0 +1,176 @@
+/*
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
+/* Styles for rendered markdown (markdown.ts output) — the message content,
+ * code blocks, tables, links. Kept separate from chat.css, which styles the
+ * chat chrome (tool rows, message bubbles, todo/question UI). */
+.md {
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+    line-height: 1.6;
+    /* Base step of the Fluent ramp, which the chat-font-size option scales. */
+    font-size: var(--fontSizeBase300);
+}
+.md > :first-child {
+    margin-top: 0;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+    margin: 16px 0 6px;
+    line-height: 1.3;
+}
+.md h1:first-child,
+.md h2:first-child,
+.md h3:first-child,
+.md h4:first-child {
+    margin-top: 0;
+}
+.md h1 {
+    font-size: 1.3em;
+}
+.md h2 {
+    font-size: 1.15em;
+}
+.md h3 {
+    font-size: 1.05em;
+}
+.md p {
+    margin-top: 0.6em;
+    margin-bottom: 0.6em;
+    white-space: pre-wrap;
+}
+.md ul,
+.md ol {
+    padding-inline-start: 1.8em;
+    margin: 0.6em 0;
+}
+.md li {
+    margin: 0.4em 0;
+}
+.md li > p {
+    margin: 0.2em 0;
+}
+.md a {
+    color: var(--colorBrandForegroundLink);
+    text-decoration: none;
+}
+.md a:hover {
+    color: var(--colorBrandForegroundLinkHover);
+    text-decoration: underline;
+}
+.md code {
+    font-family: var(--fontFamilyMonospace);
+    font-size: 0.9em;
+    background: var(--colorNeutralBackground3);
+    border: 1px solid var(--colorNeutralStroke1);
+    border-radius: 3px;
+    padding: 2px 4px;
+    word-break: break-word;
+}
+/* Inside the user bubble the background is already --colorNeutralBackground3,
+ * so an inline-code pill of the same colour vanishes. Lift inline code (NOT
+ * code inside a fenced <pre>, which stays transparent) to a lighter surface so
+ * it keeps contrast. */
+.cv-message.user .md :not(pre) > code {
+    background: var(--colorNeutralBackground1);
+}
+.md pre {
+    position: relative;
+    background: var(--colorNeutralBackground3);
+    border: 1px solid var(--colorNeutralStroke1);
+    border-radius: var(--borderRadiusMedium);
+    margin: 6px 0;
+    overflow: auto;
+    padding: 0;
+}
+.md pre code {
+    display: block;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    font-size: var(--fontSizeBase200);
+    line-height: 1.5;
+    white-space: pre;
+    word-break: normal;
+}
+/* vs2015/vs hljs themes have unreadable add/del backgrounds (#144212 / #600
+ * on dark, and inverted addition/deletion on light). Override with the same
+ * palette used by the diff2html tool diffs for visual consistency. */
+.md pre code .hljs-addition {
+    display: inline-block;
+    width: 100%;
+    background-color: rgba(80, 130, 80, 0.25);
+    color: inherit;
+}
+.md pre code .hljs-deletion {
+    display: inline-block;
+    width: 100%;
+    background-color: rgba(150, 70, 70, 0.25);
+    color: inherit;
+}
+/* cv-copy-btn: display:contents host + copied-state tint now live in its
+ * static styles (Shadow DOM). Position its button via ::part(button) below. */
+
+/* Markdown code-block wrapper: <pre> + copy button as siblings. The
+ * wrapper provides the relative positioning context for the copy button,
+ * which sits absolute over the top-right corner of the <pre>. */
+.cv-md-code-wrap {
+    position: relative;
+}
+.cv-md-code-wrap > pre {
+    margin: 0;
+}
+
+/* Copy button injected by markdown.ts as <cv-copy-btn> next to the <pre>.
+ * `cv-copy-btn` is display:contents, so we position its inner button via
+ * ::part(button). Layout-only: hover-reveal anchored top-right. */
+.cv-md-copy-btn::part(button) {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.cv-md-code-wrap:hover .cv-md-copy-btn::part(button) {
+    opacity: 1;
+}
+.md blockquote {
+    border-left: 3px solid var(--colorNeutralStroke1);
+    padding-left: 10px;
+    margin: 4px 0;
+    color: var(--colorNeutralForeground3);
+}
+.md table {
+    border-collapse: collapse;
+    margin: 0.6em 0;
+    font-size: var(--fontSizeBase200);
+    border: 1px solid var(--colorNeutralStroke1);
+}
+.md th,
+.md td {
+    border: 1px solid var(--colorNeutralStroke1);
+    padding: 5px 10px;
+    text-align: left;
+}
+.md th {
+    background: var(--colorNeutralBackground3);
+    font-weight: 600;
+    text-align: center;
+}
+.md tr:nth-child(even) {
+    background: color-mix(in srgb, var(--colorNeutralBackground2) 50%, transparent);
+}
+.md hr {
+    border: none;
+    height: 1px;
+    background: var(--colorNeutralForeground3);
+    margin: 12px 0;
+}

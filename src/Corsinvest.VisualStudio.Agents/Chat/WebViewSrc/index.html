@@ -1,0 +1,48 @@
+<!--
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+-->
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>cv4vs Agents</title>
+        <link rel="icon" href="data:," />
+        <!--
+            Boot-theme script. The host injects `data-cv-theme="dark|light"`
+            on <html> via `AddScriptToExecuteOnDocumentCreated` BEFORE this
+            script runs, so we read the value and flip everything in one go,
+            no flash of wrong theme. Defaults to dark when missing.
+        -->
+        <script>
+            (function () {
+                var dark = document.documentElement.dataset.cvTheme !== 'light';
+                if (!dark) {
+                    document.documentElement.classList.add('theme-light');
+                }
+                document.addEventListener(
+                    'DOMContentLoaded',
+                    function () {
+                        if (document.body) {
+                            document.body.classList.toggle('theme-light', !dark);
+                        }
+                        var d = document.getElementById('hljs-theme-dark');
+                        var l = document.getElementById('hljs-theme-light');
+                        if (d) d.disabled = !dark;
+                        if (l) l.disabled = dark;
+                    },
+                    { once: true }
+                );
+            })();
+        </script>
+        <link rel="stylesheet" href="diff2html.min.css" />
+        <link rel="stylesheet" href="bundle.css" />
+        <link id="hljs-theme-dark" rel="stylesheet" href="hljs/vs2015.min.css" />
+        <link id="hljs-theme-light" rel="stylesheet" href="hljs/vs.min.css" disabled />
+    </head>
+    <body>
+        <cv-app id="app"></cv-app>
+        <script src="bundle.js"></script>
+    </body>
+</html>

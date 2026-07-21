@@ -1,0 +1,15 @@
+# Blank issues are off so every report arrives with the version, the VS build and the CLI version
+# already filled in — the three things every investigation starts from.
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/Corsinvest/cv4vs-agents#readme
+    about: Setup, options, MCP tools and how the pieces fit together
+
+  - name: 🔎 Search existing issues
+    url: https://github.com/Corsinvest/cv4vs-agents/issues?q=is%3Aissue
+    about: Someone may have hit the same thing already
+
+  - name: 🧩 Claude Code CLI issues
+    url: https://github.com/anthropics/claude-code/issues
+    about: For problems in the CLI itself — this extension drives it, it doesn't ship it

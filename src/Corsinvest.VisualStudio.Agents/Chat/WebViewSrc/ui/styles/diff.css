@@ -1,0 +1,206 @@
+/*
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
+/* The custom element itself must be a block so offsetWidth tracks its
+ * column width — without this it defaults to inline and ResizeObserver
+ * sees a stuck/zero width on the host. */
+cv-diff-preview {
+    display: block;
+}
+
+.cv-diff-preview-wrap {
+    position: relative;
+    cursor: pointer;
+    font-size: var(--fontSizeBase200);
+}
+
+.cv-diff-summary {
+    color: var(--colorNeutralForeground3);
+    font-size: var(--fontSizeBase200);
+    padding: 4px 0 6px;
+}
+.cv-diff-summary.is-error {
+    color: var(--colorPaletteRedForeground1);
+}
+
+.cv-diff-empty {
+    padding: 8px;
+    color: var(--colorNeutralForeground3);
+    font-size: var(--fontSizeBase200);
+}
+
+.cv-diff-patch-wrap {
+    position: relative;
+}
+/* cv-copy-btn is display:contents, so position its inner button via ::part.
+ * Opaque background so the icon stays visible over the patch text. */
+.cv-diff-patch-copy::part(button) {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: var(--colorNeutralBackground1);
+    border: 1px solid var(--colorNeutralStroke2);
+    border-radius: var(--borderRadiusSmall);
+}
+.cv-diff-patch-text {
+    font-family: var(--fontFamilyMonospace);
+    font-size: var(--fontSizeBase200);
+    margin: 0;
+    padding: 8px 12px;
+    color: var(--colorNeutralForeground1);
+    white-space: pre;
+    overflow: auto;
+    background: transparent;
+}
+.cv-diff-patch-text code {
+    font-family: inherit;
+    background: transparent;
+    padding: 0;
+}
+
+/* Diff dialog: full-screen-ish viewer (95vw × 85vh). */
+cv-diff-dialog fluent-dialog::part(dialog) {
+    width: 95vw;
+    max-width: 95vw; /* override Fluent's max-width: 600px */
+    height: 85vh;
+    max-height: 85vh;
+    overflow: hidden; /* only the inner diff body scrolls */
+}
+cv-diff-dialog fluent-dialog-body {
+    /* Two rows (title + content) only: the empty .actions row, if left in the grid,
+     * steals ~32px and pushes the diff's horizontal scrollbar out of view. */
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 12px;
+    box-sizing: border-box;
+}
+cv-diff-dialog fluent-dialog-body::part(actions) {
+    display: none;
+}
+cv-diff-dialog fluent-dialog-body::part(content) {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    /* Flex column so the diff body fills the row height instead of growing with
+     * its content (which broke the inner scroll). */
+    display: flex;
+    flex-direction: column;
+}
+/* rc.24's sticky title row offsets the mode dropdown's popup by one row;
+ * static fixes the pointer hit-test (title is always visible anyway). */
+cv-diff-dialog fluent-dialog-body::part(title) {
+    position: static;
+}
+.cv-diff-dialog-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 8px;
+    font-size: var(--fontSizeBase300);
+    font-weight: var(--fontWeightRegular);
+    color: var(--colorNeutralForeground2);
+    line-height: var(--lineHeightBase300);
+}
+.cv-diff-dialog-name {
+    font-family: var(--fontFamilyMonospace);
+}
+/* Scroll lives inside diff2html: it syncs scrollTop+scrollLeft between the two
+ * side panes (synchronisedScroll). This box only bounds the height and clips; the
+ * height cascades down so .d2h-files-diff / .d2h-file-side-diff scroll viewport-bound. */
+#diff-dialog-body {
+    flex: 1;
+    min-height: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+#diff-dialog-body > .d2h-wrapper,
+#diff-dialog-body .d2h-file-wrapper {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+#diff-dialog-body .d2h-files-diff {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+/* Override diff2html's overflow-y:hidden so each pane scrolls both axes itself. */
+#diff-dialog-body .d2h-file-side-diff {
+    min-width: 0;
+    overflow: auto;
+}
+
+/*  diff2html minor overrides (colors come from diff2html's dark/light scheme) */
+
+.d2h-wrapper {
+    font-family: var(--fontFamilyMonospace);
+    font-size: 11px;
+}
+.d2h-code-line,
+.d2h-code-side-line,
+.d2h-code-line-ctn {
+    font-size: 11px;
+    line-height: 1.35;
+}
+.d2h-file-header {
+    display: none; /* path is shown in our dialog title / tool row */
+}
+.d2h-file-wrapper {
+    margin-bottom: 0;
+    border-radius: var(--borderRadiusMedium);
+    border-color: var(--colorNeutralStroke1);
+    background: transparent;
+}
+.d2h-wrapper,
+.d2h-files-diff,
+.d2h-file-side-diff,
+.d2h-code-wrapper,
+.d2h-code-side-line,
+.d2h-code-line,
+.d2h-diff-table {
+    background: transparent;
+}
+/* Hide hunk header banners (@@ -1,15 +1,14 @@). */
+.d2h-info {
+    display: none;
+}
+/* Hide line numbers — VS Code's inline tool diffs don't show them either. */
+.d2h-code-linenumber,
+.d2h-code-side-linenumber {
+    display: none;
+}
+
+/* Subtle row tint. Literal RGBAs (not theme tokens) so the overlay reads
+ * the same in every Fluent theme. */
+.d2h-ins,
+.d2h-ins.d2h-change {
+    background: rgba(80, 160, 80, 0.1);
+}
+.d2h-del,
+.d2h-del.d2h-change {
+    background: rgba(220, 80, 80, 0.1);
+}
+
+/* Intra-line word-diff: stronger green/red on the changed words only. */
+.d2h-code-line ins,
+.d2h-code-side-line ins,
+.d2h-ins .d2h-code-line-ctn ins {
+    background: rgba(80, 160, 80, 0.35);
+    color: inherit;
+    text-decoration: none;
+    padding: 0;
+}
+.d2h-code-line del,
+.d2h-code-side-line del,
+.d2h-del .d2h-code-line-ctn del {
+    background: rgba(220, 80, 80, 0.35);
+    color: inherit;
+    text-decoration: none;
+    padding: 0;
+}

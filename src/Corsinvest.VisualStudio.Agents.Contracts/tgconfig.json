@@ -1,0 +1,13 @@
+﻿{
+    "$schema": "https://raw.githubusercontent.com/jburzynski/TypeGen/master/schema/tgconfig.schema.json",
+    "assemblies": [ "bin/Debug/netstandard2.0/Corsinvest.VisualStudio.Agents.Contracts.dll" ],
+    "generationSpecs": [ "Corsinvest.VisualStudio.Agents.Contracts.BridgeGenerationSpec" ],
+    "outputPath": "../Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/core/generated",
+    "propertyNameConverters": [ "PascalCaseToCamelCase" ],
+    "enumValueNameConverters": [ "PascalCaseToCamelCase" ],
+    "enumStringInitializers": true,
+    "csNullableTranslation": "optional",
+    "fileNameConverters": [],
+    "createIndexFile": false,
+    "singleQuotes": true
+}

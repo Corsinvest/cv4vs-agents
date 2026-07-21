@@ -1,0 +1,188 @@
+/*
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+import { LitElement, html, nothing } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import ChevronDoubleDown16Regular from '@fluentui/svg-icons/icons/chevron_double_down_16_regular.svg';
+import ChevronDoubleUp16Regular from '@fluentui/svg-icons/icons/chevron_double_up_16_regular.svg';
+import './cv-message';
+import './cv-thinking';
+import './cv-copy-btn';
+import type { ToolStatus, ToolUseData, UiEntry } from '../../core/types';
+import { makeRenderer } from '../tool-renderers';
+import { BridgeToolHost, cleanResult } from '../tool-renderers/tool-host';
+import type { ToolRowState } from '../tool-renderers/types';
+import { state as appState } from '../../core/state';
+
+// Re-export so existing consumers (e.g. cv-app) can keep importing from here.
+export type { ToolStatus, ToolUseData } from '../../core/types';
+
+/**
+ * Tool call rendered inline inside an assistant message. The component owns the
+ * Lit state (expand, properties) and is the ToolHost the renderer talks to; the
+ * resolved renderer draws the whole row via makeRenderer(name, host).row().
+ */
+@customElement('cv-tool-row')
+export class CvToolRow extends LitElement implements ToolRowState {
+    @property({ attribute: false }) data!: ToolUseData;
+    @property() status: ToolStatus = 'pending';
+    @property() result = '';
+    /** Full output line count (before preview clipping), 0 when empty; count-only renderers use it. */
+    @property({ type: Number }) fullLineCount = 0;
+    @property({ type: Number }) elapsedSec = 0;
+    @property({ attribute: false }) subagentChildren: UiEntry[] = [];
+    /** More children exist on disk beyond the (≤3) kept in subagentChildren. */
+    @property({ type: Boolean }) hasMore = false;
+    /** Sub-agent id (Agent tool), used to fetch the full transcript on expand. */
+    @property() agentId = '';
+    /** Nested box expanded — owned by cv-app (UiToolEntry.expanded), read here.
+     *  Expanded shows the full list; collapsed shows the last 3. */
+    @property({ type: Boolean }) subagentExpanded = false;
+
+    @state() private _expanded = false;
+
+    private _unsubSubagentTasks?: () => void;
+
+    /** ToolRowState: the host reads/writes these. */
+    get expanded(): boolean {
+        return this._expanded;
+    }
+    clipsOutput = false;
+    toggleExpanded(): void {
+        this._expanded = !this._expanded;
+    }
+
+    override createRenderRoot() {
+        return this;
+    }
+
+    override connectedCallback() {
+        super.connectedCallback();
+        // Re-render when subagentTasks changes so AgentRenderer.header() picks up the active task.
+        this._unsubSubagentTasks = appState.on('subagentTasks', () => this.requestUpdate());
+    }
+
+    override disconnectedCallback() {
+        super.disconnectedCallback();
+        this._unsubSubagentTasks?.();
+        this._unsubSubagentTasks = undefined;
+    }
+
+    override render() {
+        return makeRenderer(this.data?.name, new BridgeToolHost(this)).row();
+    }
+
+    /** Concatenate the sub-agent's children into markdown, reusing the same raw
+     *  strings the per-item copy buttons use: text entries keep their markdown
+     *  (tables intact); tool entries are input + cleaned output. */
+    private _subagentToMarkdown(): string {
+        return this.subagentChildren
+            .map((e) => {
+                if (e.kind === 'text') {
+                    return e.text;
+                }
+                const input = e.data?.input != null ? JSON.stringify(e.data.input) : '';
+                const out = cleanResult(e.result, e.status === 'error');
+                const head = `**${e.data?.name ?? 'tool'}**`;
+                return [head, input, out].filter(Boolean).join('\n');
+            })
+            .filter(Boolean)
+            .join('\n\n');
+    }
+
+    // Expand/collapse are owned by cv-app: it holds the entry, fetches the full
+    // transcript (expand), and slices back to 3 (collapse). The row only signals
+    // the toggle — a same-tree CustomEvent, not the host bridge (this is pure UI).
+    private _onToggleSubagent = (e: Event): void => {
+        e.stopPropagation();
+        this.dispatchEvent(
+            new CustomEvent('subagent-toggle', {
+                detail: { agentId: this.agentId, expand: !this.subagentExpanded },
+                bubbles: true,
+                composed: true,
+            }),
+        );
+    };
+
+    /** Nested sub-agent rows/messages (Agent tool). Lit-owned, so it stays in
+     *  the component; the host exposes it to the renderer via renderSubagentChildren(). */
+    renderSubagentChildren() {
+        if (this.subagentChildren.length === 0) {
+            return nothing;
+        }
+        // Collapsed shows the last 3; expanded shows whatever subagentChildren holds
+        // (the full list once fetched). The "…"/toggle appears when more exist.
+        const shown = this.subagentExpanded
+            ? this.subagentChildren
+            : this.subagentChildren.slice(-3);
+        const hasToggle = this.hasMore || this.subagentChildren.length > 3;
+        const title = String(this.data?.input?.description ?? '');
+        return html`
+            <div class="cv-subagent-toolbar">
+                ${title ? html`<span class="cv-subagent-toolbar-title" title=${title}>${title}</span>` : html`<span class="cv-subagent-toolbar-title"></span>`}
+                <cv-copy-btn
+                    .text=${this._subagentToMarkdown()}
+                    title="Copy subagent output"
+                ></cv-copy-btn>
+                ${
+                    hasToggle
+                        ? html`<fluent-button
+                              appearance="subtle"
+                              size="small"
+                              icon-only
+                              title=${this.subagentExpanded ? 'Reduce' : 'Show all'}
+                              @click=${this._onToggleSubagent}
+                          >
+                              ${unsafeHTML(this.subagentExpanded ? ChevronDoubleUp16Regular : ChevronDoubleDown16Regular)}
+                          </fluent-button>`
+                        : nothing
+                }
+            </div>
+            <div class="cv-subagent-children">
+                ${
+                    hasToggle && !this.subagentExpanded
+                        ? html`<div class="cv-subagent-more" title="Earlier children — Show all">
+                              …
+                          </div>`
+                        : nothing
+                }
+                ${shown.map((c: UiEntry) =>
+                    c.kind === 'text' && c.role === 'thinking'
+                        ? html`<cv-thinking
+                              .text=${c.text}
+                              ?streaming=${!!c.streaming}
+                              .tokens=${c.tokens ?? 0}
+                              .durationMs=${c.durationMs ?? 0}
+                              ?redacted=${!!c.redacted}
+                          ></cv-thinking>`
+                        : c.kind === 'text'
+                          ? html`<cv-message
+                                .role=${c.role}
+                                .text=${c.text}
+                                ?streaming=${c.role === 'assistant' ? !!c.streaming : false}
+                                ?isError=${c.role === 'slash-result' ? c.isError : false}
+                            ></cv-message>`
+                          : html`<cv-tool-row
+                                .data=${c.data}
+                                .status=${c.status}
+                                .result=${c.result}
+                                .elapsedSec=${c.elapsedSec}
+                                .subagentChildren=${c.subagentChildren ?? []}
+                                .fullLineCount=${c.fullLineCount}
+                                .agentId=${this.agentId}
+                                .hasMore=${c.hasMore ?? false}
+                                .subagentExpanded=${c.expanded ?? false}
+                            ></cv-tool-row>`,
+                )}
+            </div>
+        `;
+    }
+}
+
+declare global {
+    interface HTMLElementTagNameMap {
+        'cv-tool-row': CvToolRow;
+    }
+}

@@ -1,0 +1,257 @@
+﻿<UserControl x:Class="Corsinvest.VisualStudio.Agents.Core.Panes.PaneToolbar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+             Background="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarGradientBeginBrushKey}}">
+  <UserControl.Resources>
+    <!-- VS-themed ContextMenu chrome. Implicit styles (no key) so every menu
+         inside this UserControl inherits them — including items added at
+         runtime. Without these the popup defaults to the Windows light theme
+         (white background) even in dark VS. Copied from the old launcher. -->
+    <Style TargetType="ContextMenu">
+      <Setter Property="Background" Value="{DynamicResource {x:Static vsui:EnvironmentColors.DropDownPopupBackgroundBeginBrushKey}}" />
+      <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:EnvironmentColors.DropDownTextBrushKey}}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource {x:Static vsui:EnvironmentColors.DropDownPopupBorderBrushKey}}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="2" />
+      <Setter Property="HasDropShadow" Value="True" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ContextMenu">
+            <Border Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}">
+              <ItemsPresenter />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="MenuItem">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:EnvironmentColors.DropDownTextBrushKey}}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="6,4" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="MenuItem">
+            <Border x:Name="root"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}"
+                    SnapsToDevicePixels="True">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="20" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ContentPresenter Grid.Column="0" ContentSource="Icon"
+                                  VerticalAlignment="Center" HorizontalAlignment="Center"
+                                  Width="16" Height="16" />
+                <ContentPresenter Grid.Column="1" ContentSource="Header"
+                                  RecognizesAccessKey="True" VerticalAlignment="Center"
+                                  Margin="6,0,12,0" />
+                <Path Grid.Column="2" x:Name="chevron"
+                      Width="6" Height="10" Margin="0,0,4,0" Stretch="Uniform"
+                      Fill="{TemplateBinding Foreground}"
+                      Data="M 0 0 L 5 5 L 0 10 Z" Visibility="Collapsed" />
+                <Popup x:Name="PART_Popup" Grid.Column="0" Grid.ColumnSpan="3"
+                       Placement="Right" IsOpen="{TemplateBinding IsSubmenuOpen}"
+                       AllowsTransparency="True" Focusable="False" PopupAnimation="None">
+                  <Border Background="{DynamicResource {x:Static vsui:EnvironmentColors.DropDownPopupBackgroundBeginBrushKey}}"
+                          BorderBrush="{DynamicResource {x:Static vsui:EnvironmentColors.DropDownPopupBorderBrushKey}}"
+                          BorderThickness="1" Padding="2">
+                    <ItemsPresenter />
+                  </Border>
+                </Popup>
+              </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="Role" Value="SubmenuHeader">
+                <Setter TargetName="chevron" Property="Visibility" Value="Visible" />
+              </Trigger>
+              <Trigger Property="IsHighlighted" Value="True">
+                <Setter TargetName="root" Property="Background"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.DropDownMouseOverBackgroundBeginBrushKey}}" />
+                <Setter Property="Foreground"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.DropDownMouseOverTextBrushKey}}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.SystemGrayTextBrushKey}}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="Separator">
+      <Setter Property="Background" Value="{DynamicResource {x:Static vsui:EnvironmentColors.DropDownPopupBorderBrushKey}}" />
+      <Setter Property="Margin" Value="6,3" />
+      <Setter Property="Height" Value="1" />
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+
+    <!-- Flat VS command-bar button. -->
+    <Style x:Key="CommandBarButton" TargetType="Button">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarTextActiveBrushKey}}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="SnapsToDevicePixels" Value="True" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="border" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="border" Property="Background"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarHoverBrushKey}}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="border" Property="Background"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarMouseDownBackgroundBeginBrushKey}}" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarTextInactiveBrushKey}}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </UserControl.Resources>
+
+  <Border BorderBrush="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarToolBarBorderBrushKey}}"
+          BorderThickness="0,0,0,1">
+    <DockPanel LastChildFill="True" Margin="4,3">
+
+      <!-- Right-pinned group: Session History, New Session, More (⋯).
+           In a DockPanel docked Right, the first-declared sits furthest
+           right — so the visual left-to-right order is History, New Session,
+           More. These act on THIS pane's conversation (distinct from the
+           left 'New' which opens a new pane). -->
+
+      <!-- More (⋯) kebab — furthest right. -->
+      <Button x:Name="BtnMore" DockPanel.Dock="Right"
+              Style="{StaticResource CommandBarButton}" ToolTip="More" Click="OnMore_Click">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Ellipsis}" />
+        <Button.ContextMenu>
+          <!-- This-pane actions only; everything global lives under View → cv4vs Agents. -->
+          <ContextMenu x:Name="MoreMenu">
+            <MenuItem Header="Info" Click="OnMenu_Info">
+              <MenuItem.Icon><imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.StatusInformation}" /></MenuItem.Icon>
+            </MenuItem>
+            <MenuItem Header="Open sessions folder" Click="OnMenu_SessionsFolder">
+              <MenuItem.Icon><imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.FolderOpened}" /></MenuItem.Icon>
+            </MenuItem>
+            <!-- Hidden when the pane has no extras (the terminal), so no dangling divider. -->
+            <Separator x:Name="MoreExtrasSeparator" />
+            <!-- [pane-specific extras (chat: DevTools) appended here at runtime] -->
+          </ContextMenu>
+        </Button.ContextMenu>
+      </Button>
+
+      <!-- New Session (this pane) — fresh conversation here. AddComment is a
+           speech-bubble + plus, reading as "new conversation". -->
+      <Button x:Name="BtnNewSession" DockPanel.Dock="Right"
+              Style="{StaticResource CommandBarButton}" ToolTip="New Session" Click="OnNewSession_Click">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.AddComment}" />
+      </Button>
+
+      <!-- Session History (this pane). -->
+      <Button x:Name="BtnSessionHistory" DockPanel.Dock="Right"
+              Style="{StaticResource CommandBarButton}" ToolTip="Session History" Click="OnHistory_Click">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.History}" />
+      </Button>
+
+      <!-- Left group: New pane (+ split) and Open panes. -->
+      <StackPanel Orientation="Horizontal">
+        <!-- [+ New ▾] split — opens a new INSTANCE (pane), not a new session. -->
+        <Button x:Name="BtnNew" Style="{StaticResource CommandBarButton}"
+                ToolTip="New Instance (default)" Click="OnNew_Click">
+          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Add}" />
+        </Button>
+        <Button x:Name="BtnNewDropdown" Style="{StaticResource CommandBarButton}"
+                Padding="2,4" ToolTip="New Instance…" Click="OnNewDropdown_Click">
+          <imaging:CrispImage Width="10" Height="10" Moniker="{x:Static catalog:KnownMonikers.GlyphDown}" />
+          <Button.ContextMenu>
+            <ContextMenu x:Name="NewMenu">
+              <MenuItem Header="Chat" Click="OnNewChat_Click">
+                <MenuItem.Icon><imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Comment}" /></MenuItem.Icon>
+              </MenuItem>
+              <MenuItem Header="CLI" Click="OnNewCli_Click">
+                <MenuItem.Icon><imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Console}" /></MenuItem.Icon>
+              </MenuItem>
+            </ContextMenu>
+          </Button.ContextMenu>
+        </Button>
+
+        <Border Width="1" Margin="4,2" Background="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarToolBarBorderBrushKey}}" />
+
+        <!-- Open panes switch. -->
+        <Button x:Name="BtnPanes" Style="{StaticResource CommandBarButton}" ToolTip="Open panes" Click="OnPanes_Click">
+          <StackPanel Orientation="Horizontal">
+            <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.DockPanel}" />
+            <imaging:CrispImage Width="10" Height="10" Margin="2,0,0,0" Moniker="{x:Static catalog:KnownMonikers.GlyphDown}" />
+          </StackPanel>
+          <Button.ContextMenu>
+            <ContextMenu x:Name="PanesMenu" />
+          </Button.ContextMenu>
+        </Button>
+      </StackPanel>
+
+      <!-- Current session title — fills the space between the left group and the
+           right buttons, sitting just left of the Session History (clock) icon.
+           Always an editable TextBox: borderless at rest (reads as a label), border
+           on hover/focus to signal it's editable. Enter or focus-loss saves a
+           rename, Esc reverts. Hidden when there's no session (fresh chat) or for
+           panes without a title (CLI). LastChildFill makes this the filler. -->
+      <Border x:Name="TitleHost" VerticalAlignment="Center" Margin="8,0"
+              HorizontalAlignment="Right" MaxWidth="360" CornerRadius="3"
+              Visibility="Collapsed">
+        <TextBox x:Name="TitleBox" MinWidth="120"
+                 Background="Transparent" BorderThickness="1" BorderBrush="Transparent"
+                 Padding="4,2" VerticalContentAlignment="Center"
+                 CaretBrush="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarTextActiveBrushKey}}"
+                 Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarTextActiveBrushKey}}"
+                 ToolTip="Rename session (Enter to save, Esc to cancel)"
+                 KeyDown="OnTitleKeyDown" GotKeyboardFocus="OnTitleGotFocus"
+                 LostKeyboardFocus="OnTitleLostFocus">
+          <TextBox.Style>
+            <Style TargetType="TextBox">
+              <Style.Triggers>
+                <!-- Border only on hover / focus, so at rest it looks like plain text. -->
+                <Trigger Property="IsMouseOver" Value="True">
+                  <Setter Property="BorderBrush"
+                          Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarToolBarBorderBrushKey}}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                  <Setter Property="BorderBrush"
+                          Value="{DynamicResource {x:Static vsui:EnvironmentColors.AccentBorderBrushKey}}" />
+                  <Setter Property="Background"
+                          Value="{DynamicResource {x:Static vsui:EnvironmentColors.ComboBoxBackgroundBrushKey}}" />
+                </Trigger>
+              </Style.Triggers>
+            </Style>
+          </TextBox.Style>
+        </TextBox>
+      </Border>
+    </DockPanel>
+  </Border>
+</UserControl>

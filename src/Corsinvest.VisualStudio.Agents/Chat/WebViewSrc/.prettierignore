@@ -1,0 +1,4 @@
+core/generated/
+core/bridge-messages.ts
+dist/
+node_modules/

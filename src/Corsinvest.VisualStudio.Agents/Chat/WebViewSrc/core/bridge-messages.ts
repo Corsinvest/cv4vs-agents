@@ -1,0 +1,130 @@
+/*
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+ *
+ * AUTO-GENERATED from Host/BridgeMessages.cs by tools/gen-bridge.mjs.
+ * DO NOT EDIT BY HAND — run `npm run gen-bridge` after changing the C# file.
+ */
+
+export const Msg = {
+    fromWebView: {
+        session: {
+            fork: 'fork_session',
+        },
+        file: {
+            getSuggestions: 'get_file_suggestions',
+        },
+        cli: {
+            sendPrompt: 'send_cli_prompt',
+            stop: 'stop_cli',
+            setModel: 'set_cli_model',
+            setPermissionMode: 'set_cli_permission_mode',
+            respondPermission: 'respond_cli_permission',
+            setSendSelection: 'set_cli_send_selection',
+            applyFlagSettings: 'apply_cli_flag_settings',
+            setMaxThinkingTokens: 'cli_set_max_thinking_tokens',
+        },
+        open: {
+            ideFile: 'open_ide_file',
+            ideFileAtEdit: 'open_ide_file_at_edit',
+            ideOutputWindow: 'open_ide_output_window',
+            toolOutput: 'open_tool_output',
+            externalUrl: 'open_external_url',
+            diffDialog: 'open_diff_dialog',
+            options: 'open_options',
+            cliTerminal: 'open_cli_terminal',
+            sessionHistory: 'open_session_history',
+            chatPane: 'open_chat_pane',
+        },
+        plugins: {
+            list: 'plugins_list',
+            install: 'plugin_install',
+            uninstall: 'plugin_uninstall',
+            setEnabled: 'plugin_set_enabled',
+            marketplaceList: 'marketplace_list',
+            marketplaceAdd: 'marketplace_add',
+            marketplaceRemove: 'marketplace_remove',
+            marketplaceRefresh: 'marketplace_refresh',
+        },
+        chat: {
+            getImage: 'get_chat_image',
+            openDocument: 'open_chat_document',
+            openAttachment: 'open_chat_attachment',
+            getHistory: 'get_chat_history',
+            getUsage: 'get_chat_usage',
+            getContextUsage: 'get_chat_context_usage',
+            getStats: 'get_chat_stats',
+            startStatsIndex: 'start_stats_index',
+            getSubagent: 'get_subagent',
+            subagentCancel: 'subagent_cancel',
+            subagentCancelAll: 'subagent_cancel_all',
+            getCompactSummary: 'get_compact_summary',
+        },
+        ui: {
+            ready: 'webview_ready',
+            paneActivate: 'ui_pane_activate',
+        },
+    },
+    toWebView: {
+        ide: {
+            selectionChanged: 'ide_selection_changed',
+        },
+        file: {
+            suggestions: 'file_suggestions',
+        },
+        cli: {
+            started: 'cli_started',
+            exited: 'cli_exited',
+            error: 'cli_error',
+            modelChanged: 'cli_model_changed',
+            permissionModeChanged: 'cli_permission_mode_changed',
+        },
+        chat: {
+            cleared: 'chat_cleared',
+            history: 'chat_history',
+            historyLoaded: 'chat_history_loaded',
+            promptHistory: 'chat_prompt_history',
+            userText: 'chat_user_text',
+            assistantText: 'chat_assistant_text',
+            assistantTextDelta: 'chat_assistant_text_delta',
+            thinkingDelta: 'chat_thinking_delta',
+            thinkingEnded: 'chat_thinking_ended',
+            toolProgress: 'chat_tool_progress',
+            toolPermission: 'chat_tool_permission',
+            toolPermissionCancel: 'chat_tool_permission_cancel',
+            toolResult: 'chat_tool_result',
+            exchangeEnded: 'chat_exchange_ended',
+            compacted: 'chat_compacted',
+            status: 'chat_status',
+            imageData: 'chat_image_data',
+            slashCommands: 'chat_slash_commands',
+            usage: 'chat_usage',
+            contextUsage: 'chat_context_usage',
+            stats: 'chat_stats',
+            statsIndexDone: 'chat_stats_index_done',
+            rateLimit: 'chat_rate_limit',
+            models: 'chat_models',
+            subagentLoaded: 'subagent_loaded',
+            subagentStarted: 'subagent_started',
+            subagentProgress: 'subagent_progress',
+            subagentEnded: 'subagent_ended',
+            subagentClear: 'subagent_clear',
+            compactSummaryResult: 'compact_summary_result',
+        },
+        ui: {
+            init: 'ui_init',
+            vsSettings: 'vs_settings',
+            themeChanged: 'ui_theme_changed',
+            focusInput: 'ui_focus_input',
+            blurInput: 'ui_blur_input',
+            setComposer: 'ui_set_composer',
+            escape: 'ui_escape',
+        },
+        plugins: {
+            listResult: 'plugins_list_result',
+            marketplaceListResult: 'marketplace_list_result',
+            opResult: 'plugin_op_result',
+            changed: 'plugins_changed',
+        },
+    },
+} as const;

@@ -1,0 +1,19 @@
+# Normalize line endings for all text files: LF everywhere (repo + working tree).
+# LF is the Git/cross-platform standard and matches the tooling (esbuild, npm, dotnet);
+# VS 2022 handles LF fine. Avoids the CRLF-vs-LF churn that shell edits (sed) introduce.
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text eol=lf
+
+# Shell scripts always LF
+*.sh text eol=lf
+
+# TypeGen output: dotnet-typegen (Windows) writes CRLF and regenerates on every build.
+# Pin these to CRLF so the generated files don't show up as modified after each build.
+src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/core/generated/** text eol=crlf

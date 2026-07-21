@@ -1,0 +1,46 @@
+﻿<!-- Fixed size + NoResize, same as AboutDialog: a resizable dialog gets picked up and tiled
+     by window managers instead of floating over the IDE. The info text scrolls, so a fixed
+     width costs nothing. -->
+<vsui:DialogWindow x:Class="Corsinvest.VisualStudio.Agents.Core.Panes.DevInfoDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+        xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
+        xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+        xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+        toolkit:Themes.UseVsTheme="True"
+        Title="Info"
+        Width="760" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        HasMaximizeButton="False"
+        HasMinimizeButton="False"
+        HasHelpButton="False">
+  <Grid Margin="16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <!-- Readonly so the whole block stays selectable/copyable; monospace keeps the
+         "Label: value" columns aligned. -->
+    <TextBox x:Name="TxtInfo" Grid.Row="0"
+             IsReadOnly="True"
+             FontFamily="Consolas" FontSize="12"
+             TextWrapping="NoWrap"
+             AcceptsReturn="True"
+             VerticalScrollBarVisibility="Auto"
+             HorizontalScrollBarVisibility="Auto"
+             MinWidth="440" MinHeight="120" />
+
+    <Button Grid.Row="1" x:Name="BtnCopy" Click="OnCopy_Click"
+            HorizontalAlignment="Right" MinWidth="72" Margin="0,12,0,0"
+            IsDefault="True">
+      <StackPanel Orientation="Horizontal">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Copy}" />
+        <TextBlock Text="Copy" Margin="6,0,0,0" VerticalAlignment="Center" />
+      </StackPanel>
+    </Button>
+  </Grid>
+</vsui:DialogWindow>

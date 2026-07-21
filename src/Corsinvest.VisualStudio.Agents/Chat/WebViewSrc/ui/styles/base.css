@@ -1,0 +1,96 @@
+/*
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+
+/* All colors / typography / spacing / radii come from Fluent v3 tokens
+ * applied via setTheme(webDarkTheme | webLightTheme) — see ui/fluent.ts.
+ * No custom CSS variables. Theme switching just calls setTheme() again. */
+
+::selection {
+    background: var(--colorBrandBackground);
+    color: var(--colorNeutralForegroundOnBrand);
+}
+
+/* VS Code-style scrollbars: thin (10px), thumb visible-but-dim at rest,
+ * brighter on hover. Theme-aware via Fluent neutral stroke tokens. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--colorNeutralStroke2) transparent;
+}
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+    background: var(--colorNeutralStroke2);
+}
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--colorNeutralStroke1);
+}
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+/* Zero the browser-default margin/padding on plain HTML tags only. A universal
+ * `* { margin:0; padding:0 }` also hits Fluent web components, wiping the padding
+ * they set on their shadow :host (dialog-body content flush to the edges, dropdown
+ * cramped, …) — so target the offending tags explicitly instead of every element. */
+body,
+h1, h2, h3, h4, h5, h6,
+p, ul, ol, dl, dd,
+figure, blockquote, pre, fieldset {
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body {
+    height: 100%;
+    background: var(--colorNeutralBackground1);
+    color: var(--colorNeutralForeground1);
+    font-family: var(--fontFamilyBase);
+    font-size: var(--fontSizeBase300);
+    line-height: var(--lineHeightBase300);
+    overflow: hidden;
+}
+
+/* `@fluentui/svg-icons` ships SVGs without `fill="currentColor"`, so
+ * SVGs default to black instead of following the inherited `color`.
+ * Bridge that here for inline SVG inside a Fluent host in the light DOM
+ * (shadow components use the shared iconStyles instead). */
+fluent-button svg,
+fluent-link svg,
+fluent-option svg {
+    fill: currentColor;
+}
+/* Outline icons drawn with `<path stroke="…">` declare `fill="none"` on
+ * the root <svg>; respect that so they don't get filled by the rule above. */
+fluent-button svg[fill='none'],
+fluent-link svg[fill='none'],
+fluent-option svg[fill='none'] {
+    fill: none;
+}
+
+
+/* cv-attach-menu is Shadow DOM: its fluent-menu-list/item styling (sizing, icon
+ * centering) lives in its own static styles now. */
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: clip;
+    position: relative;
+}
+
+
+
