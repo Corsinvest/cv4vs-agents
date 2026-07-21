@@ -17,3 +17,7 @@
 # TypeGen output: dotnet-typegen (Windows) writes CRLF and regenerates on every build.
 # Pin these to CRLF so the generated files don't show up as modified after each build.
 src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/core/generated/** text eol=crlf
+
+# npm writes this one; it still has to be committed (it pins every transitive version, which is
+# what makes builds reproducible and `npm audit` meaningful) — just collapsed in diffs.
+src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/package-lock.json linguist-generated=true
