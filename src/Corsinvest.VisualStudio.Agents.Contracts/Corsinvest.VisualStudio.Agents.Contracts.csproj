@@ -27,10 +27,20 @@
     <PackageReference Include="TypeGen" Version="7.0.0" ExcludeAssets="runtime" />
   </ItemGroup>
 
-  <!-- Regenerate the .ts interfaces from these DTOs on every build (reads the freshly
-       built DLL via tgconfig.json). Needs the global tool: dotnet tool install -g dotnet-typegen. -->
+  <!-- The config travels with the DLL it describes: its paths are relative to the folder it sits
+       in, so copying it to the output means the same file works for Debug and Release without
+       naming either. Keeping it at the project root instead would need a hardcoded bin/<Config>,
+       which fails on the configuration it does not name. -->
+  <ItemGroup>
+    <Content Include="tgconfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Regenerate the .ts interfaces from these DTOs on every build, reading the DLL this build
+       just produced. Needs the global tool: dotnet tool install -g dotnet-typegen. -->
   <Target Name="GenerateBridgeDtoTs" AfterTargets="Build">
-    <Exec Command="dotnet-typegen generate" WorkingDirectory="$(ProjectDir)" ContinueOnError="true" />
+    <Exec Command="dotnet-typegen generate -p &quot;$(OutputPath.TrimEnd('\'))&quot;" WorkingDirectory="$(ProjectDir)" ContinueOnError="true" />
   </Target>
 
 </Project>
