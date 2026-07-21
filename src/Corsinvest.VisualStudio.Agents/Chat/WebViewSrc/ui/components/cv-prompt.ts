@@ -306,9 +306,8 @@ export class CvPrompt extends LitElement implements CommandHost {
     @query('cv-at-menu') private _atMenu!: import('./cv-at-menu').CvAtMenu;
     @query('cv-command-menu') private _cmdMenu?: import('./cv-command-menu').CvCommandMenu;
     @query('cv-model-list') private _modelList?: import('./cv-model-list').CvModelList;
-    @query('cv-permission-list') private _permissionList?: import(
-        './cv-permission-list'
-    ).CvPermissionList;
+    @query('cv-permission-list')
+    private _permissionList?: import('./cv-permission-list').CvPermissionList;
 
     private _offBusy?: () => void;
     private _offPerm?: () => void;
