@@ -132,6 +132,9 @@ function Find-InstalledCopies {
                 Where-Object { (Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue) -match $IdentityPattern } |
                 ForEach-Object {
                     $identity = ([xml](Get-Content $_.FullName -Raw)).PackageManifest.Metadata.Identity
+                    # No build date here: VSIXInstaller stamps the extracted files with the install
+                    # time, so the DLL on disk only says when it was unpacked. The date printed when
+                    # installing comes from inside the .vsix, where it survives.
                     [pscustomobject]@{
                         Hive    = $hive.Name
                         Name    = Get-InstanceName $hive.Name
@@ -276,7 +279,30 @@ function Invoke-Install {
         exit 1
     }
 
+    # Say which build this is before installing it: the file name is the same for every build, so
+    # without this there is no way to tell a fresh VSIX from a stale download. The .vsix file date
+    # is no help either -- for a CI artifact it is when it was downloaded.
+    #
+    # The zip entry date is the packaging time, and it is what tells two builds apart. It is printed
+    # verbatim because zip stores a bare clock reading with no time zone: the number is whatever the
+    # machine that built the package saw, so a CI artifact carries the runner's UTC and a local build
+    # carries local time. Converting it would be worse than leaving it alone -- .NET attaches this
+    # machine's offset on read, so ToLocalTime()/UtcDateTime shift a value that was never in this
+    # zone to begin with.
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [IO.Compression.ZipFile]::OpenRead($Path)
+    try {
+        $manifest = $zip.Entries | Where-Object Name -eq 'extension.vsixmanifest'
+        $reader = New-Object IO.StreamReader($manifest.Open())
+        $identity = ([xml]$reader.ReadToEnd()).PackageManifest.Metadata.Identity
+        $reader.Dispose()
+        $packaged = ($zip.Entries | Where-Object Name -eq 'Corsinvest.VisualStudio.Agents.dll').LastWriteTime
+        $webView = @($zip.Entries | Where-Object FullName -like 'WebView2/*').Count
+    }
+    finally { $zip.Dispose() }
+
     Write-Host "`ninstalling $(Split-Path $Path -Leaf)"
+    Write-Host "  version $($identity.Version)   packaged $($packaged.ToString('yyyy-MM-dd HH:mm'))   $webView WebView2 files" -ForegroundColor DarkGray
     foreach ($i in $instances) { Write-Host "  -> $($i.displayName) [$($i.instanceId)]" }
 
     $vsixArgs = @()
