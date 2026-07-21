@@ -85,6 +85,27 @@ jobs:
       - name: Build
         run: msbuild cv4vs-agents.sln -t:Build -p:Configuration=Release -p:DeployExtension=false -v:minimal
 
+      # A VSIX missing the WebView2 folder installs without complaint and then throws
+      # DirectoryNotFoundException the moment the chat pane opens. That shipped once already,
+      # because a green build is not evidence the package is usable -- so check the artifact
+      # itself, not just the exit code.
+      - name: Verify VSIX contains the WebView
+        shell: pwsh
+        run: |
+          $vsix = Get-ChildItem src/Corsinvest.VisualStudio.Agents/bin/Release/*.vsix | Select-Object -First 1
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [IO.Compression.ZipFile]::OpenRead($vsix.FullName)
+          $entries = $zip.Entries.FullName
+          $zip.Dispose()
+          $required = @('WebView2/index.html', 'WebView2/bundle.js', 'WebView2/bundle.css')
+          $missing = $required | Where-Object { $_ -notin $entries }
+          if ($missing) {
+              Write-Host "::error::VSIX is missing: $($missing -join ', ')"
+              $entries | Sort-Object | ForEach-Object { Write-Host "  $_" }
+              exit 1
+          }
+          Write-Host "VSIX OK: $($entries.Count) entries, WebView2 present."
+
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
 
