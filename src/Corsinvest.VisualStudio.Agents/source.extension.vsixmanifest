@@ -5,7 +5,7 @@
     <Identity Id="Corsinvest.VisualStudio.Agents" Version="1.0.0" Language="en-US"
               Publisher="Corsinvest" />
     <DisplayName>cv4vs Agents</DisplayName>
-    <Description xml:space="preserve">Claude Code inside Visual Studio — agentic coding with a rich chat pane and an interactive terminal, wired into the editor, solution and debugger through an in-process MCP server. Drives the Claude Code CLI, installed separately via npm; the binary is never bundled.</Description>
+    <Description xml:space="preserve">Claude Code inside Visual Studio — agentic coding with a rich chat pane and an interactive terminal, wired into the editor, solution and debugger through an in-process MCP server.</Description>
     <MoreInfo>https://github.com/Corsinvest/cv4vs-agents</MoreInfo>
     <License>LICENSE</License>
     <Icon>Resources\icon.png</Icon>
