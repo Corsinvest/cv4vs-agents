@@ -426,6 +426,8 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for current limitations (mostly
 - **Marketplace listing**: [cv4vs Agents](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
 - **Website**: [www.corsinvest.it](https://www.corsinvest.it)
 
+Taking part here means following our [Code of Conduct](CODE_OF_CONDUCT.md).
+
 Problems in `claude.exe` itself belong to
 [the CLI's own tracker](https://github.com/anthropics/claude-code/issues) — this extension drives
 the CLI, it doesn't ship it.
