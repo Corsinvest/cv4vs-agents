@@ -6,7 +6,9 @@
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 
@@ -33,6 +35,16 @@ public abstract class PaneWindowBase : ToolWindowPane
             // via IPaneControl so it stays kind-agnostic.
             PaneControl = CreateControl();
             var dock = new DockPanel { LastChildFill = true };
+
+            // Above the toolbar so it reads as a property of the build rather than of the pane,
+            // and here rather than in either control so both kinds get it from one place.
+            var preview = BuildPreviewBanner();
+            if (preview != null)
+            {
+                DockPanel.SetDock(preview, Dock.Top);
+                dock.Children.Add(preview);
+            }
+
             _toolbar = new PaneToolbar();
             DockPanel.SetDock(_toolbar, Dock.Top);
             dock.Children.Add(_toolbar);
@@ -47,6 +59,31 @@ public abstract class PaneWindowBase : ToolWindowPane
             OutputWindowLogger.LogException($"{GetType().Name}.ctor", ex);
             throw;
         }
+    }
+
+    /// <summary>
+    /// A red strip naming the preview, or null on a stable build. Fixed colours rather than VS
+    /// theme brushes: the point is to stand out against the pane whatever the theme is doing.
+    /// </summary>
+    private static UIElement BuildPreviewBanner()
+    {
+        if (!BuildInfo.IsPreRelease) { return null; }
+
+        return new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(0xA8, 0x00, 0x00)),
+            Padding = new Thickness(8, 3, 8, 3),
+            Child = new TextBlock
+            {
+                Text = $"Pre-release {BuildInfo.Version} — not for production use",
+                Foreground = Brushes.White,
+                FontSize = 11,
+                TextAlignment = TextAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                ToolTip = $"This build of {AppConstants.AppName} is a preview. "
+                        + "Install a stable release from the Marketplace when one is available.",
+            },
+        };
     }
 
     /// <summary>Build the hosted control (ChatPaneControl / CliPaneControl).</summary>
