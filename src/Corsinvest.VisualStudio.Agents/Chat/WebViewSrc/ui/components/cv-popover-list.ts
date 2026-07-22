@@ -292,7 +292,7 @@ export class CvPopoverList extends LitElement {
                 const o = it as { label?: string; name?: string; path?: string; id?: string };
                 return o.id ?? o.path ?? o.label ?? o.name ?? '';
             })
-            .join(' ');
+            .join('\0');
     }
     private _lastNavSig = '';
 
