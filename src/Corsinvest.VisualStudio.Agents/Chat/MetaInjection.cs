@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using System.Text.RegularExpressions;
+
 namespace Corsinvest.VisualStudio.Agents.Chat;
 
 /// <summary>Single source of truth for CLI-injected meta entries that ride in a role:user
@@ -41,4 +43,17 @@ public static class MetaInjection
         }
         return false;
     }
+
+    // cv-prompt.ts prepends the active editor context to the user's message as an
+    // <ide_selection>/<ide_opened_file> block followed by a newline. It is not the user's words:
+    // strip a leading block so callers see the prompt itself — otherwise a message sent with editor
+    // context looks like it starts with "<", and title generation (which rejects "<") drops it.
+    private static readonly Regex LeadingIdeContext = new(
+        @"^\s*<(ide_selection|ide_opened_file)>.*?</\1>\s*",
+        RegexOptions.Singleline | RegexOptions.Compiled);
+
+    /// <summary>Remove a leading IDE-context block, returning the user's own text. No block → the
+    /// text is returned unchanged.</summary>
+    public static string StripIdeContext(string text)
+        => string.IsNullOrEmpty(text) ? text : LeadingIdeContext.Replace(text, string.Empty);
 }
