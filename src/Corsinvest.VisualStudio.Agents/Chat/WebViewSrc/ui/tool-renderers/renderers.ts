@@ -216,6 +216,13 @@ export class AgentRenderer extends ToolRenderer {
         const inText = this.inputText();
         return inText ? this.ioGrid(inText, false) : null;
     }
+    // A sub-agent's whole transcript (prompt IN + nested rows) is a lot of content, so the
+    // row starts collapsed even when previews are on — dot + description until expanded — and
+    // keeps its chevron visible at rest so it reads as expandable. A click toggles it like
+    // any other tool. This is the only tool that opts into it.
+    override defaultCollapsed(): boolean {
+        return true;
+    }
 }
 
 export class SkillRenderer extends ToolRenderer {

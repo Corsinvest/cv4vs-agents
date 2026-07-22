@@ -76,12 +76,18 @@ export abstract class ToolRenderer {
     protected rowStandard(): TemplateResult {
         const body = this.body();
         const hasBody = body !== null && this.host.status !== 'pending';
-        const open = hasBody && (this.autoOpen() || this.host.expanded);
+        // Only defaultCollapsed rows (Agent) are collapsible: they start closed regardless of
+        // the preview setting and show a chevron (kept visible at rest) to toggle. Every other
+        // tool opens per autoOpen and shows no chevron — its body just stays open.
+        const collapsed = this.defaultCollapsed();
+        const open =
+            hasBody && (collapsed ? this.host.expanded : this.autoOpen() || this.host.expanded);
         return this.chrome({
             body: hasBody ? body : null,
             open,
-            onClick: hasBody ? () => this.host.toggleExpanded() : null,
-            chevron: hasBody,
+            onClick: hasBody && collapsed ? () => this.host.toggleExpanded() : null,
+            chevron: hasBody && collapsed,
+            chevronAlwaysShown: collapsed,
         });
     }
 
@@ -142,14 +148,27 @@ export abstract class ToolRenderer {
         return this.host.status === 'error' || this.host.previewLines > 0;
     }
 
+    /** Whether this row starts collapsed, ignoring the preview auto-open setting.
+     *  Default: false — a tool row follows autoOpen (error/previews). A row that holds
+     *  a lot (Agent: a whole sub-agent transcript) overrides this to start closed and
+     *  keep its chevron visible at rest, so it clearly reads as expandable. */
+    protected defaultCollapsed(): boolean {
+        return false;
+    }
+
     private chrome(opts: {
         body: TemplateResult | null;
         open: boolean;
         onClick: (() => void) | null;
         chevron: boolean;
+        chevronAlwaysShown?: boolean;
         actions?: TemplateResult;
     }): TemplateResult {
-        const clickable = opts.onClick !== null;
+        // When the chevron is present it is the toggle (a real button), so the row itself
+        // is not clickable — otherwise the two double-trigger. Rows without a chevron keep
+        // their row-level click (e.g. diff rows opening the file).
+        const rowClick = opts.chevron ? null : opts.onClick;
+        const clickable = rowClick !== null;
         const actions =
             opts.actions ?? (this.host.status === 'error' ? this.errorButton() : nothing);
         const elapsed = this.host.elapsedSec;
@@ -159,7 +178,7 @@ export abstract class ToolRenderer {
                 <div
                     class="cv-tool-row"
                     style=${clickable ? 'cursor:pointer' : ''}
-                    @click=${opts.onClick}
+                    @click=${rowClick}
                 >
                     <span class="cv-tool-row-dot ${this.dotClass()}"></span>
                     ${this.header()}
@@ -173,13 +192,25 @@ export abstract class ToolRenderer {
                     ${actions}
                     ${
                         opts.chevron && opts.body !== null
-                            ? html`<span class="cv-tool-row-chev ${opts.open ? 'expanded' : ''}"
-                                  >${unsafeHTML(ChevronDown16Regular)}</span
+                            ? html`<fluent-button
+                                  appearance="subtle"
+                                  size="small"
+                                  icon-only
+                                  class="cv-tool-row-chev ${opts.open ? 'expanded' : ''} ${
+                                      opts.chevronAlwaysShown ? 'always-shown' : ''
+                                  }"
+                                  title=${opts.open ? 'Collapse' : 'Expand'}
+                                  @click=${(e: Event) => {
+                                      e.stopPropagation();
+                                      opts.onClick?.();
+                                  }}
+                                  >${unsafeHTML(ChevronDown16Regular)}</fluent-button
                               >`
                             : nothing
                     }
                 </div>
-                ${opts.open ? opts.body : nothing} ${this.host.renderSubagentChildren()}
+                ${opts.open ? opts.body : nothing}
+                ${opts.open ? this.host.renderSubagentChildren() : nothing}
             </div>
         `;
     }

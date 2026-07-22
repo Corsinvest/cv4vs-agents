@@ -697,8 +697,23 @@ export class CvApp extends LitElement {
                 if (e.kind !== 'tool') {
                     continue;
                 }
-                const children = childrenByParent.get(e.toolUseId);
+                let children = childrenByParent.get(e.toolUseId);
                 if (children?.length) {
+                    // The sub-agent's first message echoes the launch prompt, already shown as
+                    // the Agent row's IN — drop it here too, matching the live path (_appendEntry).
+                    // History replay bypasses that filter, so without this the echo reappears as
+                    // a user bubble when a session is reopened.
+                    const prompt = String(e.data?.input?.prompt ?? '').trim();
+                    if (prompt) {
+                        children = children.filter(
+                            (c) =>
+                                !(
+                                    c.kind === 'text' &&
+                                    c.role === 'user' &&
+                                    c.text?.trim() === prompt
+                                ),
+                        );
+                    }
                     // Child tool rows inherit the Agent's agentId so the open-output path
                     // routes to the sub-agent transcript file (agent-<agentId>.jsonl).
                     if (e.agentId) {
@@ -844,8 +859,20 @@ export class CvApp extends LitElement {
                         return;
                     }
                     const full = this._replayEvents(data.events ?? []);
+                    // The full transcript's first user message echoes the launch prompt (already
+                    // shown as the Agent row's IN). Its events carry no parentToolUseId, so the
+                    // _replayEvents post-pass filter doesn't reach them — drop the echo here.
+                    const prompt = String(p.data?.input?.prompt ?? '').trim();
                     let list = p.subagentChildren ?? [];
                     for (const child of full) {
+                        if (
+                            prompt &&
+                            child.kind === 'text' &&
+                            child.role === 'user' &&
+                            child.text?.trim() === prompt
+                        ) {
+                            continue;
+                        }
                         list = this._upsertChild(list, child);
                     }
                     p.subagentChildren = list;

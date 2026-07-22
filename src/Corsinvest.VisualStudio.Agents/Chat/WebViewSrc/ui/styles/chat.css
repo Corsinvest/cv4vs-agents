@@ -274,10 +274,19 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     border-left: 2px solid var(--colorNeutralStroke1);
     margin-top: 2px;
 }
-/* Fixed toolbar above the nested box: title left, controls right. */
+/* Collapsed keeps the last 3 children but caps the box so one long child
+ * (a big tool output) can't dominate the transcript — scroll inside instead.
+ * Expanded is uncapped: showing the full transcript is the point. */
+.cv-subagent-children.cv-subagent-collapsed {
+    max-height: 320px;
+    overflow-y: auto;
+}
+/* Fixed toolbar above the nested box: actions only (copy + expand), right-aligned.
+ * The Agent row header already carries the description, so no title here. */
 .cv-subagent-toolbar {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 6px;
     margin-left: 16px;
     margin-top: 4px;
@@ -304,15 +313,6 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     cursor: default;
     user-select: none;
 }
-.cv-subagent-toolbar-title {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-weight: 500;
-    color: var(--colorNeutralForeground2);
-}
 .cv-tool-row-count-clickable {
     cursor: pointer;
 }
@@ -331,23 +331,26 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     color: inherit;
 }
 
+/* The chevron toggle is a fluent-button (icon-only). Hidden at rest, revealed on row
+ * hover — except .always-shown (Agent), kept visible so a near-empty collapsed row reads
+ * as expandable. The button rotates 180° when open. */
 .cv-tool-row-chev {
     flex-shrink: 0;
-    color: var(--colorNeutralForeground3);
     opacity: 0;
     transition:
         transform 0.15s,
         opacity 0.15s;
-    display: flex;
-    align-items: center;
-    /* Match the first text line so it stays aligned with the dot/name. */
-    height: 18px;
 }
 .cv-tool-wrap:hover .cv-tool-row-chev {
     opacity: 1;
 }
 .cv-tool-row-chev.expanded {
     transform: rotate(180deg);
+    opacity: 1;
+}
+/* Kept visible at rest (Agent rows): a near-empty collapsed row needs the chevron
+ * as its only "expandable" cue, so it doesn't wait for hover. */
+.cv-tool-row-chev.always-shown {
     opacity: 1;
 }
 .cv-tool-actions {
