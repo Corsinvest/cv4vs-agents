@@ -26,7 +26,6 @@
       <_VersionAttribute Include="[assembly: System.Reflection.AssemblyVersion(&quot;$(VsixVersion).0&quot;)]" />
       <_VersionAttribute Include="[assembly: System.Reflection.AssemblyFileVersion(&quot;$(VsixVersion).0&quot;)]" />
       <_VersionAttribute Include="[assembly: System.Reflection.AssemblyInformationalVersion(&quot;$(Version)&quot;)]" />
-      <_VersionAttribute Include="[assembly: System.Reflection.AssemblyCopyright(&quot;$(Copyright)&quot;)]" />
     </ItemGroup>
 
     <MakeDir Directories="$(IntermediateOutputPath)" />
