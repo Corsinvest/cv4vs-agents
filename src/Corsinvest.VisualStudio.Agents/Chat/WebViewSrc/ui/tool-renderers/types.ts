@@ -25,8 +25,12 @@ export interface ToolRowState {
     readonly agentId: string;
     clipsOutput: boolean;
     toggleExpanded(): void;
-    /** Nested sub-agent rows/messages (Agent tool), or nothing. */
-    renderSubagentChildren(): TemplateResult | typeof nothing;
+    /** Nested child rows/messages (Agent tool's transcript), or nothing. Generic:
+     *  any tool with nested children can return them here. */
+    renderChildren(): TemplateResult | typeof nothing;
+    /** Actions rendered on the tool's header row (right side, before the chevron).
+     *  Default nothing; the Agent uses it for copy + show-all. */
+    renderHeaderActions(): TemplateResult | typeof nothing;
 }
 
 export interface ToolHost {
@@ -46,8 +50,12 @@ export interface ToolHost {
     readonly expanded: boolean;
     /** Always clip output to previewLines, even when expanded (shell tools). */
     clipsOutput: boolean;
-    /** Nested sub-agent rows/messages (Agent tool), or nothing. */
-    renderSubagentChildren(): TemplateResult | typeof nothing;
+    /** Nested child rows/messages (Agent tool's transcript), or nothing. Generic:
+     *  any tool with nested children can return them here. */
+    renderChildren(): TemplateResult | typeof nothing;
+    /** Actions rendered on the tool's header row (right side, before the chevron).
+     *  Default nothing; the Agent uses it for copy + show-all. */
+    renderHeaderActions(): TemplateResult | typeof nothing;
 
     /** Open a file in VS, optionally selecting a line range. */
     openFile(filePath: string, startLine?: number, endLine?: number): void;

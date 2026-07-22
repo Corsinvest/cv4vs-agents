@@ -281,29 +281,6 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     max-height: 320px;
     overflow-y: auto;
 }
-/* Fixed toolbar above the nested box: actions only (copy + expand), right-aligned.
- * The Agent row header already carries the description, so no title here. */
-.cv-subagent-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    margin-left: 16px;
-    margin-top: 4px;
-    font-size: 12px;
-    color: var(--colorNeutralForeground3);
-}
-/* Copy + expand reveal on hover over the sub-agent block (like the message copy). The
- * title stays; only the action buttons fade in. cv-tool-wrap is the hover scope. */
-.cv-subagent-toolbar cv-copy-btn,
-.cv-subagent-toolbar fluent-button {
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-.cv-tool-wrap:hover .cv-subagent-toolbar cv-copy-btn,
-.cv-tool-wrap:hover .cv-subagent-toolbar fluent-button {
-    opacity: 1;
-}
 /* "…" marker above the collapsed list = "there are earlier tools". */
 .cv-subagent-more {
     color: var(--colorNeutralForeground4);
