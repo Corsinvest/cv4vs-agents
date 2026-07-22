@@ -84,6 +84,12 @@ function wireBridgeHandlers(): void {
         // VS Options
         if (data.vsOptions) {
             applyVsOptions(data.vsOptions);
+            // The welcome screen reads appVersion/appCopyright from state at render time, but
+            // state.ui is not observable — it was rendered once before this payload arrived, so
+            // without a nudge it keeps the empty seed until some other event re-renders it (which
+            // is why New Session made the copyright appear). Re-render it now.
+            (document.querySelector('cv-welcome') as (HTMLElement & { requestUpdate?(): void }) | null)
+                ?.requestUpdate?.();
         }
 
         const firstInit = !wasInitialized;
