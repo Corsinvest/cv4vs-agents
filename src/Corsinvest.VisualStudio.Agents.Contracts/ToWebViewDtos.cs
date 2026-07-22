@@ -443,6 +443,7 @@ public class VsOptionsDto
     public bool ShowOpenDiffInVsButton { get; set; }
     public string[] AllowedUploadExtensions { get; set; }
     public string AppVersion { get; set; }
+    public string AppCopyright { get; set; }
     public bool PerfEnabled { get; set; }
     public int LogLevel { get; set; }
 }

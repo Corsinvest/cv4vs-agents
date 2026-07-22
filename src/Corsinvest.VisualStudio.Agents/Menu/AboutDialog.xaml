@@ -48,7 +48,7 @@
            HorizontalAlignment="Center"
            Margin="0,0,0,4" />
 
-    <TextBlock Text="© Corsinvest Srl"
+    <TextBlock x:Name="TxtCopyright"
                FontSize="11"
                HorizontalAlignment="Center"
                Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.SystemGrayTextBrushKey}}" />

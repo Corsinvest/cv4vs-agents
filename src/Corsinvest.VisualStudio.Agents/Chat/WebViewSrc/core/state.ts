@@ -195,6 +195,7 @@ const _impl = new StoreImpl<AppState>({
         showOpenDiffInVsButton: true,
         allowedUploadExtensions: [],
         appVersion: '',
+        appCopyright: '',
         logLevel: 0,
         perfEnabled: false,
     },

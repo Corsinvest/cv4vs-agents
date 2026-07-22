@@ -96,6 +96,10 @@ Full description in [docs/architecture.md](docs/architecture.md). What matters w
 `docs/*.md` is public and **written in English** (README, options, mcp-tools, sub-agents,
 architecture, context-and-usage, settings-and-data).
 
+`docs/marketplace-overview.md` is the odd one out: it is not documentation but the listing text,
+kept in git so edits are reviewable. Nothing reads it at build time — it is pasted into the portal
+by hand, and its images need absolute `raw.githubusercontent.com` URLs to resolve there.
+
 `docs/internal/` is **gitignored** and written in **Italian**: `TODO.md` (only things still to do —
 delete an item when done, git history keeps the record) and `specs/` (design + plan docs; never
 commit them).

@@ -223,11 +223,19 @@ public partial class ChatPaneControl : PaneControlBase
         return true;
     }
 
-    /// <summary>Chat-only extra for the toolbar's "More" menu: the WebView DevTools.
-    /// (Info is shared, so it lives on the base; the CLI returns none.)</summary>
+    /// <summary>Chat-only extra for the toolbar's "More" menu: the WebView DevTools, on preview
+    /// builds only. Testers on a release candidate are exactly who needs to inspect the WebView to
+    /// report a bug; a stable Marketplace build should not expose it. (Info is shared, so it lives
+    /// on the base; the CLI returns none.)</summary>
     public override IEnumerable<ButtonAction> MoreMenuActions
     {
-        get { yield return new ButtonAction("WebView DevTools", () => _bridge?.OpenDevTools(), "DevTools"); }
+        get
+        {
+            if (BuildInfo.IsPreRelease)
+            {
+                yield return new ButtonAction("WebView DevTools", () => _bridge?.OpenDevTools(), "DevTools");
+            }
+        }
     }
 
     private ClaudeClient _client;

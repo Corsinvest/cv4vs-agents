@@ -102,7 +102,7 @@ export class CvWelcome extends LitElement {
                     >Corsinvest Srl</fluent-link
                 >
             </div>
-            <div class="copyright">© Corsinvest Srl 2026</div>
+            <div class="copyright">${appState.ui.appCopyright}</div>
         `;
     }
 }
