@@ -43,7 +43,8 @@ internal sealed partial class WebViewBridge
             DiffIgnoreWhitespace = chat.DiffIgnoreWhitespace,
             ShowOpenDiffInVsButton = chat.ShowOpenDiffInVsButton,
             AllowedUploadExtensions = NormalizeExtensions(chat.AllowedUploadFileExtensions),
-            AppVersion = GetExtensionVersion(),
+            AppVersion = BuildInfo.Version,
+            AppCopyright = BuildInfo.Copyright,
             PerfEnabled = dbg.EnablePerfLog,
             // Always honour the Debug-page LogLevel setting (default None); previously DEBUG forced Trace ignoring it.
             LogLevel = (int)dbg.LogLevel,
@@ -66,15 +67,6 @@ internal sealed partial class WebViewBridge
         return [.. set];
     }
 
-    /// <summary>Extension version for display (matches the About dialog): the
-    /// informational version, falling back to the assembly version.</summary>
-    private static string GetExtensionVersion()
-    {
-        var asm = typeof(WebViewBridge).Assembly;
-        return asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-               ?? asm.GetName().Version?.ToString()
-               ?? "1.0.0";
-    }
 
     public static JArray BuildContentBlocks(string text, JArray attachments)
     {

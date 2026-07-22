@@ -63,15 +63,29 @@ Other platforms and installation methods are in Anthropic's
 
 **2. Install the extension** — from the
 [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents),
-or search *cv4vs Agents* in **Extensions → Manage Extensions** inside the IDE. You can also
-double-click the `.vsix` from the
-[Releases](https://github.com/Corsinvest/cv4vs-agents/releases) page.
+or search *cv4vs Agents* in **Extensions → Manage Extensions** inside the IDE.
 
 Then, in Visual Studio: **View → cv4vs Agents → Claude**. Type in the chat, or open a **CLI**
 pane for the interactive terminal. The IDE tools (navigation, diagnostics, debugger) are wired
 up automatically — nothing to configure.
 
 No CLI installed? The pane says so and links to the setup guide, instead of failing silently.
+
+### Preview builds
+
+Release candidates are tagged `vX.Y.Z-rcN` and published on the
+[Releases](https://github.com/Corsinvest/cv4vs-agents/releases) page with the `.vsix` attached —
+they are not on the Marketplace, which takes neither a suffixed version nor a second upload of one
+already published. Double-click the file to install.
+
+Two things to know before trying one. They receive **no automatic updates**: a `.vsix` installed by
+hand has no gallery behind it to check. And every preview of a release carries the **same version
+number** — the `-rcN` suffix lives on the tag, because a VSIX manifest version is digits only — so
+installing `rc2` over `rc1` is refused as *already installed*. Uninstall the previous preview first,
+from **Extensions → Manage Extensions**.
+
+Stable releases carry no `.vsix`: install them from the Marketplace, where updates arrive on their
+own.
 
 ---
 

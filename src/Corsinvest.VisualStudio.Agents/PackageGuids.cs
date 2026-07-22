@@ -30,4 +30,5 @@ internal static class PackageIds
     public const int RequestFeatureCommandId = 0x0205;
     public const int FeedbackCommandId = 0x0206;
     public const int AboutCommandId = 0x0207;
+    public const int ReleasesCommandId = 0x0208;
 }

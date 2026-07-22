@@ -19,10 +19,8 @@ public partial class AboutDialog : DialogWindow
     {
         InitializeComponent();
         var asm = typeof(AboutDialog).Assembly;
-        var version = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-                      ?? asm.GetName().Version?.ToString();
-
-        TxtVersion.Text = $"v{version}";
+        TxtVersion.Text = $"v{BuildInfo.Version}";
+        TxtCopyright.Text = BuildInfo.Copyright;
         LnkRepo.NavigateUri = new Uri("https://github.com/Corsinvest/cv4vs-agents");
         LnkCorsinvest.NavigateUri = new Uri("https://www.corsinvest.it");
     }

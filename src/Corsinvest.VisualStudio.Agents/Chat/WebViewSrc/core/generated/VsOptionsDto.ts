@@ -18,6 +18,7 @@ export interface VsOptionsDto {
     showOpenDiffInVsButton: boolean;
     allowedUploadExtensions: string[];
     appVersion: string;
+    appCopyright: string;
     perfEnabled: boolean;
     logLevel: number;
 }

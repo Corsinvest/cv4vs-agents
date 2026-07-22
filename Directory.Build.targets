@@ -1,36 +1,69 @@
 <Project>
 
   <!--
-    Guard: the version lives in Directory.Build.props, but two hand-written files repeat it.
-    Nothing generates them, so they drift silently — and the Marketplace only tells you at
-    upload time, after you have already built and tagged. Fail here instead.
+    A legacy csproj generates no AssemblyInfo, so the version attributes used to be typed by hand
+    and kept in step with Directory.Build.props by a build check. Write them instead: Version is
+    the only place to edit, and there is nothing left to drift.
 
-    Release only: it would be noise while iterating in Debug.
+    Only the VSIX project needs this. Contracts is SDK-style and does it on its own — running both
+    would define the attributes twice and fail to compile.
   -->
-  <Target Name="VerifyVersionsMatch"
+  <Target Name="GenerateVersionAssemblyInfo"
+          BeforeTargets="BeforeCompile"
+          Condition="'$(MSBuildProjectName)' == 'Corsinvest.VisualStudio.Agents'"
+          Inputs="$(MSBuildThisFileFullPath);$(MSBuildProjectDirectory)\..\..\Directory.Build.props"
+          Outputs="$(IntermediateOutputPath)VersionAssemblyInfo.cs">
+
+    <PropertyGroup>
+      <_VersionAssemblyInfo>$(IntermediateOutputPath)VersionAssemblyInfo.cs</_VersionAssemblyInfo>
+    </PropertyGroup>
+
+    <!-- AssemblyVersion and AssemblyFileVersion take digits only, hence VsixVersion; the
+         informational one carries the whole thing, suffix included, and is what About and the
+         init payload read — the one place a release candidate can say it is one. -->
+    <ItemGroup>
+      <_VersionAttribute Include="// &lt;auto-generated /&gt; Written by GenerateVersionAssemblyInfo in Directory.Build.targets." />
+      <_VersionAttribute Include="[assembly: System.Reflection.AssemblyVersion(&quot;$(VsixVersion).0&quot;)]" />
+      <_VersionAttribute Include="[assembly: System.Reflection.AssemblyFileVersion(&quot;$(VsixVersion).0&quot;)]" />
+      <_VersionAttribute Include="[assembly: System.Reflection.AssemblyInformationalVersion(&quot;$(Version)&quot;)]" />
+    </ItemGroup>
+
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <WriteLinesToFile File="$(_VersionAssemblyInfo)"
+                      Lines="@(_VersionAttribute)"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+
+    <ItemGroup>
+      <Compile Include="$(_VersionAssemblyInfo)" />
+      <FileWrites Include="$(_VersionAssemblyInfo)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    The manifest still repeats the version, and nothing can generate it: <Identity Version> is read
+    by the VSIX build itself. Check it rather than trust it — the Marketplace rejects an upload
+    whose version was already published, and it only says so after you have built and tagged.
+
+    Release only: noise while iterating in Debug.
+  -->
+  <Target Name="VerifyManifestVersion"
           BeforeTargets="Build"
           Condition="'$(Configuration)' == 'Release' AND '$(MSBuildProjectName)' == 'Corsinvest.VisualStudio.Agents'">
 
     <PropertyGroup>
       <_ManifestPath>$(MSBuildProjectDirectory)\source.extension.vsixmanifest</_ManifestPath>
-      <_AssemblyInfoPath>$(MSBuildProjectDirectory)\Properties\AssemblyInfo.cs</_AssemblyInfoPath>
-    </PropertyGroup>
-
-    <PropertyGroup>
-      <!-- Pull the version out of each file, then compare. Matching a literal substring is
-           unreliable here: the manifest carries several Version="..." attributes (the VS
-           installation targets), so only the one on <Identity> counts. -->
+      <!-- Matching a literal substring is unreliable: the manifest carries several Version="..."
+           attributes for the VS installation targets, so only the one on <Identity> counts. -->
       <_ManifestVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText($(_ManifestPath))), 'Identity[^&gt;]*?Version="([^"]+)"').Groups[1].Value)</_ManifestVersion>
-      <_AssemblyInfoVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText($(_AssemblyInfoPath))), 'AssemblyInformationalVersion\("([^"]+)"\)').Groups[1].Value)</_AssemblyInfoVersion>
     </PropertyGroup>
 
+    <!-- The numeric version: a VSIX Identity Version is digits only, so a preview suffix never
+         reaches it. -->
     <Error Condition="'$(_ManifestVersion)' != '$(VsixVersion)'"
-           Text="Version mismatch: Directory.Build.props says $(VsixVersion), source.extension.vsixmanifest says '$(_ManifestVersion)'. Make them agree before shipping." />
+           Text="Version mismatch: Directory.Build.props derives $(VsixVersion) from Version $(Version), source.extension.vsixmanifest says '$(_ManifestVersion)'. Make them agree before shipping." />
 
-    <Error Condition="'$(_AssemblyInfoVersion)' != '$(VsixVersion)'"
-           Text="Version mismatch: Directory.Build.props says $(VsixVersion), Properties/AssemblyInfo.cs says '$(_AssemblyInfoVersion)'. Make them agree before shipping." />
-
-    <Message Importance="high" Text="Version check: $(VsixVersion) — manifest and AssemblyInfo agree." />
+    <Message Importance="high" Text="Version check: $(Version) — manifest carries $(VsixVersion)." />
   </Target>
 
 </Project>

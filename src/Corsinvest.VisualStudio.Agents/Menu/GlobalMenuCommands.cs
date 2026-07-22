@@ -36,6 +36,11 @@ internal static class GlobalMenuCommands
         Add(svc, PackageIds.DataFolderCommandId, () => ShellHelpers.OpenExternal(AppPaths.DataFolder));
         Add(svc, PackageIds.OutputLogCommandId, OutputWindowLogger.ActivatePane);
         Add(svc, PackageIds.DocumentationCommandId, () => ShellHelpers.OpenExternal(RepoUrl));
+        // The release for the running version, not the list: /releases/tag/v<version>. A build
+        // that was actually shipped has a matching tag; a local build 404s to GitHub's own
+        // "release not found" page, which links back to the list.
+        Add(svc, PackageIds.ReleasesCommandId,
+            () => ShellHelpers.OpenExternal($"{RepoUrl}/releases/tag/v{BuildInfo.Version}"));
         Add(svc, PackageIds.ReportBugCommandId, () => OpenIssue("bug_report.yml", withVersion: true));
         Add(svc, PackageIds.RequestFeatureCommandId, () => OpenIssue("feature_request.yml"));
         Add(svc, PackageIds.FeedbackCommandId, () => OpenIssue("feedback.yml", withVersion: true));

@@ -3,13 +3,24 @@
                  xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
     <Identity Id="Corsinvest.VisualStudio.Agents" Version="1.0.0" Language="en-US"
-              Publisher="Corsinvest" />
+              Publisher="Corsinvest Srl" />
     <DisplayName>cv4vs Agents</DisplayName>
-    <Description xml:space="preserve">Claude Code inside Visual Studio — agentic coding with a rich chat pane and an interactive terminal, wired into the editor, solution and debugger through an in-process MCP server. Drives the Claude Code CLI, installed separately via npm; the binary is never bundled.</Description>
+    <Description xml:space="preserve">Claude Code inside Visual Studio — agentic coding with a rich chat pane and an interactive terminal, wired into the editor, solution and debugger through an in-process MCP server.</Description>
     <MoreInfo>https://github.com/Corsinvest/cv4vs-agents</MoreInfo>
     <License>LICENSE</License>
-    <Icon>Resources\icon.png</Icon>
-    <Tags>claude,anthropic,ai,claude-code,llm,agent,agentic,coding-agent</Tags>
+    <!-- A URL rather than a file: the release workflow publishes each version's CHANGELOG section
+         there, so the link stays current without the manifest naming a version. The schema fixes
+         the order of these elements — ReleaseNotes belongs after License, not before. -->
+    <ReleaseNotes>https://github.com/Corsinvest/cv4vs-agents/releases</ReleaseNotes>
+    <!-- 128x128, the size the Marketplace states for the extension page and tile: it downscales a
+         larger file but upscales a smaller one, and Resources\icon.png is 16x16 because the .vsct
+         uses it as the menu bitmap. Pointing Icon at that turned the listing logo into a blur.
+         PreviewImage is the 200x200 the details pane shows. Both generated from plugin-logo.png. -->
+    <Icon>Resources\marketplace-logo.png</Icon>
+    <PreviewImage>Resources\preview.png</PreviewImage>
+    <!-- Search hints, capped at 100 characters. copilot/chat/mcp/assistant are what people
+         actually type when looking for this kind of extension, not what it is called. -->
+    <Tags>claude,anthropic,ai,claude-code,llm,agent,agentic,coding-agent,copilot,chat,mcp,assistant</Tags>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0,)">
