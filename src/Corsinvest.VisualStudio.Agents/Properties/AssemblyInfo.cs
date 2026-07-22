@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("Claude Code AI assistant for Visual Studio")]
 [assembly: AssemblyCompany("Corsinvest Srl")]
 [assembly: AssemblyProduct("cv4vs Agents")]
-[assembly: AssemblyCopyright("Copyright © Corsinvest Srl 2026")]
 [assembly: ComVisible(false)]
 
 // No version attributes here. This is a legacy csproj, which does not generate an AssemblyInfo, so

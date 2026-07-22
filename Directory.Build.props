@@ -24,17 +24,18 @@
       Version and AssemblyVersion. Derived rather than typed, so the two cannot drift.
     -->
     <VsixVersion>$(Version.Split('-')[0])</VsixVersion>
+
+    <!-- First-published year, not the current one. Copied into the generated AssemblyInfo and read
+         back through BuildInfo.Copyright for the About dialog and the WebView welcome screen. -->
+    <Copyright>© Corsinvest Srl 2026</Copyright>
   </PropertyGroup>
 
   <!--
-    Only the SDK-style project (Contracts) picks these up: it generates its AssemblyInfo from
-    MSBuild properties. The main VSIX project is a legacy csproj with a hand-written
-    AssemblyInfo.cs, which owns its own attributes — putting Company/Product/Copyright here
-    would look authoritative while doing nothing for it.
-
     Package-level metadata (PackageLicenseExpression, RepositoryUrl, …) is deliberately absent:
     nothing here ships to NuGet. The VSIX equivalents — licence, repo link, description, tags —
-    live in source.extension.vsixmanifest, which is what the Marketplace reads.
+    live in source.extension.vsixmanifest, which is what the Marketplace reads. Company/Product
+    still live in the legacy AssemblyInfo.cs; only the version attributes and Copyright are
+    generated (GenerateVersionAssemblyInfo), because those need to agree with Version.
   -->
   <PropertyGroup>
     <AssemblyVersion>$(VsixVersion).0</AssemblyVersion>
