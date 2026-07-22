@@ -341,7 +341,21 @@ public partial class ChatPaneControl
             var title = await client.GenerateSessionTitleAsync(firstPrompt, persist: false);
             if (!string.IsNullOrWhiteSpace(title))
             {
-                sessions.SetAiTitle(sid, title);
+                // SetAiTitle no-ops (returns true) if a title already exists — e.g. the user
+                // renamed the session while generation was in flight. Don't overwrite the toolbar
+                // in that case: read back what actually stuck.
+                var wasNoOp = sessions.SetAiTitle(sid, title);
+                var effective = wasNoOp ? sessions.ScanTitle(sid) : title;
+
+                // Push it to this pane's toolbar now. The turn-end RefreshTitleOnTurnEnd already
+                // ran and found nothing — the title is only written here, and asynchronously, so
+                // without this a brand-new session shows no title until it is reopened. Guarded on
+                // the session id so a client swap mid-generation cannot mistitle the new session.
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (_client?.SessionId == sid && !string.IsNullOrWhiteSpace(effective))
+                {
+                    SetSessionTitle(effective);
+                }
             }
         }).FileAndForget(nameof(ChatPaneControl));
     }
