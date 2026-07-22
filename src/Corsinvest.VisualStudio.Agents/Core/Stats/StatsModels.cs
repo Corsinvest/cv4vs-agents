@@ -35,8 +35,10 @@ internal sealed class DayActivity
     public int MessageCount { get; set; }
     public int SessionCount { get; set; }
     public int ToolCallCount { get; set; }
-    // Per-model token total (input+output) for this day — feeds the stacked bar chart.
-    public Dictionary<string, long> TokensByModel { get; } = new();
+    // Per-model token split (in/out/cache) for this day. Keeping the split (not just the
+    // combined total) lets a ranged query still show real input/output per model, and the
+    // stacked chart uses .Total.
+    public Dictionary<string, ModelTokens> TokensByModel { get; } = new();
 
     public void Add(DayActivity other)
     {
@@ -45,8 +47,8 @@ internal sealed class DayActivity
         ToolCallCount += other.ToolCallCount;
         foreach (var kv in other.TokensByModel)
         {
-            TokensByModel.TryGetValue(kv.Key, out var cur);
-            TokensByModel[kv.Key] = cur + kv.Value;
+            if (!TokensByModel.TryGetValue(kv.Key, out var mt)) { mt = new ModelTokens(); TokensByModel[kv.Key] = mt; }
+            mt.Add(kv.Value);
         }
     }
 }

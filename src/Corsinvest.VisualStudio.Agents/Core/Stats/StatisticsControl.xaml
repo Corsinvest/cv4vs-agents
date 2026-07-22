@@ -5,13 +5,13 @@
              xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
              toolkit:Themes.UseVsTheme="True">
   <UserControl.Resources>
-    <!-- Summary tile: a bordered block with an uppercase label over a large value. -->
+    <!-- Summary tile: bordered block, uppercase label over a large value. -->
     <Style x:Key="TileStyle" TargetType="Border">
       <Setter Property="BorderBrush"
               Value="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBorderBrushKey}}" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="Padding" Value="12,8" />
-      <Setter Property="Margin" Value="0,0,10,0" />
+      <Setter Property="Margin" Value="0,0,10,10" />
     </Style>
     <Style x:Key="TileLabelStyle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="11" />
@@ -22,11 +22,16 @@
       <Setter Property="FontSize" Value="22" />
       <Setter Property="FontWeight" Value="SemiBold" />
     </Style>
+    <Style x:Key="SectionHeadStyle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Opacity" Value="0.7" />
+      <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
   </UserControl.Resources>
 
   <Grid Margin="14">
     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
@@ -34,14 +39,14 @@
     <!-- Toolbar: scope + range + indexing state + export (disabled placeholder). -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
       <TextBlock Text="Scope" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.7" />
-      <ComboBox x:Name="ScopeCombo" Width="150" VerticalAlignment="Center"
-                SelectionChanged="OnFilterChanged">
+      <ComboBox x:Name="ScopeCombo" Width="150" Height="24" Padding="6,0" VerticalAlignment="Center"
+                VerticalContentAlignment="Center" SelectionChanged="OnFilterChanged">
         <ComboBoxItem Content="All projects" IsSelected="True" />
         <ComboBoxItem Content="Current project" />
       </ComboBox>
       <TextBlock Text="Range" VerticalAlignment="Center" Margin="16,0,6,0" Opacity="0.7" />
-      <ComboBox x:Name="RangeCombo" Width="110" VerticalAlignment="Center"
-                SelectionChanged="OnFilterChanged">
+      <ComboBox x:Name="RangeCombo" Width="110" Height="24" Padding="6,0" VerticalAlignment="Center"
+                VerticalContentAlignment="Center" SelectionChanged="OnFilterChanged">
         <ComboBoxItem Content="Last 7 days" />
         <ComboBoxItem Content="Last 30 days" IsSelected="True" />
         <ComboBoxItem Content="All time" />
@@ -52,45 +57,136 @@
               VerticalAlignment="Center" IsEnabled="False" ToolTip="Coming soon" />
     </StackPanel>
 
-    <!-- Summary tiles. -->
-    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,14">
-      <Border Style="{StaticResource TileStyle}">
-        <StackPanel>
-          <TextBlock Text="TOTAL TOKENS" Style="{StaticResource TileLabelStyle}" />
-          <TextBlock x:Name="TotalTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
-        </StackPanel>
-      </Border>
-      <Border Style="{StaticResource TileStyle}">
-        <StackPanel>
-          <TextBlock Text="SESSIONS" Style="{StaticResource TileLabelStyle}" />
-          <TextBlock x:Name="SessionsText" Text="—" Style="{StaticResource TileValueStyle}" />
-        </StackPanel>
-      </Border>
-      <Border Style="{StaticResource TileStyle}">
-        <StackPanel>
-          <TextBlock Text="MESSAGES" Style="{StaticResource TileLabelStyle}" />
-          <TextBlock x:Name="MessagesText" Text="—" Style="{StaticResource TileValueStyle}" />
-        </StackPanel>
-      </Border>
-      <Border Style="{StaticResource TileStyle}">
-        <StackPanel>
-          <TextBlock Text="TOOL CALLS" Style="{StaticResource TileLabelStyle}" />
-          <TextBlock x:Name="ToolCallsText" Text="—" Style="{StaticResource TileValueStyle}" />
-        </StackPanel>
-      </Border>
-    </StackPanel>
+    <!-- Two columns: Overview (left) | Models (right). -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="360" />
+      </Grid.ColumnDefinitions>
 
-    <!-- Per-model breakdown table (no cost column — cost is a future phase). -->
-    <DataGrid Grid.Row="2" x:Name="ModelGrid" AutoGenerateColumns="False"
-              IsReadOnly="True" HeadersVisibility="Column"
-              GridLinesVisibility="Horizontal" CanUserAddRows="False">
-      <DataGrid.Columns>
-        <DataGridTextColumn Header="Model" Binding="{Binding Model}" Width="*" />
-        <DataGridTextColumn Header="Input" Binding="{Binding InputTokens, StringFormat=N0}" Width="Auto" />
-        <DataGridTextColumn Header="Output" Binding="{Binding OutputTokens, StringFormat=N0}" Width="Auto" />
-        <DataGridTextColumn Header="Cache read" Binding="{Binding CacheReadTokens, StringFormat=N0}" Width="Auto" />
-        <DataGridTextColumn Header="Cache creation" Binding="{Binding CacheCreationTokens, StringFormat=N0}" Width="Auto" />
-      </DataGrid.Columns>
-    </DataGrid>
+      <!-- Overview: summary tiles + (charts come in the next phase). -->
+      <StackPanel Grid.Column="0" Margin="0,0,20,0">
+        <TextBlock Text="OVERVIEW" Style="{StaticResource SectionHeadStyle}" />
+        <UniformGrid Columns="4">
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="TOTAL TOKENS" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="TotalTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="SESSIONS" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="SessionsText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="MESSAGES" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="MessagesText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="TOOL CALLS" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="ToolCallsText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="ACTIVE DAYS" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="ActiveDaysText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="CURRENT STREAK" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="CurrentStreakText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="LONGEST STREAK" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="LongestStreakText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="PEAK HOUR" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="PeakHourText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="FAVORITE MODEL" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="FavoriteModelText" Text="—" Style="{StaticResource TileValueStyle}"
+                         TextTrimming="CharacterEllipsis" MaxWidth="200" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="IMAGES" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="ImagesText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="ATTACHMENTS" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="AttachmentsText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="SUBAGENTS" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="SubagentsText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock Text="SUBAGENT TOKENS" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="SubagentTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+            </StackPanel>
+          </Border>
+        </UniformGrid>
+        <!-- Charts placeholder (OxyPlot added in the next phase). -->
+        <Border x:Name="ChartsHost" Margin="0,6,0,0" />
+      </StackPanel>
+
+      <!-- Models: per-model row = name + % + share bar + in/out tokens (mirrors the WebView dialog). -->
+      <StackPanel Grid.Column="1">
+        <TextBlock Text="MODELS" Style="{StaticResource SectionHeadStyle}" />
+        <ItemsControl x:Name="ModelsList">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <StackPanel Margin="0,0,0,12">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <Ellipse Grid.Column="0" Width="9" Height="9" Margin="0,0,7,0"
+                           VerticalAlignment="Center" Fill="{Binding Color}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Model}"
+                             TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding Percentage, StringFormat={}{0:F1}%}"
+                             Opacity="0.7" Margin="8,0,0,0" />
+                </Grid>
+                <ProgressBar Height="6" Margin="0,4" Foreground="{Binding Color}"
+                             Minimum="0" Maximum="100" Value="{Binding Percentage}" />
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Opacity="0.7" FontSize="11"
+                             Text="{Binding InputTokens, StringFormat=N0}" />
+                  <TextBlock Opacity="0.7" FontSize="11" Text=" in · " />
+                  <TextBlock Opacity="0.7" FontSize="11"
+                             Text="{Binding OutputTokens, StringFormat=N0}" />
+                  <TextBlock Opacity="0.7" FontSize="11" Text=" out" />
+                </StackPanel>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Grid>
   </Grid>
 </UserControl>

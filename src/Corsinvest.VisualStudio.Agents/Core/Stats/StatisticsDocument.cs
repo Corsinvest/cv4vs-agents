@@ -51,7 +51,13 @@ internal static class StatisticsDocument
                 VsShellUtilities.OpenDocumentWithSpecificEditor(
                     pkg, path, factoryGuid, VSConstants.LOGVIEWID_Primary,
                     out _, out _, out var frame);
-                frame?.Show();
+                if (frame != null)
+                {
+                    // The tab caption defaults to the placeholder file name; override it.
+                    frame.SetProperty((int)__VSFPROPID.VSFPROPID_OwnerCaption, "cv4vs Agents - Statistics");
+                    frame.SetProperty((int)__VSFPROPID.VSFPROPID_EditorCaption, "");
+                    frame.Show();
+                }
             }
             catch (Exception ex)
             {

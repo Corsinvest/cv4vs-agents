@@ -140,7 +140,8 @@ internal static class StatsService
             .Select(kv => new Contracts.StatsDayModelDto
             {
                 Date = kv.Key,
-                TokensByModel = kv.Value.TokensByModel.ToDictionary(x => x.Key, x => x.Value),
+                // The stacked chart wants the combined per-model total for each day.
+                TokensByModel = kv.Value.TokensByModel.ToDictionary(x => x.Key, x => x.Value.Total),
             })
             .ToArray();
 
@@ -348,9 +349,8 @@ internal static class StatsService
             if (!f.IsSubagent) { totals.TotalMessages += kv.Value.MessageCount; }
         }
 
-        // Model usage. Unranged: exact per-model in/out/cache split from the file aggregate.
-        // Ranged: only per-day totals (input+output combined) are available → put them in
-        // OutputTokens (the split isn't tracked per day). The list still shows correct totals/%.
+        // Model usage. Unranged: exact per-model split from the file aggregate. Ranged: the same
+        // split, now tracked per day+model, summed over the in-range days.
         if (!ranged)
         {
             foreach (var mk in f.ModelUsage)
@@ -367,7 +367,7 @@ internal static class StatsService
                 foreach (var mk in kv.Value.TokensByModel)
                 {
                     if (!totals.ModelUsage.TryGetValue(mk.Key, out var mt)) { mt = new ModelTokens(); totals.ModelUsage[mk.Key] = mt; }
-                    mt.OutputTokens += mk.Value; // combined in+out; used for total/% only when ranged
+                    mt.Add(mk.Value);
                 }
             }
         }

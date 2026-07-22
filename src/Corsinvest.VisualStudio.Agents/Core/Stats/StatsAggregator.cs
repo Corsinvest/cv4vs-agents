@@ -148,16 +148,21 @@ internal static class StatsAggregator
         var mt = GetModel(agg, model);
         var inTok = usage.Val("input_tokens", 0L);
         var outTok = usage.Val("output_tokens", 0L);
+        var cacheRead = usage.Val("cache_read_input_tokens", 0L);
+        var cacheCreate = usage.Val("cache_creation_input_tokens", 0L);
         mt.InputTokens += inTok;
         mt.OutputTokens += outTok;
-        mt.CacheReadTokens += usage.Val("cache_read_input_tokens", 0L);
-        mt.CacheCreationTokens += usage.Val("cache_creation_input_tokens", 0L);
+        mt.CacheReadTokens += cacheRead;
+        mt.CacheCreationTokens += cacheCreate;
 
-        var dayTokens = inTok + outTok;
-        if (dayTokens > 0)
+        // Same split per day+model, so a ranged query keeps real in/out/cache (not just the total).
+        if (inTok + outTok + cacheRead + cacheCreate > 0)
         {
-            day.TokensByModel.TryGetValue(model, out var cur);
-            day.TokensByModel[model] = cur + dayTokens;
+            if (!day.TokensByModel.TryGetValue(model, out var dmt)) { dmt = new ModelTokens(); day.TokensByModel[model] = dmt; }
+            dmt.InputTokens += inTok;
+            dmt.OutputTokens += outTok;
+            dmt.CacheReadTokens += cacheRead;
+            dmt.CacheCreationTokens += cacheCreate;
         }
     }
 

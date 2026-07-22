@@ -23,7 +23,8 @@ internal static class StatsCache
     // Bump when the FileAggregate shape/semantics change so stale caches are discarded.
     // v2: per-day MessageCount now populated (was always 0).
     // v3: messages count BOTH user and assistant turns (was assistant-only) + skip sidechain.
-    private const int Version = 3;
+    // v4: DayActivity.TokensByModel changed from long to ModelTokens (per-day in/out/cache split).
+    private const int Version = 4;
 
     /// <summary>One cached file: its aggregate + the mtime/size it was computed at.</summary>
     internal sealed class Entry
