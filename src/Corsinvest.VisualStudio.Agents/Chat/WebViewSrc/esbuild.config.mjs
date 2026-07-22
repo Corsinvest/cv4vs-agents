@@ -37,12 +37,19 @@ async function mirrorTargets() {
         try {
             for (const inst of await readdir(vsRoot)) {
                 if (!inst.endsWith('Exp')) { continue; }
-                const wv = path.join(vsRoot, inst, 'Extensions', 'Corsinvest', 'cv4vs Agents');
-                if (!existsSync(wv)) { continue; }
-                // version subfolder(s) (e.g. 1.0.0) → WebView2
-                for (const ver of await readdir(wv)) {
-                    const dest = path.join(wv, ver, 'WebView2');
-                    if (existsSync(dest)) { targets.push(dest); }
+                // The publisher folder is the manifest Publisher, which changed from
+                // "Corsinvest" to "Corsinvest Srl" for the Marketplace — don't hardcode it.
+                // Scan every publisher for a "cv4vs Agents\<ver>\WebView2".
+                const exts = path.join(vsRoot, inst, 'Extensions');
+                if (!existsSync(exts)) { continue; }
+                for (const pub of await readdir(exts)) {
+                    const wv = path.join(exts, pub, 'cv4vs Agents');
+                    if (!existsSync(wv)) { continue; }
+                    // version subfolder(s) (e.g. 1.0.0) → WebView2
+                    for (const ver of await readdir(wv)) {
+                        const dest = path.join(wv, ver, 'WebView2');
+                        if (existsSync(dest)) { targets.push(dest); }
+                    }
                 }
             }
         } catch { /* vsRoot missing: no experimental VS installed */ }
