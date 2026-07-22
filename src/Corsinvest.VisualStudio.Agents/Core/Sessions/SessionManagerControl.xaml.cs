@@ -117,6 +117,32 @@ public partial class SessionManagerControl : UserControl
         e.Handled = true;
     }
 
+    /// <summary>Handle Esc when it reaches us from the host rather than from the keyboard: in VS,
+    /// Esc is routed through IOleCommandTarget and never fires PreviewKeyDown on the popup. Returns
+    /// true if a rename edit was open and got reverted — the caller must then NOT dismiss the
+    /// picker, so Esc exits the edit and leaves the list up. Returns false when nothing was being
+    /// edited, so the caller closes the picker as before.</summary>
+    public bool TryCancelInlineEdit()
+    {
+        var editing = _allSessions.FirstOrDefault(r => r.IsEditing);
+        if (editing == null) { return false; }
+        CancelEditAndRefocus(editing);
+        return true;
+    }
+
+    /// <summary>Leave inline-edit mode and put focus back on the search box, or the keystroke goes
+    /// nowhere — the edit TextBox is collapsing and the picker keeps typing. Deferred so the focus
+    /// lands after the collapse.</summary>
+    private void CancelEditAndRefocus(SessionRow row)
+    {
+        row.CancelEdit();
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            SearchBox.Focus();
+            SearchBox.CaretIndex = SearchBox.Text?.Length ?? 0;
+        }));
+    }
+
     private void OnSearchKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Down)
@@ -216,7 +242,7 @@ public partial class SessionManagerControl : UserControl
         }
         else if (e.Key == Key.Escape)
         {
-            row.CancelEdit();
+            CancelEditAndRefocus(row);
             e.Handled = true;
         }
     }
@@ -273,16 +299,47 @@ public partial class SessionManagerControl : UserControl
         e.Handled = true;
         if (sender is not FrameworkElement el || el.Tag is not SessionRow row) { return; }
 
-        // Always confirm: delete unlinks the JSONL from disk, no undo.
-        var preview = string.IsNullOrEmpty(row.DisplayTitle) ? row.Id : row.DisplayTitle;
-        var ok = MessageBox.Show(
-            $"Delete session \"{preview}\"?\nThis cannot be undone.",
-            "Delete session",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Warning,
-            MessageBoxResult.No);
-        if (ok != MessageBoxResult.Yes) { return; }
+        // The picker lives in a StaysOpen=false Popup, which light-dismisses the instant it loses
+        // focus. A modal MessageBox takes that focus, so the Popup — and the dialog with it —
+        // vanishes before the user can answer. Pin the Popup open across the prompt.
+        var hostPopup = FindAncestorPopup();
+        var wasStaysOpen = hostPopup?.StaysOpen ?? true;
+        if (hostPopup != null) { hostPopup.StaysOpen = true; }
+        try
+        {
+            // Always confirm: delete unlinks the JSONL from disk, no undo.
+            var preview = string.IsNullOrEmpty(row.DisplayTitle) ? row.Id : row.DisplayTitle;
+            var ok = MessageBox.Show(
+                $"Delete session \"{preview}\"?\nThis cannot be undone.",
+                "Delete session",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning,
+                MessageBoxResult.No);
+            if (ok != MessageBoxResult.Yes) { return; }
 
+            DeleteRow(row);
+        }
+        finally
+        {
+            if (hostPopup != null) { hostPopup.StaysOpen = wasStaysOpen; }
+        }
+    }
+
+    /// <summary>Walk up the logical tree to the Popup hosting this control, or null when the
+    /// control is shown some other way (e.g. a future docked Manage Sessions dialog).</summary>
+    private System.Windows.Controls.Primitives.Popup FindAncestorPopup()
+    {
+        DependencyObject d = this;
+        while (d != null)
+        {
+            if (d is System.Windows.Controls.Primitives.Popup p) { return p; }
+            d = System.Windows.LogicalTreeHelper.GetParent(d) ?? System.Windows.Media.VisualTreeHelper.GetParent(d);
+        }
+        return null;
+    }
+
+    private void DeleteRow(SessionRow row)
+    {
         try
         {
             new SessionManager(_paths, _workingDirectory).Delete(row.Id);
