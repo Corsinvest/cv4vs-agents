@@ -189,7 +189,7 @@ export abstract class ToolRenderer {
                               >`
                             : nothing
                     }
-                    ${actions}
+                    ${actions} ${opts.open ? this.host.renderHeaderActions() : nothing}
                     ${
                         opts.chevron && opts.body !== null
                             ? html`<fluent-button
@@ -210,7 +210,7 @@ export abstract class ToolRenderer {
                     }
                 </div>
                 ${opts.open ? opts.body : nothing}
-                ${opts.open ? this.host.renderSubagentChildren() : nothing}
+                ${opts.open ? this.host.renderChildren() : nothing}
             </div>
         `;
     }

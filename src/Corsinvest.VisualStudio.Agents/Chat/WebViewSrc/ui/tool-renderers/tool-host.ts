@@ -63,8 +63,11 @@ export class BridgeToolHost implements ToolHost {
     get elapsedSec(): number {
         return this.row.elapsedSec;
     }
-    renderSubagentChildren() {
-        return this.row.renderSubagentChildren();
+    renderChildren() {
+        return this.row.renderChildren();
+    }
+    renderHeaderActions() {
+        return this.row.renderHeaderActions();
     }
     get showInlineToolErrors(): boolean {
         return appState.ui.showInlineToolErrors;
