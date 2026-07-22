@@ -194,6 +194,7 @@
     <Compile Include="Mcp\Tools\Debug\ApplyHotReloadTool.cs" />
     <Compile Include="Utils\AppConstants.cs" />
     <Compile Include="Utils\AppPaths.cs" />
+    <Compile Include="Utils\BuildInfo.cs" />
     <Compile Include="Utils\ClaudePaths.cs" />
     <Compile Include="Utils\ColorUtils.cs" />
     <Compile Include="Utils\PathHelpers.cs" />

@@ -12,17 +12,18 @@
     at build time is the cheap version of that failure.
   -->
   <PropertyGroup>
-    <VsixVersion>1.0.0</VsixVersion>
+    <!--
+      The whole version, suffix and all — this is what the release tag must equal, and what
+      AssemblyInformationalVersion carries so a preview build can say it is one at runtime. Ship a
+      stable release by dropping the suffix.
+    -->
+    <Version>1.0.0-rc1</Version>
 
     <!--
-      Preview label, empty for a stable release. A VSIX Identity Version is digits only, so the
-      suffix cannot go in VsixVersion: it lives here and is joined back on for the one place that
-      wants the whole thing — the release tag. Tag v1.0.0-rc1 means VsixPrerelease is rc1; ship
-      1.0.0 by clearing it.
+      The same version without the suffix, for the places that take digits only: the VSIX Identity
+      Version and AssemblyVersion. Derived rather than typed, so the two cannot drift.
     -->
-    <VsixPrerelease>rc1</VsixPrerelease>
-    <VsixFullVersion Condition="'$(VsixPrerelease)' != ''">$(VsixVersion)-$(VsixPrerelease)</VsixFullVersion>
-    <VsixFullVersion Condition="'$(VsixPrerelease)' == ''">$(VsixVersion)</VsixFullVersion>
+    <VsixVersion>$(Version.Split('-')[0])</VsixVersion>
   </PropertyGroup>
 
   <!--
@@ -36,7 +37,6 @@
     live in source.extension.vsixmanifest, which is what the Marketplace reads.
   -->
   <PropertyGroup>
-    <Version>$(VsixVersion)</Version>
     <AssemblyVersion>$(VsixVersion).0</AssemblyVersion>
     <FileVersion>$(VsixVersion).0</FileVersion>
   </PropertyGroup>

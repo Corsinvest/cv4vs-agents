@@ -36,19 +36,17 @@ jobs:
       - name: Install TypeGen
         run: dotnet tool install -g dotnet-typegen
 
-      # VsixVersion in Directory.Build.props is the single source of truth, and a Release build
-      # already fails if the manifest or AssemblyInfo disagree with it. The tag is the one thing
-      # nothing checks -- and the Marketplace rejects an upload whose version was already
-      # published, so a mismatch found here is the cheap version of that failure.
+      # Version in Directory.Build.props is the single source of truth (VsixVersion is derived from
+      # it), and a Release build already fails if the manifest or AssemblyInfo disagree. The tag is
+      # the one thing nothing checks -- and the Marketplace rejects an upload whose version was
+      # already published, so a mismatch found here is the cheap version of that failure.
       - name: Extract and validate version
         id: version
         shell: pwsh
         run: |
-          $props = [xml](Get-Content Directory.Build.props)
-          $group = $props.Project.PropertyGroup | Where-Object { $_.VsixVersion }
-          $numeric = "$($group.VsixVersion)".Trim()
-          $suffix = "$($group.VsixPrerelease)".Trim()
-          $projectVersion = if ($suffix) { "$numeric-$suffix" } else { $numeric }
+          # Ask MSBuild rather than parsing the XML: Version is evaluated, and reading the raw file
+          # would miss anything a condition or an import contributes.
+          $projectVersion = (msbuild src/Corsinvest.VisualStudio.Agents/Corsinvest.VisualStudio.Agents.csproj -getProperty:Version -nologo).Trim()
 
           $tag = if ('${{ github.event_name }}' -eq 'workflow_dispatch') { '${{ github.event.inputs.tag }}' }
                  else { '${{ github.ref_name }}' }
@@ -58,13 +56,17 @@ jobs:
           Write-Host "Tag version    : $tagVersion"
 
           if ($projectVersion -ne $tagVersion) {
-              Write-Host "::error::Version mismatch — Directory.Build.props says $projectVersion, tag says $tagVersion. Set VsixVersion and VsixPrerelease to match the tag, or tag v$projectVersion."
+              # ::error:: puts this at the top of the run summary, not only in the log.
+              Write-Host "::error::Version mismatch: project is $projectVersion, tag is v$tagVersion"
+              Write-Host "   Project version : $projectVersion   (Version in Directory.Build.props)"
+              Write-Host "   Git tag         : v$tagVersion"
+              Write-Host "   Set Version to $tagVersion, or tag v$projectVersion."
               exit 1
           }
 
           "version=$tagVersion" >> $env:GITHUB_OUTPUT
-          "numeric=$numeric" >> $env:GITHUB_OUTPUT
-          "prerelease=$(if ($suffix) { 'true' } else { 'false' })" >> $env:GITHUB_OUTPUT
+          "numeric=$(($tagVersion -split '-')[0])" >> $env:GITHUB_OUTPUT
+          "prerelease=$(if ($tagVersion -match '-') { 'true' } else { 'false' })" >> $env:GITHUB_OUTPUT
           Write-Host "Version validated: $projectVersion"
 
       - name: Restore

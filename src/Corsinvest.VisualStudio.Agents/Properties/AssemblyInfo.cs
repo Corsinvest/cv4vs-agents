@@ -12,8 +12,8 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("cv4vs Agents")]
 [assembly: AssemblyCopyright("Copyright © Corsinvest Srl 2026")]
 [assembly: ComVisible(false)]
-// Keep these in step with <Identity Version> in source.extension.vsixmanifest: the Marketplace
-// rejects an upload whose version was already published, and About/init read the informational one.
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
-[assembly: AssemblyInformationalVersion("1.0.0")]
+
+// No version attributes here. This is a legacy csproj, which does not generate an AssemblyInfo, so
+// they used to be written by hand and kept in step with Directory.Build.props by a build check.
+// GenerateVersionAssemblyInfo (Directory.Build.targets) emits them into obj\ instead, from Version
+// — one place to edit, nothing left to drift.
