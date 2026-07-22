@@ -179,14 +179,22 @@ public partial class PaneToolbar : UserControl
     // The live session-picker popup, so Esc (which VS routes through IOleCommandTarget, never
     // reaching the popup) can dismiss it. Null when closed.
     private Popup _historyPopup;
+    private SessionManagerControl _historyPicker;
 
-    /// <summary>Close the session picker if open; true when it was. Called by the pane's Esc
-    /// handler before it forwards Esc anywhere else.</summary>
+    /// <summary>Handle Esc for the session picker: routed here from the pane because VS's
+    /// IOleCommandTarget swallows Esc before it reaches the popup. If a rename edit is open, revert
+    /// it and keep the picker up; otherwise close the picker. Returns true when it consumed the
+    /// Esc (either case), false when the picker wasn't open.</summary>
     public bool DismissSessionHistory()
     {
         if (_historyPopup?.IsOpen != true) { return false; }
+
+        // Esc while renaming exits the edit and leaves the list up, rather than closing everything.
+        if (_historyPicker?.TryCancelInlineEdit() == true) { return true; }
+
         _historyPopup.IsOpen = false;
         _historyPopup = null;
+        _historyPicker = null;
         _pane.FocusInput();
         return true;
     }
@@ -223,8 +231,9 @@ public partial class PaneToolbar : UserControl
             popup.IsOpen = false;
             _pane.FocusInput();
         };
-        popup.Closed += (_, _) => { if (ReferenceEquals(_historyPopup, popup)) { _historyPopup = null; } };
+        popup.Closed += (_, _) => { if (ReferenceEquals(_historyPopup, popup)) { _historyPopup = null; _historyPicker = null; } };
         _historyPopup = popup;
+        _historyPicker = picker;
         popup.IsOpen = true;
         // Opened from the chat command the caret sits in WebView2 — a separate HWND. Blurring it
         // only clears the DOM caret (and asynchronously at that), so Win32 focus has to be pulled
