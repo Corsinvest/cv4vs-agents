@@ -7,6 +7,8 @@ import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { renderMarkdown } from '../../core/markdown';
 import { statusDotStyles } from '../styles/shared';
+import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
+import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.svg';
 
 // <1000 → integer; >=1000 → X.Yk (one decimal). Mirrors VS Code's token format.
 function fmtTokens(n: number): string {
@@ -57,15 +59,22 @@ export class CvThinking extends LitElement {
                 font-variant-numeric: tabular-nums;
             }
             .chevron {
-                /* Full opacity so it stays visible against the dimmed (0.8) italic summary. Collapsed
-               points right (-90°); open points down. */
+                /* Full opacity so it stays visible against the dimmed (0.8) italic summary.
+                   Down when collapsed, up when open — same single-chevron toggle as the tool
+                   rows and expandable messages (no double chevron, no tree-style rotation). */
                 opacity: 1;
-                font-size: 10px;
-                transform: rotate(-90deg);
-                transition: transform 0.15s;
+                display: inline-flex;
+                width: 16px;
+                height: 16px;
             }
-            details[open] .chevron {
-                transform: rotate(0deg);
+            .chevron .up {
+                display: none;
+            }
+            details[open] .chevron .down {
+                display: none;
+            }
+            details[open] .chevron .up {
+                display: inline-flex;
             }
             .body {
                 /* Indent under the label (past the dot + gap: ~8px dot + 6px gap), like the assistant
@@ -110,7 +119,10 @@ export class CvThinking extends LitElement {
                     ${dot}
                     <span class="label">${label}</span>
                     ${tokens}
-                    <span class="chevron">▾</span>
+                    <span class="chevron"
+                        ><span class="down">${unsafeHTML(ChevronDown16Regular)}</span
+                        ><span class="up">${unsafeHTML(ChevronUp16Regular)}</span></span
+                    >
                 </summary>
                 <div class="body">${unsafeHTML(renderMarkdown(this.text))}</div>
             </details>

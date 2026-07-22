@@ -79,6 +79,13 @@ fluent-link svg[fill='none'],
 fluent-option svg[fill='none'] {
     fill: none;
 }
+/* Fluent's small icon-only button scales its glyph to 20px; pin it to the nominal 16px
+ * so the action icons read as one size (shadow-DOM components do the same via iconStyles).
+ * Only icon-only buttons — labelled ones keep their sizing. */
+fluent-button[icon-only] svg {
+    width: 16px;
+    height: 16px;
+}
 
 
 /* cv-attach-menu is Shadow DOM: its fluent-menu-list/item styling (sizing, icon

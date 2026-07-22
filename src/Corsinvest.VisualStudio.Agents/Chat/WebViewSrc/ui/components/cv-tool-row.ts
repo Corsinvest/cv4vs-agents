@@ -5,8 +5,8 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import ChevronDoubleDown16Regular from '@fluentui/svg-icons/icons/chevron_double_down_16_regular.svg';
-import ChevronDoubleUp16Regular from '@fluentui/svg-icons/icons/chevron_double_up_16_regular.svg';
+import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
+import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.svg';
 import './cv-message';
 import './cv-thinking';
 import './cv-copy-btn';
@@ -118,10 +118,10 @@ export class CvToolRow extends LitElement implements ToolRowState {
             ? this.subagentChildren
             : this.subagentChildren.slice(-3);
         const hasToggle = this.hasMore || this.subagentChildren.length > 3;
-        const title = String(this.data?.input?.description ?? '');
+        // No title here: the Agent row header already shows the description.
+        // The toolbar carries only the actions (copy + expand), pushed right.
         return html`
             <div class="cv-subagent-toolbar">
-                ${title ? html`<span class="cv-subagent-toolbar-title" title=${title}>${title}</span>` : html`<span class="cv-subagent-toolbar-title"></span>`}
                 <cv-copy-btn
                     .text=${this._subagentToMarkdown()}
                     title="Copy subagent output"
@@ -135,12 +135,14 @@ export class CvToolRow extends LitElement implements ToolRowState {
                               title=${this.subagentExpanded ? 'Reduce' : 'Show all'}
                               @click=${this._onToggleSubagent}
                           >
-                              ${unsafeHTML(this.subagentExpanded ? ChevronDoubleUp16Regular : ChevronDoubleDown16Regular)}
+                              ${unsafeHTML(this.subagentExpanded ? ChevronUp16Regular : ChevronDown16Regular)}
                           </fluent-button>`
                         : nothing
                 }
             </div>
-            <div class="cv-subagent-children">
+            <div
+                class="cv-subagent-children ${this.subagentExpanded ? '' : 'cv-subagent-collapsed'}"
+            >
                 ${
                     hasToggle && !this.subagentExpanded
                         ? html`<div class="cv-subagent-more" title="Earlier children — Show all">

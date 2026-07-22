@@ -6,8 +6,8 @@ import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import BranchFork16Regular from '@fluentui/svg-icons/icons/branch_fork_16_regular.svg';
-import ChevronDoubleDown16Regular from '@fluentui/svg-icons/icons/chevron_double_down_16_regular.svg';
-import ChevronDoubleUp16Regular from '@fluentui/svg-icons/icons/chevron_double_up_16_regular.svg';
+import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
+import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.svg';
 import './cv-copy-btn';
 import './cv-attach-chip';
 import { renderMarkdown, renderMarkdownStreaming } from '../../core/markdown';
@@ -170,7 +170,7 @@ export class CvMessage extends LitElement {
                               title=${this.expanded ? 'Reduce' : 'Expand'}
                               @click=${this._onToggleExpand}
                           >
-                              ${unsafeHTML(this.expanded ? ChevronDoubleUp16Regular : ChevronDoubleDown16Regular)}
+                              ${unsafeHTML(this.expanded ? ChevronUp16Regular : ChevronDown16Regular)}
                           </fluent-button>`
                         : nothing
                 }
