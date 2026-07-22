@@ -41,9 +41,12 @@ namespace Corsinvest.VisualStudio.Agents;
 [ProvideOptionPage(typeof(AgentsChatPage), AppConstants.AppName, "Chat", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsDebugPage), AppConstants.AppName, "Debug", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsProfilesPage), AppConstants.AppName, "Profiles", 0, 0, true)]
-// Frameless document-tab for Statistics: no file extension (ProvideEditorExtension) — the tab is
-// opened only via the View menu command, resolved by the factory GUID.
+// Document-tab for Statistics. A custom editor is opened by opening a file, so we map a private
+// extension (.cv4vsstats) to the factory and open a placeholder file of that type from the menu.
+// The file content is never read — the pane pulls live from StatsService.
 [ProvideEditorFactory(typeof(Core.Stats.StatisticsEditorFactory), 0, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
+[ProvideEditorExtension(typeof(Core.Stats.StatisticsEditorFactory), Core.Stats.StatisticsDocument.Extension, 50)]
+[ProvideEditorLogicalView(typeof(Core.Stats.StatisticsEditorFactory), "{00000000-0000-0000-0000-000000000000}")]
 [Guid(PackageGuids.AgentsPackageString)]
 public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolutionLoadEvents
 {

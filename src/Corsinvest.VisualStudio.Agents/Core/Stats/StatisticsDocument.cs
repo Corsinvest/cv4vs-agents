@@ -4,22 +4,27 @@
  */
 
 using System;
+using System.IO;
 using Corsinvest.VisualStudio.Agents.Helpers;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using IOleServiceProvider = Microsoft.VisualStudio.OLE.Interop.IServiceProvider;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
-/// <summary>Opens (or re-activates) the frameless Statistics document-tab. Singleton by moniker:
-/// a second invocation focuses the already-open tab instead of opening a duplicate. The moniker is
-/// a synthetic URI (no file on disk) — the editor factory is resolved by GUID, not by extension.</summary>
+/// <summary>Opens (or re-activates) the Statistics document-tab. Backed by a fixed placeholder file
+/// under our data folder (extension .cv4vsstats, mapped to StatisticsEditorFactory): VS opens the
+/// file → calls the factory → mounts StatisticsControl. The file content is irrelevant (the pane
+/// reads StatsService, not the file) — it exists only so VS has a real document to open, which is
+/// how a custom editor is meant to be opened (a synthetic no-file moniker crashes the shell).
+/// Singleton: the fixed path means re-opening focuses the existing tab.</summary>
 internal static class StatisticsDocument
 {
-    /// <summary>Synthetic moniker (not a real file path). Shared with the pane's GetCurFile so the
-    /// RDT identifies the single open instance.</summary>
-    public const string Moniker = "cv4vs://statistics";
+    /// <summary>Extension mapped to the editor factory (ProvideEditorExtension on the package).</summary>
+    public const string Extension = ".cv4vsstats";
+
+    /// <summary>Fixed placeholder file so the tab is a singleton (same moniker every time).</summary>
+    private static string FilePath => Path.Combine(AppPaths.DataFolder, "statistics" + Extension);
 
     public static void Open()
     {
@@ -31,38 +36,22 @@ internal static class StatisticsDocument
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-                // Singleton: if the moniker is already open, just activate its frame.
-                if (VsShellUtilities.IsDocumentOpen(pkg, Moniker, VSConstants.LOGVIEWID_Primary,
-                        out _, out _, out var existing) && existing != null)
+                var path = FilePath;
+                // The placeholder must exist on disk for OpenDocument to succeed; its content is
+                // never read (the pane pulls from StatsService).
+                if (!File.Exists(path))
                 {
-                    ErrorHandler.ThrowOnFailure(existing.Show());
-                    return;
+                    Directory.CreateDirectory(Path.GetDirectoryName(path));
+                    File.WriteAllText(path, "");
                 }
 
-                if (await pkg.GetServiceAsync(typeof(SVsUIShellOpenDocument)) is not IVsUIShellOpenDocument openDoc)
-                {
-                    OutputWindowLogger.Warn("[stats] no IVsUIShellOpenDocument — cannot open the tab");
-                    return;
-                }
-
+                // Open with our editor factory explicitly (resolved by GUID, not by whatever the
+                // user's default for the extension is). Focuses the existing tab if already open.
                 var factoryGuid = PackageGuids.StatisticsEditorFactory;
-                var logicalView = VSConstants.LOGVIEWID_Primary;
-                var oleSp = ServiceProvider.GlobalProvider.GetService(typeof(IOleServiceProvider)) as IOleServiceProvider;
-
-                // grfOpenSpecific = 0: no special open flags, just open with our factory.
-                ErrorHandler.ThrowOnFailure(openDoc.OpenSpecificEditor(
-                    0,
-                    Moniker,
-                    ref factoryGuid,
-                    null,
-                    ref logicalView,
-                    "Statistics",
-                    null,
-                    VSConstants.VSITEMID_NIL,
-                    IntPtr.Zero,
-                    oleSp,
-                    out var frame));
-                if (frame != null) { ErrorHandler.ThrowOnFailure(frame.Show()); }
+                VsShellUtilities.OpenDocumentWithSpecificEditor(
+                    pkg, path, factoryGuid, VSConstants.LOGVIEWID_Primary,
+                    out _, out _, out var frame);
+                frame?.Show();
             }
             catch (Exception ex)
             {
