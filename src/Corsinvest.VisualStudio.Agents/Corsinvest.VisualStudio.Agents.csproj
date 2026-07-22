@@ -229,6 +229,9 @@
     <Compile Include="Core\Stats\StatsAggregator.cs" />
     <Compile Include="Core\Stats\StatsCache.cs" />
     <Compile Include="Core\Stats\StatsService.cs" />
+    <Compile Include="Core\Stats\StatisticsEditorFactory.cs" />
+    <Compile Include="Core\Stats\StatisticsEditorPane.cs" />
+    <Compile Include="Core\Stats\StatisticsDocument.cs" />
     <Compile Include="Core\Workspace\WorkspaceState.cs" />
     <Compile Include="Core\Workspace\WorkspaceStore.cs" />
     <Compile Include="Chat\ContentBlockTranslator.cs" />

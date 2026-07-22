@@ -14,6 +14,10 @@ internal static class PackageGuids
 
     public const string AgentsCommandSetString = "a2b3c4d5-e6f7-8901-cdef-ab1234567890";
     public static readonly Guid AgentsCommandSet = new(AgentsCommandSetString);
+
+    // Editor factory for the frameless Statistics document-tab.
+    public const string StatisticsEditorFactoryString = "08aaab84-271c-4d91-97a1-2c2b1f098e79";
+    public static readonly Guid StatisticsEditorFactory = new(StatisticsEditorFactoryString);
 }
 
 internal static class PackageIds
@@ -31,4 +35,5 @@ internal static class PackageIds
     public const int FeedbackCommandId = 0x0206;
     public const int AboutCommandId = 0x0207;
     public const int ReleasesCommandId = 0x0208;
+    public const int StatisticsCommandId = 0x0209;
 }

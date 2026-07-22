@@ -89,6 +89,12 @@
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>View output log</ButtonText></Strings>
       </Button>
+      <Button guid="guidAgentsCommandSet" id="StatisticsCommandId" priority="0x0400" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Statistics"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings><ButtonText>Statistics</ButtonText></Strings>
+      </Button>
 
       <Button guid="guidAgentsCommandSet" id="DocumentationCommandId" priority="0x0100" type="Button">
         <Parent guid="guidAgentsCommandSet" id="HelpDocsGroup"/>
@@ -154,6 +160,7 @@
       <IDSymbol name="FeedbackCommandId" value="0x0206" />
       <IDSymbol name="AboutCommandId" value="0x0207" />
       <IDSymbol name="ReleasesCommandId" value="0x0208" />
+      <IDSymbol name="StatisticsCommandId" value="0x0209" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{c3d4e5f6-a7b8-9012-defa-bc1234567890}">
       <IDSymbol name="bmpPic1" value="1" />
