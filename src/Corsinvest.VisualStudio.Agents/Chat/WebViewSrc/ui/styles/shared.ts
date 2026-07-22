@@ -18,6 +18,13 @@ export const iconStyles = css`
     svg[fill='none'] {
         fill: none;
     }
+    /* Fluent's small icon-only button scales its glyph to 20px; pin it to the nominal
+     * 16px so the action icons (copy, chevron, toggles) read as one size in the dense
+     * chat and don't look oversized. Only icon-only buttons — labelled ones keep theirs. */
+    fluent-button[icon-only] svg {
+        width: 16px;
+        height: 16px;
+    }
 `;
 
 /**
