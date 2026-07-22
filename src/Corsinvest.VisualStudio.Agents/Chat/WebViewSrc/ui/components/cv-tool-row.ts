@@ -5,8 +5,8 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
-import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.svg';
+import ArrowExpandAll16Regular from '@fluentui/svg-icons/icons/arrow_expand_all_16_regular.svg';
+import ArrowCollapseAll16Regular from '@fluentui/svg-icons/icons/arrow_collapse_all_16_regular.svg';
 import './cv-message';
 import './cv-thinking';
 import './cv-copy-btn';
@@ -106,40 +106,46 @@ export class CvToolRow extends LitElement implements ToolRowState {
         );
     };
 
-    /** Nested sub-agent rows/messages (Agent tool). Lit-owned, so it stays in
-     *  the component; the host exposes it to the renderer via renderSubagentChildren(). */
-    renderSubagentChildren() {
+    /** Actions for the Agent header row (copy output + expand/reduce), exposed to the
+     *  renderer via the host. Rendered on the row, not above the children — so there's no
+     *  empty toolbar band. Expand is always offered while the box is expanded: even with
+     *  ≤3 children the collapsed view caps the height and scrolls, so the user still needs
+     *  a way to lift the cap and see the whole transcript. */
+    renderHeaderActions() {
+        if (this.subagentChildren.length === 0) {
+            return nothing;
+        }
+        return html`
+            <cv-copy-btn
+                .text=${this._subagentToMarkdown()}
+                title="Copy subagent output"
+            ></cv-copy-btn>
+            <fluent-button
+                appearance="subtle"
+                size="small"
+                icon-only
+                title=${this.subagentExpanded ? 'Reduce' : 'Show all'}
+                @click=${this._onToggleSubagent}
+                >${unsafeHTML(
+                    this.subagentExpanded ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular,
+                )}</fluent-button
+            >
+        `;
+    }
+
+    /** Nested child rows/messages (Agent tool). Lit-owned, so it stays in the
+     *  component; the host exposes it to the renderer via renderChildren(). */
+    renderChildren() {
         if (this.subagentChildren.length === 0) {
             return nothing;
         }
         // Collapsed shows the last 3; expanded shows whatever subagentChildren holds
-        // (the full list once fetched). The "…"/toggle appears when more exist.
+        // (the full list once fetched). The "…" marker appears when more exist.
         const shown = this.subagentExpanded
             ? this.subagentChildren
             : this.subagentChildren.slice(-3);
         const hasToggle = this.hasMore || this.subagentChildren.length > 3;
-        // No title here: the Agent row header already shows the description.
-        // The toolbar carries only the actions (copy + expand), pushed right.
         return html`
-            <div class="cv-subagent-toolbar">
-                <cv-copy-btn
-                    .text=${this._subagentToMarkdown()}
-                    title="Copy subagent output"
-                ></cv-copy-btn>
-                ${
-                    hasToggle
-                        ? html`<fluent-button
-                              appearance="subtle"
-                              size="small"
-                              icon-only
-                              title=${this.subagentExpanded ? 'Reduce' : 'Show all'}
-                              @click=${this._onToggleSubagent}
-                          >
-                              ${unsafeHTML(this.subagentExpanded ? ChevronUp16Regular : ChevronDown16Regular)}
-                          </fluent-button>`
-                        : nothing
-                }
-            </div>
             <div
                 class="cv-subagent-children ${this.subagentExpanded ? '' : 'cv-subagent-collapsed'}"
             >
