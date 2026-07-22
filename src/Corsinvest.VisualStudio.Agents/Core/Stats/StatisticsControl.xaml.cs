@@ -38,6 +38,12 @@ public partial class StatisticsControl : UserControl
         Loaded += (_, _) =>
         {
             _loaded = true;
+            // Index once when the tab opens; when it finishes, OnIndexingCompleted re-reads.
+            if (_paths != null)
+            {
+                var indexing = StatsService.StartIndexing(_workingDirectory, _paths);
+                IndexingText.Visibility = indexing ? Visibility.Visible : Visibility.Collapsed;
+            }
             _ = ReloadAsync();
         };
         Unloaded += (_, _) => StatsService.IndexingCompleted -= OnIndexingCompleted;
@@ -45,15 +51,17 @@ public partial class StatisticsControl : UserControl
 
     private void OnFilterChanged(object sender, SelectionChangedEventArgs e)
     {
+        // Only re-read from cache on a filter change — no re-index (that's a one-time open cost).
         if (_loaded) { _ = ReloadAsync(); }
     }
 
     private void OnIndexingCompleted()
     {
-        // Raised on a background thread — marshal to the UI before touching WPF.
+        // Raised on a background thread — marshal to the UI, hide the spinner, re-read once.
         _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            IndexingText.Visibility = Visibility.Collapsed;
             await ReloadAsync();
         });
     }
@@ -65,9 +73,6 @@ public partial class StatisticsControl : UserControl
         {
             var scope = SelectedScope();
             var range = SelectedRange();
-            StatsService.StartIndexing(_workingDirectory, _paths);
-            IndexingText.Visibility = StatsService.IsIndexing ? Visibility.Visible : Visibility.Collapsed;
-
             var wd = _workingDirectory;
             var paths = _paths;
             var resp = await Task.Run(() => StatsService.BuildResponse(scope, range, wd, "", paths));
@@ -84,7 +89,6 @@ public partial class StatisticsControl : UserControl
     private void Apply(StatsResponse r)
     {
         if (r == null) { return; }
-        IndexingText.Visibility = r.Indexing ? Visibility.Visible : Visibility.Collapsed;
         TotalTokensText.Text = r.TotalTokens.ToString("N0");
         SessionsText.Text = r.TotalSessions.ToString("N0");
         MessagesText.Text = r.TotalMessages.ToString("N0");
@@ -96,7 +100,33 @@ public partial class StatisticsControl : UserControl
         }
         ToolCallsText.Text = toolCalls.ToString("N0");
 
-        ModelGrid.ItemsSource = r.ModelBreakdown;
+        ActiveDaysText.Text = r.ActiveDays.ToString("N0");
+        CurrentStreakText.Text = r.CurrentStreak + "d";
+        LongestStreakText.Text = r.LongestStreak + "d";
+        PeakHourText.Text = r.PeakHour >= 0 ? $"{r.PeakHour:D2}:00" : "—";
+        FavoriteModelText.Text = string.IsNullOrEmpty(r.FavoriteModel) ? "—" : r.FavoriteModel;
+        ImagesText.Text = r.ImageCount.ToString("N0");
+        AttachmentsText.Text = r.FileCount.ToString("N0");
+        SubagentsText.Text = r.SubagentSessions.ToString("N0");
+        SubagentTokensText.Text = FormatTokens(r.SubagentTokens);
+
+        var rows = new System.Collections.Generic.List<ModelRow>();
+        if (r.ModelBreakdown != null)
+        {
+            for (var i = 0; i < r.ModelBreakdown.Length; i++)
+            {
+                rows.Add(ModelRow.From(r.ModelBreakdown[i], i));
+            }
+        }
+        ModelsList.ItemsSource = rows;
+    }
+
+    /// <summary>Compact token count: 12.3M / 4.5k / 812 — matches the WebView dialog's formatTokens.</summary>
+    private static string FormatTokens(long n)
+    {
+        if (n >= 1_000_000) { return (n / 1_000_000.0).ToString("0.#") + "M"; }
+        if (n >= 1_000) { return (n / 1_000.0).ToString("0.#") + "k"; }
+        return n.ToString("N0");
     }
 
     private StatsScope SelectedScope()
