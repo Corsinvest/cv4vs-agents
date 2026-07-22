@@ -23,11 +23,7 @@ internal sealed class StatisticsEditorPane : WindowPane, IVsPersistDocData, IPer
 
     public StatisticsEditorPane() : base(null)
     {
-        Content = new System.Windows.Controls.TextBlock
-        {
-            Text = "Statistics (placeholder)",
-            Margin = new System.Windows.Thickness(12),
-        };
+        Content = new StatisticsControl();
     }
 
     // IVsPersistDocData — no file backing: never dirty, nothing to load or save.
