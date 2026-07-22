@@ -6,9 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [1.0.0] - 2026-07-21
+## [1.0.0-rc1] - 2026-07-22
 
-First public release. Requires the Claude Code CLI, installed separately with
+First public preview. Requires the Claude Code CLI, installed separately with
 `npm i -g @anthropic-ai/claude-code` — the extension drives it and never bundles it.
 
 ### Added
