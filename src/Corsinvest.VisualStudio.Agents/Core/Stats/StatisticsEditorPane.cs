@@ -17,6 +17,10 @@ namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 /// step. The factory returns this same object as both doc view and doc data.</summary>
 internal sealed class StatisticsEditorPane : WindowPane, IVsPersistDocData, IPersistFileFormat
 {
+    // The placeholder file path VS opened. Held only so GetCurFile can return it (the RDT moniker);
+    // its content is never read — the UI pulls from StatsService.
+    private string _fileName = "";
+
     public StatisticsEditorPane() : base(null)
     {
         Content = new System.Windows.Controls.TextBlock
@@ -45,7 +49,11 @@ internal sealed class StatisticsEditorPane : WindowPane, IVsPersistDocData, IPer
         return VSConstants.S_OK;
     }
 
-    int IVsPersistDocData.LoadDocData(string pszMkDocument) => VSConstants.S_OK;
+    int IVsPersistDocData.LoadDocData(string pszMkDocument)
+    {
+        _fileName = pszMkDocument ?? "";
+        return VSConstants.S_OK;
+    }
 
     int IVsPersistDocData.SetUntitledDocPath(string pszDocDataPath) => VSConstants.S_OK;
 
@@ -81,7 +89,7 @@ internal sealed class StatisticsEditorPane : WindowPane, IVsPersistDocData, IPer
 
     int IPersistFileFormat.GetCurFile(out string ppszFilename, out uint pnFormatIndex)
     {
-        ppszFilename = StatisticsDocument.Moniker;
+        ppszFilename = _fileName;
         pnFormatIndex = 0;
         return VSConstants.S_OK;
     }
@@ -100,7 +108,12 @@ internal sealed class StatisticsEditorPane : WindowPane, IVsPersistDocData, IPer
         return VSConstants.S_OK;
     }
 
-    int IPersistFileFormat.Load(string pszFilename, uint grfMode, int fReadOnly) => VSConstants.S_OK;
+    int IPersistFileFormat.Load(string pszFilename, uint grfMode, int fReadOnly)
+    {
+        if (pszFilename != null) { _fileName = pszFilename; }
+        // Content is never read from disk — the UI pulls from StatsService.
+        return VSConstants.S_OK;
+    }
 
     int IPersistFileFormat.Save(string pszFilename, int fRemember, uint nFormatIndex) => VSConstants.S_OK;
 

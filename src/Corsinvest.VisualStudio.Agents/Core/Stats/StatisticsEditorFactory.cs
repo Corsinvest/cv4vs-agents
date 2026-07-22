@@ -51,7 +51,11 @@ internal sealed class StatisticsEditorFactory : IVsEditorFactory, IDisposable
         pguidCmdUI = Guid.Empty;
         pgrfCDW = 0;
 
-        // A frameless singleton never re-uses existing doc data.
+        if ((grfCreateDoc & (VSConstants.CEF_OPENFILE | VSConstants.CEF_SILENT)) == 0)
+        {
+            return VSConstants.E_INVALIDARG;
+        }
+        // We create fresh doc data every time (the pane pulls live from StatsService, not the file).
         if (punkDocDataExisting != IntPtr.Zero) { return VSConstants.VS_E_INCOMPATIBLEDOCDATA; }
 
         var pane = new StatisticsEditorPane();
