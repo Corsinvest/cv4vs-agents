@@ -68,6 +68,10 @@ public sealed partial class SessionManager
                 text = (string)content;
             }
             if (string.IsNullOrWhiteSpace(text)) { return null; }
+            // Drop the editor-context block cv-prompt prepends, so a real prompt sent with IDE
+            // context is not mistaken for a "<"-tag meta line and discarded.
+            text = Chat.MetaInjection.StripIdeContext(text).TrimStart();
+            if (string.IsNullOrWhiteSpace(text)) { return null; }
             return text.StartsWith("<") || text.StartsWith("[Request interrupted") ? null : text;
         }
         catch { return null; }

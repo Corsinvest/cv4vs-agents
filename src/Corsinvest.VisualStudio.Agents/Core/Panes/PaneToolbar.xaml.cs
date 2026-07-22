@@ -53,21 +53,26 @@ public partial class PaneToolbar : UserControl
     // refresh (turn-end re-read) overwrite what the user is typing.
     private bool _titleFocused;
 
-    /// <summary>Reflect the pane's current title. Hidden when the pane doesn't
-    /// support a title (CLI) or there's no session yet (fresh chat). Skipped while
-    /// the box is focused, so a turn-end refresh doesn't clobber the user's edit.</summary>
+    // Shown when a titleable pane has no title yet — a fresh chat, or one whose ai-title has not
+    // been generated (or written) yet. Like VS Code's "Untitled": the box stays visible and
+    // editable rather than vanishing, so there is always something to click to rename.
+    private const string UntitledPlaceholder = "Untitled";
+
+    /// <summary>Reflect the pane's current title. Hidden only when the pane doesn't support a title
+    /// (CLI); a titleable pane with no title shows the Untitled placeholder. Skipped while the box
+    /// is focused, so a turn-end refresh doesn't clobber the user's edit.</summary>
     private void UpdateTitle()
     {
         if (_titleFocused) { return; }
-        var title = _pane.SupportsTitleEditing ? _pane.SessionTitle : null;
-        if (string.IsNullOrWhiteSpace(title))
+        if (!_pane.SupportsTitleEditing)
         {
             TitleHost.Visibility = Visibility.Collapsed;
             TitleBox.Text = string.Empty;
             return;
         }
+        var title = _pane.SessionTitle;
         TitleHost.Visibility = Visibility.Visible;
-        TitleBox.Text = title;
+        TitleBox.Text = string.IsNullOrWhiteSpace(title) ? UntitledPlaceholder : title;
     }
 
     private void OnTitleGotFocus(object sender, RoutedEventArgs e) => _titleFocused = true;
@@ -98,7 +103,11 @@ public partial class PaneToolbar : UserControl
     private void CommitTitle()
     {
         var newTitle = TitleBox.Text?.Trim();
-        if (!string.IsNullOrEmpty(newTitle) && newTitle != _pane.SessionTitle)
+        // Compare against what the box was showing, placeholder included: leaving "Untitled"
+        // untouched must not rename the session to "Untitled". This mirrors VS Code, which shows
+        // the placeholder as the input's value and commits only a real change against it.
+        var current = string.IsNullOrWhiteSpace(_pane.SessionTitle) ? UntitledPlaceholder : _pane.SessionTitle;
+        if (!string.IsNullOrEmpty(newTitle) && newTitle != current)
         {
             _pane.RenameSession(newTitle);
         }
