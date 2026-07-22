@@ -115,10 +115,8 @@
         <Strings><ButtonText>Provide Feedback</ButtonText></Strings>
       </Button>
 
-      <Button guid="guidAgentsCommandSet" id="ReleasesCommandId" priority="0x0100" type="Button">
+      <Button guid="guidAgentsCommandSet" id="ReleasesCommandId" priority="0x0150" type="Button">
         <Parent guid="guidAgentsCommandSet" id="HelpGroup"/>
-        <Icon guid="ImageCatalogGuid" id="Tag"/>
-        <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Release Notes</ButtonText></Strings>
       </Button>
       <Button guid="guidAgentsCommandSet" id="AboutCommandId" priority="0x0200" type="Button">
