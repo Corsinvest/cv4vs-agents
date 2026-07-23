@@ -107,7 +107,7 @@ internal static class StatsService
     /// reading only the filesystem/cache — no .jsonl parse. The range hides sessions (and the days /
     /// projects / folders that become empty) worked outside it; "All time" shows everything. Every
     /// node carries the <see cref="StatsSelection"/> its level aggregates.</summary>
-    public static StatsTreeNode BuildTree(StatsRange range = StatsRange.All)
+    public static StatsTreeNode BuildTree(StatsRange range = StatsRange.All, bool includeDays = true)
     {
         // Sessions whose last activity is before this are hidden (DateTime.MinValue = show all).
         var minDay = range switch
@@ -142,7 +142,7 @@ internal static class StatsService
                 .Where(x => x.hasData == true)
                 .ToList();
 
-            BuildFolderTree(pNode, profile, projects, minDay);
+            BuildFolderTree(pNode, profile, projects, minDay, includeDays);
         }
         return root;
     }
@@ -163,7 +163,7 @@ internal static class StatsService
     // until it branches), and every folder node is clickable — it aggregates every project beneath it.
     private static void BuildFolderTree(StatsTreeNode profileNode, Profile profile,
         List<(string dir, string cwd, bool? hasData, Dictionary<string, DateTime> lastActivity, string label)> projects,
-        DateTime minDay)
+        DateTime minDay, bool includeDays)
     {
         var root = new FolderBuild { Segment = "", FullPath = "" };
         foreach (var p in projects)
@@ -189,7 +189,7 @@ internal static class StatsService
 
         foreach (var child in root.Sub.Values)
         {
-            var folderNode = ToFolderNode(child, profile, minDay);
+            var folderNode = ToFolderNode(child, profile, minDay, includeDays);
             if (folderNode != null) { profileNode.Children.Add(folderNode); }
         }
     }
@@ -197,7 +197,7 @@ internal static class StatsService
     // Convert a FolderBuild to a StatsTreeNode, collapsing single-child chains (a folder with one
     // subfolder and no projects of its own merges its label with the child, like a solution tree).
     // Returns null when the whole subtree is empty in the range (nothing to show).
-    private static StatsTreeNode ToFolderNode(FolderBuild fb, Profile profile, DateTime minDay)
+    private static StatsTreeNode ToFolderNode(FolderBuild fb, Profile profile, DateTime minDay, bool includeDays)
     {
         // Collapse: while this folder holds exactly one subfolder and no direct projects, fold the
         // child up into it so "…\source\repos\Clienti" reads as one node until it branches.
@@ -212,12 +212,12 @@ internal static class StatsService
         var children = new List<StatsTreeNode>();
         foreach (var sub in fb.Sub.Values)
         {
-            var subNode = ToFolderNode(sub, profile, minDay);
+            var subNode = ToFolderNode(sub, profile, minDay, includeDays);
             if (subNode != null) { children.Add(subNode); }
         }
         foreach (var p in fb.Projects.OrderBy(p => p.label, StringComparer.OrdinalIgnoreCase))
         {
-            var prjNode = BuildProjectNode(profile, p.dir, p.cwd, p.label, p.lastActivity, minDay);
+            var prjNode = BuildProjectNode(profile, p.dir, p.cwd, p.label, p.lastActivity, minDay, includeDays);
             if (prjNode != null) { children.Add(prjNode); }
         }
         if (children.Count == 0) { return null; } // nothing in range under this folder
@@ -263,7 +263,7 @@ internal static class StatsService
     // "Sessions" branch (whole files, titled). Both are clickable (= the project total). Returns
     // null when nothing remains in the range.
     private static StatsTreeNode BuildProjectNode(Profile profile, string projectDir, string cwd,
-        string label, Dictionary<string, DateTime> lastActivity, DateTime minDay)
+        string label, Dictionary<string, DateTime> lastActivity, DateTime minDay, bool includeDays)
     {
         var paths = ClaudePaths.ForProfile(profile);
 
@@ -294,7 +294,9 @@ internal static class StatsService
             Selection = new StatsSelection { Scope = StatsScope.Project, Profile = profile, ProjectDir = projectDir },
         };
 
-        if (days.Count > 0)
+        // Days branch: only in the Statistics tree. The Context tree (includeDays=false) has no
+        // calendar level — get_context_usage needs a session, not a date.
+        if (includeDays && days.Count > 0)
         {
             var daysNode = new StatsTreeNode
             {
@@ -317,18 +319,25 @@ internal static class StatsService
 
         if (sessions.Count > 0)
         {
-            var sessionsNode = new StatsTreeNode
+            // Statistics wraps sessions in a "Sessions (N)" container; Context attaches them straight
+            // to the project, so a project expands directly to its sessions.
+            var parent = prjNode;
+            if (includeDays)
             {
-                Label = $"Sessions ({sessions.Count})",
-                Kind = StatsNodeKind.SessionsGroup,
-                Selection = new StatsSelection { Scope = StatsScope.Project, Profile = profile, ProjectDir = projectDir },
-            };
-            prjNode.Children.Add(sessionsNode);
+                var sessionsNode = new StatsTreeNode
+                {
+                    Label = $"Sessions ({sessions.Count})",
+                    Kind = StatsNodeKind.SessionsGroup,
+                    Selection = new StatsSelection { Scope = StatsScope.Project, Profile = profile, ProjectDir = projectDir },
+                };
+                prjNode.Children.Add(sessionsNode);
+                parent = sessionsNode;
+            }
             foreach (var s in sessions)
             {
                 titles.TryGetValue(s.id, out var title);
                 var time = s.when.ToString("g", CultureInfo.CurrentCulture);
-                sessionsNode.Children.Add(new StatsTreeNode
+                parent.Children.Add(new StatsTreeNode
                 {
                     Label = string.IsNullOrEmpty(title) ? time : title,
                     Tooltip = string.IsNullOrEmpty(title) ? null : $"{time} — {title}",
@@ -427,6 +436,22 @@ internal static class StatsService
         }
         catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".ProjectCacheInfo", ex); }
         return (null, null, lastActivity);
+    }
+
+    /// <summary>The working directory of a project (the projectCwd stored at the cache root), for a
+    /// --resume that needs a real cwd. Read-only; null when the project isn't indexed yet.</summary>
+    public static string CwdForProject(Profile profile, string projectDir)
+    {
+        if (profile == null || string.IsNullOrEmpty(projectDir)) { return null; }
+        try
+        {
+            return StatsCache.LoadProjectCwd(CacheFileFor(ClaudePaths.ForProfile(profile), projectDir));
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.LogException(nameof(StatsService) + ".CwdForProject", ex);
+            return null;
+        }
     }
 
     private static DateTime FromUnixMs(long ms)
