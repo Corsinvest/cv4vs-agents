@@ -102,4 +102,38 @@ internal sealed class StatsTotals
             return t;
         }
     }
+
+    /// <summary>Fold another totals into this one (for the cross-profile All scope): scalars add,
+    /// per-day / per-model / per-tool / per-hour maps merge by key. Streaks/peak/favorite are
+    /// derived later in BuildResponse from the merged Days/HourCounts, so they aren't merged here.</summary>
+    public void Merge(StatsTotals other)
+    {
+        TotalSessions += other.TotalSessions;
+        TotalMessages += other.TotalMessages;
+        ImageCount += other.ImageCount;
+        FileCount += other.FileCount;
+        SubagentTokens += other.SubagentTokens;
+        SubagentFiles += other.SubagentFiles;
+
+        foreach (var kv in other.ModelUsage)
+        {
+            if (!ModelUsage.TryGetValue(kv.Key, out var mt)) { mt = new ModelTokens(); ModelUsage[kv.Key] = mt; }
+            mt.Add(kv.Value);
+        }
+        foreach (var kv in other.Days)
+        {
+            if (!Days.TryGetValue(kv.Key, out var d)) { d = new DayActivity(); Days[kv.Key] = d; }
+            d.Add(kv.Value);
+        }
+        foreach (var kv in other.HourCounts)
+        {
+            HourCounts.TryGetValue(kv.Key, out var c);
+            HourCounts[kv.Key] = c + kv.Value;
+        }
+        foreach (var kv in other.ToolCallsByName)
+        {
+            ToolCallsByName.TryGetValue(kv.Key, out var c);
+            ToolCallsByName[kv.Key] = c + kv.Value;
+        }
+    }
 }

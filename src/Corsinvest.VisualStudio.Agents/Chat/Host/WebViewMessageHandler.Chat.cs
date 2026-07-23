@@ -165,16 +165,28 @@ internal sealed partial class WebViewMessageHandler
             var statsPaths = PaneClaudePaths;
             var statsWd = client.WorkingDirectory;
             var statsSid = client.SessionId;
+            var statsProfile = entry.Profile;
             var pStats = data.ToObject<Contracts.GetStatsRequest>();
             var statsScope = MapScope(pStats?.Scope ?? Contracts.StatsScopeDto.All);
             var statsRange = MapRange(pStats?.Range ?? Contracts.StatsRangeDto.All);
+            // The WebView's "All" means "this pane's whole profile" (it has no cross-profile view);
+            // Project/Session are the current workspace's project dir + open session.
+            var statsSel = new Core.Stats.StatsSelection
+            {
+                Scope = statsScope,
+                Profile = statsProfile,
+                ProjectDir = statsScope == Core.Stats.StatsScope.Profile ? null : statsPaths.SessionFolder(statsWd),
+                SessionIds = statsScope == Core.Stats.StatsScope.Session
+                    ? new System.Collections.Generic.List<string> { statsSid }
+                    : null,
+            };
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 // Read-only: aggregate from the on-disk cache (fast). The background index is
                 // NOT started here — that would loop (index done → re-read → GetStats → index …).
                 // The WebView kicks the index once on open via StartStatsIndex.
                 var dto = await Task.Run(
-                    () => Core.Stats.StatsService.BuildResponse(statsScope, statsRange, statsWd, statsSid, statsPaths));
+                    () => Core.Stats.StatsService.BuildResponse(statsSel, statsRange));
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 bridge.SendResponse(BridgeMessages.ToWebView.Chat.Stats, statsReqId, dto);
             }).FileAndForget(nameof(WebViewMessageHandler));
