@@ -21,6 +21,17 @@
         </Strings>
       </Menu>
 
+      <!-- Developer: diagnostic entries (data folder, output log) tucked out of the main list. -->
+      <Menu guid="guidAgentsCommandSet" id="DeveloperSubMenu" priority="0x0200" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
+        <Icon guid="ImageCatalogGuid" id="CodeInformation"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Developer</ButtonText>
+        </Strings>
+      </Menu>
+
       <!-- Help &amp; Feedback: docs first (it answers without bothering anyone), contact after. -->
       <Menu guid="guidAgentsCommandSet" id="HelpSubMenu" priority="0x0100" type="Menu">
         <Parent guid="guidAgentsCommandSet" id="HelpGroup"/>
@@ -42,6 +53,10 @@
       <Group guid="guidAgentsCommandSet" id="ProfilesGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
       </Group>
+      <!-- Statistics on its own, between profiles and the global actions (auto separators). -->
+      <Group guid="guidAgentsCommandSet" id="StatisticsGroup" priority="0x0180">
+        <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
+      </Group>
       <!-- Global (not per-pane) entries. Separate groups because VS draws the separators
            between groups — no <Separator> needed. -->
       <Group guid="guidAgentsCommandSet" id="GlobalGroup" priority="0x0200">
@@ -49,6 +64,10 @@
       </Group>
       <Group guid="guidAgentsCommandSet" id="HelpGroup" priority="0x0300">
         <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
+      </Group>
+      <!-- Entries inside the Developer submenu. -->
+      <Group guid="guidAgentsCommandSet" id="DeveloperGroup" priority="0x0100">
+        <Parent guid="guidAgentsCommandSet" id="DeveloperSubMenu"/>
       </Group>
       <Group guid="guidAgentsCommandSet" id="HelpDocsGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="HelpSubMenu"/>
@@ -77,20 +96,20 @@
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Settings</ButtonText></Strings>
       </Button>
-      <Button guid="guidAgentsCommandSet" id="DataFolderCommandId" priority="0x0200" type="Button">
-        <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
+      <Button guid="guidAgentsCommandSet" id="DataFolderCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="DeveloperGroup"/>
         <Icon guid="ImageCatalogGuid" id="OpenFolder"/>
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Open data folder</ButtonText></Strings>
       </Button>
-      <Button guid="guidAgentsCommandSet" id="OutputLogCommandId" priority="0x0300" type="Button">
-        <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
+      <Button guid="guidAgentsCommandSet" id="OutputLogCommandId" priority="0x0200" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="DeveloperGroup"/>
         <Icon guid="ImageCatalogGuid" id="Output"/>
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>View output log</ButtonText></Strings>
       </Button>
-      <Button guid="guidAgentsCommandSet" id="StatisticsCommandId" priority="0x0400" type="Button">
-        <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
+      <Button guid="guidAgentsCommandSet" id="StatisticsCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="StatisticsGroup"/>
         <Icon guid="ImageCatalogGuid" id="Statistics"/>
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Statistics</ButtonText></Strings>
@@ -144,9 +163,12 @@
       <IDSymbol name="MyMenuGroup" value="0x1020" />
       <IDSymbol name="ProfilesSubMenu" value="0x1030" />
       <IDSymbol name="ProfilesGroup" value="0x1040" />
+      <IDSymbol name="StatisticsGroup" value="0x1045" />
       <IDSymbol name="GlobalGroup" value="0x1050" />
       <IDSymbol name="HelpGroup" value="0x1060" />
       <IDSymbol name="HelpSubMenu" value="0x1070" />
+      <IDSymbol name="DeveloperSubMenu" value="0x1075" />
+      <IDSymbol name="DeveloperGroup" value="0x1076" />
       <IDSymbol name="HelpDocsGroup" value="0x1080" />
       <IDSymbol name="HelpContactGroup" value="0x1090" />
       <!-- Must match PackageIds.cs — a mismatch is silent: the entry just never appears. -->
