@@ -16,7 +16,7 @@ import type {
     GetSubagentRequest,
     GetSubagentResponse,
     GetUsageRequest,
-    GetUsageResponse,
+    UsageDto,
     GetContextUsageRequest,
     GetContextUsageResponse,
     GetStatsRequest,
@@ -61,7 +61,7 @@ export const GetCompactSummaryReq = new RequestType<
     GetCompactSummaryResponse
 >(Msg.fromWebView.chat.getCompactSummary, Msg.toWebView.chat.compactSummaryResult);
 
-export const GetUsageReq = new RequestType<GetUsageRequest, GetUsageResponse>(
+export const GetUsageReq = new RequestType<GetUsageRequest, UsageDto>(
     Msg.fromWebView.chat.getUsage,
     Msg.toWebView.chat.usage,
 );

@@ -9,73 +9,8 @@ import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import { dialogStyles, iconStyles } from '../styles/shared';
 import { bridge } from '../../core/bridge';
 import { GetUsageReq } from '../../core/request-types';
-import type { AccountDto } from '../../core/generated/AccountDto';
+import type { UsageDto, RateWindowDto, UsageAttributionDto } from '../../core/types';
 import { CvDialogBase } from './cv-dialog-base';
-
-interface RateWindow {
-    utilization: number | null;
-    resets_at: string | null;
-}
-interface BehaviorItem {
-    key: string;
-    pct: number;
-    count: number;
-}
-interface AttributionItem {
-    name?: string;
-    pct?: number;
-}
-interface BehaviorPeriod {
-    behaviors?: BehaviorItem[] | null;
-    skills?: AttributionItem[] | null;
-    subagents?: AttributionItem[] | null;
-    agents?: AttributionItem[] | null;
-    plugins?: AttributionItem[] | null;
-    mcp_servers?: AttributionItem[] | null;
-}
-interface UsagePayload {
-    account: AccountDto | null;
-    usage: {
-        subscription_type?: string | null;
-        rate_limits_available?: boolean;
-        rate_limits?: Record<string, RateWindow | null> | null;
-        session?: { total_cost_usd?: number } | null;
-        behaviors?: { day?: BehaviorPeriod | null; week?: BehaviorPeriod | null } | null;
-    } | null;
-}
-
-/** key → (headline given pct) + body. Mirrors the VS Code extension's insight copy. */
-const BEHAVIOR_COPY: Record<string, { headline: (pct: number) => string; body: string }> = {
-    long_context: {
-        headline: (pct) => `${pct}% of your usage was at >150k context`,
-        body: 'Longer sessions are more expensive even when cached. /compact mid-task, /clear when switching to new tasks.',
-    },
-    subagent_heavy: {
-        headline: (pct) => `${pct}% of your usage came from subagent-heavy sessions`,
-        body: 'Each subagent runs its own requests. Be deliberate about spawning them — and consider configuring a cheaper model for simpler subagents.',
-    },
-};
-
-/** Human label for the auth backend (apiProvider). */
-function authLabel(p?: string): string {
-    switch (p) {
-        case 'firstParty':
-            return 'Claude AI';
-        case 'bedrock':
-            return 'Amazon Bedrock';
-        case 'vertex':
-            return 'Google Vertex';
-        case 'gateway':
-            return 'Enterprise gateway';
-        default:
-            return p ? p : 'API key';
-    }
-}
-
-/** "Claude max" from "max", "Claude pro" from "pro", etc. */
-function planLabel(sub?: string | null): string {
-    return sub ? `Claude ${sub}` : '—';
-}
 
 /** Relative "Resets in 3h / 4d" from an ISO timestamp. Coarse on purpose. */
 function resetsIn(iso: string | null, nowMs: number): string {
@@ -197,7 +132,7 @@ export class CvUsageDialog extends CvDialogBase {
         `,
     ];
 
-    @state() private _data: UsagePayload | null = null;
+    @state() private _data: UsageDto | null = null;
     @state() private _loading = false;
     @state() private _period: 'day' | 'week' = 'day';
     // Timestamp captured when the payload arrives, for "Resets in …" (Date.now
@@ -213,7 +148,7 @@ export class CvUsageDialog extends CvDialogBase {
             bridge
                 .sendRequest(GetUsageReq, {})
                 .then((d) => {
-                    this._data = (d as UsagePayload) ?? null;
+                    this._data = (d as UsageDto) ?? null;
                     this._nowMs = Date.now();
                     this._loading = false;
                 })
@@ -223,20 +158,16 @@ export class CvUsageDialog extends CvDialogBase {
         }
     }
 
-    /** A labelled usage bar (Session / Weekly / per-model). */
-    private _bar(label: string, w: RateWindow | null | undefined): TemplateResult | typeof nothing {
-        if (!w) {
-            return nothing;
-        }
-        const pct = Math.max(0, Math.min(100, Math.round(w.utilization ?? 0)));
+    /** A usage bar — the C# DTO already carries the label + clamped utilization. */
+    private _bar(w: RateWindowDto): TemplateResult {
         return html`
             <div class="row">
                 <div class="row-head">
-                    <span>${label}</span>
-                    <span class="pct">${pct}%</span>
+                    <span>${w.name}</span>
+                    <span class="pct">${w.utilization}%</span>
                 </div>
-                <fluent-progress-bar class="bar" value=${pct}></fluent-progress-bar>
-                <div class="reset">${resetsIn(w.resets_at, this._nowMs)}</div>
+                <fluent-progress-bar class="bar" value=${w.utilization}></fluent-progress-bar>
+                <div class="reset">${resetsIn(w.resetsAt, this._nowMs)}</div>
             </div>
         `;
     }
@@ -244,7 +175,7 @@ export class CvUsageDialog extends CvDialogBase {
     /** One attribution group (Skills / Subagents / Plugins / MCP servers). */
     private _attribution(
         title: string,
-        items: AttributionItem[] | null | undefined,
+        items: UsageAttributionDto[] | null | undefined,
     ): TemplateResult | typeof nothing {
         if (!items || items.length === 0) {
             return nothing;
@@ -258,8 +189,8 @@ export class CvUsageDialog extends CvDialogBase {
                 ${items.map(
                     (it) => html`
                         <div class="attr-row">
-                            <span>${it.name ?? '—'}</span>
-                            <span class="pct">${Math.round(it.pct ?? 0)}%</span>
+                            <span>${it.name}</span>
+                            <span class="pct">${it.pct}%</span>
                         </div>
                     `,
                 )}
@@ -275,21 +206,13 @@ export class CvUsageDialog extends CvDialogBase {
         }
     };
 
-    /** "What's contributing to your limits usage?" — from `usage.behaviors`. */
+    /** "What's contributing to your limits usage?" — the C# DTO already carries the day/week
+     *  behaviours (insights filtered, attribution grouped). */
     private _renderBehaviors(): TemplateResult | typeof nothing {
-        const b = this._data?.usage?.behaviors;
-        const period = b?.[this._period];
-        if (!b || !period) {
+        const period = this._period === 'day' ? this._data?.day : this._data?.week;
+        if (!period) {
             return nothing;
         }
-        const insights = (period.behaviors ?? []).filter((x) => BEHAVIOR_COPY[x.key]);
-        const hasAttribution =
-            (period.skills?.length ?? 0) +
-                (period.subagents?.length ?? 0) +
-                (period.agents?.length ?? 0) +
-                (period.plugins?.length ?? 0) +
-                (period.mcp_servers?.length ?? 0) >
-            0;
         const periodLabel = this._period === 'day' ? 'Last 24h' : 'Last 7 days';
         return html`
             <div class="section">What's contributing to your limits usage?</div>
@@ -310,24 +233,23 @@ export class CvUsageDialog extends CvDialogBase {
                 ${periodLabel} · these are independent characteristics of your usage, not a
                 breakdown
             </div>
-            ${insights.map((x) => {
-                const copy = BEHAVIOR_COPY[x.key];
-                return html`
+            ${(period.insights ?? []).map(
+                (x) => html`
                     <div class="insight">
-                        <div class="insight-head">${copy.headline(Math.round(x.pct ?? 0))}</div>
-                        <div class="insight-body">${copy.body}</div>
+                        <div class="insight-head">${x.headline}</div>
+                        <div class="insight-body">${x.body}</div>
                     </div>
-                `;
-            })}
+                `,
+            )}
             <div class="insight">
                 <div class="insight-head">Skills, subagents, plugins, and MCP servers</div>
                 ${
-                    hasAttribution
+                    period.hasAttribution
                         ? html`
                               ${this._attribution('Skills', period.skills)}
-                              ${this._attribution('Subagents', period.subagents ?? period.agents)}
+                              ${this._attribution('Subagents', period.subagents)}
                               ${this._attribution('Plugins', period.plugins)}
-                              ${this._attribution('MCP servers', period.mcp_servers)}
+                              ${this._attribution('MCP servers', period.mcpServers)}
                           `
                         : html`<div class="insight-body">
                               No attribution data yet · accumulates as you use Claude
@@ -341,14 +263,12 @@ export class CvUsageDialog extends CvDialogBase {
         if (this._loading || !this._data) {
             return html`<div class="cv-dialog-loading">Loading…</div>`;
         }
-        const acct = this._data.account;
-        const usage = this._data.usage;
-        const rl = usage?.rate_limits ?? null;
-        const sub = usage?.subscription_type ?? acct?.subscriptionType;
+        const d = this._data;
+        const acct = d.account;
         return html`
             <div class="section">Account</div>
             <div class="kv">
-                <span>Auth method</span><span>${authLabel(acct?.apiProvider)}</span>
+                <span>Auth method</span><span>${d.authMethod}</span>
             </div>
             ${
                 acct?.email
@@ -362,16 +282,13 @@ export class CvUsageDialog extends CvDialogBase {
                       </div>`
                     : nothing
             }
-            <div class="kv"><span>Plan</span><span>${planLabel(sub)}</span></div>
+            <div class="kv"><span>Plan</span><span>${d.plan}</span></div>
 
             ${
-                rl && usage?.rate_limits_available !== false
+                d.rateLimitsAvailable && d.windows.length > 0
                     ? html`
                           <div class="section">Usage</div>
-                          ${this._bar('Session (5hr)', rl.five_hour)}
-                          ${this._bar('Weekly (7 day)', rl.seven_day)}
-                          ${this._bar('Weekly Opus', rl.seven_day_opus)}
-                          ${this._bar('Weekly Sonnet', rl.seven_day_sonnet)}
+                          ${d.windows.map((w) => this._bar(w))}
                       `
                     : html`<div class="section">Usage</div>
                           <div class="cv-dialog-loading">
@@ -379,9 +296,15 @@ export class CvUsageDialog extends CvDialogBase {
                           </div>`
             }
 
-            <fluent-link class="link" href="https://claude.ai/settings/usage" target="_blank"
-                >Manage usage on claude.ai</fluent-link
-            >
+            ${
+                // Only for the first-party Claude AI account (undefined = native Claude); for 3rd-party
+                // providers (z.ai/GLM, Bedrock, Vertex, gateway) the claude.ai link points nowhere useful.
+                !acct?.apiProvider || acct.apiProvider === 'firstParty'
+                    ? html`<fluent-link class="link" href="https://claude.ai/settings/usage" target="_blank"
+                          >Manage usage on claude.ai</fluent-link
+                      >`
+                    : nothing
+            }
 
             ${this._renderBehaviors()}
         `;

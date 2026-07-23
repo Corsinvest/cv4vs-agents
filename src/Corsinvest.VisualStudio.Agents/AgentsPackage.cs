@@ -47,6 +47,9 @@ namespace Corsinvest.VisualStudio.Agents;
 [ProvideEditorFactory(typeof(Core.Stats.StatisticsEditorFactory), 0, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
 [ProvideEditorExtension(typeof(Core.Stats.StatisticsEditorFactory), Core.Stats.StatisticsDocument.Extension, 50)]
 [ProvideEditorLogicalView(typeof(Core.Stats.StatisticsEditorFactory), "{00000000-0000-0000-0000-000000000000}")]
+[ProvideEditorFactory(typeof(Core.Usage.UsageEditorFactory), 0, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
+[ProvideEditorExtension(typeof(Core.Usage.UsageEditorFactory), Core.Usage.UsageDocument.Extension, 50)]
+[ProvideEditorLogicalView(typeof(Core.Usage.UsageEditorFactory), "{00000000-0000-0000-0000-000000000000}")]
 [Guid(PackageGuids.AgentsPackageString)]
 public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolutionLoadEvents
 {
@@ -211,6 +214,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         await GlobalMenuCommands.InitializeAsync(this);
         // Register the Statistics document-tab editor factory (opened by the View → Statistics command).
         RegisterEditorFactory(new Core.Stats.StatisticsEditorFactory());
+        RegisterEditorFactory(new Core.Usage.UsageEditorFactory());
         // Lazy MCP lifecycle: server runs only while >=1 session is open,
         // driven by PaneRegistry's 0->1 / ->0 transitions.
         Core.Panes.PaneRegistry.Instance.FirstSessionStarted += () => Mcp.McpServerHost.Instance.EnsureStarted();
