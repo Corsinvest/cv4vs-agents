@@ -47,22 +47,54 @@ const MODEL_COLORS = [
 ];
 const modelColor = (i: number): string => MODEL_COLORS[i % MODEL_COLORS.length];
 
-// Round a value up to a "nice" axis ceiling: 1/2/5 × 10ⁿ (e.g. 11.3M → 12M via 1.13×10⁷ → 2×10⁷?
-// no — we want the smallest nice number ≥ v, so 1.13e7 → 1.5e7). Steps: 1, 1.5, 2, 3, 5, 7.5, 10.
-const niceCeil = (v: number): number => {
-    if (v <= 0) {
+/** One model's slice of a day's tokens (for the hover card): name, tokens, its palette colour. */
+interface DayRow {
+    name: string;
+    tok: number;
+    color?: string;
+}
+
+/** Everything one day's hover card needs — shared by the heatmap and the chart so both cards are
+ *  identical: activity counts + the per-model token rows. */
+interface DayInfo {
+    date: string;
+    messages: number;
+    sessions: number;
+    tools: number;
+    rows: DayRow[];
+}
+
+// The smallest "nice" step >= target: cycles 1 → 2 → 5 → 10 → 20 → 50 → … (the 1/2/5 sequence,
+// magnitude climbing on its own), so it scales to any size with no hardcoded ceiling. Shared logic
+// with the WPF chart (CvBarChart.NiceStep).
+const niceStep = (target: number): number => {
+    const cycle = [1, 2, 5];
+    let step = 1;
+    let i = 0;
+    while (step < target) {
+        step = cycle[i % 3] * Math.pow(10, Math.floor(i / 3));
+        i++;
+    }
+    return step;
+};
+
+// The axis ceiling: pick a nice tick step (~ max/TICKS), then round the top up to a whole number of
+// those steps, so every gridline lands on a round value.
+const niceCeil = (max: number, ticks: number): number => {
+    if (max <= 0) {
         return 1;
     }
-    const pow = Math.pow(10, Math.floor(Math.log10(v)));
-    const norm = v / pow; // 1..10
-    const step = [1, 1.5, 2, 3, 5, 7.5, 10].find((s) => s >= norm) ?? 10;
-    return step * pow;
+    const step = niceStep(max / ticks);
+    return Math.ceil(max / step) * step;
 };
 
 // Y-axis tick label: like formatTokens but always 1 decimal above 1M (matches the "12.0M" look).
 const formatAxis = (n: number): string => {
+    if (n >= 1_000_000_000) {
+        return +(n / 1_000_000_000).toFixed(1) + 'B';
+    }
     if (n >= 1_000_000) {
-        return (n / 1_000_000).toFixed(1) + 'M';
+        return +(n / 1_000_000).toFixed(1) + 'M';
     }
     if (n >= 1_000) {
         return Math.round(n / 1_000) + 'k';
@@ -201,10 +233,10 @@ export class CvStatsDialog extends CvDialogBase {
             .tabs {
                 margin-bottom: 12px;
             }
-            /* Overview card grid. */
+            /* Overview card grid — 4 columns (16 cards → 4×4), matching the WPF Statistics tab. */
             .grid {
                 display: grid;
-                grid-template-columns: repeat(3, 1fr);
+                grid-template-columns: repeat(4, 1fr);
                 gap: 8px;
             }
             .card {
@@ -290,33 +322,11 @@ export class CvStatsDialog extends CvDialogBase {
                 white-space: nowrap;
                 overflow: visible;
             }
-            /* Bar tooltip (fluent-tooltip): date header + one row per model (dot · id · tokens).
-             * Match the padding pattern of the other tooltips (cv-context-gauge/cv-segmented); DON'T
-             * set display on the fluent-tooltip host (it toggles none↔visible for show/hide). The
-             * content wrapper is a plain BLOCK — a single child of fluent's slot, so it doesn't get
-             * laid out inline, and its rows stack; a flex wrapper here broke fluent's positioning. */
+            /* Bar tooltip (fluent-tooltip): the card content comes from _dayTip with inline styles
+             * (it also renders inside cv-heatmap's shadow, so it can't rely on classes here). DON'T
+             * set display on the fluent-tooltip host — it toggles none↔visible for show/hide. */
             fluent-tooltip {
                 padding: 6px 8px;
-            }
-            .chart-tip {
-                display: block;
-            }
-            .chart-tip-date {
-                font-weight: var(--fontWeightSemibold);
-                margin-bottom: 4px;
-            }
-            .chart-tip-row {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                white-space: nowrap;
-            }
-            .chart-tip-name {
-                flex: 1 1 auto;
-            }
-            .chart-tip-tok {
-                margin-left: 12px;
-                color: var(--colorNeutralForeground3);
             }
             .chart-bar {
                 flex: 1 1 auto;
@@ -535,11 +545,24 @@ export class CvStatsDialog extends CvDialogBase {
             d && n !== undefined ? n.toLocaleString() : dash;
         const tok = (n: number | undefined): string =>
             d && n !== undefined ? formatTokens(n) : dash;
+        // Token split + tool-call total, summed from the breakdowns (the top-level DTO has only the
+        // combined total). Kept in the same order the WPF Statistics tab uses.
+        const models = d?.modelBreakdown ?? [];
+        const input = models.reduce((s, m) => s + m.inputTokens, 0);
+        const output = models.reduce((s, m) => s + m.outputTokens, 0);
+        const cache = models.reduce((s, m) => s + m.cacheReadTokens + m.cacheCreationTokens, 0);
+        const toolCalls = (d?.topTools ?? []).reduce((s, t) => s + t.count, 0);
         return html`
             <div class="grid">
                 ${this._stat('Total tokens', tok(d?.totalTokens))}
+                ${this._stat('Input tokens', d ? tok(input) : dash)}
+                ${this._stat('Output tokens', d ? tok(output) : dash)}
+                ${this._stat('Cache tokens', d ? tok(cache) : dash)}
                 ${this._stat('Sessions', num(d?.totalSessions))}
                 ${this._stat('Messages', num(d?.totalMessages))}
+                ${this._stat('Tool calls', d ? num(toolCalls) : dash)}
+                ${this._stat('Subagents', num(d?.subagentSessions))}
+                ${this._stat('Subagent tokens', tok(d?.subagentTokens))}
                 ${this._stat('Active days', num(d?.activeDays))}
                 ${this._stat('Current streak', d ? `${d.currentStreak}d` : dash)}
                 ${this._stat('Longest streak', d ? `${d.longestStreak}d` : dash)}
@@ -547,8 +570,6 @@ export class CvStatsDialog extends CvDialogBase {
                 ${this._stat('Favorite model', d?.favoriteModel || dash)}
                 ${this._stat('Images', num(d?.imageCount))}
                 ${this._stat('Attachments', num(d?.fileCount))}
-                ${this._stat('Subagents', num(d?.subagentSessions))}
-                ${this._stat('Subagent tokens', tok(d?.subagentTokens))}
             </div>
             ${d && d.dailyActivity.length > 0 ? this._renderHeatmap(d) : nothing}
         `;
@@ -556,20 +577,97 @@ export class CvStatsDialog extends CvDialogBase {
 
     /** GitHub-style activity heatmap under the overview cards, via the generic cv-heatmap.
      *  Passes each day's semantic intensity (0–4); cv-heatmap owns the color scale. */
+    /** The rich per-day hover card, identical for the heatmap and the chart (mirrors the WPF
+     *  StatsTooltip): full date, an activity line (messages · sessions · tools), then one coloured
+     *  row per model (dot · name · tokens · share-of-day), largest first.
+     *  Styles are INLINE (not classes): this card renders inside two different shadow roots — the
+     *  dialog and cv-heatmap — so it can't rely on either host's stylesheet. */
+    private _dayTip(info: DayInfo): TemplateResult {
+        const total = info.rows.reduce((s, r) => s + r.tok, 0);
+        const rows = [...info.rows].sort((a, b) => b.tok - a.tok);
+        const dim = 'color:var(--colorNeutralForeground3)';
+        return html`
+            <div>
+                <div style="font-weight:var(--fontWeightSemibold)">${formatDay(info.date)}</div>
+                <div style="${dim};font-size:var(--fontSizeBase200);margin-bottom:6px">
+                    ${info.messages.toLocaleString()} messages ·
+                    ${info.sessions.toLocaleString()} sessions · ${info.tools.toLocaleString()} tools
+                </div>
+                ${rows.map((r) => {
+                    const pct = total > 0 ? (r.tok / total) * 100 : 0;
+                    return html`
+                        <div
+                            style="display:flex;align-items:center;gap:6px;white-space:nowrap"
+                        >
+                            <span
+                                style="width:10px;height:10px;border-radius:2px;flex:0 0 auto;background:${r.color}"
+                            ></span>
+                            <span style="flex:1 1 auto">${r.name}</span>
+                            <span style="margin-left:12px;${dim}">
+                                ${formatTokens(r.tok)} (${pct.toFixed(0)}%)
+                            </span>
+                        </div>
+                    `;
+                })}
+            </div>
+        `;
+    }
+
+    /** Per-date info shared by the heatmap and the chart: activity + per-model token rows (in
+     *  breakdown/colour order, non-zero). One pass over dailyActivity + dailyModelTokens. */
+    private _dayInfos(d: StatsResponse): Map<string, DayInfo> {
+        const colorOf = new Map<string, string>();
+        d.modelBreakdown.forEach((m, i) => colorOf.set(m.model, modelColor(i)));
+
+        const infos = new Map<string, DayInfo>();
+        const get = (date: string): DayInfo => {
+            let i = infos.get(date);
+            if (!i) {
+                i = { date, messages: 0, sessions: 0, tools: 0, rows: [] };
+                infos.set(date, i);
+            }
+            return i;
+        };
+        for (const a of d.dailyActivity) {
+            const i = get(a.date);
+            i.messages += a.messageCount;
+            i.sessions += a.sessionCount;
+            i.tools += a.toolCallCount;
+        }
+        for (const day of d.dailyModelTokens) {
+            const i = get(day.date);
+            const tm = (day.tokensByModel ?? {}) as Record<string, number>;
+            // Breakdown order so colours line up with the model dots / chart segments.
+            for (const m of d.modelBreakdown) {
+                const tok = tm[m.model] ?? 0;
+                if (tok > 0) {
+                    i.rows.push({ name: m.model, tok, color: colorOf.get(m.model) });
+                }
+            }
+        }
+        return infos;
+    }
+
     private _renderHeatmap(d: StatsResponse): TemplateResult {
         const cols = buildHeatmap(d.dailyActivity);
         if (cols.length === 0) {
             return html``;
         }
+        const infos = this._dayInfos(d);
         const heatCols: HeatmapCell[][] = cols.map((col) =>
-            col.map((c) =>
-                c.future
-                    ? { intensity: 0, empty: true }
-                    : {
-                          intensity: c.intensity,
-                          title: `${c.date}: ${c.count.toLocaleString()} messages`,
-                      },
-            ),
+            col.map((c) => {
+                if (c.future) {
+                    return { intensity: 0, empty: true };
+                }
+                const info = infos.get(c.date) ?? {
+                    date: c.date,
+                    messages: c.count,
+                    sessions: 0,
+                    tools: 0,
+                    rows: [],
+                };
+                return { intensity: c.intensity, tip: this._dayTip(info) };
+            }),
         );
         return html`
             <cv-heatmap
@@ -618,6 +716,18 @@ export class CvStatsDialog extends CvDialogBase {
             }
             buckets.set(k, byModel);
         }
+
+        // Activity (messages/sessions/tools) summed into the same buckets, for the hover card.
+        const activity = new Map<string, { messages: number; sessions: number; tools: number }>();
+        for (const a of d.dailyActivity) {
+            const k = bucketKey(a.date);
+            const acc = activity.get(k) ?? { messages: 0, sessions: 0, tools: 0 };
+            acc.messages += a.messageCount;
+            acc.sessions += a.sessionCount;
+            acc.tools += a.toolCallCount;
+            activity.set(k, acc);
+        }
+
         const keys = [...buckets.keys()].sort();
         const totals = keys.map((k) =>
             [...(buckets.get(k)?.values() ?? [])].reduce((s, v) => s + v, 0),
@@ -626,8 +736,8 @@ export class CvStatsDialog extends CvDialogBase {
 
         // Y axis: round the peak up to a "nice" ceiling (1/2/5 × 10ⁿ) so bars don't touch the top and
         // the ticks read cleanly; bars scale on this ceiling, not the raw max, so the ticks line up.
-        const niceMax = niceCeil(max);
         const TICKS = 4; // → 5 gridlines counting 0
+        const niceMax = niceCeil(max, TICKS);
         const ticks = Array.from({ length: TICKS + 1 }, (_, i) => (niceMax / TICKS) * i);
 
         // X axis: ~10 date labels evenly spaced (all of them would overlap on wide ranges).
@@ -651,14 +761,21 @@ export class CvStatsDialog extends CvDialogBase {
                         <div class="chart-bars">
                             ${keys.map((k, ki) => {
                                 const byModel = buckets.get(k) ?? new Map();
-                                // Rows for the tooltip: color dot + model id + tokens, breakdown order, non-zero.
-                                const rows = d.modelBreakdown
+                                // The hover card, identical to the heatmap's: rows in breakdown/colour
+                                // order, non-zero; plus this bucket's activity counts.
+                                const rows: DayRow[] = d.modelBreakdown
                                     .map((m) => ({
                                         name: m.model,
                                         tok: byModel.get(m.model) ?? 0,
                                         color: colorOf.get(m.model),
                                     }))
                                     .filter((r) => r.tok > 0);
+                                const act = activity.get(k) ?? {
+                                    messages: 0,
+                                    sessions: 0,
+                                    tools: 0,
+                                };
+                                const info: DayInfo = { date: k, ...act, rows };
                                 const barId = `bar-${ki}`;
                                 return html`
                                     <div
@@ -677,27 +794,7 @@ export class CvStatsDialog extends CvDialogBase {
                                             ></span>`;
                                         })}
                                     </div>
-                                    <fluent-tooltip anchor=${barId}>
-                                        <div class="chart-tip">
-                                            <div class="chart-tip-date">${formatDay(k)}</div>
-                                            ${rows.map(
-                                                (r) => html`
-                                                    <div class="chart-tip-row">
-                                                        <span
-                                                            class="model-dot"
-                                                            style="background:${r.color}"
-                                                        ></span>
-                                                        <span class="chart-tip-name"
-                                                            >${r.name}</span
-                                                        >
-                                                        <span class="chart-tip-tok"
-                                                            >${formatTokens(r.tok)}</span
-                                                        >
-                                                    </div>
-                                                `,
-                                            )}
-                                        </div>
-                                    </fluent-tooltip>
+                                    <fluent-tooltip anchor=${barId}>${this._dayTip(info)}</fluent-tooltip>
                                 `;
                             })}
                         </div>
