@@ -89,7 +89,23 @@ public partial class StatisticsControl : UserControl
     private void Apply(StatsResponse r)
     {
         if (r == null) { return; }
-        TotalTokensText.Text = r.TotalTokens.ToString("N0");
+        TotalTokensText.Text = StatsFormat.FormatTokens(r.TotalTokens);
+        TotalTokensText.ToolTip = r.TotalTokens.ToString("N0");
+
+        long input = 0, output = 0, cache = 0;
+        if (r.ModelBreakdown != null)
+        {
+            foreach (var m in r.ModelBreakdown)
+            {
+                input += m.InputTokens;
+                output += m.OutputTokens;
+                cache += m.CacheReadTokens + m.CacheCreationTokens;
+            }
+        }
+        InputTokensText.Text = StatsFormat.FormatTokens(input);
+        OutputTokensText.Text = StatsFormat.FormatTokens(output);
+        CacheTokensText.Text = StatsFormat.FormatTokens(cache);
+
         SessionsText.Text = r.TotalSessions.ToString("N0");
         MessagesText.Text = r.TotalMessages.ToString("N0");
 
@@ -108,7 +124,7 @@ public partial class StatisticsControl : UserControl
         ImagesText.Text = r.ImageCount.ToString("N0");
         AttachmentsText.Text = r.FileCount.ToString("N0");
         SubagentsText.Text = r.SubagentSessions.ToString("N0");
-        SubagentTokensText.Text = FormatTokens(r.SubagentTokens);
+        SubagentTokensText.Text = StatsFormat.FormatTokens(r.SubagentTokens);
 
         var rows = new System.Collections.Generic.List<ModelRow>();
         if (r.ModelBreakdown != null)
@@ -119,14 +135,9 @@ public partial class StatisticsControl : UserControl
             }
         }
         ModelsList.ItemsSource = rows;
-    }
 
-    /// <summary>Compact token count: 12.3M / 4.5k / 812 — matches the WebView dialog's formatTokens.</summary>
-    private static string FormatTokens(long n)
-    {
-        if (n >= 1_000_000) { return (n / 1_000_000.0).ToString("0.#") + "M"; }
-        if (n >= 1_000) { return (n / 1_000.0).ToString("0.#") + "k"; }
-        return n.ToString("N0");
+        Heatmap.SetData(StatsChart.BuildHeatmap(r));
+        BarChart.SetData(StatsChart.BuildBars(r));
     }
 
     private StatsScope SelectedScope()

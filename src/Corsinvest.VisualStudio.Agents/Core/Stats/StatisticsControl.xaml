@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
              xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
+             xmlns:stats="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Stats"
              toolkit:Themes.UseVsTheme="True">
   <UserControl.Resources>
     <!-- Summary tile: bordered block, uppercase label over a large value. -->
@@ -13,14 +14,15 @@
       <Setter Property="Padding" Value="12,8" />
       <Setter Property="Margin" Value="0,0,10,10" />
     </Style>
-    <Style x:Key="TileLabelStyle" TargetType="TextBlock">
-      <Setter Property="FontSize" Value="11" />
-      <Setter Property="Opacity" Value="0.7" />
-      <Setter Property="Margin" Value="0,0,0,2" />
-    </Style>
+    <!-- Value on top (big), label under it (small) — KPI-card order, like the WebView dialog. -->
     <Style x:Key="TileValueStyle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="22" />
       <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style x:Key="TileLabelStyle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Opacity" Value="0.7" />
+      <Setter Property="Margin" Value="0,2,0,0" />
     </Style>
     <Style x:Key="SectionHeadStyle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="12" />
@@ -48,8 +50,8 @@
       <ComboBox x:Name="RangeCombo" Width="110" Height="24" Padding="6,0" VerticalAlignment="Center"
                 VerticalContentAlignment="Center" SelectionChanged="OnFilterChanged">
         <ComboBoxItem Content="Last 7 days" />
-        <ComboBoxItem Content="Last 30 days" IsSelected="True" />
-        <ComboBoxItem Content="All time" />
+        <ComboBoxItem Content="Last 30 days" />
+        <ComboBoxItem Content="All time" IsSelected="True" />
       </ComboBox>
       <TextBlock x:Name="IndexingText" Text="Indexing…" VerticalAlignment="Center"
                  Margin="16,0,0,0" Opacity="0.7" Visibility="Collapsed" />
@@ -61,7 +63,7 @@
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
-        <ColumnDefinition Width="360" />
+        <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
 
       <!-- Overview: summary tiles + (charts come in the next phase). -->
@@ -70,86 +72,108 @@
         <UniformGrid Columns="4">
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="TOTAL TOKENS" Style="{StaticResource TileLabelStyle}" />
               <TextBlock x:Name="TotalTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="TOTAL TOKENS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="SESSIONS" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="InputTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="INPUT TOKENS" Style="{StaticResource TileLabelStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock x:Name="OutputTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="OUTPUT TOKENS" Style="{StaticResource TileLabelStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock x:Name="CacheTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="CACHE TOKENS" Style="{StaticResource TileLabelStyle}" />
+            </StackPanel>
+          </Border>
+          <!-- Row 2: volume -->
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
               <TextBlock x:Name="SessionsText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="SESSIONS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="MESSAGES" Style="{StaticResource TileLabelStyle}" />
               <TextBlock x:Name="MessagesText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="MESSAGES" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="TOOL CALLS" Style="{StaticResource TileLabelStyle}" />
               <TextBlock x:Name="ToolCallsText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="TOOL CALLS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="ACTIVE DAYS" Style="{StaticResource TileLabelStyle}" />
+              <TextBlock x:Name="SubagentsText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="SUBAGENTS" Style="{StaticResource TileLabelStyle}" />
+            </StackPanel>
+          </Border>
+          <!-- Row 3: sub-agent tokens + activity -->
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
+              <TextBlock x:Name="SubagentTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="SUBAGENT TOKENS" Style="{StaticResource TileLabelStyle}" />
+            </StackPanel>
+          </Border>
+          <Border Style="{StaticResource TileStyle}">
+            <StackPanel>
               <TextBlock x:Name="ActiveDaysText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="ACTIVE DAYS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="CURRENT STREAK" Style="{StaticResource TileLabelStyle}" />
               <TextBlock x:Name="CurrentStreakText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="CURRENT STREAK" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="LONGEST STREAK" Style="{StaticResource TileLabelStyle}" />
               <TextBlock x:Name="LongestStreakText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="LONGEST STREAK" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
+          <!-- Row 4: meta -->
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="PEAK HOUR" Style="{StaticResource TileLabelStyle}" />
               <TextBlock x:Name="PeakHourText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="PEAK HOUR" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="FAVORITE MODEL" Style="{StaticResource TileLabelStyle}" />
               <TextBlock x:Name="FavoriteModelText" Text="—" Style="{StaticResource TileValueStyle}"
                          TextTrimming="CharacterEllipsis" MaxWidth="200" />
+              <TextBlock Text="FAVORITE MODEL" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="IMAGES" Style="{StaticResource TileLabelStyle}" />
               <TextBlock x:Name="ImagesText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="IMAGES" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock Text="ATTACHMENTS" Style="{StaticResource TileLabelStyle}" />
               <TextBlock x:Name="AttachmentsText" Text="—" Style="{StaticResource TileValueStyle}" />
-            </StackPanel>
-          </Border>
-          <Border Style="{StaticResource TileStyle}">
-            <StackPanel>
-              <TextBlock Text="SUBAGENTS" Style="{StaticResource TileLabelStyle}" />
-              <TextBlock x:Name="SubagentsText" Text="—" Style="{StaticResource TileValueStyle}" />
-            </StackPanel>
-          </Border>
-          <Border Style="{StaticResource TileStyle}">
-            <StackPanel>
-              <TextBlock Text="SUBAGENT TOKENS" Style="{StaticResource TileLabelStyle}" />
-              <TextBlock x:Name="SubagentTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock Text="ATTACHMENTS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
         </UniformGrid>
-        <!-- Charts placeholder (OxyPlot added in the next phase). -->
-        <Border x:Name="ChartsHost" Margin="0,6,0,0" />
+        <!-- Activity heatmap (GitHub-style) — same look as the WebView dialog. -->
+        <TextBlock Text="ACTIVITY" Style="{StaticResource SectionHeadStyle}" Margin="0,10,0,10" />
+        <stats:CvHeatmap x:Name="Heatmap" HorizontalAlignment="Left" />
       </StackPanel>
 
       <!-- Models: per-model row = name + % + share bar + in/out tokens (mirrors the WebView dialog). -->
@@ -186,6 +210,9 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+        <!-- Daily tokens, stacked per model (same colours as the MODELS list above). -->
+        <TextBlock Text="DAILY TOKENS" Style="{StaticResource SectionHeadStyle}" Margin="0,20,0,10" />
+        <stats:CvBarChart x:Name="BarChart" Height="230" HorizontalAlignment="Stretch" />
       </StackPanel>
     </Grid>
   </Grid>

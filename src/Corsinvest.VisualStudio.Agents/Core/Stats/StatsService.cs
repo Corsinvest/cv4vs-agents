@@ -140,8 +140,9 @@ internal static class StatsService
             .Select(kv => new Contracts.StatsDayModelDto
             {
                 Date = kv.Key,
-                // The stacked chart wants the combined per-model total for each day.
-                TokensByModel = kv.Value.TokensByModel.ToDictionary(x => x.Key, x => x.Value.Total),
+                // The stacked chart wants a meaningful per-model daily total — GrandTotal (incl. cache),
+                // since raw input/output is tiny next to cache read/creation.
+                TokensByModel = kv.Value.TokensByModel.ToDictionary(x => x.Key, x => x.Value.GrandTotal),
             })
             .ToArray();
 
@@ -346,7 +347,13 @@ internal static class StatsService
             if (ranged && !InRange(kv.Key, fromDate, toDate)) { continue; }
             if (!totals.Days.TryGetValue(kv.Key, out var d)) { d = new DayActivity(); totals.Days[kv.Key] = d; }
             d.Add(kv.Value);
-            if (!f.IsSubagent) { totals.TotalMessages += kv.Value.MessageCount; }
+            // This file is one session; count it once per day it was active (subagents aren't
+            // sessions). SessionCount isn't tracked per-day in the aggregate, so it's derived here.
+            if (!f.IsSubagent)
+            {
+                d.SessionCount++;
+                totals.TotalMessages += kv.Value.MessageCount;
+            }
         }
 
         // Model usage. Unranged: exact per-model split from the file aggregate. Ranged: the same

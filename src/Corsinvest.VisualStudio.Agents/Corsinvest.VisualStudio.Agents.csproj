@@ -104,10 +104,6 @@
          caret colors, foreground/background per theme) without us hand-picking
          EnvironmentColors brushes. -->
     <PackageReference Include="Community.VisualStudio.Toolkit.17" Version="17.0.551" GeneratePathProperty="true" />
-    <!-- Charts for the Statistics document-tab. OxyPlot.Wpf is MIT, pure-managed WPF
-         rendering — no SkiaSharp / native binaries, so it is safe inside the VSIX
-         (a shared VS process; native deps risk version clashes with other extensions). -->
-    <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />
   </ItemGroup>
   <ItemGroup>
     <!-- Wire DTOs shared C#<->TS (single source of truth; TS interfaces generated
@@ -234,6 +230,11 @@
     <Compile Include="Core\Stats\StatisticsDocument.cs" />
     <Compile Include="Core\Stats\StatsPalette.cs" />
     <Compile Include="Core\Stats\ModelRow.cs" />
+    <Compile Include="Core\Stats\StatsChart.cs" />
+    <Compile Include="Core\Stats\StatsFormat.cs" />
+    <Compile Include="Core\Stats\StatsTooltip.cs" />
+    <Compile Include="Core\Stats\CvHeatmap.cs" />
+    <Compile Include="Core\Stats\CvBarChart.cs" />
     <Compile Include="Core\Stats\StatisticsControl.xaml.cs">
       <DependentUpon>StatisticsControl.xaml</DependentUpon>
     </Compile>

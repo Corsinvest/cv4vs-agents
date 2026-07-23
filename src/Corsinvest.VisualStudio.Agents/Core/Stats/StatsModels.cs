@@ -20,6 +20,10 @@ internal sealed class ModelTokens
 
     public long Total => InputTokens + OutputTokens;
 
+    /// <summary>All tokens incl. cache — the meaningful "how much did this day cost" measure, since
+    /// cache read/creation dwarf raw input/output.</summary>
+    public long GrandTotal => InputTokens + OutputTokens + CacheReadTokens + CacheCreationTokens;
+
     public void Add(ModelTokens other)
     {
         InputTokens += other.InputTokens;
