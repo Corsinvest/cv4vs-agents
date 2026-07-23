@@ -51,13 +51,18 @@
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
 
-    <!-- Profiles list. -->
+    <!-- Profiles list, with the Refresh toolbar above it (like the Statistics tree toolbar). -->
     <Grid Grid.Column="0">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
         <RowDefinition Height="*" />
       </Grid.RowDefinitions>
-      <TextBlock Grid.Row="0" Text="PROFILES" Style="{StaticResource SectionHeadStyle}" Margin="0,0,0,6" />
+      <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,4">
+        <Button x:Name="RefreshButton" Style="{StaticResource ToolBtn}" Click="OnRefreshClick"
+                ToolTip="Refresh usage">
+          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
+        </Button>
+      </StackPanel>
       <ListBox x:Name="ProfileList" Grid.Row="1"
                SelectionChanged="OnProfileSelected"
                Background="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
@@ -80,28 +85,15 @@
 
     <!-- Usage panel for the selected profile. -->
     <Grid Grid.Column="2" Margin="10,0,0,0">
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto" />
-        <RowDefinition Height="*" />
-      </Grid.RowDefinitions>
-
-      <!-- Toolbar: Refresh. -->
-      <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,4">
-        <Button x:Name="RefreshButton" Style="{StaticResource ToolBtn}" Click="OnRefreshClick"
-                ToolTip="Refresh usage">
-          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
-        </Button>
-      </StackPanel>
-
       <!-- While fetching: a centered progress bar + message, over the whole usage area. -->
-      <StackPanel x:Name="LoadingPanel" Grid.Row="1" Visibility="Collapsed"
+      <StackPanel x:Name="LoadingPanel" Visibility="Collapsed"
                   HorizontalAlignment="Center" VerticalAlignment="Center">
         <ProgressBar IsIndeterminate="True" Width="180" Height="4" />
         <TextBlock Text="Fetching usage…" HorizontalAlignment="Center" Margin="0,10,0,0" Opacity="0.7" />
       </StackPanel>
 
       <!-- Content: account + usage, or a message. -->
-      <ScrollViewer x:Name="ContentScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <ScrollViewer x:Name="ContentScroller" VerticalScrollBarVisibility="Auto">
         <StackPanel MaxWidth="420" HorizontalAlignment="Left">
           <TextBlock x:Name="MessageText" Opacity="0.7" Visibility="Collapsed"
                      TextWrapping="Wrap" Margin="0,8,0,0" />

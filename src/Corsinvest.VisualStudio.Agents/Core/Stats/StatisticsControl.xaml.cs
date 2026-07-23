@@ -25,19 +25,29 @@ public partial class StatisticsControl : UserControl
     // The current tree selection (what BuildResponse aggregates). Starts on the current workspace's
     // project when there is one, else All.
     private StatsSelection _sel = new() { Scope = StatsScope.All };
+    // The selected tree node (for the donut's child breakdown; _sel alone can't navigate children).
+    private StatsTreeNode _selNode;
     private bool _loaded;
+    // Monotonic reload token. A rebuild + re-select can start two ReloadAsyncs; each captures the
+    // token at entry and only paints if it is still the latest, so a stale one can't overwrite the
+    // fresh donut/tiles (the donut used to flash in then vanish).
+    private int _reloadToken;
 
     public StatisticsControl()
     {
         InitializeComponent();
 
         _sel = InitialSelection();
-        StatsService.IndexingCompleted += OnIndexingCompleted;
         Loaded += (_, _) =>
         {
+            // Loaded fires again every time the tab is re-activated / regains focus. Re-attach the
+            // indexing event each time (Unloaded detaches it), but run the initial build + index ONLY
+            // once — otherwise it would re-index on every tab switch.
+            StatsService.IndexingCompleted -= OnIndexingCompleted;
+            StatsService.IndexingCompleted += OnIndexingCompleted;
+            if (_loaded) { return; }
             _loaded = true;
             BuildTree();
-            // Index every profile once when the tab opens; OnIndexingCompleted re-reads + rebuilds.
             SetIndexing(StatsService.StartIndexing());
             _ = ReloadAsync();
         };
@@ -78,7 +88,8 @@ public partial class StatisticsControl : UserControl
 
         var path = new List<StatsTreeNode>();
         if (!FindPath(root, _sel, path)) { path.Clear(); path.Add(root); }
-        _sel = path[path.Count - 1].Selection;
+        _selNode = path[path.Count - 1];
+        _sel = _selNode.Selection;
         // Mark expand/select on the models BEFORE assigning ItemsSource, so the TreeViewItem
         // containers are generated already expanded (setting IsExpanded afterwards doesn't
         // retroactively generate the containers of a collapsed ancestor).
@@ -126,6 +137,11 @@ public partial class StatisticsControl : UserControl
     {
         if (e.NewValue is StatsTreeNode node)
         {
+            // BuildTree's programmatic IsSelected re-selects the very node it just stored in _selNode;
+            // that echo would race the caller's own ReloadAsync (the donut flickered in then out). Only
+            // a real user pick lands on a different node — reload just for those.
+            if (ReferenceEquals(node, _selNode)) { return; }
+            _selNode = node;
             _sel = node.Selection;
             if (_loaded) { _ = ReloadAsync(); }
         }
@@ -150,12 +166,14 @@ public partial class StatisticsControl : UserControl
         if (StatsService.StartIndexing(force)) { SetIndexing(true); }
     }
 
-    // While indexing, the two action buttons give way to the progress indicator (in the same slot);
-    // the range combo stays usable. Restored when the pass finishes.
+    // While indexing: a centered progress bar replaces the content area (Overview + Models), and the
+    // action buttons are disabled (not hidden); the range combo stays usable. Restored when done.
     private void SetIndexing(bool running)
     {
-        RefreshButtons.Visibility = running ? Visibility.Collapsed : Visibility.Visible;
-        IndexingPanel.Visibility = running ? Visibility.Visible : Visibility.Collapsed;
+        LoadingPanel.Visibility = running ? Visibility.Visible : Visibility.Collapsed;
+        OverviewPanel.Visibility = running ? Visibility.Collapsed : Visibility.Visible;
+        ModelsPanel.Visibility = running ? Visibility.Collapsed : Visibility.Visible;
+        RefreshButtons.IsEnabled = !running;
     }
 
     private void OnIndexingCompleted()
@@ -173,14 +191,25 @@ public partial class StatisticsControl : UserControl
 
     private async Task ReloadAsync()
     {
+        var token = ++_reloadToken;
         try
         {
             var range = SelectedRange();
             var sel = _sel;
+            var node = _selNode;
             var resp = await Task.Run(() => StatsService.BuildResponse(sel, range));
+            // The donut breaks the selected node's tokens down by child (empty for a leaf / <2 kids).
+            var slices = await Task.Run(() => StatsService.ChildBreakdown(node, range));
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            // A newer reload started while this one ran — drop this stale paint.
+            if (token != _reloadToken) { return; }
             Apply(resp);
+            Donut.SetData(slices);
+            // Show even a single child (a full 100% ring) — a hidden donut where the node clearly has
+            // data reads as a bug. Only a true leaf (no children) yields an empty list and hides it.
+            var showDonut = slices.Count >= 1;
+            BreakdownHead.Visibility = Donut.Visibility = showDonut ? Visibility.Visible : Visibility.Collapsed;
         }
         catch (Exception ex)
         {

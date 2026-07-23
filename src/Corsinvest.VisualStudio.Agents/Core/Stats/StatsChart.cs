@@ -20,11 +20,14 @@ internal sealed class BarSegment
     public int ColorIndex { get; set; }
 }
 
-/// <summary>Everything about one day, shared by the heatmap and the bar chart so their hover cards
-/// are identical: activity (messages/sessions/tools) + the per-model token segments + the total.</summary>
+/// <summary>Everything a hover card needs, shared by the heatmap, the bar chart and the donut so
+/// they're identical: activity (messages/sessions/tools) + the per-model token segments + the total.
+/// Title is a generic header (a project/session name for the donut); when null the header is the
+/// formatted Date (heatmap/chart).</summary>
 internal sealed class DayInfo
 {
     public string Date { get; set; }
+    public string Title { get; set; }
     public int Messages { get; set; }
     public int Sessions { get; set; }
     public int Tools { get; set; }
@@ -65,7 +68,11 @@ internal static class StatsChart
         foreach (var a in r.DailyActivity ?? Array.Empty<StatsDayDto>())
         {
             if (a.Date == null) { continue; }
-            if (!infos.TryGetValue(a.Date, out var info)) { info = new DayInfo { Date = a.Date }; infos[a.Date] = info; }
+            if (!infos.TryGetValue(a.Date, out var info))
+            {
+                info = new DayInfo { Date = a.Date };
+                infos[a.Date] = info;
+            }
             info.Messages += a.MessageCount;
             info.Sessions += a.SessionCount;
             info.Tools += a.ToolCallCount;

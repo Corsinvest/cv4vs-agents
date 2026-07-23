@@ -44,7 +44,11 @@ For the selected node:
 - **Overview** — summary tiles (total / input / output / cache tokens, sessions, messages, tool
   calls, active days, streaks, peak hour, favourite model, images, attachments, sub-agents) and a
   GitHub-style **activity heatmap**. Hovering a heatmap cell shows that day's messages, sessions,
-  tools and per-model token split.
+  tools and per-model token split. Below the heatmap, a **breakdown donut** splits the selected
+  node's tokens across its children — All by profile, a folder by project, a project by session, the
+  Days node by day. Top 7 by tokens, the rest folded into a grey **Others**; the legend lists each
+  slice with its token count and share, and hovering a slice reuses the heatmap's hover card. It is
+  hidden only for a leaf (a single session or day, which has no children to break down).
 - **Models** — each model with its share and input/output tokens, and a **daily-tokens** stacked bar
   chart (one segment per model, coloured to match the model dots). Hovering a bar breaks that day
   down. The Y axis auto-scales to a clean 1/2/5 step at any magnitude (k / M / B).
@@ -62,8 +66,8 @@ Two buttons on the tree toolbar:
   between projects or a session's working directory changed, so the labels/grouping are rebuilt from
   the current on-disk state.
 
-While either runs, the buttons give way to a progress indicator in the same spot; the tree and the
-right side refresh when it finishes, keeping your selection.
+While either runs, the buttons are disabled and the right side is replaced by a centered progress
+bar; the tree and the right side refresh when it finishes, keeping your selection.
 
 ### How it works
 

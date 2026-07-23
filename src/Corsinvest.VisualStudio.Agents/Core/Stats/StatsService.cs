@@ -641,6 +641,139 @@ internal static class StatsService
         return AggregateProject(paths, sel.ProjectDir, ids, fromDate, toDate, new StatsTotals());
     }
 
+    /// <summary>One donut slice: a child of the selected node, its token total, and the hover card
+    /// (DayInfo with Title = the child's name + its activity/per-model breakdown).</summary>
+    internal sealed class DonutSlice
+    {
+        public string Label { get; set; }
+        public long Tokens { get; set; }
+        public DayInfo Tooltip { get; set; }
+    }
+
+    private const int DonutTopN = 7;
+
+    /// <summary>The token breakdown of a node by its children — the donut data. Aggregates each
+    /// slice-child from the cache; keeps the top N and rolls the rest into "Others". Empty only for a
+    /// leaf (a single day/session, no children); a single child renders as a full 100% ring.</summary>
+    public static List<DonutSlice> ChildBreakdown(StatsTreeNode node, StatsRange range)
+    {
+        var children = SliceChildren(node);
+        if (children.Count == 0) { return new List<DonutSlice>(); }
+
+        var slices = BreakdownSessions(children, range) ?? BreakdownGeneric(children, range);
+
+        slices = slices.OrderByDescending(s => s.Tokens).ToList();
+        if (slices.Count <= DonutTopN) { return slices; }
+
+        // Roll everything past the top N into a single grey "Others" slice.
+        var top = slices.Take(DonutTopN).ToList();
+        var rest = slices.Skip(DonutTopN).ToList();
+        var otherTokens = rest.Sum(s => s.Tokens);
+        top.Add(new DonutSlice
+        {
+            Label = "Others",
+            Tokens = otherTokens,
+            Tooltip = new DayInfo { Title = $"Others ({rest.Count})", Total = otherTokens },
+        });
+        return top;
+    }
+
+    // Fast path when all slice-children are sessions of the SAME project (Project/Sessions node): load
+    // the project cache ONCE and aggregate each session from it in memory, instead of one cache Load
+    // per session (a project with 100 sessions would otherwise reload the same cache 100 times).
+    // Returns null when the children aren't uniform sessions → the caller falls back to the generic path.
+    private static List<DonutSlice> BreakdownSessions(List<StatsTreeNode> children, StatsRange range)
+    {
+        var first = children[0].Selection;
+        if (first.Scope != StatsScope.Session || first.Profile == null) { return null; }
+        var projectDir = first.ProjectDir;
+        if (children.Any(c => c.Selection.Scope != StatsScope.Session
+                              || !ReferenceEquals(c.Selection.Profile, first.Profile)
+                              || !string.Equals(c.Selection.ProjectDir, projectDir, StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
+        var (fromDate, toDate) = RangeBounds(range);
+        var paths = ClaudePaths.ForProfile(first.Profile);
+        var cache = StatsCache.Load(CacheFileFor(paths, projectDir)); // ONE load for all sessions
+
+        var slices = new List<DonutSlice>();
+        foreach (var child in children)
+        {
+            var sid = child.Selection.SessionIds?.FirstOrDefault();
+            if (sid == null) { continue; }
+            var totals = new StatsTotals();
+            foreach (var kv in cache)
+            {
+                // A session's entries are keyed "<sid>.jsonl" and "<sid>/subagents/agent-*.jsonl".
+                if (!kv.Key.StartsWith(sid, StringComparison.OrdinalIgnoreCase)) { continue; }
+                if (kv.Value.Aggregate != null) { Merge(totals, kv.Value.Aggregate, fromDate, toDate); }
+            }
+            var tokens = totals.TotalTokens;
+            if (tokens <= 0) { continue; }
+            slices.Add(new DonutSlice { Label = child.Label, Tokens = tokens, Tooltip = TooltipFrom(child.Label, totals) });
+        }
+        return slices;
+    }
+
+    // Generic path: one Aggregate per child (profiles / projects — few, so a cache Load each is fine).
+    private static List<DonutSlice> BreakdownGeneric(List<StatsTreeNode> children, StatsRange range)
+    {
+        var slices = new List<DonutSlice>();
+        foreach (var child in children)
+        {
+            var t = Aggregate(child.Selection, range);
+            var tokens = t.TotalTokens;
+            if (tokens <= 0) { continue; }
+            slices.Add(new DonutSlice { Label = child.Label, Tokens = tokens, Tooltip = TooltipFrom(child.Label, t) });
+        }
+        return slices;
+    }
+
+    // The nodes that become donut slices for the selected node: for a Project we descend into its
+    // Sessions branch; for the Days/Sessions containers into their real children; otherwise the
+    // node's direct children (profiles / projects). A leaf (single Day/Session) has none.
+    private static List<StatsTreeNode> SliceChildren(StatsTreeNode node)
+    {
+        if (node?.Selection == null) { return new List<StatsTreeNode>(); }
+        switch (node.Selection.Scope)
+        {
+            case StatsScope.Session:
+                return new List<StatsTreeNode>(); // leaf
+            case StatsScope.Project:
+                // Descend to the sessions under the "Sessions" container.
+                var sessions = node.Children.FirstOrDefault(c => c.Kind == StatsNodeKind.SessionsGroup);
+                return sessions?.Children ?? new List<StatsTreeNode>();
+            default:
+                // All → profiles, Profile/Folder → projects, Days/Sessions containers → their items.
+                return node.Children;
+        }
+    }
+
+    // Build the shared hover card from a child's aggregated totals (Title = the child's name).
+    private static DayInfo TooltipFrom(string title, StatsTotals t)
+    {
+        var order = new Dictionary<string, int>();
+        var models = t.ModelUsage.OrderByDescending(m => m.Value.Total).ToList();
+        for (var i = 0; i < models.Count; i++) { order[models[i].Key] = i; }
+
+        var info = new DayInfo
+        {
+            Title = title,
+            Messages = t.TotalMessages,
+            Sessions = t.TotalSessions,
+            Tools = t.ToolCallsByName.Values.Sum(),
+            Total = t.TotalTokens,
+        };
+        foreach (var m in models)
+        {
+            if (m.Value.Total <= 0) { continue; }
+            info.Segments.Add(new BarSegment { Model = m.Key, Tokens = m.Value.Total, ColorIndex = order[m.Key] });
+        }
+        return info;
+    }
+
     // Fold every project of one profile.
     private static StatsTotals AggregateProfile(ClaudePaths paths, string fromDate, string toDate)
     {
