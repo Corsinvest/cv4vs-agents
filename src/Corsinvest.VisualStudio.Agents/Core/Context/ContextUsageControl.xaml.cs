@@ -6,8 +6,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using Corsinvest.VisualStudio.Agents.Contracts;
 using Corsinvest.VisualStudio.Agents.Core.Profiles;
 using Corsinvest.VisualStudio.Agents.Core.Stats;
 using Corsinvest.VisualStudio.Agents.Helpers;
@@ -28,6 +30,10 @@ public partial class ContextUsageControl : UserControl
     // The selected tree node (needed to read the session id / profile / project dir for the fetch).
     private StatsTreeNode _selNode;
     private bool _loaded;
+    // Context of a closed session doesn't change → cache the first fetch; re-clicks are instant.
+    private readonly Dictionary<string, GetContextUsageResponse> _cache = new();
+    // Cancels the in-flight fetch when the selection changes.
+    private CancellationTokenSource _cts;
 
     public ContextUsageControl()
     {
@@ -144,6 +150,9 @@ public partial class ContextUsageControl : UserControl
 
     private void StartIndex(bool force)
     {
+        // A manual Refresh/Recreate should re-fetch the visible session (drop its cached context).
+        var sid = _selNode?.Selection?.SessionIds?.FirstOrDefault();
+        if (sid != null) { _cache.Remove(sid); }
         if (StatsService.StartIndexing(force)) { SetIndexing(true); }
     }
 
@@ -189,8 +198,52 @@ public partial class ContextUsageControl : UserControl
         });
     }
 
-    // Filled in the next task (fetch + render).
-    private void OnSessionSelected(StatsTreeNode node) { }
+    // A session was picked: serve it from cache, else fetch it with an ephemeral --resume CLI.
+    private void OnSessionSelected(StatsTreeNode node)
+    {
+        var sel = node.Selection;
+        var sid = sel.SessionIds?.FirstOrDefault();
+        if (string.IsNullOrEmpty(sid)) { ShowSelectPrompt(); return; }
+
+        if (_cache.TryGetValue(sid, out var cached)) { SetFetching(false); RenderContext(cached); return; }
+
+        // Cancel a previous in-flight fetch; start a fresh one.
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var ct = _cts.Token;
+
+        SetFetching(true);
+        var profile = sel.Profile;
+        var wd = StatsService.CwdForProject(profile, sel.ProjectDir);
+        _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            try
+            {
+                var data = await ContextProbe.FetchAsync(profile, wd, sid, ct);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (ct.IsCancellationRequested) { return; } // selection moved on
+                SetFetching(false);
+                if (data == null) { ShowUnavailable(); return; }
+                _cache[sid] = data;
+                RenderContext(data);
+            }
+            catch (OperationCanceledException) { /* superseded */ }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.LogException("ContextUsageControl.Fetch", ex);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (!ct.IsCancellationRequested) { SetFetching(false); ShowUnavailable(); }
+            }
+        });
+    }
+
+    // While fetching: the centered progress bar replaces the panel; the action buttons are disabled.
+    private void SetFetching(bool on)
+    {
+        LoadingPanel.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
+        ContextScroller.Visibility = on ? Visibility.Collapsed : Visibility.Visible;
+        RefreshButtons.IsEnabled = !on;
+    }
 
     private StatsRange SelectedRange()
         => RangeCombo.SelectedIndex switch
