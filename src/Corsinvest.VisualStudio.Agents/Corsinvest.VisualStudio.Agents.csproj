@@ -250,6 +250,7 @@
     <Compile Include="Core\Usage\UsageControl.xaml.cs">
       <DependentUpon>UsageControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Core\Context\ContextProbe.cs" />
     <Compile Include="Core\Workspace\WorkspaceState.cs" />
     <Compile Include="Core\Workspace\WorkspaceStore.cs" />
     <Compile Include="Chat\ContentBlockTranslator.cs" />
