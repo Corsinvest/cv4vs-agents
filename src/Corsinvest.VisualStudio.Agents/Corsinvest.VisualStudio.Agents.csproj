@@ -253,6 +253,12 @@
     <Compile Include="Core\Context\ContextProbe.cs" />
     <Compile Include="Core\Context\CvContextPalette.cs" />
     <Compile Include="Core\Context\CvMemoryMap.cs" />
+    <Compile Include="Core\Context\ContextEditorFactory.cs" />
+    <Compile Include="Core\Context\ContextEditorPane.cs" />
+    <Compile Include="Core\Context\ContextDocument.cs" />
+    <Compile Include="Core\Context\ContextUsageControl.xaml.cs">
+      <DependentUpon>ContextUsageControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Core\Workspace\WorkspaceState.cs" />
     <Compile Include="Core\Workspace\WorkspaceStore.cs" />
     <Compile Include="Chat\ContentBlockTranslator.cs" />
@@ -346,6 +352,9 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Core\Usage\UsageControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Core\Context\ContextUsageControl.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Core\Panes\DevInfoDialog.xaml">
