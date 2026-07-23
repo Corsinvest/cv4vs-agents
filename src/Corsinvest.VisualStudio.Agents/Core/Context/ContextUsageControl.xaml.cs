@@ -177,6 +177,18 @@ public partial class ContextUsageControl : UserControl
         });
     }
 
+    // The panel message when a fetch fails.
+    private void ShowUnavailable()
+    {
+        ContextPanel.Children.Clear();
+        ContextPanel.Children.Add(new TextBlock
+        {
+            Text = "Context usage unavailable.",
+            Opacity = 0.7,
+            Margin = new Thickness(12),
+        });
+    }
+
     // Filled in the next task (fetch + render).
     private void OnSessionSelected(StatsTreeNode node) { }
 
