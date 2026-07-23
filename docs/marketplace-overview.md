@@ -71,7 +71,7 @@ than the files on disk:
 Tools are language-agnostic where Visual Studio allows it: they go through Roslyn's per-document
 language services or through `EnvDTE`, not through a C#-only path.
 
-![Diffs and tool rows in the chat](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/subagents-panel.png)
+![Diffs and tool rows in the chat](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat/subagents-panel.png)
 
 ---
 
@@ -91,7 +91,14 @@ A long session opens as quickly as an empty one.
 A live gauge in the composer shows how full the context window is, and a stats dialog aggregates
 token usage and cost from your local session files — per day, per project, per model.
 
-![Context and usage statistics](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/statistics-dialog.png)
+![Context and usage statistics](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat/statistics-dialog.png)
+
+There is also a full-window **Statistics** tab: a navigable tree (All → Profile → Folder → Project →
+Days/Sessions) drives summary tiles, a GitHub-style activity heatmap and per-day/per-model charts —
+all aggregated locally, no telemetry. A companion **Usage** tab shows each profile's live plan and
+rate-limit windows.
+
+![Statistics document-tab](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/statistics-document.png)
 
 ---
 
