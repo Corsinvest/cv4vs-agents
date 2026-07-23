@@ -42,6 +42,7 @@ public partial class UsageControl : UserControl
     private readonly string _workingDirectory;
     private CancellationTokenSource _cts;
     private UsageDto _dto; // last fetched, for the Day/Week toggle
+    private bool _loaded;
 
     public UsageControl()
     {
@@ -50,6 +51,10 @@ public partial class UsageControl : UserControl
 
         Loaded += (_, _) =>
         {
+            // Loaded fires again on every tab re-activation — populate + fetch ONLY the first time,
+            // or switching back to the tab would re-fetch (a fresh CLI) each time.
+            if (_loaded) { return; }
+            _loaded = true;
             var profiles = ProfileStore.Load(forEdit: false).ToList();
             ProfileList.ItemsSource = profiles;
             if (profiles.Count > 0) { ProfileList.SelectedIndex = 0; } // triggers the first fetch

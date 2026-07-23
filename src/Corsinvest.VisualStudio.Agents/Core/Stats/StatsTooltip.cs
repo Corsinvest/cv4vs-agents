@@ -23,7 +23,8 @@ internal static class StatsTooltip
 
         panel.Children.Add(new TextBlock
         {
-            Text = FullDate(info.Date),
+            // Generic title (donut: a project/session name); when absent, the formatted day.
+            Text = info.Title ?? FullDate(info.Date),
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 0, 0, 2),
         });

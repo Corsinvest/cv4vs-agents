@@ -238,6 +238,7 @@
     <Compile Include="Core\Stats\StatsTooltip.cs" />
     <Compile Include="Core\Stats\CvHeatmap.cs" />
     <Compile Include="Core\Stats\CvBarChart.cs" />
+    <Compile Include="Core\Stats\CvDonut.cs" />
     <Compile Include="Core\Stats\StatisticsControl.xaml.cs">
       <DependentUpon>StatisticsControl.xaml</DependentUpon>
     </Compile>
