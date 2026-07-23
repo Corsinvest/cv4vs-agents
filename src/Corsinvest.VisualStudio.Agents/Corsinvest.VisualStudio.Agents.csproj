@@ -241,6 +241,14 @@
     <Compile Include="Core\Stats\StatisticsControl.xaml.cs">
       <DependentUpon>StatisticsControl.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Core\Usage\UsageMapper.cs" />
+    <Compile Include="Core\Usage\UsageProbe.cs" />
+    <Compile Include="Core\Usage\UsageEditorFactory.cs" />
+    <Compile Include="Core\Usage\UsageEditorPane.cs" />
+    <Compile Include="Core\Usage\UsageDocument.cs" />
+    <Compile Include="Core\Usage\UsageControl.xaml.cs">
+      <DependentUpon>UsageControl.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Core\Workspace\WorkspaceState.cs" />
     <Compile Include="Core\Workspace\WorkspaceStore.cs" />
     <Compile Include="Chat\ContentBlockTranslator.cs" />
@@ -331,6 +339,9 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Core\Stats\StatisticsControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Core\Usage\UsageControl.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Core\Panes\DevInfoDialog.xaml">

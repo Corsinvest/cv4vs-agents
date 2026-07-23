@@ -18,6 +18,10 @@ internal static class PackageGuids
     // Editor factory for the frameless Statistics document-tab.
     public const string StatisticsEditorFactoryString = "08aaab84-271c-4d91-97a1-2c2b1f098e79";
     public static readonly Guid StatisticsEditorFactory = new(StatisticsEditorFactoryString);
+
+    // Editor factory for the frameless Usage document-tab.
+    public const string UsageEditorFactoryString = "5f47bea8-7731-4cd0-b4dc-f572859577bf";
+    public static readonly Guid UsageEditorFactory = new(UsageEditorFactoryString);
 }
 
 internal static class PackageIds
@@ -36,4 +40,5 @@ internal static class PackageIds
     public const int AboutCommandId = 0x0207;
     public const int ReleasesCommandId = 0x0208;
     public const int StatisticsCommandId = 0x0209;
+    public const int UsageCommandId = 0x020A;
 }

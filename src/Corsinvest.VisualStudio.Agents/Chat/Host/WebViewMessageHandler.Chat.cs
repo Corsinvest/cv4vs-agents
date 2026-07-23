@@ -102,25 +102,21 @@ internal sealed partial class WebViewMessageHandler
         if (id is not int usageReqId) { return; }
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
-            // Fetch the structured /usage data (experimental control req)
-            // and pair it with the cached account info from init. The
-            // webview renders both in the Account & Usage dialog.
-            var usage = await client.GetUsageAsync();
+            // Fetch the raw /usage (experimental control req) and decode it ONCE here into the typed
+            // UsageDto (windows + behaviours + the account from init). Both the WebView dialog and the
+            // WPF Usage tab render the same DTO — no re-parsing on the client.
+            var raw = await client.GetUsageAsync();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             var acct = client.Account;
-            bridge.SendResponse(BridgeMessages.ToWebView.Chat.Usage, usageReqId, new Contracts.GetUsageResponse
+            var account = acct == null ? null : new Contracts.AccountDto
             {
-                Account = acct == null
-                            ? null
-                            : new Contracts.AccountDto
-                            {
-                                Email = acct.Email,
-                                Organization = acct.Organization,
-                                SubscriptionType = acct.SubscriptionType,
-                                ApiProvider = acct.ApiProvider,
-                            },
-                Usage = usage,
-            });
+                Email = acct.Email,
+                Organization = acct.Organization,
+                SubscriptionType = acct.SubscriptionType,
+                ApiProvider = acct.ApiProvider,
+            };
+            bridge.SendResponse(BridgeMessages.ToWebView.Chat.Usage, usageReqId,
+                Core.Usage.UsageMapper.Build(raw, account));
         }).FileAndForget(nameof(WebViewMessageHandler));
     }
 
