@@ -3,9 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
              xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
              xmlns:stats="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Stats"
              toolkit:Themes.UseVsTheme="True">
   <UserControl.Resources>
+    <stats:ScopeIconConverter x:Key="ScopeIconConverter" />
     <!-- Summary tile: bordered block, uppercase label over a large value. -->
     <Style x:Key="TileStyle" TargetType="Border">
       <Setter Property="BorderBrush"
@@ -32,42 +35,124 @@
     </Style>
   </UserControl.Resources>
 
+  <!-- Columns: scope tree | draggable splitter | Overview | Models. The tree column is
+       user-resizable (min 140) via the GridSplitter. Toolbar + range live above the tree. -->
   <Grid Margin="14">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="*" />
-    </Grid.RowDefinitions>
-
-    <!-- Toolbar: scope + range + indexing state + export (disabled placeholder). -->
-    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,14">
-      <TextBlock Text="Scope" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.7" />
-      <ComboBox x:Name="ScopeCombo" Width="150" Height="24" Padding="6,0" VerticalAlignment="Center"
-                VerticalContentAlignment="Center" SelectionChanged="OnFilterChanged">
-        <ComboBoxItem Content="All projects" IsSelected="True" />
-        <ComboBoxItem Content="Current project" />
-      </ComboBox>
-      <TextBlock Text="Range" VerticalAlignment="Center" Margin="16,0,6,0" Opacity="0.7" />
-      <ComboBox x:Name="RangeCombo" Width="110" Height="24" Padding="6,0" VerticalAlignment="Center"
-                VerticalContentAlignment="Center" SelectionChanged="OnFilterChanged">
-        <ComboBoxItem Content="Last 7 days" />
-        <ComboBoxItem Content="Last 30 days" />
-        <ComboBoxItem Content="All time" IsSelected="True" />
-      </ComboBox>
-      <TextBlock x:Name="IndexingText" Text="Indexing…" VerticalAlignment="Center"
-                 Margin="16,0,0,0" Opacity="0.7" Visibility="Collapsed" />
-      <Button x:Name="ExportButton" Content="Export xlsx" Width="100" Margin="16,0,0,0"
-              VerticalAlignment="Center" IsEnabled="False" ToolTip="Coming soon" />
-    </StackPanel>
-
-    <!-- Two columns: Overview (left) | Models (right). -->
-    <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="220" MinWidth="140" />
+        <ColumnDefinition Width="Auto" />
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
 
+      <!-- Column 0: a small icon toolbar (Refresh / Recreate) over the scope tree. -->
+      <Grid Grid.Column="0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Tree toolbar: compact flat icon buttons (WPF ToolBar drags a grip + overflow chevron
+             that don't theme cleanly, so a plain StackPanel with a small flat button style instead). -->
+        <StackPanel x:Name="TreeToolbar" Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,4">
+          <StackPanel.Resources>
+            <Style x:Key="ToolBtn" TargetType="Button">
+              <Setter Property="Width" Value="22" />
+              <Setter Property="Height" Value="22" />
+              <Setter Property="Padding" Value="0" />
+              <Setter Property="Margin" Value="0,0,2,0" />
+              <Setter Property="Background" Value="Transparent" />
+              <Setter Property="BorderBrush" Value="Transparent" />
+              <Setter Property="BorderThickness" Value="1" />
+              <Setter Property="Template">
+                <Setter.Value>
+                  <ControlTemplate TargetType="Button">
+                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3">
+                      <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                      <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="bd" Property="Background"
+                                Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarMouseOverBackgroundBeginBrushKey}}" />
+                        <Setter TargetName="bd" Property="BorderBrush"
+                                Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarBorderBrushKey}}" />
+                      </Trigger>
+                    </ControlTemplate.Triggers>
+                  </ControlTemplate>
+                </Setter.Value>
+              </Setter>
+            </Style>
+          </StackPanel.Resources>
+          <!-- The two action buttons; replaced in-place by the indexing indicator while a pass runs. -->
+          <StackPanel x:Name="RefreshButtons" Orientation="Horizontal">
+            <Button Style="{StaticResource ToolBtn}" Click="OnRefreshClick"
+                    ToolTip="Refresh — re-read changed sessions">
+              <imaging:CrispImage Width="16" Height="16"
+                                  Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
+            </Button>
+            <Button Style="{StaticResource ToolBtn}" Click="OnRecreateClick"
+                    ToolTip="Recreate statistics — re-index everything from scratch">
+              <imaging:CrispImage Width="16" Height="16"
+                                  Moniker="{x:Static catalog:KnownMonikers.Restart}" />
+            </Button>
+          </StackPanel>
+          <!-- Shown in the buttons' place while indexing: an indeterminate bar + label. -->
+          <StackPanel x:Name="IndexingPanel" Orientation="Horizontal" VerticalAlignment="Center"
+                      Visibility="Collapsed">
+            <ProgressBar IsIndeterminate="True" Width="60" Height="4" VerticalAlignment="Center" />
+            <TextBlock Text="Indexing…" VerticalAlignment="Center" Margin="6,0,0,0" Opacity="0.7" />
+          </StackPanel>
+          <!-- Separator, then the range filter (applies to both the tree and the stats). -->
+          <Rectangle Width="1" Height="16" Margin="4,0,6,0" VerticalAlignment="Center"
+                     Fill="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarBorderBrushKey}}" />
+          <ComboBox x:Name="RangeCombo" Height="22" MinWidth="96" Padding="6,0" VerticalAlignment="Center"
+                    VerticalContentAlignment="Center" SelectionChanged="OnFilterChanged">
+            <ComboBoxItem Content="Last 7 days" />
+            <ComboBoxItem Content="Last 30 days" />
+            <ComboBoxItem Content="All time" IsSelected="True" />
+          </ComboBox>
+        </StackPanel>
+
+      <!-- Scope tree: All → Profile → Folder → Project → Day → Session; every node is clickable and
+           recomputes. Native WPF TreeView doesn't follow the VS theme on its own, so bind its colours
+           to the theme brushes (works in both light and dark). -->
+      <TreeView x:Name="ScopeTree" Grid.Row="1"
+                BorderThickness="1"
+                Background="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
+                Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}"
+                BorderBrush="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                SelectedItemChanged="OnScopeSelected">
+        <TreeView.ItemContainerStyle>
+          <Style TargetType="TreeViewItem">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+            <!-- Inherit the theme text colour on every item (the TextBlock reads it). -->
+            <Setter Property="Foreground"
+                    Value="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}" />
+          </Style>
+        </TreeView.ItemContainerStyle>
+        <TreeView.Resources>
+          <HierarchicalDataTemplate DataType="{x:Type stats:StatsTreeNode}"
+                                    ItemsSource="{Binding Children}">
+            <StackPanel Orientation="Horizontal" ToolTip="{Binding Tooltip}">
+              <imaging:CrispImage Width="16" Height="16" Margin="0,0,6,0"
+                                  VerticalAlignment="Center"
+                                  Moniker="{Binding Converter={StaticResource ScopeIconConverter}}" />
+              <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+            </StackPanel>
+          </HierarchicalDataTemplate>
+        </TreeView.Resources>
+      </TreeView>
+      </Grid>
+
+      <!-- Draggable divider: resizes the tree column. -->
+      <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center"
+                    VerticalAlignment="Stretch" Background="Transparent" />
+
       <!-- Overview: summary tiles + (charts come in the next phase). -->
-      <StackPanel Grid.Column="0" Margin="0,0,20,0">
+      <StackPanel Grid.Column="2" Margin="10,0,20,0">
         <TextBlock Text="OVERVIEW" Style="{StaticResource SectionHeadStyle}" />
         <UniformGrid Columns="4">
           <Border Style="{StaticResource TileStyle}">
@@ -177,7 +262,7 @@
       </StackPanel>
 
       <!-- Models: per-model row = name + % + share bar + in/out tokens (mirrors the WebView dialog). -->
-      <StackPanel Grid.Column="1">
+      <StackPanel Grid.Column="3">
         <TextBlock Text="MODELS" Style="{StaticResource SectionHeadStyle}" />
         <ItemsControl x:Name="ModelsList">
           <ItemsControl.ItemTemplate>
@@ -214,6 +299,5 @@
         <TextBlock Text="DAILY TOKENS" Style="{StaticResource SectionHeadStyle}" Margin="0,20,0,10" />
         <stats:CvBarChart x:Name="BarChart" Height="230" HorizontalAlignment="Stretch" />
       </StackPanel>
-    </Grid>
   </Grid>
 </UserControl>

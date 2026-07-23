@@ -154,15 +154,29 @@ internal sealed class CvBarChart : Grid
         return b;
     }
 
-    /// <summary>Round up to a clean ceiling (1/2/5 × 10ⁿ) so the ticks read well and bars don't
-    /// touch the top.</summary>
-    private static long NiceCeil(long v)
+    /// <summary>The smallest "nice" step ≥ <paramref name="target"/>: cycles 1 → 2 → 5 → 10 → 20 →
+    /// 50 → … (the 1/2/5 sequence, magnitude climbing on its own), so it scales to any size with no
+    /// hardcoded ceiling. Shared logic with the WebView chart (niceStep).</summary>
+    private static double NiceStep(double target)
     {
-        if (v <= 0) { return 1; }
-        var mag = Math.Pow(10, Math.Floor(Math.Log10(v)));
-        var norm = v / mag;
-        double nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
-        return (long)(nice * mag);
+        double[] cycle = { 1, 2, 5 };
+        double step = 1;
+        var i = 0;
+        while (step < target)
+        {
+            step = cycle[i % 3] * Math.Pow(10, i / 3);
+            i++;
+        }
+        return step;
+    }
+
+    /// <summary>The axis ceiling: pick a nice tick step (≈ max/Ticks), then round the top up to a
+    /// whole number of those steps, so every gridline lands on a round value.</summary>
+    private static long NiceCeil(long max)
+    {
+        if (max <= 0) { return 1; }
+        var step = NiceStep((double)max / Ticks);
+        return (long)(Math.Ceiling(max / step) * step);
     }
 
     private static string ShortDate(string date)

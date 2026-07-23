@@ -222,6 +222,9 @@
     <Compile Include="Core\Profiles\Profile.cs" />
     <Compile Include="Core\Profiles\ProfileStore.cs" />
     <Compile Include="Core\Stats\StatsModels.cs" />
+    <Compile Include="Core\Stats\StatsSelection.cs" />
+    <Compile Include="Core\Stats\StatsTreeNode.cs" />
+    <Compile Include="Core\Stats\ScopeIconConverter.cs" />
     <Compile Include="Core\Stats\StatsAggregator.cs" />
     <Compile Include="Core\Stats\StatsCache.cs" />
     <Compile Include="Core\Stats\StatsService.cs" />
