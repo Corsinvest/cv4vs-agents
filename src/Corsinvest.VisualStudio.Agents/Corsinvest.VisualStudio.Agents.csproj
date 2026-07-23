@@ -198,6 +198,9 @@
     <Compile Include="Utils\ClaudePaths.cs" />
     <Compile Include="Utils\ColorUtils.cs" />
     <Compile Include="Utils\PathHelpers.cs" />
+    <Compile Include="Core\Panes\CvLoadingOverlay.xaml.cs">
+      <DependentUpon>CvLoadingOverlay.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Core\Panes\IPaneControl.cs" />
     <Compile Include="Core\Panes\PaneAttentionInfoBar.cs" />
     <Compile Include="Core\Panes\PaneAttentionService.cs" />
@@ -355,6 +358,9 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Core\Context\ContextUsageControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Core\Panes\CvLoadingOverlay.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Core\Panes\DevInfoDialog.xaml">

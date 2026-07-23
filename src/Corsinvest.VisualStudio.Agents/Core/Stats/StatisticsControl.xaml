@@ -6,6 +6,7 @@
              xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
              xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
              xmlns:stats="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Stats"
+             xmlns:panes="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Panes"
              toolkit:Themes.UseVsTheme="True">
   <UserControl.Resources>
     <stats:ScopeIconConverter x:Key="ScopeIconConverter" />
@@ -301,10 +302,7 @@
 
       <!-- While indexing: a centered progress bar + message over the content area (Overview+Models),
            like the Usage tab. -->
-      <StackPanel x:Name="LoadingPanel" Grid.Column="2" Grid.ColumnSpan="2" Visibility="Collapsed"
-                  HorizontalAlignment="Center" VerticalAlignment="Center">
-        <ProgressBar IsIndeterminate="True" Width="180" Height="4" />
-        <TextBlock Text="Indexing…" HorizontalAlignment="Center" Margin="0,10,0,0" Opacity="0.7" />
-      </StackPanel>
+      <panes:CvLoadingOverlay x:Name="LoadingPanel" Grid.Column="2" Grid.ColumnSpan="2"
+                              Visibility="Collapsed" Message="Indexing…" />
   </Grid>
 </UserControl>
