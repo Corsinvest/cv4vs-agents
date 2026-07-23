@@ -1,0 +1,10 @@
+<UserControl x:Class="Corsinvest.VisualStudio.Agents.Core.Context.ContextUsageControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
+             toolkit:Themes.UseVsTheme="True">
+    <Grid>
+        <TextBlock Text="Context usage" Margin="12"
+                   VerticalAlignment="Center" HorizontalAlignment="Center"/>
+    </Grid>
+</UserControl>

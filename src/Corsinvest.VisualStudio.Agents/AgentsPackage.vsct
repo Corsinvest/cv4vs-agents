@@ -120,6 +120,12 @@
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Usage</ButtonText></Strings>
       </Button>
+      <Button guid="guidAgentsCommandSet" id="ContextUsageCommandId" priority="0x0300" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="StatisticsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="MemoryWindow"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings><ButtonText>Context usage</ButtonText></Strings>
+      </Button>
 
       <Button guid="guidAgentsCommandSet" id="DocumentationCommandId" priority="0x0100" type="Button">
         <Parent guid="guidAgentsCommandSet" id="HelpDocsGroup"/>
@@ -190,6 +196,7 @@
       <IDSymbol name="ReleasesCommandId" value="0x0208" />
       <IDSymbol name="StatisticsCommandId" value="0x0209" />
       <IDSymbol name="UsageCommandId" value="0x020A" />
+      <IDSymbol name="ContextUsageCommandId" value="0x020B" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{c3d4e5f6-a7b8-9012-defa-bc1234567890}">
       <IDSymbol name="bmpPic1" value="1" />

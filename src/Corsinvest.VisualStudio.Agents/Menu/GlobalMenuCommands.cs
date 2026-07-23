@@ -47,6 +47,7 @@ internal static class GlobalMenuCommands
         Add(svc, PackageIds.AboutCommandId, () => new AboutDialog().ShowDialog());
         Add(svc, PackageIds.StatisticsCommandId, Core.Stats.StatisticsDocument.Open);
         Add(svc, PackageIds.UsageCommandId, Core.Usage.UsageDocument.Open);
+        Add(svc, PackageIds.ContextUsageCommandId, Core.Context.ContextDocument.Open);
     }
 
     /// <summary>Open a GitHub issue form. The template name must match a file in
