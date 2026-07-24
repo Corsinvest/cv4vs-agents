@@ -24,6 +24,7 @@ import { truncate } from '../helpers/format';
 import '../components/cv-copy-btn';
 import '../components/cv-diff-preview';
 import { cleanResult, previewText, formatElapsed } from './tool-host';
+import { state as appState } from '../../core/state';
 import type { ToolHost } from './types';
 
 export abstract class ToolRenderer {
@@ -75,18 +76,21 @@ export abstract class ToolRenderer {
     /** Header + collapsible IN/OUT body (the common case). */
     protected rowStandard(): TemplateResult {
         const body = this.body();
-        const hasBody = body !== null && this.host.status !== 'pending';
+        // "Something to expand into": a body, or (Agent) live sub-agent children. Not gated on the
+        // pending status, so the Agent chevron appears while the sub-agent runs.
+        const expandable = this.hasExpandableContent();
         // Only defaultCollapsed rows (Agent) are collapsible: they start closed regardless of
         // the preview setting and show a chevron (kept visible at rest) to toggle. Every other
         // tool opens per autoOpen and shows no chevron — its body just stays open.
         const collapsed = this.defaultCollapsed();
         const open =
-            hasBody && (collapsed ? this.host.expanded : this.autoOpen() || this.host.expanded);
+            expandable && (collapsed ? this.host.expanded : this.autoOpen() || this.host.expanded);
         return this.chrome({
-            body: hasBody ? body : null,
+            body,
             open,
-            onClick: hasBody && collapsed ? () => this.host.toggleExpanded() : null,
-            chevron: hasBody && collapsed,
+            // No explicit onClick: chrome's rowClick falls back to toggleExpanded when there's a chevron.
+            onClick: null,
+            chevron: expandable && collapsed,
             chevronAlwaysShown: collapsed,
         });
     }
@@ -127,7 +131,6 @@ export abstract class ToolRenderer {
             open: true,
             onClick: () => this.host.openFileAtEdit(fp),
             chevron: false,
-            actions: this.diffActionButtons(),
         });
     }
 
@@ -137,15 +140,23 @@ export abstract class ToolRenderer {
         return this.chrome({
             body: show ? body : null,
             open: show && (autoOpen || this.host.expanded),
-            onClick: show ? () => this.host.toggleExpanded() : null,
+            // No explicit onClick: chrome's rowClick falls back to toggleExpanded via the chevron.
+            onClick: null,
             chevron: show,
         });
+    }
+
+    /** Whether the row has something to expand into (drives the chevron + row toggle). Default: a
+     *  non-empty body. Agent widens this to include its live sub-agent children, so the chevron
+     *  shows while the sub-agent runs, not only once it finishes. */
+    protected hasExpandableContent(): boolean {
+        return this.body() !== null;
     }
 
     /** Whether a standard body opens without a click. Default: error rows, or
      *  when previews are on. */
     protected autoOpen(): boolean {
-        return this.host.status === 'error' || this.host.previewLines > 0;
+        return this.host.status === 'error' || appState.ui.previewLines > 0;
     }
 
     /** Whether this row starts collapsed, ignoring the preview auto-open setting.
@@ -162,15 +173,12 @@ export abstract class ToolRenderer {
         onClick: (() => void) | null;
         chevron: boolean;
         chevronAlwaysShown?: boolean;
-        actions?: TemplateResult;
     }): TemplateResult {
-        // When the chevron is present it is the toggle (a real button), so the row itself
-        // is not clickable — otherwise the two double-trigger. Rows without a chevron keep
-        // their row-level click (e.g. diff rows opening the file).
-        const rowClick = opts.chevron ? null : opts.onClick;
+        // A custom onClick wins (e.g. Edit opens the file); otherwise a chevron makes the WHOLE row
+        // the toggle target (accordion-style). The chevron button stopPropagation()s, so clicking it
+        // and clicking the row can't double-fire.
+        const rowClick = opts.onClick ?? (opts.chevron ? () => this.host.toggleExpanded() : null);
         const clickable = rowClick !== null;
-        const actions =
-            opts.actions ?? (this.host.status === 'error' ? this.errorButton() : nothing);
         const elapsed = this.host.elapsedSec;
         const wrapCls = `cv-tool-wrap${clickable ? '' : ' no-row-click'}`;
         return html`
@@ -189,23 +197,21 @@ export abstract class ToolRenderer {
                               >`
                             : nothing
                     }
-                    ${actions} ${opts.open ? this.host.renderHeaderActions() : nothing}
+                    ${this.renderHeaderActions()}
                     ${
-                        opts.chevron && opts.body !== null
-                            ? html`<fluent-button
-                                  appearance="subtle"
-                                  size="small"
-                                  icon-only
-                                  class="cv-tool-row-chev ${opts.open ? 'expanded' : ''} ${
+                        opts.chevron
+                            ? html`<button
+                                  class="icon-btn cv-tool-row-chev ${opts.open ? 'expanded' : ''} ${
                                       opts.chevronAlwaysShown ? 'always-shown' : ''
                                   }"
                                   title=${opts.open ? 'Collapse' : 'Expand'}
                                   @click=${(e: Event) => {
                                       e.stopPropagation();
-                                      opts.onClick?.();
+                                      rowClick?.();
                                   }}
-                                  >${unsafeHTML(ChevronDown16Regular)}</fluent-button
-                              >`
+                              >
+                                  ${unsafeHTML(ChevronDown16Regular)}
+                              </button>`
                             : nothing
                     }
                 </div>
@@ -299,7 +305,7 @@ export abstract class ToolRenderer {
             return html`${nothing}`;
         }
         const preview = (t: string) =>
-            previewText(t, this.host.previewLines, this.host.expanded, this.host.clipsOutput);
+            previewText(t, appState.ui.previewLines, this.host.expanded, this.host.clipsOutput);
         const copyBtn = (text: string, slot: 'in' | 'out') =>
             html`<cv-copy-btn
                 class="cv-tool-body-copy-btn cv-tool-body-copy-${slot}"
@@ -354,7 +360,7 @@ ${preview(outText)}</pre>
         const oldS = String(inp.old_string ?? '');
         const newS = String(inp.new_string ?? inp.content ?? '');
         const errBox =
-            this.host.status === 'error' && this.host.result && this.host.showInlineToolErrors
+            this.host.status === 'error' && this.host.result && appState.ui.showInlineToolErrors
                 ? html`<div class="cv-tool-body-error">${cleanResult(this.host.result, true)}</div>`
                 : nothing;
         return html`
@@ -398,14 +404,17 @@ ${preview(outText)}</pre>
         return 'Modified';
     }
 
+    /** The header actions this tool shows (right of the header, before the chevron). Default: an
+     *  error button on a failed tool, nothing otherwise. Renderers override to add their own. */
+    protected renderHeaderActions(): TemplateResult | typeof nothing {
+        return this.host.status === 'error' ? this.errorButton() : nothing;
+    }
+
     /** The "show error details in VS" icon button. */
     protected errorButton(): TemplateResult {
         return html`<div class="cv-tool-actions">
-            <fluent-button
-                appearance="subtle"
-                size="small"
-                icon-only
-                class="cv-tool-actions-error"
+            <button
+                class="icon-btn cv-tool-actions-error"
                 title="Show error details"
                 @click=${(e: Event) => {
                     e.stopPropagation();
@@ -413,7 +422,7 @@ ${preview(outText)}</pre>
                 }}
             >
                 ${unsafeHTML(ErrorCircle16Regular)}
-            </fluent-button>
+            </button>
         </div>`;
     }
 
@@ -426,11 +435,8 @@ ${preview(outText)}</pre>
         return html`<div class="cv-tool-actions">
             ${
                 this.host.status === 'error'
-                    ? html`<fluent-button
-                          appearance="subtle"
-                          size="small"
-                          icon-only
-                          class="cv-tool-actions-error"
+                    ? html`<button
+                          class="icon-btn cv-tool-actions-error"
                           title="Show error details"
                           @click=${(e: Event) => {
                               e.stopPropagation();
@@ -438,16 +444,13 @@ ${preview(outText)}</pre>
                           }}
                       >
                           ${unsafeHTML(ErrorCircle16Regular)}
-                      </fluent-button>`
+                      </button>`
                     : nothing
             }
             ${
-                this.host.showOpenDiffInVsButton
-                    ? html`<fluent-button
-                          appearance="subtle"
-                          size="small"
-                          icon-only
-                          class="cv-tool-actions-vs"
+                appState.ui.showOpenDiffInVsButton
+                    ? html`<button
+                          class="icon-btn cv-tool-actions-vs"
                           title="Open diff in Visual Studio"
                           @click=${(e: Event) => {
                               e.stopPropagation();
@@ -455,7 +458,7 @@ ${preview(outText)}</pre>
                           }}
                       >
                           ${unsafeHTML(VisualStudioIcon)}
-                      </fluent-button>`
+                      </button>`
                     : nothing
             }
         </div>`;

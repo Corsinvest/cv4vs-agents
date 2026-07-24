@@ -6,4 +6,5 @@
 export interface GetSubagentRequest {
     agentId: string;
     sessionId?: string;
+    preview: boolean;
 }

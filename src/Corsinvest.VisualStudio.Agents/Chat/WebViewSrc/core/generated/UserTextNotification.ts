@@ -12,4 +12,5 @@ export interface UserTextNotification {
     files: UserFileDto[] | null;
     parentToolUseId: string | null;
     uuid: string | null;
+    timestamp?: number;
 }

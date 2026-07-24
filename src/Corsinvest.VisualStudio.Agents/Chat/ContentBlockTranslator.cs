@@ -25,7 +25,8 @@ internal static class ContentBlockTranslator
                                      string parentToolUseId = null,
                                      JObject usage = null,
                                      bool needsPermission = false,
-                                     JArray permissionSuggestions = null)
+                                     JArray permissionSuggestions = null,
+                                     long? timestamp = null)
     {
         // JToken for a uniform Emit* signature (HistoryReplay passes the raw content to both). The
         // assistant content is always a block array in practice; a bare string never occurs, so just
@@ -57,6 +58,7 @@ internal static class ContentBlockTranslator
                     Text = item.Val("text", ""),
                     ParentToolUseId = parentToolUseId,
                     Usage = !firstEmitted ? usagePayload : null,
+                    Timestamp = timestamp,
                 });
                 firstEmitted = true;
             }
@@ -91,7 +93,8 @@ internal static class ContentBlockTranslator
                                 Action<string, object> send,
                                 string parentToolUseId = null,
                                 string uuid = null,
-                                string agentId = null)
+                                string agentId = null,
+                                long? timestamp = null)
     {
         if (content == null) { return; }
         // agentId (the Agent tool's sub-agent id) is surfaced on the tool_result so
@@ -189,6 +192,7 @@ internal static class ContentBlockTranslator
                 Files = files.Count > 0 ? [.. files] : null,
                 ParentToolUseId = parentToolUseId,
                 Uuid = uuid,
+                Timestamp = timestamp,
             });
         }
     }

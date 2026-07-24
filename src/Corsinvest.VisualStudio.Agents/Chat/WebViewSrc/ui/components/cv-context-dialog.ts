@@ -11,8 +11,7 @@ import { dialogStyles, iconStyles } from '../styles/shared';
 import { fetchContextUsage } from '../../core/lazy';
 import { formatTokens } from '../../core/ai-models';
 import { CvDialogBase } from './cv-dialog-base';
-import { displayPath } from '../../core/path';
-import { state as appState } from '../../core/state';
+import { displayPathUi } from '../paths';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import type { IdeFileNotification } from '../../core/types';
@@ -367,7 +366,7 @@ export class CvContextDialog extends CvDialogBase {
     /** A sub-row whose name is a clickable file link (opens in the editor). `path` is the absolute
      *  file path; `suffix` is the trailing info shown after the name (e.g. "· Project"). */
     private _subRowFile(path: string, suffix: string, tokens: number): TemplateResult {
-        const shown = displayPath(path, appState.workingDirectory, appState.ui.showRelativePaths);
+        const shown = displayPathUi(path);
         return html`
             <div class="subrow">
                 <span class="sub-name">

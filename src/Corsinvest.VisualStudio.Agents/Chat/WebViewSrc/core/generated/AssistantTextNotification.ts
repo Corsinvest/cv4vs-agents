@@ -9,4 +9,5 @@ export interface AssistantTextNotification {
     text: string;
     parentToolUseId: string | null;
     usage: ContextUsageDto | null;
+    timestamp?: number;
 }

@@ -321,6 +321,10 @@ public sealed partial class SessionManager
                     // read by HistoryReplay; the message object has no native uuid).
                     var uuid = obj.Val("uuid");
                     if (!string.IsNullOrEmpty(uuid)) { msg["uuid"] = uuid; }
+                    // The message time is a top-level field on the record, not inside `message`;
+                    // lift it too so HistoryReplay's ValTimestampMs finds it (the "x ago" on replay).
+                    var ts = obj.Val("timestamp");
+                    if (!string.IsNullOrEmpty(ts)) { msg["timestamp"] = ts; }
                     // The Agent tool's result carries the sub-agent id at the line's
                     // top-level toolUseResult.agentId (camelCase on disk). Lift it onto
                     // the message so HistoryReplay can nest the sub-agent's tools.

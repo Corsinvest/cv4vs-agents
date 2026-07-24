@@ -52,13 +52,14 @@ internal static class HistoryReplay
             var content = msg["content"];
             if (content == null) { continue; }
 
+            var tsMs = msg.ValTimestampMs("timestamp");
             if (role == "assistant")
             {
-                ContentBlockTranslator.EmitAssistant(content, Collect, parentToolUseId, msg["usage"] as JObject);
+                ContentBlockTranslator.EmitAssistant(content, Collect, parentToolUseId, msg["usage"] as JObject, timestamp: tsMs);
             }
             else // user (and tool_result-carrying user lines)
             {
-                ContentBlockTranslator.EmitUser(content, previewLines, Collect, parentToolUseId, uuid, agentId);
+                ContentBlockTranslator.EmitUser(content, previewLines, Collect, parentToolUseId, uuid, agentId, timestamp: tsMs);
             }
         }
         return events;

@@ -266,6 +266,9 @@ public class UserTextNotification
     public UserFileDto[] Files { get; set; }
     public string ParentToolUseId { get; set; }
     public string Uuid { get; set; }
+    // Message time (epoch ms) from the .jsonl record / live event; null when absent. The WebView
+    // shows it as "x ago" with an absolute date/time tooltip.
+    public long? Timestamp { get; set; }
 }
 
 /// <summary>One replayed bridge event inside a history page: Type = the bridge msg name
@@ -402,6 +405,9 @@ public class AssistantTextNotification
     public string Text { get; set; }
     public string ParentToolUseId { get; set; }
     public ContextUsageDto Usage { get; set; }
+    // Message time (epoch ms) from the .jsonl record / live event; null when absent. The WebView
+    // shows it as "x ago" with an absolute date/time tooltip.
+    public long? Timestamp { get; set; }
 }
 
 /// <summary>Spinner-verb override config (nested in the init ui payload). mode is the

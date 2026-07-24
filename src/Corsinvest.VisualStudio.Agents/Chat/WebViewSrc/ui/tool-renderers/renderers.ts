@@ -7,7 +7,8 @@
 // registered in index.ts. No name-switching anywhere else.
 
 import { html, nothing, type TemplateResult } from 'lit';
-import { displayPath, fileName } from '../../core/path';
+import { fileName } from '../../core/path';
+import { displayPathUi } from '../paths';
 import { truncate } from '../helpers/format';
 import { ToolRenderer } from './base';
 import { state as appState } from '../../core/state';
@@ -37,12 +38,7 @@ export class ReadRenderer extends ToolRenderer {
                   : '';
         const start = offset != null ? offset + 1 : 0;
         const end = start > 0 && limit != null && limit > 0 ? start + limit - 1 : start;
-        const link = this.fileLink(
-            fp,
-            html`${displayPath(fp, this.host.workingDirectory, this.host.showRelativePaths)}${range}`,
-            start,
-            end,
-        );
+        const link = this.fileLink(fp, html`${displayPathUi(fp)}${range}`, start, end);
         return html`${this.nameSpan('Read')}${this.detailSpan(link)}`;
     }
 }
@@ -55,12 +51,12 @@ export class EditRenderer extends ToolRenderer {
     override row(): TemplateResult {
         return this.rowDiff();
     }
+    protected override renderHeaderActions(): TemplateResult | typeof nothing {
+        return this.diffActionButtons();
+    }
     override header(): TemplateResult {
         const fp = String(this.host.input.file_path ?? '');
-        const link = this.editFileLink(
-            fp,
-            html`${displayPath(fp, this.host.workingDirectory, this.host.showRelativePaths)}`,
-        );
+        const link = this.editFileLink(fp, html`${displayPathUi(fp)}`);
         return html`${this.nameSpan(this.label())}${this.detailSpan(link)}`;
     }
 }
@@ -100,9 +96,7 @@ export class GrepRenderer extends ToolRenderer {
         const extras: string[] = [];
         // Shorten the search path relative to the workdir, exactly like Edit/Read.
         if (i.path) {
-            extras.push(
-                `in ${displayPath(String(i.path), this.host.workingDirectory, this.host.showRelativePaths)}`,
-            );
+            extras.push(`in ${displayPathUi(String(i.path))}`);
         }
         if (i.glob) {
             extras.push(`glob: ${String(i.glob)}`);
@@ -222,6 +216,20 @@ export class AgentRenderer extends ToolRenderer {
     // any other tool. This is the only tool that opts into it.
     override defaultCollapsed(): boolean {
         return true;
+    }
+    // The chevron must appear while the sub-agent runs, not only once it finishes — so the row can be
+    // opened to follow the live children. Expandable when there's a prompt body OR any child yet.
+    protected override hasExpandableContent(): boolean {
+        // An Agent is always expandable: it has a prompt body, and even at 0 children the chevron must
+        // show so expanding can kick the lazy preview fetch (history). agentId makes that explicit.
+        return this.body() !== null || this.host.agentId !== '' || this.host.childCount > 0;
+    }
+    protected override renderHeaderActions(): TemplateResult | typeof nothing {
+        // Copy-output + show-all only make sense once the transcript is open (same as before, when the
+        // slot was gated on `open`). Collapsed → just the error button, if any.
+        return this.host.expanded
+            ? this.host.componentHeaderActions()
+            : super.renderHeaderActions();
     }
 }
 
@@ -394,7 +402,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
             return html`${nothing}`;
         }
         const title = (q: AskQuestion): string => q.header || q.question || '';
-        const md = this.host.compactOutputAskAnswers
+        const md = appState.ui.compactOutputAskAnswers
             ? questions
                   .map((q) => `- **${title(q)}**: ${chosenLabels(q, answered).join(', ') || '—'}`)
                   .join('\n')
@@ -428,7 +436,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
         // Compact (VS Code style): once answered, show only the chosen option per
         // question. While still pending (no result yet) fall through to the full
         // list so all options are visible.
-        if (this.host.compactOutputAskAnswers && answered) {
+        if (appState.ui.compactOutputAskAnswers && answered) {
             return this.compactBody(questions, answered);
         }
         return html`

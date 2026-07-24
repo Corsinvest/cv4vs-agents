@@ -14,7 +14,6 @@ using Microsoft.VisualStudio.Shell;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -101,7 +100,8 @@ public partial class ChatPaneControl : PaneControlBase
     {
         if (page?.Messages == null) { return; }
         var events = HistoryReplay.ReplayPage(page.Messages, AgentsOptions.Chat.PreviewLines);
-        events.AddRange(BuildSubagentTailEvents(page.Messages, sessionId));
+        // Sub-agent children are loaded lazily on expand (chevron → preview, Show all → full), the
+        // same for the initial page and scroll-up — no preview is pre-appended here anymore.
         // Unprompted push (not a getHistory response) → notification channel, no id.
         _bridge?.Send(BridgeMessages.ToWebView.Chat.HistoryLoaded, new Contracts.HistoryLoadedNotification
         {
@@ -111,59 +111,6 @@ public partial class ChatPaneControl : PaneControlBase
             HasMore = page.HasMore,
         });
         LoadPromptHistory(sessionId);
-    }
-
-    /// <summary>
-    /// For each history tool_result carrying a sub-agent id (_agentId, lifted by
-    /// SessionManager), read the last ≤4 rows of the sub-agent transcript and replay them
-    /// into typed events tagged (via _parentToolUseId = the Agent's tool_use_id) so the
-    /// WebView nests them under the Agent row. The 4th row is a sentinel → the WebView shows
-    /// 3 and infers hasMore. Expand re-reads the whole file via fetchSubagent. Defensive:
-    /// any read failure is silently skipped.
-    /// </summary>
-    private List<Contracts.HistoryEventDto> BuildSubagentTailEvents(JArray messages, string sessionId)
-    {
-        var tail = new List<Contracts.HistoryEventDto>();
-        if (messages == null || messages.Count == 0 || string.IsNullOrEmpty(sessionId)) { return tail; }
-
-        foreach (var msg in messages)
-        {
-            var agentId = (msg as JObject)?["agentId"]?.Value<string>();
-            if (string.IsNullOrEmpty(agentId)) { continue; }
-            if (msg["content"] is not JArray content) { continue; }
-
-            var toolUseId = content
-                .FirstOrDefault(b => b["type"]?.Value<string>() == "tool_result")
-                ?["tool_use_id"]?.Value<string>();
-            if (string.IsNullOrEmpty(toolUseId)) { continue; }
-
-            SessionManager.HistoryPage subPage;
-            try { subPage = Sessions.ReadSubagentHistory(sessionId, agentId, fullFile: false); }
-            catch { continue; } // defensive: skip unreadable sub-agent
-            if (subPage?.Messages == null || subPage.Messages.Count == 0) { continue; }
-
-            // Keep the last ≤4 RENDERED rows (tool_use/text carriers; tool_result rides with
-            // its tool_use). Tag each with the parent, then replay them into typed events.
-            var msgs = subPage.Messages;
-            int rows = 0, startIdx = 0;
-            for (int i = msgs.Count - 1; i >= 0; i--)
-            {
-                var blocks = msgs[i]?["content"] as JArray;
-                var isRow = blocks?.Any(b => { var t = b["type"]?.Value<string>(); return t == "tool_use" || t == "text"; }) == true;
-                if (isRow && ++rows > 4) { startIdx = i + 1; break; }
-            }
-            var tailMsgs = new JArray();
-            for (int i = startIdx; i < msgs.Count; i++)
-            {
-                var tagged = new JObject(msgs[i] as JObject)
-                {
-                    ["parentToolUseId"] = toolUseId
-                };
-                tailMsgs.Add(tagged);
-            }
-            tail.AddRange(HistoryReplay.ReplayPage(tailMsgs, AgentsOptions.Chat.PreviewLines));
-        }
-        return tail;
     }
 
     /// <summary>Read the typed-prompt history off the UI thread (it's lightweight but

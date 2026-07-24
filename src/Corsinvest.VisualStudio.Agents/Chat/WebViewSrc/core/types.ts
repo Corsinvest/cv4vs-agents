@@ -281,12 +281,16 @@ export interface UiUserEntry extends UiEntryBase {
     uuid?: string;
     images?: UiImage[];
     files?: UiFile[];
+    /** Message time (epoch ms) from the record/event; absent when the wire had none. */
+    timestamp?: number;
 }
 
 /** An assistant turn; `streaming` is UI-only (true while the delta text is still growing). */
 export interface UiAssistantEntry extends UiEntryBase {
     role: 'assistant';
     streaming?: boolean;
+    /** Message time (epoch ms) from the record/event; absent when the wire had none. */
+    timestamp?: number;
 }
 
 /** A thinking block: the model's reasoning, live-only (never persisted). `streaming` true while
@@ -339,6 +343,19 @@ export interface AskQuestion {
     options: { label: string; description?: string }[];
 }
 
+/** A tool row's nested children (the Agent tool's transcript today; the mechanism is generic).
+ *  Memoria-minima: at most the 3 most-recent items are kept; expand fetches more lazily. */
+export interface ToolChildren {
+    /** The kept child rows/messages (≤3 collapsed, the full list once "Show all" fetched). */
+    items: UiEntry[];
+    /** True once a 4th child arrived: more exist beyond the kept items. A flag, not a count —
+     *  the "…" only signals "more", never the number. */
+    hasMore: boolean;
+    /** Show-all: `items` holds the full transcript and the view renders all of it, vs the
+     *  last-3 ring. Collapse ("Reduce") clears it. Distinct from the row's open/closed state. */
+    showAll: boolean;
+}
+
 export interface UiToolEntry {
     kind: 'tool';
     id: number;
@@ -352,15 +369,10 @@ export interface UiToolEntry {
      *  Count-only renderers (Grep/Glob) show this; the full text is re-read on click. */
     fullLineCount: number;
     elapsedSec: number;
-    /** Sub-agent children. Memoria-minima: at most the 3 most-recent are kept;
-     *  expand re-fetches the full list (lazy), collapse shows the last 3 again. */
-    subagentChildren?: UiEntry[];
-    /** True once a 4th child arrived: more exist beyond the 3 kept in subagentChildren.
-     *  A flag, not a count — the "…" only signals "more", never the number. */
-    hasMore?: boolean;
-    /** Nested box expanded: subagentChildren holds the full list (not the ring of 3) and
-     *  new children are upserted in full rather than sliced. Collapse clears it. */
-    expanded?: boolean;
+    /** Nested children (Agent tool today; any tool with children). Present only when the tool
+     *  has children — undefined for a normal leaf tool. NOT the row open/closed state: that's
+     *  the component's local `_expanded`, which every tool has whether or not it has children. */
+    children?: ToolChildren;
 }
 
 /** A rendered chat entry: a message bubble (one per role) or a tool row (with optional nested

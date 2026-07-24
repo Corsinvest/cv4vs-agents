@@ -5,6 +5,8 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Globalization;
 using System.IO;
 
 namespace Corsinvest.VisualStudio.Agents.Helpers;
@@ -34,4 +36,16 @@ internal static class JsonExtensions
     /// <summary>Read a nullable bool value, returning null if missing.</summary>
     public static bool? ValBool(this JToken token, string key)
         => token?[key] is JToken t && t.Type != JTokenType.Null ? t.Value<bool>() : null;
+
+    /// <summary>Read an ISO-8601 timestamp field (e.g. "2026-07-22T11:48:14.040Z") as epoch ms;
+    /// null when the key is missing/empty/unparseable. Shared by the chat live/history paths.</summary>
+    public static long? ValTimestampMs(this JToken token, string key)
+    {
+        var iso = token.Val(key);
+        if (string.IsNullOrEmpty(iso)) { return null; }
+        return DateTimeOffset.TryParse(iso, CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var dto)
+            ? dto.ToUnixTimeMilliseconds()
+            : (long?)null;
+    }
 }

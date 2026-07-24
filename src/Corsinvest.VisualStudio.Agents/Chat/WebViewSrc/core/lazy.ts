@@ -59,8 +59,11 @@ export function openAttachment(name: string, base64: string, mediaType: string):
 
 /** Request a sub-agent's full transcript on expand. Correlated by id; rejects on timeout /
  *  error-response. The caller applies the transcript (upsert children + expand) in the .then. */
-export function fetchSubagent(agentId: string): Promise<GetSubagentResponse> {
-    return bridge.sendRequest(GetSubagentReq, { agentId });
+export function fetchSubagent(
+    agentId: string,
+    opts?: { preview?: boolean },
+): Promise<GetSubagentResponse> {
+    return bridge.sendRequest(GetSubagentReq, { agentId, preview: opts?.preview ?? false });
 }
 
 /** Request a compaction summary on first expand (header arrives live/history; the summary
