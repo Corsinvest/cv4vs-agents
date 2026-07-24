@@ -86,7 +86,8 @@ export abstract class ToolRenderer {
         return this.chrome({
             body: hasBody ? body : null,
             open,
-            onClick: hasBody && collapsed ? () => this.host.toggleExpanded() : null,
+            // No explicit onClick: chrome's rowClick falls back to toggleExpanded when there's a chevron.
+            onClick: null,
             chevron: hasBody && collapsed,
             chevronAlwaysShown: collapsed,
         });
@@ -137,7 +138,8 @@ export abstract class ToolRenderer {
         return this.chrome({
             body: show ? body : null,
             open: show && (autoOpen || this.host.expanded),
-            onClick: show ? () => this.host.toggleExpanded() : null,
+            // No explicit onClick: chrome's rowClick falls back to toggleExpanded via the chevron.
+            onClick: null,
             chevron: show,
         });
     }
@@ -163,10 +165,10 @@ export abstract class ToolRenderer {
         chevron: boolean;
         chevronAlwaysShown?: boolean;
     }): TemplateResult {
-        // When the chevron is present it is the toggle (a real button), so the row itself
-        // is not clickable — otherwise the two double-trigger. Rows without a chevron keep
-        // their row-level click (e.g. diff rows opening the file).
-        const rowClick = opts.chevron ? null : opts.onClick;
+        // A custom onClick wins (e.g. Edit opens the file); otherwise a chevron makes the WHOLE row
+        // the toggle target (accordion-style). The chevron button stopPropagation()s, so clicking it
+        // and clicking the row can't double-fire.
+        const rowClick = opts.onClick ?? (opts.chevron ? () => this.host.toggleExpanded() : null);
         const clickable = rowClick !== null;
         const elapsed = this.host.elapsedSec;
         const wrapCls = `cv-tool-wrap${clickable ? '' : ' no-row-click'}`;
@@ -196,7 +198,7 @@ export abstract class ToolRenderer {
                                   title=${opts.open ? 'Collapse' : 'Expand'}
                                   @click=${(e: Event) => {
                                       e.stopPropagation();
-                                      opts.onClick?.();
+                                      rowClick?.();
                                   }}
                               >
                                   ${unsafeHTML(ChevronDown16Regular)}
