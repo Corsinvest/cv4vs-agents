@@ -6,7 +6,7 @@
              xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
              xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
              xmlns:stats="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Stats"
-             xmlns:panes="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Panes"
+             xmlns:controls="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Controls"
              toolkit:Themes.UseVsTheme="True">
   <UserControl.Resources>
     <stats:ScopeIconConverter x:Key="ScopeIconConverter" />
@@ -274,8 +274,8 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
-                  <Ellipse Grid.Column="0" Width="9" Height="9" Margin="0,0,7,0"
-                           VerticalAlignment="Center" Fill="{Binding Color}" />
+                  <Rectangle Grid.Column="0" Width="9" Height="9" RadiusX="2" RadiusY="2"
+                             Margin="0,0,7,0" VerticalAlignment="Center" Fill="{Binding Color}" />
                   <TextBlock Grid.Column="1" Text="{Binding Model}"
                              TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="2" Text="{Binding Percentage, StringFormat={}{0:F1}%}"
@@ -302,7 +302,7 @@
 
       <!-- While indexing: a centered progress bar + message over the content area (Overview+Models),
            like the Usage tab. -->
-      <panes:CvLoadingOverlay x:Name="LoadingPanel" Grid.Column="2" Grid.ColumnSpan="2"
+      <controls:CvLoadingOverlay x:Name="LoadingPanel" Grid.Column="2" Grid.ColumnSpan="2"
                               Visibility="Collapsed" Message="Indexing…" />
   </Grid>
 </UserControl>

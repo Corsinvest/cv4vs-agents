@@ -5,7 +5,7 @@
              xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
              xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
              xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
-             xmlns:panes="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Panes"
+             xmlns:controls="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Controls"
              toolkit:Themes.UseVsTheme="True">
   <UserControl.Resources>
     <!-- Uppercase section header, like the WebView dialog's .section. -->
@@ -87,7 +87,7 @@
     <!-- Usage panel for the selected profile. -->
     <Grid Grid.Column="2" Margin="10,0,0,0">
       <!-- While fetching: a centered progress bar + message, over the whole usage area. -->
-      <panes:CvLoadingOverlay x:Name="LoadingPanel" Visibility="Collapsed"
+      <controls:CvLoadingOverlay x:Name="LoadingPanel" Visibility="Collapsed"
                               Message="Fetching usage…" />
 
       <!-- Content: account + usage, or a message. -->
