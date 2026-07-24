@@ -847,31 +847,32 @@ export class CvApp extends LitElement {
     }
 
     /** Expand/collapse a nested Agent box (CustomEvent from cv-tool-row). */
-    private _onSubagentToggle = (e: CustomEvent<{ agentId: string; expand: boolean }>): void => {
-        const { agentId, expand } = e.detail ?? {};
+    private _onSubagentToggle = (
+        e: CustomEvent<{ agentId: string; expand: boolean; preview?: boolean }>,
+    ): void => {
+        const { agentId, expand, preview } = e.detail ?? {};
         const parent = agentId ? this._findToolByAgentId(agentId) : null;
         if (!parent) {
             return;
         }
         if (expand) {
-            // Clear the kept 3 first: the fetched transcript is the source of truth and
-            // arrives in order. Keeping the old 3 would leave them out of position (the
-            // full list re-adds them anyway). A child streaming in during the fetch is
-            // upserted onto the empty list, then deduped when the transcript lands.
-            parent.subagentChildren = [];
             parent.expanded = true;
-            // Fetch the full transcript, then upsert it under the Agent. (Was a separate
-            // subagent_loaded listener; now the correlated response drives the same apply.)
-            fetchSubagent(agentId)
+            // Show all (preview=false) replaces with the whole transcript, so clear the kept rows
+            // first (they re-add in order). A preview keeps what's there and fills the last ≤3.
+            if (!preview) {
+                parent.subagentChildren = [];
+            }
+            // Fetch the tail (preview) or the whole transcript, then upsert under the Agent.
+            fetchSubagent(agentId, { preview: !!preview })
                 .then((data) => {
                     const p = this._findToolByAgentId(data.agentId);
                     if (!p) {
                         return;
                     }
                     const full = this._replayEvents(data.events ?? []);
-                    // The full transcript's first user message echoes the launch prompt (already
-                    // shown as the Agent row's IN). Its events carry no parentToolUseId, so the
-                    // _replayEvents post-pass filter doesn't reach them — drop the echo here.
+                    // The transcript's first user message echoes the launch prompt (already shown as
+                    // the Agent row's IN). Its events carry no parentToolUseId, so the _replayEvents
+                    // post-pass filter doesn't reach them — drop the echo here.
                     const prompt = String(p.data?.input?.prompt ?? '').trim();
                     let list = p.subagentChildren ?? [];
                     for (const child of full) {
@@ -885,9 +886,10 @@ export class CvApp extends LitElement {
                         }
                         list = this._upsertChild(list, child);
                     }
-                    p.subagentChildren = list;
+                    // Preview keeps the last 3 (and flags "…" if more); full keeps everything.
+                    p.subagentChildren = preview ? list.slice(-3) : list;
+                    p.hasMore = preview ? list.length > 3 : false;
                     p.expanded = true;
-                    p.hasMore = false; // fully loaded, nothing beyond the list
                     this._entries = [...this._entries];
                 })
                 .catch(() => {
