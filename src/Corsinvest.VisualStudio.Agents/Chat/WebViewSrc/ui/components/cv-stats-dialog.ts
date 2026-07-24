@@ -590,15 +590,13 @@ export class CvStatsDialog extends CvDialogBase {
             <div>
                 <div style="font-weight:var(--fontWeightSemibold)">${formatDay(info.date)}</div>
                 <div style="${dim};font-size:var(--fontSizeBase200);margin-bottom:6px">
-                    ${info.messages.toLocaleString()} messages ·
-                    ${info.sessions.toLocaleString()} sessions · ${info.tools.toLocaleString()} tools
+                    ${info.messages.toLocaleString()} messages · ${info.sessions.toLocaleString()}
+                    sessions · ${info.tools.toLocaleString()} tools
                 </div>
                 ${rows.map((r) => {
                     const pct = total > 0 ? (r.tok / total) * 100 : 0;
                     return html`
-                        <div
-                            style="display:flex;align-items:center;gap:6px;white-space:nowrap"
-                        >
+                        <div style="display:flex;align-items:center;gap:6px;white-space:nowrap">
                             <span
                                 style="width:10px;height:10px;border-radius:2px;flex:0 0 auto;background:${r.color}"
                             ></span>
@@ -794,7 +792,9 @@ export class CvStatsDialog extends CvDialogBase {
                                             ></span>`;
                                         })}
                                     </div>
-                                    <fluent-tooltip anchor=${barId}>${this._dayTip(info)}</fluent-tooltip>
+                                    <fluent-tooltip anchor=${barId}
+                                        >${this._dayTip(info)}</fluent-tooltip
+                                    >
                                 `;
                             })}
                         </div>
