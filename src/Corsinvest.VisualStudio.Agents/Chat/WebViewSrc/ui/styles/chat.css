@@ -574,7 +574,7 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     display: flex;
     align-items: center;
     gap: 4px;
-    margin: 2px 0 0 2px;
+    margin: 5px 0 0 2px;
     min-height: 20px;
     opacity: 0;
     transition: opacity 0.15s;
@@ -658,28 +658,20 @@ cv-message:focus-within .cv-msg-actions {
 /* A slash command's local output (<local-command-stdout>, e.g. "Set model to X"): a centered
  * berry/purple pill with hairline rules either side — same "special action" language as the
  * model-switch notice, and centered like the VS Code compact divider. stderr → red. */
+/* A slash command's own output (/config, /model, "Unknown command"…) — the CLI's raw terminal
+ * text. Rendered as a preformatted monospace block (left-aligned, wraps), faithful to the terminal
+ * (no markdown reinterpretation, which would break /config's aligned key=value list). A subtle left
+ * rail + muted colour marks it as command output, not conversation. stderr tints red. */
 .cv-message.slash-result {
-    display: flex;
-    align-items: center;
-    gap: 8px;
     margin: 6px 0;
-    color: var(--colorPaletteBerryBorderActive);
+    color: var(--colorNeutralForeground3);
     font-size: 11px;
     font-family: var(--fontFamilyMonospace, monospace);
 }
-.cv-message.slash-result::before,
-.cv-message.slash-result::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 30%, transparent);
-}
 .cv-message.slash-result pre {
     margin: 0;
-    padding: 1px 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--colorPaletteBerryBorderActive) 35%, transparent);
+    padding: 2px 0 2px 10px;
+    border-left: 2px solid var(--colorNeutralStroke1);
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -687,8 +679,7 @@ cv-message:focus-within .cv-msg-actions {
     color: var(--colorPaletteRedForeground1);
 }
 .cv-message.slash-result.error pre {
-    background: color-mix(in srgb, var(--colorPaletteRedForeground1) 12%, transparent);
-    border-color: color-mix(in srgb, var(--colorPaletteRedForeground1) 35%, transparent);
+    border-left-color: var(--colorPaletteRedForeground1);
 }
 
 .cv-message.error {

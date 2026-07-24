@@ -314,7 +314,8 @@ export class CvMessage extends LitElement {
         switch (this.role) {
             case 'slash-result':
                 // A slash command's own output (<local-command-stdout>/stderr>, already parsed into
-                // `text` by buildUserEntry) — a centered berry pill, not a user bubble.
+                // `text` by buildUserEntry) — a preformatted monospace block, not a user bubble. No
+                // per-message copy: the exchange's single end-of-response actions row copies it too.
                 return this.text
                     ? html`<div class="cv-message slash-result${this.isError ? ' error' : ''}">
                           <pre>${this.text}</pre>
