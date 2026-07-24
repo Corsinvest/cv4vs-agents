@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -9,7 +9,6 @@ using Corsinvest.VisualStudio.Agents.Options;
 using Microsoft.VisualStudio.Shell;
 using Newtonsoft.Json.Linq;
 using System;
-using System.IO;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Host;

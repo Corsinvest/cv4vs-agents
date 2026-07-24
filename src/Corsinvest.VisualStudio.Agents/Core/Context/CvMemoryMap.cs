@@ -6,7 +6,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
-using System.Windows.Media;
 using System.Windows.Shapes;
 using Corsinvest.VisualStudio.Agents.Contracts;
 using Corsinvest.VisualStudio.Agents.Core.Stats;

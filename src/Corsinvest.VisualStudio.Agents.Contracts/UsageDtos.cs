@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-using System.Collections.Generic;
-
 namespace Corsinvest.VisualStudio.Agents.Contracts;
 
 /// <summary>One rate-limit window from get_usage (the 5-hour / 7-day plan windows): a label,

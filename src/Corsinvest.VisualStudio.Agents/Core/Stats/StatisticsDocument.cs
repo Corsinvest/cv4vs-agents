@@ -5,7 +5,6 @@
 
 using System;
 using System.IO;
-using Corsinvest.VisualStudio.Agents.Helpers;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -61,7 +61,7 @@ internal sealed partial class McpServerHost
     private void DeleteAllLockFiles()
     {
         string[] folders;
-        lock (_lockFoldersGate) { folders = _lockFolders.ToArray(); _lockFolders.Clear(); }
+        lock (_lockFoldersGate) { folders = [.. _lockFolders]; _lockFolders.Clear(); }
         foreach (var folder in folders)
         {
             try

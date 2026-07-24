@@ -1,11 +1,10 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
 using Microsoft.VisualStudio.PlatformUI;
 using System;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Documents;
 

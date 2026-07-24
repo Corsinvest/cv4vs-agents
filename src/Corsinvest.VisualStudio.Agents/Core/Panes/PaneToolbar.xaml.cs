@@ -1,11 +1,10 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
 using Corsinvest.VisualStudio.Agents.Core.Sessions;
 using Corsinvest.VisualStudio.Agents.Helpers;
-using Corsinvest.VisualStudio.Agents.Menu;
 using Corsinvest.VisualStudio.Agents.Options;
 using Microsoft.VisualStudio.Imaging;
 using System;

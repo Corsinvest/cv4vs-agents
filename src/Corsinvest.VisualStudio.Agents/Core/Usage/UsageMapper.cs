@@ -50,7 +50,7 @@ internal static class UsageMapper
                     });
                 }
             }
-            dto.Windows = windows.ToArray();
+            dto.Windows = [.. windows];
         }
 
         if (raw?["behaviors"] is JObject behaviors)
@@ -68,12 +68,11 @@ internal static class UsageMapper
         {
             // Only insights we have copy for are kept; the headline/body are composed here so the
             // clients just render them.
-            Insights = (period["behaviors"] as JArray ?? new JArray())
+            Insights = [.. (period["behaviors"] as JArray ?? new JArray())
                 .OfType<JObject>()
                 .Select(b => InsightCopy(b.Val("key", ""), b.Val("pct", 0)))
                 .Where(c => c != null)
-                .Select(c => new UsageInsightDto { Headline = c.Value.Headline, Body = c.Value.Body })
-                .ToArray(),
+                .Select(c => new UsageInsightDto { Headline = c.Value.Headline, Body = c.Value.Body })],
             Skills = Attribution(period["skills"]),
             // The CLI sends subagents under "agents"; some builds also use "subagents".
             Subagents = Attribution(period["subagents"] ?? period["agents"]),
@@ -83,10 +82,9 @@ internal static class UsageMapper
     }
 
     private static UsageAttributionDto[] Attribution(JToken arr)
-        => (arr as JArray ?? new JArray())
+        => [.. (arr as JArray ?? new JArray())
             .OfType<JObject>()
-            .Select(x => new UsageAttributionDto { Name = x.Val("name", "—"), Pct = x.Val("pct", 0) })
-            .ToArray();
+            .Select(x => new UsageAttributionDto { Name = x.Val("name", "—"), Pct = x.Val("pct", 0) })];
 
     // Headline + body for an insight key (pct fills the headline). Null for unknown keys → dropped.
     private static (string Headline, string Body)? InsightCopy(string key, int pct) => key switch

@@ -12,8 +12,6 @@ using System.Windows;
 using System.Windows.Controls;
 using Corsinvest.VisualStudio.Agents.Contracts;
 using Corsinvest.VisualStudio.Agents.Core.Profiles;
-using Corsinvest.VisualStudio.Agents.Helpers;
-using Corsinvest.VisualStudio.Agents.Utils;
 using Microsoft.VisualStudio.Shell;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Usage;

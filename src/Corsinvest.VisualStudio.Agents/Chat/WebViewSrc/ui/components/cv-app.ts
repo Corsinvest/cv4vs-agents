@@ -495,7 +495,6 @@ export class CvApp extends LitElement {
                     m.set(d.taskId, {
                         taskId: d.taskId,
                         description: d.description ?? '',
-                        taskType: d.taskType,
                         toolUseId: d.toolUseId ?? undefined,
                         recentTools: [],
                         usage: { totalTokens: 0, toolUses: 0, durationMs: 0 },
