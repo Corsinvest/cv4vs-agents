@@ -24,6 +24,7 @@ import { truncate } from '../helpers/format';
 import '../components/cv-copy-btn';
 import '../components/cv-diff-preview';
 import { cleanResult, previewText, formatElapsed } from './tool-host';
+import { state as appState } from '../../core/state';
 import type { ToolHost } from './types';
 
 export abstract class ToolRenderer {
@@ -352,7 +353,7 @@ ${preview(outText)}</pre>
         const oldS = String(inp.old_string ?? '');
         const newS = String(inp.new_string ?? inp.content ?? '');
         const errBox =
-            this.host.status === 'error' && this.host.result && this.host.showInlineToolErrors
+            this.host.status === 'error' && this.host.result && appState.ui.showInlineToolErrors
                 ? html`<div class="cv-tool-body-error">${cleanResult(this.host.result, true)}</div>`
                 : nothing;
         return html`
@@ -434,7 +435,7 @@ ${preview(outText)}</pre>
                     : nothing
             }
             ${
-                this.host.showOpenDiffInVsButton
+                appState.ui.showOpenDiffInVsButton
                     ? html`<button
                           class="icon-btn cv-tool-actions-vs"
                           title="Open diff in Visual Studio"

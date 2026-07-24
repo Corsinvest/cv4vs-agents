@@ -53,6 +53,9 @@ export class CvToolRow extends LitElement implements ToolRowState {
     toggleExpanded(): void {
         this._expanded = !this._expanded;
     }
+    get subagentChildCount(): number {
+        return this.subagentChildren.length;
+    }
 
     override createRenderRoot() {
         return this;

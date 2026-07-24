@@ -23,6 +23,8 @@ export interface ToolRowState {
     /** Sub-agent id when this row is a child of an Agent — routes open-output to the
      *  sub-agent transcript. Empty for top-level tools. */
     readonly agentId: string;
+    /** How many sub-agent children this row holds (Agent tool). 0 for a normal tool. */
+    readonly subagentChildCount: number;
     clipsOutput: boolean;
     toggleExpanded(): void;
     /** Nested child rows/messages (Agent tool's transcript), or nothing. Generic:
@@ -33,28 +35,15 @@ export interface ToolRowState {
     componentHeaderActions(): TemplateResult | typeof nothing;
 }
 
-export interface ToolHost {
+// What a renderer sees: everything the component provides (ToolRowState) plus the tool-scoped data
+// derived from it and the app actions that touch the bridge/VS. NO global user settings — those live
+// in appState.ui, read directly by the renderers.
+export interface ToolHost extends ToolRowState {
     readonly name: string;
     readonly input: Record<string, unknown>;
-    readonly status: ToolStatus;
-    readonly result: string; // raw tool output (preview-clipped)
-    /** Full output line count (before clipping), 0 when empty; count-only renderers show it. */
-    readonly fullLineCount: number;
     readonly toolUseId: string;
-    /** Sub-agent id when this tool is a sub-agent child; empty for top-level tools. */
-    readonly agentId: string;
     readonly previewLines: number;
     readonly workingDirectory: string;
-    readonly elapsedSec: number;
-    /** Whether this row is expanded (chevron toggled open). */
-    readonly expanded: boolean;
-    /** Always clip output to previewLines, even when expanded (shell tools). */
-    clipsOutput: boolean;
-    /** Nested child rows/messages (Agent tool's transcript), or nothing. Generic:
-     *  any tool with nested children can return them here. */
-    renderChildren(): TemplateResult | typeof nothing;
-    /** Actions that depend on the component's Lit state (sub-agent copy + show-all). */
-    componentHeaderActions(): TemplateResult | typeof nothing;
 
     /** Open a file in VS, optionally selecting a line range. */
     openFile(filePath: string, startLine?: number, endLine?: number): void;
@@ -70,14 +59,4 @@ export interface ToolHost {
     openOutput(which: 'in' | 'out'): void;
     /** Open this tool's full error output in VS (resolved by toolUseId). */
     openError(): void;
-    /** Toggle the row's expanded state. */
-    toggleExpanded(): void;
-    /** Whether inline tool errors are shown in the body (user setting). */
-    readonly showInlineToolErrors: boolean;
-    /** Whether the "Open diff in Visual Studio" button is shown (user setting). */
-    readonly showOpenDiffInVsButton: boolean;
-    /** Whether tool-row paths are shown relative to the workdir (user setting). */
-    readonly showRelativePaths: boolean;
-    /** Compact AskUserQuestion output: only the chosen option per question. */
-    readonly compactOutputAskAnswers: boolean;
 }

@@ -30,6 +30,11 @@ const PERSISTED_OUTPUT_RE =
 export class BridgeToolHost implements ToolHost {
     constructor(private row: ToolRowState) {}
 
+    // Inherited from ToolRowState (ToolHost extends it); the renderer uses name/input, but the field
+    // is part of the contract, so delegate it to the row.
+    get data() {
+        return this.row.data;
+    }
     get name(): string {
         return this.row.data?.name ?? '';
     }
@@ -69,17 +74,8 @@ export class BridgeToolHost implements ToolHost {
     componentHeaderActions() {
         return this.row.componentHeaderActions();
     }
-    get showInlineToolErrors(): boolean {
-        return appState.ui.showInlineToolErrors;
-    }
-    get showOpenDiffInVsButton(): boolean {
-        return appState.ui.showOpenDiffInVsButton;
-    }
-    get showRelativePaths(): boolean {
-        return appState.ui.showRelativePaths;
-    }
-    get compactOutputAskAnswers(): boolean {
-        return appState.ui.compactOutputAskAnswers;
+    get subagentChildCount(): number {
+        return this.row.subagentChildCount;
     }
     get clipsOutput(): boolean {
         return this.row.clipsOutput;

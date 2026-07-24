@@ -39,7 +39,7 @@ export class ReadRenderer extends ToolRenderer {
         const end = start > 0 && limit != null && limit > 0 ? start + limit - 1 : start;
         const link = this.fileLink(
             fp,
-            html`${displayPath(fp, this.host.workingDirectory, this.host.showRelativePaths)}${range}`,
+            html`${displayPath(fp, this.host.workingDirectory, appState.ui.showRelativePaths)}${range}`,
             start,
             end,
         );
@@ -59,7 +59,7 @@ export class EditRenderer extends ToolRenderer {
         const fp = String(this.host.input.file_path ?? '');
         const link = this.editFileLink(
             fp,
-            html`${displayPath(fp, this.host.workingDirectory, this.host.showRelativePaths)}`,
+            html`${displayPath(fp, this.host.workingDirectory, appState.ui.showRelativePaths)}`,
         );
         return html`${this.nameSpan(this.label())}${this.detailSpan(link)}`;
     }
@@ -101,7 +101,7 @@ export class GrepRenderer extends ToolRenderer {
         // Shorten the search path relative to the workdir, exactly like Edit/Read.
         if (i.path) {
             extras.push(
-                `in ${displayPath(String(i.path), this.host.workingDirectory, this.host.showRelativePaths)}`,
+                `in ${displayPath(String(i.path), this.host.workingDirectory, appState.ui.showRelativePaths)}`,
             );
         }
         if (i.glob) {
@@ -394,7 +394,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
             return html`${nothing}`;
         }
         const title = (q: AskQuestion): string => q.header || q.question || '';
-        const md = this.host.compactOutputAskAnswers
+        const md = appState.ui.compactOutputAskAnswers
             ? questions
                   .map((q) => `- **${title(q)}**: ${chosenLabels(q, answered).join(', ') || '—'}`)
                   .join('\n')
@@ -428,7 +428,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
         // Compact (VS Code style): once answered, show only the chosen option per
         // question. While still pending (no result yet) fall through to the full
         // list so all options are visible.
-        if (this.host.compactOutputAskAnswers && answered) {
+        if (appState.ui.compactOutputAskAnswers && answered) {
             return this.compactBody(questions, answered);
         }
         return html`
