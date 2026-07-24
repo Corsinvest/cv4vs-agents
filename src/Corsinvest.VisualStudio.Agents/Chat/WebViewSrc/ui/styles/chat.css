@@ -567,6 +567,8 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
  * is reserved (min-height) so revealing it on hover never shifts the layout. */
 .cv-msg-actions {
     display: flex;
+    align-items: center;
+    gap: 4px;
     margin: 2px 0 0 2px;
     min-height: 20px;
     opacity: 0;
@@ -575,6 +577,34 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 cv-message:hover .cv-msg-actions,
 cv-message:focus-within .cv-msg-actions {
     opacity: 1;
+}
+/* Small icon-action button (Fork/Expand in the user row) — the light-DOM twin of cv-copy-btn's
+ * .icon-btn (which is Shadow-scoped). Same compact look. */
+.cv-msg-actions .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    border: 0;
+    border-radius: var(--borderRadiusSmall);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.75;
+}
+.cv-msg-actions .icon-btn:hover {
+    background: var(--colorSubtleBackgroundHover, rgba(127, 127, 127, 0.12));
+    opacity: 1;
+}
+.cv-msg-actions .icon-btn:focus-visible {
+    outline: 1px solid var(--colorStrokeFocus2, currentColor);
+    outline-offset: 1px;
+}
+.cv-msg-actions .icon-btn svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+    fill: currentColor;
 }
 /* The response row (inline: copy + timestamp) lives at the end of the exchange (a whole answer),
  * so it reveals on hovering anywhere in the exchange, not a single bubble. */
@@ -587,8 +617,8 @@ cv-message:focus-within .cv-msg-actions {
     opacity: 0;
     transition: opacity 0.15s;
 }
-.cv-exchange:hover .cv-response-actions,
-.cv-exchange:focus-within .cv-response-actions {
+.cv-response:hover .cv-response-actions,
+.cv-response:focus-within .cv-response-actions {
     opacity: 1;
 }
 /* Relative "x ago" timestamp next to the copy button (both the user and response rows). */

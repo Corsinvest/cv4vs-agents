@@ -5,8 +5,10 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import BranchFork16Regular from '@fluentui/svg-icons/icons/branch_fork_16_regular.svg';
+import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
+import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.svg';
 import './cv-copy-btn';
-import './cv-msg-actions';
 import './cv-attach-chip';
 import { renderMarkdown, renderMarkdownStreaming } from '../../core/markdown';
 import { escapeHtml } from '../../core/html';
@@ -19,8 +21,10 @@ import { fileName, displayPath } from '../../core/path';
 import { parseIdeContextTags } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
+import { formatTimeAgo, formatAbsolute } from '../../core/time';
 import type {
     IdeContextRef,
+    ForkNotification,
     IdeFileNotification,
     UiImage,
     UiFile,
@@ -137,23 +141,57 @@ export class CvMessage extends LitElement {
     }
 
     /**
-     * Bottom hover actions row. Fork only with a uuid (replayed from JSONL history — live messages
-     * have none); Expand only for long user text. The fork bridge call lives in cv-msg-actions;
-     * Expand toggles this element's state via the `toggle-expand` event.
+     * Bottom hover actions row (user messages): Copy + Fork (only with a uuid, i.e. replayed from
+     * JSONL history — live messages have none) + Expand (long text) + "x ago" timestamp. Inline —
+     * cv-copy-btn is the shared icon button; Fork/Expand are bare .icon-btn (styled in chat.css).
      */
     private _renderActions() {
-        const copyText = this.role === 'user' ? parseIdeContextTags(this.text).text : this.text;
-        return html`<cv-msg-actions
-            class="cv-msg-actions"
-            .text=${copyText}
-            .uuid=${this.uuid}
-            .timestamp=${this.timestamp}
-            .canFork=${this.role === 'user' && !!this.uuid}
-            .canExpand=${this.role === 'user' && (this._isOverflowing || this.expanded)}
-            .expanded=${this.expanded}
-            @toggle-expand=${this._onToggleExpand}
-        ></cv-msg-actions>`;
+        const copyText = parseIdeContextTags(this.text).text;
+        const showFork = this.role === 'user' && !!this.uuid;
+        const showExpand = this.role === 'user' && (this._isOverflowing || this.expanded);
+        return html`<div class="cv-msg-actions">
+            <cv-copy-btn .text=${copyText} title="Copy message"></cv-copy-btn>
+            ${
+                showFork
+                    ? html`<button
+                          class="icon-btn"
+                          title="Fork conversation from here"
+                          @click=${this._onFork}
+                      >
+                          ${unsafeHTML(BranchFork16Regular)}
+                      </button>`
+                    : nothing
+            }
+            ${
+                showExpand
+                    ? html`<button
+                          class="icon-btn"
+                          title=${this.expanded ? 'Reduce' : 'Expand'}
+                          @click=${this._onToggleExpand}
+                      >
+                          ${unsafeHTML(this.expanded ? ChevronUp16Regular : ChevronDown16Regular)}
+                      </button>`
+                    : nothing
+            }
+            ${
+                this.timestamp > 0
+                    ? html`<span class="cv-ts" title=${formatAbsolute(this.timestamp)}
+                          >${formatTimeAgo(this.timestamp)}</span
+                      >`
+                    : nothing
+            }
+        </div>`;
     }
+
+    private _onFork = (e: Event): void => {
+        e.stopPropagation();
+        if (!this.uuid) {
+            return;
+        }
+        bridge.sendNotification<ForkNotification>(Msg.fromWebView.session.fork, {
+            messageUuid: this.uuid,
+        });
+    };
 
     private _onToggleExpand = (e: Event): void => {
         e.stopPropagation();

@@ -1233,10 +1233,34 @@ export class CvApp extends LitElement {
               : this.renderMessage(e);
     }
 
-    // One actions row at the end of a whole response (exchange): copy the whole answer (every
-    // finished assistant block joined) + "x ago" (the last block, i.e. when the response finished).
-    // Just two elements, so inline here — no component. Nothing while the last block still streams,
-    // or when the exchange has no assistant text.
+    // An exchange = the leading user message(s) then the response (assistant blocks + tool rows).
+    // The response and its actions row are wrapped in .cv-response so the row reveals on hovering the
+    // RESPONSE only — hovering the user bubble must not light up the response's copy (they're
+    // separate turns). Leading user entries render outside that wrapper (each has its own row).
+    private renderExchange(group: UiEntry[]) {
+        const isUser = (e: UiEntry): boolean => e.kind === 'text' && e.role === 'user';
+        let i = 0;
+        while (i < group.length && isUser(group[i])) {
+            i++;
+        }
+        const leadUsers = group.slice(0, i);
+        const response = group.slice(i);
+        return html`<section class="cv-exchange">
+            ${leadUsers.map((e) => this.renderEntry(e))}
+            ${
+                response.length > 0
+                    ? html`<div class="cv-response">
+                          ${response.map((e) => this.renderEntry(e))}
+                          ${this.renderResponseActions(response)}
+                      </div>`
+                    : nothing
+            }
+        </section>`;
+    }
+
+    // One actions row at the end of a whole response: copy the whole answer (every finished assistant
+    // block joined) + "x ago" (the last block, i.e. when the response finished). Just two elements, so
+    // inline here — no component. Nothing while the last block still streams, or with no assistant text.
     private renderResponseActions(group: UiEntry[]) {
         const blocks = group.filter(
             (e): e is UiAssistantEntry => e.kind === 'text' && e.role === 'assistant',
@@ -1299,13 +1323,7 @@ export class CvApp extends LitElement {
                         ? html`<cv-welcome></cv-welcome>`
                         : nothing
                 }
-                ${this._exchanges.map(
-                    (group) =>
-                        html`<section class="cv-exchange">
-                            ${group.map((e) => this.renderEntry(e))}
-                            ${this.renderResponseActions(group)}
-                        </section>`,
-                )}
+                ${this._exchanges.map((group) => this.renderExchange(group))}
                 ${
                     this._isBusy && this._streamingMsgs.size === 0 && !this._awaitingUser
                         ? html`<cv-spinner .status=${this._status}></cv-spinner>`
