@@ -128,7 +128,6 @@ export abstract class ToolRenderer {
             open: true,
             onClick: () => this.host.openFileAtEdit(fp),
             chevron: false,
-            actions: this.diffActionButtons(),
         });
     }
 
@@ -163,15 +162,12 @@ export abstract class ToolRenderer {
         onClick: (() => void) | null;
         chevron: boolean;
         chevronAlwaysShown?: boolean;
-        actions?: TemplateResult;
     }): TemplateResult {
         // When the chevron is present it is the toggle (a real button), so the row itself
         // is not clickable — otherwise the two double-trigger. Rows without a chevron keep
         // their row-level click (e.g. diff rows opening the file).
         const rowClick = opts.chevron ? null : opts.onClick;
         const clickable = rowClick !== null;
-        const actions =
-            opts.actions ?? (this.host.status === 'error' ? this.errorButton() : nothing);
         const elapsed = this.host.elapsedSec;
         const wrapCls = `cv-tool-wrap${clickable ? '' : ' no-row-click'}`;
         return html`
@@ -190,7 +186,7 @@ export abstract class ToolRenderer {
                               >`
                             : nothing
                     }
-                    ${actions} ${opts.open ? this.host.componentHeaderActions() : nothing}
+                    ${this.renderHeaderActions()}
                     ${
                         opts.chevron && opts.body !== null
                             ? html`<button
@@ -395,6 +391,12 @@ ${preview(outText)}</pre>
             return `Removed ${removed} line${pl(removed)}`;
         }
         return 'Modified';
+    }
+
+    /** The header actions this tool shows (right of the header, before the chevron). Default: an
+     *  error button on a failed tool, nothing otherwise. Renderers override to add their own. */
+    protected renderHeaderActions(): TemplateResult | typeof nothing {
+        return this.host.status === 'error' ? this.errorButton() : nothing;
     }
 
     /** The "show error details in VS" icon button. */

@@ -55,6 +55,9 @@ export class EditRenderer extends ToolRenderer {
     override row(): TemplateResult {
         return this.rowDiff();
     }
+    protected override renderHeaderActions(): TemplateResult | typeof nothing {
+        return this.diffActionButtons();
+    }
     override header(): TemplateResult {
         const fp = String(this.host.input.file_path ?? '');
         const link = this.editFileLink(
@@ -222,6 +225,13 @@ export class AgentRenderer extends ToolRenderer {
     // any other tool. This is the only tool that opts into it.
     override defaultCollapsed(): boolean {
         return true;
+    }
+    protected override renderHeaderActions(): TemplateResult | typeof nothing {
+        // Copy-output + show-all only make sense once the transcript is open (same as before, when the
+        // slot was gated on `open`). Collapsed → just the error button, if any.
+        return this.host.expanded
+            ? this.host.componentHeaderActions()
+            : super.renderHeaderActions();
     }
 }
 
