@@ -25,6 +25,7 @@ import type {
     IdeContextRef,
     ForkNotification,
     IdeFileNotification,
+    ExternalUrlNotification,
     UiImage,
     UiFile,
     MessageRole,
@@ -212,6 +213,41 @@ export class CvMessage extends LitElement {
         });
     };
 
+    // Delegated click on the rendered markdown: a "path:line" file link (added by the fileLink
+    // marked extension). Route by kind: a standalone document (an .html/.htm report, or anything the
+    // model wrote with a file:// scheme) opens in the default browser via the shell — you want it
+    // rendered, not its source. Everything else (code/text) opens in VS at the line; the host
+    // resolves the path (absolute/relative to the workdir, else searched by name in the workspace).
+    private _onMdClick = (e: Event): void => {
+        const a = (e.target as HTMLElement | null)?.closest('a.cv-file-link') as HTMLElement | null;
+        if (!a) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        const filePath = a.getAttribute('data-file') ?? '';
+        const line = Number(a.getAttribute('data-line') ?? 0) || 0;
+        if (!filePath) {
+            return;
+        }
+        const isDocument = /^file:\/\//i.test(filePath) || /\.html?($|[?#])/i.test(filePath);
+        if (isDocument) {
+            // Normalize backslashes to a proper file:// URL the shell opens in the browser.
+            const url = /^file:\/\//i.test(filePath)
+                ? filePath
+                : 'file:///' + filePath.replace(/\\/g, '/').replace(/^\/+/, '');
+            bridge.sendNotification<ExternalUrlNotification>(Msg.fromWebView.open.externalUrl, {
+                url,
+            });
+            return;
+        }
+        bridge.sendNotification<IdeFileNotification>(Msg.fromWebView.open.ideFile, {
+            filePath,
+            startLine: line,
+            endLine: line,
+        });
+    };
+
     private _onToggleExpand = (e: Event): void => {
         e.stopPropagation();
         const wasExpanded = this.expanded;
@@ -382,7 +418,7 @@ export class CvMessage extends LitElement {
                 return html`
                     <div class="cv-message assistant">
                         <span class="cv-tool-row-dot ${dotClass}"></span>
-                        <div class="cv-msg-body">
+                        <div class="cv-msg-body" @click=${this._onMdClick}>
                             ${
                                 this.streaming
                                     ? html`<div class="md">

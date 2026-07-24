@@ -42,8 +42,9 @@ configure.
 
 ## Two panes, one session
 
-**Chat** — streaming replies, thinking blocks, collapsible tool output, inline diffs, image
-attachments, and a composer with slash commands, an `@` file picker and prompt history.
+**Chat** — streaming replies, thinking blocks, collapsible tool output, inline diffs, clickable file
+references (`ClientEvents.cs:208` opens the file at that line), image attachments, and a composer with
+slash commands, an `@` file picker and prompt history.
 
 **CLI** — the real `claude.exe` in an embedded terminal, connected to the IDE over the same channel
 the official VS Code extension uses.

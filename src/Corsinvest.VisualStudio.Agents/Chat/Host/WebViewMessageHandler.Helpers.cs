@@ -216,12 +216,71 @@ internal sealed partial class WebViewMessageHandler
     private string ResolveFilePath(string filePath)
     {
         if (string.IsNullOrEmpty(filePath)) { return null; }
-        var normalized = filePath.Replace('/', Path.DirectorySeparatorChar);
+        // Strip a file:// prefix (a chat file link may carry one) before path logic.
+        var stripped = filePath;
+        if (stripped.StartsWith("file:///", System.StringComparison.OrdinalIgnoreCase)) { stripped = stripped.Substring(8); }
+        else if (stripped.StartsWith("file://", System.StringComparison.OrdinalIgnoreCase)) { stripped = stripped.Substring(7); }
+        var normalized = stripped.Replace('/', Path.DirectorySeparatorChar);
         if (Path.IsPathRooted(normalized) && File.Exists(normalized)) { return normalized; }
         var combined = Path.Combine(client.WorkingDirectory ?? string.Empty, normalized);
         if (File.Exists(combined)) { return combined; }
         if (File.Exists(normalized)) { return normalized; }
+        // Bare name (a "X.cs:20" link carries just the file name): search the workspace by name.
+        // The model almost always means a file under the working directory (see the chat file-link
+        // design), so a recursive search of the workdir resolves it. First unique match wins; a
+        // deeper path in the link (Core/Stats/X.cs) already resolved above via the workdir-combine.
+        var wd = client.WorkingDirectory;
+        var name = Path.GetFileName(normalized);
+        if (!string.IsNullOrEmpty(wd) && !string.IsNullOrEmpty(name) && Directory.Exists(wd))
+        {
+            var found = FindFileByNameUnderRoot(wd, name);
+            if (found != null) { return found; }
+        }
         OutputWindowLogger.Debug(() => $"[OpenFile] Path not found. raw='{filePath}' normalized='{normalized}' combined='{combined}' workingDir='{client.WorkingDirectory}'");
+        return null;
+    }
+
+    /// <summary>First file named <paramref name="name"/> under <paramref name="root"/>, skipping the
+    /// usual noise dirs (bin/obj/.git/node_modules) to keep the walk fast. Null if none.</summary>
+    private static string FindFileByNameUnderRoot(string root, string name)
+    {
+        try
+        {
+            var stack = new System.Collections.Generic.Stack<string>();
+            stack.Push(root);
+            while (stack.Count > 0)
+            {
+                var dir = stack.Pop();
+                string match = null;
+                try
+                {
+                    foreach (var f in Directory.EnumerateFiles(dir))
+                    {
+                        if (string.Equals(Path.GetFileName(f), name, System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            match = f;
+                            break;
+                        }
+                    }
+                    if (match != null) { return match; }
+                    foreach (var sub in Directory.EnumerateDirectories(dir))
+                    {
+                        var leaf = Path.GetFileName(sub);
+                        if (leaf.Length > 0 && leaf[0] == '.') { continue; }
+                        if (string.Equals(leaf, "bin", System.StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(leaf, "obj", System.StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(leaf, "node_modules", System.StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+                        stack.Push(sub);
+                    }
+                }
+                catch (System.UnauthorizedAccessException) { }
+                catch (System.IO.IOException) { }
+            }
+        }
+        catch (System.Exception) { }
         return null;
     }
 }
