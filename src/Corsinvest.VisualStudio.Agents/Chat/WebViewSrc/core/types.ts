@@ -281,12 +281,16 @@ export interface UiUserEntry extends UiEntryBase {
     uuid?: string;
     images?: UiImage[];
     files?: UiFile[];
+    /** Message time (epoch ms) from the record/event; absent when the wire had none. */
+    timestamp?: number;
 }
 
 /** An assistant turn; `streaming` is UI-only (true while the delta text is still growing). */
 export interface UiAssistantEntry extends UiEntryBase {
     role: 'assistant';
     streaming?: boolean;
+    /** Message time (epoch ms) from the record/event; absent when the wire had none. */
+    timestamp?: number;
 }
 
 /** A thinking block: the model's reasoning, live-only (never persisted). `streaming` true while

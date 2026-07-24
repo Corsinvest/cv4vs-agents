@@ -5,10 +5,8 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import BranchFork16Regular from '@fluentui/svg-icons/icons/branch_fork_16_regular.svg';
-import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
-import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.svg';
 import './cv-copy-btn';
+import './cv-msg-actions';
 import './cv-attach-chip';
 import { renderMarkdown, renderMarkdownStreaming } from '../../core/markdown';
 import { escapeHtml } from '../../core/html';
@@ -23,7 +21,6 @@ import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
 import type {
     IdeContextRef,
-    ForkNotification,
     IdeFileNotification,
     UiImage,
     UiFile,
@@ -49,6 +46,8 @@ export class CvMessage extends LitElement {
     @property({ type: Boolean }) loaded = false;
     @property() uuid = '';
     @property({ type: Boolean }) streaming = false;
+    // Message time (epoch ms) for the actions row's "x ago"; 0 = none (hide it).
+    @property({ type: Number }) timestamp = 0;
     // role:'slash-result' only — true for <local-command-stderr> (rendered red).
     @property({ type: Boolean }) isError = false;
     @property({ attribute: false }) images: UiImage[] = [];
@@ -138,55 +137,24 @@ export class CvMessage extends LitElement {
     }
 
     /**
-     * Hover toolbar. User bubbles add Fork (only with a uuid, i.e. replayed
-     * from JSONL history; live messages have none) and Expand for long text.
+     * Bottom hover actions row. Fork only with a uuid (replayed from JSONL history — live messages
+     * have none); Expand only for long user text. The fork bridge call lives in cv-msg-actions;
+     * Expand toggles this element's state via the `toggle-expand` event.
      */
     private _renderActions() {
-        const showFork = this.role === 'user' && !!this.uuid;
-        const showExpand = this.role === 'user' && (this._isOverflowing || this.expanded);
         const copyText = this.role === 'user' ? parseIdeContextTags(this.text).text : this.text;
-        return html`
-            <div class="cv-msg-actions">
-                <cv-copy-btn .text=${copyText} title="Copy message"></cv-copy-btn>
-                ${
-                    showFork
-                        ? html`<fluent-button
-                              appearance="subtle"
-                              size="small"
-                              icon-only
-                              title="Fork conversation from here"
-                              @click=${this._onFork}
-                          >
-                              ${unsafeHTML(BranchFork16Regular)}
-                          </fluent-button>`
-                        : nothing
-                }
-                ${
-                    showExpand
-                        ? html`<fluent-button
-                              appearance="subtle"
-                              size="small"
-                              icon-only
-                              title=${this.expanded ? 'Reduce' : 'Expand'}
-                              @click=${this._onToggleExpand}
-                          >
-                              ${unsafeHTML(this.expanded ? ChevronUp16Regular : ChevronDown16Regular)}
-                          </fluent-button>`
-                        : nothing
-                }
-            </div>
-        `;
+        return html`<cv-msg-actions
+            class="cv-msg-actions"
+            .text=${copyText}
+            .role=${this.role}
+            .uuid=${this.uuid}
+            .timestamp=${this.timestamp}
+            .canFork=${this.role === 'user' && !!this.uuid}
+            .canExpand=${this.role === 'user' && (this._isOverflowing || this.expanded)}
+            .expanded=${this.expanded}
+            @toggle-expand=${this._onToggleExpand}
+        ></cv-msg-actions>`;
     }
-
-    private _onFork = (e: Event): void => {
-        e.stopPropagation();
-        if (!this.uuid) {
-            return;
-        }
-        bridge.sendNotification<ForkNotification>(Msg.fromWebView.session.fork, {
-            messageUuid: this.uuid,
-        });
-    };
 
     private _onToggleExpand = (e: Event): void => {
         e.stopPropagation();

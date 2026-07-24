@@ -6,6 +6,8 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import BranchFork16Regular from '@fluentui/svg-icons/icons/branch_fork_16_regular.svg';
+import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
+import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.svg';
 import { iconStyles } from '../styles/shared';
 import { formatTimeAgo, formatAbsolute } from '../../core/time';
 import { bridge } from '../../core/bridge';
@@ -67,6 +69,9 @@ export class CvMsgActions extends LitElement {
     @property() uuid = '';
     @property({ type: Number }) timestamp = 0;
     @property({ type: Boolean }) canFork = false;
+    /** Show the expand/reduce toggle (long user messages); state in `expanded`. */
+    @property({ type: Boolean }) canExpand = false;
+    @property({ type: Boolean }) expanded = false;
 
     private _onFork = (e: Event): void => {
         e.stopPropagation();
@@ -76,6 +81,12 @@ export class CvMsgActions extends LitElement {
         bridge.sendNotification<ForkNotification>(Msg.fromWebView.session.fork, {
             messageUuid: this.uuid,
         });
+    };
+
+    // Expand toggles the parent message's state; bubble a composed event so cv-message handles it.
+    private _onExpand = (e: Event): void => {
+        e.stopPropagation();
+        this.dispatchEvent(new CustomEvent('toggle-expand', { bubbles: true, composed: true }));
     };
 
     override render() {
@@ -89,6 +100,17 @@ export class CvMsgActions extends LitElement {
                           @click=${this._onFork}
                       >
                           ${unsafeHTML(BranchFork16Regular)}
+                      </button>`
+                    : nothing
+            }
+            ${
+                this.canExpand
+                    ? html`<button
+                          class="icon-btn"
+                          title=${this.expanded ? 'Reduce' : 'Expand'}
+                          @click=${this._onExpand}
+                      >
+                          ${unsafeHTML(this.expanded ? ChevronUp16Regular : ChevronDown16Regular)}
                       </button>`
                     : nothing
             }

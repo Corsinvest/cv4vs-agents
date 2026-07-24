@@ -120,6 +120,10 @@ export class CvApp extends LitElement {
                 if (!entry) {
                     return;
                 }
+                // Live message: use its wire time, or now as a fallback (a live turn is "now").
+                if (entry.role === 'user') {
+                    entry.timestamp = data.timestamp ?? Date.now();
+                }
                 this._appendEntry(entry, data.parentToolUseId ?? undefined);
                 queueMicrotask(() => this._scrollToBottom());
             }),
@@ -138,10 +142,14 @@ export class CvApp extends LitElement {
                     if (streaming) {
                         streaming.text = data?.text ?? streaming.text;
                         streaming.streaming = false;
+                        // The final assistant notification carries the message time; live fallback = now.
+                        streaming.timestamp = data?.timestamp ?? Date.now();
                         this._streamingMsgs.delete(parentId);
                         this._entries = [...this._entries];
                     } else {
-                        this._appendEntry(CvApp.buildAssistantEntry(data), parentId);
+                        const entry = CvApp.buildAssistantEntry(data);
+                        entry.timestamp = data?.timestamp ?? Date.now();
+                        this._appendEntry(entry, parentId);
                         queueMicrotask(() => this._scrollToBottom());
                     }
                 },
@@ -987,12 +995,19 @@ export class CvApp extends LitElement {
             uuid: d.uuid ?? undefined,
             images: images.length > 0 ? images : undefined,
             files: files.length > 0 ? files : undefined,
+            timestamp: d.timestamp ?? undefined,
         };
     }
 
     /** AssistantTextNotification → an assistant text entry. */
     private static buildAssistantEntry(d: AssistantTextNotification): UiAssistantEntry {
-        return { kind: 'text', id: ++_entryIdSeq, role: 'assistant', text: d.text ?? '' };
+        return {
+            kind: 'text',
+            id: ++_entryIdSeq,
+            role: 'assistant',
+            text: d.text ?? '',
+            timestamp: d.timestamp ?? undefined,
+        };
     }
 
     /** ToolPermissionNotification → a pending tool row. */
@@ -1229,6 +1244,7 @@ export class CvApp extends LitElement {
             .files=${e.role === 'user' ? (e.files ?? []) : []}
             ?streaming=${e.role === 'assistant' ? !!e.streaming : false}
             ?isError=${e.role === 'slash-result' ? e.isError : false}
+            .timestamp=${e.role === 'user' || e.role === 'assistant' ? (e.timestamp ?? 0) : 0}
         ></cv-message>`;
     }
 
