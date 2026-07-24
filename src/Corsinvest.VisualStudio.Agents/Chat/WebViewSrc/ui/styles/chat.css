@@ -273,10 +273,9 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     font-family: var(--fontFamilyMonospace);
     opacity: 0.7;
 }
-/* Error icon lives inside `.cv-tool-actions` so it shares the exact
- * hover/opacity behavior of "Open in VS" — same fade-in on hover, same
- * position. Force the SVG fill to red (Fluent's `<fluent-button>` doesn't
- * pipe `color` through to slotted SVGs reliably). */
+/* Error icon lives inside `.cv-tool-actions` (in flow on the row, next to "Open in VS").
+ * Force the SVG fill to red (Fluent's `<fluent-button>` doesn't pipe `color` through to
+ * slotted SVGs reliably). */
 .cv-tool-actions-error svg,
 .cv-tool-actions-error svg path {
     fill: var(--colorPaletteRedForeground1);
