@@ -1297,7 +1297,7 @@ export class CvApp extends LitElement {
         }
         const text = blocks.map((b) => b.text).join('\n\n');
         const ts = last.timestamp ?? 0;
-        return renderActionsRow(text, ts, 'Copy');
+        return renderActionsRow(text, ts, 'Copy', '', /* speak */ true);
     }
 
     private renderMessage(e: Exclude<UiEntry, UiToolEntry | UiThinkingEntry>) {
