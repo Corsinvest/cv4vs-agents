@@ -13,7 +13,8 @@ import Code16Regular from '@fluentui/svg-icons/icons/code_16_regular.svg';
 import hljs from 'highlight.js';
 import { buildPatch } from '../../core/diff';
 import { state as appState } from '../../core/state';
-import { fileName, displayPath } from '../../core/path';
+import { fileName } from '../../core/path';
+import { displayPathUi } from '../paths';
 import { iconUrl } from '../../core/icon-url';
 import { escapeHtml } from '../../core/html';
 import { renderDiff, SPLIT_THRESHOLD, type DiffFormat } from '../diff';
@@ -139,12 +140,8 @@ export class CvDiffDialog extends CvDialogBase {
         if (!this.open || !this.req) {
             return nothing;
         }
-        const wd = appState.workingDirectory;
         // Title shows bare file name; the path (native separators) goes in the tooltip.
-        const fullPath =
-            displayPath(this.req.filePath, wd, appState.ui.showRelativePaths) ||
-            this.req.filePath ||
-            'Diff';
+        const fullPath = displayPathUi(this.req.filePath) || this.req.filePath || 'Diff';
         const name = fileName(this.req.filePath) || 'Diff';
         return html`
             <fluent-dialog type="modal" aria-label="Diff viewer" @toggle=${this._onDialogToggle}>

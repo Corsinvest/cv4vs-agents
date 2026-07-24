@@ -99,11 +99,15 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     background: var(--colorNeutralBackground3);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
-/* Clip + fade only when truncated; on a short bubble the gradient would clip descenders. */
-.cv-message.user.collapsible.is-overflowing {
+/* Clip + fade the TEXT (.md is a plain block, so max-height clips cleanly with no scrollbar).
+ * The "Show more" button flows BELOW .md, still inside the bubble, so it's always visible below
+ * the clipped text. On a short message the gradient would clip descenders, so it's gated on
+ * is-overflowing. */
+.cv-message.user.collapsible.is-overflowing .md {
     overflow: hidden;
+    position: relative;
 }
-.cv-message.user.collapsible.is-overflowing::after {
+.cv-message.user.collapsible.is-overflowing .md::after {
     content: '';
     position: absolute;
     bottom: 0;
@@ -113,12 +117,23 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     background: linear-gradient(transparent, var(--colorNeutralBackground3));
     pointer-events: none;
 }
-.cv-message.user:hover.collapsible.is-overflowing::after {
+.cv-message.user:hover.collapsible.is-overflowing .md::after {
     background: linear-gradient(transparent, var(--colorNeutralBackground4));
 }
-.cv-message.user.expanded {
-    max-height: none;
-    overflow: visible;
+
+/* "Show more / Show less" for long user messages — inside the bubble, below the clipped text,
+ * with a margin so it never sits flush against the truncated last line. Link-like, theme-aware. */
+.cv-show-more {
+    border: 0;
+    background: transparent;
+    color: var(--colorBrandForegroundLink, var(--colorNeutralForeground2));
+    font-size: 0.85em;
+    cursor: pointer;
+    padding: 2px 0;
+    margin-top: 4px;
+}
+.cv-show-more:hover {
+    text-decoration: underline;
 }
 
 /* Assistant block: same inline dot + flex layout as a tool row, so the dots align. */
@@ -135,7 +150,6 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     flex-direction: row; /* override .cv-message's column */
     align-items: flex-start;
     gap: 6px;
-    position: relative; /* anchor for the absolute .cv-msg-actions (copy) */
 }
 .cv-message.assistant .md > :first-child {
     margin-top: 0;
@@ -251,38 +265,38 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     font-family: var(--fontFamilyMonospace);
     opacity: 0.7;
 }
-/* Error icon lives inside `.cv-tool-actions` so it shares the exact
- * hover/opacity behavior of "Open in VS" — same fade-in on hover, same
- * position. Force the SVG fill to red (Fluent's `<fluent-button>` doesn't
- * pipe `color` through to slotted SVGs reliably). */
+/* Error icon lives inside `.cv-tool-actions` (in flow on the row, next to "Open in VS").
+ * Force the SVG fill to red (Fluent's `<fluent-button>` doesn't pipe `color` through to
+ * slotted SVGs reliably). */
 .cv-tool-actions-error svg,
 .cv-tool-actions-error svg path {
     fill: var(--colorPaletteRedForeground1);
 }
-/* "Open diff in Visual Studio" icon: tinted purple to echo the slash-cmd
- * band ("special action" colour) — the SVG uses stroke currentColor, so
- * we just set color on the host. */
+/* "Open diff in Visual Studio" icon: tinted purple to echo the slash-cmd band
+ * ("special action" colour). The SVG is a solid fill (reads well at 14px), so tint
+ * the fill; clear the generic .icon-btn `fill: currentColor` on this one. */
 .cv-tool-actions-vs svg,
 .cv-tool-actions-vs svg path {
-    stroke: var(--colorPaletteBerryBorderActive);
+    fill: var(--colorPaletteBerryBorderActive);
+    stroke: none;
 }
-/* Tool rows produced by a sub-agent (Agent / Skill) — indented and
+/* A tool row's nested children (Agent / Skill transcript today) — indented and
  * separated by a left border to show the parent/child relationship. */
-.cv-subagent-children {
+.cv-children {
     margin-left: 16px;
     padding-left: 8px;
     border-left: 2px solid var(--colorNeutralStroke1);
     margin-top: 2px;
 }
-/* Collapsed keeps the last 3 children but caps the box so one long child
- * (a big tool output) can't dominate the transcript — scroll inside instead.
- * Expanded is uncapped: showing the full transcript is the point. */
-.cv-subagent-children.cv-subagent-collapsed {
+/* Only the scrolling area is capped — the actions footer is a sibling below it (outside this box)
+ * so Copy + timestamp stay visible without scrolling. Collapsed caps the last-3 view so one long
+ * child (a big tool output) can't dominate; show-all is uncapped (the full transcript is the point). */
+.cv-children-scroll.cv-children-collapsed {
     max-height: 320px;
     overflow-y: auto;
 }
 /* "…" marker above the collapsed list = "there are earlier tools". */
-.cv-subagent-more {
+.cv-children-more {
     color: var(--colorNeutralForeground4);
     font-size: 14px;
     line-height: 1;
@@ -330,26 +344,16 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 .cv-tool-row-chev.always-shown {
     opacity: 1;
 }
+/* Tool header actions — all now come from one renderHeaderActions() per renderer (error / open-diff /
+ * sub-agent copy+expand), rendered in flow on the row (not an absolute overlay). This wrapper holds
+ * the diff/error buttons; the tints below colour them. Buttons are .icon-btn (shared 14px style). */
 .cv-tool-actions {
-    position: absolute;
-    top: 4px;
-    right: 6px;
-    display: flex;
+    display: inline-flex;
+    align-items: center;
     gap: 2px;
-    opacity: 0;
-    transition: opacity 0.15s;
-    z-index: 2;
-    /* Opaque chat-coloured background so the icons don't blend with the
-     * tool body text underneath. */
-    background: var(--colorNeutralBackground1);
-    border-radius: var(--borderRadiusSmall);
-    padding: 2px;
 }
 .cv-tool-wrap {
     position: relative;
-}
-.cv-tool-wrap:hover .cv-tool-actions {
-    opacity: 1;
 }
 
 .cv-tool-body {
@@ -563,24 +567,77 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 .cv-message.user:hover {
     background: var(--colorNeutralBackground4);
 }
+/* Actions row: cv-msg-actions sits below the bubble, on the chat background (a sibling of the
+ * bubble inside the light-DOM cv-message host — NOT inside the .cv-message.user dark box). The slot
+ * is reserved (min-height) so revealing it on hover never shifts the layout. */
 .cv-msg-actions {
-    position: absolute;
-    top: 4px;
-    right: 6px;
     display: flex;
-    gap: 2px;
+    align-items: center;
+    gap: 4px;
+    margin: 2px 0 0 2px;
+    min-height: 20px;
     opacity: 0;
     transition: opacity 0.15s;
-    z-index: 2;
-    /* Opaque chat-coloured background so the icons don't blend with the
-     * cv-message text underneath (icons sit above the bubble content). */
-    background: var(--colorNeutralBackground1);
-    border-radius: var(--borderRadiusSmall);
-    padding: 2px;
 }
-.cv-message.user:hover .cv-msg-actions,
-.cv-message.assistant:hover .cv-msg-actions {
+cv-message:hover .cv-msg-actions,
+cv-message:focus-within .cv-msg-actions {
     opacity: 1;
+}
+/* Small icon-action button — the shared light-DOM twin of cv-copy-btn's .icon-btn (Shadow-scoped).
+ * Used across the chat light DOM: message rows (Fork) and tool header actions (error/open-diff/
+ * expand/copy). Compact (14px glyph), theme-aware, keyboard-focusable — a bare <button>, not a
+ * fluent-button (fluent-pure rule + it can't get this small). */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px;
+    border: 0;
+    border-radius: var(--borderRadiusSmall);
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    opacity: 0.75;
+}
+.icon-btn:hover {
+    background: var(--colorSubtleBackgroundHover, rgba(127, 127, 127, 0.12));
+    opacity: 1;
+}
+.icon-btn:focus-visible {
+    outline: 1px solid var(--colorStrokeFocus2, currentColor);
+    outline-offset: 1px;
+}
+.icon-btn svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+    fill: currentColor;
+}
+/* The response row (inline: copy + timestamp) lives at the end of the exchange (a whole answer),
+ * so it reveals on hovering anywhere in the exchange, not a single bubble. */
+.cv-response-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 2px 0 0 2px;
+    min-height: 20px;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.cv-response:hover .cv-response-actions,
+.cv-response:focus-within .cv-response-actions {
+    opacity: 1;
+}
+/* Same row at the bottom of a sub-agent transcript — reveals on hovering the children box. */
+.cv-children:hover .cv-children-actions,
+.cv-children:focus-within .cv-children-actions {
+    opacity: 1;
+}
+/* Relative "x ago" timestamp next to the copy button (both the user and response rows). */
+.cv-ts {
+    font-size: 0.82em;
+    color: var(--colorNeutralForeground3);
+    cursor: default;
 }
 /* Status messages — a whole assistant turn that is ONLY italic text (e.g.
  * "*Thinking…*"): small and greyed. The `:has` must match a message whose
@@ -714,7 +771,7 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 /* cv-spinner styling now lives in its static styles (Shadow DOM). */
 
 /* cv-subagent-chip styling now lives in its static styles (Shadow DOM). The
- * .cv-subagent-children / -toolbar / -more classes above belong to cv-tool-row. */
+ * .cv-children / -collapsed / -more classes above belong to cv-tool-row. */
 
 /* Elapsed time on a running Agent row (the dot handles the spinner). */
 .cv-agent-time { margin-left: 4px; font-size: 11px; opacity: 0.7; }

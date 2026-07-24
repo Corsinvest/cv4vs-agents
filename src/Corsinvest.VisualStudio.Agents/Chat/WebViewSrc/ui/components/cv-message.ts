@@ -6,8 +6,6 @@ import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import BranchFork16Regular from '@fluentui/svg-icons/icons/branch_fork_16_regular.svg';
-import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
-import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.svg';
 import './cv-copy-btn';
 import './cv-attach-chip';
 import { renderMarkdown, renderMarkdownStreaming } from '../../core/markdown';
@@ -17,10 +15,12 @@ import { Msg } from '../../core/bridge-messages';
 import { fetchChatImage, openChatDocument } from '../../core/lazy';
 import { state as appState } from '../../core/state';
 import { iconUrl } from '../../core/icon-url';
-import { fileName, displayPath } from '../../core/path';
+import { fileName } from '../../core/path';
+import { displayPathUi } from '../paths';
 import { parseIdeContextTags } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
+import { formatTimeAgo, formatAbsolute } from '../../core/time';
 import type {
     IdeContextRef,
     ForkNotification,
@@ -49,6 +49,8 @@ export class CvMessage extends LitElement {
     @property({ type: Boolean }) loaded = false;
     @property() uuid = '';
     @property({ type: Boolean }) streaming = false;
+    // Message time (epoch ms) for the actions row's "x ago"; 0 = none (hide it).
+    @property({ type: Number }) timestamp = 0;
     // role:'slash-result' only — true for <local-command-stderr> (rendered red).
     @property({ type: Boolean }) isError = false;
     @property({ attribute: false }) images: UiImage[] = [];
@@ -56,6 +58,12 @@ export class CvMessage extends LitElement {
 
     @property({ type: Boolean, reflect: true }) expanded = false;
     @state() private _isOverflowing = false;
+    // Re-measure the truncation on width changes: text re-wraps, so the px cap and the "Show more"
+    // decision must be recomputed. updated() alone fires on property change, not on resize.
+    private _resizeObs?: ResizeObserver;
+    // Last observed width — the observer fires on our own max-height writes too, so re-measure only
+    // when the WIDTH actually changed (that's what re-wraps the text). Avoids a feedback loop.
+    private _lastWidth = 0;
 
     // Streaming markdown throttle: re-running the full marked→hljs→DOMPurify
     // pipeline on every token janks long answers, so cache the HTML and refresh
@@ -104,33 +112,56 @@ export class CvMessage extends LitElement {
             clearTimeout(this._streamTimer);
             this._streamTimer = undefined;
         }
+        this._resizeObs?.disconnect();
+        this._resizeObs = undefined;
     }
 
     override updated(): void {
+        this._measure();
+        // Observe width once the row exists: re-wrapping on resize changes the truncation.
+        if (this.role === 'user' && !this._resizeObs) {
+            const el = this.querySelector('.cv-message.user') as HTMLElement | null;
+            if (el) {
+                this._lastWidth = el.clientWidth;
+                this._resizeObs = new ResizeObserver((entries) => {
+                    const w = entries[0]?.contentRect.width ?? 0;
+                    if (Math.abs(w - this._lastWidth) < 1) {
+                        return; // height-only change (our own max-height write) — skip
+                    }
+                    this._lastWidth = w;
+                    this._measure();
+                });
+                this._resizeObs.observe(el);
+            }
+        }
+    }
+
+    /** Cap the message TEXT to previewLines and flag overflow (drives the fade + "Show more").
+     *  The cap goes on .md (plain block, not the flex body/bubble) so it clips cleanly with no
+     *  scrollbar, and the "Show more" button below it stays inside the bubble, visible. */
+    private _measure(): void {
         if (this.role !== 'user') {
             return;
         }
         const el = this.querySelector('.cv-message.user') as HTMLElement | null;
-        if (!el) {
+        const md = this.querySelector('.cv-msg-body .md') as HTMLElement | null;
+        if (!el || !md) {
             return;
         }
-        // Measure natural scrollHeight with the cap removed, then re-apply
-        // the cap (lineHeight * previewLines + paddingV) only when collapsed.
-        el.style.maxHeight = '';
-        el.style.minHeight = '';
-        const cs = getComputedStyle(el);
+        // Measure natural scrollHeight with the cap removed, then re-apply the cap
+        // (lineHeight * previewLines) only when collapsed.
+        md.style.maxHeight = '';
+        const cs = getComputedStyle(md);
         const lineHeight = parseFloat(cs.lineHeight) || 20;
-        const paddingV = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
         const lines = appState.ui.previewLines || 3;
-        const threshold = lineHeight * lines + paddingV;
-        const naturalHeight = el.scrollHeight;
+        const threshold = lineHeight * lines;
+        const naturalHeight = md.scrollHeight;
         // +4 tolerance absorbs sub-pixel lineHeight rounding.
         const overflows = naturalHeight > threshold + 4;
         // Drives the clip + fade CSS; only when truncated, so short bubbles keep their descenders.
         el.classList.toggle('is-overflowing', overflows && !this.expanded);
         if (overflows && !this.expanded) {
-            el.style.maxHeight = `${threshold}px`;
-            el.style.minHeight = `${threshold}px`;
+            md.style.maxHeight = `${threshold}px`;
         }
         if (overflows !== this._isOverflowing) {
             this._isOverflowing = overflows;
@@ -138,48 +169,41 @@ export class CvMessage extends LitElement {
     }
 
     /**
-     * Hover toolbar. User bubbles add Fork (only with a uuid, i.e. replayed
-     * from JSONL history; live messages have none) and Expand for long text.
+     * Bottom hover actions row (user messages): Copy + Fork (only with a uuid, i.e. replayed from
+     * JSONL history — live messages have none) + "x ago" timestamp. Inline — cv-copy-btn is the
+     * shared icon button; Fork is a bare .icon-btn (styled in chat.css). Expand is NOT here: long
+     * messages get an always-visible "Show more" button on the fade instead (see the user render).
      */
     private _renderActions() {
+        const copyText = parseIdeContextTags(this.text).text;
         const showFork = this.role === 'user' && !!this.uuid;
-        const showExpand = this.role === 'user' && (this._isOverflowing || this.expanded);
-        const copyText = this.role === 'user' ? parseIdeContextTags(this.text).text : this.text;
-        return html`
-            <div class="cv-msg-actions">
-                <cv-copy-btn .text=${copyText} title="Copy message"></cv-copy-btn>
-                ${
-                    showFork
-                        ? html`<fluent-button
-                              appearance="subtle"
-                              size="small"
-                              icon-only
-                              title="Fork conversation from here"
-                              @click=${this._onFork}
-                          >
-                              ${unsafeHTML(BranchFork16Regular)}
-                          </fluent-button>`
-                        : nothing
-                }
-                ${
-                    showExpand
-                        ? html`<fluent-button
-                              appearance="subtle"
-                              size="small"
-                              icon-only
-                              title=${this.expanded ? 'Reduce' : 'Expand'}
-                              @click=${this._onToggleExpand}
-                          >
-                              ${unsafeHTML(this.expanded ? ChevronUp16Regular : ChevronDown16Regular)}
-                          </fluent-button>`
-                        : nothing
-                }
-            </div>
-        `;
+        return html`<div class="cv-msg-actions">
+            <cv-copy-btn .text=${copyText} title="Copy message"></cv-copy-btn>
+            ${
+                showFork
+                    ? html`<button
+                          class="icon-btn"
+                          title="Fork conversation from here"
+                          @click=${this._onFork}
+                      >
+                          ${unsafeHTML(BranchFork16Regular)}
+                      </button>`
+                    : nothing
+            }
+            ${
+                this.timestamp > 0
+                    ? html`<span class="cv-ts" title=${formatAbsolute(this.timestamp)}
+                          >${formatTimeAgo(this.timestamp)}</span
+                      >`
+                    : nothing
+            }
+        </div>`;
     }
 
     private _onFork = (e: Event): void => {
         e.stopPropagation();
+        // Drop focus so the actions row (shown on :focus-within) doesn't stay after the pointer leaves.
+        (e.currentTarget as HTMLElement | null)?.blur();
         if (!this.uuid) {
             return;
         }
@@ -265,11 +289,10 @@ export class CvMessage extends LitElement {
 
     /** Render one chip per IDE context ref attached to a user message. */
     private _renderIdeChips(refs: IdeContextRef[]) {
-        const wd = appState.workingDirectory;
         return refs.map((r) => {
             // Chip shows `name:start-end` (editor style, range only for a real
             // selection); tooltip carries the full relative path.
-            const rel = displayPath(r.filePath, wd, appState.ui.showRelativePaths);
+            const rel = displayPathUi(r.filePath);
             const name = fileName(r.filePath);
             const range = r.startLine ? `:${r.startLine}-${r.endLine}` : '';
             return html`<cv-attach-chip
@@ -323,6 +346,8 @@ export class CvMessage extends LitElement {
                 const interrupted = this.text.startsWith('[Request interrupted');
                 const userCls = `cv-message user ${this.expanded ? 'expanded' : 'collapsible'}${interrupted ? ' interrupted' : ''}`;
                 const hasChips = this.images.length > 0 || this.files.length > 0 || refs.length > 0;
+                // The actions row sits OUTSIDE the bubble (below it, on the chat background) so it
+                // doesn't inherit the user bubble's dark box.
                 return html`
                     <div class=${userCls}>
                         ${
@@ -339,8 +364,15 @@ export class CvMessage extends LitElement {
                                 ${unsafeHTML(escapeHtml(text).replace(/\n/g, '<br>'))}
                             </div>
                         </div>
-                        ${interrupted ? nothing : this._renderActions()}
+                        ${
+                            this._isOverflowing || this.expanded
+                                ? html`<button class="cv-show-more" @click=${this._onToggleExpand}>
+                                      ${this.expanded ? 'Show less' : 'Show more'}
+                                  </button>`
+                                : nothing
+                        }
                     </div>
+                    ${interrupted ? nothing : this._renderActions()}
                 `;
             }
 
@@ -360,7 +392,6 @@ export class CvMessage extends LitElement {
                                       </div>`
                             }
                         </div>
-                        ${!this.streaming ? this._renderActions() : nothing}
                     </div>
                 `;
             }

@@ -57,6 +57,8 @@ public sealed class AssistantMessageEventArgs
     public JToken Content { get; set; }
     public JObject Usage { get; set; }
     public string Uuid { get; set; }
+    /// <summary>Message time (epoch ms) parsed from the wire `timestamp`; null when absent.</summary>
+    public long? Timestamp { get; set; }
     /// <summary>When non-null, this assistant message was emitted by a sub-agent
     /// run inside the given parent tool_use (Agent / Skill).</summary>
     public string ParentToolUseId { get; set; }
@@ -66,6 +68,8 @@ public sealed class UserMessageEventArgs
 {
     public JToken Content { get; set; }
     public string Uuid { get; set; }
+    /// <summary>Message time (epoch ms) parsed from the wire `timestamp`; null when absent.</summary>
+    public long? Timestamp { get; set; }
     public JObject ToolUseResult { get; set; }
     /// <summary>When non-null, this user (tool_result) message was emitted by a
     /// sub-agent run inside the given parent tool_use (Agent / Skill).</summary>

@@ -15,6 +15,7 @@ import { makeRenderer } from '../tool-renderers';
 import { BridgeToolHost, cleanResult } from '../tool-renderers/tool-host';
 import type { ToolRowState } from '../tool-renderers/types';
 import { state as appState } from '../../core/state';
+import { renderActionsRow } from '../helpers/actions-row';
 
 // Re-export so existing consumers (e.g. cv-app) can keep importing from here.
 export type { ToolStatus, ToolUseData } from '../../core/types';
@@ -32,16 +33,19 @@ export class CvToolRow extends LitElement implements ToolRowState {
     /** Full output line count (before preview clipping), 0 when empty; count-only renderers use it. */
     @property({ type: Number }) fullLineCount = 0;
     @property({ type: Number }) elapsedSec = 0;
-    @property({ attribute: false }) subagentChildren: UiEntry[] = [];
-    /** More children exist on disk beyond the (≤3) kept in subagentChildren. */
+    // Named childItems, not `children`: HTMLElement.children (the DOM child collection) is reserved.
+    @property({ attribute: false }) childItems: UiEntry[] = [];
+    /** More children exist on disk beyond the (≤3) kept in `childItems`. */
     @property({ type: Boolean }) hasMore = false;
     /** Sub-agent id (Agent tool), used to fetch the full transcript on expand. */
     @property() agentId = '';
-    /** Nested box expanded — owned by cv-app (UiToolEntry.expanded), read here.
-     *  Expanded shows the full list; collapsed shows the last 3. */
-    @property({ type: Boolean }) subagentExpanded = false;
+    /** Show-all — owned by cv-app (UiToolEntry.showAll), read here. True shows the full
+     *  list; false shows the last 3. NOT the row open/closed state (that's `_expanded`). */
+    @property({ type: Boolean }) showAll = false;
 
     @state() private _expanded = false;
+    // Guards the one-shot lazy preview fetch (history Agent expanded with no children yet).
+    private _previewRequested = false;
 
     private _unsubSubagentTasks?: () => void;
 
@@ -52,6 +56,9 @@ export class CvToolRow extends LitElement implements ToolRowState {
     clipsOutput = false;
     toggleExpanded(): void {
         this._expanded = !this._expanded;
+    }
+    get childCount(): number {
+        return this.childItems.length;
     }
 
     override createRenderRoot() {
@@ -74,12 +81,32 @@ export class CvToolRow extends LitElement implements ToolRowState {
         return makeRenderer(this.data?.name, new BridgeToolHost(this)).row();
     }
 
+    override updated(): void {
+        // A history Agent row expanded with no children yet → lazily fetch its ≤3 preview, once.
+        // Live rows already hold children in memory, so this never fires there. The guard stops it
+        // re-firing on every render while the fetch is in flight; it resets when the row collapses.
+        if (this._expanded && this.agentId && this.childItems.length === 0) {
+            if (!this._previewRequested) {
+                this._previewRequested = true;
+                this.dispatchEvent(
+                    new CustomEvent('subagent-toggle', {
+                        detail: { agentId: this.agentId, expand: true, preview: true },
+                        bubbles: true,
+                        composed: true,
+                    }),
+                );
+            }
+        } else if (!this._expanded) {
+            this._previewRequested = false;
+        }
+    }
+
     /** Concatenate the sub-agent's children into markdown, reusing the same raw
      *  strings the per-item copy buttons use: text entries keep their markdown
      *  (tables intact); tool entries are input + cleaned output. */
-    private _subagentToMarkdown(): string {
-        return this.subagentChildren
-            .map((e) => {
+    private _childrenToMarkdown(): string {
+        return this.childItems
+            .map((e: UiEntry) => {
                 if (e.kind === 'text') {
                     return e.text;
                 }
@@ -92,100 +119,112 @@ export class CvToolRow extends LitElement implements ToolRowState {
             .join('\n\n');
     }
 
-    // Expand/collapse are owned by cv-app: it holds the entry, fetches the full
-    // transcript (expand), and slices back to 3 (collapse). The row only signals
-    // the toggle — a same-tree CustomEvent, not the host bridge (this is pure UI).
-    private _onToggleSubagent = (e: Event): void => {
+    // "Show all" button: expand asks cv-app for the WHOLE transcript (preview:false), collapse
+    // slices back to 3. In history cv-app fetches; in live it just shows what's already in memory.
+    // (The first chevron-expand preview is signalled separately in updated().) A same-tree event.
+    private _onToggleShowAll = (e: Event): void => {
         e.stopPropagation();
         this.dispatchEvent(
             new CustomEvent('subagent-toggle', {
-                detail: { agentId: this.agentId, expand: !this.subagentExpanded },
+                detail: { agentId: this.agentId, expand: !this.showAll, preview: false },
                 bubbles: true,
                 composed: true,
             }),
         );
     };
 
-    /** Actions for the Agent header row (copy output + expand/reduce), exposed to the
-     *  renderer via the host. Rendered on the row, not above the children — so there's no
-     *  empty toolbar band. Expand is always offered while the box is expanded: even with
-     *  ≤3 children the collapsed view caps the height and scrolls, so the user still needs
+    /** Header action for the Agent row: Show all / Reduce only. Copy lives in the children
+     *  footer (renderChildren) instead — next to where the transcript ends, matching a normal
+     *  response's bottom actions row. Expand is always offered while the box is expanded: even
+     *  with ≤3 children the collapsed view caps the height and scrolls, so the user still needs
      *  a way to lift the cap and see the whole transcript. */
-    renderHeaderActions() {
-        if (this.subagentChildren.length === 0) {
+    componentHeaderActions() {
+        if (this.childItems.length === 0) {
             return nothing;
         }
         return html`
-            <cv-copy-btn
-                .text=${this._subagentToMarkdown()}
-                title="Copy subagent output"
-            ></cv-copy-btn>
-            <fluent-button
-                appearance="subtle"
-                size="small"
-                icon-only
-                title=${this.subagentExpanded ? 'Reduce' : 'Show all'}
-                @click=${this._onToggleSubagent}
-                >${unsafeHTML(
-                    this.subagentExpanded ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular,
-                )}</fluent-button
+            <button
+                class="icon-btn"
+                title=${this.showAll ? 'Reduce' : 'Show all'}
+                @click=${this._onToggleShowAll}
             >
+                ${unsafeHTML(this.showAll ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular)}
+            </button>
         `;
     }
 
-    /** Nested child rows/messages (Agent tool). Lit-owned, so it stays in the
+    /** Nested child rows/messages (Agent tool today; generic). Lit-owned, so it stays in the
      *  component; the host exposes it to the renderer via renderChildren(). */
     renderChildren() {
-        if (this.subagentChildren.length === 0) {
+        if (this.childItems.length === 0) {
             return nothing;
         }
-        // Collapsed shows the last 3; expanded shows whatever subagentChildren holds
-        // (the full list once fetched). The "…" marker appears when more exist.
-        const shown = this.subagentExpanded
-            ? this.subagentChildren
-            : this.subagentChildren.slice(-3);
-        const hasToggle = this.hasMore || this.subagentChildren.length > 3;
+        // Collapsed shows the last 3; showAll shows whatever childItems holds (the full list
+        // once fetched). The "…" marker appears when more exist.
+        const shown = this.showAll ? this.childItems : this.childItems.slice(-3);
+        const hasToggle = this.hasMore || this.childItems.length > 3;
         return html`
-            <div
-                class="cv-subagent-children ${this.subagentExpanded ? '' : 'cv-subagent-collapsed'}"
-            >
-                ${
-                    hasToggle && !this.subagentExpanded
-                        ? html`<div class="cv-subagent-more" title="Earlier children — Show all">
-                              …
-                          </div>`
-                        : nothing
-                }
-                ${shown.map((c: UiEntry) =>
-                    c.kind === 'text' && c.role === 'thinking'
-                        ? html`<cv-thinking
-                              .text=${c.text}
-                              ?streaming=${!!c.streaming}
-                              .tokens=${c.tokens ?? 0}
-                              .durationMs=${c.durationMs ?? 0}
-                              ?redacted=${!!c.redacted}
-                          ></cv-thinking>`
-                        : c.kind === 'text'
-                          ? html`<cv-message
-                                .role=${c.role}
-                                .text=${c.text}
-                                ?streaming=${c.role === 'assistant' ? !!c.streaming : false}
-                                ?isError=${c.role === 'slash-result' ? c.isError : false}
-                            ></cv-message>`
-                          : html`<cv-tool-row
-                                .data=${c.data}
-                                .status=${c.status}
-                                .result=${c.result}
-                                .elapsedSec=${c.elapsedSec}
-                                .subagentChildren=${c.subagentChildren ?? []}
-                                .fullLineCount=${c.fullLineCount}
-                                .agentId=${this.agentId}
-                                .hasMore=${c.hasMore ?? false}
-                                .subagentExpanded=${c.expanded ?? false}
-                            ></cv-tool-row>`,
-                )}
+            <div class="cv-children">
+                <div class="cv-children-scroll ${this.showAll ? '' : 'cv-children-collapsed'}">
+                    ${
+                        hasToggle && !this.showAll
+                            ? html`<div
+                                  class="cv-children-more"
+                                  title="Earlier children — Show all"
+                              >
+                                  …
+                              </div>`
+                            : nothing
+                    }
+                    ${shown.map((c: UiEntry) =>
+                        c.kind === 'text' && c.role === 'thinking'
+                            ? html`<cv-thinking
+                                  .text=${c.text}
+                                  ?streaming=${!!c.streaming}
+                                  .tokens=${c.tokens ?? 0}
+                                  .durationMs=${c.durationMs ?? 0}
+                                  ?redacted=${!!c.redacted}
+                              ></cv-thinking>`
+                            : c.kind === 'text'
+                              ? html`<cv-message
+                                    .role=${c.role}
+                                    .text=${c.text}
+                                    ?streaming=${c.role === 'assistant' ? !!c.streaming : false}
+                                    ?isError=${c.role === 'slash-result' ? c.isError : false}
+                                ></cv-message>`
+                              : html`<cv-tool-row
+                                    .data=${c.data}
+                                    .status=${c.status}
+                                    .result=${c.result}
+                                    .elapsedSec=${c.elapsedSec}
+                                    .childItems=${c.children?.items ?? []}
+                                    .fullLineCount=${c.fullLineCount}
+                                    .agentId=${this.agentId}
+                                    .hasMore=${c.children?.hasMore ?? false}
+                                    .showAll=${c.children?.showAll ?? false}
+                                ></cv-tool-row>`,
+                    )}
+                </div>
+                ${this._renderChildrenActions()}
             </div>
         `;
+    }
+
+    /** Footer actions for the whole sub-agent transcript: Copy (the full transcript) + the last
+     *  child's "x ago" timestamp. Sits at the bottom of the children box and mirrors a normal
+     *  response's bottom actions row — hover-gated via CSS (.cv-children-actions). */
+    private _renderChildrenActions() {
+        // The last child carries the freshest timestamp; entries without one (e.g. thinking) → 0.
+        const ts = this.childItems.reduce(
+            (m, c) => Math.max(m, ('timestamp' in c ? c.timestamp : 0) ?? 0),
+            0,
+        );
+        return renderActionsRow(
+            this._childrenToMarkdown(),
+            ts,
+            'Copy subagent output',
+            'cv-children-actions',
+        );
     }
 }
 

@@ -311,6 +311,7 @@ public sealed partial class ClaudeClient
             Content = m["content"],
             Usage = m["usage"] as JObject,
             Uuid = obj.Val("uuid"),
+            Timestamp = obj.ValTimestampMs("timestamp"),
             ParentToolUseId = obj.Val("parent_tool_use_id"),
         });
     }
@@ -322,6 +323,7 @@ public sealed partial class ClaudeClient
         {
             Content = m["content"],
             Uuid = obj.Val("uuid"),
+            Timestamp = obj.ValTimestampMs("timestamp"),
             ToolUseResult = obj["tool_use_result"] as JObject,
             ParentToolUseId = obj.Val("parent_tool_use_id"),
             // The compaction summary ("This session is being continued…") rides as a role:user
