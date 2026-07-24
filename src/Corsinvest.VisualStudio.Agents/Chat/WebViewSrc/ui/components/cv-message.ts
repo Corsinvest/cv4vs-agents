@@ -15,7 +15,8 @@ import { Msg } from '../../core/bridge-messages';
 import { fetchChatImage, openChatDocument } from '../../core/lazy';
 import { state as appState } from '../../core/state';
 import { iconUrl } from '../../core/icon-url';
-import { fileName, displayPath } from '../../core/path';
+import { fileName } from '../../core/path';
+import { displayPathUi } from '../paths';
 import { parseIdeContextTags } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
@@ -257,11 +258,10 @@ export class CvMessage extends LitElement {
 
     /** Render one chip per IDE context ref attached to a user message. */
     private _renderIdeChips(refs: IdeContextRef[]) {
-        const wd = appState.workingDirectory;
         return refs.map((r) => {
             // Chip shows `name:start-end` (editor style, range only for a real
             // selection); tooltip carries the full relative path.
-            const rel = displayPath(r.filePath, wd, appState.ui.showRelativePaths);
+            const rel = displayPathUi(r.filePath);
             const name = fileName(r.filePath);
             const range = r.startLine ? `:${r.startLine}-${r.endLine}` : '';
             return html`<cv-attach-chip

@@ -7,7 +7,8 @@
 // registered in index.ts. No name-switching anywhere else.
 
 import { html, nothing, type TemplateResult } from 'lit';
-import { displayPath, fileName } from '../../core/path';
+import { fileName } from '../../core/path';
+import { displayPathUi } from '../paths';
 import { truncate } from '../helpers/format';
 import { ToolRenderer } from './base';
 import { state as appState } from '../../core/state';
@@ -37,12 +38,7 @@ export class ReadRenderer extends ToolRenderer {
                   : '';
         const start = offset != null ? offset + 1 : 0;
         const end = start > 0 && limit != null && limit > 0 ? start + limit - 1 : start;
-        const link = this.fileLink(
-            fp,
-            html`${displayPath(fp, appState.workingDirectory, appState.ui.showRelativePaths)}${range}`,
-            start,
-            end,
-        );
+        const link = this.fileLink(fp, html`${displayPathUi(fp)}${range}`, start, end);
         return html`${this.nameSpan('Read')}${this.detailSpan(link)}`;
     }
 }
@@ -60,10 +56,7 @@ export class EditRenderer extends ToolRenderer {
     }
     override header(): TemplateResult {
         const fp = String(this.host.input.file_path ?? '');
-        const link = this.editFileLink(
-            fp,
-            html`${displayPath(fp, appState.workingDirectory, appState.ui.showRelativePaths)}`,
-        );
+        const link = this.editFileLink(fp, html`${displayPathUi(fp)}`);
         return html`${this.nameSpan(this.label())}${this.detailSpan(link)}`;
     }
 }
@@ -103,9 +96,7 @@ export class GrepRenderer extends ToolRenderer {
         const extras: string[] = [];
         // Shorten the search path relative to the workdir, exactly like Edit/Read.
         if (i.path) {
-            extras.push(
-                `in ${displayPath(String(i.path), appState.workingDirectory, appState.ui.showRelativePaths)}`,
-            );
+            extras.push(`in ${displayPathUi(String(i.path))}`);
         }
         if (i.glob) {
             extras.push(`glob: ${String(i.glob)}`);
