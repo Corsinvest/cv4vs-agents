@@ -231,7 +231,7 @@ export class AgentRenderer extends ToolRenderer {
     protected override hasExpandableContent(): boolean {
         // An Agent is always expandable: it has a prompt body, and even at 0 children the chevron must
         // show so expanding can kick the lazy preview fetch (history). agentId makes that explicit.
-        return this.body() !== null || this.host.agentId !== '' || this.host.subagentChildCount > 0;
+        return this.body() !== null || this.host.agentId !== '' || this.host.childCount > 0;
     }
     protected override renderHeaderActions(): TemplateResult | typeof nothing {
         // Copy-output + show-all only make sense once the transcript is open (same as before, when the

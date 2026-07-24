@@ -23,8 +23,8 @@ export interface ToolRowState {
     /** Sub-agent id when this row is a child of an Agent — routes open-output to the
      *  sub-agent transcript. Empty for top-level tools. */
     readonly agentId: string;
-    /** How many sub-agent children this row holds (Agent tool). 0 for a normal tool. */
-    readonly subagentChildCount: number;
+    /** How many nested children this row holds (Agent tool today). 0 for a normal tool. */
+    readonly childCount: number;
     clipsOutput: boolean;
     toggleExpanded(): void;
     /** Nested child rows/messages (Agent tool's transcript), or nothing. Generic:

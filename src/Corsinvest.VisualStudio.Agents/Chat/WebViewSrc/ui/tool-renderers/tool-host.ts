@@ -74,8 +74,8 @@ export class BridgeToolHost implements ToolHost {
     componentHeaderActions() {
         return this.row.componentHeaderActions();
     }
-    get subagentChildCount(): number {
-        return this.row.subagentChildCount;
+    get childCount(): number {
+        return this.row.childCount;
     }
     get clipsOutput(): boolean {
         return this.row.clipsOutput;

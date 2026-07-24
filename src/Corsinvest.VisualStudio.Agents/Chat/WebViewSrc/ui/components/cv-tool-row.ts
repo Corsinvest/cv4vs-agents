@@ -32,8 +32,9 @@ export class CvToolRow extends LitElement implements ToolRowState {
     /** Full output line count (before preview clipping), 0 when empty; count-only renderers use it. */
     @property({ type: Number }) fullLineCount = 0;
     @property({ type: Number }) elapsedSec = 0;
-    @property({ attribute: false }) subagentChildren: UiEntry[] = [];
-    /** More children exist on disk beyond the (≤3) kept in subagentChildren. */
+    // Named childItems, not `children`: HTMLElement.children (the DOM child collection) is reserved.
+    @property({ attribute: false }) childItems: UiEntry[] = [];
+    /** More children exist on disk beyond the (≤3) kept in `childItems`. */
     @property({ type: Boolean }) hasMore = false;
     /** Sub-agent id (Agent tool), used to fetch the full transcript on expand. */
     @property() agentId = '';
@@ -55,8 +56,8 @@ export class CvToolRow extends LitElement implements ToolRowState {
     toggleExpanded(): void {
         this._expanded = !this._expanded;
     }
-    get subagentChildCount(): number {
-        return this.subagentChildren.length;
+    get childCount(): number {
+        return this.childItems.length;
     }
 
     override createRenderRoot() {
@@ -83,7 +84,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
         // A history Agent row expanded with no children yet → lazily fetch its ≤3 preview, once.
         // Live rows already hold children in memory, so this never fires there. The guard stops it
         // re-firing on every render while the fetch is in flight; it resets when the row collapses.
-        if (this._expanded && this.agentId && this.subagentChildren.length === 0) {
+        if (this._expanded && this.agentId && this.childItems.length === 0) {
             if (!this._previewRequested) {
                 this._previewRequested = true;
                 this.dispatchEvent(
@@ -102,9 +103,9 @@ export class CvToolRow extends LitElement implements ToolRowState {
     /** Concatenate the sub-agent's children into markdown, reusing the same raw
      *  strings the per-item copy buttons use: text entries keep their markdown
      *  (tables intact); tool entries are input + cleaned output. */
-    private _subagentToMarkdown(): string {
-        return this.subagentChildren
-            .map((e) => {
+    private _childrenToMarkdown(): string {
+        return this.childItems
+            .map((e: UiEntry) => {
                 if (e.kind === 'text') {
                     return e.text;
                 }
@@ -120,7 +121,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
     // "Show all" button: expand asks cv-app for the WHOLE transcript (preview:false), collapse
     // slices back to 3. In history cv-app fetches; in live it just shows what's already in memory.
     // (The first chevron-expand preview is signalled separately in updated().) A same-tree event.
-    private _onToggleSubagent = (e: Event): void => {
+    private _onToggleShowAll = (e: Event): void => {
         e.stopPropagation();
         this.dispatchEvent(
             new CustomEvent('subagent-toggle', {
@@ -137,45 +138,39 @@ export class CvToolRow extends LitElement implements ToolRowState {
      *  ≤3 children the collapsed view caps the height and scrolls, so the user still needs
      *  a way to lift the cap and see the whole transcript. */
     componentHeaderActions() {
-        if (this.subagentChildren.length === 0) {
+        if (this.childItems.length === 0) {
             return nothing;
         }
         return html`
             <cv-copy-btn
-                .text=${this._subagentToMarkdown()}
+                .text=${this._childrenToMarkdown()}
                 title="Copy subagent output"
             ></cv-copy-btn>
             <button
                 class="icon-btn"
                 title=${this.showAll ? 'Reduce' : 'Show all'}
-                @click=${this._onToggleSubagent}
+                @click=${this._onToggleShowAll}
             >
-                ${unsafeHTML(
-                    this.showAll ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular,
-                )}
+                ${unsafeHTML(this.showAll ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular)}
             </button>
         `;
     }
 
-    /** Nested child rows/messages (Agent tool). Lit-owned, so it stays in the
+    /** Nested child rows/messages (Agent tool today; generic). Lit-owned, so it stays in the
      *  component; the host exposes it to the renderer via renderChildren(). */
     renderChildren() {
-        if (this.subagentChildren.length === 0) {
+        if (this.childItems.length === 0) {
             return nothing;
         }
-        // Collapsed shows the last 3; expanded shows whatever subagentChildren holds
-        // (the full list once fetched). The "…" marker appears when more exist.
-        const shown = this.showAll
-            ? this.subagentChildren
-            : this.subagentChildren.slice(-3);
-        const hasToggle = this.hasMore || this.subagentChildren.length > 3;
+        // Collapsed shows the last 3; showAll shows whatever childItems holds (the full list
+        // once fetched). The "…" marker appears when more exist.
+        const shown = this.showAll ? this.childItems : this.childItems.slice(-3);
+        const hasToggle = this.hasMore || this.childItems.length > 3;
         return html`
-            <div
-                class="cv-subagent-children ${this.showAll ? '' : 'cv-subagent-collapsed'}"
-            >
+            <div class="cv-children ${this.showAll ? '' : 'cv-children-collapsed'}">
                 ${
                     hasToggle && !this.showAll
-                        ? html`<div class="cv-subagent-more" title="Earlier children — Show all">
+                        ? html`<div class="cv-children-more" title="Earlier children — Show all">
                               …
                           </div>`
                         : nothing
@@ -201,11 +196,11 @@ export class CvToolRow extends LitElement implements ToolRowState {
                                 .status=${c.status}
                                 .result=${c.result}
                                 .elapsedSec=${c.elapsedSec}
-                                .subagentChildren=${c.subagentChildren ?? []}
+                                .childItems=${c.children?.items ?? []}
                                 .fullLineCount=${c.fullLineCount}
                                 .agentId=${this.agentId}
-                                .hasMore=${c.hasMore ?? false}
-                                .showAll=${c.showAll ?? false}
+                                .hasMore=${c.children?.hasMore ?? false}
+                                .showAll=${c.children?.showAll ?? false}
                             ></cv-tool-row>`,
                 )}
             </div>

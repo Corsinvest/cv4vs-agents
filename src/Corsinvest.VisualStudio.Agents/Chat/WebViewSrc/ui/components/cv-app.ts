@@ -108,7 +108,7 @@ export class CvApp extends LitElement {
         window.addEventListener('keydown', this._onGlobalEsc);
         // A nested Agent box toggled. Expand: fetch the full transcript (subagent_loaded
         // upserts it + sets expanded). Collapse: drop back to the last 3 here.
-        this.addEventListener('subagent-toggle', this._onSubagentToggle as EventListener);
+        this.addEventListener('subagent-toggle', this._onChildrenToggle as EventListener);
         // A compact separator's <details> opened for the first time: fetch the summary
         // (lazy, cached via the entry's `loaded` flag — collapse/re-expand doesn't refetch).
         this.addEventListener('compact-expand', this._onCompactExpand as EventListener);
@@ -569,7 +569,7 @@ export class CvApp extends LitElement {
         super.disconnectedCallback();
         this._messagesEl?.removeEventListener('scroll', this._onMessagesScroll);
         window.removeEventListener('keydown', this._onGlobalEsc);
-        this.removeEventListener('subagent-toggle', this._onSubagentToggle as EventListener);
+        this.removeEventListener('subagent-toggle', this._onChildrenToggle as EventListener);
         this.removeEventListener('compact-expand', this._onCompactExpand as EventListener);
         this.removeEventListener('model-switched', this._onModelSwitched as EventListener);
         for (const off of this._offs) {
@@ -733,8 +733,11 @@ export class CvApp extends LitElement {
                             }
                         }
                     }
-                    e.hasMore = children.length > 3;
-                    e.subagentChildren = children.slice(-3);
+                    e.children = {
+                        items: children.slice(-3),
+                        hasMore: children.length > 3,
+                        showAll: false,
+                    };
                 }
             }
         }
@@ -801,7 +804,7 @@ export class CvApp extends LitElement {
      *
      * Memoria-minima: when appending a child under an Agent parent, keep only
      * the last 3 children — a ring of 3 (`slice(-3)`). The `hasMore` flag flips
-     * true once a 4th child arrives (subagentChildren already holds 3 before the push):
+     * true once a 4th child arrives (children.items already holds 3 before the push):
      * the "…" indicator only signals "more exist", not the count, so a boolean
      * is enough — no running counter needed.
      */
@@ -824,19 +827,18 @@ export class CvApp extends LitElement {
                 if (parent.agentId && entry.kind === 'tool') {
                     (entry as UiToolEntry).agentId = parent.agentId;
                 }
-                if (parent.showAll) {
+                // First child under this parent creates the children block.
+                const kids = (parent.children ??= { items: [], hasMore: false, showAll: false });
+                if (kids.showAll) {
                     // Show-all: keep the full list, upsert (a re-emitted tool row updates
                     // in place — e.g. pending → done — instead of duplicating).
-                    parent.subagentChildren = this._upsertChild(
-                        parent.subagentChildren ?? [],
-                        entry,
-                    );
+                    kids.items = this._upsertChild(kids.items, entry);
                 } else {
                     // Collapsed: ring of 3. A 4th child means more exist beyond the window.
-                    if ((parent.subagentChildren?.length ?? 0) >= 3) {
-                        parent.hasMore = true;
+                    if (kids.items.length >= 3) {
+                        kids.hasMore = true;
                     }
-                    parent.subagentChildren = [...(parent.subagentChildren ?? []), entry].slice(-3);
+                    kids.items = [...kids.items, entry].slice(-3);
                 }
                 this._entries = [...this._entries];
                 return;
@@ -847,7 +849,7 @@ export class CvApp extends LitElement {
     }
 
     /** Expand/collapse a nested Agent box (CustomEvent from cv-tool-row). */
-    private _onSubagentToggle = (
+    private _onChildrenToggle = (
         e: CustomEvent<{ agentId: string; expand: boolean; preview?: boolean }>,
     ): void => {
         const { agentId, expand, preview } = e.detail ?? {};
@@ -855,27 +857,29 @@ export class CvApp extends LitElement {
         if (!parent) {
             return;
         }
+        // Ensure the children block exists (a history Agent may not have fetched anything yet).
+        const kids = (parent.children ??= { items: [], hasMore: false, showAll: false });
         if (expand) {
             // Rule: history FETCHES, live SHOWS what it already has in memory.
             //  - preview (first chevron expand): fetch only if children are empty (history). Live
             //    already streamed them in → no fetch.
-            //  - Show all (preview=false): mark expanded; fetch the whole transcript only if there's
+            //  - Show all (preview=false): mark showAll; fetch the whole transcript only if there's
             //    more than we hold (hasMore = a history preview). Live/already-full → just show all.
             const showAll = !preview;
             // Show all sets the flag; preview (chevron open) leaves it false → renderChildren shows ≤3.
             // Row open/closed is the component's own `_expanded`, not tracked here.
-            parent.showAll = showAll;
+            kids.showAll = showAll;
 
             const needFetch = preview
-                ? (parent.subagentChildren?.length ?? 0) === 0 // history preview
-                : parent.hasMore; // Show all with more on disk than we hold
+                ? kids.items.length === 0 // history preview
+                : kids.hasMore; // Show all with more on disk than we hold
             if (!needFetch) {
                 this._entries = [...this._entries];
                 return;
             }
             // Show all replaces with the whole transcript, so clear first (it re-adds in order).
             if (showAll) {
-                parent.subagentChildren = [];
+                kids.items = [];
             }
             fetchSubagent(agentId, { preview: !!preview })
                 .then((data) => {
@@ -883,12 +887,13 @@ export class CvApp extends LitElement {
                     if (!p) {
                         return;
                     }
+                    const pk = (p.children ??= { items: [], hasMore: false, showAll: false });
                     const full = this._replayEvents(data.events ?? []);
                     // The transcript's first user message echoes the launch prompt (already shown as
                     // the Agent row's IN). Its events carry no parentToolUseId, so the _replayEvents
                     // post-pass filter doesn't reach them — drop the echo here.
                     const prompt = String(p.data?.input?.prompt ?? '').trim();
-                    let list = p.subagentChildren ?? [];
+                    let list = pk.items;
                     for (const child of full) {
                         if (
                             prompt &&
@@ -902,9 +907,9 @@ export class CvApp extends LitElement {
                     }
                     // Preview keeps the last 3 (and flags "…" if more); full keeps everything and is
                     // now complete in memory (hasMore=false → no more fetches).
-                    p.subagentChildren = preview ? list.slice(-3) : list;
-                    p.hasMore = preview ? list.length > 3 : false;
-                    p.showAll = !preview;
+                    pk.items = preview ? list.slice(-3) : list;
+                    pk.hasMore = preview ? list.length > 3 : false;
+                    pk.showAll = !preview;
                     this._entries = [...this._entries];
                 })
                 .catch(() => {
@@ -914,8 +919,8 @@ export class CvApp extends LitElement {
             // "Reduce" (Show all → off): show the last 3 again, but KEEP the full list in memory so a
             // later Show all doesn't refetch (and live never can). renderChildren slices the view.
             // hasMore reflects that more is held than shown.
-            parent.showAll = false;
-            parent.hasMore = (parent.subagentChildren?.length ?? 0) > 3;
+            kids.showAll = false;
+            kids.hasMore = kids.items.length > 3;
         }
         this._entries = [...this._entries];
     };
@@ -1075,8 +1080,8 @@ export class CvApp extends LitElement {
                 if (e.toolUseId === toolUseId) {
                     return e;
                 }
-                if (e.subagentChildren?.length) {
-                    const hit = visit(e.subagentChildren);
+                if (e.children?.items.length) {
+                    const hit = visit(e.children.items);
                     if (hit) {
                         return hit;
                     }
@@ -1097,8 +1102,8 @@ export class CvApp extends LitElement {
                 if (e.agentId === agentId) {
                     return e;
                 }
-                if (e.subagentChildren?.length) {
-                    const hit = visit(e.subagentChildren);
+                if (e.children?.items.length) {
+                    const hit = visit(e.children.items);
                     if (hit) {
                         return hit;
                     }
@@ -1320,11 +1325,11 @@ export class CvApp extends LitElement {
             .status=${e.status}
             .result=${e.result}
             .elapsedSec=${e.elapsedSec}
-            .subagentChildren=${e.subagentChildren ?? []}
+            .childItems=${e.children?.items ?? []}
             .fullLineCount=${e.fullLineCount}
             .agentId=${e.agentId ?? ''}
-            .hasMore=${e.hasMore ?? false}
-            .showAll=${e.showAll ?? false}
+            .hasMore=${e.children?.hasMore ?? false}
+            .showAll=${e.children?.showAll ?? false}
         ></cv-tool-row>`;
     }
 
