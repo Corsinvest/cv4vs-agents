@@ -32,6 +32,17 @@
         </Strings>
       </Menu>
 
+      <!-- Analytics: the three full-window data tabs (Statistics / Usage / Context usage). -->
+      <Menu guid="guidAgentsCommandSet" id="AnalyticsSubMenu" priority="0x0180" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="StatisticsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="BarChart"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Analytics</ButtonText>
+        </Strings>
+      </Menu>
+
       <!-- Help &amp; Feedback: docs first (it answers without bothering anyone), contact after. -->
       <Menu guid="guidAgentsCommandSet" id="HelpSubMenu" priority="0x0100" type="Menu">
         <Parent guid="guidAgentsCommandSet" id="HelpGroup"/>
@@ -53,9 +64,13 @@
       <Group guid="guidAgentsCommandSet" id="ProfilesGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
       </Group>
-      <!-- Statistics on its own, between profiles and the global actions (auto separators). -->
+      <!-- Analytics submenu anchor, between profiles and the global actions (auto separators). -->
       <Group guid="guidAgentsCommandSet" id="StatisticsGroup" priority="0x0180">
         <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
+      </Group>
+      <!-- The three data-tab entries inside the Analytics submenu. -->
+      <Group guid="guidAgentsCommandSet" id="AnalyticsGroup" priority="0x0100">
+        <Parent guid="guidAgentsCommandSet" id="AnalyticsSubMenu"/>
       </Group>
       <!-- Global (not per-pane) entries. Separate groups because VS draws the separators
            between groups — no <Separator> needed. -->
@@ -109,20 +124,20 @@
         <Strings><ButtonText>View output log</ButtonText></Strings>
       </Button>
       <Button guid="guidAgentsCommandSet" id="StatisticsCommandId" priority="0x0100" type="Button">
-        <Parent guid="guidAgentsCommandSet" id="StatisticsGroup"/>
+        <Parent guid="guidAgentsCommandSet" id="AnalyticsGroup"/>
         <Icon guid="ImageCatalogGuid" id="Statistics"/>
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Statistics</ButtonText></Strings>
       </Button>
       <Button guid="guidAgentsCommandSet" id="UsageCommandId" priority="0x0200" type="Button">
-        <Parent guid="guidAgentsCommandSet" id="StatisticsGroup"/>
-        <Icon guid="ImageCatalogGuid" id="CloudGroup"/>
+        <Parent guid="guidAgentsCommandSet" id="AnalyticsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="GaugeRound"/>
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Usage</ButtonText></Strings>
       </Button>
       <Button guid="guidAgentsCommandSet" id="ContextUsageCommandId" priority="0x0300" type="Button">
-        <Parent guid="guidAgentsCommandSet" id="StatisticsGroup"/>
-        <Icon guid="ImageCatalogGuid" id="MemoryWindow"/>
+        <Parent guid="guidAgentsCommandSet" id="AnalyticsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="DoughnutChart"/>
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Context usage</ButtonText></Strings>
       </Button>
@@ -176,6 +191,8 @@
       <IDSymbol name="ProfilesSubMenu" value="0x1030" />
       <IDSymbol name="ProfilesGroup" value="0x1040" />
       <IDSymbol name="StatisticsGroup" value="0x1045" />
+      <IDSymbol name="AnalyticsSubMenu" value="0x1046" />
+      <IDSymbol name="AnalyticsGroup" value="0x1047" />
       <IDSymbol name="GlobalGroup" value="0x1050" />
       <IDSymbol name="HelpGroup" value="0x1060" />
       <IDSymbol name="HelpSubMenu" value="0x1070" />
