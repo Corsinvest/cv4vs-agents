@@ -226,6 +226,11 @@ export class AgentRenderer extends ToolRenderer {
     override defaultCollapsed(): boolean {
         return true;
     }
+    // The chevron must appear while the sub-agent runs, not only once it finishes — so the row can be
+    // opened to follow the live children. Expandable when there's a prompt body OR any child yet.
+    protected override hasExpandableContent(): boolean {
+        return this.body() !== null || this.host.subagentChildCount > 0;
+    }
     protected override renderHeaderActions(): TemplateResult | typeof nothing {
         // Copy-output + show-all only make sense once the transcript is open (same as before, when the
         // slot was gated on `open`). Collapsed → just the error button, if any.

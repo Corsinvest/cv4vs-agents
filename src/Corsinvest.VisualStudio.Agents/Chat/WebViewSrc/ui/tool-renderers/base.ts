@@ -76,19 +76,21 @@ export abstract class ToolRenderer {
     /** Header + collapsible IN/OUT body (the common case). */
     protected rowStandard(): TemplateResult {
         const body = this.body();
-        const hasBody = body !== null && this.host.status !== 'pending';
+        // "Something to expand into": a body, or (Agent) live sub-agent children. Not gated on the
+        // pending status, so the Agent chevron appears while the sub-agent runs.
+        const expandable = this.hasExpandableContent();
         // Only defaultCollapsed rows (Agent) are collapsible: they start closed regardless of
         // the preview setting and show a chevron (kept visible at rest) to toggle. Every other
         // tool opens per autoOpen and shows no chevron — its body just stays open.
         const collapsed = this.defaultCollapsed();
         const open =
-            hasBody && (collapsed ? this.host.expanded : this.autoOpen() || this.host.expanded);
+            expandable && (collapsed ? this.host.expanded : this.autoOpen() || this.host.expanded);
         return this.chrome({
-            body: hasBody ? body : null,
+            body,
             open,
             // No explicit onClick: chrome's rowClick falls back to toggleExpanded when there's a chevron.
             onClick: null,
-            chevron: hasBody && collapsed,
+            chevron: expandable && collapsed,
             chevronAlwaysShown: collapsed,
         });
     }
@@ -144,6 +146,13 @@ export abstract class ToolRenderer {
         });
     }
 
+    /** Whether the row has something to expand into (drives the chevron + row toggle). Default: a
+     *  non-empty body. Agent widens this to include its live sub-agent children, so the chevron
+     *  shows while the sub-agent runs, not only once it finishes. */
+    protected hasExpandableContent(): boolean {
+        return this.body() !== null;
+    }
+
     /** Whether a standard body opens without a click. Default: error rows, or
      *  when previews are on. */
     protected autoOpen(): boolean {
@@ -190,7 +199,7 @@ export abstract class ToolRenderer {
                     }
                     ${this.renderHeaderActions()}
                     ${
-                        opts.chevron && opts.body !== null
+                        opts.chevron
                             ? html`<button
                                   class="icon-btn cv-tool-row-chev ${opts.open ? 'expanded' : ''} ${
                                       opts.chevronAlwaysShown ? 'always-shown' : ''
