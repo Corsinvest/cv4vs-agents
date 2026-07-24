@@ -1279,19 +1279,26 @@ export class CvApp extends LitElement {
         </section>`;
     }
 
-    // One actions row at the end of a whole response: copy the whole answer (every finished assistant
-    // block joined) + "x ago" (the last block, i.e. when the response finished). Just two elements, so
-    // inline here — no component. Nothing while the last block still streams, or with no assistant text.
+    // One actions row at the end of a whole exchange's response: copy every finished text block
+    // (assistant answers AND slash-command outputs like /config) joined + "x ago" (the last block).
+    // Nothing while the last assistant block still streams, or with no copyable text (e.g. a bare
+    // tool-only response). A slash-result-only exchange (a command with no assistant reply) still
+    // gets the row — its output is worth copying.
     private renderResponseActions(group: UiEntry[]) {
         const blocks = group.filter(
-            (e): e is UiAssistantEntry => e.kind === 'text' && e.role === 'assistant',
+            (e): e is UiAssistantEntry | UiSlashResultEntry =>
+                e.kind === 'text' && (e.role === 'assistant' || e.role === 'slash-result'),
         );
-        if (blocks.length === 0 || blocks[blocks.length - 1].streaming) {
+        if (blocks.length === 0) {
+            return nothing;
+        }
+        const last = blocks[blocks.length - 1];
+        if (last.role === 'assistant' && last.streaming) {
             return nothing;
         }
         const text = blocks.map((b) => b.text).join('\n\n');
-        const ts = blocks[blocks.length - 1].timestamp ?? 0;
-        return renderActionsRow(text, ts, 'Copy response');
+        const ts = last.timestamp ?? 0;
+        return renderActionsRow(text, ts, 'Copy');
     }
 
     private renderMessage(e: Exclude<UiEntry, UiToolEntry | UiThinkingEntry>) {

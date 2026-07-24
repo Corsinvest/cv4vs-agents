@@ -681,11 +681,6 @@ cv-message:focus-within .cv-msg-actions {
 .cv-message.slash-result.error pre {
     border-left-color: var(--colorPaletteRedForeground1);
 }
-/* Copy + timestamp below the output, revealed on hovering the block. */
-.cv-message.slash-result:hover .cv-slash-actions,
-.cv-message.slash-result:focus-within .cv-slash-actions {
-    opacity: 1;
-}
 
 .cv-message.error {
     align-self: flex-start;
