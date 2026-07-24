@@ -16,10 +16,10 @@ import type { ForkNotification } from '../../core/types';
 import './cv-copy-btn';
 
 /**
- * The message actions row (bottom of a user/assistant bubble, revealed on hover by the parent):
- * Copy + optional Fork + optional "x ago" timestamp (absolute date/time in its tooltip). Small
- * bare-button icons — the icon-action standard shared with cv-copy-btn. The anchor for future
- * pin/listen buttons.
+ * The user message actions row (below the bubble, revealed on hover): Copy + optional Fork +
+ * optional Expand + optional "x ago" timestamp (absolute date/time in its tooltip). Small bare-button
+ * icons — the icon-action standard shared with cv-copy-btn. The anchor for future pin/listen buttons.
+ * (The whole-response row is rendered inline in cv-app — just copy + timestamp.)
  */
 @customElement('cv-msg-actions')
 export class CvMsgActions extends LitElement {
@@ -65,7 +65,6 @@ export class CvMsgActions extends LitElement {
     ];
 
     @property() text = '';
-    @property() role: 'user' | 'assistant' = 'assistant';
     @property() uuid = '';
     @property({ type: Number }) timestamp = 0;
     @property({ type: Boolean }) canFork = false;

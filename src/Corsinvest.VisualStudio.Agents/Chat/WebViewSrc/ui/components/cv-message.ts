@@ -146,7 +146,6 @@ export class CvMessage extends LitElement {
         return html`<cv-msg-actions
             class="cv-msg-actions"
             .text=${copyText}
-            .role=${this.role}
             .uuid=${this.uuid}
             .timestamp=${this.timestamp}
             .canFork=${this.role === 'user' && !!this.uuid}

@@ -11,7 +11,8 @@ import './cv-cli-banner';
 import './cv-welcome';
 import './cv-prompt';
 import './cv-message';
-import './cv-msg-actions';
+import './cv-copy-btn';
+import { formatTimeAgo, formatAbsolute } from '../../core/time';
 import './cv-thinking';
 // Dialogs are created on demand by core/dialog-host (which must not import ui/),
 // so register their custom elements here in the UI layer.
@@ -1232,9 +1233,10 @@ export class CvApp extends LitElement {
               : this.renderMessage(e);
     }
 
-    // One actions row at the end of a whole response (exchange): copy = the whole answer (every
-    // finished assistant block joined), timestamp = the last block (when the response finished).
-    // Nothing while the last block is still streaming, or when the exchange has no assistant text.
+    // One actions row at the end of a whole response (exchange): copy the whole answer (every
+    // finished assistant block joined) + "x ago" (the last block, i.e. when the response finished).
+    // Just two elements, so inline here — no component. Nothing while the last block still streams,
+    // or when the exchange has no assistant text.
     private renderResponseActions(group: UiEntry[]) {
         const blocks = group.filter(
             (e): e is UiAssistantEntry => e.kind === 'text' && e.role === 'assistant',
@@ -1243,13 +1245,17 @@ export class CvApp extends LitElement {
             return nothing;
         }
         const text = blocks.map((b) => b.text).join('\n\n');
-        const last = blocks[blocks.length - 1];
-        return html`<cv-msg-actions
-            class="cv-msg-actions cv-response-actions"
-            .text=${text}
-            .role=${'assistant'}
-            .timestamp=${last.timestamp ?? 0}
-        ></cv-msg-actions>`;
+        const ts = blocks[blocks.length - 1].timestamp ?? 0;
+        return html`<div class="cv-response-actions">
+            <cv-copy-btn .text=${text} title="Copy response"></cv-copy-btn>
+            ${
+                ts > 0
+                    ? html`<span class="cv-ts" title=${formatAbsolute(ts)}
+                          >${formatTimeAgo(ts)}</span
+                      >`
+                    : nothing
+            }
+        </div>`;
     }
 
     private renderMessage(e: Exclude<UiEntry, UiToolEntry | UiThinkingEntry>) {
