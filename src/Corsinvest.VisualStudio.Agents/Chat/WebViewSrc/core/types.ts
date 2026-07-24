@@ -362,9 +362,10 @@ export interface UiToolEntry {
     /** True once a 4th child arrived: more exist beyond the 3 kept in subagentChildren.
      *  A flag, not a count — the "…" only signals "more", never the number. */
     hasMore?: boolean;
-    /** Nested box expanded: subagentChildren holds the full list (not the ring of 3) and
-     *  new children are upserted in full rather than sliced. Collapse clears it. */
-    expanded?: boolean;
+    /** Show-all: subagentChildren holds the full transcript (not the last-3 ring) and the view
+     *  renders all of it. This is NOT the row-open flag — the row's open/closed state is the
+     *  component's local `_expanded`; this only drives last-3 vs all. Collapse ("Reduce") clears it. */
+    showAll?: boolean;
 }
 
 /** A rendered chat entry: a message bubble (one per role) or a tool row (with optional nested

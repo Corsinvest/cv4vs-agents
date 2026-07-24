@@ -824,8 +824,8 @@ export class CvApp extends LitElement {
                 if (parent.agentId && entry.kind === 'tool') {
                     (entry as UiToolEntry).agentId = parent.agentId;
                 }
-                if (parent.expanded) {
-                    // Expanded: keep the full list, upsert (a re-emitted tool row updates
+                if (parent.showAll) {
+                    // Show-all: keep the full list, upsert (a re-emitted tool row updates
                     // in place — e.g. pending → done — instead of duplicating).
                     parent.subagentChildren = this._upsertChild(
                         parent.subagentChildren ?? [],
@@ -856,13 +856,27 @@ export class CvApp extends LitElement {
             return;
         }
         if (expand) {
-            parent.expanded = true;
-            // Show all (preview=false) replaces with the whole transcript, so clear the kept rows
-            // first (they re-add in order). A preview keeps what's there and fills the last ≤3.
-            if (!preview) {
+            // Rule: history FETCHES, live SHOWS what it already has in memory.
+            //  - preview (first chevron expand): fetch only if children are empty (history). Live
+            //    already streamed them in → no fetch.
+            //  - Show all (preview=false): mark expanded; fetch the whole transcript only if there's
+            //    more than we hold (hasMore = a history preview). Live/already-full → just show all.
+            const showAll = !preview;
+            // Show all sets the flag; preview (chevron open) leaves it false → renderChildren shows ≤3.
+            // Row open/closed is the component's own `_expanded`, not tracked here.
+            parent.showAll = showAll;
+
+            const needFetch = preview
+                ? (parent.subagentChildren?.length ?? 0) === 0 // history preview
+                : parent.hasMore; // Show all with more on disk than we hold
+            if (!needFetch) {
+                this._entries = [...this._entries];
+                return;
+            }
+            // Show all replaces with the whole transcript, so clear first (it re-adds in order).
+            if (showAll) {
                 parent.subagentChildren = [];
             }
-            // Fetch the tail (preview) or the whole transcript, then upsert under the Agent.
             fetchSubagent(agentId, { preview: !!preview })
                 .then((data) => {
                     const p = this._findToolByAgentId(data.agentId);
@@ -886,23 +900,22 @@ export class CvApp extends LitElement {
                         }
                         list = this._upsertChild(list, child);
                     }
-                    // Preview keeps the last 3 (and flags "…" if more); full keeps everything.
+                    // Preview keeps the last 3 (and flags "…" if more); full keeps everything and is
+                    // now complete in memory (hasMore=false → no more fetches).
                     p.subagentChildren = preview ? list.slice(-3) : list;
                     p.hasMore = preview ? list.length > 3 : false;
-                    p.expanded = true;
+                    p.showAll = !preview;
                     this._entries = [...this._entries];
                 })
                 .catch(() => {
                     /* timeout / not found — leave the kept children as-is */
                 });
         } else {
-            // Collapse: back to the last 3, drop the rest. hasMore returns if >3 existed.
-            const had = parent.subagentChildren?.length ?? 0;
-            parent.expanded = false;
-            parent.subagentChildren = (parent.subagentChildren ?? []).slice(-3);
-            if (had > 3) {
-                parent.hasMore = true;
-            }
+            // "Reduce" (Show all → off): show the last 3 again, but KEEP the full list in memory so a
+            // later Show all doesn't refetch (and live never can). renderChildren slices the view.
+            // hasMore reflects that more is held than shown.
+            parent.showAll = false;
+            parent.hasMore = (parent.subagentChildren?.length ?? 0) > 3;
         }
         this._entries = [...this._entries];
     };
@@ -1311,7 +1324,7 @@ export class CvApp extends LitElement {
             .fullLineCount=${e.fullLineCount}
             .agentId=${e.agentId ?? ''}
             .hasMore=${e.hasMore ?? false}
-            .subagentExpanded=${e.expanded ?? false}
+            .subagentExpanded=${e.showAll ?? false}
         ></cv-tool-row>`;
     }
 

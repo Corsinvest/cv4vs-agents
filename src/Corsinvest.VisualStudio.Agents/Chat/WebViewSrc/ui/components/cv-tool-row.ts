@@ -117,14 +117,14 @@ export class CvToolRow extends LitElement implements ToolRowState {
             .join('\n\n');
     }
 
-    // Expand/collapse are owned by cv-app: it holds the entry, fetches the full
-    // transcript (expand), and slices back to 3 (collapse). The row only signals
-    // the toggle — a same-tree CustomEvent, not the host bridge (this is pure UI).
+    // "Show all" button: expand asks cv-app for the WHOLE transcript (preview:false), collapse
+    // slices back to 3. In history cv-app fetches; in live it just shows what's already in memory.
+    // (The first chevron-expand preview is signalled separately in updated().) A same-tree event.
     private _onToggleSubagent = (e: Event): void => {
         e.stopPropagation();
         this.dispatchEvent(
             new CustomEvent('subagent-toggle', {
-                detail: { agentId: this.agentId, expand: !this.subagentExpanded },
+                detail: { agentId: this.agentId, expand: !this.subagentExpanded, preview: false },
                 bubbles: true,
                 composed: true,
             }),
@@ -205,7 +205,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
                                 .fullLineCount=${c.fullLineCount}
                                 .agentId=${this.agentId}
                                 .hasMore=${c.hasMore ?? false}
-                                .subagentExpanded=${c.expanded ?? false}
+                                .subagentExpanded=${c.showAll ?? false}
                             ></cv-tool-row>`,
                 )}
             </div>
