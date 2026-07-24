@@ -34,6 +34,8 @@ public partial class ContextUsageControl : UserControl
     private readonly Dictionary<string, GetContextUsageResponse> _cache = new();
     // Cancels the in-flight fetch when the selection changes.
     private CancellationTokenSource _cts;
+    // The selected session's working directory — memory-file paths are shown relative to it.
+    private string _currentCwd;
 
     public ContextUsageControl()
     {
@@ -205,6 +207,10 @@ public partial class ContextUsageControl : UserControl
         var sid = sel.SessionIds?.FirstOrDefault();
         if (string.IsNullOrEmpty(sid)) { ShowSelectPrompt(); return; }
 
+        var profile = sel.Profile;
+        var wd = StatsService.CwdForProject(profile, sel.ProjectDir);
+        _currentCwd = wd; // memory-file paths render relative to this (cached or fresh)
+
         if (_cache.TryGetValue(sid, out var cached)) { SetFetching(false); RenderContext(cached); return; }
 
         // Cancel a previous in-flight fetch; start a fresh one.
@@ -213,8 +219,6 @@ public partial class ContextUsageControl : UserControl
         var ct = _cts.Token;
 
         SetFetching(true);
-        var profile = sel.Profile;
-        var wd = StatsService.CwdForProject(profile, sel.ProjectDir);
         _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
             try

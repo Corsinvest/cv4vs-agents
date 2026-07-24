@@ -29,8 +29,9 @@ internal static class CvContextPalette
     private static readonly Brush DarkOrange = Freeze(0xF9, 0x73, 0x16);
     private static readonly Brush Lavender = Freeze(0x8B, 0x5C, 0xF6);
 
-    /// <summary>The unfilled memory-map cell (never a category colour).</summary>
-    public static readonly Brush EmptyCell = Freeze(0x5A, 0x5A, 0x5A);
+    /// <summary>The unfilled memory-map cell (never a category colour). Matches the TS
+    /// colorNeutralBackground4 — a dim grey the coloured cells clearly stand out from.</summary>
+    public static readonly Brush EmptyCell = Freeze(0x3B, 0x3B, 0x3B);
 
     // Same keys as the TS CATEGORY_BY_NAME. Free space maps to the empty-cell grey (a track, never a
     // filled colour).

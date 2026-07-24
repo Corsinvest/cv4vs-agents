@@ -6,7 +6,7 @@
              xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
              xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
              xmlns:stats="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Stats"
-             xmlns:panes="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Panes"
+             xmlns:controls="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Controls"
              toolkit:Themes.UseVsTheme="True">
   <UserControl.Resources>
     <!-- Reuse the Statistics tree's icon converter (All/Profile/Folder/Project/Session monikers). -->
@@ -116,14 +116,17 @@
     <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center"
                   VerticalAlignment="Stretch" Background="Transparent" />
 
-    <!-- Column 2: the per-session context panel, built entirely in code-behind (data-driven). -->
-    <ScrollViewer x:Name="ContextScroller" Grid.Column="2" Margin="10,0,0,0"
+    <!-- Column 2: the per-session context panel, built entirely in code-behind (data-driven). The
+         panel's TextBlocks set no Foreground — the theme colour inherits from UseVsTheme down the
+         live visual tree (same as the Statistics tiles / donut legend), so runtime-added text follows
+         the theme too. Dim secondary text with Opacity, never a hardcoded brush. -->
+    <ScrollViewer x:Name="ContextScroller" Grid.Column="2" Margin="10,0,0,0" Padding="0,0,12,0"
                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel x:Name="ContextPanel" />
     </ScrollViewer>
 
     <!-- While fetching: a centered progress bar + message over the panel, like the Usage tab. -->
-    <panes:CvLoadingOverlay x:Name="LoadingPanel" Grid.Column="2" Visibility="Collapsed"
+    <controls:CvLoadingOverlay x:Name="LoadingPanel" Grid.Column="2" Visibility="Collapsed"
                             Message="Loading context usage…" />
   </Grid>
 </UserControl>
