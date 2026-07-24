@@ -12,7 +12,8 @@
         "lint": "eslint \"{core,ui}/**/*.ts\"",
         "lint:fix": "eslint --fix \"{core,ui}/**/*.ts\"",
         "format": "prettier --write \"{core,ui}/**/*.ts\" \"*.ts\"",
-        "format:check": "prettier --check \"{core,ui}/**/*.ts\" \"*.ts\""
+        "format:check": "prettier --check \"{core,ui}/**/*.ts\" \"*.ts\"",
+        "check": "npm run typecheck && npm run lint && npm run format:check"
     },
     "dependencies": {
         "@fluentui/svg-icons": "^1.1.331",
