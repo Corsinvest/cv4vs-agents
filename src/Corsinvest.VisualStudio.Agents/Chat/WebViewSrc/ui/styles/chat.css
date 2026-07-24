@@ -352,8 +352,9 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 .cv-tool-row-chev.always-shown {
     opacity: 1;
 }
-/* Tool header actions (open-diff/error) sit in flow on the row — same mechanism as
- * renderHeaderActions (copy/expand), not an absolute overlay above the body. */
+/* Tool header actions — all now come from one renderHeaderActions() per renderer (error / open-diff /
+ * sub-agent copy+expand), rendered in flow on the row (not an absolute overlay). This wrapper holds
+ * the diff/error buttons; the tints below colour them. Buttons are .icon-btn (shared 14px style). */
 .cv-tool-actions {
     display: inline-flex;
     align-items: center;
