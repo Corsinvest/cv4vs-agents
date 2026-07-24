@@ -384,7 +384,8 @@ public sealed partial class SessionManager
                 return false;
 
             case ClientMessages.Type.System:
-                if (obj.Val("subtype", "") == ClientMessages.SystemSubtype.CompactBoundary)
+                var systemSubtype = obj.Val("subtype", "");
+                if (systemSubtype == ClientMessages.SystemSubtype.CompactBoundary)
                 {
                     // sink is null once the page is full and we're only scanning older lines
                     // for the opening user prompt/metadata — don't add a compact row then.
@@ -398,6 +399,28 @@ public sealed partial class SessionManager
                             ["trigger"] = meta?.Val("trigger") ?? "auto",
                             ["preTokens"] = meta?.Val("preTokens", 0) ?? 0,
                         });
+                    }
+                    return true;
+                }
+                if (systemSubtype == ClientMessages.SystemSubtype.LocalCommand)
+                {
+                    // A slash command's local output persisted as a system record. Replay it as a
+                    // user-text line: EmitUser accepts the bare "<local-command-stdout>…" string and
+                    // the WebView turns it into a slash-result pill (same as the live path).
+                    if (messagesNewestFirst != null)
+                    {
+                        var content = obj.Val("content", "");
+                        if (content.IndexOf("<local-command-std", System.StringComparison.Ordinal) >= 0)
+                        {
+                            messagesNewestFirst.Add(new JObject
+                            {
+                                ["role"] = "user",
+                                ["content"] = content,
+                                ["uuid"] = obj.Val("uuid", ""),
+                                // Carry the ISO timestamp so ReplayPage → the actions row shows "x ago".
+                                ["timestamp"] = obj.Val("timestamp", (string)null),
+                            });
+                        }
                     }
                     return true;
                 }

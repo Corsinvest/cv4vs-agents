@@ -273,6 +273,9 @@ interface UiEntryBase {
     kind: 'text';
     id: number;
     text: string;
+    /** Message time (epoch ms) from the record/event; absent when the wire had none. Drives the
+     *  actions row's "x ago". Not every role shows it (thinking/compact/status don't). */
+    timestamp?: number;
 }
 
 /** A real user turn: the prompt text plus optional image/file chips. */
@@ -281,16 +284,12 @@ export interface UiUserEntry extends UiEntryBase {
     uuid?: string;
     images?: UiImage[];
     files?: UiFile[];
-    /** Message time (epoch ms) from the record/event; absent when the wire had none. */
-    timestamp?: number;
 }
 
 /** An assistant turn; `streaming` is UI-only (true while the delta text is still growing). */
 export interface UiAssistantEntry extends UiEntryBase {
     role: 'assistant';
     streaming?: boolean;
-    /** Message time (epoch ms) from the record/event; absent when the wire had none. */
-    timestamp?: number;
 }
 
 /** A thinking block: the model's reasoning, live-only (never persisted). `streaming` true while
@@ -321,7 +320,7 @@ export interface UiCompactEntry extends UiEntryBase {
 }
 
 /** A slash command's local output (<local-command-stdout>/<stderr>), parsed TS-side from a user
- *  message — a ViewModel-only role (no DTO/SDK peer). Rendered as a centered berry pill. */
+ *  message — a ViewModel-only role (no DTO/SDK peer). Rendered as a preformatted monospace block. */
 export interface UiSlashResultEntry extends UiEntryBase {
     role: 'slash-result';
     isError: boolean;

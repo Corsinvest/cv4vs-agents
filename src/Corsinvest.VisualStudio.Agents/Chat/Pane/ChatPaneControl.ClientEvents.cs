@@ -517,6 +517,22 @@ public partial class ChatPaneControl
                 // "finished" — we notify only when this is empty (updates on finish AND on cancel).
                 _hasBackgroundTasks = obj["tasks"] is JArray tasks && tasks.Count > 0;
             }
+            else if (subtype == ClientMessages.SystemSubtype.LocalCommand)
+            {
+                // A slash command's local output arrives as a system record; forward the raw
+                // <local-command-stdout>/-stderr envelope as a UserText so the WebView parses it into
+                // a slash-result pill (parseLocalCommandOutput). Empty output → the WebView renders nothing.
+                var content = obj.Val("content", "");
+                if (content.IndexOf("<local-command-std", System.StringComparison.Ordinal) >= 0)
+                {
+                    _bridge.Send(BridgeMessages.ToWebView.Chat.UserText, new Contracts.UserTextNotification
+                    {
+                        Text = content,
+                        Uuid = obj.Val("uuid", ""),
+                        Timestamp = obj.ValTimestampMs("timestamp"),
+                    });
+                }
+            }
         });
 
     // Map rate_limit_info to a banner: "allowed" clears it, else a message

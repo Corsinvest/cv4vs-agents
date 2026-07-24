@@ -46,6 +46,10 @@ internal static class ClientMessages
         public const string BackgroundTasksChanged = "background_tasks_changed";
         // Authoritative cumulative thinking-token estimate for the in-flight thinking block.
         public const string ThinkingTokens = "thinking_tokens";
+        // A slash command's own output ("Current model: …", "Unknown command: …", "/x isn't available",
+        // /config|/context usage). content = "<local-command-stdout>…</local-command-stdout>" (or -stderr).
+        // The WebView renders it as a slash-result pill (parseLocalCommandOutput on the UserText text).
+        public const string LocalCommand = "local_command";
     }
 
     // ----- subtype on control_request messages -----
