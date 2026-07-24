@@ -9,12 +9,10 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
-using System.Windows.Media;
 using System.Windows.Shapes;
 using Corsinvest.VisualStudio.Agents.Contracts;
 using Corsinvest.VisualStudio.Agents.Core.Controls;
 using Corsinvest.VisualStudio.Agents.Core.Stats;
-using Corsinvest.VisualStudio.Agents.Helpers;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 
