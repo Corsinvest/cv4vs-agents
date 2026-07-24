@@ -54,8 +54,11 @@ internal static class StatisticsDocument
                 if (frame != null)
                 {
                     // The tab caption defaults to the placeholder file name; override it.
-                    frame.SetProperty((int)__VSFPROPID.VSFPROPID_OwnerCaption, "cv4vs Agents - Statistics");
+                    // Short caption (the tab is narrow and truncates); the full name goes in the tooltip.
+                    frame.SetProperty((int)__VSFPROPID.VSFPROPID_OwnerCaption, "Statistics");
                     frame.SetProperty((int)__VSFPROPID.VSFPROPID_EditorCaption, "");
+                    // Without this the tab tooltip falls back to the placeholder file's path.
+                    frame.SetProperty((int)__VSFPROPID5.VSFPROPID_OverrideToolTip, "cv4vs Agents - Statistics");
                     frame.Show();
                 }
             }

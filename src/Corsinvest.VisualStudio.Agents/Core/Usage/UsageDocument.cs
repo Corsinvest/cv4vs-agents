@@ -50,8 +50,11 @@ internal static class UsageDocument
                     out _, out _, out var frame);
                 if (frame != null)
                 {
-                    frame.SetProperty((int)__VSFPROPID.VSFPROPID_OwnerCaption, "cv4vs Agents - Usage");
+                    // Short caption (the tab is narrow and truncates); the full name goes in the tooltip.
+                    frame.SetProperty((int)__VSFPROPID.VSFPROPID_OwnerCaption, "Usage");
                     frame.SetProperty((int)__VSFPROPID.VSFPROPID_EditorCaption, "");
+                    // Without this the tab tooltip falls back to the placeholder file's path.
+                    frame.SetProperty((int)__VSFPROPID5.VSFPROPID_OverrideToolTip, "cv4vs Agents - Usage");
                     frame.Show();
                 }
             }
