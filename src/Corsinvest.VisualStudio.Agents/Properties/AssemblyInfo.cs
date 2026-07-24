@@ -5,6 +5,11 @@
 
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Windows;
+
+// Custom WPF controls (Core/Controls) resolve their default ControlTemplate from Themes/Generic.xaml
+// in this assembly. Required for CvExpander's chevron template to load.
+[assembly: ThemeInfo(ResourceDictionaryLocation.None, ResourceDictionaryLocation.SourceAssembly)]
 
 [assembly: AssemblyTitle("Corsinvest.VisualStudio.Agents")]
 [assembly: AssemblyDescription("Claude Code AI assistant for Visual Studio")]

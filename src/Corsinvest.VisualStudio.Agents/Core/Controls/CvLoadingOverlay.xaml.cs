@@ -6,7 +6,7 @@
 using System.Windows;
 using System.Windows.Controls;
 
-namespace Corsinvest.VisualStudio.Agents.Core.Panes;
+namespace Corsinvest.VisualStudio.Agents.Core.Controls;
 
 /// <summary>A centered indeterminate progress bar with a caption, shared by the document-tabs
 /// (Statistics, Usage, Context usage) while they index or fetch. The caller places it in its grid and
