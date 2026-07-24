@@ -280,12 +280,13 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 .cv-tool-actions-error svg path {
     fill: var(--colorPaletteRedForeground1);
 }
-/* "Open diff in Visual Studio" icon: tinted purple to echo the slash-cmd
- * band ("special action" colour) — the SVG uses stroke currentColor, so
- * we just set color on the host. */
+/* "Open diff in Visual Studio" icon: tinted purple to echo the slash-cmd band
+ * ("special action" colour). The SVG is a solid fill (reads well at 14px), so tint
+ * the fill; clear the generic .icon-btn `fill: currentColor` on this one. */
 .cv-tool-actions-vs svg,
 .cv-tool-actions-vs svg path {
-    stroke: var(--colorPaletteBerryBorderActive);
+    fill: var(--colorPaletteBerryBorderActive);
+    stroke: none;
 }
 /* Tool rows produced by a sub-agent (Agent / Skill) — indented and
  * separated by a left border to show the parent/child relationship. */
