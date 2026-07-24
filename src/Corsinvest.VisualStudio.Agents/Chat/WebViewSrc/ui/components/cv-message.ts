@@ -330,7 +330,6 @@ export class CvMessage extends LitElement {
                                       </div>`
                             }
                         </div>
-                        ${!this.streaming ? this._renderActions() : nothing}
                     </div>
                 `;
             }

@@ -576,6 +576,12 @@ cv-message:hover .cv-msg-actions,
 cv-message:focus-within .cv-msg-actions {
     opacity: 1;
 }
+/* The response row lives at the end of the exchange (a whole answer), so it reveals on hovering
+ * anywhere in the exchange, not a single bubble. */
+.cv-exchange:hover .cv-response-actions,
+.cv-exchange:focus-within .cv-response-actions {
+    opacity: 1;
+}
 /* Status messages — a whole assistant turn that is ONLY italic text (e.g.
  * "*Thinking…*"): small and greyed. The `:has` must match a message whose
  * entire body is a single italic paragraph, NOT any message that merely
