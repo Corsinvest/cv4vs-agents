@@ -228,7 +228,6 @@ export interface Attachment {
 export interface SubagentTask {
     taskId: string;
     description: string;
-    taskType?: string;
     toolUseId?: string;
     recentTools: string[]; // last 3 tool names (cosa fa ora = at(-1))
     summary?: string;
@@ -297,7 +296,6 @@ export interface UiAssistantEntry extends UiEntryBase {
  *  thinking_tokens value). `redacted` = cipher-only block, no text → static, not expandable. */
 export interface UiThinkingEntry extends UiEntryBase {
     role: 'thinking';
-    parentToolUseId?: string;
     streaming?: boolean;
     tokens?: number;
     durationMs?: number;
