@@ -10,11 +10,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Corsinvest.VisualStudio.Agents.Core.Profiles;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
-/// <summary>Scope of the aggregation: the current session, the current project, or every project.</summary>
-internal enum StatsScope { Session, Project, All }
+/// <summary>Scope of the aggregation, matching the tree levels: everything across profiles, one
+/// profile's config-dir, a folder in the path tree (every project beneath it), one project, one
+/// calendar day of a project, or a single session.</summary>
+internal enum StatsScope { All, Profile, Folder, Project, Day, Session }
 
 /// <summary>Time range filter (applied to the per-day buckets).</summary>
 internal enum StatsRange { All, Last30d, Last7d }
@@ -41,9 +44,34 @@ internal static class StatsService
     /// re-read. Raised on the indexing thread; handlers must marshal to the UI thread.</summary>
     public static event Action IndexingCompleted;
 
-    /// <summary>Run one full indexing pass (all projects, current workspace first) unless one is
-    /// already running. Refreshes each project's on-disk cache; holds no result in memory. No-op
-    /// (returns false) if a pass is already in flight.</summary>
+    /// <summary>Run one full indexing pass over EVERY profile (the WPF tree spans all profiles).
+    /// Single-flight; no-op (false) if a pass is already in flight. Refreshes each project's on-disk
+    /// cache; holds no result in memory. force=true ignores the existing cache and re-reads every
+    /// .jsonl from scratch (the Refresh button — picks up moved files / changed cwd).</summary>
+    public static bool StartIndexing(bool force = false)
+    {
+        if (System.Threading.Interlocked.CompareExchange(ref _indexing, 1, 0) != 0) { return false; }
+        Task.Run(() =>
+        {
+            try
+            {
+                foreach (var profile in ProfileStore.Load(forEdit: false))
+                {
+                    IndexAllProjects(workingDirectory: null, ClaudePaths.ForProfile(profile), force);
+                }
+            }
+            catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".Index", ex); }
+            finally
+            {
+                System.Threading.Volatile.Write(ref _indexing, 0);
+                IndexingCompleted?.Invoke();
+            }
+        });
+        return true;
+    }
+
+    /// <summary>Run one full indexing pass for a SINGLE profile (current workspace first), unless
+    /// one is already running. Used by the pane's WebView dialog, which is single-profile.</summary>
     public static bool StartIndexing(string workingDirectory, ClaudePaths paths)
     {
         // CompareExchange: only the winner runs; everyone else bails (single-flight).
@@ -62,13 +90,382 @@ internal static class StatsService
         return true;
     }
 
-    /// <summary>Refresh every project's cache (current workspace first, so its stats are ready
-    /// soonest), then the rest. Pure I/O + parse → per-project cache file; nothing kept in RAM.</summary>
-    private static void IndexAllProjects(string workingDirectory, ClaudePaths paths)
+    /// <summary>Profiles collapsed by config-dir: two profiles (e.g. Claude + a GLM override) can
+    /// share the same ~/.claude, hence the same .jsonl. They'd otherwise be double-counted in All
+    /// and appear as duplicate tree nodes. Returns one entry per distinct config-dir: a representative
+    /// profile (any of the group — same paths) and a label joining every profile name that uses it.</summary>
+    private static IEnumerable<(Profile profile, string label)> DistinctConfigs()
     {
-        var current = paths.SessionFolder(workingDirectory);
+        return ProfileStore.Load(forEdit: false)
+            .GroupBy(p => ClaudePaths.ForProfile(p).ConfigId, StringComparer.OrdinalIgnoreCase)
+            .Select(g => (
+                profile: g.First(),
+                label: string.Join(", ", g.Select(p => string.IsNullOrEmpty(p.Name) ? "(profile)" : p.Name))));
+    }
+
+    /// <summary>Build the navigation tree (All → Profile → Folder… → Project → Day → Session),
+    /// reading only the filesystem/cache — no .jsonl parse. The range hides sessions (and the days /
+    /// projects / folders that become empty) worked outside it; "All time" shows everything. Every
+    /// node carries the <see cref="StatsSelection"/> its level aggregates.</summary>
+    public static StatsTreeNode BuildTree(StatsRange range = StatsRange.All, bool includeDays = true)
+    {
+        // Sessions whose last activity is before this are hidden (DateTime.MinValue = show all).
+        var minDay = range switch
+        {
+            StatsRange.Last7d => DateTime.Now.Date.AddDays(-6),
+            StatsRange.Last30d => DateTime.Now.Date.AddDays(-29),
+            _ => DateTime.MinValue,
+        };
+
+        var root = new StatsTreeNode
+        {
+            Label = "All",
+            Selection = new StatsSelection { Scope = StatsScope.All },
+        };
+
+        foreach (var (profile, profileLabel) in DistinctConfigs())
+        {
+            var pNode = new StatsTreeNode
+            {
+                Label = profileLabel,
+                Selection = new StatsSelection { Scope = StatsScope.Profile, Profile = profile },
+            };
+            root.Children.Add(pNode);
+
+            var paths = ClaudePaths.ForProfile(profile);
+            if (!Directory.Exists(paths.ProjectsFolder)) { continue; }
+
+            var projects = Directory.EnumerateDirectories(paths.ProjectsFolder)
+                .Select(dir => { var info = ProjectCacheInfo(paths, dir); return (dir, info.cwd, info.hasData, info.lastActivity, label: ProjectLabel(dir, info.cwd)); })
+                // Show only projects with confirmed activity in the cache. This also drops the
+                // not-yet-indexed ones (no cwd → ugly encoded name); the Refresh pass fills them in.
+                .Where(x => x.hasData == true)
+                .ToList();
+
+            BuildFolderTree(pNode, profile, projects, minDay, includeDays);
+        }
+        return root;
+    }
+
+    // A mutable folder node while the path tree is being built (before conversion to StatsTreeNode).
+    private sealed class FolderBuild
+    {
+        public string Segment;                    // this folder's own name (one path segment)
+        public string FullPath;                   // full path down to here (for the folder scope)
+        public readonly SortedDictionary<string, FolderBuild> Sub =
+            new(StringComparer.OrdinalIgnoreCase);
+        public readonly List<(string dir, string cwd, Dictionary<string, DateTime> lastActivity, string label)> Projects =
+            new();
+    }
+
+    // Build a real nested folder tree from the projects' working directories, then attach it under
+    // the profile node. Single-child folder chains are collapsed (…\source\repos shows as one node
+    // until it branches), and every folder node is clickable — it aggregates every project beneath it.
+    private static void BuildFolderTree(StatsTreeNode profileNode, Profile profile,
+        List<(string dir, string cwd, bool? hasData, Dictionary<string, DateTime> lastActivity, string label)> projects,
+        DateTime minDay, bool includeDays)
+    {
+        var root = new FolderBuild { Segment = "", FullPath = "" };
+        foreach (var p in projects)
+        {
+            // The cwd's last segment is the project itself; the ones before it are folders.
+            var segs = SplitPath(p.cwd);
+            var node = root;
+            for (var i = 0; i < segs.Count - 1; i++)
+            {
+                if (!node.Sub.TryGetValue(segs[i], out var child))
+                {
+                    child = new FolderBuild
+                    {
+                        Segment = segs[i],
+                        FullPath = node.FullPath.Length == 0 ? segs[i] : node.FullPath + "\\" + segs[i],
+                    };
+                    node.Sub[segs[i]] = child;
+                }
+                node = child;
+            }
+            node.Projects.Add((p.dir, p.cwd, p.lastActivity, p.label));
+        }
+
+        foreach (var child in root.Sub.Values)
+        {
+            var folderNode = ToFolderNode(child, profile, minDay, includeDays);
+            if (folderNode != null) { profileNode.Children.Add(folderNode); }
+        }
+    }
+
+    // Convert a FolderBuild to a StatsTreeNode, collapsing single-child chains (a folder with one
+    // subfolder and no projects of its own merges its label with the child, like a solution tree).
+    // Returns null when the whole subtree is empty in the range (nothing to show).
+    private static StatsTreeNode ToFolderNode(FolderBuild fb, Profile profile, DateTime minDay, bool includeDays)
+    {
+        // Collapse: while this folder holds exactly one subfolder and no direct projects, fold the
+        // child up into it so "…\source\repos\Clienti" reads as one node until it branches.
+        var label = fb.Segment;
+        while (fb.Projects.Count == 0 && fb.Sub.Count == 1)
+        {
+            var only = fb.Sub.Values.First();
+            label = label + "\\" + only.Segment;
+            fb = only;
+        }
+
+        var children = new List<StatsTreeNode>();
+        foreach (var sub in fb.Sub.Values)
+        {
+            var subNode = ToFolderNode(sub, profile, minDay, includeDays);
+            if (subNode != null) { children.Add(subNode); }
+        }
+        foreach (var p in fb.Projects.OrderBy(p => p.label, StringComparer.OrdinalIgnoreCase))
+        {
+            var prjNode = BuildProjectNode(profile, p.dir, p.cwd, p.label, p.lastActivity, minDay, includeDays);
+            if (prjNode != null) { children.Add(prjNode); }
+        }
+        if (children.Count == 0) { return null; } // nothing in range under this folder
+
+        var node = new StatsTreeNode
+        {
+            Label = label,
+            Tooltip = fb.FullPath,
+            Selection = new StatsSelection
+            {
+                Scope = StatsScope.Folder,
+                Profile = profile,
+                ProjectDirs = CollectProjectDirs(fb),
+            },
+        };
+        node.Children.AddRange(children);
+        return node;
+    }
+
+    // Every project dir at or below this folder (for the Folder scope's aggregation).
+    private static List<string> CollectProjectDirs(FolderBuild fb)
+    {
+        var dirs = new List<string>();
+        void Walk(FolderBuild n)
+        {
+            foreach (var p in n.Projects) { dirs.Add(p.dir); }
+            foreach (var s in n.Sub.Values) { Walk(s); }
+        }
+        Walk(fb);
+        return dirs;
+    }
+
+    // Split a path into segments, keeping the drive/root as the first one (K:\a\b → [K:, a, b]).
+    private static List<string> SplitPath(string path)
+    {
+        if (string.IsNullOrEmpty(path)) { return new List<string> { "(unknown)" }; }
+        return path.Replace('/', '\\').TrimEnd('\\')
+            .Split(new[] { '\\' }, StringSplitOptions.RemoveEmptyEntries)
+            .ToList();
+    }
+
+    // The Project subtree: a "Days" branch (real per-day tokens, matching the chart) and a
+    // "Sessions" branch (whole files, titled). Both are clickable (= the project total). Returns
+    // null when nothing remains in the range.
+    private static StatsTreeNode BuildProjectNode(Profile profile, string projectDir, string cwd,
+        string label, Dictionary<string, DateTime> lastActivity, DateTime minDay, bool includeDays)
+    {
+        var paths = ClaudePaths.ForProfile(profile);
+
+        // Days: the project's real active days (from the cache's per-day buckets), in range, newest
+        // first. Each Day aggregates that calendar day's tokens across every session.
+        var days = ProjectActiveDays(paths, projectDir)
+            .Where(d => DateTime.TryParse(d, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) && dt.Date >= minDay)
+            .OrderByDescending(d => d, StringComparer.Ordinal)
+            .ToList();
+
+        // Sessions: one per .jsonl (whole file), placed by last activity, titled via SessionManager
+        // (realtime — no stale cached title). Range filter on last-activity day.
+        var titles = SessionTitles(paths, cwd);
+        var sessions = new DirectoryInfo(projectDir)
+            .EnumerateFiles("*.jsonl", SearchOption.TopDirectoryOnly)
+            .Select(f => (id: SessionIdOf(f.Name),
+                when: lastActivity.TryGetValue(SessionIdOf(f.Name), out var la) ? la : f.CreationTime))
+            .Where(s => s.when.Date >= minDay)
+            .OrderByDescending(s => s.when)
+            .ToList();
+
+        if (days.Count == 0 && sessions.Count == 0) { return null; }
+
+        var prjNode = new StatsTreeNode
+        {
+            Label = label,
+            Tooltip = cwd,
+            Selection = new StatsSelection { Scope = StatsScope.Project, Profile = profile, ProjectDir = projectDir },
+        };
+
+        // Days branch: only in the Statistics tree. The Context tree (includeDays=false) has no
+        // calendar level — get_context_usage needs a session, not a date.
+        if (includeDays && days.Count > 0)
+        {
+            var daysNode = new StatsTreeNode
+            {
+                Label = $"Days ({days.Count})",
+                Kind = StatsNodeKind.DaysGroup,
+                // Clicking the container = the whole project.
+                Selection = new StatsSelection { Scope = StatsScope.Project, Profile = profile, ProjectDir = projectDir },
+            };
+            prjNode.Children.Add(daysNode);
+            foreach (var d in days)
+            {
+                var when = DateTime.Parse(d, CultureInfo.InvariantCulture);
+                daysNode.Children.Add(new StatsTreeNode
+                {
+                    Label = when.ToString("d", CultureInfo.CurrentCulture),
+                    Selection = new StatsSelection { Scope = StatsScope.Day, Profile = profile, ProjectDir = projectDir, Date = d },
+                });
+            }
+        }
+
+        if (sessions.Count > 0)
+        {
+            // Statistics wraps sessions in a "Sessions (N)" container; Context attaches them straight
+            // to the project, so a project expands directly to its sessions.
+            var parent = prjNode;
+            if (includeDays)
+            {
+                var sessionsNode = new StatsTreeNode
+                {
+                    Label = $"Sessions ({sessions.Count})",
+                    Kind = StatsNodeKind.SessionsGroup,
+                    Selection = new StatsSelection { Scope = StatsScope.Project, Profile = profile, ProjectDir = projectDir },
+                };
+                prjNode.Children.Add(sessionsNode);
+                parent = sessionsNode;
+            }
+            foreach (var s in sessions)
+            {
+                titles.TryGetValue(s.id, out var title);
+                var time = s.when.ToString("g", CultureInfo.CurrentCulture);
+                parent.Children.Add(new StatsTreeNode
+                {
+                    Label = string.IsNullOrEmpty(title) ? time : title,
+                    Tooltip = string.IsNullOrEmpty(title) ? null : $"{time} — {title}",
+                    Selection = new StatsSelection
+                    {
+                        Scope = StatsScope.Session,
+                        Profile = profile,
+                        ProjectDir = projectDir,
+                        SessionIds = new List<string> { s.id },
+                    },
+                });
+            }
+        }
+        return prjNode;
+    }
+
+    // The project's active calendar days (yyyy-MM-dd) from the cache's per-day buckets (days with
+    // messages). Read-only.
+    private static IEnumerable<string> ProjectActiveDays(ClaudePaths paths, string projectDir)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        try
+        {
+            var cache = StatsCache.Load(CacheFileFor(paths, projectDir));
+            foreach (var kv in cache)
+            {
+                var agg = kv.Value.Aggregate;
+                if (agg == null) { continue; }
+                foreach (var day in agg.Days)
+                {
+                    if (day.Value.MessageCount > 0) { seen.Add(day.Key); }
+                }
+            }
+        }
+        catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".ProjectActiveDays", ex); }
+        return seen;
+    }
+
+    // sessionId → title, read live via SessionManager (custom/ai title or last prompt). Empty when
+    // the working directory is unknown (no cwd yet) or the folder is missing.
+    private static Dictionary<string, string> SessionTitles(ClaudePaths paths, string cwd)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrEmpty(cwd)) { return map; }
+        try
+        {
+            foreach (var s in new Sessions.SessionManager(paths, cwd).Load())
+            {
+                if (s.Id != null && !string.IsNullOrEmpty(s.Title)) { map[s.Id] = s.Title; }
+            }
+        }
+        catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".SessionTitles", ex); }
+        return map;
+    }
+
+    /// <summary>A readable label for a CLI project dir. The dir name is a LOSSY encoding of the real
+    /// path (every non-alphanumeric char → '-'), so it can't be decoded reliably. Instead use the
+    /// captured Cwd (the real working directory) and take its leaf folder name. Falls back to the
+    /// raw dir name when there's no Cwd yet (un-indexed / old cache).</summary>
+    private static string ProjectLabel(string projectDir, string cwd)
+    {
+        if (!string.IsNullOrEmpty(cwd))
+        {
+            var leaf = Path.GetFileName(cwd.TrimEnd('\\', '/'));
+            if (!string.IsNullOrWhiteSpace(leaf)) { return leaf; }
+        }
+        return Path.GetFileName(projectDir.TrimEnd('\\', '/'));
+    }
+
+    /// <summary>Read-only cache probe for a project: its working directory (the projectCwd stored at
+    /// the cache root), whether it has any real activity, and each main session's last-activity time
+    /// (for grouping sessions by the day worked, not the file's creation day). hasData is null when
+    /// nothing is cached yet, true when a cached aggregate has messages, false when it has none.</summary>
+    private static (string cwd, bool? hasData, Dictionary<string, DateTime> lastActivity)
+        ProjectCacheInfo(ClaudePaths paths, string projectDir)
+    {
+        var lastActivity = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var cacheFile = CacheFileFor(paths, projectDir);
+            var cache = StatsCache.Load(cacheFile);
+            if (cache.Count == 0) { return (null, null, lastActivity); } // not indexed yet
+            var cwd = StatsCache.LoadProjectCwd(cacheFile); // stored once at the cache root
+            var hasData = false;
+            foreach (var kv in cache)
+            {
+                var agg = kv.Value.Aggregate;
+                if (agg == null) { continue; }
+                if (agg.Messages > 0) { hasData = true; }
+                if (!agg.IsSubagent && agg.LastTimestampMs > 0 && agg.SessionId != null)
+                {
+                    lastActivity[agg.SessionId] = FromUnixMs(agg.LastTimestampMs);
+                }
+            }
+            return (cwd, hasData, lastActivity);
+        }
+        catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".ProjectCacheInfo", ex); }
+        return (null, null, lastActivity);
+    }
+
+    /// <summary>The working directory of a project (the projectCwd stored at the cache root), for a
+    /// --resume that needs a real cwd. Read-only; null when the project isn't indexed yet.</summary>
+    public static string CwdForProject(Profile profile, string projectDir)
+    {
+        if (profile == null || string.IsNullOrEmpty(projectDir)) { return null; }
+        try
+        {
+            return StatsCache.LoadProjectCwd(CacheFileFor(ClaudePaths.ForProfile(profile), projectDir));
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.LogException(nameof(StatsService) + ".CwdForProject", ex);
+            return null;
+        }
+    }
+
+    private static DateTime FromUnixMs(long ms)
+        => new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(ms).ToLocalTime();
+
+    /// <summary>Refresh every project's cache. When a workspace is given, its project is done first
+    /// so its stats are ready soonest; a null/empty workspace (the all-profiles pass) just does them
+    /// all in folder order. Pure I/O + parse → per-project cache file; nothing kept in RAM.</summary>
+    private static void IndexAllProjects(string workingDirectory, ClaudePaths paths, bool force = false)
+    {
+        // No workspace (all-profiles pass): no "current" project to front-load.
+        var current = string.IsNullOrEmpty(workingDirectory) ? null : paths.SessionFolder(workingDirectory);
         var ordered = new List<string>();
-        if (Directory.Exists(current)) { ordered.Add(current); }
+        if (current != null && Directory.Exists(current)) { ordered.Add(current); }
         if (Directory.Exists(paths.ProjectsFolder))
         {
             foreach (var d in Directory.EnumerateDirectories(paths.ProjectsFolder))
@@ -76,7 +473,7 @@ internal static class StatsService
                 if (!string.Equals(d, current, StringComparison.OrdinalIgnoreCase)) { ordered.Add(d); }
             }
         }
-        foreach (var projectDir in ordered) { IndexProject(projectDir, paths); }
+        foreach (var projectDir in ordered) { IndexProject(projectDir, paths, force); }
     }
 
     // The projectDir is the CLI's dir (source of .jsonl); the cache lives in OUR data folder,
@@ -86,29 +483,46 @@ internal static class StatsService
 
     /// <summary>Refresh one project's cache: re-read changed files (delta for grown ones), prune
     /// vanished, persist. This is the heavy step; Aggregate below only reads the result.</summary>
-    private static void IndexProject(string projectDir, ClaudePaths paths)
+    private static void IndexProject(string projectDir, ClaudePaths paths, bool force = false)
     {
         var cacheFile = CacheFileFor(paths, projectDir);
-        var cache = StatsCache.Load(cacheFile);
-        var files = EnumerateSessionFiles(projectDir, StatsScope.All, null);
+        // force: start from an empty cache so every file is re-read from scratch (not delta).
+        var cache = force
+            ? new Dictionary<string, StatsCache.Entry>(StringComparer.OrdinalIgnoreCase)
+            : StatsCache.Load(cacheFile);
+        var files = EnumerateSessionFiles(projectDir, ids: null);
         var updated = new ConcurrentDictionary<string, StatsCache.Entry>();
+        // cwd of each freshly-read file (not the reused ones) — used to pick the project label.
+        var freshCwd = new ConcurrentDictionary<string, string>();
         Parallel.ForEach(files, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
             file =>
             {
                 var key = RelativeKey(projectDir, file.FullName);
                 cache.TryGetValue(key, out var cached);
-                var entry = RefreshFile(file, cached);
+                var (entry, cwd) = RefreshFile(file, cached);
                 if (entry != null) { updated[key] = entry; }
+                if (!string.IsNullOrEmpty(cwd)) { freshCwd[key] = cwd; }
             });
         var next = new Dictionary<string, StatsCache.Entry>(StringComparer.OrdinalIgnoreCase);
         foreach (var kv in updated) { next[kv.Key] = kv.Value; }
-        StatsCache.Save(cacheFile, next);
+
+        // Project label = the most recent session's cwd (a moved older file keeps a stale cwd). The
+        // cwd isn't persisted per file, so pick it among the files re-read this pass, ranked by their
+        // last-activity time; if none were re-read, keep whatever cwd the cache already had.
+        string projectCwd = StatsCache.LoadProjectCwd(cacheFile);
+        long best = long.MinValue;
+        foreach (var kv in freshCwd)
+        {
+            var ts = next.TryGetValue(kv.Key, out var e) ? e.Aggregate?.LastTimestampMs ?? 0 : 0;
+            if (ts >= best) { projectCwd = kv.Value; best = ts; }
+        }
+        StatsCache.Save(cacheFile, next, projectCwd);
     }
 
     /// <summary>Aggregate then map to the wire DTO (streaks, %, favorite model computed here).</summary>
-    public static Contracts.StatsResponse BuildResponse(StatsScope scope, StatsRange range, string workingDirectory, string sessionId, ClaudePaths paths)
+    public static Contracts.StatsResponse BuildResponse(StatsSelection sel, StatsRange range)
     {
-        var t = Aggregate(scope, range, workingDirectory, sessionId, paths);
+        var t = Aggregate(sel, range);
         long totalTokens = t.TotalTokens;
 
         var models = t.ModelUsage
@@ -140,7 +554,9 @@ internal static class StatsService
             .Select(kv => new Contracts.StatsDayModelDto
             {
                 Date = kv.Key,
-                TokensByModel = kv.Value.TokensByModel.ToDictionary(x => x.Key, x => x.Value),
+                // The stacked chart wants a meaningful per-model daily total — GrandTotal (incl. cache),
+                // since raw input/output is tiny next to cache read/creation.
+                TokensByModel = kv.Value.TokensByModel.ToDictionary(x => x.Key, x => x.Value.GrandTotal),
             })
             .ToArray();
 
@@ -203,57 +619,228 @@ internal static class StatsService
         return (current, longest);
     }
 
-    /// <summary>Aggregate for the given scope, reading ONLY the on-disk cache (no file re-read —
-    /// that's StartIndexing's job). Fast: it merges the cached per-file aggregates for the scope's
-    /// projects and applies the range filter. workingDirectory = current workspace; sessionId =
-    /// the open session (for Session scope). Returns whatever the cache currently holds, so an
-    /// un-indexed project yields empty totals until the indexing pass has run.</summary>
-    public static StatsTotals Aggregate(StatsScope scope, StatsRange range, string workingDirectory, string sessionId, ClaudePaths paths)
+    /// <summary>Aggregate for the given tree selection, reading ONLY the on-disk cache (no file
+    /// re-read — that's StartIndexing's job). All folds every profile; Profile folds all of one
+    /// profile's projects; Project one project; Day the sessions of one calendar day; Session one
+    /// file. Returns whatever the cache holds, so an un-indexed project yields empty totals.</summary>
+    public static StatsTotals Aggregate(StatsSelection sel, StatsRange range)
     {
-        var projectDirs = ProjectDirsForScope(scope, workingDirectory, paths);
-        var totals = new StatsTotals();
         var (fromDate, toDate) = RangeBounds(range);
 
-        foreach (var projectDir in projectDirs)
+        // All: fold each DISTINCT config-dir once (profiles sharing a config-dir would double-count).
+        if (sel.Scope == StatsScope.All)
         {
-            var cache = StatsCache.Load(CacheFileFor(paths, projectDir));
-            // Only the files in scope (Session scope narrows to the open session + its subagents).
-            var wanted = new HashSet<string>(
-                EnumerateSessionFiles(projectDir, scope, sessionId).Select(f => RelativeKey(projectDir, f.FullName)),
-                StringComparer.OrdinalIgnoreCase);
+            var all = new StatsTotals();
+            foreach (var (profile, _) in DistinctConfigs())
+            {
+                all.Merge(AggregateProfile(ClaudePaths.ForProfile(profile), fromDate, toDate));
+            }
+            return all;
+        }
 
+        var paths = ClaudePaths.ForProfile(sel.Profile);
+        if (sel.Scope == StatsScope.Profile) { return AggregateProfile(paths, fromDate, toDate); }
+
+        // Folder: fold every project beneath this folder in the path tree.
+        if (sel.Scope == StatsScope.Folder)
+        {
+            var totals = new StatsTotals();
+            foreach (var projectDir in sel.ProjectDirs ?? new List<string>())
+            {
+                AggregateProject(paths, projectDir, null, fromDate, toDate, totals);
+            }
+            return totals;
+        }
+
+        // Day: every session of the project, but only that one calendar day's tokens (a multi-day
+        // session contributes just its slice) — narrow the date window to the day, keep all sessions.
+        if (sel.Scope == StatsScope.Day)
+        {
+            return AggregateProject(paths, sel.ProjectDir, null, sel.Date, sel.Date, new StatsTotals());
+        }
+
+        // Session = one whole file (all its days); Project = every session, all days.
+        var ids = sel.Scope == StatsScope.Session
+            ? new HashSet<string>(sel.SessionIds ?? new List<string>(), StringComparer.OrdinalIgnoreCase)
+            : null;
+        return AggregateProject(paths, sel.ProjectDir, ids, fromDate, toDate, new StatsTotals());
+    }
+
+    /// <summary>One donut slice: a child of the selected node, its token total, and the hover card
+    /// (DayInfo with Title = the child's name + its activity/per-model breakdown).</summary>
+    internal sealed class DonutSlice
+    {
+        public string Label { get; set; }
+        public long Tokens { get; set; }
+        public DayInfo Tooltip { get; set; }
+    }
+
+    private const int DonutTopN = 7;
+
+    /// <summary>The token breakdown of a node by its children — the donut data. Aggregates each
+    /// slice-child from the cache; keeps the top N and rolls the rest into "Others". Empty only for a
+    /// leaf (a single day/session, no children); a single child renders as a full 100% ring.</summary>
+    public static List<DonutSlice> ChildBreakdown(StatsTreeNode node, StatsRange range)
+    {
+        var children = SliceChildren(node);
+        if (children.Count == 0) { return new List<DonutSlice>(); }
+
+        var slices = BreakdownSessions(children, range) ?? BreakdownGeneric(children, range);
+
+        slices = slices.OrderByDescending(s => s.Tokens).ToList();
+        if (slices.Count <= DonutTopN) { return slices; }
+
+        // Roll everything past the top N into a single grey "Others" slice.
+        var top = slices.Take(DonutTopN).ToList();
+        var rest = slices.Skip(DonutTopN).ToList();
+        var otherTokens = rest.Sum(s => s.Tokens);
+        top.Add(new DonutSlice
+        {
+            Label = "Others",
+            Tokens = otherTokens,
+            Tooltip = new DayInfo { Title = $"Others ({rest.Count})", Total = otherTokens },
+        });
+        return top;
+    }
+
+    // Fast path when all slice-children are sessions of the SAME project (Project/Sessions node): load
+    // the project cache ONCE and aggregate each session from it in memory, instead of one cache Load
+    // per session (a project with 100 sessions would otherwise reload the same cache 100 times).
+    // Returns null when the children aren't uniform sessions → the caller falls back to the generic path.
+    private static List<DonutSlice> BreakdownSessions(List<StatsTreeNode> children, StatsRange range)
+    {
+        var first = children[0].Selection;
+        if (first.Scope != StatsScope.Session || first.Profile == null) { return null; }
+        var projectDir = first.ProjectDir;
+        if (children.Any(c => c.Selection.Scope != StatsScope.Session
+                              || !ReferenceEquals(c.Selection.Profile, first.Profile)
+                              || !string.Equals(c.Selection.ProjectDir, projectDir, StringComparison.OrdinalIgnoreCase)))
+        {
+            return null;
+        }
+
+        var (fromDate, toDate) = RangeBounds(range);
+        var paths = ClaudePaths.ForProfile(first.Profile);
+        var cache = StatsCache.Load(CacheFileFor(paths, projectDir)); // ONE load for all sessions
+
+        var slices = new List<DonutSlice>();
+        foreach (var child in children)
+        {
+            var sid = child.Selection.SessionIds?.FirstOrDefault();
+            if (sid == null) { continue; }
+            var totals = new StatsTotals();
             foreach (var kv in cache)
             {
-                if (!wanted.Contains(kv.Key)) { continue; }
+                // A session's entries are keyed "<sid>.jsonl" and "<sid>/subagents/agent-*.jsonl".
+                if (!kv.Key.StartsWith(sid, StringComparison.OrdinalIgnoreCase)) { continue; }
                 if (kv.Value.Aggregate != null) { Merge(totals, kv.Value.Aggregate, fromDate, toDate); }
             }
+            var tokens = totals.TotalTokens;
+            if (tokens <= 0) { continue; }
+            slices.Add(new DonutSlice { Label = child.Label, Tokens = tokens, Tooltip = TooltipFrom(child.Label, totals) });
+        }
+        return slices;
+    }
+
+    // Generic path: one Aggregate per child (profiles / projects — few, so a cache Load each is fine).
+    private static List<DonutSlice> BreakdownGeneric(List<StatsTreeNode> children, StatsRange range)
+    {
+        var slices = new List<DonutSlice>();
+        foreach (var child in children)
+        {
+            var t = Aggregate(child.Selection, range);
+            var tokens = t.TotalTokens;
+            if (tokens <= 0) { continue; }
+            slices.Add(new DonutSlice { Label = child.Label, Tokens = tokens, Tooltip = TooltipFrom(child.Label, t) });
+        }
+        return slices;
+    }
+
+    // The nodes that become donut slices for the selected node: for a Project we descend into its
+    // Sessions branch; for the Days/Sessions containers into their real children; otherwise the
+    // node's direct children (profiles / projects). A leaf (single Day/Session) has none.
+    private static List<StatsTreeNode> SliceChildren(StatsTreeNode node)
+    {
+        if (node?.Selection == null) { return new List<StatsTreeNode>(); }
+        switch (node.Selection.Scope)
+        {
+            case StatsScope.Session:
+                return new List<StatsTreeNode>(); // leaf
+            case StatsScope.Project:
+                // Descend to the sessions under the "Sessions" container.
+                var sessions = node.Children.FirstOrDefault(c => c.Kind == StatsNodeKind.SessionsGroup);
+                return sessions?.Children ?? new List<StatsTreeNode>();
+            default:
+                // All → profiles, Profile/Folder → projects, Days/Sessions containers → their items.
+                return node.Children;
+        }
+    }
+
+    // Build the shared hover card from a child's aggregated totals (Title = the child's name).
+    private static DayInfo TooltipFrom(string title, StatsTotals t)
+    {
+        var order = new Dictionary<string, int>();
+        var models = t.ModelUsage.OrderByDescending(m => m.Value.Total).ToList();
+        for (var i = 0; i < models.Count; i++) { order[models[i].Key] = i; }
+
+        var info = new DayInfo
+        {
+            Title = title,
+            Messages = t.TotalMessages,
+            Sessions = t.TotalSessions,
+            Tools = t.ToolCallsByName.Values.Sum(),
+            Total = t.TotalTokens,
+        };
+        foreach (var m in models)
+        {
+            if (m.Value.Total <= 0) { continue; }
+            info.Segments.Add(new BarSegment { Model = m.Key, Tokens = m.Value.Total, ColorIndex = order[m.Key] });
+        }
+        return info;
+    }
+
+    // Fold every project of one profile.
+    private static StatsTotals AggregateProfile(ClaudePaths paths, string fromDate, string toDate)
+    {
+        var totals = new StatsTotals();
+        if (!Directory.Exists(paths.ProjectsFolder)) { return totals; }
+        foreach (var projectDir in Directory.EnumerateDirectories(paths.ProjectsFolder))
+        {
+            AggregateProject(paths, projectDir, null, fromDate, toDate, totals);
         }
         return totals;
     }
 
-    private static IEnumerable<string> ProjectDirsForScope(StatsScope scope, string workingDirectory, ClaudePaths paths)
+    // Merge one project's cached file aggregates into totals. ids = null aggregates every session;
+    // a set narrows to those session ids (+ their subagents). Reads only the cache — never the .jsonl.
+    private static StatsTotals AggregateProject(ClaudePaths paths, string projectDir, HashSet<string> ids,
+        string fromDate, string toDate, StatsTotals totals)
     {
-        if (scope == StatsScope.All)
+        if (!Directory.Exists(projectDir)) { return totals; }
+        var cache = StatsCache.Load(CacheFileFor(paths, projectDir));
+        var wanted = new HashSet<string>(
+            EnumerateSessionFiles(projectDir, ids).Select(f => RelativeKey(projectDir, f.FullName)),
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kv in cache)
         {
-            return !Directory.Exists(paths.ProjectsFolder)
-                ? []
-                : Directory.EnumerateDirectories(paths.ProjectsFolder);
+            if (!wanted.Contains(kv.Key)) { continue; }
+            if (kv.Value.Aggregate != null) { Merge(totals, kv.Value.Aggregate, fromDate, toDate); }
         }
-        // Session and Project both live under the current workspace's session folder.
-        var dir = paths.SessionFolder(workingDirectory);
-        return Directory.Exists(dir) ? new[] { dir } : Enumerable.Empty<string>();
+        return totals;
     }
 
     /// <summary>The .jsonl to aggregate in a project dir: main sessions (*.jsonl) + subagents
-    /// (&lt;sid&gt;/subagents/agent-*.jsonl). For Session scope, only the open session + its subagents.</summary>
-    private static IEnumerable<FileInfo> EnumerateSessionFiles(string projectDir, StatsScope scope, string sessionId)
+    /// (&lt;sid&gt;/subagents/agent-*.jsonl). ids = null takes every session; a set narrows to those
+    /// session ids and their subagents.</summary>
+    private static IEnumerable<FileInfo> EnumerateSessionFiles(string projectDir, HashSet<string> ids)
     {
         var dir = new DirectoryInfo(projectDir);
         var mains = dir.EnumerateFiles("*.jsonl", SearchOption.TopDirectoryOnly)
-            .Where(f => scope != StatsScope.Session || SessionIdOf(f.Name) == sessionId);
+            .Where(f => ids == null || ids.Contains(SessionIdOf(f.Name)));
 
         var subs = dir.EnumerateDirectories()
-            .Where(d => scope != StatsScope.Session || d.Name == sessionId)
+            .Where(d => ids == null || ids.Contains(d.Name))
             .SelectMany(sid =>
             {
                 var subDir = new DirectoryInfo(Path.Combine(sid.FullName, "subagents"));
@@ -277,8 +864,9 @@ internal static class StatsService
         fullPath.Replace('\\', '/').Contains("/subagents/");
 
     /// <summary>Re-aggregate a file only if changed: same mtime → reuse; grown (append) → delta
-    /// from the cached size; shrunk/rewritten → recompute; new → full. Returns the fresh entry.</summary>
-    private static StatsCache.Entry RefreshFile(FileInfo file, StatsCache.Entry cached)
+    /// from the cached size; shrunk/rewritten → recompute; new → full. Returns the fresh entry and
+    /// the session's cwd (null when the file was reused unchanged — its cwd isn't cached).</summary>
+    private static (StatsCache.Entry entry, string cwd) RefreshFile(FileInfo file, StatsCache.Entry cached)
     {
         long mtime = new DateTimeOffset(file.LastWriteTimeUtc).ToUnixTimeMilliseconds();
         long size = file.Length;
@@ -286,7 +874,7 @@ internal static class StatsService
 
         if (cached?.Aggregate != null && cached.Mtime == mtime && cached.Size == size)
         {
-            return cached; // unchanged
+            return (cached, null); // unchanged
         }
 
         long fromOffset = 0;
@@ -299,10 +887,10 @@ internal static class StatsService
         }
 
         var res = StatsAggregator.AggregateFile(file.FullName, isSub, fromOffset, seed);
-        if (res == null) { return cached; } // keep old on error
-        var (agg, newSize) = res.Value;
+        if (res == null) { return (cached, null); } // keep old on error
+        var (agg, newSize, cwd) = res.Value;
         agg.SessionId ??= SessionIdOf(file.Name);
-        return new StatsCache.Entry { Mtime = mtime, Size = newSize, Aggregate = agg };
+        return (new StatsCache.Entry { Mtime = mtime, Size = newSize, Aggregate = agg }, cwd);
     }
 
     private static void Merge(StatsTotals totals, FileAggregate f, string fromDate, string toDate)
@@ -345,12 +933,17 @@ internal static class StatsService
             if (ranged && !InRange(kv.Key, fromDate, toDate)) { continue; }
             if (!totals.Days.TryGetValue(kv.Key, out var d)) { d = new DayActivity(); totals.Days[kv.Key] = d; }
             d.Add(kv.Value);
-            if (!f.IsSubagent) { totals.TotalMessages += kv.Value.MessageCount; }
+            // This file is one session; count it once per day it was active (subagents aren't
+            // sessions). SessionCount isn't tracked per-day in the aggregate, so it's derived here.
+            if (!f.IsSubagent)
+            {
+                d.SessionCount++;
+                totals.TotalMessages += kv.Value.MessageCount;
+            }
         }
 
-        // Model usage. Unranged: exact per-model in/out/cache split from the file aggregate.
-        // Ranged: only per-day totals (input+output combined) are available → put them in
-        // OutputTokens (the split isn't tracked per day). The list still shows correct totals/%.
+        // Model usage. Unranged: exact per-model split from the file aggregate. Ranged: the same
+        // split, now tracked per day+model, summed over the in-range days.
         if (!ranged)
         {
             foreach (var mk in f.ModelUsage)
@@ -367,7 +960,7 @@ internal static class StatsService
                 foreach (var mk in kv.Value.TokensByModel)
                 {
                     if (!totals.ModelUsage.TryGetValue(mk.Key, out var mt)) { mt = new ModelTokens(); totals.ModelUsage[mk.Key] = mt; }
-                    mt.OutputTokens += mk.Value; // combined in+out; used for total/% only when ranged
+                    mt.Add(mk.Value);
                 }
             }
         }

@@ -18,7 +18,7 @@ chip.
 
 Clicking it opens the sub-agents panel:
 
-![Sub-agents panel](images/subagents-panel.png)
+![Sub-agents panel](../images/chat/subagents-panel.png)
 
 Each row shows:
 

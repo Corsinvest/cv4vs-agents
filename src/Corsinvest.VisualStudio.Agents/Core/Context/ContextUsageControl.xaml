@@ -1,0 +1,132 @@
+<UserControl x:Class="Corsinvest.VisualStudio.Agents.Core.Context.ContextUsageControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+             xmlns:stats="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Stats"
+             xmlns:controls="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Controls"
+             toolkit:Themes.UseVsTheme="True">
+  <UserControl.Resources>
+    <!-- Reuse the Statistics tree's icon converter (All/Profile/Folder/Project/Session monikers). -->
+    <stats:ScopeIconConverter x:Key="ScopeIconConverter" />
+  </UserControl.Resources>
+
+  <!-- Columns: scope tree | draggable splitter | context panel. The tree is the same as Statistics
+       but calendar-free (sessions sit directly under a project). -->
+  <Grid Margin="14">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="220" MinWidth="140" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <!-- Column 0: a small icon toolbar (Refresh / Recreate) over the scope tree. -->
+    <Grid Grid.Column="0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <StackPanel x:Name="TreeToolbar" Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,4">
+        <StackPanel.Resources>
+          <Style x:Key="ToolBtn" TargetType="Button">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,2,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                  <Border x:Name="bd" Background="{TemplateBinding Background}"
+                          BorderBrush="{TemplateBinding BorderBrush}"
+                          BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter TargetName="bd" Property="Background"
+                              Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarMouseOverBackgroundBeginBrushKey}}" />
+                      <Setter TargetName="bd" Property="BorderBrush"
+                              Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarBorderBrushKey}}" />
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+        </StackPanel.Resources>
+        <!-- Refresh re-reads changed sessions and re-fetches the visible one. -->
+        <StackPanel x:Name="RefreshButtons" Orientation="Horizontal">
+          <Button Style="{StaticResource ToolBtn}" Click="OnRefreshClick"
+                  ToolTip="Refresh — re-read changed sessions">
+            <imaging:CrispImage Width="16" Height="16"
+                                Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
+          </Button>
+          <Button Style="{StaticResource ToolBtn}" Click="OnRecreateClick"
+                  ToolTip="Recreate — re-index everything from scratch">
+            <imaging:CrispImage Width="16" Height="16"
+                                Moniker="{x:Static catalog:KnownMonikers.Restart}" />
+          </Button>
+        </StackPanel>
+        <Rectangle Width="1" Height="16" Margin="4,0,6,0" VerticalAlignment="Center"
+                   Fill="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarBorderBrushKey}}" />
+        <ComboBox x:Name="RangeCombo" Height="22" MinWidth="96" Padding="6,0" VerticalAlignment="Center"
+                  VerticalContentAlignment="Center" SelectionChanged="OnFilterChanged">
+          <ComboBoxItem Content="Last 7 days" />
+          <ComboBoxItem Content="Last 30 days" />
+          <ComboBoxItem Content="All time" IsSelected="True" />
+        </ComboBox>
+      </StackPanel>
+
+      <!-- Scope tree: All → Profile → Folder → Project → Session (no calendar). -->
+      <TreeView x:Name="ScopeTree" Grid.Row="1"
+                BorderThickness="1"
+                Background="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
+                Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}"
+                BorderBrush="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                SelectedItemChanged="OnScopeSelected">
+        <TreeView.ItemContainerStyle>
+          <Style TargetType="TreeViewItem">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+            <Setter Property="Foreground"
+                    Value="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}" />
+          </Style>
+        </TreeView.ItemContainerStyle>
+        <TreeView.Resources>
+          <HierarchicalDataTemplate DataType="{x:Type stats:StatsTreeNode}"
+                                    ItemsSource="{Binding Children}">
+            <StackPanel Orientation="Horizontal" ToolTip="{Binding Tooltip}">
+              <imaging:CrispImage Width="16" Height="16" Margin="0,0,6,0"
+                                  VerticalAlignment="Center"
+                                  Moniker="{Binding Converter={StaticResource ScopeIconConverter}}" />
+              <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+            </StackPanel>
+          </HierarchicalDataTemplate>
+        </TreeView.Resources>
+      </TreeView>
+    </Grid>
+
+    <!-- Draggable divider: resizes the tree column. -->
+    <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center"
+                  VerticalAlignment="Stretch" Background="Transparent" />
+
+    <!-- Column 2: the per-session context panel, built entirely in code-behind (data-driven). The
+         panel's TextBlocks set no Foreground — the theme colour inherits from UseVsTheme down the
+         live visual tree (same as the Statistics tiles / donut legend), so runtime-added text follows
+         the theme too. Dim secondary text with Opacity, never a hardcoded brush. -->
+    <ScrollViewer x:Name="ContextScroller" Grid.Column="2" Margin="10,0,0,0" Padding="0,0,12,0"
+                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel x:Name="ContextPanel" />
+    </ScrollViewer>
+
+    <!-- While fetching: a centered progress bar + message over the panel, like the Usage tab. -->
+    <controls:CvLoadingOverlay x:Name="LoadingPanel" Grid.Column="2" Visibility="Collapsed"
+                            Message="Loading context usage…" />
+  </Grid>
+</UserControl>

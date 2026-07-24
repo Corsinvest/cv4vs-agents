@@ -467,15 +467,6 @@ public class AccountDto
     public string ApiProvider { get; set; }
 }
 
-/// <summary>Account & usage data for the dialog (chat_usage). account is null when the CLI
-/// reported none; usage is the CLI's raw experimental /usage object (opaque JObject, shape
-/// not stable — kept untyped like ToolPermissionNotification.Input).</summary>
-public class GetUsageResponse
-{
-    public AccountDto Account { get; set; }
-    public object Usage { get; set; }
-}
-
 /// <summary>The editor selection/active file changed (ide_selection_changed). All fields
 /// null/false/0 when there's no editor context. Drives the composer's IDE-context badge.</summary>
 public class IdeContextNotification

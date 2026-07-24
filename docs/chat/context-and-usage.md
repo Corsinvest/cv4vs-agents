@@ -14,10 +14,19 @@ then orange, then red as it approaches the auto-compact threshold.
 Clicking it opens a small panel: a progress bar, the numbers, and shortcuts to the three dialogs
 below.
 
-![Context gauge popup](images/gauge-popup.png)
+![Context gauge popup](../images/chat/gauge-popup.png)
 
 `61% of context remaining until auto-compact` is the number that matters day to day: not how much
 you have used, but how much room is left before the CLI compacts the conversation.
+
+---
+
+## Account & usage
+
+![Account & usage dialog](../images/chat/usage-dialog.png)
+
+Account information and the plan's rate-limit windows — what you are allowed, and how much of it
+is left in the current window. Read live from the CLI, not computed here.
 
 ---
 
@@ -25,7 +34,7 @@ you have used, but how much room is left before the CLI compacts the conversatio
 
 What is actually filling the context window right now.
 
-![Context usage dialog](images/context-usage-dialog.png)
+![Context usage dialog](../images/chat/context-usage-dialog.png)
 
 The grid at the top is a memory map — one cell per slice of the window, coloured by category — so
 the shape of the problem is visible at a glance: a wall of purple means the conversation itself is
@@ -39,18 +48,11 @@ The footer shows whether auto-compact is on and at what threshold.
 
 ---
 
-## Account & usage
-
-Account information and the plan's rate-limit windows — what you are allowed, and how much of it
-is left in the current window. Read live from the CLI, not computed here.
-
----
-
 ## Statistics
 
 Historical usage, aggregated **locally** from the CLI's own session files.
 
-![Statistics dialog](images/statistics-dialog.png)
+![Statistics dialog](../images/chat/statistics-dialog.png)
 
 Two tabs — **Overview** and **Models** — and two selectors that decide what is counted:
 

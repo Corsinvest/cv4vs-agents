@@ -21,6 +21,28 @@
         </Strings>
       </Menu>
 
+      <!-- Developer: diagnostic entries (data folder, output log) tucked out of the main list. -->
+      <Menu guid="guidAgentsCommandSet" id="DeveloperSubMenu" priority="0x0200" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
+        <Icon guid="ImageCatalogGuid" id="CodeInformation"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Developer</ButtonText>
+        </Strings>
+      </Menu>
+
+      <!-- Analytics: the three full-window data tabs (Statistics / Usage / Context usage). -->
+      <Menu guid="guidAgentsCommandSet" id="AnalyticsSubMenu" priority="0x0180" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="StatisticsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="BarChart"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Analytics</ButtonText>
+        </Strings>
+      </Menu>
+
       <!-- Help &amp; Feedback: docs first (it answers without bothering anyone), contact after. -->
       <Menu guid="guidAgentsCommandSet" id="HelpSubMenu" priority="0x0100" type="Menu">
         <Parent guid="guidAgentsCommandSet" id="HelpGroup"/>
@@ -42,6 +64,14 @@
       <Group guid="guidAgentsCommandSet" id="ProfilesGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
       </Group>
+      <!-- Analytics submenu anchor, between profiles and the global actions (auto separators). -->
+      <Group guid="guidAgentsCommandSet" id="StatisticsGroup" priority="0x0180">
+        <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
+      </Group>
+      <!-- The three data-tab entries inside the Analytics submenu. -->
+      <Group guid="guidAgentsCommandSet" id="AnalyticsGroup" priority="0x0100">
+        <Parent guid="guidAgentsCommandSet" id="AnalyticsSubMenu"/>
+      </Group>
       <!-- Global (not per-pane) entries. Separate groups because VS draws the separators
            between groups — no <Separator> needed. -->
       <Group guid="guidAgentsCommandSet" id="GlobalGroup" priority="0x0200">
@@ -49,6 +79,10 @@
       </Group>
       <Group guid="guidAgentsCommandSet" id="HelpGroup" priority="0x0300">
         <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
+      </Group>
+      <!-- Entries inside the Developer submenu. -->
+      <Group guid="guidAgentsCommandSet" id="DeveloperGroup" priority="0x0100">
+        <Parent guid="guidAgentsCommandSet" id="DeveloperSubMenu"/>
       </Group>
       <Group guid="guidAgentsCommandSet" id="HelpDocsGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="HelpSubMenu"/>
@@ -77,17 +111,35 @@
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Settings</ButtonText></Strings>
       </Button>
-      <Button guid="guidAgentsCommandSet" id="DataFolderCommandId" priority="0x0200" type="Button">
-        <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
+      <Button guid="guidAgentsCommandSet" id="DataFolderCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="DeveloperGroup"/>
         <Icon guid="ImageCatalogGuid" id="OpenFolder"/>
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Open data folder</ButtonText></Strings>
       </Button>
-      <Button guid="guidAgentsCommandSet" id="OutputLogCommandId" priority="0x0300" type="Button">
-        <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
+      <Button guid="guidAgentsCommandSet" id="OutputLogCommandId" priority="0x0200" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="DeveloperGroup"/>
         <Icon guid="ImageCatalogGuid" id="Output"/>
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>View output log</ButtonText></Strings>
+      </Button>
+      <Button guid="guidAgentsCommandSet" id="StatisticsCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="AnalyticsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Statistics"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings><ButtonText>Statistics</ButtonText></Strings>
+      </Button>
+      <Button guid="guidAgentsCommandSet" id="UsageCommandId" priority="0x0200" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="AnalyticsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="GaugeRound"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings><ButtonText>Usage</ButtonText></Strings>
+      </Button>
+      <Button guid="guidAgentsCommandSet" id="ContextUsageCommandId" priority="0x0300" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="AnalyticsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="DoughnutChart"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings><ButtonText>Context usage</ButtonText></Strings>
       </Button>
 
       <Button guid="guidAgentsCommandSet" id="DocumentationCommandId" priority="0x0100" type="Button">
@@ -138,9 +190,14 @@
       <IDSymbol name="MyMenuGroup" value="0x1020" />
       <IDSymbol name="ProfilesSubMenu" value="0x1030" />
       <IDSymbol name="ProfilesGroup" value="0x1040" />
+      <IDSymbol name="StatisticsGroup" value="0x1045" />
+      <IDSymbol name="AnalyticsSubMenu" value="0x1046" />
+      <IDSymbol name="AnalyticsGroup" value="0x1047" />
       <IDSymbol name="GlobalGroup" value="0x1050" />
       <IDSymbol name="HelpGroup" value="0x1060" />
       <IDSymbol name="HelpSubMenu" value="0x1070" />
+      <IDSymbol name="DeveloperSubMenu" value="0x1075" />
+      <IDSymbol name="DeveloperGroup" value="0x1076" />
       <IDSymbol name="HelpDocsGroup" value="0x1080" />
       <IDSymbol name="HelpContactGroup" value="0x1090" />
       <!-- Must match PackageIds.cs — a mismatch is silent: the entry just never appears. -->
@@ -154,6 +211,9 @@
       <IDSymbol name="FeedbackCommandId" value="0x0206" />
       <IDSymbol name="AboutCommandId" value="0x0207" />
       <IDSymbol name="ReleasesCommandId" value="0x0208" />
+      <IDSymbol name="StatisticsCommandId" value="0x0209" />
+      <IDSymbol name="UsageCommandId" value="0x020A" />
+      <IDSymbol name="ContextUsageCommandId" value="0x020B" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{c3d4e5f6-a7b8-9012-defa-bc1234567890}">
       <IDSymbol name="bmpPic1" value="1" />

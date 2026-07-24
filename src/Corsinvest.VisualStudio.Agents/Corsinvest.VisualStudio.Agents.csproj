@@ -198,6 +198,10 @@
     <Compile Include="Utils\ClaudePaths.cs" />
     <Compile Include="Utils\ColorUtils.cs" />
     <Compile Include="Utils\PathHelpers.cs" />
+    <Compile Include="Core\Controls\CvExpander.cs" />
+    <Compile Include="Core\Controls\CvLoadingOverlay.xaml.cs">
+      <DependentUpon>CvLoadingOverlay.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Core\Panes\IPaneControl.cs" />
     <Compile Include="Core\Panes\PaneAttentionInfoBar.cs" />
     <Compile Include="Core\Panes\PaneAttentionService.cs" />
@@ -222,9 +226,46 @@
     <Compile Include="Core\Profiles\Profile.cs" />
     <Compile Include="Core\Profiles\ProfileStore.cs" />
     <Compile Include="Core\Stats\StatsModels.cs" />
+    <Compile Include="Core\Stats\StatsSelection.cs" />
+    <Compile Include="Core\Stats\StatsTreeNode.cs" />
+    <Compile Include="Core\Stats\ScopeIconConverter.cs" />
     <Compile Include="Core\Stats\StatsAggregator.cs" />
     <Compile Include="Core\Stats\StatsCache.cs" />
     <Compile Include="Core\Stats\StatsService.cs" />
+    <Compile Include="Core\Stats\StatisticsEditorFactory.cs" />
+    <Compile Include="Core\Stats\StatisticsEditorPane.cs" />
+    <Compile Include="Core\Stats\StatisticsDocument.cs" />
+    <Compile Include="Core\Stats\StatsPalette.cs" />
+    <Compile Include="Core\Stats\ModelRow.cs" />
+    <Compile Include="Core\Stats\StatsChart.cs" />
+    <Compile Include="Core\Stats\StatsFormat.cs" />
+    <Compile Include="Core\Stats\StatsTooltip.cs" />
+    <Compile Include="Core\Stats\CvHeatmap.cs" />
+    <Compile Include="Core\Stats\CvBarChart.cs" />
+    <Compile Include="Core\Stats\CvDonut.cs" />
+    <Compile Include="Core\Stats\StatisticsControl.xaml.cs">
+      <DependentUpon>StatisticsControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Core\Usage\UsageMapper.cs" />
+    <Compile Include="Core\Usage\UsageProbe.cs" />
+    <Compile Include="Core\Usage\UsageEditorFactory.cs" />
+    <Compile Include="Core\Usage\UsageEditorPane.cs" />
+    <Compile Include="Core\Usage\UsageDocument.cs" />
+    <Compile Include="Core\Usage\UsageControl.xaml.cs">
+      <DependentUpon>UsageControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Core\Context\ContextProbe.cs" />
+    <Compile Include="Core\Context\CvContextPalette.cs" />
+    <Compile Include="Core\Context\CvMemoryMap.cs" />
+    <Compile Include="Core\Context\ContextEditorFactory.cs" />
+    <Compile Include="Core\Context\ContextEditorPane.cs" />
+    <Compile Include="Core\Context\ContextDocument.cs" />
+    <Compile Include="Core\Context\ContextUsageControl.xaml.cs">
+      <DependentUpon>ContextUsageControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Core\Context\ContextUsageControl.Render.cs">
+      <DependentUpon>ContextUsageControl.xaml.cs</DependentUpon>
+    </Compile>
     <Compile Include="Core\Workspace\WorkspaceState.cs" />
     <Compile Include="Core\Workspace\WorkspaceStore.cs" />
     <Compile Include="Chat\ContentBlockTranslator.cs" />
@@ -312,6 +353,21 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Core\Sessions\SessionManagerControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Core\Stats\StatisticsControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Core\Usage\UsageControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Core\Context\ContextUsageControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Themes\Generic.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Core\Controls\CvLoadingOverlay.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Core\Panes\DevInfoDialog.xaml">
