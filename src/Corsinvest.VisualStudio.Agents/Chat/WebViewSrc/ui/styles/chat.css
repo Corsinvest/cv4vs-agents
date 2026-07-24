@@ -589,9 +589,11 @@ cv-message:hover .cv-msg-actions,
 cv-message:focus-within .cv-msg-actions {
     opacity: 1;
 }
-/* Small icon-action button (Fork/Expand in the user row) — the light-DOM twin of cv-copy-btn's
- * .icon-btn (which is Shadow-scoped). Same compact look. */
-.cv-msg-actions .icon-btn {
+/* Small icon-action button — the shared light-DOM twin of cv-copy-btn's .icon-btn (Shadow-scoped).
+ * Used across the chat light DOM: message rows (Fork) and tool header actions (error/open-diff/
+ * expand/copy). Compact (14px glyph), theme-aware, keyboard-focusable — a bare <button>, not a
+ * fluent-button (fluent-pure rule + it can't get this small). */
+.icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -603,15 +605,15 @@ cv-message:focus-within .cv-msg-actions {
     cursor: pointer;
     opacity: 0.75;
 }
-.cv-msg-actions .icon-btn:hover {
+.icon-btn:hover {
     background: var(--colorSubtleBackgroundHover, rgba(127, 127, 127, 0.12));
     opacity: 1;
 }
-.cv-msg-actions .icon-btn:focus-visible {
+.icon-btn:focus-visible {
     outline: 1px solid var(--colorStrokeFocus2, currentColor);
     outline-offset: 1px;
 }
-.cv-msg-actions .icon-btn svg {
+.icon-btn svg {
     width: 14px;
     height: 14px;
     display: block;

@@ -120,16 +120,15 @@ export class CvToolRow extends LitElement implements ToolRowState {
                 .text=${this._subagentToMarkdown()}
                 title="Copy subagent output"
             ></cv-copy-btn>
-            <fluent-button
-                appearance="subtle"
-                size="small"
-                icon-only
+            <button
+                class="icon-btn"
                 title=${this.subagentExpanded ? 'Reduce' : 'Show all'}
                 @click=${this._onToggleSubagent}
-                >${unsafeHTML(
-                    this.subagentExpanded ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular,
-                )}</fluent-button
             >
+                ${unsafeHTML(
+                    this.subagentExpanded ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular,
+                )}
+            </button>
         `;
     }
 

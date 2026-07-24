@@ -192,11 +192,8 @@ export abstract class ToolRenderer {
                     ${actions} ${opts.open ? this.host.renderHeaderActions() : nothing}
                     ${
                         opts.chevron && opts.body !== null
-                            ? html`<fluent-button
-                                  appearance="subtle"
-                                  size="small"
-                                  icon-only
-                                  class="cv-tool-row-chev ${opts.open ? 'expanded' : ''} ${
+                            ? html`<button
+                                  class="icon-btn cv-tool-row-chev ${opts.open ? 'expanded' : ''} ${
                                       opts.chevronAlwaysShown ? 'always-shown' : ''
                                   }"
                                   title=${opts.open ? 'Collapse' : 'Expand'}
@@ -204,8 +201,9 @@ export abstract class ToolRenderer {
                                       e.stopPropagation();
                                       opts.onClick?.();
                                   }}
-                                  >${unsafeHTML(ChevronDown16Regular)}</fluent-button
-                              >`
+                              >
+                                  ${unsafeHTML(ChevronDown16Regular)}
+                              </button>`
                             : nothing
                     }
                 </div>
@@ -401,11 +399,8 @@ ${preview(outText)}</pre>
     /** The "show error details in VS" icon button. */
     protected errorButton(): TemplateResult {
         return html`<div class="cv-tool-actions">
-            <fluent-button
-                appearance="subtle"
-                size="small"
-                icon-only
-                class="cv-tool-actions-error"
+            <button
+                class="icon-btn cv-tool-actions-error"
                 title="Show error details"
                 @click=${(e: Event) => {
                     e.stopPropagation();
@@ -413,7 +408,7 @@ ${preview(outText)}</pre>
                 }}
             >
                 ${unsafeHTML(ErrorCircle16Regular)}
-            </fluent-button>
+            </button>
         </div>`;
     }
 
@@ -426,11 +421,8 @@ ${preview(outText)}</pre>
         return html`<div class="cv-tool-actions">
             ${
                 this.host.status === 'error'
-                    ? html`<fluent-button
-                          appearance="subtle"
-                          size="small"
-                          icon-only
-                          class="cv-tool-actions-error"
+                    ? html`<button
+                          class="icon-btn cv-tool-actions-error"
                           title="Show error details"
                           @click=${(e: Event) => {
                               e.stopPropagation();
@@ -438,16 +430,13 @@ ${preview(outText)}</pre>
                           }}
                       >
                           ${unsafeHTML(ErrorCircle16Regular)}
-                      </fluent-button>`
+                      </button>`
                     : nothing
             }
             ${
                 this.host.showOpenDiffInVsButton
-                    ? html`<fluent-button
-                          appearance="subtle"
-                          size="small"
-                          icon-only
-                          class="cv-tool-actions-vs"
+                    ? html`<button
+                          class="icon-btn cv-tool-actions-vs"
                           title="Open diff in Visual Studio"
                           @click=${(e: Event) => {
                               e.stopPropagation();
@@ -455,7 +444,7 @@ ${preview(outText)}</pre>
                           }}
                       >
                           ${unsafeHTML(VisualStudioIcon)}
-                      </fluent-button>`
+                      </button>`
                     : nothing
             }
         </div>`;
