@@ -24,7 +24,16 @@ internal sealed class CvMemoryMap : Grid
         if (rows == null || rows.Length == 0) { return; }
 
         var cols = rows[0]?.Length ?? 0;
-        var panel = new UniformGrid { Rows = rows.Length, Columns = cols };
+        // The grid sits in a vertical StackPanel (no height given from outside), so square cells with
+        // a fixed size give the UniformGrid an intrinsic size — otherwise Stretch cells collapse to 0
+        // and the whole map is invisible.
+        const double Cell = 18;
+        var panel = new UniformGrid
+        {
+            Rows = rows.Length,
+            Columns = cols,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
         foreach (var row in rows)
         {
             if (row == null) { continue; }
@@ -35,11 +44,12 @@ internal sealed class CvMemoryMap : Grid
                     : CvContextPalette.EmptyCell;
                 var rect = new Rectangle
                 {
+                    Width = Cell,
+                    Height = Cell,
                     Fill = fill,
                     RadiusX = 1,
                     RadiusY = 1,
                     Margin = new Thickness(1),
-                    Stretch = Stretch.Fill,
                 };
                 if (cell != null && cell.IsFilled)
                 {

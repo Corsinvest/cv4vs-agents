@@ -8,10 +8,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Corsinvest.VisualStudio.Agents.Contracts;
+using Corsinvest.VisualStudio.Agents.Core.Controls;
 using Corsinvest.VisualStudio.Agents.Core.Stats;
+using Corsinvest.VisualStudio.Agents.Helpers;
+using Microsoft.VisualStudio.PlatformUI;
+using Microsoft.VisualStudio.Shell;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Context;
 
@@ -21,6 +26,21 @@ namespace Corsinvest.VisualStudio.Agents.Core.Context;
 public partial class ContextUsageControl
 {
     private static string Tok(long tokens) => StatsFormat.FormatTokens(tokens);
+
+    // A theme separator line (the tool-window border brush), applied as a DynamicResource so it
+    // follows a live light/dark switch — like the Statistics separators.
+    private static Border Separator(Thickness thickness, Thickness margin = default, Thickness padding = default)
+    {
+        var b = new Border { BorderThickness = thickness, Margin = margin, Padding = padding };
+        b.SetResourceReference(Border.BorderBrushProperty, EnvironmentColors.ToolWindowBorderBrushKey);
+        return b;
+    }
+
+    // A collapsible section with the Fluent-style chevron. CvExpander's template already carries the
+    // theme foreground, the stretched header (trailing token at the right edge) and the rotating "›",
+    // so this is just a typed constructor.
+    private static CvExpander MakeExpander(UIElement header, UIElement content)
+        => new() { Header = header, Content = content };
 
     // Percentage of the window a token count fills (matching the TS _pct: "<0.1%" floor).
     private static string Pct(long tokens, int max)
@@ -40,7 +60,7 @@ public partial class ContextUsageControl
         ContextPanel.Children.Add(BuildBar(d));
         if ((d.GridRows?.Length ?? 0) > 0)
         {
-            var map = new CvMemoryMap { Margin = new Thickness(0, 0, 0, 14), MaxWidth = 460, HorizontalAlignment = HorizontalAlignment.Left };
+            var map = new CvMemoryMap { Margin = new Thickness(0, 0, 0, 14), HorizontalAlignment = HorizontalAlignment.Left };
             map.SetData(d.GridRows);
             ContextPanel.Children.Add(map);
         }
@@ -103,7 +123,6 @@ public partial class ContextUsageControl
     {
         var g = ThreeCol();
         g.Margin = new Thickness(0, 0, 0, 4);
-        var head = new Style(typeof(TextBlock));
         void Cell(string text, int c, TextAlignment align)
         {
             var t = new TextBlock { Text = text, Opacity = 0.6, FontSize = 11, TextAlignment = align };
@@ -113,13 +132,9 @@ public partial class ContextUsageControl
         Cell("CATEGORY", 0, TextAlignment.Left);
         Cell("TOKENS", 1, TextAlignment.Right);
         Cell("USAGE", 2, TextAlignment.Right);
-        return new Border
-        {
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x33, 0x88, 0x88, 0x88)),
-            Padding = new Thickness(0, 0, 0, 4),
-            Child = g,
-        };
+        var border = Separator(new Thickness(0, 0, 0, 1), padding: new Thickness(0, 0, 0, 4));
+        border.Child = g;
+        return border;
     }
 
     private UIElement BuildCategoryTable(GetContextUsageResponse d)
@@ -135,12 +150,7 @@ public partial class ContextUsageControl
         {
             if (c.Name == "Messages" && d.MessageBreakdown != null)
             {
-                host.Children.Add(new Expander
-                {
-                    Header = CategoryRow(c, d.MaxTokens),
-                    Content = BuildMessagesBreakdown(d.MessageBreakdown),
-                    Margin = new Thickness(0, 0, 0, 0),
-                });
+                host.Children.Add(MakeExpander(CategoryRow(c, d.MaxTokens), BuildMessagesBreakdown(d.MessageBreakdown)));
             }
             else
             {
@@ -207,7 +217,7 @@ public partial class ContextUsageControl
         {
             body.Children.Add(SubRow(g.Name, g.Tokens));
         }
-        host.Children.Add(new Expander { Header = GroupHeader(title, items.Length, total), Content = body });
+        host.Children.Add(MakeExpander(GroupHeader(title, items.Length, total), body));
     }
 
     // The five expandable trees, each rendered only when non-empty.
@@ -217,18 +227,13 @@ public partial class ContextUsageControl
         {
             Margin = new Thickness(0, 8, 0, 0),
         };
-        host.Children.Add(new Border
-        {
-            BorderThickness = new Thickness(0, 1, 0, 0),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x33, 0x88, 0x88, 0x88)),
-            Margin = new Thickness(0, 0, 0, 6),
-        });
+        host.Children.Add(Separator(new Thickness(0, 1, 0, 0), margin: new Thickness(0, 0, 0, 6)));
 
         if ((d.MemoryFiles?.Length ?? 0) > 0)
         {
             host.Children.Add(Tree("Memory files", d.MemoryFiles.Length,
                 d.MemoryFiles.Sum(f => (long)f.Tokens), "/memory",
-                Grouped(d.MemoryFiles, f => f.Type, f => f.Tokens, f => SubRow(f.Path, f.Tokens))));
+                Grouped(d.MemoryFiles, f => f.Type, f => f.Tokens, f => SubRowFile(f.Path, f.Tokens))));
         }
         if ((d.Agents?.Length ?? 0) > 0)
         {
@@ -278,48 +283,74 @@ public partial class ContextUsageControl
         {
             var sub = new StackPanel { Margin = new Thickness(16, 0, 0, 0) };
             foreach (var it in g.items) { sub.Children.Add(row(it)); }
-            body.Children.Add(new Expander { Header = GroupHeader(g.name, g.items.Count, g.tokens), Content = sub });
+            body.Children.Add(MakeExpander(GroupHeader(g.name, g.items.Count, g.tokens), sub));
         }
         return body;
     }
 
     private UIElement Tree(string title, int count, long tokens, string slashHint, UIElement body)
-    {
-        var header = new StackPanel { Orientation = Orientation.Horizontal };
-        header.Children.Add(new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center });
-        header.Children.Add(new TextBlock { Text = $" ({count})", Opacity = 0.6, VerticalAlignment = VerticalAlignment.Center });
-        if (slashHint != null)
-        {
-            header.Children.Add(new TextBlock { Text = $"  {slashHint}", Opacity = 0.5, VerticalAlignment = VerticalAlignment.Center });
-        }
-        header.Children.Add(new TextBlock { Text = $"   {Tok(tokens)}", Opacity = 0.8, VerticalAlignment = VerticalAlignment.Center });
-        return new Expander { Header = header, Content = body, Margin = new Thickness(0, 0, 0, 2) };
-    }
+        => MakeExpander(HeaderRow(title, count, slashHint, tokens), body);
 
-    private UIElement GroupHeader(string title, int count, long tokens)
+    // A section/group header row: name + dimmed (count) + optional /slash hint on the left, the token
+    // total right-aligned in its own column so every expander's value lines up at the right edge.
+    private UIElement HeaderRow(string title, int count, string slashHint, long tokens)
     {
-        var g = new Grid();
+        var g = new Grid { Margin = new Thickness(0, 3, 0, 3) };
         g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        g.Margin = new Thickness(0, 3, 0, 3);
-        var name = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
-        name.Inlines.Add(new System.Windows.Documents.Run(title));
-        name.Inlines.Add(new System.Windows.Documents.Run($" ({count})") { Foreground = Brushes.Gray });
-        Grid.SetColumn(name, 0);
-        g.Children.Add(name);
+
+        var left = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        left.Children.Add(new TextBlock { Text = title });
+        left.Children.Add(new TextBlock { Text = $" ({count})", Opacity = 0.6 });
+        if (slashHint != null) { left.Children.Add(new TextBlock { Text = $"  {slashHint}", Opacity = 0.5 }); }
+        Grid.SetColumn(left, 0);
+        g.Children.Add(left);
+
         var tok = new TextBlock { Text = Tok(tokens), Opacity = 0.8, VerticalAlignment = VerticalAlignment.Center };
         Grid.SetColumn(tok, 1);
         g.Children.Add(tok);
         return g;
     }
 
+    private UIElement GroupHeader(string title, int count, long tokens)
+        => HeaderRow(title, count, null, tokens);
+
     // An indented sub-row: label (wraps) + tokens, right-aligned.
     private UIElement SubRow(string label, int tokens)
+        => SubRowCore(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, Opacity = 0.85 }, tokens);
+
+    // A sub-row whose name is a clickable link opening the file in the VS editor (memory files). The
+    // path is shown relative to the session's working directory (full path in the tooltip), like the TS.
+    private UIElement SubRowFile(string path, int tokens)
+    {
+        var link = new Hyperlink(new Run(RelPath(path, _currentCwd))) { ToolTip = path };
+        link.Click += (_, _) => OpenInEditor(path);
+        var name = new TextBlock(link) { TextWrapping = TextWrapping.Wrap, Opacity = 0.85 };
+        return SubRowCore(name, tokens);
+    }
+
+    // Path relative to the working directory (Windows separators), or the full path when it's not
+    // under it — ports the WebView's relPath/displayPath.
+    private static string RelPath(string path, string cwd)
+    {
+        if (string.IsNullOrEmpty(path)) { return ""; }
+        static string Norm(string p) => (p ?? "").Replace('\\', '/').TrimEnd('/');
+        var root = Norm(cwd);
+        var full = Norm(path);
+        var shown = full;
+        if (!string.IsNullOrEmpty(root))
+        {
+            var prefix = root + "/";
+            if (full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) { shown = full.Substring(prefix.Length); }
+        }
+        return shown.Replace('/', '\\');
+    }
+
+    private UIElement SubRowCore(TextBlock name, int tokens)
     {
         var g = new Grid { Margin = new Thickness(0, 2, 0, 2) };
         g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var name = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap, Opacity = 0.85 };
         Grid.SetColumn(name, 0);
         g.Children.Add(name);
         var tok = new TextBlock { Text = Tok(tokens), Margin = new Thickness(10, 0, 0, 0), Opacity = 0.85, VerticalAlignment = VerticalAlignment.Top };
@@ -328,19 +359,31 @@ public partial class ContextUsageControl
         return g;
     }
 
+    // Open an absolute file path in the VS editor (memory files come with full paths). Called from a
+    // WPF click handler, so we're already on the UI thread.
+    private static void OpenInEditor(string path)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, path,
+                Microsoft.VisualStudio.VSConstants.LOGVIEWID.TextView_guid, out _, out _, out var frame);
+            frame?.Show();
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.LogException("ContextUsageControl.OpenInEditor", ex);
+        }
+    }
+
     private UIElement BuildFooter(GetContextUsageResponse d)
     {
         var text = $"Auto-compact: {(d.IsAutoCompactEnabled ? "on" : "off")}";
         if (d.IsAutoCompactEnabled) { text += $" · threshold {Tok(d.AutoCompactThreshold)}"; }
         if (!string.IsNullOrEmpty(d.AutocompactSource)) { text += $" · {d.AutocompactSource}"; }
-        return new Border
-        {
-            BorderThickness = new Thickness(0, 1, 0, 0),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(0x33, 0x88, 0x88, 0x88)),
-            Margin = new Thickness(0, 12, 0, 0),
-            Padding = new Thickness(0, 8, 0, 0),
-            Child = new TextBlock { Text = text, Opacity = 0.6 },
-        };
+        var border = Separator(new Thickness(0, 1, 0, 0), margin: new Thickness(0, 12, 0, 0), padding: new Thickness(0, 8, 0, 0));
+        border.Child = new TextBlock { Text = text, Opacity = 0.6 };
+        return border;
     }
 
     // A 3-column grid (name * | tokens auto | usage auto) shared by the header and category rows.
