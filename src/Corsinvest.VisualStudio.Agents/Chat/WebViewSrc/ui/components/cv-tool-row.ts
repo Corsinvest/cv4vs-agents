@@ -37,9 +37,9 @@ export class CvToolRow extends LitElement implements ToolRowState {
     @property({ type: Boolean }) hasMore = false;
     /** Sub-agent id (Agent tool), used to fetch the full transcript on expand. */
     @property() agentId = '';
-    /** Nested box expanded — owned by cv-app (UiToolEntry.expanded), read here.
-     *  Expanded shows the full list; collapsed shows the last 3. */
-    @property({ type: Boolean }) subagentExpanded = false;
+    /** Show-all — owned by cv-app (UiToolEntry.showAll), read here. True shows the full
+     *  list; false shows the last 3. NOT the row open/closed state (that's `_expanded`). */
+    @property({ type: Boolean }) showAll = false;
 
     @state() private _expanded = false;
     // Guards the one-shot lazy preview fetch (history Agent expanded with no children yet).
@@ -124,7 +124,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
         e.stopPropagation();
         this.dispatchEvent(
             new CustomEvent('subagent-toggle', {
-                detail: { agentId: this.agentId, expand: !this.subagentExpanded, preview: false },
+                detail: { agentId: this.agentId, expand: !this.showAll, preview: false },
                 bubbles: true,
                 composed: true,
             }),
@@ -147,11 +147,11 @@ export class CvToolRow extends LitElement implements ToolRowState {
             ></cv-copy-btn>
             <button
                 class="icon-btn"
-                title=${this.subagentExpanded ? 'Reduce' : 'Show all'}
+                title=${this.showAll ? 'Reduce' : 'Show all'}
                 @click=${this._onToggleSubagent}
             >
                 ${unsafeHTML(
-                    this.subagentExpanded ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular,
+                    this.showAll ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular,
                 )}
             </button>
         `;
@@ -165,16 +165,16 @@ export class CvToolRow extends LitElement implements ToolRowState {
         }
         // Collapsed shows the last 3; expanded shows whatever subagentChildren holds
         // (the full list once fetched). The "…" marker appears when more exist.
-        const shown = this.subagentExpanded
+        const shown = this.showAll
             ? this.subagentChildren
             : this.subagentChildren.slice(-3);
         const hasToggle = this.hasMore || this.subagentChildren.length > 3;
         return html`
             <div
-                class="cv-subagent-children ${this.subagentExpanded ? '' : 'cv-subagent-collapsed'}"
+                class="cv-subagent-children ${this.showAll ? '' : 'cv-subagent-collapsed'}"
             >
                 ${
-                    hasToggle && !this.subagentExpanded
+                    hasToggle && !this.showAll
                         ? html`<div class="cv-subagent-more" title="Earlier children — Show all">
                               …
                           </div>`
@@ -205,7 +205,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
                                 .fullLineCount=${c.fullLineCount}
                                 .agentId=${this.agentId}
                                 .hasMore=${c.hasMore ?? false}
-                                .subagentExpanded=${c.showAll ?? false}
+                                .showAll=${c.showAll ?? false}
                             ></cv-tool-row>`,
                 )}
             </div>

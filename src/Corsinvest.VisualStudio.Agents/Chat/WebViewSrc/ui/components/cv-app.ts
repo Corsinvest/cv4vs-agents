@@ -1324,7 +1324,7 @@ export class CvApp extends LitElement {
             .fullLineCount=${e.fullLineCount}
             .agentId=${e.agentId ?? ''}
             .hasMore=${e.hasMore ?? false}
-            .subagentExpanded=${e.showAll ?? false}
+            .showAll=${e.showAll ?? false}
         ></cv-tool-row>`;
     }
 
