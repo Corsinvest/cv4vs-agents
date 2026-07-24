@@ -86,6 +86,9 @@ public class GetSubagentRequest
 {
     public string AgentId { get; set; }
     public string SessionId { get; set; }
+    // True → the WebView wants only the last ≤PreviewLines rows (chevron expand); false/absent → the
+    // whole transcript (Show all).
+    public bool Preview { get; set; }
 }
 
 /// <summary>Lazily fetch a stripped image's bytes (chat_get_image). sessionId is optional

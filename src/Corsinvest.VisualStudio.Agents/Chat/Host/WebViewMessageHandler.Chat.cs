@@ -33,10 +33,13 @@ internal sealed partial class WebViewMessageHandler
                     "sub-agent transcript unavailable (missing agentId or session)");
                 return;
             }
+            // Preview (chevron expand) reads only the tail window; full (Show all) reads the whole
+            // file. The WebView keeps the last 3 on preview and infers "…" from the row count, so no
+            // server-side HasMore is needed here.
             var page = await Task.Run(() => Sessions.ReadSubagentHistory(
-                sessionId, agentId, fullFile: true));
-            // Full transcript: replay every message into typed events. No parentToolUseId
-            // here — the WebView routes all children under the Agent found by agentId.
+                sessionId, agentId, fullFile: !subP.Preview));
+            // Replay every message into typed events. No parentToolUseId here — the WebView routes
+            // all children under the Agent found by agentId.
             var events = HistoryReplay.ReplayPage(page.Messages, AgentsOptions.Chat.PreviewLines);
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             bridge.SendResponse(BridgeMessages.ToWebView.Chat.SubagentLoaded, subAgentReqId, new Contracts.GetSubagentResponse
