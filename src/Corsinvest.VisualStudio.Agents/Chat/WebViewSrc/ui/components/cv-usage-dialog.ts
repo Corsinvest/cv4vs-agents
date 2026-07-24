@@ -267,9 +267,7 @@ export class CvUsageDialog extends CvDialogBase {
         const acct = d.account;
         return html`
             <div class="section">Account</div>
-            <div class="kv">
-                <span>Auth method</span><span>${d.authMethod}</span>
-            </div>
+            <div class="kv"><span>Auth method</span><span>${d.authMethod}</span></div>
             ${
                 acct?.email
                     ? html`<div class="kv"><span>Email</span><span>${acct.email}</span></div>`
@@ -295,17 +293,18 @@ export class CvUsageDialog extends CvDialogBase {
                               Plan usage is not available for this session.
                           </div>`
             }
-
             ${
                 // Only for the first-party Claude AI account (undefined = native Claude); for 3rd-party
                 // providers (z.ai/GLM, Bedrock, Vertex, gateway) the claude.ai link points nowhere useful.
                 !acct?.apiProvider || acct.apiProvider === 'firstParty'
-                    ? html`<fluent-link class="link" href="https://claude.ai/settings/usage" target="_blank"
+                    ? html`<fluent-link
+                          class="link"
+                          href="https://claude.ai/settings/usage"
+                          target="_blank"
                           >Manage usage on claude.ai</fluent-link
                       >`
                     : nothing
             }
-
             ${this._renderBehaviors()}
         `;
     }
