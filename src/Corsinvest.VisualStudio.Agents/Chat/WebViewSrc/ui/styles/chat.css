@@ -352,26 +352,15 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 .cv-tool-row-chev.always-shown {
     opacity: 1;
 }
+/* Tool header actions (open-diff/error) sit in flow on the row — same mechanism as
+ * renderHeaderActions (copy/expand), not an absolute overlay above the body. */
 .cv-tool-actions {
-    position: absolute;
-    top: 4px;
-    right: 6px;
-    display: flex;
+    display: inline-flex;
+    align-items: center;
     gap: 2px;
-    opacity: 0;
-    transition: opacity 0.15s;
-    z-index: 2;
-    /* Opaque chat-coloured background so the icons don't blend with the
-     * tool body text underneath. */
-    background: var(--colorNeutralBackground1);
-    border-radius: var(--borderRadiusSmall);
-    padding: 2px;
 }
 .cv-tool-wrap {
     position: relative;
-}
-.cv-tool-wrap:hover .cv-tool-actions {
-    opacity: 1;
 }
 
 .cv-tool-body {
