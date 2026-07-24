@@ -111,7 +111,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
      *  empty toolbar band. Expand is always offered while the box is expanded: even with
      *  ≤3 children the collapsed view caps the height and scrolls, so the user still needs
      *  a way to lift the cap and see the whole transcript. */
-    renderHeaderActions() {
+    componentHeaderActions() {
         if (this.subagentChildren.length === 0) {
             return nothing;
         }

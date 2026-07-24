@@ -189,7 +189,7 @@ export abstract class ToolRenderer {
                               >`
                             : nothing
                     }
-                    ${actions} ${opts.open ? this.host.renderHeaderActions() : nothing}
+                    ${actions} ${opts.open ? this.host.componentHeaderActions() : nothing}
                     ${
                         opts.chevron && opts.body !== null
                             ? html`<button

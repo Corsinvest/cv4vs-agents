@@ -66,8 +66,8 @@ export class BridgeToolHost implements ToolHost {
     renderChildren() {
         return this.row.renderChildren();
     }
-    renderHeaderActions() {
-        return this.row.renderHeaderActions();
+    componentHeaderActions() {
+        return this.row.componentHeaderActions();
     }
     get showInlineToolErrors(): boolean {
         return appState.ui.showInlineToolErrors;

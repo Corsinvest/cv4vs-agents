@@ -28,9 +28,9 @@ export interface ToolRowState {
     /** Nested child rows/messages (Agent tool's transcript), or nothing. Generic:
      *  any tool with nested children can return them here. */
     renderChildren(): TemplateResult | typeof nothing;
-    /** Actions rendered on the tool's header row (right side, before the chevron).
-     *  Default nothing; the Agent uses it for copy + show-all. */
-    renderHeaderActions(): TemplateResult | typeof nothing;
+    /** Actions that depend on the component's Lit state (sub-agent copy + show-all).
+     *  Default nothing; the Agent uses it. Composed by the renderer's renderHeaderActions. */
+    componentHeaderActions(): TemplateResult | typeof nothing;
 }
 
 export interface ToolHost {
@@ -53,9 +53,8 @@ export interface ToolHost {
     /** Nested child rows/messages (Agent tool's transcript), or nothing. Generic:
      *  any tool with nested children can return them here. */
     renderChildren(): TemplateResult | typeof nothing;
-    /** Actions rendered on the tool's header row (right side, before the chevron).
-     *  Default nothing; the Agent uses it for copy + show-all. */
-    renderHeaderActions(): TemplateResult | typeof nothing;
+    /** Actions that depend on the component's Lit state (sub-agent copy + show-all). */
+    componentHeaderActions(): TemplateResult | typeof nothing;
 
     /** Open a file in VS, optionally selecting a line range. */
     openFile(filePath: string, startLine?: number, endLine?: number): void;
