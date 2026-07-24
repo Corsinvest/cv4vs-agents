@@ -229,7 +229,9 @@ export class AgentRenderer extends ToolRenderer {
     // The chevron must appear while the sub-agent runs, not only once it finishes — so the row can be
     // opened to follow the live children. Expandable when there's a prompt body OR any child yet.
     protected override hasExpandableContent(): boolean {
-        return this.body() !== null || this.host.subagentChildCount > 0;
+        // An Agent is always expandable: it has a prompt body, and even at 0 children the chevron must
+        // show so expanding can kick the lazy preview fetch (history). agentId makes that explicit.
+        return this.body() !== null || this.host.agentId !== '' || this.host.subagentChildCount > 0;
     }
     protected override renderHeaderActions(): TemplateResult | typeof nothing {
         // Copy-output + show-all only make sense once the transcript is open (same as before, when the

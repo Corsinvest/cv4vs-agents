@@ -42,6 +42,8 @@ export class CvToolRow extends LitElement implements ToolRowState {
     @property({ type: Boolean }) subagentExpanded = false;
 
     @state() private _expanded = false;
+    // Guards the one-shot lazy preview fetch (history Agent expanded with no children yet).
+    private _previewRequested = false;
 
     private _unsubSubagentTasks?: () => void;
 
@@ -75,6 +77,26 @@ export class CvToolRow extends LitElement implements ToolRowState {
 
     override render() {
         return makeRenderer(this.data?.name, new BridgeToolHost(this)).row();
+    }
+
+    override updated(): void {
+        // A history Agent row expanded with no children yet → lazily fetch its ≤3 preview, once.
+        // Live rows already hold children in memory, so this never fires there. The guard stops it
+        // re-firing on every render while the fetch is in flight; it resets when the row collapses.
+        if (this._expanded && this.agentId && this.subagentChildren.length === 0) {
+            if (!this._previewRequested) {
+                this._previewRequested = true;
+                this.dispatchEvent(
+                    new CustomEvent('subagent-toggle', {
+                        detail: { agentId: this.agentId, expand: true, preview: true },
+                        bubbles: true,
+                        composed: true,
+                    }),
+                );
+            }
+        } else if (!this._expanded) {
+            this._previewRequested = false;
+        }
     }
 
     /** Concatenate the sub-agent's children into markdown, reusing the same raw
