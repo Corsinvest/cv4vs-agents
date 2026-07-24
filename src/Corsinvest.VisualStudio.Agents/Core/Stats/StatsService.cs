@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -254,9 +254,7 @@ internal static class StatsService
     private static List<string> SplitPath(string path)
     {
         if (string.IsNullOrEmpty(path)) { return new List<string> { "(unknown)" }; }
-        return path.Replace('/', '\\').TrimEnd('\\')
-            .Split(new[] { '\\' }, StringSplitOptions.RemoveEmptyEntries)
-            .ToList();
+        return [.. path.Replace('/', '\\').TrimEnd('\\').Split(new[] { '\\' }, StringSplitOptions.RemoveEmptyEntries)];
     }
 
     // The Project subtree: a "Days" branch (real per-day tokens, matching the chart) and a
@@ -687,7 +685,7 @@ internal static class StatsService
 
         var slices = BreakdownSessions(children, range) ?? BreakdownGeneric(children, range);
 
-        slices = slices.OrderByDescending(s => s.Tokens).ToList();
+        slices = [.. slices.OrderByDescending(s => s.Tokens)];
         if (slices.Count <= DonutTopN) { return slices; }
 
         // Roll everything past the top N into a single grey "Others" slice.

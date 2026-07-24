@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -81,7 +81,7 @@ internal sealed class IdeDiagnosticsTracker
         {
             var uri = PathHelpers.ToFileUri(filePath);
             var files = await IdeContextService.Instance.GetDiagnosticsAsync(uri);
-            return files.SelectMany(f => f.Diagnostics).ToList();
+            return [.. files.SelectMany(f => f.Diagnostics)];
         }
         catch (Exception ex)
         {

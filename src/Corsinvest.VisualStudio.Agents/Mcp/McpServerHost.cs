@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -75,10 +75,9 @@ internal sealed partial class McpServerHost
     /// on any configured config-dir discovers it. Two profiles on the same CLAUDE_CONFIG_DIR collapse
     /// to one folder (Distinct).</summary>
     private static List<string> ProfileIdeFolders() =>
-        ProfileStore.Load(forEdit: false)
+        [.. ProfileStore.Load(forEdit: false)
             .Select(p => ClaudePaths.ForProfile(p).IdeFolder)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
 
     public void Start()
     {
@@ -175,7 +174,7 @@ internal sealed partial class McpServerHost
             await Task.Run(() =>
             {
                 string[] folders;
-                lock (_lockFoldersGate) { folders = _lockFolders.ToArray(); }
+                lock (_lockFoldersGate) { folders = [.. _lockFolders]; }
                 // A pane closing concurrently could remove a folder from _lockFolders (and delete
                 // its lock) between this snapshot and the write below, resurrecting an orphan lock.
                 // Tolerated: the lock still points at this live VS pid, so the CLI accepts it, and

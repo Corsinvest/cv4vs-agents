@@ -162,11 +162,10 @@ internal static class StatsChart
 
         var infos = BuildDayInfos(r);
         // One bar per day that has token data, in chronological order.
-        return days
+        return [.. days
             .Where(d => d.Date != null && infos.ContainsKey(d.Date))
             .OrderBy(d => d.Date, StringComparer.Ordinal)
-            .Select(d => new DayBar { Info = infos[d.Date] })
-            .ToList();
+            .Select(d => new DayBar { Info = infos[d.Date] })];
     }
 
     private static Dictionary<string, long> ToMap(object tokensByModel)

@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Corsinvest.VisualStudio.Agents.Contracts;
 using Corsinvest.VisualStudio.Agents.Core.Client;
 using Corsinvest.VisualStudio.Agents.Core.Profiles;
-using Corsinvest.VisualStudio.Agents.Helpers;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Context;
 

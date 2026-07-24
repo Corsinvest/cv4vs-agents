@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -27,15 +27,14 @@ internal static class WorkspaceStore
             {
                 Version = 1,
                 SavedAt = savedAtIso,
-                Panes = PaneRegistry.Instance.Entries
+                Panes = [.. PaneRegistry.Instance.Entries
                     .OrderBy(e => e.SeqNo)
                     .Select(e => new PaneState
                     {
                         Kind = e.Kind == PaneKind.Cli ? "Cli" : "Chat",
                         Profile = e.Profile.Name,
                         SessionId = e.ActiveSessionId,
-                    })
-                    .ToList(),
+                    })],
             };
 
             var path = AppPaths.WorkspaceFile(solutionFolder);
