@@ -24,13 +24,16 @@ internal static class StatsAggregator
 
     /// <summary>Parse one .jsonl into a <see cref="FileAggregate"/>, reading from
     /// <paramref name="fromOffset"/> bytes. Pass a non-null <paramref name="seed"/> to accumulate
-    /// onto an existing aggregate (append delta); null starts fresh. Returns the aggregate and
-    /// the new byte length read, or null on I/O error.</summary>
-    public static (FileAggregate agg, long newSize)? AggregateFile(
+    /// onto an existing aggregate (append delta); null starts fresh. Returns the aggregate, the new
+    /// byte length read, and the session's cwd (last record that carries one; null if none read this
+    /// pass) — or null on I/O error. The cwd isn't stored in the aggregate; the caller keeps only
+    /// the most recent session's for the project label.</summary>
+    public static (FileAggregate agg, long newSize, string cwd)? AggregateFile(
         string path, bool isSubagent, long fromOffset, FileAggregate seed)
     {
         FileAggregate agg = seed ?? new FileAggregate { IsSubagent = isSubagent };
         agg.IsSubagent = isSubagent;
+        string cwd = null;
         long size;
         try
         {
@@ -61,7 +64,7 @@ internal static class StatsAggregator
                 JObject obj;
                 try { obj = JObject.Parse(line); }
                 catch { continue; }
-                Accumulate(agg, obj);
+                Accumulate(agg, obj, ref cwd);
             }
         }
         catch (Exception ex)
@@ -69,12 +72,13 @@ internal static class StatsAggregator
             OutputWindowLogger.LogException("StatsAggregator.AggregateFile", ex);
             return null;
         }
-        return (agg, size);
+        return (agg, size, cwd);
     }
 
     // Called for assistant lines (tokens/model/tool) and user lines with media (image/document
-    // attachments). The caller pre-filters everything else out.
-    private static void Accumulate(FileAggregate agg, JObject obj)
+    // attachments). The caller pre-filters everything else out. cwd is threaded through so the last
+    // record that carries one wins (a mid-session cd updates it), without storing it in the aggregate.
+    private static void Accumulate(FileAggregate agg, JObject obj, ref string cwd)
     {
         var role = obj.Val("type", "");
         if (role != "user" && role != "assistant") { return; } // defensive: substring false-positive
@@ -84,6 +88,11 @@ internal static class StatsAggregator
 
         var message = obj["message"] as JObject;
         var content = message?["content"] as JArray;
+
+        // The real working directory — keep the LAST record that carries one (a mid-session cd
+        // updates it). The project-dir name is a lossy encoding, so this is the only readable source.
+        var cwdHere = obj.Val("cwd", "");
+        if (!string.IsNullOrEmpty(cwdHere)) { cwd = cwdHere; }
 
         // Timestamp bookkeeping (first/last, peak hour) from every message, user or assistant.
         var tsMs = ParseTimestampMs(obj.Val("timestamp", ""));
@@ -148,16 +157,21 @@ internal static class StatsAggregator
         var mt = GetModel(agg, model);
         var inTok = usage.Val("input_tokens", 0L);
         var outTok = usage.Val("output_tokens", 0L);
+        var cacheRead = usage.Val("cache_read_input_tokens", 0L);
+        var cacheCreate = usage.Val("cache_creation_input_tokens", 0L);
         mt.InputTokens += inTok;
         mt.OutputTokens += outTok;
-        mt.CacheReadTokens += usage.Val("cache_read_input_tokens", 0L);
-        mt.CacheCreationTokens += usage.Val("cache_creation_input_tokens", 0L);
+        mt.CacheReadTokens += cacheRead;
+        mt.CacheCreationTokens += cacheCreate;
 
-        var dayTokens = inTok + outTok;
-        if (dayTokens > 0)
+        // Same split per day+model, so a ranged query keeps real in/out/cache (not just the total).
+        if (inTok + outTok + cacheRead + cacheCreate > 0)
         {
-            day.TokensByModel.TryGetValue(model, out var cur);
-            day.TokensByModel[model] = cur + dayTokens;
+            if (!day.TokensByModel.TryGetValue(model, out var dmt)) { dmt = new ModelTokens(); day.TokensByModel[model] = dmt; }
+            dmt.InputTokens += inTok;
+            dmt.OutputTokens += outTok;
+            dmt.CacheReadTokens += cacheRead;
+            dmt.CacheCreationTokens += cacheCreate;
         }
     }
 

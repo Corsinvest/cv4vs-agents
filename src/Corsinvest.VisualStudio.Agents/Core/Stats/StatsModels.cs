@@ -20,6 +20,10 @@ internal sealed class ModelTokens
 
     public long Total => InputTokens + OutputTokens;
 
+    /// <summary>All tokens incl. cache — the meaningful "how much did this day cost" measure, since
+    /// cache read/creation dwarf raw input/output.</summary>
+    public long GrandTotal => InputTokens + OutputTokens + CacheReadTokens + CacheCreationTokens;
+
     public void Add(ModelTokens other)
     {
         InputTokens += other.InputTokens;
@@ -35,8 +39,10 @@ internal sealed class DayActivity
     public int MessageCount { get; set; }
     public int SessionCount { get; set; }
     public int ToolCallCount { get; set; }
-    // Per-model token total (input+output) for this day — feeds the stacked bar chart.
-    public Dictionary<string, long> TokensByModel { get; } = new();
+    // Per-model token split (in/out/cache) for this day. Keeping the split (not just the
+    // combined total) lets a ranged query still show real input/output per model, and the
+    // stacked chart uses .Total.
+    public Dictionary<string, ModelTokens> TokensByModel { get; } = new();
 
     public void Add(DayActivity other)
     {
@@ -45,8 +51,8 @@ internal sealed class DayActivity
         ToolCallCount += other.ToolCallCount;
         foreach (var kv in other.TokensByModel)
         {
-            TokensByModel.TryGetValue(kv.Key, out var cur);
-            TokensByModel[kv.Key] = cur + kv.Value;
+            if (!TokensByModel.TryGetValue(kv.Key, out var mt)) { mt = new ModelTokens(); TokensByModel[kv.Key] = mt; }
+            mt.Add(kv.Value);
         }
     }
 }
@@ -94,6 +100,40 @@ internal sealed class StatsTotals
             long t = 0;
             foreach (var m in ModelUsage.Values) { t += m.Total; }
             return t;
+        }
+    }
+
+    /// <summary>Fold another totals into this one (for the cross-profile All scope): scalars add,
+    /// per-day / per-model / per-tool / per-hour maps merge by key. Streaks/peak/favorite are
+    /// derived later in BuildResponse from the merged Days/HourCounts, so they aren't merged here.</summary>
+    public void Merge(StatsTotals other)
+    {
+        TotalSessions += other.TotalSessions;
+        TotalMessages += other.TotalMessages;
+        ImageCount += other.ImageCount;
+        FileCount += other.FileCount;
+        SubagentTokens += other.SubagentTokens;
+        SubagentFiles += other.SubagentFiles;
+
+        foreach (var kv in other.ModelUsage)
+        {
+            if (!ModelUsage.TryGetValue(kv.Key, out var mt)) { mt = new ModelTokens(); ModelUsage[kv.Key] = mt; }
+            mt.Add(kv.Value);
+        }
+        foreach (var kv in other.Days)
+        {
+            if (!Days.TryGetValue(kv.Key, out var d)) { d = new DayActivity(); Days[kv.Key] = d; }
+            d.Add(kv.Value);
+        }
+        foreach (var kv in other.HourCounts)
+        {
+            HourCounts.TryGetValue(kv.Key, out var c);
+            HourCounts[kv.Key] = c + kv.Value;
+        }
+        foreach (var kv in other.ToolCallsByName)
+        {
+            ToolCallsByName.TryGetValue(kv.Key, out var c);
+            ToolCallsByName[kv.Key] = c + kv.Value;
         }
     }
 }

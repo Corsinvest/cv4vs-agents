@@ -172,11 +172,13 @@ internal sealed partial class WebViewMessageHandler
         }
     }
 
+    // The WebView dialog is single-profile (the pane's), so its "All" is this profile's whole set
+    // of projects → the Profile scope, not the cross-profile All (that one is WPF-tree only).
     private static Core.Stats.StatsScope MapScope(Contracts.StatsScopeDto s) => s switch
     {
         Contracts.StatsScopeDto.Session => Core.Stats.StatsScope.Session,
         Contracts.StatsScopeDto.Project => Core.Stats.StatsScope.Project,
-        _ => Core.Stats.StatsScope.All,
+        _ => Core.Stats.StatsScope.Profile,
     };
     private static Core.Stats.StatsRange MapRange(Contracts.StatsRangeDto r) => r switch
     {

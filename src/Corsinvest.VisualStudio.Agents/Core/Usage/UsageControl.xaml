@@ -1,0 +1,234 @@
+<UserControl x:Class="Corsinvest.VisualStudio.Agents.Core.Usage.UsageControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+             xmlns:controls="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Controls"
+             toolkit:Themes.UseVsTheme="True">
+  <UserControl.Resources>
+    <!-- Uppercase section header, like the WebView dialog's .section. -->
+    <Style x:Key="SectionHeadStyle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Opacity" Value="0.7" />
+      <Setter Property="Margin" Value="0,14,0,6" />
+    </Style>
+    <!-- Small flat icon button for the toolbar (same look as the Statistics tree toolbar). -->
+    <Style x:Key="ToolBtn" TargetType="Button">
+      <Setter Property="Width" Value="22" />
+      <Setter Property="Height" Value="22" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="bd" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="bd" Property="Background"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarMouseOverBackgroundBeginBrushKey}}" />
+                <Setter TargetName="bd" Property="BorderBrush"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarBorderBrushKey}}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </UserControl.Resources>
+
+  <Grid Margin="14">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="200" MinWidth="140" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <!-- Profiles list, with the Refresh toolbar above it (like the Statistics tree toolbar). -->
+    <Grid Grid.Column="0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+      <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,4">
+        <Button x:Name="RefreshButton" Style="{StaticResource ToolBtn}" Click="OnRefreshClick"
+                ToolTip="Refresh usage">
+          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
+        </Button>
+      </StackPanel>
+      <ListBox x:Name="ProfileList" Grid.Row="1"
+               SelectionChanged="OnProfileSelected"
+               Background="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
+               Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}"
+               BorderBrush="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBorderBrushKey}}">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Orientation="Horizontal">
+              <imaging:CrispImage Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center"
+                                  Moniker="{x:Static catalog:KnownMonikers.User}" />
+              <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Grid>
+
+    <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Center"
+                  VerticalAlignment="Stretch" Background="Transparent" />
+
+    <!-- Usage panel for the selected profile. -->
+    <Grid Grid.Column="2" Margin="10,0,0,0">
+      <!-- While fetching: a centered progress bar + message, over the whole usage area. -->
+      <controls:CvLoadingOverlay x:Name="LoadingPanel" Visibility="Collapsed"
+                              Message="Fetching usage…" />
+
+      <!-- Content: account + usage, or a message. -->
+      <ScrollViewer x:Name="ContentScroller" VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="420" HorizontalAlignment="Left">
+          <TextBlock x:Name="MessageText" Opacity="0.7" Visibility="Collapsed"
+                     TextWrapping="Wrap" Margin="0,8,0,0" />
+
+          <StackPanel x:Name="ContentPanel" Visibility="Collapsed">
+            <!-- ACCOUNT -->
+            <TextBlock Text="ACCOUNT" Style="{StaticResource SectionHeadStyle}" Margin="0,0,0,6" />
+            <Grid Margin="0,2">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Auth method" Opacity="0.8" />
+              <TextBlock x:Name="AuthText" Grid.Column="1" TextAlignment="Right"
+                         TextTrimming="CharacterEllipsis" />
+            </Grid>
+            <Grid x:Name="EmailRow" Margin="0,2" Visibility="Collapsed">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Email" Opacity="0.8" />
+              <TextBlock x:Name="EmailText" Grid.Column="1" TextAlignment="Right"
+                         TextTrimming="CharacterEllipsis" />
+            </Grid>
+            <Grid x:Name="OrgRow" Margin="0,2" Visibility="Collapsed">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Organization" Opacity="0.8" />
+              <TextBlock x:Name="OrgText" Grid.Column="1" TextAlignment="Right"
+                         TextTrimming="CharacterEllipsis" />
+            </Grid>
+            <Grid Margin="0,2">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Plan" Opacity="0.8" />
+              <TextBlock x:Name="PlanText" Grid.Column="1" TextAlignment="Right" />
+            </Grid>
+
+            <!-- USAGE (rate-limit windows) -->
+            <TextBlock Text="USAGE" Style="{StaticResource SectionHeadStyle}" />
+            <TextBlock x:Name="NoLimitsText" Opacity="0.7" TextWrapping="Wrap"
+                       Text="Plan usage is not available for this session." Visibility="Collapsed" />
+            <ItemsControl x:Name="WindowsList">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Margin="0,6,0,2">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" />
+                      <TextBlock Grid.Column="1" Opacity="0.8"
+                                 Text="{Binding Utilization, StringFormat={}{0}%}" />
+                    </Grid>
+                    <ProgressBar Height="6" Margin="0,4" Minimum="0" Maximum="100"
+                                 Value="{Binding Utilization}" />
+                    <TextBlock Text="{Binding ResetsIn}" Opacity="0.6" FontSize="11" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Manage-usage link — only meaningful for the first-party Claude AI account. -->
+            <TextBlock x:Name="ManageLink" Margin="0,16,0,0" Visibility="Collapsed">
+              <Hyperlink NavigateUri="https://claude.ai/settings/usage" RequestNavigate="OnLinkNavigate">
+                Manage usage on claude.ai
+              </Hyperlink>
+            </TextBlock>
+
+            <!-- Behaviours: what's contributing to the limits usage (Day / Week). -->
+            <StackPanel x:Name="BehaviorsPanel" Visibility="Collapsed">
+              <TextBlock Text="WHAT'S CONTRIBUTING TO YOUR LIMITS USAGE?" Style="{StaticResource SectionHeadStyle}" />
+              <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <RadioButton x:Name="DayTab" Content="Day" IsChecked="True" GroupName="Period"
+                             Checked="OnPeriodChanged" Margin="0,0,12,0" />
+                <RadioButton x:Name="WeekTab" Content="Week" GroupName="Period" Checked="OnPeriodChanged" />
+              </StackPanel>
+              <TextBlock Opacity="0.6" FontSize="11" TextWrapping="Wrap"
+                         Text="Approximate, based on local sessions on this machine — does not include other devices or claude.ai" />
+              <TextBlock x:Name="PeriodNote" Opacity="0.6" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+
+              <!-- Insights (headline + body). -->
+              <ItemsControl x:Name="InsightsList" Margin="0,10,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Margin="0,0,0,10">
+                      <TextBlock Text="{Binding Headline}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Body}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- Attribution groups (Skills / Subagents / Plugins / MCP servers). -->
+              <TextBlock Text="Skills, subagents, plugins, and MCP servers" FontWeight="SemiBold" Margin="0,4,0,4" />
+              <TextBlock x:Name="NoAttributionText" Opacity="0.7" FontSize="12" TextWrapping="Wrap"
+                         Text="No attribution data yet · accumulates as you use Claude" Visibility="Collapsed" />
+              <ItemsControl x:Name="AttributionList">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Margin="0,6,0,0">
+                      <Grid Margin="0,0,0,2">
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="Auto" />
+                          <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{Binding Title}" Opacity="0.6" FontSize="11" />
+                        <TextBlock Grid.Column="1" Text="% of usage" Opacity="0.6" FontSize="11" TextAlignment="Right" />
+                      </Grid>
+                      <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid Margin="0,1">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                              </Grid.ColumnDefinitions>
+                              <TextBlock Grid.Column="0" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Text="{Binding Pct, StringFormat={}{0}%}" Opacity="0.8" Margin="10,0,0,0" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

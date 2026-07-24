@@ -1,0 +1,76 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+                    xmlns:controls="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Controls">
+
+  <!-- CvExpander: an Expander with a Fluent-style chevron (">" that rotates to point down when open),
+       matching the WebView context dialog. The header stretches full-width so a trailing token sits at
+       the right edge; header + content inherit the theme text brush. -->
+  <Style TargetType="{x:Type controls:CvExpander}">
+    <Setter Property="Foreground"
+            Value="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Margin" Value="0,0,0,2" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="{x:Type controls:CvExpander}">
+          <StackPanel>
+            <!-- Header row: a clickable toggle with the rotating chevron + the header content. -->
+            <ToggleButton x:Name="Toggle"
+                          IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                          Focusable="False" HorizontalContentAlignment="Stretch"
+                          Background="Transparent" BorderThickness="0" Padding="0,2">
+              <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                  <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <!-- Chevron ">" — rotates 90° to "v" when expanded. -->
+                      <Path x:Name="Chevron" Grid.Column="0"
+                            Data="M 0,0 L 4,4 L 0,8"
+                            Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type controls:CvExpander}}}"
+                            StrokeThickness="1.4" StrokeEndLineCap="Round" StrokeStartLineCap="Round"
+                            Width="8" Height="10" Stretch="None"
+                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                            RenderTransformOrigin="0.3,0.5">
+                        <Path.RenderTransform>
+                          <RotateTransform x:Name="ChevronRotate" Angle="0" />
+                        </Path.RenderTransform>
+                      </Path>
+                      <ContentPresenter Grid.Column="1" ContentSource="Content"
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                    </Grid>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <!-- The ToggleButton's own Content is the CvExpander Header (set below). -->
+                    <Trigger Property="IsChecked" Value="True">
+                      <Setter TargetName="Chevron" Property="RenderTransform">
+                        <Setter.Value>
+                          <RotateTransform Angle="90" />
+                        </Setter.Value>
+                      </Setter>
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </ToggleButton.Template>
+              <!-- The header content shown next to the chevron. -->
+              <ContentPresenter ContentSource="Header" HorizontalAlignment="Stretch" />
+            </ToggleButton>
+
+            <!-- Body: the expander content, indented to line up under the header, shown when open. -->
+            <ContentPresenter x:Name="Body" ContentSource="Content" Visibility="Collapsed"
+                              Margin="16,2,0,4" />
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsExpanded" Value="True">
+              <Setter TargetName="Body" Property="Visibility" Value="Visible" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+</ResourceDictionary>

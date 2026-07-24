@@ -41,6 +41,18 @@ namespace Corsinvest.VisualStudio.Agents;
 [ProvideOptionPage(typeof(AgentsChatPage), AppConstants.AppName, "Chat", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsDebugPage), AppConstants.AppName, "Debug", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsProfilesPage), AppConstants.AppName, "Profiles", 0, 0, true)]
+// Document-tab for Statistics. A custom editor is opened by opening a file, so we map a private
+// extension (.cv4vsstats) to the factory and open a placeholder file of that type from the menu.
+// The file content is never read — the pane pulls live from StatsService.
+[ProvideEditorFactory(typeof(Core.Stats.StatisticsEditorFactory), 0, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
+[ProvideEditorExtension(typeof(Core.Stats.StatisticsEditorFactory), Core.Stats.StatisticsDocument.Extension, 50)]
+[ProvideEditorLogicalView(typeof(Core.Stats.StatisticsEditorFactory), "{00000000-0000-0000-0000-000000000000}")]
+[ProvideEditorFactory(typeof(Core.Usage.UsageEditorFactory), 0, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
+[ProvideEditorExtension(typeof(Core.Usage.UsageEditorFactory), Core.Usage.UsageDocument.Extension, 50)]
+[ProvideEditorLogicalView(typeof(Core.Usage.UsageEditorFactory), "{00000000-0000-0000-0000-000000000000}")]
+[ProvideEditorFactory(typeof(Core.Context.ContextEditorFactory), 0, TrustLevel = __VSEDITORTRUSTLEVEL.ETL_AlwaysTrusted)]
+[ProvideEditorExtension(typeof(Core.Context.ContextEditorFactory), Core.Context.ContextDocument.Extension, 50)]
+[ProvideEditorLogicalView(typeof(Core.Context.ContextEditorFactory), "{00000000-0000-0000-0000-000000000000}")]
 [Guid(PackageGuids.AgentsPackageString)]
 public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolutionLoadEvents
 {
@@ -203,6 +215,10 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         OutputWindowLogger.EnsurePaneOnUIThread();
         await ProfilesMenuCommand.InitializeAsync(this);
         await GlobalMenuCommands.InitializeAsync(this);
+        // Register the Statistics document-tab editor factory (opened by the View → Statistics command).
+        RegisterEditorFactory(new Core.Stats.StatisticsEditorFactory());
+        RegisterEditorFactory(new Core.Usage.UsageEditorFactory());
+        RegisterEditorFactory(new Core.Context.ContextEditorFactory());
         // Lazy MCP lifecycle: server runs only while >=1 session is open,
         // driven by PaneRegistry's 0->1 / ->0 transitions.
         Core.Panes.PaneRegistry.Instance.FirstSessionStarted += () => Mcp.McpServerHost.Instance.EnsureStarted();

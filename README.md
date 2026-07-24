@@ -96,6 +96,9 @@ own.
 - **[50 MCP tools](docs/mcp-tools.md)** — Visual Studio's own navigation, references, rename,
   diagnostics, build and the **live debugger** (breakpoints, stepping, locals, evaluate) handed to
   the agent. Not text search over source: the IDE's semantic, running view of your program.
+- **[Review changes in VS's own diff](docs/chat/diff.md)** — every Edit/Write shows as an inline diff,
+  and opens in Visual Studio's native, **editable** side-by-side diff: **save (Ctrl+S) to accept** or
+  **close to reject**, the CLI applies it only if you saved.
 - **The same sessions as VS Code and the terminal** — no separate database: it reads and writes the
   CLI's own session store, so a conversation started in the VS Code extension or in a terminal shows
   up here, and vice versa. Resume, fork and rename all work on those shared files, so you can switch
@@ -105,12 +108,22 @@ own.
   toggle turns the sharing off when you'd rather it didn't.
 - **Jump between panes** — a toolbar list of every open pane, Chat and CLI together, each with its
   title and kind. Docked panes hide each other behind tabs; this is how you find the one you want.
-- **[Sub-agent panel](docs/sub-agents.md)** — a chip shows how many sub-agents are running; click it
+- **[Sub-agent panel](docs/chat/sub-agents.md)** — a chip shows how many sub-agents are running; click it
   for a live list with per-agent Stop and Stop-all, so a fan-out never gets away from you.
   Background/async agents are tracked too: the turn is "finished" only once they are.
 - **[Any Anthropic-compatible provider](docs/options.md#profiles)** — profiles inject per-pane
   environment variables (z.ai/GLM, MiniMax, DeepSeek, OpenRouter, Ollama…); the IDE tools keep
   working.
+- **Analytics tabs** — full-window views under **View → cv4vs Agents**, all reading the local session
+  files with no telemetry:
+  - **[Statistics](docs/statistics.md)** — a navigable tree (All → Profile → Folder → Project →
+    Days/Sessions) driving summary tiles, an activity heatmap and per-day/per-model charts.
+  - **[Usage](docs/usage.md)** — each profile's live plan and rate-limit windows, read from the CLI.
+  - **[Context usage](docs/context-usage.md)** — for any historical session, how it fills the model's
+    context window: a memory-map, category table and expandable trees (memory files, agents, skills,
+    MCP tools), fetched read-only by resuming the session.
+- **[Plugin manager](docs/chat/plugins.md)** — install from a marketplace, enable/disable what you have,
+  add marketplaces — from Installed / Available / Marketplaces tabs, without leaving the chat.
 - **Talk to it** — dictate the prompt instead of typing it: a mic button in the composer transcribes
   as you speak (Web Speech API; hidden when the platform doesn't support it).
 - **Hot-swap** — model, permission mode and interrupt change on the live process, never a restart.
@@ -230,10 +243,12 @@ See [Options → Profiles](docs/options.md#profiles).
 
 - **Tool rows** — collapsible tool call/result rows; click a file to open it in VS (optionally
   selecting the referenced lines); inline tool errors (toggleable).
-- **Inline diffs** — Edit/Write rows show a diff (configurable context lines / ignore-whitespace),
-  expandable to a full-screen viewer with four view modes — **split** (side-by-side), **unified**,
-  **patch**, and **auto**, which switches between split and unified by available width; an
-  **Open in Visual Studio** button opens it in VS's native side-by-side diff.
+- **[Inline diffs](docs/chat/diff.md)** — Edit/Write rows show a diff (configurable context lines /
+  ignore-whitespace), expandable to a full-screen viewer with four view modes — **split**
+  (side-by-side), **unified**, **patch**, and **auto**, which switches between split and unified by
+  available width; an **Open in Visual Studio** button opens it in VS's native side-by-side diff.
+  There you review — and edit — the proposed change with the full editor, then **save (Ctrl+S) to
+  accept** it or **close the tab to reject**; the CLI applies the edit only if you saved.
 - **Full Markdown rendering** — tables, lists, blockquotes, links, and fenced code blocks rendered
   with **syntax highlighting** (highlight.js) across all common languages.
 - **Everything is copyable** — a copy button on every message, tool row and code block, so any part
@@ -251,7 +266,7 @@ See [Options → Profiles](docs/options.md#profiles).
   in flight and stop them. Background/async agents are tracked correctly (the turn's "finished" waits
   for them).
 - Sub-agent transcripts are replayed in history. Collapsed rows show the last 3 steps; expanding
-  fetches the full run — see [Sub-agents](docs/sub-agents.md).
+  fetches the full run — see [Sub-agents](docs/chat/sub-agents.md).
 
 ### Permissions
 
@@ -266,7 +281,7 @@ See [Options → Profiles](docs/options.md#profiles).
 
 A gauge in the composer shows how full the context window is; clicking it opens what is filling it,
 your plan's rate limits, and historical usage — aggregated locally from the session files, with no
-telemetry. See [Context, usage & statistics](docs/context-and-usage.md).
+telemetry. See [Context, usage & statistics](docs/chat/context-and-usage.md).
 
 ### Sessions
 
@@ -287,8 +302,8 @@ telemetry. See [Context, usage & statistics](docs/context-and-usage.md).
 
 ### Plugins
 
-- **Plugin manager** — Installed / Available / Marketplaces tabs; install, enable/disable, refresh,
-  add a marketplace.
+- **[Plugin manager](docs/chat/plugins.md)** — Installed / Available / Marketplaces tabs; install,
+  enable/disable, refresh, add a marketplace.
 
 ---
 
@@ -393,7 +408,7 @@ Studio is a different host, so several things are done differently — or don't 
 - **Sub-agents you can see and control.** Their tool calls are grouped under the Agent row that
   spawned them (last 3 steps, expand for the full run) instead of being interleaved into the
   transcript, and a chip in the composer counts the ones still running — click it to stop any of
-  them, or all. See [Sub-agents](docs/sub-agents.md).
+  them, or all. See [Sub-agents](docs/chat/sub-agents.md).
 - **Pane attention notifications.** With several panes open (or VS in the background), an InfoBar or
   a layout-proof OS toast tells you which pane needs input or has finished — the VS docked tab can't
   carry that state the way VS Code's editor title does.
@@ -407,11 +422,12 @@ Studio is a different host, so several things are done differently — or don't 
   up front.
 - **Deep VS integration for viewing changes.** Opening a file lands you in the real editor (optionally
   on the referenced lines); Edit/Write changes open in Visual Studio's **native, interactive
-  side-by-side diff** — not a static rendered diff — so you review and edit with the full editor.
-- **[Context gauge + Usage/Context/Statistics dialogs](docs/context-and-usage.md)** rendered
+  side-by-side diff** — not a static rendered diff — so you review and edit with the full editor, then
+  **save (Ctrl+S) to accept** or **close the tab to reject** (the CLI applies the edit only if you
+  saved).
+- **[Context gauge + Usage/Context/Statistics dialogs](docs/chat/context-and-usage.md)** rendered
   natively in the chat, including historical statistics across the current chat, the whole project,
   or **all projects together**.
-- **VS-native diff.** Inline diffs can be opened in Visual Studio's real side-by-side diff viewer.
 
 Not implemented (yet): a rewind/checkpoint feature — the closest is **Fork**.
 

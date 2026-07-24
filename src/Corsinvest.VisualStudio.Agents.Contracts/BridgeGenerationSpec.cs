@@ -99,9 +99,16 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.CliState)).Null()
             .Member(x => nameof(x.VsOptions)).Null();
         AddInterface<AccountDto>();
-        AddInterface<GetUsageResponse>()
+        // Usage (get_usage), decoded once in HandleGetUsage into this typed shape.
+        AddInterface<RateWindowDto>()
+            .Member(x => nameof(x.ResetsAt)).Null();
+        AddInterface<UsageInsightDto>();
+        AddInterface<UsageAttributionDto>();
+        AddInterface<UsageBehaviorsDto>();
+        AddInterface<UsageDto>()
             .Member(x => nameof(x.Account)).Null()
-            .Member(x => nameof(x.Usage)).Null();
+            .Member(x => nameof(x.Day)).Null()
+            .Member(x => nameof(x.Week)).Null();
 
         // Context-usage DTOs (get_context_usage). The handler always maps every field from the
         // JObject, so arrays/objects are non-null (empty [] when the CLI reports none).
