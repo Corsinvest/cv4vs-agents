@@ -12,7 +12,7 @@ import './cv-welcome';
 import './cv-prompt';
 import './cv-message';
 import './cv-copy-btn';
-import { formatTimeAgo, formatAbsolute } from '../../core/time';
+import { renderActionsRow } from '../helpers/actions-row';
 import './cv-thinking';
 // Dialogs are created on demand by core/dialog-host (which must not import ui/),
 // so register their custom elements here in the UI layer.
@@ -1290,16 +1290,7 @@ export class CvApp extends LitElement {
         }
         const text = blocks.map((b) => b.text).join('\n\n');
         const ts = blocks[blocks.length - 1].timestamp ?? 0;
-        return html`<div class="cv-response-actions">
-            <cv-copy-btn .text=${text} title="Copy response"></cv-copy-btn>
-            ${
-                ts > 0
-                    ? html`<span class="cv-ts" title=${formatAbsolute(ts)}
-                          >${formatTimeAgo(ts)}</span
-                      >`
-                    : nothing
-            }
-        </div>`;
+        return renderActionsRow(text, ts, 'Copy response');
     }
 
     private renderMessage(e: Exclude<UiEntry, UiToolEntry | UiThinkingEntry>) {

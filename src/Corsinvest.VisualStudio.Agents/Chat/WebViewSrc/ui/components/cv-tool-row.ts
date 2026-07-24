@@ -15,6 +15,7 @@ import { makeRenderer } from '../tool-renderers';
 import { BridgeToolHost, cleanResult } from '../tool-renderers/tool-host';
 import type { ToolRowState } from '../tool-renderers/types';
 import { state as appState } from '../../core/state';
+import { renderActionsRow } from '../helpers/actions-row';
 
 // Re-export so existing consumers (e.g. cv-app) can keep importing from here.
 export type { ToolStatus, ToolUseData } from '../../core/types';
@@ -132,20 +133,16 @@ export class CvToolRow extends LitElement implements ToolRowState {
         );
     };
 
-    /** Actions for the Agent header row (copy output + expand/reduce), exposed to the
-     *  renderer via the host. Rendered on the row, not above the children — so there's no
-     *  empty toolbar band. Expand is always offered while the box is expanded: even with
-     *  ≤3 children the collapsed view caps the height and scrolls, so the user still needs
+    /** Header action for the Agent row: Show all / Reduce only. Copy lives in the children
+     *  footer (renderChildren) instead — next to where the transcript ends, matching a normal
+     *  response's bottom actions row. Expand is always offered while the box is expanded: even
+     *  with ≤3 children the collapsed view caps the height and scrolls, so the user still needs
      *  a way to lift the cap and see the whole transcript. */
     componentHeaderActions() {
         if (this.childItems.length === 0) {
             return nothing;
         }
         return html`
-            <cv-copy-btn
-                .text=${this._childrenToMarkdown()}
-                title="Copy subagent output"
-            ></cv-copy-btn>
             <button
                 class="icon-btn"
                 title=${this.showAll ? 'Reduce' : 'Show all'}
@@ -167,44 +164,67 @@ export class CvToolRow extends LitElement implements ToolRowState {
         const shown = this.showAll ? this.childItems : this.childItems.slice(-3);
         const hasToggle = this.hasMore || this.childItems.length > 3;
         return html`
-            <div class="cv-children ${this.showAll ? '' : 'cv-children-collapsed'}">
-                ${
-                    hasToggle && !this.showAll
-                        ? html`<div class="cv-children-more" title="Earlier children — Show all">
-                              …
-                          </div>`
-                        : nothing
-                }
-                ${shown.map((c: UiEntry) =>
-                    c.kind === 'text' && c.role === 'thinking'
-                        ? html`<cv-thinking
-                              .text=${c.text}
-                              ?streaming=${!!c.streaming}
-                              .tokens=${c.tokens ?? 0}
-                              .durationMs=${c.durationMs ?? 0}
-                              ?redacted=${!!c.redacted}
-                          ></cv-thinking>`
-                        : c.kind === 'text'
-                          ? html`<cv-message
-                                .role=${c.role}
-                                .text=${c.text}
-                                ?streaming=${c.role === 'assistant' ? !!c.streaming : false}
-                                ?isError=${c.role === 'slash-result' ? c.isError : false}
-                            ></cv-message>`
-                          : html`<cv-tool-row
-                                .data=${c.data}
-                                .status=${c.status}
-                                .result=${c.result}
-                                .elapsedSec=${c.elapsedSec}
-                                .childItems=${c.children?.items ?? []}
-                                .fullLineCount=${c.fullLineCount}
-                                .agentId=${this.agentId}
-                                .hasMore=${c.children?.hasMore ?? false}
-                                .showAll=${c.children?.showAll ?? false}
-                            ></cv-tool-row>`,
-                )}
+            <div class="cv-children">
+                <div class="cv-children-scroll ${this.showAll ? '' : 'cv-children-collapsed'}">
+                    ${
+                        hasToggle && !this.showAll
+                            ? html`<div
+                                  class="cv-children-more"
+                                  title="Earlier children — Show all"
+                              >
+                                  …
+                              </div>`
+                            : nothing
+                    }
+                    ${shown.map((c: UiEntry) =>
+                        c.kind === 'text' && c.role === 'thinking'
+                            ? html`<cv-thinking
+                                  .text=${c.text}
+                                  ?streaming=${!!c.streaming}
+                                  .tokens=${c.tokens ?? 0}
+                                  .durationMs=${c.durationMs ?? 0}
+                                  ?redacted=${!!c.redacted}
+                              ></cv-thinking>`
+                            : c.kind === 'text'
+                              ? html`<cv-message
+                                    .role=${c.role}
+                                    .text=${c.text}
+                                    ?streaming=${c.role === 'assistant' ? !!c.streaming : false}
+                                    ?isError=${c.role === 'slash-result' ? c.isError : false}
+                                ></cv-message>`
+                              : html`<cv-tool-row
+                                    .data=${c.data}
+                                    .status=${c.status}
+                                    .result=${c.result}
+                                    .elapsedSec=${c.elapsedSec}
+                                    .childItems=${c.children?.items ?? []}
+                                    .fullLineCount=${c.fullLineCount}
+                                    .agentId=${this.agentId}
+                                    .hasMore=${c.children?.hasMore ?? false}
+                                    .showAll=${c.children?.showAll ?? false}
+                                ></cv-tool-row>`,
+                    )}
+                </div>
+                ${this._renderChildrenActions()}
             </div>
         `;
+    }
+
+    /** Footer actions for the whole sub-agent transcript: Copy (the full transcript) + the last
+     *  child's "x ago" timestamp. Sits at the bottom of the children box and mirrors a normal
+     *  response's bottom actions row — hover-gated via CSS (.cv-children-actions). */
+    private _renderChildrenActions() {
+        // The last child carries the freshest timestamp; entries without one (e.g. thinking) → 0.
+        const ts = this.childItems.reduce(
+            (m, c) => Math.max(m, ('timestamp' in c ? c.timestamp : 0) ?? 0),
+            0,
+        );
+        return renderActionsRow(
+            this._childrenToMarkdown(),
+            ts,
+            'Copy subagent output',
+            'cv-children-actions',
+        );
     }
 }
 

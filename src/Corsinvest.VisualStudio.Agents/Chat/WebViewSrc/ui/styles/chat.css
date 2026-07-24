@@ -288,10 +288,10 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     border-left: 2px solid var(--colorNeutralStroke1);
     margin-top: 2px;
 }
-/* Collapsed keeps the last 3 children but caps the box so one long child
- * (a big tool output) can't dominate the transcript — scroll inside instead.
- * Show-all is uncapped: showing the full transcript is the point. */
-.cv-children.cv-children-collapsed {
+/* Only the scrolling area is capped — the actions footer is a sibling below it (outside this box)
+ * so Copy + timestamp stay visible without scrolling. Collapsed caps the last-3 view so one long
+ * child (a big tool output) can't dominate; show-all is uncapped (the full transcript is the point). */
+.cv-children-scroll.cv-children-collapsed {
     max-height: 320px;
     overflow-y: auto;
 }
@@ -626,6 +626,11 @@ cv-message:focus-within .cv-msg-actions {
 }
 .cv-response:hover .cv-response-actions,
 .cv-response:focus-within .cv-response-actions {
+    opacity: 1;
+}
+/* Same row at the bottom of a sub-agent transcript — reveals on hovering the children box. */
+.cv-children:hover .cv-children-actions,
+.cv-children:focus-within .cv-children-actions {
     opacity: 1;
 }
 /* Relative "x ago" timestamp next to the copy button (both the user and response rows). */
