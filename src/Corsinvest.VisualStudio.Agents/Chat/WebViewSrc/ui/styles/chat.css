@@ -562,19 +562,18 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 .cv-message.user:hover {
     background: var(--colorNeutralBackground4);
 }
-/* Actions row: the cv-msg-actions element sits in flow at the bottom of a user/assistant bubble.
- * Its slot is always reserved (min-height) so revealing it on hover never shifts the layout. */
+/* Actions row: cv-msg-actions sits below the bubble, on the chat background (a sibling of the
+ * bubble inside the light-DOM cv-message host — NOT inside the .cv-message.user dark box). The slot
+ * is reserved (min-height) so revealing it on hover never shifts the layout. */
 .cv-msg-actions {
     display: flex;
-    margin-top: 2px;
+    margin: 2px 0 0 2px;
     min-height: 20px;
     opacity: 0;
     transition: opacity 0.15s;
 }
-.cv-message.user:hover .cv-msg-actions,
-.cv-message.assistant:hover .cv-msg-actions,
-.cv-message.user:focus-within .cv-msg-actions,
-.cv-message.assistant:focus-within .cv-msg-actions {
+cv-message:hover .cv-msg-actions,
+cv-message:focus-within .cv-msg-actions {
     opacity: 1;
 }
 /* Status messages — a whole assistant turn that is ONLY italic text (e.g.

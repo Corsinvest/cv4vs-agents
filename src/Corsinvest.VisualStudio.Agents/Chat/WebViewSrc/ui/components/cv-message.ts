@@ -291,6 +291,8 @@ export class CvMessage extends LitElement {
                 const interrupted = this.text.startsWith('[Request interrupted');
                 const userCls = `cv-message user ${this.expanded ? 'expanded' : 'collapsible'}${interrupted ? ' interrupted' : ''}`;
                 const hasChips = this.images.length > 0 || this.files.length > 0 || refs.length > 0;
+                // The actions row sits OUTSIDE the bubble (below it, on the chat background) so it
+                // doesn't inherit the user bubble's dark box.
                 return html`
                     <div class=${userCls}>
                         ${
@@ -307,8 +309,8 @@ export class CvMessage extends LitElement {
                                 ${unsafeHTML(escapeHtml(text).replace(/\n/g, '<br>'))}
                             </div>
                         </div>
-                        ${interrupted ? nothing : this._renderActions()}
                     </div>
+                    ${interrupted ? nothing : this._renderActions()}
                 `;
             }
 
