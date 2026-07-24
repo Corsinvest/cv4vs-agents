@@ -58,6 +58,12 @@ export class CvMessage extends LitElement {
 
     @property({ type: Boolean, reflect: true }) expanded = false;
     @state() private _isOverflowing = false;
+    // Re-measure the truncation on width changes: text re-wraps, so the px cap and the "Show more"
+    // decision must be recomputed. updated() alone fires on property change, not on resize.
+    private _resizeObs?: ResizeObserver;
+    // Last observed width — the observer fires on our own max-height writes too, so re-measure only
+    // when the WIDTH actually changed (that's what re-wraps the text). Avoids a feedback loop.
+    private _lastWidth = 0;
 
     // Streaming markdown throttle: re-running the full marked→hljs→DOMPurify
     // pipeline on every token janks long answers, so cache the HTML and refresh
@@ -106,33 +112,56 @@ export class CvMessage extends LitElement {
             clearTimeout(this._streamTimer);
             this._streamTimer = undefined;
         }
+        this._resizeObs?.disconnect();
+        this._resizeObs = undefined;
     }
 
     override updated(): void {
+        this._measure();
+        // Observe width once the row exists: re-wrapping on resize changes the truncation.
+        if (this.role === 'user' && !this._resizeObs) {
+            const el = this.querySelector('.cv-message.user') as HTMLElement | null;
+            if (el) {
+                this._lastWidth = el.clientWidth;
+                this._resizeObs = new ResizeObserver((entries) => {
+                    const w = entries[0]?.contentRect.width ?? 0;
+                    if (Math.abs(w - this._lastWidth) < 1) {
+                        return; // height-only change (our own max-height write) — skip
+                    }
+                    this._lastWidth = w;
+                    this._measure();
+                });
+                this._resizeObs.observe(el);
+            }
+        }
+    }
+
+    /** Cap the message TEXT to previewLines and flag overflow (drives the fade + "Show more").
+     *  The cap goes on .md (plain block, not the flex body/bubble) so it clips cleanly with no
+     *  scrollbar, and the "Show more" button below it stays inside the bubble, visible. */
+    private _measure(): void {
         if (this.role !== 'user') {
             return;
         }
         const el = this.querySelector('.cv-message.user') as HTMLElement | null;
-        if (!el) {
+        const md = this.querySelector('.cv-msg-body .md') as HTMLElement | null;
+        if (!el || !md) {
             return;
         }
-        // Measure natural scrollHeight with the cap removed, then re-apply
-        // the cap (lineHeight * previewLines + paddingV) only when collapsed.
-        el.style.maxHeight = '';
-        el.style.minHeight = '';
-        const cs = getComputedStyle(el);
+        // Measure natural scrollHeight with the cap removed, then re-apply the cap
+        // (lineHeight * previewLines) only when collapsed.
+        md.style.maxHeight = '';
+        const cs = getComputedStyle(md);
         const lineHeight = parseFloat(cs.lineHeight) || 20;
-        const paddingV = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
         const lines = appState.ui.previewLines || 3;
-        const threshold = lineHeight * lines + paddingV;
-        const naturalHeight = el.scrollHeight;
+        const threshold = lineHeight * lines;
+        const naturalHeight = md.scrollHeight;
         // +4 tolerance absorbs sub-pixel lineHeight rounding.
         const overflows = naturalHeight > threshold + 4;
         // Drives the clip + fade CSS; only when truncated, so short bubbles keep their descenders.
         el.classList.toggle('is-overflowing', overflows && !this.expanded);
         if (overflows && !this.expanded) {
-            el.style.maxHeight = `${threshold}px`;
-            el.style.minHeight = `${threshold}px`;
+            md.style.maxHeight = `${threshold}px`;
         }
         if (overflows !== this._isOverflowing) {
             this._isOverflowing = overflows;

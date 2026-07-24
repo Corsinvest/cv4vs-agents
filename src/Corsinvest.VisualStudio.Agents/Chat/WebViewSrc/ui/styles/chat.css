@@ -99,11 +99,15 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     background: var(--colorNeutralBackground3);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
-/* Clip + fade only when truncated; on a short bubble the gradient would clip descenders. */
-.cv-message.user.collapsible.is-overflowing {
+/* Clip + fade the TEXT (.md is a plain block, so max-height clips cleanly with no scrollbar).
+ * The "Show more" button flows BELOW .md, still inside the bubble, so it's always visible below
+ * the clipped text. On a short message the gradient would clip descenders, so it's gated on
+ * is-overflowing. */
+.cv-message.user.collapsible.is-overflowing .md {
     overflow: hidden;
+    position: relative;
 }
-.cv-message.user.collapsible.is-overflowing::after {
+.cv-message.user.collapsible.is-overflowing .md::after {
     content: '';
     position: absolute;
     bottom: 0;
@@ -113,17 +117,12 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     background: linear-gradient(transparent, var(--colorNeutralBackground3));
     pointer-events: none;
 }
-.cv-message.user:hover.collapsible.is-overflowing::after {
+.cv-message.user:hover.collapsible.is-overflowing .md::after {
     background: linear-gradient(transparent, var(--colorNeutralBackground4));
 }
-.cv-message.user.expanded {
-    max-height: none;
-    overflow: visible;
-}
 
-/* Always-visible "Show more / Show less" for long user messages. While collapsed it sits over the
- * fade at the bottom (so it's obvious there's more); expanded it flows under the text. A small link-
- * like button, theme-aware. */
+/* "Show more / Show less" for long user messages — inside the bubble, below the clipped text,
+ * with a margin so it never sits flush against the truncated last line. Link-like, theme-aware. */
 .cv-show-more {
     border: 0;
     background: transparent;
@@ -131,17 +130,10 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     font-size: 0.85em;
     cursor: pointer;
     padding: 2px 0;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 .cv-show-more:hover {
     text-decoration: underline;
-}
-/* Collapsed: pin the button to the bottom-left, above the fade, so the truncation is visible. */
-.cv-message.user.collapsible.is-overflowing .cv-show-more {
-    position: absolute;
-    bottom: 2px;
-    left: 12px;
-    z-index: 1;
 }
 
 /* Assistant block: same inline dot + flex layout as a tool row, so the dots align. */
