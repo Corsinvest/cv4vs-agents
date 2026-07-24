@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 import { html, css, nothing } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import Dismiss20Regular from '@fluentui/svg-icons/icons/dismiss_20_regular.svg';
+import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import './cv-copy-btn';
 import { iconStyles } from '../styles/shared';
 import type { LightboxRequest } from '../../core/types';
@@ -25,77 +25,42 @@ export class CvLightbox extends CvDialogBase {
             :host {
                 display: contents;
             }
-            /* Strip Fluent's default body padding/title-bar — go straight into our own
-             * frame. Cap to the viewport and clip so the image never scrolls. */
+            /* Cap the dialog to the viewport; the standard header sits above the image. */
             fluent-dialog::part(dialog) {
-                padding: 0;
                 max-width: 92vw;
                 max-height: 92vh;
                 overflow: hidden;
             }
+            .title {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .header-actions {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
             .frame {
-                position: relative;
                 display: block;
                 line-height: 0;
                 overflow: hidden;
-                max-width: 92vw;
-                max-height: 92vh;
+                max-width: 88vw;
+                max-height: 84vh;
             }
-            /* Image carries its intrinsic size, capped slightly below the dialog cap. */
+            /* Image carries its intrinsic size, capped below the dialog cap (header takes some height). */
             .img {
                 display: block;
-                max-width: 90vw;
-                max-height: 90vh;
+                max-width: 88vw;
+                max-height: 84vh;
                 width: auto;
                 height: auto;
                 object-fit: contain;
-            }
-            /* Action chips (copy, close) overlaid top-right; reveal on deliberate hover. */
-            .actions {
-                position: absolute;
-                top: 8px;
-                right: 8px;
-                display: flex;
-                gap: 4px;
-                background: var(--colorBackgroundOverlay);
-                border-radius: var(--borderRadiusMedium);
-                padding: 2px;
-                opacity: 0;
-                transition: opacity 0.15s;
-            }
-            .frame.armed:hover .actions,
-            .actions:focus-within {
-                opacity: 1;
-            }
-            .actions fluent-button::part(control) {
-                color: var(--colorNeutralForegroundOnBrand);
-            }
-            .actions:hover {
-                background: rgba(0, 0, 0, 0.75);
             }
         `,
     ];
 
     @property({ attribute: false }) req: LightboxRequest | null = null;
-    // The mouse is already over the image on open (the click that opened it),
-    // so :hover would show the actions immediately. Stay "disarmed" until the
-    // first real mousemove, so the actions only appear on a deliberate hover.
-    @state() private _armed = false;
-
-    override updated(changed: Map<string, unknown>): void {
-        super.updated(changed);
-        // Disarm the hover-actions on open: the mouse is already over the image, so wait for a
-        // deliberate mousemove before showing them.
-        if (changed.has('open') && this.open) {
-            this._armed = false;
-        }
-    }
-
-    private _arm = (): void => {
-        if (!this._armed) {
-            this._armed = true;
-        }
-    };
 
     /** Backdrop dismiss: our `.cv-lightbox-frame` fills the dialog and absorbs
      *  Fluent's own backdrop clicks, so re-check at the frame level. */
@@ -111,16 +76,41 @@ export class CvLightbox extends CvDialogBase {
             return nothing;
         }
         const src = r.src;
-        const fetchBlob = (): Promise<Blob> => fetch(src).then((res) => res.blob());
+        const name = r.name || 'Image';
+        // The clipboard only accepts image/png for a ClipboardItem — a jpeg/webp write is rejected
+        // (silent catch = no checkmark). Draw the image onto a canvas and re-encode as PNG so any
+        // source format copies.
+        const fetchBlob = (): Promise<Blob> =>
+            new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        reject(new Error('no 2d context'));
+                        return;
+                    }
+                    ctx.drawImage(img, 0, 0);
+                    canvas.toBlob(
+                        (blob) => (blob ? resolve(blob) : reject(new Error('toBlob failed'))),
+                        'image/png',
+                    );
+                };
+                img.onerror = () => reject(new Error('image load failed'));
+                img.src = src;
+            });
+        // Standard dialog chrome (like the diff dialog): title + copy in the header, the ✕ in the
+        // close slot — all ABOVE the image, never overlaid on it.
         return html`
             <fluent-dialog type="modal" aria-label="Image preview" @toggle=${this._onDialogToggle}>
-                <div
-                    class="frame ${this._armed ? 'armed' : ''}"
-                    @click=${this._onFrameClick}
-                    @mousemove=${this._arm}
-                >
-                    <img class="img" src=${src} alt=${r.name ?? ''} />
-                    <div class="actions">
+                <fluent-dialog-body>
+                    <span slot="title" class="title" title=${name}>${name}</span>
+
+                    <!-- Copy + close together on the right (title-action slot), copy first. -->
+                    <span slot="title-action" class="header-actions">
                         <cv-copy-btn .getBlob=${fetchBlob} title="Copy image"></cv-copy-btn>
                         <fluent-button
                             appearance="transparent"
@@ -128,10 +118,14 @@ export class CvLightbox extends CvDialogBase {
                             aria-label="Close"
                             @click=${() => this._close()}
                         >
-                            ${unsafeHTML(Dismiss20Regular)}
+                            ${unsafeHTML(Dismiss16Regular)}
                         </fluent-button>
+                    </span>
+
+                    <div class="frame" @click=${this._onFrameClick}>
+                        <img class="img" src=${src} alt=${r.name ?? ''} />
                     </div>
-                </div>
+                </fluent-dialog-body>
             </fluent-dialog>
         `;
     }
