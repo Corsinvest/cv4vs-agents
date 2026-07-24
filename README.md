@@ -114,11 +114,14 @@ own.
 - **[Any Anthropic-compatible provider](docs/options.md#profiles)** — profiles inject per-pane
   environment variables (z.ai/GLM, MiniMax, DeepSeek, OpenRouter, Ollama…); the IDE tools keep
   working.
-- **[Statistics tab](docs/statistics.md)** — a full-window view with a navigable tree
-  (All → Profile → Folder → Project → Days/Sessions) driving summary tiles, an activity heatmap and
-  per-day/per-model charts, all aggregated locally from the session files with no telemetry.
-- **[Usage tab](docs/usage.md)** — each profile's live plan and rate-limit windows, read from the
-  CLI.
+- **Analytics tabs** — full-window views under **View → cv4vs Agents**, all reading the local session
+  files with no telemetry:
+  - **[Statistics](docs/statistics.md)** — a navigable tree (All → Profile → Folder → Project →
+    Days/Sessions) driving summary tiles, an activity heatmap and per-day/per-model charts.
+  - **[Usage](docs/usage.md)** — each profile's live plan and rate-limit windows, read from the CLI.
+  - **[Context usage](docs/context-usage.md)** — for any historical session, how it fills the model's
+    context window: a memory-map, category table and expandable trees (memory files, agents, skills,
+    MCP tools), fetched read-only by resuming the session.
 - **[Plugin manager](docs/chat/plugins.md)** — install from a marketplace, enable/disable what you have,
   add marketplaces — from Installed / Available / Marketplaces tabs, without leaving the chat.
 - **Talk to it** — dictate the prompt instead of typing it: a mic button in the composer transcribes

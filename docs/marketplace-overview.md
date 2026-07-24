@@ -96,9 +96,12 @@ token usage and cost from your local session files — per day, per project, per
 There is also a full-window **Statistics** tab: a navigable tree (All → Profile → Folder → Project →
 Days/Sessions) drives summary tiles, a GitHub-style activity heatmap and per-day/per-model charts —
 all aggregated locally, no telemetry. A companion **Usage** tab shows each profile's live plan and
-rate-limit windows.
+rate-limit windows, and a **Context usage** tab breaks down how any historical session fills the
+model's context window (a memory-map, category table and the loaded files/agents/skills/tools).
 
 ![Statistics document-tab](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/statistics-document.png)
+
+![Context usage document-tab](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/usage-context-document.png)
 
 ---
 
