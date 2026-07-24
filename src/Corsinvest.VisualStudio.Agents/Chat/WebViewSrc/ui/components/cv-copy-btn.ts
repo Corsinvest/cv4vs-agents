@@ -28,8 +28,36 @@ export class CvCopyBtn extends LitElement {
             :host {
                 display: contents;
             }
+            /* Small icon-action button: compact, theme-aware, keyboard-focusable. A bare <button>
+               (not fluent-button) so it can be this small without violating the fluent-pure rule —
+               the shared icon-action standard. Callers still position it via ::part(button). */
+            .icon-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 3px;
+                border: 0;
+                border-radius: var(--borderRadiusSmall);
+                background: transparent;
+                color: inherit;
+                cursor: pointer;
+                opacity: 0.75;
+            }
+            .icon-btn:hover {
+                background: var(--colorSubtleBackgroundHover, rgba(127, 127, 127, 0.12));
+                opacity: 1;
+            }
+            .icon-btn:focus-visible {
+                outline: 1px solid var(--colorStrokeFocus2, currentColor);
+                outline-offset: 1px;
+            }
+            .icon-btn svg {
+                width: 14px;
+                height: 14px;
+                display: block;
+            }
             /* Copied state: tint the checkmark green for a clearer "done" signal. */
-            fluent-button.copied svg {
+            .icon-btn.copied svg {
                 color: var(--colorPaletteGreenForeground1);
                 fill: var(--colorPaletteGreenForeground1);
             }
@@ -74,17 +102,14 @@ export class CvCopyBtn extends LitElement {
 
     override render() {
         return html`
-            <fluent-button
+            <button
                 part="button"
-                appearance="subtle"
-                size="small"
-                icon-only
-                class=${this._copied ? 'copied' : ''}
+                class="icon-btn ${this._copied ? 'copied' : ''}"
                 title=${this._copied ? 'Copied' : this.title}
                 @click=${this._onClick}
             >
                 ${unsafeHTML(this._copied ? Checkmark16Regular : Copy16Regular)}
-            </fluent-button>
+            </button>
         `;
     }
 }
