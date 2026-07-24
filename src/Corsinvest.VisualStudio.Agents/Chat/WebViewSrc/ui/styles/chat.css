@@ -321,6 +321,15 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     text-decoration: underline;
     color: inherit;
 }
+/* "path:line" file link inside rendered markdown (fileLink marked extension) — opens in VS on click. */
+.cv-file-link {
+    color: var(--colorBrandForegroundLink);
+    text-decoration: none;
+    cursor: pointer;
+}
+.cv-file-link:hover {
+    text-decoration: underline;
+}
 
 /* The chevron toggle is a fluent-button (icon-only). Hidden at rest, revealed on row
  * hover — except .always-shown (Agent), kept visible so a near-empty collapsed row reads

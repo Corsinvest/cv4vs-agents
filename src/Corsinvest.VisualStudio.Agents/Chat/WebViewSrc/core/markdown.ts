@@ -10,6 +10,7 @@ import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import { resolveLang } from './lang';
 import { escapeHtml } from './html';
+import { findFileRefs } from './file-links';
 
 // CLI-internal tags that look like HTML but are content; DOMPurify would
 // drop them silently, so escape up-front to render as literal text.
@@ -50,12 +51,67 @@ renderer.link = function (token: Tokens.Link): string {
     if (/^(https?|mailto):/.test(href)) {
         return `<a href="${escapeHtml(href)}" title="${escapeHtml(title)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     }
-    // Local file paths render as plain text — `<cv-message>` adds its own
-    // click handlers; don't smuggle file:// URLs through the renderer.
+    // A markdown link to a local file — the model writes [X.cs:192](src/.../X.cs:192). If the href
+    // parses as a file ref, render a clickable file link (cv-message routes the click to VS) using
+    // the LABEL text as-is. Otherwise fall back to plain text.
+    const ref = findFileRefs(href).find((r) => r.start === 0 && r.match === href);
+    if (ref) {
+        const line = ref.lines[0] ?? 0;
+        return `<a class="cv-file-link" data-file="${escapeHtml(ref.path)}" data-line="${line}" title="Open in editor">${escapeHtml(text)}</a>`;
+    }
+    // Other local paths render as plain text.
     return text;
 };
 
-marked.use({ gfm: true, breaks: true, renderer });
+// Inline extension: turn a bare "path:line" reference (ClientEvents.cs:208, Core/x.ts:45) into a
+// clickable link that cv-message routes to VS. It runs on inline TEXT only — marked tokenizes fenced
+// code and inline `code` first, so those are never touched, and http(s) autolinks are consumed by
+// marked's own inline link/url rules before this. The heavy lifting (which substrings qualify, the
+// allow-list, the :line[:col] suffix shapes) lives in findFileRefs; here we just anchor it to the
+// current cursor. Idempotent by construction: marked always re-parses from the markdown source.
+const fileLinkExtension = {
+    name: 'fileLink',
+    level: 'inline' as const,
+    // Speed hint: only bother where a path-ish char run could begin.
+    start(src: string): number | undefined {
+        const m = src.match(/[A-Za-z0-9._/\\-]+\.[A-Za-z0-9]+(?::\d|\(\d|\[\d)/);
+        return m?.index;
+    },
+    tokenizer(src: string) {
+        // A file-ref only counts if it starts at the cursor (offset 0 of the remaining src).
+        const refs = findFileRefs(src);
+        const ref = refs.find((r) => r.start === 0);
+        if (!ref) {
+            return undefined;
+        }
+        return {
+            type: 'fileLink',
+            raw: ref.match,
+            path: ref.path,
+            lines: ref.lines,
+        };
+    },
+    renderer(token: { path: string; lines: number[]; raw: string }): string {
+        const file = escapeHtml(token.path);
+        const anchor = (label: string, line: number): string =>
+            `<a class="cv-file-link" data-file="${file}" data-line="${line}" title="Open in editor">${label}</a>`;
+        // No line → single link on the whole path (file:// scheme dropped from the label as noise).
+        if (token.lines.length === 0) {
+            return anchor(escapeHtml(token.path.replace(/^file:\/\/\/?/i, '')), 0);
+        }
+        // "file.cs:124,185,202" → the first link carries "file.cs:124", the rest are just the bare
+        // line numbers (same file, different line), commas as plain text between them.
+        const name = escapeHtml(token.path.replace(/^file:\/\/\/?/i, ''));
+        const [first, ...rest] = token.lines;
+        let html = anchor(`${name}:${first}`, first);
+        for (const ln of rest) {
+            html += ',' + anchor(String(ln), ln);
+        }
+        return html;
+    },
+};
+
+marked.use({ gfm: true, breaks: true, renderer, extensions: [fileLinkExtension] });
 
 /**
  * Render markdown to sanitized HTML for `unsafeHTML` (DOMPurify has run).
@@ -66,7 +122,7 @@ export function renderMarkdown(text: string | undefined | null): string {
     try {
         const html = marked.parse(normalized, { async: false }) as string;
         return DOMPurify.sanitize(html, {
-            ADD_ATTR: ['target', 'frompre'],
+            ADD_ATTR: ['target', 'frompre', 'data-file', 'data-line'],
             ADD_TAGS: ['cv-copy-btn'],
         });
     } catch (err) {
