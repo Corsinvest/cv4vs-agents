@@ -202,6 +202,8 @@ export class CvMessage extends LitElement {
 
     private _onFork = (e: Event): void => {
         e.stopPropagation();
+        // Drop focus so the actions row (shown on :focus-within) doesn't stay after the pointer leaves.
+        (e.currentTarget as HTMLElement | null)?.blur();
         if (!this.uuid) {
             return;
         }

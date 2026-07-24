@@ -77,6 +77,9 @@ export class CvCopyBtn extends LitElement {
 
     private _onClick = async (e: Event): Promise<void> => {
         e.stopPropagation();
+        // Drop focus after a click: the actions row is shown on :focus-within too (for keyboard
+        // users), so a lingering focus would keep it visible after the pointer leaves.
+        (e.currentTarget as HTMLElement | null)?.blur();
         try {
             if (this.getBlob) {
                 const blob = await this.getBlob();
