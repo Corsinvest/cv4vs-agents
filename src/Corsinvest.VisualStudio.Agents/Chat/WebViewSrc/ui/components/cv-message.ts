@@ -6,8 +6,6 @@ import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import BranchFork16Regular from '@fluentui/svg-icons/icons/branch_fork_16_regular.svg';
-import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
-import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.svg';
 import './cv-copy-btn';
 import './cv-attach-chip';
 import { renderMarkdown, renderMarkdownStreaming } from '../../core/markdown';
@@ -142,13 +140,13 @@ export class CvMessage extends LitElement {
 
     /**
      * Bottom hover actions row (user messages): Copy + Fork (only with a uuid, i.e. replayed from
-     * JSONL history — live messages have none) + Expand (long text) + "x ago" timestamp. Inline —
-     * cv-copy-btn is the shared icon button; Fork/Expand are bare .icon-btn (styled in chat.css).
+     * JSONL history — live messages have none) + "x ago" timestamp. Inline — cv-copy-btn is the
+     * shared icon button; Fork is a bare .icon-btn (styled in chat.css). Expand is NOT here: long
+     * messages get an always-visible "Show more" button on the fade instead (see the user render).
      */
     private _renderActions() {
         const copyText = parseIdeContextTags(this.text).text;
         const showFork = this.role === 'user' && !!this.uuid;
-        const showExpand = this.role === 'user' && (this._isOverflowing || this.expanded);
         return html`<div class="cv-msg-actions">
             <cv-copy-btn .text=${copyText} title="Copy message"></cv-copy-btn>
             ${
@@ -159,17 +157,6 @@ export class CvMessage extends LitElement {
                           @click=${this._onFork}
                       >
                           ${unsafeHTML(BranchFork16Regular)}
-                      </button>`
-                    : nothing
-            }
-            ${
-                showExpand
-                    ? html`<button
-                          class="icon-btn"
-                          title=${this.expanded ? 'Reduce' : 'Expand'}
-                          @click=${this._onToggleExpand}
-                      >
-                          ${unsafeHTML(this.expanded ? ChevronUp16Regular : ChevronDown16Regular)}
                       </button>`
                     : nothing
             }
@@ -346,6 +333,13 @@ export class CvMessage extends LitElement {
                                 ${unsafeHTML(escapeHtml(text).replace(/\n/g, '<br>'))}
                             </div>
                         </div>
+                        ${
+                            this._isOverflowing || this.expanded
+                                ? html`<button class="cv-show-more" @click=${this._onToggleExpand}>
+                                      ${this.expanded ? 'Show less' : 'Show more'}
+                                  </button>`
+                                : nothing
+                        }
                     </div>
                     ${interrupted ? nothing : this._renderActions()}
                 `;

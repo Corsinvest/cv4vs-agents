@@ -121,6 +121,29 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     overflow: visible;
 }
 
+/* Always-visible "Show more / Show less" for long user messages. While collapsed it sits over the
+ * fade at the bottom (so it's obvious there's more); expanded it flows under the text. A small link-
+ * like button, theme-aware. */
+.cv-show-more {
+    border: 0;
+    background: transparent;
+    color: var(--colorBrandForegroundLink, var(--colorNeutralForeground2));
+    font-size: 0.85em;
+    cursor: pointer;
+    padding: 2px 0;
+    margin-top: 2px;
+}
+.cv-show-more:hover {
+    text-decoration: underline;
+}
+/* Collapsed: pin the button to the bottom-left, above the fade, so the truncation is visible. */
+.cv-message.user.collapsible.is-overflowing .cv-show-more {
+    position: absolute;
+    bottom: 2px;
+    left: 12px;
+    z-index: 1;
+}
+
 /* Assistant block: same inline dot + flex layout as a tool row, so the dots align. */
 .cv-message.assistant {
     align-self: stretch;
