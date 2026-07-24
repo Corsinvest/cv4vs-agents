@@ -234,7 +234,7 @@ public partial class ChatPaneControl
             // Do NOT push the reply's `model` to the selector: sub-agents run on a different
             // model and would flip the selection. The selector reflects only the user's explicit
             // choice (set_model) plus init/history.
-            ContentBlockTranslator.EmitAssistant(e.Content, (t, d) => _bridge.Send(t, d), e.ParentToolUseId, e.Usage);
+            ContentBlockTranslator.EmitAssistant(e.Content, (t, d) => _bridge.Send(t, d), e.ParentToolUseId, e.Usage, timestamp: e.Timestamp);
         });
 
     private void OnUserMessage(object sender, UserMessageEventArgs e)
@@ -245,7 +245,7 @@ public partial class ChatPaneControl
             if (e.IsMeta) { return; }
             var previewLines = AgentsOptions.Chat.PreviewLines;
             var agentId = e.ToolUseResult?["agentId"]?.Value<string>();
-            ContentBlockTranslator.EmitUser(e.Content, previewLines, (t, d) => _bridge.Send(t, d), e.ParentToolUseId, e.Uuid, agentId);
+            ContentBlockTranslator.EmitUser(e.Content, previewLines, (t, d) => _bridge.Send(t, d), e.ParentToolUseId, e.Uuid, agentId, timestamp: e.Timestamp);
         });
 
     private void OnResult(object sender, ResultEventArgs e)
