@@ -156,7 +156,7 @@ export abstract class ToolRenderer {
     /** Whether a standard body opens without a click. Default: error rows, or
      *  when previews are on. */
     protected autoOpen(): boolean {
-        return this.host.status === 'error' || this.host.previewLines > 0;
+        return this.host.status === 'error' || appState.ui.previewLines > 0;
     }
 
     /** Whether this row starts collapsed, ignoring the preview auto-open setting.
@@ -305,7 +305,7 @@ export abstract class ToolRenderer {
             return html`${nothing}`;
         }
         const preview = (t: string) =>
-            previewText(t, this.host.previewLines, this.host.expanded, this.host.clipsOutput);
+            previewText(t, appState.ui.previewLines, this.host.expanded, this.host.clipsOutput);
         const copyBtn = (text: string, slot: 'in' | 'out') =>
             html`<cv-copy-btn
                 class="cv-tool-body-copy-btn cv-tool-body-copy-${slot}"

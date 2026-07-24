@@ -42,8 +42,6 @@ export interface ToolHost extends ToolRowState {
     readonly name: string;
     readonly input: Record<string, unknown>;
     readonly toolUseId: string;
-    readonly previewLines: number;
-    readonly workingDirectory: string;
 
     /** Open a file in VS, optionally selecting a line range. */
     openFile(filePath: string, startLine?: number, endLine?: number): void;

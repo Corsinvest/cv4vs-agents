@@ -6,7 +6,6 @@
 // and turns renderer requests into bridge messages / dialog opens. Renderers
 // depend on the ToolHost interface, never on this class or the bridge.
 
-import { state as appState } from '../../core/state';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { openDiffDialog } from '../../core/dialog-host';
@@ -55,12 +54,6 @@ export class BridgeToolHost implements ToolHost {
     }
     get agentId(): string {
         return this.row.agentId ?? '';
-    }
-    get previewLines(): number {
-        return appState.ui.previewLines;
-    }
-    get workingDirectory(): string {
-        return appState.workingDirectory;
     }
     get expanded(): boolean {
         return this.row.expanded;

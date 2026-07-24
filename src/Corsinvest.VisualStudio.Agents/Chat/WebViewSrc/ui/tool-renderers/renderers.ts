@@ -39,7 +39,7 @@ export class ReadRenderer extends ToolRenderer {
         const end = start > 0 && limit != null && limit > 0 ? start + limit - 1 : start;
         const link = this.fileLink(
             fp,
-            html`${displayPath(fp, this.host.workingDirectory, appState.ui.showRelativePaths)}${range}`,
+            html`${displayPath(fp, appState.workingDirectory, appState.ui.showRelativePaths)}${range}`,
             start,
             end,
         );
@@ -62,7 +62,7 @@ export class EditRenderer extends ToolRenderer {
         const fp = String(this.host.input.file_path ?? '');
         const link = this.editFileLink(
             fp,
-            html`${displayPath(fp, this.host.workingDirectory, appState.ui.showRelativePaths)}`,
+            html`${displayPath(fp, appState.workingDirectory, appState.ui.showRelativePaths)}`,
         );
         return html`${this.nameSpan(this.label())}${this.detailSpan(link)}`;
     }
@@ -104,7 +104,7 @@ export class GrepRenderer extends ToolRenderer {
         // Shorten the search path relative to the workdir, exactly like Edit/Read.
         if (i.path) {
             extras.push(
-                `in ${displayPath(String(i.path), this.host.workingDirectory, appState.ui.showRelativePaths)}`,
+                `in ${displayPath(String(i.path), appState.workingDirectory, appState.ui.showRelativePaths)}`,
             );
         }
         if (i.glob) {
