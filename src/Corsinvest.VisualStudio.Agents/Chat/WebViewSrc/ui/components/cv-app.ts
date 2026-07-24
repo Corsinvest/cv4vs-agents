@@ -992,6 +992,7 @@ export class CvApp extends LitElement {
                       role: 'slash-result',
                       text: lco.text,
                       isError: lco.isError,
+                      timestamp: d.timestamp ?? undefined,
                   }
                 : null;
         }
@@ -1306,7 +1307,11 @@ export class CvApp extends LitElement {
             .files=${e.role === 'user' ? (e.files ?? []) : []}
             ?streaming=${e.role === 'assistant' ? !!e.streaming : false}
             ?isError=${e.role === 'slash-result' ? e.isError : false}
-            .timestamp=${e.role === 'user' || e.role === 'assistant' ? (e.timestamp ?? 0) : 0}
+            .timestamp=${
+                e.role === 'user' || e.role === 'assistant' || e.role === 'slash-result'
+                    ? (e.timestamp ?? 0)
+                    : 0
+            }
         ></cv-message>`;
     }
 

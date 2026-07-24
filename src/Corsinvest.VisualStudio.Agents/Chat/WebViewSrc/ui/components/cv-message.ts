@@ -21,6 +21,7 @@ import { parseIdeContextTags } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
 import { formatTimeAgo, formatAbsolute } from '../../core/time';
+import { renderActionsRow } from '../helpers/actions-row';
 import type {
     IdeContextRef,
     ForkNotification,
@@ -314,10 +315,12 @@ export class CvMessage extends LitElement {
         switch (this.role) {
             case 'slash-result':
                 // A slash command's own output (<local-command-stdout>/stderr>, already parsed into
-                // `text` by buildUserEntry) — a centered berry pill, not a user bubble.
+                // `text` by buildUserEntry) — a preformatted monospace block, not a user bubble, with
+                // the shared bottom actions row (copy + "x ago"), hover-gated.
                 return this.text
                     ? html`<div class="cv-message slash-result${this.isError ? ' error' : ''}">
                           <pre>${this.text}</pre>
+                          ${renderActionsRow(this.text, this.timestamp, 'Copy output', 'cv-slash-actions')}
                       </div>`
                     : nothing;
 
