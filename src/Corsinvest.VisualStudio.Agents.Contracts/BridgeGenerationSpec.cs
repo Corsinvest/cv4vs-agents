@@ -54,8 +54,10 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.ParentToolUseId)).Null()
             .Member(x => nameof(x.AgentId)).Null();
         AddEnum<NoticeVariantDto>(asUnionType: true).StringInitializers();
+        AddEnum<NoticePositionDto>(asUnionType: true).StringInitializers();
         AddEnum<EffortLevelDto>(asUnionType: true).StringInitializers();
         AddInterface<RateLimitNotification>();
+        AddInterface<NoticeNotification>();
         AddInterface<ModelChangedNotification>();
         AddInterface<PermissionModeChangedNotification>();
         AddInterface<SetComposerNotification>();

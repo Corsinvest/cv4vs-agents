@@ -50,6 +50,10 @@ internal static class ClientMessages
         // /config|/context usage). content = "<local-command-stdout>…</local-command-stdout>" (or -stderr).
         // The WebView renders it as a slash-result pill (parseLocalCommandOutput on the UserText text).
         public const string LocalCommand = "local_command";
+        // A CLI advisory about the session: {content, level: info|notice|suggestion|warning}. E.g.
+        // "Session model claude-opus-5 could not be restored (not a model this version recognizes)".
+        // Surfaced as a session notice at the top of the chat.
+        public const string Informational = "informational";
     }
 
     // ----- subtype on control_request messages -----

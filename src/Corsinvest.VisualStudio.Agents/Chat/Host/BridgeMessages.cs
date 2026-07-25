@@ -171,6 +171,9 @@ internal static class BridgeMessages
             /// re-reads the stats (cache is now up to date).</summary>
             public const string StatsIndexDone = "chat_stats_index_done";
             public const string RateLimit = "chat_rate_limit";
+            /// <summary>A CLI advisory (system/informational) shown as a session notice at the top of
+            /// the chat — e.g. "session model X isn't recognized by this version".</summary>
+            public const string Notice = "chat_notice";
             public const string Models = "chat_models";
             /// <summary>Response to get_subagent: full sub-agent transcript (all blocks).</summary>
             public const string SubagentLoaded = "subagent_loaded";
