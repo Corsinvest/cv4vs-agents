@@ -517,6 +517,40 @@ public partial class ChatPaneControl
                 // "finished" — we notify only when this is empty (updates on finish AND on cancel).
                 _hasBackgroundTasks = obj["tasks"] is JArray tasks && tasks.Count > 0;
             }
+            else if (subtype == ClientMessages.SystemSubtype.Informational)
+            {
+                // A CLI advisory: hook feedback (a UserPromptSubmit block reason), session notes
+                // ("Session resumed"), a saved model this version no longer knows… Session scope →
+                // the top stack. Levels follow the SDK's own rendering intent (SDKInformationalMessage):
+                //   info       → transcript-only in the CLI's TUI; we skip it rather than nag
+                //   notice     → "inactive gray"      → info, auto-dismissing
+                //   suggestion → "more prominent"     → warning, auto-dismissing
+                //   warning    → "more prominent"     → warning, stays until dismissed
+                // prevent_continuation means the turn STOPPED here (a Stop hook denied it): always a
+                // sticky warning, whatever the level says.
+                var content = obj.Val("content", "");
+                var level = obj.Val("level", "info");
+                var halted = obj.Val("prevent_continuation", false);
+                if (!string.IsNullOrWhiteSpace(content) && (halted || level != "info"))
+                {
+                    var prominent = halted || level == "warning" || level == "suggestion";
+                    _bridge.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
+                    {
+                        // Dedup per tool when the CLI says so (it reuses tool_use_id for progress
+                        // updates of the same tool), else per message text.
+                        Key = "informational:" + (obj.Val("tool_use_id", "") is { Length: > 0 } tid
+                            ? tid
+                            : content.GetHashCode().ToString("x")),
+                        Severity = prominent
+                            ? Contracts.NoticeVariantDto.Warning
+                            : Contracts.NoticeVariantDto.Info,
+                        Message = content,
+                        Position = Contracts.NoticePositionDto.Top,
+                        // A halted turn or an explicit warning stays up; a suggestion/notice fades.
+                        Sticky = halted || level == "warning",
+                    });
+                }
+            }
             else if (subtype == ClientMessages.SystemSubtype.LocalCommand)
             {
                 // A slash command's local output arrives as a system record; forward the raw

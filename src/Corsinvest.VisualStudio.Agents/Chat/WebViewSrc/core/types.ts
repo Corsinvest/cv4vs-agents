@@ -73,7 +73,9 @@ export type { ToolResultNotification } from './generated/ToolResultNotification'
 /** Rate-limit notice (`chat_rate_limit`) + its severity union.
  *  Generated from C# by TypeGen — re-exported here. */
 export type { RateLimitNotification } from './generated/RateLimitNotification';
+export type { NoticeNotification } from './generated/NoticeNotification';
 export type { NoticeVariantDto } from './generated/NoticeVariantDto';
+export type { NoticePositionDto } from './generated/NoticePositionDto';
 
 /** Active model / permission mode changed (`cli_model_changed` / `cli_permission_mode_changed`).
  *  Generated from C# by TypeGen — re-exported here. */
@@ -387,4 +389,20 @@ export type UiEntry =
 export interface LightboxRequest {
     src: string;
     name?: string;
+}
+
+/** One dismissible notice in the stack above the composer (rate limits, CLI `informational`
+ *  warnings, upload errors…). `key` dedups repeats of the same condition (a second arrival with the
+ *  same key replaces rather than stacks); `id` identifies the row for dismissal. info/success
+ *  auto-dismiss, warning/error stay until dismissed. */
+export interface Notice {
+    id: string;
+    severity: 'info' | 'success' | 'warning' | 'error';
+    message: string;
+    key?: string;
+    /** Optional action button: label + the fromWebView bridge message its click sends. */
+    actionLabel?: string;
+    actionMessage?: string;
+    /** Stays until the host clears it (a dead CLI process) — never auto-dismissed. */
+    sticky?: boolean;
 }
