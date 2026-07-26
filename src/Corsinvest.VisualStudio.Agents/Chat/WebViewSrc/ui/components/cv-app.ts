@@ -7,7 +7,8 @@ import { customElement, query, state } from 'lit/decorators.js';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { fetchSubagent, fetchContextUsage, fetchCompactSummary } from '../../core/lazy';
-import './cv-cli-banner';
+import './cv-notice-stack';
+import type { CvNoticeStack } from './cv-notice-stack';
 import './cv-welcome';
 import './cv-prompt';
 import './cv-message';
@@ -55,6 +56,8 @@ import type {
     ToolPermissionNotification,
     HistoryEventDto,
     HistoryLoadedNotification,
+    NoticeNotification,
+    CliExitedNotification,
 } from '../../core/types';
 import { GetHistoryReq } from '../../core/request-types';
 import { modelLabel } from '../../core/ai-models';
@@ -62,6 +65,9 @@ import { turnErrorLabel } from '../../core/turn-errors';
 import { parseLocalCommandOutput } from '../../core/slash-commands';
 
 let _entryIdSeq = 0;
+
+/** Notice key for the "CLI process exited" row, so a restart clears exactly that one. */
+const CLI_EXITED_KEY = 'cli-exited';
 
 /**
  * Root component. Owns the chat entry list and wires the bridge messages
@@ -81,6 +87,7 @@ export class CvApp extends LitElement {
     @state() private _awaitingUser = appState.pendingPermission != null;
 
     @query('#messages') private _messagesEl!: HTMLDivElement;
+    @query('#system-notices') private _systemNotices!: CvNoticeStack | null;
 
     private _offs: Array<() => void> = [];
     /**
@@ -115,6 +122,52 @@ export class CvApp extends LitElement {
         // User picked a model from the menu (cv-prompt) — the "Switched to X" notice
         // fires ONLY here, never for the ui_init seed or a runtime cli_model_changed.
         this.addEventListener('model-switched', this._onModelSwitched as EventListener);
+
+        // Session/system notices: this stack keeps the `top` ones (a per-turn notice is picked up by
+        // cv-prompt's own stack listening on the same channel).
+        this._offs.push(
+            bridge.onNotification<NoticeNotification>(Msg.toWebView.chat.notice, (d) => {
+                if (!d?.message || (d.position ?? 'top') !== 'top') {
+                    return;
+                }
+                this._systemNotices?.push({
+                    severity: d.severity ?? 'info',
+                    message: d.message,
+                    key: d.key ?? undefined,
+                    actionLabel: d.actionLabel ?? undefined,
+                    actionMessage: d.actionMessage ?? undefined,
+                    sticky: !!d.sticky,
+                });
+            }),
+        );
+
+        // The CLI process died: a sticky error with a "View logs" action, cleared when it restarts.
+        // (An intentional exit is a respawn we triggered — session switch/resume/workdir — not a crash.)
+        this._offs.push(
+            bridge.onNotification<CliExitedNotification>(Msg.toWebView.cli.exited, (d) => {
+                if (d?.intentional) {
+                    this._systemNotices?.dismissByKey(CLI_EXITED_KEY);
+                    return;
+                }
+                const code = d?.exitCode;
+                this._systemNotices?.push({
+                    severity: 'error',
+                    message:
+                        code != null && code !== 0
+                            ? `Claude Code process exited (code ${code})`
+                            : 'Claude Code process exited',
+                    key: CLI_EXITED_KEY,
+                    actionLabel: 'View logs',
+                    actionMessage: Msg.fromWebView.open.ideOutputWindow,
+                    sticky: true,
+                });
+            }),
+        );
+        this._offs.push(
+            bridge.onNotification(Msg.toWebView.cli.started, () => {
+                this._systemNotices?.dismissByKey(CLI_EXITED_KEY);
+            }),
+        );
 
         this._offs.push(
             bridge.onNotification<UserTextNotification>(Msg.toWebView.chat.userText, (data) => {
@@ -311,6 +364,10 @@ export class CvApp extends LitElement {
                 appState.hasMoreHistory = false;
                 appState.loadingOlder = false;
                 appState.contextUsage = null;
+                // The CLI's advisories are about the session that just went away ("session model
+                // could not be restored"), so they'd read as stale against the new one. The dead-CLI
+                // row is about the process instead: it survives, and cli_started clears it.
+                this._systemNotices?.dismissExcept(CLI_EXITED_KEY);
             }),
         );
 
@@ -1337,7 +1394,11 @@ export class CvApp extends LitElement {
 
     override render() {
         return html`
-            <cv-cli-banner></cv-cli-banner>
+            <!-- Session/system notices at the top of the chat: a dead CLI process (with View logs),
+                 CLI informational advisories (a session model this version no longer knows), … .
+                 Turn-scoped ones (rate limit, uploads) live above the composer in cv-prompt — each
+                 stack owns its own queue and keeps only its own position. -->
+            <cv-notice-stack id="system-notices"></cv-notice-stack>
 
             <div id="messages" aria-live="polite">
                 ${

@@ -15,6 +15,15 @@ public enum NoticeVariantDto
     Error,
 }
 
+/// <summary>Which notice stack a message belongs in (wire values lowercase). `Top` = session/system
+/// scope, shown at the top of the chat; `Composer` = turn scope, shown above the composer. Each stack
+/// listens on the same channel and keeps only its own position.</summary>
+public enum NoticePositionDto
+{
+    Top,
+    Composer,
+}
+
 /// <summary>Reasoning effort level (wire values lowercase). Generated as a TS union.</summary>
 public enum EffortLevelDto
 {
@@ -196,6 +205,26 @@ public class RateLimitNotification
     public string Key { get; set; }
     public NoticeVariantDto? Severity { get; set; }
     public string Message { get; set; }
+}
+
+/// <summary>A notice for one of the two notice stacks (chat_notice) — today CLI advisories
+/// (system/informational). Key dedups repeats of the same advisory; severity maps the CLI's level;
+/// position picks the stack (absent = top, i.e. session scope).</summary>
+public class NoticeNotification
+{
+    public string Key { get; set; }
+    public NoticeVariantDto? Severity { get; set; }
+    public string Message { get; set; }
+    public NoticePositionDto? Position { get; set; }
+    /// <summary>Optional action button label (e.g. "View logs"). With ActionMessage, clicking it
+    /// sends that bridge message back to the host.</summary>
+    public string ActionLabel { get; set; }
+    /// <summary>Bridge message name the action button sends (fromWebView), e.g.
+    /// open_ide_output_window. Ignored without ActionLabel.</summary>
+    public string ActionMessage { get; set; }
+    /// <summary>True for a notice that must stay until the host clears it (a dead CLI process) —
+    /// it isn't auto-dismissed even at info severity.</summary>
+    public bool Sticky { get; set; }
 }
 
 /// <summary>The active model changed (cli_model_changed).</summary>

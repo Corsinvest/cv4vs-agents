@@ -13,7 +13,6 @@ import './ui/components/cv-model-list';
 import './ui/components/cv-permission-list';
 import './ui/components/cv-permission-selector';
 import './ui/components/cv-attach-menu';
-import './ui/components/cv-cli-banner';
 import './ui/components/cv-prompt';
 import './ui/components/cv-message';
 import './ui/components/cv-tool-row';

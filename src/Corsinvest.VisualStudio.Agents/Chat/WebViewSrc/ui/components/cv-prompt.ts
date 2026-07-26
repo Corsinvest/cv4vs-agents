@@ -8,11 +8,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { iconStyles } from '../styles/shared';
 import Send16Filled from '@fluentui/svg-icons/icons/send_16_filled.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
-import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import { iconUrl } from '../../core/icon-url';
-import Info16Regular from '@fluentui/svg-icons/icons/info_16_regular.svg';
-import Warning16Regular from '@fluentui/svg-icons/icons/warning_16_regular.svg';
-import ErrorCircle16Regular from '@fluentui/svg-icons/icons/error_circle_16_regular.svg';
 import { state as appState } from '../../core/state';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
@@ -21,6 +17,7 @@ import type {
     SubagentTask,
     AtItemDto,
     RateLimitNotification,
+    NoticeNotification,
     PromptHistoryNotification,
     UserTextNotification,
     UserImageDto,
@@ -33,6 +30,8 @@ import type {
 } from '../../core/types';
 import { GetSuggestionsReq } from '../../core/request-types';
 import type { ChatCommand, CommandHost } from '../../core/commands';
+import './cv-notice-stack';
+import type { CvNoticeStack } from './cv-notice-stack';
 import './cv-at-menu';
 import './cv-command-menu';
 import './cv-attach-menu';
@@ -47,17 +46,6 @@ import './cv-mic-button';
 import './cv-slash-menu';
 import { openLightbox, openPluginManagerDialog } from '../../core/dialog-host';
 import { openAttachment } from '../../core/lazy';
-
-/** Fluent message-bar intents we use for the notice above the composer. */
-type NoticeVariant = 'info' | 'success' | 'warning' | 'error';
-
-/** Intent icon for the message-bar `icon` slot (without it the text hugs the left edge). */
-const NOTICE_ICONS: Record<NoticeVariant, string> = {
-    info: Info16Regular,
-    success: Info16Regular,
-    warning: Warning16Regular,
-    error: ErrorCircle16Regular,
-};
 
 const TEXTAREA_MAX_HEIGHT_PX = 160;
 
@@ -294,7 +282,9 @@ export class CvPrompt extends LitElement implements CommandHost {
     // Hidden while a permission/question prompt is pending (answered in overlay).
     @state() private _pendingPermission = appState.pendingPermission != null;
     // Reusable notice shown above the textarea (e.g. unsupported upload, rate limit).
-    @state() private _notice: { variant: NoticeVariant; message: string } | null = null;
+    // Notices (rate limit, CLI informational, upload errors) accumulate INSIDE cv-notice-stack — it
+    // owns the queue, the dedup, the cap and the auto-dismiss; we just push into it.
+    @query('cv-notice-stack') private _noticeStack!: CvNoticeStack | null;
     @state() private _subagentTasks: SubagentTask[] = appState.subagentTasks;
     // Dedup: don't re-show a rate-limit banner the user dismissed until its key
     // (status:type) changes. _rateKey = the live banner's key (null if not a rate limit).
@@ -315,6 +305,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     private _offHistory?: () => void;
     private _offCleared?: () => void;
     private _offRate?: () => void;
+    private _offNotice?: () => void;
     private _offSubagentTasks?: () => void;
 
     // Input ↑/↓ prompt history (shell-style). Oldest first; the typed prompts of
@@ -365,14 +356,40 @@ export class CvPrompt extends LitElement implements CommandHost {
             if (this._cmdOpen) {
                 this._closeCommandMenu();
             }
+            // Composer notices are turn-scoped (a rate limit hit, a rejected upload): none of them
+            // still applies to the session being switched to.
+            this._noticeStack?.clear();
+            this._rateKey = null;
         });
+
+        // Turn-scoped notices: this stack keeps the `composer` ones (session-scoped `top` ones go to
+        // cv-app's stack, which listens on the same channel).
+        this._offNotice = bridge.onNotification<NoticeNotification>(
+            Msg.toWebView.chat.notice,
+            (d) => {
+                if (!d?.message || d.position !== 'composer') {
+                    return;
+                }
+                this._noticeStack?.push({
+                    severity: d.severity ?? 'info',
+                    message: d.message,
+                    key: d.key ?? undefined,
+                    actionLabel: d.actionLabel ?? undefined,
+                    actionMessage: d.actionMessage ?? undefined,
+                    sticky: !!d.sticky,
+                });
+            },
+        );
 
         // Null message clears; else show unless this key was already dismissed.
         this._offRate = bridge.onNotification<RateLimitNotification>(
             Msg.toWebView.chat.rateLimit,
             (d) => {
                 if (!d?.message) {
-                    this._notice = null;
+                    // Cleared upstream: drop the rate-limit row (other notices stay).
+                    if (this._rateKey) {
+                        this._noticeStack?.dismissByKey(this._rateKey);
+                    }
                     this._rateKey = null;
                     this._dismissedRateKey = null;
                     return;
@@ -380,8 +397,12 @@ export class CvPrompt extends LitElement implements CommandHost {
                 if (d.key === this._dismissedRateKey) {
                     return;
                 }
-                this._rateKey = d.key;
-                this._notice = { variant: d.severity ?? 'warning', message: d.message };
+                this._rateKey = d.key ?? 'rate-limit';
+                this._noticeStack?.push({
+                    severity: d.severity ?? 'warning',
+                    message: d.message,
+                    key: this._rateKey,
+                });
             },
         );
 
@@ -407,6 +428,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._offHistory?.();
         this._offCleared?.();
         this._offRate?.();
+        this._offNotice?.();
         this._offSubagentTasks?.();
         document.removeEventListener('pointerdown', this._onDocPointerDown, true);
         document.removeEventListener('keydown', this._onDocKeyDown, true);
@@ -1041,7 +1063,11 @@ export class CvPrompt extends LitElement implements CommandHost {
             }
         }
         if (rejected.length > 0) {
-            this._notice = { variant: 'error', message: unsupportedMessage(rejected) };
+            this._noticeStack?.push({
+                severity: 'error',
+                message: unsupportedMessage(rejected),
+                key: 'upload-rejected',
+            });
         }
     }
 
@@ -1307,36 +1333,6 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._ta?.focus();
     };
 
-    // Remember a dismissed rate-limit key so it doesn't immediately reappear.
-    private _dismissNotice = (): void => {
-        if (this._rateKey) {
-            this._dismissedRateKey = this._rateKey;
-            this._rateKey = null;
-        }
-        this._notice = null;
-    };
-
-    private _renderNotice() {
-        const n = this._notice;
-        if (!n) {
-            return nothing;
-        }
-        const icon = NOTICE_ICONS[n.variant];
-        return html`<fluent-message-bar class="notice" intent=${n.variant} layout="multiline">
-            <span slot="icon" class="ico">${unsafeHTML(icon)}</span>
-            <span>${unsafeHTML(n.message)}</span>
-            <fluent-button
-                slot="dismiss"
-                appearance="transparent"
-                icon-only
-                title="Dismiss"
-                @click=${this._dismissNotice}
-            >
-                ${unsafeHTML(Dismiss16Regular)}
-            </fluent-button>
-        </fluent-message-bar>`;
-    }
-
     private _renderChips() {
         if (this._attachments.length === 0) {
             return nothing;
@@ -1377,7 +1373,8 @@ export class CvPrompt extends LitElement implements CommandHost {
                 @dragleave=${this._onDragLeave}
                 @drop=${this._onDrop}
             >
-                ${this._renderNotice()} ${this._renderChips()}
+                <cv-notice-stack></cv-notice-stack>
+                ${this._renderChips()}
                 <textarea
                     id="input"
                     placeholder=${

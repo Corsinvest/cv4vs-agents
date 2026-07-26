@@ -103,6 +103,7 @@ export const Msg = {
             stats: 'chat_stats',
             statsIndexDone: 'chat_stats_index_done',
             rateLimit: 'chat_rate_limit',
+            notice: 'chat_notice',
             models: 'chat_models',
             subagentLoaded: 'subagent_loaded',
             subagentStarted: 'subagent_started',
