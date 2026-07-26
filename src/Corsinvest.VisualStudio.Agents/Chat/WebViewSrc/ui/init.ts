@@ -11,6 +11,7 @@ import { state } from '../core/state';
 import type { IdeContextNotification } from '../core/types';
 import { normPath } from '../core/path';
 import { closeTopDialog } from '../core/dialog-focus';
+import { setExtraLinkableExtensions } from '../core/file-links';
 import type {
     InitPayload,
     ModelsNotification,
@@ -50,6 +51,8 @@ function applyVsOptions(o: VsOptionsConfig): void {
     logger.setPerfEnabled(!!state.ui.perfEnabled);
     document.body.classList.toggle('sticky-user', !!o.stickyUserMessages);
     applyFontScale(o.chatFontSize);
+    // The file-link parser keeps its own set (module-level, not read from state at render time).
+    setExtraLinkableExtensions(o.extraLinkableExtensions);
 }
 
 function wireBridgeHandlers(): void {
