@@ -227,6 +227,9 @@ export class CvMessage extends LitElement {
         e.stopPropagation();
         const filePath = a.getAttribute('data-file') ?? '';
         const line = Number(a.getAttribute('data-line') ?? 0) || 0;
+        // Last line of a "100-120" range, so the host selects the block instead of just placing the
+        // caret; equal to `line` for a plain reference.
+        const lineEnd = Number(a.getAttribute('data-line-end') ?? 0) || line;
         if (!filePath) {
             return;
         }
@@ -244,7 +247,7 @@ export class CvMessage extends LitElement {
         bridge.sendNotification<IdeFileNotification>(Msg.fromWebView.open.ideFile, {
             filePath,
             startLine: line,
-            endLine: line,
+            endLine: lineEnd,
         });
     };
 
