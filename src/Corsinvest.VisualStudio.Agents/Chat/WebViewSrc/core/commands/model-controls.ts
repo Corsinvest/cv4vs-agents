@@ -22,7 +22,12 @@ import {
 } from './base';
 import { state as appState } from '../state';
 import { resolveModelValue } from '../ai-models';
-import { EFFORT_LEVEL_LABELS, type EffortLevelDto, type EffortSliderLevel } from '../types';
+import {
+    effortLabel,
+    ULTRACODE_VALUE,
+    type EffortLevelDto,
+    type EffortSliderLevel,
+} from '../types';
 
 /** The current model's catalogue entry (from the CLI), or undefined before init. */
 function currentModelInfo() {
@@ -31,8 +36,9 @@ function currentModelInfo() {
 }
 
 /** Effort levels the current model supports (from the CLI), or null when the
- *  model has no effort (e.g. Haiku) — the slider is then hidden. */
-function currentEffortLevels(): EffortSliderLevel[] | null {
+ *  model has no effort (e.g. Haiku) — the slider is then hidden. Exported so the
+ *  composer's effort chip hides on exactly the same condition as this row. */
+export function currentEffortLevels(): EffortSliderLevel[] | null {
     const m = currentModelInfo();
     const levels = (m?.supportedEffortLevels ?? []) as EffortSliderLevel[];
     return m?.supportsEffort && levels.length > 0 ? levels : null;
@@ -126,10 +132,10 @@ export class EffortCommand extends ChatCommand {
     private stopValues(): string[] {
         const levels = currentEffortLevels() ?? [];
         const ultraAvailable = levels.includes('xhigh');
-        return ultraAvailable ? [...levels, 'ultracode'] : [...levels];
+        return ultraAvailable ? [...levels, ULTRACODE_VALUE] : [...levels];
     }
     private ultraIdx(stops: string[]): number {
-        return stops.indexOf('ultracode');
+        return stops.indexOf(ULTRACODE_VALUE);
     }
 
     /** Hidden when the current model has no effort levels (e.g. Haiku). */
@@ -149,7 +155,7 @@ export class EffortCommand extends ChatCommand {
         return Math.max(0, stops.indexOf(appState.effortLevel));
     }
     get levelLabel(): string {
-        return appState.ultracodeEnabled ? 'ultracode' : appState.effortLevel;
+        return effortLabel(appState.effortLevel, appState.ultracodeEnabled);
     }
     /** Set the active stop. The ultracode stop is effort=xhigh + the ultracode
      *  flag (like VS Code); any other stop clears ultracode. `max` is selectable
@@ -157,7 +163,7 @@ export class EffortCommand extends ChatCommand {
     setLevel(host: CommandHost, idx: number): void {
         const stops = this.stopValues();
         const value = stops[Math.max(0, Math.min(idx, stops.length - 1))];
-        if (value === 'ultracode') {
+        if (value === ULTRACODE_VALUE) {
             appState.effortLevel = 'xhigh';
             appState.ultracodeEnabled = true;
             host.applyFlagSettings({ effortLevel: 'xhigh', ultracode: true });
@@ -172,11 +178,10 @@ export class EffortCommand extends ChatCommand {
         const ultra = this.ultraIdx(stops);
         return {
             kind: 'slider',
+            // false: a stop is labelled by its own value — the ultracode stop already IS
+            // ULTRACODE_VALUE, so it needs no flag to be named.
             stops: stops.map((lvl, i) => ({
-                label:
-                    lvl === 'ultracode'
-                        ? 'ultracode'
-                        : EFFORT_LEVEL_LABELS[lvl as EffortSliderLevel],
+                label: effortLabel(lvl, false),
                 value: i,
                 accent: i === ultra,
             })),

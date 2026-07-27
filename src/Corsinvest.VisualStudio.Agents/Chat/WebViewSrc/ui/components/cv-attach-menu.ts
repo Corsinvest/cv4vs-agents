@@ -5,7 +5,9 @@
 import { LitElement, html, css } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import Attach16Regular from '@fluentui/svg-icons/icons/attach_16_regular.svg';
+// A plus, not a paperclip: the menu offers "Add content" as well as a file upload, so it means
+// "add something to the message" rather than strictly "attach a file".
+import Add16Regular from '@fluentui/svg-icons/icons/add_16_regular.svg';
 import ArrowUpload16Regular from '@fluentui/svg-icons/icons/arrow_upload_16_regular.svg';
 import DocumentText16Regular from '@fluentui/svg-icons/icons/document_text_16_regular.svg';
 import { iconStyles } from '../styles/shared';
@@ -72,9 +74,9 @@ export class CvAttachMenu extends LitElement {
                     appearance="subtle"
                     size="small"
                     icon-only
-                    title="Attach"
+                    title="Add files or content"
                 >
-                    ${unsafeHTML(Attach16Regular)}
+                    ${unsafeHTML(Add16Regular)}
                 </fluent-button>
                 <fluent-menu-list>
                     <fluent-menu-item @click=${this._onUpload}>

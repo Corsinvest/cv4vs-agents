@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, css, nothing, svg } from 'lit';
+import { LitElement, html, css, svg } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { iconStyles } from '../styles/shared';
 import { state as appState } from '../../core/state';
@@ -206,22 +206,21 @@ export class CvContextGauge extends LitElement {
 
     override render() {
         const u = this._usage;
-        // Hidden until both the usage and the model's real window are known
-        // (the window arrives with the first result), like VS Code.
-        if (!u || this._window <= 0) {
-            return nothing;
-        }
+        // The real window only arrives with the first result, so a fresh (or just-resumed) session
+        // has no numbers yet. Show the ring anyway, empty: it keeps its slot in the toolbar instead
+        // of appearing after the first turn and shifting everything beside it.
+        const known = !!u && this._window > 0;
         // Gauge fill tracks raw consumption of the model's full window; the
         // tooltip headline tracks the AUTO-COMPACT window (limit − output − buffer),
         // matching VS Code's "{n}% of context remaining until auto-compact".
-        const percent = contextPercent(u);
+        const percent = known ? contextPercent(u) : 0;
         const color = gaugeColor(percent);
         // Arc: stroke-dashoffset runs CIRC (empty) → 0 (full).
         const offset = CIRC * (1 - percent / 100);
 
-        const used = consumedTokens(u);
+        const used = known ? consumedTokens(u) : 0;
         const limit = appState.contextWindow;
-        const remainingPct = remainingPercent(u);
+        const remainingPct = known ? remainingPercent(u) : 100;
         const window = autoCompactWindow();
 
         // Clickable ring (<button>) → opens a light-dismiss popover with the usage detail + actions
@@ -262,13 +261,17 @@ export class CvContextGauge extends LitElement {
             </button>
             <div id="cv-gauge-popover" class="popover" ?hidden=${!this._open}>
                 <div class="tip-head">
-                    ${remainingPct.toFixed(0)}% of context remaining until auto-compact
+                    ${
+                        known
+                            ? `${remainingPct.toFixed(0)}% of context remaining until auto-compact`
+                            : 'Context usage is reported after the first reply'
+                    }
                 </div>
                 <fluent-progress-bar
                     class="bar"
                     min="0"
                     max="100"
-                    value=${Math.min(100, (used / limit) * 100)}
+                    value=${limit > 0 ? Math.min(100, (used / limit) * 100) : 0}
                     validation-state=${gaugeValidationState(percent)}
                 ></fluent-progress-bar>
                 <div class="bar-legend">
@@ -304,7 +307,7 @@ export class CvContextGauge extends LitElement {
                 </div>
             </div>
             <fluent-tooltip anchor="cv-context-gauge-btn" positioning="above-end">
-                ${remainingPct.toFixed(0)}% of context remaining
+                ${known ? `${remainingPct.toFixed(0)}% of context remaining` : 'Context usage'}
             </fluent-tooltip>
         `;
     }

@@ -33,3 +33,20 @@ const LABELS: Record<string, string> = {
 export function turnErrorLabel(kind: string): string {
     return LABELS[kind] || 'Turn failed';
 }
+
+/** Reasons that are the user's own doing. The CLI flags them is_error like any other failure, but
+ *  pressing stop is not a failure — and the transcript already shows "[Request interrupted by
+ *  user]", so a red notice on top of it reads as though something went wrong. */
+const USER_ABORTED = new Set(['aborted_streaming', 'aborted_tools']);
+
+export function isUserAbort(kind: string): boolean {
+    return USER_ABORTED.has(kind);
+}
+
+/** The CLI's `result` text sometimes carries an internal diagnostic rather than a message
+ *  ("[ede_diagnostic] result_type=user last_content_type=n/a stop_reason=null"). It means nothing
+ *  to a reader, so keep the label alone rather than pasting a debug line into the chat. */
+export function turnErrorDetail(detail: string): string {
+    const t = detail.trim();
+    return /^\[[a-z_]+_diagnostic\]/i.test(t) ? '' : t;
+}

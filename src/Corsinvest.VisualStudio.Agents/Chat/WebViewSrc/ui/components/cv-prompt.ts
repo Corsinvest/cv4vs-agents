@@ -39,7 +39,10 @@ import './cv-attach-chip';
 import './cv-context-gauge';
 import './cv-ide-context-badge';
 import './cv-subagent-chip';
+import './cv-effort-selector';
+import './cv-thinking-toggle';
 import './cv-model-list';
+import './cv-model-selector';
 import './cv-permission-list';
 import './cv-permission-selector';
 import './cv-mic-button';
@@ -230,6 +233,17 @@ export class CvPrompt extends LitElement implements CommandHost {
                 display: flex;
                 align-items: center;
                 gap: 6px;
+            }
+            /* Turn settings on their own row: effort, model and permission mode answer "how should
+               this turn run", while the row above is about the message itself (attach, commands,
+               context, send). Splitting them means the labels always fit, at any pane width — no
+               truncation and no width-dependent hiding. */
+            #toolbar-settings {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px;
+                border-top: 1px solid var(--colorNeutralStroke2);
             }
             /* Send button: shrink the inline icon to 16px (Fluent default 20px dominates
              * a small button); turn it red when the CLI is busy so it reads as "stop". */
@@ -460,12 +474,17 @@ export class CvPrompt extends LitElement implements CommandHost {
     /** Outside-click closes the searchable (lightning) palette. The lightning
      *  button's own click toggles, so ignore clicks on it (it handles itself). */
     private _onDocPointerDown = (e: PointerEvent): void => {
-        // Outside-click closes the model list (clicks on it are handled by its rows).
+        // Outside-click closes the model list (clicks on it are handled by its rows). As with the
+        // mode list, the toolbar trigger toggles itself — closing here too would reopen-then-close.
         if (this._modelListOpen) {
-            const onList = e
+            const onListOrTrigger = e
                 .composedPath()
-                .some((n) => n instanceof Element && n.tagName === 'CV-MODEL-LIST');
-            if (!onList) {
+                .some(
+                    (n) =>
+                        n instanceof Element &&
+                        (n.tagName === 'CV-MODEL-LIST' || n.tagName === 'CV-MODEL-SELECTOR'),
+                );
+            if (!onListOrTrigger) {
                 this._modelListOpen = false;
             }
         }
@@ -1309,6 +1328,20 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._ta?.focus();
     };
 
+    /** Toolbar trigger asked for the model picker. Toggles (unlike openModelPicker(), which the
+     *  menu's "Switch model…" row calls to always open) and closes the menus it is exclusive with. */
+    private _onOpenModels = (): void => {
+        this._permissionListOpen = false;
+        this._closeCommandMenu();
+        this._atOpen = false;
+        this._modelListOpen = !this._modelListOpen;
+        // Same reason as the permission trigger: navigation is driven from the textarea's
+        // keydown, so give focus back after the click for the list to be keyboard-navigable.
+        if (this._modelListOpen) {
+            this._ta?.focus();
+        }
+    };
+
     /** Trigger asked for the mode picker; the other above-textarea menus are exclusive with it. */
     private _onOpenPermissions = (): void => {
         this._modelListOpen = false;
@@ -1428,8 +1461,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                         <cv-subagent-chip .tasks=${this._subagentTasks}></cv-subagent-chip>
                         <cv-ide-context-badge></cv-ide-context-badge>
                     </div>
-                    <div id="toolbar-right" @open-permissions=${this._onOpenPermissions}>
-                        <cv-permission-selector></cv-permission-selector>
+                    <div id="toolbar-right">
                         <cv-mic-button
                             @transcript=${this._onMicTranscript}
                             @recording-start=${this._onMicStart}
@@ -1448,6 +1480,16 @@ export class CvPrompt extends LitElement implements CommandHost {
                             ${unsafeHTML(this._isBusy ? Stop16Filled : Send16Filled)}
                         </fluent-button>
                     </div>
+                </div>
+                <div
+                    id="toolbar-settings"
+                    @open-models=${this._onOpenModels}
+                    @open-permissions=${this._onOpenPermissions}
+                >
+                    <cv-thinking-toggle .host=${this}></cv-thinking-toggle>
+                    <cv-effort-selector .host=${this}></cv-effort-selector>
+                    <cv-model-selector></cv-model-selector>
+                    <cv-permission-selector></cv-permission-selector>
                 </div>
                 <input
                     data-cv-file-picker

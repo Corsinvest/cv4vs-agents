@@ -9,11 +9,15 @@ import { state as appState } from '../../core/state';
 import { iconStyles } from '../styles/shared';
 import type { PermissionMode } from '../../core/types';
 import { permissionItems } from '../../core/permission-modes';
+import { SwitchPermissionModeCommand } from '../../core/commands/builtin-commands';
 
 /**
  * Permission-mode trigger in the input toolbar: shows the active mode and asks cv-prompt to
  * open the picker (cv-permission-list, above the textarea — same place as the model picker
  * and the `/` palette). The list, not this button, owns the menu.
+ *
+ * The title carries the mode's full description as well as its name: which mode is active decides
+ * whether a command runs unattended, so "Edit automatically" alone is not enough to choose by.
  */
 @customElement('cv-permission-selector')
 export class CvPermissionSelector extends LitElement {
@@ -29,11 +33,22 @@ export class CvPermissionSelector extends LitElement {
                 height: 16px;
                 margin-right: 4px;
             }
+            /* Two-word labels ("Edit automatically") otherwise wrap inside the button and make the
+               whole toolbar two rows tall. On the span too: the label is our own light-DOM node,
+               so it takes the rule even where the Fluent shadow wouldn't inherit it. */
+            .trigger,
+            .trigger span {
+                white-space: nowrap;
+            }
         `,
     ];
 
     @state() private _current: PermissionMode = appState.permissionMode;
     @state() private _models = appState.models;
+
+    // The menu row for the same thing: its description is the one place that says what picking a
+    // mode does, so the tooltip borrows it instead of wording it a second time.
+    private readonly _command = new SwitchPermissionModeCommand();
 
     private _off?: () => void;
     private _offModels?: () => void;
@@ -70,7 +85,7 @@ export class CvPermissionSelector extends LitElement {
                 class="trigger"
                 appearance="subtle"
                 size="small"
-                title=${`${item.label} — Shift+Tab to switch`}
+                title=${`${item.label}\n${item.description}\n${this._command.description} — Shift+Tab to switch`}
                 @click=${this._onClick}
             >
                 ${unsafeHTML(item.icon)}
