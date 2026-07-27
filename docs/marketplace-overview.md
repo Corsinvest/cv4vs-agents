@@ -44,7 +44,11 @@ configure.
 
 **Chat** — streaming replies, thinking blocks, collapsible tool output, inline diffs, clickable file
 references (`ClientEvents.cs:208` opens the file at that line), image attachments, and a composer with
-slash commands, an `@` file picker and prompt history.
+slash commands, an `@` file picker and prompt history. Any reply can be read aloud.
+
+Under the message box, a row for the turn itself: **thinking**, **effort**, **model** and
+**permission mode**, each a click away. Which model is answering, and what it may do without asking,
+are the two things that change a turn the most — they belong in sight, not three levels down a menu.
 
 **CLI** — the real `claude.exe` in an embedded terminal, connected to the IDE over the same channel
 the official VS Code extension uses.
