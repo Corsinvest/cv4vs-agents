@@ -9,6 +9,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Client;
@@ -313,13 +314,15 @@ public sealed partial class ClaudeClient : IClaudeClient
                     ApiProvider = acct.Val("apiProvider"),
                 };
             }
+            // Gate on the raw arrays, not on the parsed lists: ParseModels flattens "absent" and
+            // "empty" to the same [], and an absent catalogue must not fire the event.
             if (models != null || unavailable != null || commands != null)
             {
                 ModelsReceived?.Invoke(this, new ModelsReceivedEventArgs
                 {
-                    Models = models,
-                    UnavailableModels = unavailable,
-                    Commands = commands,
+                    Models = ParseModels(models),
+                    UnavailableModels = ParseModels(unavailable),
+                    Commands = ParseCommands(commands),
                 });
             }
             // fast_mode_state is present in the initialize reply only when fast mode is available for
@@ -341,7 +344,7 @@ public sealed partial class ClaudeClient : IClaudeClient
                 AlwaysThinkingEnabled = eff?.ValBool("alwaysThinkingEnabled"),
                 Ultracode = applied?.ValBool("ultracode"),
                 SwitchModelsOnFlag = eff?.ValBool("switchModelsOnFlag"),
-                SpinnerVerbs = eff?["spinnerVerbs"] as JObject,
+                SpinnerVerbs = ParseSpinnerVerbs(eff?["spinnerVerbs"] as JObject),
                 FastModeState = fastModeState,
             });
         }
@@ -540,6 +543,101 @@ public sealed partial class ClaudeClient : IClaudeClient
         }
         return status;
     }
+
+    /// <summary>Asks the live CLI for the model catalogue — the same list `initialize` seeds us with
+    /// (the CLI builds both from getModelOptions), but askable at any time, which `initialize` is not:
+    /// the catalogue follows the account/provider/settings cascade and the CLI never pushes a change.
+    /// Empty when the CLI predates the subtype or answers without models.
+    /// Deliberately does NOT raise ModelsReceived: that path publishes only on the first init
+    /// (see ChatPaneControl.OnModelsReceived), so an event here would be silently dropped.</summary>
+    public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync()
+    {
+        try
+        {
+            var resp = await SendControlRequestAsync(ClientMessages.ControlSubtype.ListModels, null);
+            return ParseModels(resp?["models"] as JArray);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Warn($"[client] list_models refused ({ex.Message}) — keeping the catalogue from initialize");
+            return [];
+        }
+    }
+
+    /// <summary>Maps the wire rows of the slash-command list onto <see cref="SlashCommand"/>.
+    /// Nameless rows are dropped — they would render as an unclickable blank in the palette.
+    /// internal, unlike the model parse: `commands_changed` carries the same shape and is handled in
+    /// the pane, which parses it through here rather than growing a second reader of the wire.</summary>
+    internal static IReadOnlyList<SlashCommand> ParseCommands(JArray commands)
+        => commands == null
+            ? []
+            : [.. commands.OfType<JObject>().Select(c => new SlashCommand
+            {
+                Name = c.Val("name", ""),
+                Description = c.Val("description", ""),
+                ArgumentHint = c.Val("argumentHint", ""),
+                Aliases = (c["aliases"] as JArray)?.Select(x => (string)x).ToArray() ?? [],
+            })
+            .Where(c => !string.IsNullOrEmpty(c.Name))];
+
+    /// <summary>Maps `effective.spinnerVerbs`; null when the CLI configures none.</summary>
+    private static SpinnerVerbs ParseSpinnerVerbs(JObject verbs)
+        => verbs == null
+            ? null
+            : new SpinnerVerbs
+            {
+                Mode = verbs.Val("mode"),
+                Verbs = verbs["verbs"]?.ToObject<string[]>() ?? [],
+            };
+
+    /// <summary>Maps `rate_limit_event.rate_limit_info`. Only the fields we act on: the payload also
+    /// carries the overage/credits block, which no surface of ours reads yet.</summary>
+    internal static RateLimitInfo ParseRateLimitInfo(JObject info)
+        => info == null
+            ? null
+            : new RateLimitInfo
+            {
+                Status = info.Val("status", ""),
+                ResetsAt = info.Val<long?>("resetsAt", null),
+                RateLimitType = info.Val("rateLimitType", ""),
+                Utilization = info.Val<double?>("utilization", null),
+            };
+
+    /// <summary>Maps `result.modelUsage` (an object keyed by model id) onto its typed form. These
+    /// keys are camelCase, unlike the snake_case of `message.usage` — the wire is inconsistent by
+    /// design, so don't reuse one reader for both.</summary>
+    internal static IReadOnlyDictionary<string, ModelUsage> ParseModelUsage(JObject modelUsage)
+        => modelUsage?.Properties()
+            .Where(p => p.Value is JObject)
+            .ToDictionary(p => p.Name, p => new ModelUsage
+            {
+                InputTokens = ((JObject)p.Value).Val("inputTokens", 0),
+                OutputTokens = ((JObject)p.Value).Val("outputTokens", 0),
+                CacheReadInputTokens = ((JObject)p.Value).Val("cacheReadInputTokens", 0),
+                CacheCreationInputTokens = ((JObject)p.Value).Val("cacheCreationInputTokens", 0),
+                WebSearchRequests = ((JObject)p.Value).Val("webSearchRequests", 0),
+                CostUsd = ((JObject)p.Value).Val("costUSD", 0d),
+                ContextWindow = ((JObject)p.Value).Val("contextWindow", 0),
+                MaxOutputTokens = ((JObject)p.Value).Val("maxOutputTokens", 0),
+            });
+
+    /// <summary>Maps the wire rows of a model catalogue onto <see cref="ModelInfo"/>. The capability
+    /// flags are absent (not false) when unsupported — the CLI omits them — so every one defaults off.</summary>
+    private static IReadOnlyList<ModelInfo> ParseModels(JArray models)
+        => models == null
+            ? []
+            : [.. models.OfType<JObject>().Select(m => new ModelInfo
+            {
+                Value = m.Val("value", ""),
+                ResolvedModel = m.Val("resolvedModel", ""),
+                DisplayName = m.Val("displayName", ""),
+                Description = m.Val("description", ""),
+                SupportsEffort = m.ValBool("supportsEffort") ?? false,
+                SupportedEffortLevels = (m["supportedEffortLevels"] as JArray)?.Select(x => (string)x).ToArray() ?? [],
+                SupportsAdaptiveThinking = m.ValBool("supportsAdaptiveThinking") ?? false,
+                SupportsFastMode = m.ValBool("supportsFastMode") ?? false,
+                SupportsAutoMode = m.ValBool("supportsAutoMode") ?? false,
+            })];
 
     public Task McpReconnectAsync(string serverName)
         => SendControlRequestAsync(ClientMessages.ControlSubtype.McpReconnect, new { serverName });

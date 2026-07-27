@@ -5,6 +5,7 @@
 
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Client;
@@ -72,6 +73,10 @@ public interface IClaudeClient : IDisposable
 
     /// <summary>Generates a short AI title for the session via CLI (uses Haiku under the hood).</summary>
     Task<string> GenerateSessionTitleAsync(string description, bool persist = false);
+
+    /// <summary>Asks the live CLI for the model catalogue (the list `initialize` seeds at startup),
+    /// on demand. Empty when the CLI predates `list_models` or answers without models.</summary>
+    Task<IReadOnlyList<ModelInfo>> ListModelsAsync();
 
     // ----- MCP -----
     Task<McpStatus> GetMcpStatusAsync();

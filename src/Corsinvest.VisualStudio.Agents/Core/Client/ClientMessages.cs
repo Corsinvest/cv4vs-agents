@@ -80,6 +80,7 @@ internal static class ClientMessages
         public const string GetSettings = "get_settings";
         public const string GenerateSessionTitle = "generate_session_title";
         public const string RenameSession = "rename_session";
+        public const string ListModels = "list_models";
 
         // Inbound (the CLI sends these to us)
         public const string CanUseTool = "can_use_tool";
