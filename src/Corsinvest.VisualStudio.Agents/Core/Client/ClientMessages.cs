@@ -79,6 +79,7 @@ internal static class ClientMessages
         public const string ApplyFlagSettings = "apply_flag_settings";
         public const string GetSettings = "get_settings";
         public const string GenerateSessionTitle = "generate_session_title";
+        public const string RenameSession = "rename_session";
 
         // Inbound (the CLI sends these to us)
         public const string CanUseTool = "can_use_tool";
