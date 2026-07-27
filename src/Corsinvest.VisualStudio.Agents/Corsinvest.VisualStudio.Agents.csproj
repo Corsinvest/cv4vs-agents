@@ -217,6 +217,7 @@
     <Compile Include="Core\Client\ClientOptions.cs" />
     <Compile Include="Core\Client\ContextUsage.cs" />
     <Compile Include="Core\Client\Events.cs" />
+    <Compile Include="Core\Client\Models.cs" />
     <Compile Include="Core\Client\IClaudeClient.cs" />
     <Compile Include="Core\Client\ClaudeClient.cs" />
     <Compile Include="Core\Client\ClaudeClient.Protocol.cs" />

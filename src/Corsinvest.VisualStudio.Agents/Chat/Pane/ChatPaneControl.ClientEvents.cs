@@ -163,8 +163,8 @@ public partial class ChatPaneControl
                     FastModeState = e.FastModeState,
                     SpinnerVerbsConfig = e.SpinnerVerbs == null ? null : new Contracts.SpinnerVerbsConfigDto
                     {
-                        Mode = e.SpinnerVerbs.Val("mode"),
-                        Verbs = e.SpinnerVerbs["verbs"]?.ToObject<string[]>(),
+                        Mode = e.SpinnerVerbs.Mode,
+                        Verbs = e.SpinnerVerbs.Verbs,
                     },
                 },
                 VsOptions = WebViewBridge.BuildVsOptions(),
@@ -190,43 +190,41 @@ public partial class ChatPaneControl
                     Models = [.. ProjectModels(e.Models, disabled: false), .. ProjectModels(e.UnavailableModels, disabled: true)],
                 });
             }
-            if (e.Commands != null)
+            // Count, not null: the parse flattens "absent" to an empty list, and publishing that
+            // would wipe the commands the WebView already has.
+            if (e.Commands?.Count > 0)
             {
                 _bridge.Send(BridgeMessages.ToWebView.Chat.SlashCommands, new Contracts.SlashCommandsNotification { Commands = ProjectCommands(e.Commands) });
             }
         });
 
-    private static Contracts.SlashCommandDto[] ProjectCommands(JArray commands)
-        => [.. commands.OfType<JObject>()
-            .Select(c => new Contracts.SlashCommandDto
+    private static Contracts.SlashCommandDto[] ProjectCommands(IReadOnlyList<SlashCommand> commands)
+        => [.. commands.Select(c => new Contracts.SlashCommandDto
             {
-                Name = c.Val("name", ""),
-                Description = c.Val("description", ""),
-                ArgumentHint = c.Val("argumentHint", ""),
-                Aliases = (c["aliases"] as JArray)?.Select(x => (string)x).ToArray() ?? [],
-            })
-            .Where(c => !string.IsNullOrEmpty(c.Name))];
+                Name = c.Name,
+                Description = c.Description,
+                ArgumentHint = c.ArgumentHint,
+                Aliases = c.Aliases,
+            })];
 
-    private static IEnumerable<Contracts.ModelInfoDto> ProjectModels(JArray models, bool disabled)
-    {
-        if (models == null) { yield break; }
-        foreach (var m in models.OfType<JObject>())
-        {
-            yield return new Contracts.ModelInfoDto
+    /// <summary>Client catalogue → WebView DTO. `disabled` is ours, not the CLI's: it records which
+    /// of the two arrays the row came from (models vs unavailable_models).</summary>
+    private static IEnumerable<Contracts.ModelInfoDto> ProjectModels(IReadOnlyList<ModelInfo> models, bool disabled)
+        => models == null
+            ? []
+            : models.Select(m => new Contracts.ModelInfoDto
             {
-                Value = m.Val("value", ""),
-                ResolvedModel = m.Val("resolvedModel", ""),
-                DisplayName = m.Val("displayName", ""),
-                Description = m.Val("description", ""),
-                SupportsEffort = m.ValBool("supportsEffort") ?? false,
-                SupportedEffortLevels = (m["supportedEffortLevels"] as JArray)?.Select(x => (string)x).ToArray() ?? [],
-                SupportsFastMode = m.ValBool("supportsFastMode") ?? false,
-                SupportsAdaptiveThinking = m.ValBool("supportsAdaptiveThinking") ?? false,
-                SupportsAutoMode = m.ValBool("supportsAutoMode") ?? false,
+                Value = m.Value,
+                ResolvedModel = m.ResolvedModel,
+                DisplayName = m.DisplayName,
+                Description = m.Description,
+                SupportsEffort = m.SupportsEffort,
+                SupportedEffortLevels = m.SupportedEffortLevels,
+                SupportsFastMode = m.SupportsFastMode,
+                SupportsAdaptiveThinking = m.SupportsAdaptiveThinking,
+                SupportsAutoMode = m.SupportsAutoMode,
                 Disabled = disabled,
-            };
-        }
-    }
+            });
 
     private void OnAssistantMessage(object sender, AssistantMessageEventArgs e)
         => Dispatcher.Invoke(() =>
@@ -269,8 +267,11 @@ public partial class ChatPaneControl
             // on a fresh init. After any model switch the exact-key lookup misses, so fall back to
             // the single entry (a turn is single-model on the wire) to keep the gauge denominator.
             var mu = e.ModelUsage;
-            var modelUsage = (mu?[_client?.Model ?? ""] as JObject)
-                ?? (mu?.Count == 1 ? mu.Properties().First().Value as JObject : null);
+            ModelUsage modelUsage = null;
+            if (mu != null && !mu.TryGetValue(_client?.Model ?? "", out modelUsage) && mu.Count == 1)
+            {
+                modelUsage = mu.Values.First();
+            }
             _bridge.Send(BridgeMessages.ToWebView.Chat.ExchangeEnded, new Contracts.ExchangeEndedNotification
             {
                 CostUsd = e.TotalCostUsd ?? 0,
@@ -283,8 +284,8 @@ public partial class ChatPaneControl
                     CacheReadTokens = e.Usage.Val("cache_read_input_tokens", 0),
                     CacheCreationTokens = e.Usage.Val("cache_creation_input_tokens", 0),
                 },
-                ContextWindow = modelUsage?.Val<long>("contextWindow", 0) ?? 0,
-                MaxOutputTokens = modelUsage?.Val<long>("maxOutputTokens", 0) ?? 0,
+                ContextWindow = modelUsage?.ContextWindow ?? 0,
+                MaxOutputTokens = modelUsage?.MaxOutputTokens ?? 0,
                 ErrorText = e.ErrorText ?? "",
                 // terminal_reason is the finer cause when present; the subtype always identifies
                 // the failure family, so it's the fallback rather than nothing.
@@ -496,7 +497,8 @@ public partial class ChatPaneControl
                 // same bridge channel; the WebView replaces its list.
                 if (obj["commands"] is JArray commands)
                 {
-                    _bridge.Send(BridgeMessages.ToWebView.Chat.SlashCommands, new Contracts.SlashCommandsNotification { Commands = ProjectCommands(commands) });
+                    _bridge.Send(BridgeMessages.ToWebView.Chat.SlashCommands,
+                        new Contracts.SlashCommandsNotification { Commands = ProjectCommands(ClaudeClient.ParseCommands(commands)) });
                 }
             }
             else if (subtype == ClientMessages.SystemSubtype.ThinkingTokens)
@@ -574,9 +576,9 @@ public partial class ChatPaneControl
     private void OnRateLimit(object sender, RateLimitEventArgs e)
         => Dispatcher.Invoke(() =>
         {
-            var info = e.RateLimitInfo;
-            var status = info.Val("status", "");
-            var type = info.Val("rateLimitType", "");
+            var info = e.Info;
+            var status = info?.Status ?? "";
+            var type = info?.RateLimitType ?? "";
             var key = status + ":" + type;
             if (status == "allowed" || string.IsNullOrEmpty(status))
             {
@@ -588,7 +590,7 @@ public partial class ChatPaneControl
             {
                 Key = key,
                 Severity = status == "rejected" ? Contracts.NoticeVariantDto.Error : Contracts.NoticeVariantDto.Warning,
-                Message = FormatRateLimit(status, type, info.Val<double?>("utilization", null), info.Val<long?>("resetsAt", null)),
+                Message = FormatRateLimit(status, type, info?.Utilization, info?.ResetsAt),
             });
         });
 
