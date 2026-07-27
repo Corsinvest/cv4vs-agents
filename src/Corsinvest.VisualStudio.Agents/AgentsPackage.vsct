@@ -32,6 +32,21 @@
         </Strings>
       </Menu>
 
+      <!-- Active sessions: one entry per open pane, to bring it forward. Between the profiles
+           (which open a pane) and Analytics (which reads their data): open, go to, then look at.
+           No DynamicVisibility on the menu itself — nothing would drive it, since submenus have no
+           command behind them. VS hides a submenu whose every item is invisible, and the dynamic
+           range below reports exactly that when no pane is open. -->
+      <Menu guid="guidAgentsCommandSet" id="ActiveSessionsSubMenu" priority="0x0170" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="ActiveSessionsAnchorGroup"/>
+        <Icon guid="ImageCatalogGuid" id="ApplicationGroup"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>Active sessions</ButtonText>
+        </Strings>
+      </Menu>
+
       <!-- Analytics: the three full-window data tabs (Statistics / Usage / Context usage). -->
       <Menu guid="guidAgentsCommandSet" id="AnalyticsSubMenu" priority="0x0180" type="Menu">
         <Parent guid="guidAgentsCommandSet" id="StatisticsGroup"/>
@@ -63,6 +78,14 @@
       <!-- Group inside the submenu holding the entries. -->
       <Group guid="guidAgentsCommandSet" id="ProfilesGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
+      </Group>
+      <!-- Active-sessions submenu anchor, ahead of Analytics in the same band. -->
+      <Group guid="guidAgentsCommandSet" id="ActiveSessionsAnchorGroup" priority="0x0170">
+        <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
+      </Group>
+      <!-- The dynamic entries inside the Active sessions submenu. -->
+      <Group guid="guidAgentsCommandSet" id="ActiveSessionsGroup" priority="0x0100">
+        <Parent guid="guidAgentsCommandSet" id="ActiveSessionsSubMenu"/>
       </Group>
       <!-- Analytics submenu anchor, between profiles and the global actions (auto separators). -->
       <Group guid="guidAgentsCommandSet" id="StatisticsGroup" priority="0x0180">
@@ -108,6 +131,19 @@
         <CommandFlag>TextChanges</CommandFlag>
         <Strings>
           <ButtonText>Claude</ButtonText>
+        </Strings>
+      </Button>
+
+      <!-- Dynamic range inside the Active sessions submenu: one item per open pane, seeded by
+           DynamicItemStart. No <Icon>, for the same reason as the profiles range above: a dynamic
+           command cannot carry one. -->
+      <Button guid="guidAgentsCommandSet" id="ActiveSessionCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="ActiveSessionsGroup"/>
+        <CommandFlag>DynamicItemStart</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <CommandFlag>TextChanges</CommandFlag>
+        <Strings>
+          <ButtonText>Session</ButtonText>
         </Strings>
       </Button>
 
@@ -202,6 +238,9 @@
       <IDSymbol name="GlobalGroup" value="0x1050" />
       <IDSymbol name="HelpGroup" value="0x1060" />
       <IDSymbol name="HelpSubMenu" value="0x1070" />
+      <IDSymbol name="ActiveSessionsSubMenu" value="0x1048" />
+      <IDSymbol name="ActiveSessionsGroup" value="0x1049" />
+      <IDSymbol name="ActiveSessionsAnchorGroup" value="0x104A" />
       <IDSymbol name="DeveloperSubMenu" value="0x1075" />
       <IDSymbol name="DeveloperGroup" value="0x1076" />
       <IDSymbol name="HelpDocsGroup" value="0x1080" />
@@ -220,6 +259,9 @@
       <IDSymbol name="StatisticsCommandId" value="0x0209" />
       <IDSymbol name="UsageCommandId" value="0x020A" />
       <IDSymbol name="ContextUsageCommandId" value="0x020B" />
+      <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
+           number of open panes and must not run into the fixed ids above. -->
+      <IDSymbol name="ActiveSessionCommandId" value="0x0300" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{c3d4e5f6-a7b8-9012-defa-bc1234567890}">
       <IDSymbol name="bmpPic1" value="1" />

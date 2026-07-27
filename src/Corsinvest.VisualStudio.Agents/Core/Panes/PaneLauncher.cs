@@ -44,8 +44,7 @@ internal static class PaneLauncher
         {
             try
             {
-                var pane = pkg.FindToolWindow(WindowType(entry.Kind), entry.PaneId, create: false);
-                if (pane?.Frame is IVsWindowFrame frame && frame.IsVisible() != VSConstants.S_OK)
+                if (Frame(pkg, entry) is IVsWindowFrame frame && frame.IsVisible() != VSConstants.S_OK)
                 {
                     frame.Show();
                 }
@@ -56,6 +55,32 @@ internal static class PaneLauncher
                 OutputWindowLogger.LogException($"PaneLauncher.ShowExisting({entry.Title})", ex);
             }
         }
+    }
+
+    /// <summary>Bring one open pane forward — what the Active sessions menu does. Unlike
+    /// <see cref="ShowExisting"/> this shows even an already-visible pane, so picking a session
+    /// buried under its siblings' tabs raises it. Main thread only.</summary>
+    public static void Activate(PaneEntry entry)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var pkg = AgentsPackage.Instance;
+        if (pkg == null || entry == null) { return; }
+        try
+        {
+            if (Frame(pkg, entry) is IVsWindowFrame frame) { ErrorHandler.ThrowOnFailure(frame.Show()); }
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.LogException($"PaneLauncher.Activate({entry.Title})", ex);
+        }
+    }
+
+    /// <summary>The window frame hosting an open pane, or null when VS no longer has it.
+    /// create: false — this only ever finds what is already there.</summary>
+    private static object Frame(AgentsPackage pkg, PaneEntry entry)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        return pkg.FindToolWindow(WindowType(entry.Kind), entry.PaneId, create: false)?.Frame;
     }
 
     /// <summary>The pane's working directory: the open solution's folder, else the user profile

@@ -247,6 +247,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         await this.JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
         OutputWindowLogger.EnsurePaneOnUIThread();
         await ProfilesMenuCommand.InitializeAsync(this);
+        await ActiveSessionsMenuCommand.InitializeAsync(this);
         await GlobalMenuCommands.InitializeAsync(this);
         // Register the Statistics document-tab editor factory (opened by the View → Statistics command).
         RegisterEditorFactory(new Core.Stats.StatisticsEditorFactory());
