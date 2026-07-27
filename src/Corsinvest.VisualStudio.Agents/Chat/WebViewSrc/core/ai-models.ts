@@ -13,9 +13,9 @@ import { state as appState } from './state';
 /** Resolve a served model id to a catalogue `value`. The CLI reports the served id
  *  (e.g. `claude-opus-4-8[1m]`), which the catalogue keys (`default`, `opus[1m]`, …)
  *  don't match directly — but each catalogue entry carries a `resolvedModel` (the served id
- *  it maps to). We match on that (exact, then without the [1m] suffix), preferring the
- *  recommended `default` row when several entries share the same resolvedModel — like the
- *  VS Code extension. No family-name guessing, so alternative providers work too. */
+ *  it maps to). We match on that (exact, then without the [1m] suffix), preferring a NAMED entry
+ *  over `default` when several share the same resolvedModel — the picker hides that duplicated
+ *  `default` (see displayModels). No family-name guessing, so alternative providers work too. */
 export function resolveModelValue(value: string | null | undefined): string {
     if (!value || value === 'default') {
         return 'default';
@@ -34,10 +34,43 @@ export function resolveModelValue(value: string | null | undefined): string {
         models.find((m) => m.value === value) ??
         models.find((m) => m.value === bare) ??
         // Several entries can share a resolvedModel (default and opus[1m] both point at the same
-        // opus id) — prefer the recommended "default" row, like VS Code, else the first match.
-        models.find((m) => m.value === 'default' && rm(m) === bare) ??
+        // opus id). Prefer the NAMED one over `default`: the picker hides a duplicated `default`
+        // (see displayModels), so resolving to it would leave no row checked.
+        models.find((m) => m.value !== 'default' && rm(m) === bare) ??
         models.find((m) => rm(m) === bare);
     return hit?.value ?? (models.some((m) => m.value === 'default') ? 'default' : value);
+}
+
+/** The catalogue as the picker should SHOW it: `default` is dropped when another entry resolves to
+ *  the same model, because the two are then the same choice under two names — and picking either
+ *  writes the same served id to the transcript, so a resumed session can no longer tell them apart
+ *  (the picker would say "Default" for an explicit "Opus"). Claude Desktop sidesteps this by never
+ *  listing a Default row at all; we only hide it when it IS a duplicate.
+ *
+ *  Kept conditional on the data, never on a name: if `default` resolves to something no other entry
+ *  offers (plausible on an env-remapped provider), it stays — dropping it would make that model
+ *  unreachable. The surviving twin inherits the "(recommended)" hint so nothing is lost.
+ *
+ *  Filters the DISPLAY list only — `appState.models` keeps every entry, so lookups by value
+ *  (currentModelInfo, effort levels) still resolve for sessions that stored `default`. */
+export function displayModels<
+    T extends { value: string; resolvedModel?: string; description: string },
+>(models: readonly T[]): T[] {
+    const def = models.find((m) => m.value === 'default');
+    if (!def) {
+        return [...models];
+    }
+    const strip = (s: string): string => s.replace(/\[1m\]$/i, '');
+    const target = strip(def.resolvedModel ?? '');
+    const twin = target
+        ? models.find((m) => m.value !== 'default' && strip(m.resolvedModel ?? '') === target)
+        : undefined;
+    if (!twin) {
+        return [...models];
+    }
+    return models
+        .filter((m) => m.value !== 'default')
+        .map((m) => (m === twin ? { ...m, description: def.description || m.description } : m));
 }
 
 /** Trigger-button label for the current model id. Prefers the CLI's displayName;
@@ -52,6 +85,19 @@ export function modelLabel(value: string | null | undefined): string {
         return 'Default';
     }
     return resolved;
+}
+
+/** Short form of modelLabel() for the composer toolbar, where the full name ("Opus (1M context)",
+ *  "Default (recommended)") would eat the row. Drops a trailing parenthesised qualifier and any
+ *  [1m] tag — a shape rule, not a name list, so provider-supplied labels shorten too. Falls back to
+ *  the full label when the trim would leave nothing. Pair it with the full name in a title. */
+export function modelLabelShort(value: string | null | undefined): string {
+    const full = modelLabel(value);
+    const short = full
+        .replace(/\s*\[1m\]/i, '')
+        .replace(/\s*\([^)]*\)\s*$/, '')
+        .trim();
+    return short || full;
 }
 
 /** Tokens that occupy the prompt window. `output_tokens` is GENERATED,

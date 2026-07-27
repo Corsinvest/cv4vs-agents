@@ -23,6 +23,27 @@ export const EFFORT_LEVEL_LABELS: Readonly<Record<EffortSliderLevel, string>> = 
     max: 'Max',
 };
 
+/** Slider-stop value for ultracode. Deliberately NOT a key of EFFORT_LEVEL_LABELS: ultracode is not
+ *  an effort level the CLI accepts — it is effort=xhigh plus a separate flag, so putting it in the
+ *  union would make a state representable that the wire has no value for. Lowercase because it is
+ *  an identifier, not display text (VS Code keeps the same split). */
+export const ULTRACODE_VALUE = 'ultracode';
+
+/** Display text for ultracode, capitalised like every other effort label. */
+export const ULTRACODE_LABEL = 'Ultracode';
+
+/** The one place that turns effort state into display text, so the composer chip and the menu's
+ *  slider can never word it differently. `ultracode` is required, not defaulted: the flag is what
+ *  separates ultracode from a plain xhigh (both store effortLevel='xhigh'), so every caller has to
+ *  say which it means — the slider's own ultracode stop is recognised by value instead. Anything
+ *  with no label of its own shows its raw value. */
+export function effortLabel(level: string, ultracode: boolean): string {
+    if (ultracode || level === ULTRACODE_VALUE) {
+        return ULTRACODE_LABEL;
+    }
+    return EFFORT_LEVEL_LABELS[level as EffortSliderLevel] ?? level;
+}
+
 /** A model as reported by the CLI's `initialize` response (via `chat_models`).
  *  Shape generated from C# (Contracts.ModelInfoDto) by TypeGen — re-exported here.
  *  `supportedEffortLevels` is empty for models without effort (e.g. Haiku);
