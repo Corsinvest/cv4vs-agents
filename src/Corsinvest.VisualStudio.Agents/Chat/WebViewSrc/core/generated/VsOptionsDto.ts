@@ -17,6 +17,7 @@ export interface VsOptionsDto {
     diffIgnoreWhitespace: boolean;
     showOpenDiffInVsButton: boolean;
     allowedUploadExtensions: string[];
+    extraLinkableExtensions: string[];
     appVersion: string;
     appCopyright: string;
     perfEnabled: boolean;

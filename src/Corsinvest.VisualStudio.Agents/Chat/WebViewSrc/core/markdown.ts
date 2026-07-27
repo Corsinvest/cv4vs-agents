@@ -10,7 +10,7 @@ import DOMPurify from 'dompurify';
 import hljs from 'highlight.js';
 import { resolveLang } from './lang';
 import { escapeHtml } from './html';
-import { findFileRefs } from './file-links';
+import { findFileRefs, firstRefHint, parseFileRef } from './file-links';
 
 // CLI-internal tags that look like HTML but are content; DOMPurify would
 // drop them silently, so escape up-front to render as literal text.
@@ -54,13 +54,16 @@ renderer.link = function (token: Tokens.Link): string {
     // A markdown link to a local file — the model writes [X.cs:192](src/.../X.cs:192). If the href
     // parses as a file ref, render a clickable file link (cv-message routes the click to VS) using
     // the LABEL text as-is. Otherwise fall back to plain text.
-    const ref = findFileRefs(href).find((r) => r.start === 0 && r.match === href);
+    // 'plausible-path', not the prose allow-list: the model wrote this AS a link, so any extension is
+    // fine (.rb/.kt/.tf … used to be dropped here). Unlike VS Code we still degrade to text when the
+    // href isn't path-shaped at all, instead of leaving a blue link that does nothing on click.
+    const ref = parseFileRef(href, 'plausible-path');
     if (ref) {
         const line = ref.lines[0] ?? 0;
         return `<a class="cv-file-link" data-file="${escapeHtml(ref.path)}" data-line="${line}" title="Open in editor">${escapeHtml(text)}</a>`;
     }
     // Other local paths render as plain text.
-    return text;
+    return escapeHtml(text);
 };
 
 // Inline extension: turn a bare "path:line" reference (ClientEvents.cs:208, Core/x.ts:45) into a
@@ -72,16 +75,15 @@ renderer.link = function (token: Tokens.Link): string {
 const fileLinkExtension = {
     name: 'fileLink',
     level: 'inline' as const,
-    // Speed hint: only bother where a path-ish char run could begin.
-    start(src: string): number | undefined {
-        const m = src.match(/[A-Za-z0-9._/\\-]+\.[A-Za-z0-9]+(?::\d|\(\d|\[\d)/);
-        return m?.index;
-    },
+    // Where marked should jump to next — a potential index, per marked's contract. firstRefHint
+    // shares ANCHOR/BACK with the parser, so it can't drift the way a parallel hand-written regex
+    // did (that is how "#L10" in prose stayed unlinked once already).
+    start: firstRefHint,
     tokenizer(src: string) {
-        // A file-ref only counts if it starts at the cursor (offset 0 of the remaining src).
-        const refs = findFileRefs(src);
-        const ref = refs.find((r) => r.start === 0);
-        if (!ref) {
+        // A file-ref only counts if it starts at the cursor (offset 0 of the remaining src). Only the
+        // first ref can qualify — findFileRefs returns them in order — so stop at it.
+        const ref = findFileRefs(src)[0];
+        if (!ref || ref.start !== 0) {
             return undefined;
         }
         return {
@@ -89,24 +91,43 @@ const fileLinkExtension = {
             raw: ref.match,
             path: ref.path,
             lines: ref.lines,
+            ends: ref.ends,
         };
     },
-    renderer(token: { path: string; lines: number[]; raw: string }): string {
+    renderer(token: { path: string; lines: number[]; ends: number[]; raw: string }): string {
         const file = escapeHtml(token.path);
-        const anchor = (label: string, line: number): string =>
-            `<a class="cv-file-link" data-file="${file}" data-line="${line}" title="Open in editor">${label}</a>`;
+        // data-line-end carries the last line of a range so the host selects the whole block
+        // (Options → Chat → SelectLinesOnOpen); it equals data-line for a single line.
+        const anchor = (label: string, line: number, end = line): string =>
+            `<a class="cv-file-link" data-file="${file}" data-line="${line}" data-line-end="${end}" title="Open in editor">${label}</a>`;
         // No line → single link on the whole path (file:// scheme dropped from the label as noise).
         if (token.lines.length === 0) {
             return anchor(escapeHtml(token.path.replace(/^file:\/\/\/?/i, '')), 0);
         }
-        // "file.cs:124,185,202" → the first link carries "file.cs:124", the rest are just the bare
-        // line numbers (same file, different line), commas as plain text between them.
-        const name = escapeHtml(token.path.replace(/^file:\/\/\/?/i, ''));
-        const [first, ...rest] = token.lines;
-        let html = anchor(`${name}:${first}`, first);
-        for (const ln of rest) {
-            html += ',' + anchor(String(ln), ln);
+        // Single line → label the link with what the model actually wrote, so a range keeps its end
+        // ("x.ts:100-120" stays readable) and "#L128" keeps its GitHub shape. Only the file:// scheme
+        // is dropped, as noise.
+        if (token.lines.length === 1) {
+            return anchor(
+                escapeHtml(token.raw.replace(/^file:\/\/\/?/i, '')),
+                token.lines[0],
+                token.ends[0],
+            );
         }
+        // "file.cs:124,185,202" → the first link carries "file.cs:124", the rest are just the bare
+        // line numbers (same file, different line), commas as plain text between them. Each label is
+        // the element as written, so a range inside the list keeps its end ("100-120,130").
+        const name = escapeHtml(token.path.replace(/^file:\/\/\/?/i, ''));
+        const written = token.raw.slice(token.raw.indexOf(':') + 1).split(',');
+        const [first, ...rest] = token.lines;
+        let html = anchor(
+            `${name}:${escapeHtml(written[0] ?? String(first))}`,
+            first,
+            token.ends[0],
+        );
+        rest.forEach((ln, i) => {
+            html += ',' + anchor(escapeHtml(written[i + 1] ?? String(ln)), ln, token.ends[i + 1]);
+        });
         return html;
     },
 };

@@ -47,6 +47,12 @@ public class AgentsChatPage : AgentsOptionsPage
     [Description("Number of lines shown in preview areas (tool output and user messages). 0 = no preview.")]
     public int PreviewLines { get; set; } = 3;
 
+    [Category("File links")]
+    [DisplayName("Extra linkable extensions")]
+    [Description("Extensions to also turn into clickable links when Claude mentions a file in prose (e.g. `render.wgsl:20`), on top of the ~270 built-in ones. Needed only for a language we don't ship yet — a markdown link written by the model is always linked, whatever its extension. Click `…` to edit one entry per line, without the leading dot.")]
+    [Editor("System.Windows.Forms.Design.StringArrayEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", typeof(UITypeEditor))]
+    public string[] ExtraLinkableExtensions { get; set; } = [];
+
     [Category("Display")]
     [DisplayName("Chat font size")]
     [Description("Font size (px) of the chat message text. Default: 13.")]

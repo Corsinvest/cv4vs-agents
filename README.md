@@ -100,9 +100,11 @@ own.
   and opens in Visual Studio's native, **editable** side-by-side diff: **save (Ctrl+S) to accept** or
   **close to reject**, the CLI applies it only if you saved.
 - **[Clickable file references](docs/file-links.md)** — when Claude writes `ClientEvents.cs:208` (or a
-  whole list, `Package.cs:124,185,202`) the reference becomes a link that opens the file in VS at that
-  line. Every line in a list is its own link — something the VS Code extension and Claude Desktop
-  don't do. Code blocks stay untouched; clocks and host:ports never become dead links.
+  range, `Stats.cs:35-48`, or a whole list, `Package.cs:124,185,202`) the reference becomes a link that
+  opens the file in VS — a range **selects those lines**, and every line in a list is its own link. It
+  works **in plain prose**, not just in markdown links — neither is true in the VS Code extension or
+  Claude Desktop. ~270 extensions out of the box, extendable from Options; code blocks stay untouched,
+  and clocks, host:ports and version numbers never become dead links.
 - **Read a response aloud** — a speaker button on each answer reads it out with the system voice
   (Web Speech, no extra install); click to pause, click to resume. The markdown is spoken as plain
   prose — no "asterisk asterisk", no code blocks recited.
