@@ -134,11 +134,10 @@ export type { AssistantTextNotification } from './generated/AssistantTextNotific
 export type { ExchangeEndedNotification } from './generated/ExchangeEndedNotification';
 
 // Init payload from the host — generated from C# (Contracts.InitPayloadNotification and its
-// nested InitConfigDto/VsOptionsDto) by TypeGen. Aliased to the historical names the
-// UI consumes; do not hand-edit the generated files.
-export type { InitConfigDto as InitConfig } from './generated/InitConfigDto';
-export type { VsOptionsDto as VsOptionsConfig } from './generated/VsOptionsDto';
-export type { InitPayloadNotification as InitPayload } from './generated/InitPayloadNotification';
+// nested InitConfigDto/VsOptionsDto) by TypeGen. Same names as the C# side, so a DTO stays
+// greppable across both languages; do not hand-edit the generated files.
+export type { VsOptionsDto } from './generated/VsOptionsDto';
+export type { InitPayloadNotification } from './generated/InitPayloadNotification';
 
 export type PermissionMode = 'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions';
 
@@ -209,7 +208,7 @@ export type { ContextUsageDto } from './generated/ContextUsageDto';
 
 /** Spinner-verb override from settings (nested in the init ui payload). Generated from
  *  C# (Contracts.SpinnerVerbsConfigDto); mode is a raw string ("append"/"replace"). */
-export type { SpinnerVerbsConfigDto as SpinnerVerbsConfig } from './generated/SpinnerVerbsConfigDto';
+export type { SpinnerVerbsConfigDto } from './generated/SpinnerVerbsConfigDto';
 
 /** A file picked/dropped for upload. Always read as base64 (one code path);
  *  the host decides by extension whether to send it as an image, a PDF, or

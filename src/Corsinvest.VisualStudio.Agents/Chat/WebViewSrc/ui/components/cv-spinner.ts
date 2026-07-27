@@ -4,7 +4,7 @@
  */
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import type { SpinnerVerbsConfig } from '../../core/types';
+import type { SpinnerVerbsConfigDto } from '../../core/types';
 import { state as appState } from '../../core/state';
 
 // Verbs the spinner cycles; replace/extend via setVerbsConfig at runtime.
@@ -94,7 +94,7 @@ let _activeVerbs: readonly string[] = DEFAULT_VERBS;
  * Set the verb pool for every <cv-spinner>. 'replace' overrides defaults,
  * 'append' adds to them, `null` resets to defaults.
  */
-export function setVerbsConfig(cfg: SpinnerVerbsConfig | null): void {
+export function setVerbsConfig(cfg: SpinnerVerbsConfigDto | null): void {
     if (!cfg) {
         _activeVerbs = DEFAULT_VERBS;
         return;

@@ -13,7 +13,7 @@ import { normPath } from '../core/path';
 import { closeTopDialog } from '../core/dialog-focus';
 import { setExtraLinkableExtensions } from '../core/file-links';
 import type {
-    InitPayload,
+    InitPayloadNotification,
     ModelsNotification,
     PermissionMode,
     PermissionModeChangedNotification,
@@ -22,7 +22,7 @@ import type {
     ThemeChangedNotification,
     ExchangeEndedNotification,
     Theme,
-    VsOptionsConfig,
+    VsOptionsDto,
 } from '../core/types';
 import { installDebugApi } from './debug';
 import { logger } from '../core/logger';
@@ -44,8 +44,8 @@ function applyTheme(theme: Theme): void {
 }
 
 // Applies the VS Options category (init payload's `vsOptions` and the standalone
-// `vs_settings` re-push share this — both carry the full VsOptionsConfig).
-function applyVsOptions(o: VsOptionsConfig): void {
+// `vs_settings` re-push share this — both carry the full VsOptionsDto).
+function applyVsOptions(o: VsOptionsDto): void {
     state.ui = o;
     logger.setLevel(state.ui.logLevel ?? 0);
     logger.setPerfEnabled(!!state.ui.perfEnabled);
@@ -56,7 +56,7 @@ function applyVsOptions(o: VsOptionsConfig): void {
 }
 
 function wireBridgeHandlers(): void {
-    bridge.onNotification<InitPayload>(Msg.toWebView.ui.init, (data) => {
+    bridge.onNotification<InitPayloadNotification>(Msg.toWebView.ui.init, (data) => {
         if (!data?.config) {
             return;
         }
@@ -111,7 +111,7 @@ function wireBridgeHandlers(): void {
 
     // VS Options re-pushed standalone when the user changes the Options page while
     // the pane is open (independent of CLI state / a respawn).
-    bridge.onNotification<VsOptionsConfig>(Msg.toWebView.ui.vsSettings, (data) => {
+    bridge.onNotification<VsOptionsDto>(Msg.toWebView.ui.vsSettings, (data) => {
         if (data) {
             applyVsOptions(data);
         }

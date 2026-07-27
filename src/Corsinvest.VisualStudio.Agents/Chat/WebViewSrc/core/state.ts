@@ -17,7 +17,7 @@ import type {
     SlashCommandDto,
     SubagentTask,
     Theme,
-    VsOptionsConfig,
+    VsOptionsDto,
 } from './types';
 
 interface AppState {
@@ -81,8 +81,8 @@ interface AppState {
 
     // UI options from the C# Options page, as one group (the init payload's
     // `vsOptions` block, also re-pushed via `vs_settings`). Read at render time
-    // (not observed per-field). Adding an option = one field in VsOptionsConfig, nothing here.
-    ui: VsOptionsConfig;
+    // (not observed per-field). Adding an option = one field in VsOptionsDto, nothing here.
+    ui: VsOptionsDto;
 }
 
 type Listener<T> = (value: T) => void;
