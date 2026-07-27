@@ -995,7 +995,7 @@ export class CvPermissionBanner extends LitElement {
                             : nothing
                     }
                     <fluent-button appearance="outline" @click=${this._onDeny}>
-                        <span class="num">${n++}</span> No
+                        <span class="num">${n}</span> No
                     </fluent-button>
                 </div>
                 <fluent-textarea

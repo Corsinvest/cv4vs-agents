@@ -15,4 +15,4 @@ Layout:
 ## Rule
 
 `ui/` may freely import from `core/`. The reverse is forbidden — see
-`.eslintrc.json`. The architectural direction is `ui → core`.
+`eslint.config.js`. The architectural direction is `ui → core`.

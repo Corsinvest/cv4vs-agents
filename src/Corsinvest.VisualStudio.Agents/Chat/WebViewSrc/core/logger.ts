@@ -29,35 +29,30 @@ class Logger {
 
     error(msg: string, ...args: unknown[]): void {
         if (this._level >= LogLevel.Error) {
-            // eslint-disable-next-line no-console
             console.error(this._fmt('ERROR', msg), ...args);
         }
     }
 
     warn(msg: string, ...args: unknown[]): void {
         if (this._level >= LogLevel.Warn) {
-            // eslint-disable-next-line no-console
             console.warn(this._fmt('WARN', msg), ...args);
         }
     }
 
     info(msg: string, ...args: unknown[]): void {
         if (this._level >= LogLevel.Info) {
-            // eslint-disable-next-line no-console
             console.info(this._fmt('INFO', msg), ...args);
         }
     }
 
     debug(msg: string, ...args: unknown[]): void {
         if (this._level >= LogLevel.Debug) {
-            // eslint-disable-next-line no-console
             console.log(this._fmt('DEBUG', msg), ...args);
         }
     }
 
     trace(msg: string, ...args: unknown[]): void {
         if (this._level >= LogLevel.Trace) {
-            // eslint-disable-next-line no-console
             console.log(this._fmt('TRACE', msg), ...args);
         }
     }
@@ -66,7 +61,6 @@ class Logger {
         if (!this._perfEnabled) {
             return;
         }
-        // eslint-disable-next-line no-console
         console.log(this._fmt('PERF', msg));
     }
 

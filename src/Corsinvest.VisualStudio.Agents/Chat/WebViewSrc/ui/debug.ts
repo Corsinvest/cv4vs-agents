@@ -100,7 +100,6 @@ function snapshot(): Snapshot {
 /** Pretty-print the current diagnostic snapshot to the DevTools console. */
 function info(): void {
     const s = snapshot();
-    /* eslint-disable no-console */
     console.group('%c[cv4vs] info', 'color:#3794ff;font-weight:bold');
     console.log('app', s.app);
     console.log('options', s.options);
@@ -108,7 +107,6 @@ function info(): void {
     console.log('dom', s.dom);
     console.log('viewport', s.viewport);
     console.groupEnd();
-    /* eslint-enable no-console */
 }
 
 /** Diagnostic report string for bug reports: counts/flags only, no cv-message content. */

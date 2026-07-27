@@ -98,7 +98,6 @@ export class CvCopyBtn extends LitElement {
             this._copied = true;
             setTimeout(() => (this._copied = false), 1200);
         } catch (err) {
-            // eslint-disable-next-line no-console
             console.warn('[cv-copy-btn] copy failed', err);
         }
     };
