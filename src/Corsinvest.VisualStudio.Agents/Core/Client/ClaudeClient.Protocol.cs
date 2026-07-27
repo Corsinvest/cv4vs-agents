@@ -395,7 +395,7 @@ public sealed partial class ClaudeClient
                 ? (double?)obj.Val<double>("total_cost_usd", 0) : null,
             StopReason = obj.Val("stop_reason"),
             Usage = obj["usage"] as JObject,
-            ModelUsage = obj["modelUsage"] as JObject,
+            ModelUsage = ParseModelUsage(obj["modelUsage"] as JObject),
             ErrorText = ResultErrorText(obj, subtype),
             TerminalReason = obj.Val("terminal_reason", ""),
         });
@@ -415,7 +415,7 @@ public sealed partial class ClaudeClient
     }
 
     private void HandleRateLimit(JObject obj)
-        => RateLimitReceived?.Invoke(this, new RateLimitEventArgs { RateLimitInfo = obj["rate_limit_info"] as JObject });
+        => RateLimitReceived?.Invoke(this, new RateLimitEventArgs { Info = ParseRateLimitInfo(obj["rate_limit_info"] as JObject) });
 
     /// <summary>Fail every in-flight control_request and forget tracked tool
     /// requests. Called when the process exits (so awaiters don't hang to their

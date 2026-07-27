@@ -4,16 +4,9 @@
  */
 
 using Newtonsoft.Json.Linq;
+using System.Collections.Generic;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Client;
-
-public sealed class AccountInfo
-{
-    public string Email { get; set; }
-    public string Organization { get; set; }
-    public string SubscriptionType { get; set; }
-    public string ApiProvider { get; set; }
-}
 
 public sealed class InitializedEventArgs
 {
@@ -27,9 +20,9 @@ public sealed class InitializedEventArgs
 
 /// <summary>The CLI's full startup state, gathered from `initialize` (fast_mode_state) + `get_settings`
 /// (model + toggles) right after StartProcess — WITHOUT a user turn (system/init only arrives on the
-/// first turn, so it can't seed the UI on open). Raw values (strings/JObject); the pane maps them to
-/// the webview DTO and adds PermissionMode (which the CLI doesn't report — we pass it via
-/// --permission-mode). Fired on every startup (open + respawn). Fields are null when get_settings fails.</summary>
+/// first turn, so it can't seed the UI on open). The pane maps these onto the webview DTO and adds
+/// PermissionMode (which the CLI doesn't report — we pass it via --permission-mode). Fired on every
+/// startup (open + respawn). Fields are null when get_settings fails.</summary>
 public sealed class CliStateReceivedEventArgs
 {
     // From get_settings.applied.model (resume = the session's own model, new = the settings default,
@@ -44,8 +37,8 @@ public sealed class CliStateReceivedEventArgs
     public bool? AlwaysThinkingEnabled { get; set; }   // effective.alwaysThinkingEnabled
     public bool? Ultracode { get; set; }               // applied.ultracode
     public bool? SwitchModelsOnFlag { get; set; }      // effective.switchModelsOnFlag (absent in CLI → null → webview default)
-    // effective.spinnerVerbs ({ mode, verbs }) or null. Raw JObject — the pane builds the DTO.
-    public JObject SpinnerVerbs { get; set; }
+    // effective.spinnerVerbs, or null when the CLI configures none.
+    public SpinnerVerbs SpinnerVerbs { get; set; }
     // From initialize.fast_mode_state (present only if fast is available for the account/org) or "off".
     public string FastModeState { get; set; }
 }
@@ -119,7 +112,7 @@ public sealed class ResultEventArgs
     public JObject Usage { get; set; }
     /// <summary>Per-model usage, keyed by model id; each carries contextWindow /
     /// maxOutputTokens. Source of the context-window limits. Null when absent.</summary>
-    public JObject ModelUsage { get; set; }
+    public IReadOnlyDictionary<string, ModelUsage> ModelUsage { get; set; }
     /// <summary>Why the turn failed, when IsError: `result` on a success-subtype result,
     /// otherwise the joined `errors[]`. Empty when the turn succeeded.</summary>
     public string ErrorText { get; set; } = "";
@@ -133,9 +126,16 @@ public sealed class ResultEventArgs
 /// description + argumentHint). The CLI's only source for both.</summary>
 public sealed class ModelsReceivedEventArgs
 {
-    public JArray Models { get; set; }
-    public JArray UnavailableModels { get; set; }
-    public JArray Commands { get; set; }
+    /// <summary>Selectable models. Parsed here rather than passed as raw JSON so every consumer
+    /// reads the same shape `list_models` returns (ClaudeClient.ParseModels builds both).</summary>
+    public IReadOnlyList<ModelInfo> Models { get; set; }
+
+    /// <summary>Models the account cannot use — shown greyed out, not hidden.</summary>
+    public IReadOnlyList<ModelInfo> UnavailableModels { get; set; }
+
+    /// <summary>Slash commands (built-in, skills, plugins). Re-published on every init, unlike the
+    /// catalogue — they don't get dirtied by a --resume.</summary>
+    public IReadOnlyList<SlashCommand> Commands { get; set; }
 }
 
 public sealed class ToolPermissionRequestEventArgs
@@ -169,30 +169,8 @@ public sealed class HookCallbackEventArgs
 
 public sealed class RateLimitEventArgs
 {
-    public JObject RateLimitInfo { get; set; }
+    public RateLimitInfo Info { get; set; }
 }
-
-/// <summary>Connection state of a single MCP (Model Context Protocol) server.</summary>
-public sealed class McpServerStatus
-{
-    public string Name { get; set; }
-
-    /// <summary>One of "connected", "failed", "needs-auth", "pending", "disabled".</summary>
-    public string Status { get; set; }
-
-    public string Error { get; set; }
-
-    /// <summary>Configuration scope (project / user / local / claudeai / managed).</summary>
-    public string Scope { get; set; }
-}
-
-/// <summary>Aggregate status of all configured MCP servers.</summary>
-public sealed class McpStatus
-{
-    public System.Collections.Generic.List<McpServerStatus> Servers { get; set; }
-        = [];
-}
-
 
 public sealed class ProcessStartedEventArgs
 {
