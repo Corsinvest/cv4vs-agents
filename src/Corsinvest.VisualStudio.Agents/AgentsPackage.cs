@@ -31,12 +31,18 @@ namespace Corsinvest.VisualStudio.Agents;
 // pane open, and the submenu shows just the native "Claude" seed until then.
 [ProvideAutoLoad(VSConstants.UICONTEXT.ShellInitialized_string, PackageAutoLoadFlags.BackgroundLoad)]
 // Multi-instance per-session panes (each "New" spawns a fresh pane).
-// Tabbed + Window=own-GUID: same-kind instances group as tabs, and Chat/CLI
-// stay in SEPARATE dock areas (sharing one host mixed them up / floated CLI).
+// Docked against windows VS itself owns, rather than a GUID of our own: a private GUID gives VS a
+// dock area it only knows in the layout the pane was opened in, and design and debug layouts are
+// kept apart — so starting the debugger left our panes with nowhere to be and closed them, while
+// the built-in windows stayed put. These groups exist in every layout.
+// Chat beside Solution Explorer (tall and narrow, like the tree it sits with), CLI beside Output
+// (wide and short, where a terminal belongs and where VS users already look for one). That also
+// keeps the two apart by their nature rather than by a GUID: an earlier attempt at sharing one
+// host mixed them up and floated the CLI.
 // Transient: don't persist panes across solution open-close (avoid orphans
 // against a stale workdir).
-[ProvideToolWindow(typeof(ChatPaneWindow), MultiInstances = true, Transient = true, Style = VsDockStyle.Tabbed, Window = "e4f5a6b7-c8d9-0123-efab-de3456789012")]
-[ProvideToolWindow(typeof(CliPaneWindow), MultiInstances = true, Transient = true, Style = VsDockStyle.Tabbed, Window = "f5a6b7c8-d9e0-1234-fabc-ef4567890123")]
+[ProvideToolWindow(typeof(ChatPaneWindow), MultiInstances = true, Transient = true, Style = VsDockStyle.Tabbed, Window = EnvDTE.Constants.vsWindowKindSolutionExplorer)]
+[ProvideToolWindow(typeof(CliPaneWindow), MultiInstances = true, Transient = true, Style = VsDockStyle.Tabbed, Window = EnvDTE.Constants.vsWindowKindOutput)]
 [ProvideOptionPage(typeof(AgentsGeneralPage), AppConstants.AppName, "General", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsChatPage), AppConstants.AppName, "Chat", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsDebugPage), AppConstants.AppName, "Debug", 0, 0, true)]
@@ -54,10 +60,12 @@ namespace Corsinvest.VisualStudio.Agents;
 [ProvideEditorExtension(typeof(Core.Context.ContextEditorFactory), Core.Context.ContextDocument.Extension, 50)]
 [ProvideEditorLogicalView(typeof(Core.Context.ContextEditorFactory), "{00000000-0000-0000-0000-000000000000}")]
 [Guid(PackageGuids.AgentsPackageString)]
-public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolutionLoadEvents
+public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolutionLoadEvents, IVsDebuggerEvents
 {
     private uint _solutionEventsCookie;
     private IVsSolution _solution;
+    private uint _debuggerEventsCookie;
+    private IVsDebugger _debugger;
 
     static AgentsPackage() =>
         // Microsoft.Terminal.Wpf ships with VS but isn't on any VSIX probing
@@ -186,6 +194,31 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         });
     }
 
+    /// <summary>Debugger mode changed. VS keeps window layouts per mode, so panes opened at design
+    /// time are absent from the run-time layout and look as though the debugger closed them — the
+    /// frames are still there, just not shown. Bring back the ones the registry knows are open.
+    ///
+    /// Only ever shows what was already open: a pane the user closed stays closed, because it is
+    /// not in the registry. StartOnIdle for the same reason as the solution-open restore — the
+    /// shell is mid-transition and showing a frame from inside its event freezes it.</summary>
+    public int OnModeChange(DBGMODE dbgmodeNew)
+    {
+        try
+        {
+            if (Core.Panes.PaneRegistry.Instance.Entries.Count == 0) { return VSConstants.S_OK; }
+            _ = JoinableTaskFactory.StartOnIdle(() =>
+            {
+                try { Core.Panes.PaneLauncher.ShowExisting(); }
+                catch (Exception ex) { OutputWindowLogger.LogException("Pkg.OnModeChange.Show", ex); }
+            });
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.LogException("Pkg.OnModeChange", ex);
+        }
+        return VSConstants.S_OK;
+    }
+
     /// <summary>Re-read the solution folder from <see cref="IVsSolution"/> into <see cref="CurrentSolutionFolder"/>; call on every solution-state change.</summary>
     private void RefreshCurrentSolutionFolder()
     {
@@ -229,6 +262,12 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         _solution = await GetServiceAsync(typeof(SVsSolution)) as IVsSolution;
         _solution?.AdviseSolutionEvents(this, out _solutionEventsCookie);
 
+        // VS keeps one window layout for design time and another for run time, and a pane opened
+        // while writing code is simply not in the run-time one — so starting the debugger appears
+        // to close it. The frames are still alive, so bring them back up on the mode change.
+        _debugger = await GetServiceAsync(typeof(SVsShellDebugger)) as IVsDebugger;
+        _debugger?.AdviseDebuggerEvents(this, out _debuggerEventsCookie);
+
         // Prime from current state: VS may already have a solution open before
         // our package activates, so we'd miss OnAfterOpenSolution.
         if (_solution?.GetProperty((int)__VSPROPID.VSPROPID_IsSolutionOpen, out var isOpenObj) == VSConstants.S_OK
@@ -249,6 +288,11 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             {
                 _solution?.UnadviseSolutionEvents(_solutionEventsCookie);
                 _solutionEventsCookie = 0;
+            }
+            if (_debuggerEventsCookie != 0)
+            {
+                _debugger?.UnadviseDebuggerEvents(_debuggerEventsCookie);
+                _debuggerEventsCookie = 0;
             }
             Mcp.McpServerHost.Instance.Stop();
             AgentsOptions.Applied -= ProfilesMenuCommand.InvalidateCache;
