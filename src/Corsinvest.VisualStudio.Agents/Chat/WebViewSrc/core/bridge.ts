@@ -54,7 +54,6 @@ function truncate(value: unknown): unknown {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Handler<T = any> = (data: T) => void;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type PendingReq = {
     resolve: (v: any) => void;
     reject: (e: Error) => void;
@@ -105,7 +104,6 @@ class Bridge {
     private _postRaw(type: string, data: unknown, id?: number): void {
         const wv = window.chrome?.webview;
         if (!wv) {
-            // eslint-disable-next-line no-console
             console.warn('[bridge] chrome.webview not available — message dropped:', type);
             return;
         }
@@ -141,7 +139,6 @@ class Bridge {
         }
         const wv = window.chrome?.webview;
         if (!wv) {
-            // eslint-disable-next-line no-console
             console.warn('[bridge] chrome.webview not available — start() is a no-op');
             return;
         }
@@ -157,7 +154,6 @@ class Bridge {
             } catch {
                 // A non-JSON message on the wire is unexpected (everything should be JSON), so keep
                 // it a direct console.warn — visible even at LogLevel=None, not gated as mere noise.
-                // eslint-disable-next-line no-console
                 console.warn('[bridge] non-JSON message ignored:', raw);
                 return;
             }
@@ -200,7 +196,6 @@ class Bridge {
             try {
                 h(parsed.data);
             } catch (err) {
-                // eslint-disable-next-line no-console
                 console.error(`[bridge] handler for "${parsed.type}" threw:`, err);
             }
         }
