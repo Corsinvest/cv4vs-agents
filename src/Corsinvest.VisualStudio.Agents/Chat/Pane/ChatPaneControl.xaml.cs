@@ -45,8 +45,34 @@ public partial class ChatPaneControl : PaneControlBase
         var sid = _client?.SessionId;
         var wd = _client?.WorkingDirectory;
         if (string.IsNullOrEmpty(sid) || string.IsNullOrEmpty(wd) || string.IsNullOrWhiteSpace(newTitle)) { return; }
-        Sessions.Rename(sid, newTitle);
+
+        // Show it straight away — the write below is the slow part, and it can't fail in a way
+        // the user could act on.
         SetSessionTitle(newTitle);
+
+        // A live CLI holds the JSONL open and keeps the title in memory: appending to the file
+        // behind its back races its own writes and leaves it believing the old title. Ask it to
+        // rename instead, and let it persist. Only write the file ourselves when there is no CLI
+        // to compete with, or when it is too old to know the request.
+        if (_client?.IsRunning != true)
+        {
+            Sessions.Rename(sid, newTitle);
+            return;
+        }
+        _ = RenameThroughClientAsync(sid, newTitle);
+    }
+
+    private async Task RenameThroughClientAsync(string sessionId, string newTitle)
+    {
+        try
+        {
+            if (await _client.RenameSessionAsync(newTitle)) { return; }
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.LogException("[chat] rename_session", ex);
+        }
+        Sessions.Rename(sessionId, newTitle);
     }
 
     /// <summary>Fresh conversation in THIS pane. Mirrors the Session.New

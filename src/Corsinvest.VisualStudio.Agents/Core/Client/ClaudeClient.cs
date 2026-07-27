@@ -499,6 +499,28 @@ public sealed partial class ClaudeClient : IClaudeClient
         return resp.Val("title");
     }
 
+    /// <summary>
+    /// Sets the session's user-facing title through the live CLI, which persists it to the JSONL
+    /// itself (a <c>custom-title</c> entry — the same shape <see cref="SessionManager.Rename"/>
+    /// writes). Going through the CLI keeps it the single writer of a file it holds open, and
+    /// leaves its in-memory title in step with what is on disk.
+    /// Returns false when the CLI rejects the request — a version that predates the subtype —
+    /// so the caller can fall back to writing the file directly.
+    /// </summary>
+    public async Task<bool> RenameSessionAsync(string title)
+    {
+        try
+        {
+            await SendControlRequestAsync(ClientMessages.ControlSubtype.RenameSession, new { title });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Warn($"[client] rename_session refused ({ex.Message}) — falling back to the JSONL");
+            return false;
+        }
+    }
+
     public async Task<McpStatus> GetMcpStatusAsync()
     {
         var resp = await SendControlRequestAsync(ClientMessages.ControlSubtype.McpStatus, null);
