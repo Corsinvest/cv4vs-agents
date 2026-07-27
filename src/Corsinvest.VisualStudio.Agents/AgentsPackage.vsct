@@ -94,7 +94,13 @@
 
     <Buttons>
       <!-- Dynamic range inside the submenu: one item per enabled profile, the native "Claude"
-           profile prepended (unless a profile is itself named "Claude"). Seeded by DynamicItemStart. -->
+           profile prepended (unless a profile is itself named "Claude"). Seeded by DynamicItemStart.
+           NO <Icon> here, deliberately: "a dynamic command cannot have an icon associated with it"
+           (MS docs on dynamically adding menu items), and OleMenuCommand exposes no image property
+           either. Adding one decorates the SEED item only and leaves every generated profile bare —
+           an asymmetry that reads as a bug. Per-item icons would mean dropping DynamicItemStart for
+           N pre-declared Buttons (fixed ceiling on profiles) or a WPF picker, as VS itself does for
+           its branch picker; not worth it for a cosmetic. Tried and reverted 2026-07. -->
       <Button guid="guidAgentsCommandSet" id="ShowToolWindowCommandId" priority="0x0100" type="Button">
         <Parent guid="guidAgentsCommandSet" id="ProfilesGroup"/>
         <CommandFlag>DynamicItemStart</CommandFlag>
