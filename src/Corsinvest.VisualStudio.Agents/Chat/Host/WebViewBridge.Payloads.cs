@@ -42,12 +42,34 @@ internal sealed partial class WebViewBridge
             DiffIgnoreWhitespace = chat.DiffIgnoreWhitespace,
             ShowOpenDiffInVsButton = chat.ShowOpenDiffInVsButton,
             AllowedUploadExtensions = NormalizeExtensions(chat.AllowedUploadFileExtensions),
+            // Bare (no dot, lowercase): the webview matches these against a parsed extension, not
+            // against a file name, so the dot-prefixed shape used for uploads would never hit.
+            ExtraLinkableExtensions = NormalizeBareExtensions(chat.ExtraLinkableExtensions),
             AppVersion = BuildInfo.Version,
             AppCopyright = BuildInfo.Copyright,
             PerfEnabled = dbg.EnablePerfLog,
             // Always honour the Debug-page LogLevel setting (default None); previously DEBUG forced Trace ignoring it.
             LogLevel = (int)dbg.LogLevel,
         };
+    }
+
+    /// <summary>Normalize extra linkable extensions to lowercase, WITHOUT the dot, de-duplicated —
+    /// the shape `findFileRefs` compares against. A user entry may be written either way (`zig` or
+    /// `.zig`), and a leading `*.` glob is tolerated too.</summary>
+    private static string[] NormalizeBareExtensions(string[] exts)
+    {
+        if (exts == null) { return []; }
+        var set = new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in exts)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) { continue; }
+            var e = raw.Trim().TrimStart('*').TrimStart('.').ToLowerInvariant();
+            // Same shape the parser can produce: letters/digits only, and never all digits (an
+            // all-digit tail is a version or a price, never a file).
+            if (e.Length is 0 or > 10 || !System.Text.RegularExpressions.Regex.IsMatch(e, "^[a-z0-9+#-]*[a-z][a-z0-9+#-]*$")) { continue; }
+            set.Add(e);
+        }
+        return [.. set];
     }
 
     /// <summary>Normalize allowed upload extensions to lowercase, dot-prefixed,

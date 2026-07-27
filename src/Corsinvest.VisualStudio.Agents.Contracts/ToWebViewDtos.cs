@@ -477,6 +477,7 @@ public class VsOptionsDto
     public bool DiffIgnoreWhitespace { get; set; }
     public bool ShowOpenDiffInVsButton { get; set; }
     public string[] AllowedUploadExtensions { get; set; }
+    public string[] ExtraLinkableExtensions { get; set; }
     public string AppVersion { get; set; }
     public string AppCopyright { get; set; }
     public bool PerfEnabled { get; set; }
