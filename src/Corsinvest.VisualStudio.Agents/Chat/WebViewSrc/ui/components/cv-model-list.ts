@@ -7,7 +7,7 @@ import { customElement, property, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Checkmark16Regular from '@fluentui/svg-icons/icons/checkmark_16_regular.svg';
 import { state as appState } from '../../core/state';
-import { resolveModelValue } from '../../core/ai-models';
+import { displayModels, resolveModelValue } from '../../core/ai-models';
 import type { ModelInfoDto } from '../../core/types';
 import './cv-popover-list';
 import type { CvPopoverList } from './cv-popover-list';
@@ -22,7 +22,9 @@ import type { CvPopoverList } from './cv-popover-list';
 export class CvModelList extends LitElement {
     @property({ type: Boolean, reflect: true }) open = false;
 
-    @state() private _models = appState.models;
+    // The picker's own view of the catalogue (a duplicated `default` collapsed away) — the
+    // navigation index and the rendered rows must come from the SAME list to stay aligned.
+    @state() private _models = displayModels(appState.models);
     @state() private _current = appState.currentModel;
 
     private _offModels?: () => void;
@@ -38,7 +40,7 @@ export class CvModelList extends LitElement {
     override connectedCallback(): void {
         super.connectedCallback();
         this._offModels = appState.on('models', (v) => {
-            this._models = v;
+            this._models = displayModels(v);
         });
         this._offCurrent = appState.on('currentModel', (v) => {
             this._current = v;
@@ -55,7 +57,7 @@ export class CvModelList extends LitElement {
         // On open, resync from app state and put the cursor on the active model.
         if (changed.has('open') && this.open) {
             this._current = appState.currentModel;
-            this._models = appState.models;
+            this._models = displayModels(appState.models);
         }
     }
 

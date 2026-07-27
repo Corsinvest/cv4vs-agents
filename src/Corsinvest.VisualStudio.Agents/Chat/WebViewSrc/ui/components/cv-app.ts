@@ -61,7 +61,7 @@ import type {
 } from '../../core/types';
 import { GetHistoryReq } from '../../core/request-types';
 import { modelLabel } from '../../core/ai-models';
-import { turnErrorLabel } from '../../core/turn-errors';
+import { turnErrorLabel, turnErrorDetail, isUserAbort } from '../../core/turn-errors';
 import { parseLocalCommandOutput } from '../../core/slash-commands';
 
 let _entryIdSeq = 0;
@@ -315,9 +315,12 @@ export class CvApp extends LitElement {
                     // refusal produce no failing tool row, so without this the stream just stops and
                     // the user is left guessing. (VS Code only uses this text to improve a crash
                     // message; in a chat surface a notice is the useful form.)
-                    if (data?.isError) {
+                    // …but a turn the user stopped is not one of those: the transcript already
+                    // carries "[Request interrupted by user]", so a red notice under it would
+                    // report their own decision back to them as a failure.
+                    if (data?.isError && !isUserAbort(data.errorKind ?? '')) {
                         const label = turnErrorLabel(data.errorKind ?? '');
-                        const detail = (data.errorText ?? '').trim();
+                        const detail = turnErrorDetail(data.errorText ?? '');
                         this._addText<UiSlashResultEntry>({
                             role: 'slash-result',
                             text: detail ? `${label} — ${detail}` : label,
