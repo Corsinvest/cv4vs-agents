@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -11,6 +11,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 
@@ -24,6 +25,38 @@ internal static class PaneLauncher
 {
     private static Type WindowType(PaneKind kind)
         => kind == PaneKind.Cli ? typeof(CliPaneWindow) : typeof(ChatPaneWindow);
+
+    /// <summary>Re-show the panes the registry already knows about, without creating any. VS holds a
+    /// separate window layout for design time and run time, so panes opened while writing code are
+    /// missing from the run-time one and look closed when the debugger starts — the frames are alive,
+    /// they are simply not in that layout. Called on debugger mode changes.
+    ///
+    /// create: false throughout: a pane the user closed is gone from the registry and must stay
+    /// closed, and a frame we cannot find is not one to conjure up.
+    /// Main thread only — IVsWindowFrame is not free-threaded.</summary>
+    public static void ShowExisting()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var pkg = AgentsPackage.Instance;
+        if (pkg == null) { return; }
+
+        foreach (var entry in PaneRegistry.Instance.Entries.ToList())
+        {
+            try
+            {
+                var pane = pkg.FindToolWindow(WindowType(entry.Kind), entry.PaneId, create: false);
+                if (pane?.Frame is IVsWindowFrame frame && frame.IsVisible() != VSConstants.S_OK)
+                {
+                    frame.Show();
+                }
+            }
+            catch (Exception ex)
+            {
+                // One pane failing to come back must not stop the others.
+                OutputWindowLogger.LogException($"PaneLauncher.ShowExisting({entry.Title})", ex);
+            }
+        }
+    }
 
     /// <summary>The pane's working directory: the open solution's folder, else the user profile
     /// (so claude.exe always has a real cwd). Resolved once here, then injected into the entry and
