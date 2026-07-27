@@ -7,7 +7,8 @@
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Visual Studio](https://img.shields.io/badge/Visual%20Studio-2022%20%7C%202026-5C2D91.svg)](https://visualstudio.microsoft.com/)
-[![Marketplace installs](https://img.shields.io/visual-studio-marketplace/i/Corsinvest.cv4vs-agents?label=marketplace%20installs)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
+[![Marketplace](https://img.shields.io/badge/marketplace-cv4vs%20Agents-5C2D91.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
+[![Self-hosting](https://img.shields.io/badge/self--hosting-since%202026--07--27-brightgreen.svg)](#why)
 
 A Visual Studio 2022 / 2026 extension that brings the **Claude Code** CLI inside the IDE — a rich
 chat experience plus an interactive terminal, both wired into Visual Studio's editor,
@@ -202,6 +203,11 @@ And yes — I built this CLI/chat *for* Claude *with* Claude. There's something 
 it was a genuinely fun little adventure: watching it sometimes deny things about itself, only to
 turn around and build them. That's just part of the LLM game. The code here was written with
 Claude's help.
+
+**Since 27 July 2026 the extension is self-hosting.** It is developed inside itself: no VS Code, no
+external terminal, no other editor — the Chat and CLI panes in the screenshots above are the ones
+writing the next version. Which is also the toughest test there is: every rough edge turns up in the
+day's work, not in a bug report.
 
 — *Daniele Corsini (Frank Lupo)*
 
