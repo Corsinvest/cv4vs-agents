@@ -8,6 +8,7 @@
         xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
         xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
         xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+        xmlns:platformui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Imaging"
         toolkit:Themes.UseVsTheme="True"
         Title="Info"
         Width="760" SizeToContent="Height"
@@ -17,7 +18,11 @@
         HasMaximizeButton="False"
         HasMinimizeButton="False"
         HasHelpButton="False">
-  <Grid Margin="16">
+  <!-- CrispImage biases its icon against the background it is TOLD about, not the one it is drawn
+       on: with no ImageBackgroundColor in the tree it assumes the light default, so the Copy icon
+       stays dark on a dark dialog. Feed it the themed window background the dialog actually has. -->
+  <Grid Margin="16"
+        platformui:ImageThemingUtilities.ImageBackgroundColor="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBackgroundColorKey}}">
     <Grid.RowDefinitions>
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
