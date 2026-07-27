@@ -55,9 +55,10 @@ export class CvEffortSelector extends LitElement {
             .popover {
                 position: absolute;
                 bottom: calc(100% + 4px);
-                /* Anchored right, not left: the chip sits in the right-hand toolbar, so its right
-                   edge is the one that stays put while the label changes width. */
-                right: 0;
+                /* Anchored left: the chip leads the settings row, so its left edge is the one
+                   against the composer's. Anchoring right would grow the panel outwards from a
+                   chip whose width changes with the level's name, off the left of the box. */
+                left: 0;
                 z-index: 1000;
                 padding: 8px 10px;
                 display: flex;
