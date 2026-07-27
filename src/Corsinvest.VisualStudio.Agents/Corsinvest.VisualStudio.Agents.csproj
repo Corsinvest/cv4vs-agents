@@ -273,6 +273,7 @@
     <Compile Include="Chat\HistoryReplay.cs" />
     <Compile Include="Chat\MetaInjection.cs" />
     <Compile Include="Chat\ThumbnailGenerator.cs" />
+    <Compile Include="Menu\ActiveSessionsMenuCommand.cs" />
     <Compile Include="Menu\ProfilesMenuCommand.cs" />
     <Compile Include="Menu\GlobalMenuCommands.cs" />
     <Compile Include="Core\Panes\PaneLauncher.cs" />
