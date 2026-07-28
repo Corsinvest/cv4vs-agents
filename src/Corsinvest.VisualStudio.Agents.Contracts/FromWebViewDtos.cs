@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -165,6 +165,7 @@ public class OpenAttachmentNotification
 /// <summary>Show the VS diff dialog for a proposed edit (open_diff_dialog).</summary>
 public class DiffDialogNotification
 {
+    public string ToolUseId { get; set; }
     public string FilePath { get; set; }
     public string OldString { get; set; }
     public string NewString { get; set; }
