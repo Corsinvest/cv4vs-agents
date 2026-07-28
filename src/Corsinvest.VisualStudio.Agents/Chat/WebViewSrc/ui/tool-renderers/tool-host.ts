@@ -110,8 +110,6 @@ export class BridgeToolHost implements ToolHost {
         bridge.sendNotification<ExternalUrlNotification>(Msg.fromWebView.open.externalUrl, { url });
     }
 
-    // Both diff openers carry the tool_use_id: it identifies the frame, so answering this
-    // tool's permission closes THIS diff and nothing else.
     openDiffDialog(filePath: string, oldString: string, newString: string): void {
         openDiffDialog({ toolUseId: this.toolUseId, filePath, oldString, newString });
     }

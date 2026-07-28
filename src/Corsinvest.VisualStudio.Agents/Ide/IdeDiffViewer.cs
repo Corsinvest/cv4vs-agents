@@ -54,9 +54,8 @@ internal sealed partial class IdeDiffViewer
         new(StringComparer.Ordinal);
 
     /// <summary>Diffs opened by the chat, keyed by the tool_use they preview. Separate from
-    /// <see cref="_openFrames"/>, which is keyed by tab name because close_tab addresses it that
-    /// way — the two indexes hold the same frames for different questions ("which tab?" vs
-    /// "which request?"). Answering a permission closes by request, so it needs this one.</summary>
+    /// <see cref="_openFrames"/> because close_tab addresses that one by tab name: the two hold
+    /// the same frames for different questions — "which tab?" vs "which request?".</summary>
     private readonly Dictionary<string, IVsWindowFrame> _chatDiffs =
         new(StringComparer.Ordinal);
 
@@ -203,8 +202,8 @@ internal sealed partial class IdeDiffViewer
 
     /// <summary>WebView-style entry point: the chat has BOTH contents in memory. Both sides go to
     /// temp. Clicking the same <paramref name="toolUseId"/> twice closes it (toggle); a different
-    /// one replaces it — keying this on the file path instead made two edits to the same file
-    /// indistinguishable, so the second click closed the first diff rather than showing it.</summary>
+    /// one replaces it — keying on the file path would make two edits to the same file the
+    /// same diff.</summary>
     public async Task ShowFromContentsAsync(string toolUseId, string filePath, string oldContent, string newContent)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -227,8 +226,6 @@ internal sealed partial class IdeDiffViewer
                 rightIsTemp: true, leftIsTemp: true);
             if (frame != null)
             {
-                // Both indexes: _openFrames so closeAllDiffTabs sweeps it, _chatDiffs so the
-                // permission answer can find it by request.
                 _openFrames[caption] = frame;
                 if (!string.IsNullOrEmpty(toolUseId)) { _chatDiffs[toolUseId] = frame; }
             }
@@ -283,10 +280,8 @@ internal sealed partial class IdeDiffViewer
         }
     }
 
-    /// <summary>Close the diff opened for a given tool_use, if any. A frame we never opened — the
-    /// user's own diff — is not in the map, so it is not found and not touched: that is the whole
-    /// point of keying by request. Finding nothing is a normal outcome, not an error: the user may
-    /// simply never have opened the diff for that edit.</summary>
+    /// <summary>Close the diff opened for a given tool_use. Finding none is normal, not an error:
+    /// the frame may be the user's own (never in the map) or the diff was never opened.</summary>
     public void CloseDiffFor(string toolUseId)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
