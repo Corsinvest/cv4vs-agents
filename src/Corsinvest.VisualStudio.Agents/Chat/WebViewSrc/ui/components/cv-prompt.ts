@@ -1188,7 +1188,6 @@ export class CvPrompt extends LitElement implements CommandHost {
         bridge.sendNotification(Msg.fromWebView.open.chatPane, {});
     }
 
-    /** Open the Manage Plugins dialog. */
     openPluginManager(): void {
         openPluginManagerDialog();
     }

@@ -81,7 +81,6 @@ internal sealed class CvDonut : Grid
         Children.Add(row);
     }
 
-    // A legend entry: colour dot + label + share-of-total %.
     // A legend entry: colour dot + label + tokens + share-of-total %.
     private static UIElement LegendRow(Brush fill, string label, long tokens, double pct)
     {

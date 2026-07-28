@@ -117,8 +117,8 @@ export class CvPopoverList extends LitElement {
                 color: var(--colorNeutralForeground2);
             }
 
-            /* --- Row-content classes shared by the callers' renderRow markup (they render into
-             *     this component's shadow, so their styles must live here). --- */
+            /* Row-content classes shared by the callers' renderRow markup (they render into
+             * this component's shadow, so their styles must live here). */
             .row-icon {
                 flex-shrink: 0;
                 width: 20px;

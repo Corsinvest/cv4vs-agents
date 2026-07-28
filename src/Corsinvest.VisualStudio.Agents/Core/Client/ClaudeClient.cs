@@ -389,8 +389,6 @@ public sealed partial class ClaudeClient : IClaudeClient
         return Task.CompletedTask;
     }
 
-    // ----- High-level session operations (encapsulate respawn vs hot-swap) -----
-
     /// <summary>Starts a new empty session in the same working directory. Kills the current process and spawns a fresh one.</summary>
     public Task NewSessionAsync()
     {
@@ -428,8 +426,7 @@ public sealed partial class ClaudeClient : IClaudeClient
 
     private void KillForRespawn() => _transport.DisposeIntentional();
 
-    // ----- Hot-swap operations -----
-
+    // Hot-swap operations — these must never respawn the process.
     public async Task SetModelAsync(string model)
     {
         await SendControlRequestAsync(ClientMessages.ControlSubtype.SetModel, new { model });
@@ -654,8 +651,6 @@ public sealed partial class ClaudeClient : IClaudeClient
 
     public Task McpToggleAsync(string serverName, bool enabled)
         => SendControlRequestAsync(ClientMessages.ControlSubtype.McpToggle, new { serverName, enabled });
-
-    // ----- Dialogue -----
 
     public void SendSelectionChanged(string text, string filePath, string fileUrl,
                                       int startLine, int startChar, int endLine, int endChar,
