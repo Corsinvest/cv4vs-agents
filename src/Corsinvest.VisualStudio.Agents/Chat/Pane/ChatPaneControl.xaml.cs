@@ -196,15 +196,22 @@ public partial class ChatPaneControl : PaneControlBase
         return true;
     }
 
-    /// <summary>Chat-only extra for the toolbar's "More" menu: the WebView DevTools, on preview
-    /// builds only. Testers on a release candidate are exactly who needs to inspect the WebView to
-    /// report a bug; a stable Marketplace build should not expose it. (Info is shared, so it lives
-    /// on the base; the CLI returns none.)</summary>
+    /// <summary>Chat-only extra for the toolbar's "More" menu: the WebView DevTools, on preview and
+    /// Debug builds. Testers on a release candidate are exactly who needs to inspect the WebView to
+    /// report a bug, and so is anyone building the extension — the DEBUG arm is what keeps it around
+    /// once a version drops its -rc suffix, which is when it silently disappeared. A stable
+    /// Marketplace build, which is neither, should not expose it. (Info is shared, so it lives on
+    /// the base; the CLI returns none.)</summary>
     public override IEnumerable<ButtonAction> MoreMenuActions
     {
         get
         {
-            if (BuildInfo.IsPreRelease)
+#if DEBUG
+            const bool devBuild = true;
+#else
+            const bool devBuild = false;
+#endif
+            if (BuildInfo.IsPreRelease || devBuild)
             {
                 yield return new ButtonAction("WebView DevTools", () => _bridge?.OpenDevTools(), "DevTools");
             }
