@@ -111,11 +111,12 @@ export class BridgeToolHost implements ToolHost {
     }
 
     openDiffDialog(filePath: string, oldString: string, newString: string): void {
-        openDiffDialog({ filePath, oldString, newString });
+        openDiffDialog({ toolUseId: this.toolUseId, filePath, oldString, newString });
     }
 
     openDiffInVs(filePath: string, oldString: string, newString: string): void {
         bridge.sendNotification<DiffDialogNotification>(Msg.fromWebView.open.diffDialog, {
+            toolUseId: this.toolUseId,
             filePath,
             oldString,
             newString,
