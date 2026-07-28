@@ -87,6 +87,9 @@ public class CliStateDto
     public bool? AlwaysThinkingEnabled { get; set; }
     public bool? SwitchModelsOnFlag { get; set; }
     public bool? Ultracode { get; set; }
+    // effective.permissions.disableBypassPermissionsMode == "disable": an org policy forbids the
+    // bypass mode, so the selector must not offer it (VS Code gates on the same key).
+    public bool? BypassPermissionsDisabled { get; set; }
     // From init.fast_mode_state (off|cooldown|on). The webview derives only the on/off toggle
     // (on = state != "off"); cooldown is not currently surfaced distinctly. Replaces the
     // always-null FastMode bool from get_settings.

@@ -28,7 +28,7 @@ export const PERMISSION_ITEMS: PermissionItem[] = [
     // acceptEdits only auto-approves writes inside the working directory).
     {
         value: 'default',
-        label: 'Ask before edits',
+        label: 'Manual',
         description: 'Every edit and command waits for your approval',
         icon: HandRight20Regular,
     },
@@ -41,13 +41,13 @@ export const PERMISSION_ITEMS: PermissionItem[] = [
     },
     {
         value: 'plan',
-        label: 'Plan mode',
+        label: 'Plan',
         description: 'Reads and explores freely, then proposes a plan — no file is changed',
         icon: ClipboardTask20Regular,
     },
     {
         value: 'auto',
-        label: 'Auto mode',
+        label: 'Auto',
         description: 'Decides per task when to act and when to ask, based on how risky it is',
         icon: Flash20Regular,
     },
@@ -66,7 +66,11 @@ export function permissionItems(): PermissionItem[] {
     const value = resolveModelValue(appState.currentModel);
     const m = appState.models.find((x) => x.value === value);
     const autoOk = m ? m.supportsAutoMode : true;
-    const bypassOk = appState.ui.allowDangerouslySkipPermissions;
+    // Two gates, like VS Code: our own VS option AND the CLI's effective settings — an org can
+    // forbid the mode via managed settings. Without the second one we would offer a mode the CLI
+    // then refuses. Note the different sources: `ui.*` is a VS Option, the other is CLI state.
+    const bypassOk =
+        appState.ui.allowDangerouslySkipPermissions && !appState.bypassPermissionsDisabled;
     return PERMISSION_ITEMS.filter((it) => {
         if (it.value === 'auto') {
             return autoOk;

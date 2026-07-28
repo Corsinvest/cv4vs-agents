@@ -174,9 +174,7 @@ public sealed partial class ClaudeClient : IClaudeClient
         // set it after init with a `set_model` control_request (InitializeAndPublishCatalogAsync).
         if (!string.IsNullOrEmpty(options.ResumeSessionId)) { args += " --resume " + options.ResumeSessionId; }
 
-        // --permission-prompt-tool stdio is passed ALWAYS (except bypass): the mode decides WHICH
-        // tools need confirmation, the prompt-tool is the channel to ask. Lets interactive tools
-        // (AskUserQuestion, always behavior:'ask') reach the UI even in acceptEdits/plan.
+        // The mode decides WHICH tools need confirmation, the prompt-tool is the channel to ask.
         var mode = options.InitialPermissionMode ?? Client.PermissionMode.Default;
         if (mode == Client.PermissionMode.BypassPermissions)
         {
@@ -187,8 +185,13 @@ public sealed partial class ClaudeClient : IClaudeClient
             if (mode == Client.PermissionMode.AcceptEdits) { args += " --permission-mode acceptEdits"; }
             else if (mode == Client.PermissionMode.Plan) { args += " --permission-mode plan"; }
             else if (mode == Client.PermissionMode.Auto) { args += " --permission-mode auto"; }
-            args += " --permission-prompt-tool stdio";
         }
+        // ALWAYS, bypass included. Verified on CLI 2.1.220: without this flag the CLI drops
+        // AskUserQuestion from the session entirely — the turn ends `success` and the question is
+        // never emitted, on either channel. So the flag doesn't merely carry permission prompts,
+        // it registers the interactive tool. Passing it alongside --dangerously-skip-permissions
+        // does NOT bring the confirmations back: writes and commands still run unasked.
+        args += " --permission-prompt-tool stdio";
 
         // Profile env goes FIRST, our required keys LAST — a profile (e.g. z.ai/GLM base
         // URL + token) must never be able to override what makes the IDE integration work.
@@ -344,6 +347,8 @@ public sealed partial class ClaudeClient : IClaudeClient
                 AlwaysThinkingEnabled = eff?.ValBool("alwaysThinkingEnabled"),
                 Ultracode = applied?.ValBool("ultracode"),
                 SwitchModelsOnFlag = eff?.ValBool("switchModelsOnFlag"),
+                BypassPermissionsDisabled =
+                    eff?["permissions"].Val("disableBypassPermissionsMode") == "disable",
                 SpinnerVerbs = ParseSpinnerVerbs(eff?["spinnerVerbs"] as JObject),
                 FastModeState = fastModeState,
             });
