@@ -285,7 +285,7 @@ See [Options → Profiles](docs/options.md#profiles).
 
 ### Permissions
 
-- **Permission-mode selector** in the toolbar — Ask before edits / Edit automatically / Plan /
+- **Permission-mode selector** in the toolbar — Manual / Edit automatically / Plan /
   Auto / Bypass (Bypass is gated behind an option).
 - **Permission prompts & AskUserQuestion** — an inline approval banner for tool use with
   per-session/project "allow" suggestions, and interactive answering of `AskUserQuestion`. The Ask

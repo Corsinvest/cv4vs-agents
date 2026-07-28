@@ -78,6 +78,8 @@ function wireBridgeHandlers(): void {
             if (c.switchModelsOnFlag !== null && c.switchModelsOnFlag !== undefined) {
                 state.switchModelsOnFlag = c.switchModelsOnFlag;
             }
+            // Absent → false: a missing policy means the mode is allowed.
+            state.bypassPermissionsDisabled = !!c.bypassPermissionsDisabled;
             state.fastMode = (c.fastModeState ?? 'off') !== 'off';
             // Custom spinner verbs from settings (replace/append the defaults). Migrated
             // from vsOptions into cliState — applied here rather than in applyVsOptions.

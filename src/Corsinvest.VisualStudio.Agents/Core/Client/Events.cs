@@ -37,6 +37,10 @@ public sealed class CliStateReceivedEventArgs
     public bool? AlwaysThinkingEnabled { get; set; }   // effective.alwaysThinkingEnabled
     public bool? Ultracode { get; set; }               // applied.ultracode
     public bool? SwitchModelsOnFlag { get; set; }      // effective.switchModelsOnFlag (absent in CLI → null → webview default)
+    // effective.permissions.disableBypassPermissionsMode == "disable": an org policy forbids the
+    // bypass mode. Absent/get_settings failed → false, i.e. allowed: only the exact "disable" may
+    // hide the mode, never a missing value.
+    public bool? BypassPermissionsDisabled { get; set; }
     // effective.spinnerVerbs, or null when the CLI configures none.
     public SpinnerVerbs SpinnerVerbs { get; set; }
     // From initialize.fast_mode_state (present only if fast is available for the account/org) or "off".

@@ -16,11 +16,14 @@ namespace Corsinvest.VisualStudio.Agents.Options;
 /// initial default — matching VS Code.</summary>
 public enum InitialPermissionMode
 {
-    /// <summary>Ask before edits — approval required for each edit (prudent default).</summary>
+    /// <summary>Manual — approval required for each edit (prudent default). The name stays
+    /// `Default` because it is what goes on the wire and what VS serializes into the settings
+    /// store: renaming it would invalidate the saved preference of everyone who already chose
+    /// a mode. "Manual" is only the user-facing label.</summary>
     Default,
     /// <summary>Edit automatically — accept Edit/Write without asking.</summary>
     AcceptEdits,
-    /// <summary>Plan mode — explore and present a plan before editing.</summary>
+    /// <summary>Plan — explore and present a plan before editing.</summary>
     Plan,
 }
 
@@ -109,7 +112,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Input")]
     [DisplayName("Initial permission mode")]
-    [Description("Permission mode every new chat session starts in. You can still change it per-session from the toolbar. \"Ask before edits\" (Default) is the most cautious.")]
+    [Description("Permission mode every new chat session starts in. You can still change it per-session from the toolbar. \"Manual\" (Default) is the most cautious.")]
     public InitialPermissionMode InitialPermissionMode { get; set; } = InitialPermissionMode.Default;
 
     [Category("Input")]
