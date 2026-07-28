@@ -17,6 +17,7 @@ import type {
     ModelsNotification,
     PermissionMode,
     PermissionModeChangedNotification,
+    ModelChangedNotification,
     SetComposerNotification,
     SlashCommandsNotification,
     ThemeChangedNotification,
@@ -171,6 +172,8 @@ function wireBridgeHandlers(): void {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     });
 
+    // Both selectors switch optimistically and the host echoes back what the CLI really holds —
+    // on success the same value, on failure the previous one, which rolls the UI back.
     bridge.onNotification<PermissionModeChangedNotification>(
         Msg.toWebView.cli.permissionModeChanged,
         (data) => {
@@ -179,6 +182,14 @@ function wireBridgeHandlers(): void {
             }
         },
     );
+
+    bridge.onNotification<ModelChangedNotification>(Msg.toWebView.cli.modelChanged, (data) => {
+        // Unlike the mode, an empty model is meaningful — it is "Default" — so only a missing
+        // payload is ignored, never a null value.
+        if (data) {
+            state.currentModel = data.model || null;
+        }
+    });
 
     // Turn end: clear busy and capture the model's real context window/max output
     // (the result carries them; 0 means unknown, so keep the previous value).

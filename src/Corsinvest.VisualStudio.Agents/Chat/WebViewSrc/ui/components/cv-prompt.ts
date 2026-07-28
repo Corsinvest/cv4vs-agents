@@ -29,6 +29,7 @@ import type {
     PermissionMode,
 } from '../../core/types';
 import { GetSuggestionsReq } from '../../core/request-types';
+import { permissionItems } from '../../core/permission-modes';
 import type { ChatCommand, CommandHost } from '../../core/commands';
 import './cv-notice-stack';
 import type { CvNoticeStack } from './cv-notice-stack';
@@ -819,16 +820,18 @@ export class CvPrompt extends LitElement implements CommandHost {
         // like VS Code), so the textarea no longer handles it here.
     };
 
-    /** Cycle: default → acceptEdits → plan → auto → default. */
+    /** Cycle through the modes the selector actually offers — same source, so the gates hold
+     *  here too (model support for `auto`, VS option + CLI policy for `bypassPermissions`).
+     *  A hardcoded list ignored them, and stranded whoever was in a mode it left out. */
     private _cyclePermissionMode(): void {
-        const order: Array<typeof appState.permissionMode> = [
-            'default',
-            'acceptEdits',
-            'plan',
-            'auto',
-        ];
+        const order = permissionItems().map((it) => it.value);
+        if (!order.length) {
+            return;
+        }
+        // Current mode absent from the list (a policy can withdraw one mid-session):
+        // restart from the first rather than leaving it to the modulo.
         const i = order.indexOf(appState.permissionMode);
-        const next = order[(i + 1) % order.length];
+        const next = i < 0 ? order[0] : order[(i + 1) % order.length];
         appState.permissionMode = next;
         bridge.sendNotification<SetPermissionModeNotification>(
             Msg.fromWebView.cli.setPermissionMode,

@@ -71,19 +71,23 @@ internal sealed partial class WebViewMessageHandler
     private void HandleSetPermissionMode(JObject data, int? id)
     {
         var newMode = data.ToObject<Contracts.SetPermissionModeNotification>().Mode ?? "default";
-        // Hot-swap via set_permission_mode; all four modes are
-        // supported so no respawn is needed. The continuation runs off the UI
-        // thread, but bridge.Send marshals CoreWebView2 access itself.
+        // Hot-swap via set_permission_mode; every mode is supported so no respawn is
+        // needed. The continuation runs off the UI thread, but bridge.Send marshals
+        // CoreWebView2 access itself.
         _ = client.SetPermissionModeAsync(newMode).ContinueWith(t =>
         {
             if (t.IsFaulted)
             {
                 OutputWindowLogger.Warn($"!!! set_permission_mode failed: {t.Exception?.GetBaseException().Message}");
             }
-            else
-            {
-                bridge.Send(BridgeMessages.ToWebView.Cli.PermissionModeChanged, new Contracts.PermissionModeChangedNotification { Mode = newMode });
-            }
+            // Either way, tell the WebView what the mode REALLY is. The selector switched
+            // optimistically before asking, and the client only advances PermissionMode once
+            // the CLI has acked — so on failure this sends the old mode back and the UI rolls
+            // itself back. Without it the selector reads "Plan" while the CLI is still in
+            // bypass: the one lie that costs files.
+            bridge.Send(
+                BridgeMessages.ToWebView.Cli.PermissionModeChanged,
+                new Contracts.PermissionModeChangedNotification { Mode = client.PermissionMode });
         });
     }
 
@@ -96,6 +100,12 @@ internal sealed partial class WebViewMessageHandler
             {
                 OutputWindowLogger.Warn($"!!! set_model failed: {t.Exception?.GetBaseException().Message}");
             }
+            // Same rollback as the permission mode: the picker switched before asking, so echo
+            // back what the client actually holds. Null means "Default", which the WebView
+            // renders as such.
+            bridge.Send(
+                BridgeMessages.ToWebView.Cli.ModelChanged,
+                new Contracts.ModelChangedNotification { Model = client.Model });
         });
     }
 }
