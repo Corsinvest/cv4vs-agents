@@ -38,7 +38,7 @@ internal sealed partial class WebViewMessageHandler
             // sends back the chosen permission_suggestion(s) to apply.
             UpdatedPermissions = data["updatedPermissions"] as JArray,
         });
-        Ide.IdeContextService.Instance.CloseLastDiff();
+        Ide.IdeContextService.Instance.CloseDiffFor(p.ToolUseId ?? "");
     }
 
     private void HandleSetSendSelection(JObject data, int? id)

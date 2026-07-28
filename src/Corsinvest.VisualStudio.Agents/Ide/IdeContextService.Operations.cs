@@ -511,13 +511,14 @@ internal sealed partial class IdeContextService
     /// <summary>Show a diff between two strings (used by the WebView
     /// chat path: it has the original and proposed contents in memory).
     /// Wrapper around <see cref="OpenDiffAsync"/> with a synthetic
-    /// <c>old</c> path written to temp.</summary>
-    public Task ShowDiffAsync(string filePath, string oldContent, string newContent)
-        => IdeDiffViewer.Instance.ShowFromContentsAsync(filePath, oldContent, newContent);
+    /// <c>old</c> path written to temp. <paramref name="toolUseId"/> identifies the frame so it
+    /// can later be closed by request rather than by "whichever was last".</summary>
+    public Task ShowDiffAsync(string toolUseId, string filePath, string oldContent, string newContent)
+        => IdeDiffViewer.Instance.ShowFromContentsAsync(toolUseId, filePath, oldContent, newContent);
 
-    /// <summary>Close the last diff opened by <see cref="ShowDiffAsync"/>.
-    /// Used by the WebView chat to dismiss its preview.</summary>
-    public void CloseLastDiff() => IdeDiffViewer.Instance.CloseLast();
+    /// <summary>Close the diff opened for a given tool_use, if any. Used when its permission is
+    /// answered — a diff the user opened themselves is never touched.</summary>
+    public void CloseDiffFor(string toolUseId) => IdeDiffViewer.Instance.CloseDiffFor(toolUseId);
 
     /// <summary>Close a specific diff tab by its <paramref name="tabName"/>.
     /// Looks up the frame in <see cref="IdeDiffViewer"/>'s open-frames

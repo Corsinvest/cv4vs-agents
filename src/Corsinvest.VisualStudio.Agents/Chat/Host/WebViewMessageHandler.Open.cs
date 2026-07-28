@@ -115,7 +115,8 @@ internal sealed partial class WebViewMessageHandler
     private void HandleDiffDialog(JObject data, int? id)
     {
         var p = data.ToObject<Contracts.DiffDialogNotification>();
-        _ = Ide.IdeContextService.Instance.ShowDiffAsync(p.FilePath ?? "", p.OldString ?? "", p.NewString ?? "");
+        _ = Ide.IdeContextService.Instance.ShowDiffAsync(
+            p.ToolUseId ?? "", p.FilePath ?? "", p.OldString ?? "", p.NewString ?? "");
     }
 
     private void HandleIdeOutputWindow(JObject data, int? id)
