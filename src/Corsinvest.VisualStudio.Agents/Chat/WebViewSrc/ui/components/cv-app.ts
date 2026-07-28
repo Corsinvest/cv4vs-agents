@@ -347,12 +347,6 @@ export class CvApp extends LitElement {
             ),
         );
 
-        // subagent_loaded: full sub-agent transcript arrives (expand "show all").
-        // Replace the kept ≤3 with all children; hasMore clears (nothing hidden).
-        // Collapse re-slices to 3 — no separate cache is kept (lazy: re-fetch on re-expand).
-        // (The former subagent_loaded listener moved into the fetchSubagent().then in
-        // _toggleSubagentExpand — the correlated response drives the upsert now.)
-
         this._offs.push(
             bridge.onNotification(Msg.toWebView.chat.cleared, () => {
                 // Abort in-flight requests for the old session so their Promises reject
@@ -654,10 +648,6 @@ export class CvApp extends LitElement {
         appState.isBusy = false;
     };
 
-    /**
-     * Convert a Chat.History `messages[]` array into the backing UiEntry
-     * list. Shared by the initial load and lazy-loaded older pages.
-     */
     /** Build UiEntry[] from a replayed page of typed events (chat_history / subagent_loaded).
      *  Uses the SAME build* as the live handlers; only the placement differs (accumulate here,
      *  append/prepend in the caller). Parent-bucket + post-pass = order-independent nesting. */
@@ -1027,7 +1017,7 @@ export class CvApp extends LitElement {
         return ('uuid' in e ? e.uuid : undefined) ?? `t${e.id}`;
     }
 
-    // ---- Pure DTO → UiEntry builders, shared by the live handlers (then append)
+    // Pure DTO → UiEntry builders, shared by the live handlers (then append)
     // and the history replay (then batch/prepend). Zero side effects: no _entries,
     // no _appendEntry, no scroll, no gauge. The one construction path for both.
 
@@ -1207,17 +1197,6 @@ export class CvApp extends LitElement {
         return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
     }
 
-    /**
-     * Prepend a page of older history while keeping the user's reading row
-     * fixed. We anchor on the DISTANCE FROM THE BOTTOM (`scrollHeight -
-     * scrollTop`), which is invariant to content growing both above (the
-     * prepended page) and below (async-rendered markdown / diff2html / lazy
-     * images) the viewport — unlike a one-shot `scrollTop += delta`, which
-     * slides as async children settle. A ResizeObserver keeps re-applying the
-     * anchor until the list height stops changing, so there are no magic frame
-     * counts. `scroll-behavior` is forced to `auto` during the operation so the
-     * imperative `scrollTop` writes aren't swallowed by the smooth animation.
-     */
     /** Shared history-page processing for both the unprompted load (chat_history_loaded) and
      *  the scroll-up response (getHistory): replay the events to UiEntry and update the paging
      *  state (currentSessionId / oldestLoadedOffset / hasMoreHistory). Returns the replayed list;
@@ -1237,6 +1216,17 @@ export class CvApp extends LitElement {
         return out;
     }
 
+    /**
+     * Prepend a page of older history while keeping the user's reading row
+     * fixed. We anchor on the DISTANCE FROM THE BOTTOM (`scrollHeight -
+     * scrollTop`), which is invariant to content growing both above (the
+     * prepended page) and below (async-rendered markdown / diff2html / lazy
+     * images) the viewport — unlike a one-shot `scrollTop += delta`, which
+     * slides as async children settle. A ResizeObserver keeps re-applying the
+     * anchor until the list height stops changing, so there are no magic frame
+     * counts. `scroll-behavior` is forced to `auto` during the operation so the
+     * imperative `scrollTop` writes aren't swallowed by the smooth animation.
+     */
     private _prependWithAnchor(older: UiEntry[]): void {
         const el = this._messagesEl;
         if (!el) {

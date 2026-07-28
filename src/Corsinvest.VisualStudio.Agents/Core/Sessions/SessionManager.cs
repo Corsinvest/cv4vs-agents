@@ -158,14 +158,6 @@ public sealed partial class SessionManager
         => line.IndexOf("\"" + key + "\":true", StringComparison.Ordinal) >= 0
         || line.IndexOf("\"" + key + "\": true", StringComparison.Ordinal) >= 0;
 
-    // Extracts text from a user message line — used as LastPrompt fallback when no last-prompt entry exists.
-    /// <summary>True only for a genuine user PROMPT (opens an exchange), not a synthetic
-    /// role:user line. The CLI writes tool_results as role:user with a content ARRAY, and
-    /// meta-injections (task-notification/system-reminder/local-command…) as role:user with
-    /// text starting '&lt;'. History paging scrolls past those to the real prompt so the oldest
-    /// exchange isn't orphaned — but bounded (see the page loop) so a long tool-only stretch
-    /// doesn't load the whole session in one page.</summary>
-    // CLI-injected entries that ride in a role:user line but aren't the user's own turn.
     /// <summary>True only for a genuine user PROMPT that OPENS an exchange — not a tool_result
     /// (content is an array) nor a CLI meta-injection (Chat.MetaInjection, the same filter used
     /// to drop them from the transcript). History paging stops on one of these so the oldest

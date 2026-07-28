@@ -25,7 +25,6 @@ const SCOPES: ReadonlyArray<{ value: StatsScopeDto; label: string; title: string
     { value: 'project', label: 'Project', title: 'This project' },
     { value: 'session', label: 'Current', title: 'Current chat' },
 ];
-// Short labels for the segmented control; `title` carries the full wording as a tooltip.
 const RANGES: ReadonlyArray<{ value: StatsRangeDto; label: string; title: string }> = [
     { value: 'all', label: 'All', title: 'All time' },
     { value: 'days30', label: '30d', title: 'Last 30 days' },
@@ -575,8 +574,6 @@ export class CvStatsDialog extends CvDialogBase {
         `;
     }
 
-    /** GitHub-style activity heatmap under the overview cards, via the generic cv-heatmap.
-     *  Passes each day's semantic intensity (0–4); cv-heatmap owns the color scale. */
     /** The rich per-day hover card, identical for the heatmap and the chart (mirrors the WPF
      *  StatsTooltip): full date, an activity line (messages · sessions · tools), then one coloured
      *  row per model (dot · name · tokens · share-of-day), largest first.
@@ -646,6 +643,8 @@ export class CvStatsDialog extends CvDialogBase {
         return infos;
     }
 
+    /** GitHub-style activity heatmap under the overview cards, via the generic cv-heatmap.
+     *  Passes each day's semantic intensity (0–4); cv-heatmap owns the color scale. */
     private _renderHeatmap(d: StatsResponse): TemplateResult {
         const cols = buildHeatmap(d.dailyActivity);
         if (cols.length === 0) {

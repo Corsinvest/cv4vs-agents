@@ -112,7 +112,6 @@ public partial class ContextUsageControl
             Grid.SetColumn(seg, col++);
             bar.Children.Add(seg);
         }
-        // Rounded corners on the whole bar.
         bar.SetValue(FrameworkElement.MinHeightProperty, 8.0);
         return new Border { CornerRadius = new CornerRadius(3), ClipToBounds = true, Child = bar, Margin = new Thickness(0, 0, 0, 12) };
     }

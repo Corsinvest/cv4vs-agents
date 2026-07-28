@@ -17,7 +17,6 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 /// </summary>
 public interface IClaudeClient : IDisposable
 {
-    // ----- State -----
     string WorkingDirectory { get; }
     string SessionId { get; }
     string Model { get; }
@@ -27,7 +26,6 @@ public interface IClaudeClient : IDisposable
     /// subscriptionType, apiProvider). Null until init / for 3P sessions.</summary>
     AccountInfo Account { get; }
 
-    // ----- In-process SDK MCP server (chat IDE tools) -----
     /// <summary>Serves an inbound MCP JSON-RPC message (CLI `mcp_message`) and returns
     /// the JSON-RPC response string. Host wires this to the MCP dispatcher.</summary>
     Func<string, Task<string>> McpMessageHandler { get; set; }
@@ -35,7 +33,6 @@ public interface IClaudeClient : IDisposable
     /// mcp__&lt;name&gt;__*). Null = don't register (e.g. the CLI pane uses WS instead).</summary>
     string SdkMcpServerName { get; set; }
 
-    // ----- Lifecycle -----
     /// <summary>
     /// Configures the client without launching the process. The process will be started
     /// lazily on the first <see cref="SendPrompt"/>. If a process is already running and
@@ -49,11 +46,11 @@ public interface IClaudeClient : IDisposable
     /// <summary>Gracefully stops the process.</summary>
     Task StopAsync();
 
-    // ----- Session operations (encapsulate respawn vs hot-swap) -----
+    // Session operations: these encapsulate respawn vs hot-swap.
     Task NewSessionAsync();
     Task ResumeSessionAsync(string sessionId, string permissionMode = null);
 
-    // ----- Hot-swap operations (no respawn) -----
+    // Hot-swap operations — these must never respawn the process.
     Task SetModelAsync(string model);
     Task SetPermissionModeAsync(string mode);
     Task InterruptAsync();
@@ -78,12 +75,10 @@ public interface IClaudeClient : IDisposable
     /// on demand. Empty when the CLI predates `list_models` or answers without models.</summary>
     Task<IReadOnlyList<ModelInfo>> ListModelsAsync();
 
-    // ----- MCP -----
     Task<McpStatus> GetMcpStatusAsync();
     Task McpReconnectAsync(string serverName);
     Task McpToggleAsync(string serverName, bool enabled);
 
-    // ----- Dialogue -----
     void SendSelectionChanged(string text, string filePath, string fileUrl,
                               int startLine, int startChar, int endLine, int endChar,
                               bool isEmpty);
@@ -99,7 +94,6 @@ public interface IClaudeClient : IDisposable
     /// <summary>Responds to a HookCallback event (raw payload, since hook response shape depends on event).</summary>
     void RespondToHookCallback(string requestId, object response);
 
-    // ----- Events -----
     event EventHandler<InitializedEventArgs> Initialized;
     /// <summary>The CLI startup state (model + toggles from initialize+get_settings), gathered without
     /// a user turn so the UI can seed on open. Fired once per StartProcess (open + respawn).</summary>

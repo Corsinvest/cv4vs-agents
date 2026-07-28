@@ -39,8 +39,8 @@ export class RequestType<TParams, TResult> {
     ) {}
 }
 
-// The 5 request/response pairs. requestChannel = FromWebView (TS→C#),
-// responseChannel = ToWebView (C#→TS, carries the same id back).
+// requestChannel = FromWebView (TS→C#), responseChannel = ToWebView (C#→TS, carries the same
+// id back).
 export const GetImageReq = new RequestType<GetImageRequest, GetImageResponse>(
     Msg.fromWebView.chat.getImage,
     Msg.toWebView.chat.imageData,

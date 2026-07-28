@@ -797,7 +797,6 @@ internal static class StatsService
         return info;
     }
 
-    // Fold every project of one profile.
     private static StatsTotals AggregateProfile(ClaudePaths paths, string fromDate, string toDate)
     {
         var totals = new StatsTotals();

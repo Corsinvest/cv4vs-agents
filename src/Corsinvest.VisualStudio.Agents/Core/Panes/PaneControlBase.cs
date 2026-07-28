@@ -22,7 +22,6 @@ namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 /// </summary>
 public abstract class PaneControlBase : UserControl, IPaneControl
 {
-    // --- readiness (identical in both) ---
     public bool IsReady { get; private set; }
     public event EventHandler ReadyChanged;
     protected void SetReady(bool value)
@@ -32,7 +31,6 @@ public abstract class PaneControlBase : UserControl, IPaneControl
         ReadyChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    // --- multi-instance plumbing ---
     /// <summary>The pane window this control lives in (set on attach); used to close the
     /// pane and push the caption.</summary>
     protected PaneWindowBase Pane { get; private set; }
@@ -62,7 +60,6 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     /// silently no-op.</summary>
     protected void RepushCaption() => Pane?.SetSessionCaption(Entry);
 
-    // --- teardown template ---
     protected bool _disposed;
 
     /// <summary>Real teardown (IPaneControl), called once by PaneWindowBase.Dispose on frame
@@ -89,7 +86,6 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     /// teardown is DisposePane on frame close, so this is a deliberate no-op.</summary>
     protected static void OnUnloaded(object sender, RoutedEventArgs e) { }
 
-    // --- session title (mechanism identical to SetReady; the base owns it) ---
     /// <summary>Whether this pane exposes an editable title in the toolbar. Chat: true;
     /// CLI: false (the raw terminal doesn't surface its live session id). Default false.</summary>
     public virtual bool SupportsTitleEditing => false;
@@ -141,7 +137,6 @@ public abstract class PaneControlBase : UserControl, IPaneControl
         catch (Exception ex) { OutputWindowLogger.LogException("Pane.ShowSessionInfo", ex); }
     }
 
-    // --- IPaneControl kind-specific (implemented by the concrete controls) ---
     public abstract void NewSession();
     public abstract void LoadSession(string sessionId);
     public abstract void FocusInput();
