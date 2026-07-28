@@ -69,8 +69,15 @@
                  Margin="0,2,0,0"
                  Visibility="Collapsed" />
 
-      <TextBlock Grid.Row="3" Text="Description" Margin="0,8,0,2" />
-      <TextBox Grid.Row="4" x:Name="DescriptionBox" TextChanged="OnDescriptionChanged" />
+      <!-- Multi-line: a note is "token expires in March / client X account / not for production",
+           not a single sentence. AcceptsReturn so Enter adds a line instead of leaving the box. -->
+      <TextBlock Grid.Row="3" Text="Notes" Margin="0,8,0,2" />
+      <TextBox Grid.Row="4" x:Name="NotesBox"
+               TextChanged="OnNotesChanged"
+               AcceptsReturn="True"
+               TextWrapping="Wrap"
+               VerticalScrollBarVisibility="Auto"
+               MinHeight="56" />
 
       <Grid Grid.Row="5">
         <Grid.RowDefinitions>

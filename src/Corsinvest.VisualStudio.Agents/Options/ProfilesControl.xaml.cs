@@ -62,7 +62,7 @@ public partial class ProfilesControl : UserControl
             DetailPanel.IsEnabled = profile != null;
 
             NameBox.Text = profile?.Name ?? "";
-            DescriptionBox.Text = profile?.Description ?? "";
+            NotesBox.Text = profile?.Notes ?? "";
 
             _envRows.Clear();
             if (profile != null)
@@ -169,10 +169,10 @@ public partial class ProfilesControl : UserControl
         PersistProfiles();
     }
 
-    private void OnDescriptionChanged(object sender, TextChangedEventArgs e)
+    private void OnNotesChanged(object sender, TextChangedEventArgs e)
     {
         if (_loadingDetail || _selected == null) { return; }
-        _selected.Description = DescriptionBox.Text ?? "";
+        _selected.Notes = NotesBox.Text ?? "";
         PersistProfiles();
     }
 

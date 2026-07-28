@@ -78,7 +78,7 @@ internal static class ProfileStore
     /// by claude.exe from the parent.</summary>
     private static Profile NativeProfile()
     {
-        var p = new Profile { Name = "Claude", Description = "", Enabled = true };
+        var p = new Profile { Name = "Claude", Notes = "", Enabled = true };
         var sys = Environment.GetEnvironmentVariable(ClaudePaths.ConfigDirEnvVar);
         if (!string.IsNullOrEmpty(sys)) { p.Env[ClaudePaths.ConfigDirEnvVar] = sys; }
         return p;
