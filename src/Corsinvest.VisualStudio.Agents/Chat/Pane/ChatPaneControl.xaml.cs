@@ -360,7 +360,8 @@ public partial class ChatPaneControl : PaneControlBase
         // own system/init reports it (fresh pane picks the CLI default; resume re-emits the
         // session's model) and the gate ships it to the WebView. Permission mode comes from OUR
         // Options page (the CLI doesn't restore it from --resume).
-        var permMode = PermissionMode.FromInitial(AgentsOptions.Chat.InitialPermissionMode);
+        var allowBypass = AgentsOptions.Chat.AllowDangerouslySkipPermissions;
+        var permMode = PermissionMode.FromInitial(AgentsOptions.Chat.InitialPermissionMode, allowBypass);
         // Resuming (auto-resume or fork)? Read the session ONCE now so the respawn's --permission-mode
         // matches what the user last had. The transcript/title from the same read are seeded after
         // Cleared, below.
@@ -411,6 +412,7 @@ public partial class ChatPaneControl : PaneControlBase
             // "already in use".) A fresh pane passes neither.
             ResumeSessionId = _startupSessionId,
             InitialPermissionMode = permMode,
+            AllowBypassPermissions = allowBypass,
             SsePort = ssePort,
             Env = Entry.Profile.Env,
         });

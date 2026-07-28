@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -174,23 +174,23 @@ public sealed partial class ClaudeClient : IClaudeClient
         // set it after init with a `set_model` control_request (InitializeAndPublishCatalogAsync).
         if (!string.IsNullOrEmpty(options.ResumeSessionId)) { args += " --resume " + options.ResumeSessionId; }
 
+        // Grants the capability to switch into bypassPermissions later; weakens nothing now.
+        // Must be the allow- form: --dangerously-skip-permissions disarms permissions immediately,
+        // whatever --permission-mode says. Without either, the CLI refuses the swap outright.
+        if (options.AllowBypassPermissions) { args += " --allow-dangerously-skip-permissions"; }
+
         // The mode decides WHICH tools need confirmation, the prompt-tool is the channel to ask.
         var mode = options.InitialPermissionMode ?? Client.PermissionMode.Default;
-        if (mode == Client.PermissionMode.BypassPermissions)
-        {
-            args += " --dangerously-skip-permissions";
-        }
-        else
-        {
-            if (mode == Client.PermissionMode.AcceptEdits) { args += " --permission-mode acceptEdits"; }
-            else if (mode == Client.PermissionMode.Plan) { args += " --permission-mode plan"; }
-            else if (mode == Client.PermissionMode.Auto) { args += " --permission-mode auto"; }
-        }
-        // ALWAYS, bypass included. Verified on CLI 2.1.220: without this flag the CLI drops
+        if (mode == Client.PermissionMode.AcceptEdits) { args += " --permission-mode acceptEdits"; }
+        else if (mode == Client.PermissionMode.Plan) { args += " --permission-mode plan"; }
+        else if (mode == Client.PermissionMode.Auto) { args += " --permission-mode auto"; }
+        // Needed on resume: a session left in bypass would otherwise restart in `default`.
+        else if (mode == Client.PermissionMode.BypassPermissions) { args += " --permission-mode bypassPermissions"; }
+
+        // ALWAYS, whatever the mode. Verified on CLI 2.1.220: without this flag the CLI drops
         // AskUserQuestion from the session entirely — the turn ends `success` and the question is
         // never emitted, on either channel. So the flag doesn't merely carry permission prompts,
-        // it registers the interactive tool. Passing it alongside --dangerously-skip-permissions
-        // does NOT bring the confirmations back: writes and commands still run unasked.
+        // it registers the interactive tool: a session in bypass could otherwise not ask anything.
         args += " --permission-prompt-tool stdio";
 
         // Profile env goes FIRST, our required keys LAST — a profile (e.g. z.ai/GLM base
@@ -374,6 +374,7 @@ public sealed partial class ClaudeClient : IClaudeClient
             WorkingDirectory = WorkingDirectory ?? _lastOptions.WorkingDirectory,
             ResumeSessionId = SessionId ?? _lastOptions.ResumeSessionId,
             InitialPermissionMode = PermissionMode ?? _lastOptions.InitialPermissionMode,
+            AllowBypassPermissions = _lastOptions.AllowBypassPermissions,
             SsePort = _lastOptions.SsePort,   // keep talking to the same MCP server after a restart
             // Keep the profile's provider across respawns — else the pane silently reverts to native Claude.
             Env = _env ?? _lastOptions?.Env,
@@ -399,6 +400,9 @@ public sealed partial class ClaudeClient : IClaudeClient
         {
             WorkingDirectory = WorkingDirectory,
             InitialPermissionMode = PermissionMode,
+            // Preserved across respawn like Env: losing it would make bypass unreachable
+            // for the rest of the pane's life, with nothing to explain why.
+            AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
             Env = _env,
         });
     }
@@ -417,6 +421,7 @@ public sealed partial class ClaudeClient : IClaudeClient
             WorkingDirectory = WorkingDirectory,
             ResumeSessionId = sessionId,
             InitialPermissionMode = PermissionMode,
+            AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
             Env = _env,
         });
     }
