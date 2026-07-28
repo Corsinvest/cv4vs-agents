@@ -37,12 +37,6 @@ internal sealed partial class IdeDiffViewer
     public const string TabClosed = "TAB_CLOSED";
     public const string DiffRejected = "DIFF_REJECTED";
 
-    private IVsWindowFrame _lastFrame;
-    private string _lastFilePath;
-    // _openFrames key of the last ShowFromContentsAsync diff, so CloseLast
-    // can drop it from the registry (otherwise dead frames accumulate there).
-    private string _lastKey;
-
     /// <summary>Pending interactive diffs keyed by the temp "right" path.
     /// The RDT save listener and the frame-close listener look up the
     /// pending entry here and resolve its TCS. Same dictionary used by
@@ -57,6 +51,13 @@ internal sealed partial class IdeDiffViewer
     /// (or any of our own panes, whose caption used to match the old
     /// "Claude Code" substring filter).</summary>
     private readonly Dictionary<string, IVsWindowFrame> _openFrames =
+        new(StringComparer.Ordinal);
+
+    /// <summary>Diffs opened by the chat, keyed by the tool_use they preview. Separate from
+    /// <see cref="_openFrames"/>, which is keyed by tab name because close_tab addresses it that
+    /// way — the two indexes hold the same frames for different questions ("which tab?" vs
+    /// "which request?"). Answering a permission closes by request, so it needs this one.</summary>
+    private readonly Dictionary<string, IVsWindowFrame> _chatDiffs =
         new(StringComparer.Ordinal);
 
     /// <summary>Single shared RDT subscription. Created lazily on the
@@ -200,30 +201,37 @@ internal sealed partial class IdeDiffViewer
         }
     }
 
-    /// <summary>WebView-style entry point: the chat has BOTH contents in
-    /// memory. Both sides go to temp; calling twice for the same
-    /// <paramref name="filePath"/> closes the previous diff (toggle).</summary>
-    public async Task ShowFromContentsAsync(string filePath, string oldContent, string newContent)
+    /// <summary>WebView-style entry point: the chat has BOTH contents in memory. Both sides go to
+    /// temp. Clicking the same <paramref name="toolUseId"/> twice closes it (toggle); a different
+    /// one replaces it — keying this on the file path instead made two edits to the same file
+    /// indistinguishable, so the second click closed the first diff rather than showing it.</summary>
+    public async Task ShowFromContentsAsync(string toolUseId, string filePath, string oldContent, string newContent)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
         {
-            if (_lastFrame != null && _lastFilePath == filePath) { CloseLast(); return; }
-            CloseLast();
+            if (!string.IsNullOrEmpty(toolUseId) && _chatDiffs.ContainsKey(toolUseId))
+            {
+                CloseDiffFor(toolUseId);
+                return;
+            }
+            CloseAllChatDiffs();
 
             var tempOld = WriteTemp(oldContent, Path.GetFileName(filePath) + ".old");
             var tempNew = WriteTemp(newContent, Path.GetFileName(filePath) + ".new");
             var caption = $"Claude Code — {Path.GetFileName(filePath)}";
-            _lastFrame = OpenComparison(
+            var frame = OpenComparison(
                 leftPath: tempOld, rightPath: tempNew,
                 caption: caption,
                 leftLabel: "Original", rightLabel: "Proposed",
                 rightIsTemp: true, leftIsTemp: true);
-            _lastFilePath = filePath;
-            // Track in the open-frames registry too, so closeAllDiffTabs
-            // sweeps WebView-shown diffs as well. Remember the key so
-            // CloseLast can remove it (avoids leaking dead frames).
-            if (_lastFrame != null) { _openFrames[caption] = _lastFrame; _lastKey = caption; }
+            if (frame != null)
+            {
+                // Both indexes: _openFrames so closeAllDiffTabs sweeps it, _chatDiffs so the
+                // permission answer can find it by request.
+                _openFrames[caption] = frame;
+                if (!string.IsNullOrEmpty(toolUseId)) { _chatDiffs[toolUseId] = frame; }
+            }
         }
         catch (Exception ex) { OutputWindowLogger.LogException("IdeDiffViewer.ShowFromContents", ex); }
     }
@@ -275,22 +283,40 @@ internal sealed partial class IdeDiffViewer
         }
     }
 
-    /// <summary>Close the diff opened by the last
-    /// <see cref="ShowFromContentsAsync"/>. No-op if none.</summary>
-    public void CloseLast()
+    /// <summary>Close the diff opened for a given tool_use, if any. A frame we never opened — the
+    /// user's own diff — is not in the map, so it is not found and not touched: that is the whole
+    /// point of keying by request. Finding nothing is a normal outcome, not an error: the user may
+    /// simply never have opened the diff for that edit.</summary>
+    public void CloseDiffFor(string toolUseId)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        try
+        if (string.IsNullOrEmpty(toolUseId)) { return; }
+        if (!_chatDiffs.TryGetValue(toolUseId, out var frame)) { return; }
+        CloseChatFrame(toolUseId, frame);
+    }
+
+    /// <summary>One chat diff at a time: opening a new one closes the previous.</summary>
+    private void CloseAllChatDiffs()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        foreach (var kv in new List<KeyValuePair<string, IVsWindowFrame>>(_chatDiffs))
         {
-            if (_lastFrame != null)
-            {
-                _lastFrame.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave);
-                _lastFrame = null;
-                _lastFilePath = null;
-                if (_lastKey != null) { _openFrames.Remove(_lastKey); _lastKey = null; }
-            }
+            CloseChatFrame(kv.Key, kv.Value);
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("IdeDiffViewer.CloseLast", ex); }
+    }
+
+    /// <summary>Close a frame and drop it from BOTH indexes — left in _openFrames it would be a
+    /// dead entry that close_all later tries to close again.</summary>
+    private void CloseChatFrame(string toolUseId, IVsWindowFrame frame)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try { frame.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave); }
+        catch (Exception ex) { OutputWindowLogger.LogException("IdeDiffViewer.CloseChatFrame", ex); }
+        _chatDiffs.Remove(toolUseId);
+        foreach (var kv in new List<KeyValuePair<string, IVsWindowFrame>>(_openFrames))
+        {
+            if (ReferenceEquals(kv.Value, frame)) { _openFrames.Remove(kv.Key); }
+        }
     }
 
     //  Interactive resolution plumbing

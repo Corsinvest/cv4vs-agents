@@ -38,7 +38,9 @@ internal sealed partial class WebViewMessageHandler
             // sends back the chosen permission_suggestion(s) to apply.
             UpdatedPermissions = data["updatedPermissions"] as JArray,
         });
-        Ide.IdeContextService.Instance.CloseLastDiff();
+        // Close the diff opened for THIS request. It used to close "the last one", which could be
+        // a diff the user had opened themselves.
+        Ide.IdeContextService.Instance.CloseDiffFor(p.ToolUseId ?? "");
     }
 
     private void HandleSetSendSelection(JObject data, int? id)
