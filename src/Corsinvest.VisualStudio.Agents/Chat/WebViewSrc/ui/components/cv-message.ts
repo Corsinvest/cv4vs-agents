@@ -20,7 +20,7 @@ import { displayPathUi } from '../paths';
 import { parseIdeContextTags } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
-import { formatTimeAgo, formatAbsolute } from '../../core/time';
+import { renderTimeAgo } from '../../core/time';
 import type {
     IdeContextRef,
     ForkNotification,
@@ -191,13 +191,7 @@ export class CvMessage extends LitElement {
                       </button>`
                     : nothing
             }
-            ${
-                this.timestamp > 0
-                    ? html`<span class="cv-ts" title=${formatAbsolute(this.timestamp)}
-                          >${formatTimeAgo(this.timestamp)}</span
-                      >`
-                    : nothing
-            }
+            ${this.timestamp > 0 ? renderTimeAgo(this.timestamp) : nothing}
         </div>`;
     }
 
