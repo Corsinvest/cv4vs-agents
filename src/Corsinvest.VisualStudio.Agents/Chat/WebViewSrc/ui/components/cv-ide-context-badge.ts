@@ -5,7 +5,6 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import Eye16Regular from '@fluentui/svg-icons/icons/eye_16_regular.svg';
 import EyeOff16Regular from '@fluentui/svg-icons/icons/eye_off_16_regular.svg';
 import { state as appState } from '../../core/state';
 import type { IdeContextNotification, SetSendSelectionNotification } from '../../core/types';
@@ -15,9 +14,9 @@ import { iconUrl } from '../../core/icon-url';
 import { iconStyles } from '../styles/shared';
 
 /**
- * Compact "context chip" above the chat textarea: file name opens the file in
- * VS at the selection; eye icon toggles sharing IDE context for the session.
- * Hidden when there's no active document. Shadow DOM + static styles.
+ * Compact "context chip" above the chat textarea, showing the file that rides along with each
+ * prompt. The whole chip is the toggle. Hidden when there's no active document.
+ * Shadow DOM + static styles.
  */
 @customElement('cv-ide-context-badge')
 export class CvIdeContextBadge extends LitElement {
@@ -48,14 +47,11 @@ export class CvIdeContextBadge extends LitElement {
             .badge.is-disabled {
                 opacity: 0.55;
             }
+            /* Only rendered while paused, so there is one colour to give it. */
             .eye {
                 flex-shrink: 0;
                 display: inline-flex;
                 align-items: center;
-                /* Active (sharing) = brand/azure; paused = neutral grey. */
-                color: var(--colorBrandForeground1);
-            }
-            .badge.is-disabled .eye {
                 color: var(--colorNeutralForeground3);
             }
             .eye svg {
@@ -125,19 +121,26 @@ export class CvIdeContextBadge extends LitElement {
         }
         // The whole chip is the toggle: the file is already open in VS (it's why
         // it's here), so there's no "open file" action — only share on/off.
-        // Eye OFF dims the chip rather than hiding it, so the user can re-enable.
+        // Paused dims the chip rather than hiding it, so it can be switched back on.
         const cls = `badge${this._enabled ? '' : ' is-disabled'}`;
         // Editor-style `:start-end` range, shown only for a real selection
         // (a bare open file carries no lines). Matches the in-bubble chip.
         const lineInfo = ctx.hasSelection ? `:${ctx.startLine}-${ctx.endLine}` : '';
-        const eyeIcon = this._enabled ? Eye16Regular : EyeOff16Regular;
         const title = this._enabled
-            ? 'IDE context attached — click to stop sharing'
-            : 'IDE context paused — click to share again';
+            ? `${ctx.fileName} goes with every message — click to stop`
+            : `${ctx.fileName} is not sent — click to include it`;
 
         return html`
             <button class=${cls} type="button" title=${title} @click=${this._onToggleEye}>
-                <span class="eye">${unsafeHTML(eyeIcon)}</span>
+                <!-- Only when paused. Sharing is the normal state and the file icon and name
+                     already say which file is in play; a second glyph beside them adds nothing.
+                     Not being sent is the exception, and the one worth marking — otherwise the
+                     chip reads as "this file is going along" when it isn't. -->
+                ${
+                    this._enabled
+                        ? nothing
+                        : html`<span class="eye">${unsafeHTML(EyeOff16Regular)}</span>`
+                }
                 <img class="file-icon" src=${iconUrl(ctx.fileName)} width="16" height="16" alt="" />
                 <span class="name">${ctx.fileName}</span>
                 ${lineInfo ? html`<span class="info">${lineInfo}</span>` : nothing}
