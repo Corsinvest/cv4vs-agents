@@ -161,7 +161,6 @@ internal static class StatsChart
         if (days.Length == 0) { return new List<DayBar>(); }
 
         var infos = BuildDayInfos(r);
-        // One bar per day that has token data, in chronological order.
         return [.. days
             .Where(d => d.Date != null && infos.ContainsKey(d.Date))
             .OrderBy(d => d.Date, StringComparer.Ordinal)

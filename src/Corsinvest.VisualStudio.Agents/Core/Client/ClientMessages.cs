@@ -8,7 +8,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 /// <summary>Wire-level type and subtype names for stream-json messages exchanged with claude.exe.</summary>
 internal static class ClientMessages
 {
-    // ----- Top-level type field on every line of stdin/stdout -----
+    // Top-level type field on every line of stdin/stdout.
     public static class Type
     {
         public const string User = "user";
@@ -29,7 +29,7 @@ internal static class ClientMessages
         public const string ConversationReset = "conversation_reset";
     }
 
-    // ----- subtype on system messages -----
+    // subtype on system messages.
     public static class SystemSubtype
     {
         public const string Init = "init";
@@ -56,7 +56,7 @@ internal static class ClientMessages
         public const string Informational = "informational";
     }
 
-    // ----- subtype on control_request messages -----
+    // subtype on control_request messages.
     public static class ControlSubtype
     {
         // Outbound (we send these to the CLI)
@@ -93,7 +93,7 @@ internal static class ClientMessages
         public const string Error = "error";
     }
 
-    // ----- JSON field names on entries written to the JSONL session files -----
+    // JSON field names on entries written to the JSONL session files.
     public static class JsonlEntryType
     {
         public const string CustomTitle = "custom-title";

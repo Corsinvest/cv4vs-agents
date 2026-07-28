@@ -22,8 +22,6 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 /// </summary>
 public sealed partial class ClaudeClient
 {
-    // ----- Control protocol internals -----
-
     private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan InitializeTimeout = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan LongRunningTimeout = TimeSpan.FromMinutes(5);
@@ -105,8 +103,6 @@ public sealed partial class ClaudeClient
         // GUID suffix (first 8 hex chars) for uniqueness — just a correlation id, no crypto needed.
         return $"req_{n}_{Guid.NewGuid():N}".Substring(0, $"req_{n}_".Length + 8);
     }
-
-    // ----- Incoming dispatcher -----
 
     private void HandleLine(JObject obj)
     {

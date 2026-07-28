@@ -88,9 +88,6 @@ fluent-button[icon-only] svg {
 }
 
 
-/* cv-attach-menu is Shadow DOM: its fluent-menu-list/item styling (sizing, icon
- * centering) lives in its own static styles now. */
-
 #app {
     display: flex;
     flex-direction: column;

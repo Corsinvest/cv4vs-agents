@@ -45,8 +45,8 @@ public partial class PaneToolbar : UserControl
         UpdateTitle();
     }
 
-    // ----- Session title (always an editable TextBox; border shows on hover/focus).
-    //       Enter or focus-loss saves a rename, Esc reverts. -----
+    // Session title: always an editable TextBox (border shows on hover/focus). Enter or
+    // focus-loss saves a rename, Esc reverts.
 
     // True while the title box has keyboard focus → don't let a background title
     // refresh (turn-end re-read) overwrite what the user is typing.
@@ -167,9 +167,6 @@ public partial class PaneToolbar : UserControl
         OpenContextMenu(BtnPanes);
     }
 
-
-    // ----- History (this pane) -----
-
     private void OnHistory_Click(object sender, RoutedEventArgs e) => ShowSessionHistory();
 
     /// <summary>Open the session picker for this pane. Public because the chat's
@@ -251,16 +248,12 @@ public partial class PaneToolbar : UserControl
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     private static extern IntPtr SetFocus(IntPtr hWnd);
 
-    // ----- New session (this pane) -----
-
     // Fresh conversation in THIS pane (vs. BtnNew, which opens a new pane).
     private void OnNewSession_Click(object sender, RoutedEventArgs e)
     {
         _pane.NewSession();
         _pane.FocusInput();
     }
-
-    // ----- More (⋯): static items in XAML; pane extras inserted at top -----
 
     private void OnMore_Click(object sender, RoutedEventArgs e)
     {

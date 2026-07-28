@@ -31,7 +31,6 @@ declare global {
     }
 }
 
-// Streamed channels — emit too often for a useful trace, skip them.
 // High-frequency channels excluded from bridge trace. Sourced from the generated message
 // names (same constants the host's IsNoisyChannel uses) so the two lists can't drift.
 const NOISY = new Set<string>([

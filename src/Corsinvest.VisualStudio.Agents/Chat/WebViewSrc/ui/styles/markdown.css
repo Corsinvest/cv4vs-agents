@@ -116,9 +116,6 @@
     background-color: rgba(150, 70, 70, 0.25);
     color: inherit;
 }
-/* cv-copy-btn: display:contents host + copied-state tint now live in its
- * static styles (Shadow DOM). Position its button via ::part(button) below. */
-
 /* Markdown code-block wrapper: <pre> + copy button as siblings. The
  * wrapper provides the relative positioning context for the copy button,
  * which sits absolute over the top-right corner of the <pre>. */

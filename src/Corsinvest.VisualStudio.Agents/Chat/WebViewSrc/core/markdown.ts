@@ -62,7 +62,6 @@ renderer.link = function (token: Tokens.Link): string {
         const line = ref.lines[0] ?? 0;
         return `<a class="cv-file-link" data-file="${escapeHtml(ref.path)}" data-line="${line}" title="Open in editor">${escapeHtml(text)}</a>`;
     }
-    // Other local paths render as plain text.
     return escapeHtml(text);
 };
 

@@ -251,7 +251,7 @@ export interface SubagentTask {
     taskId: string;
     description: string;
     toolUseId?: string;
-    recentTools: string[]; // last 3 tool names (cosa fa ora = at(-1))
+    recentTools: string[]; // last 3 tool names — at(-1) is what it is doing now
     summary?: string;
     usage: SubagentUsageDto;
 }

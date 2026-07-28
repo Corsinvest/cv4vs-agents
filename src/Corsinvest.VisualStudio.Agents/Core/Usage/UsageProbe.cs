@@ -20,7 +20,6 @@ namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 /// as the transport is up — so we send it directly without spending a turn.</summary>
 internal static class UsageProbe
 {
-    // How long to wait for the transport to come up before giving up.
     private static readonly TimeSpan StartTimeout = TimeSpan.FromSeconds(15);
 
     /// <summary>Start a CLI for <paramref name="profile"/>, read its usage, kill it. Throws on
