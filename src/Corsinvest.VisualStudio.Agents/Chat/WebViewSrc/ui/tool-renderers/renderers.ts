@@ -61,10 +61,34 @@ export class EditRenderer extends ToolRenderer {
     }
 }
 
-export class WriteRenderer extends EditRenderer {
-    override readonly name = 'Write';
+/** Write creates a file, so there is no "before" to diff against: rendered as the plain content,
+ *  not as a diff where every line is an addition. Deliberately NOT extending EditRenderer — it
+ *  would bring rowDiff() and the Accept/Reject buttons, which have nothing to act on here.
+ *  Same split VS Code makes (Edit → diff component, Write → the content). */
+export class WriteRenderer extends ToolRenderer {
+    readonly name = 'Write';
     override label(): string {
         return 'Write';
+    }
+    override header(): TemplateResult {
+        const fp = String(this.host.input.file_path ?? '');
+        const content = this.inputText();
+        // Size in the header, like Read's line range: tells a 5-line file from a 500-line one
+        // without expanding the row.
+        const lines = content ? ` (${content.split('\n').length} lines)` : '';
+        return html`${this.nameSpan('Write')}${this.detailSpan(
+            this.editFileLink(fp, html`${displayPathUi(fp)}${lines}`),
+        )}`;
+    }
+    /** The file's content, not the raw input JSON the base class would print. */
+    override inputText(): string {
+        return String(this.host.input.content ?? '');
+    }
+    /** No IN label: there is no in/out pair to tell apart, the body IS the file. And on success
+     *  the result only repeats the path already in the header ("File created successfully at: …"),
+     *  so it is dropped too — an error still gets its row, being the one thing the header can't say. */
+    override body(): TemplateResult | null {
+        return this.ioGrid(this.inputText(), this.host.status === 'error', '');
     }
 }
 

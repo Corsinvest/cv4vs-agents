@@ -553,6 +553,11 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     padding: 6px 8px;
     gap: 8px;
 }
+/* Labelless row (Write: the body IS the file, there is no in/out pair to tell apart) —
+   drop the 44px gutter instead of leaving it empty. */
+.cv-tool-body-row:not(:has(.cv-tool-body-label)) {
+    grid-template-columns: 1fr;
+}
 .cv-tool-body-row-in + .cv-tool-body-row-out {
     border-top: 1px solid var(--colorNeutralStroke1);
 }
