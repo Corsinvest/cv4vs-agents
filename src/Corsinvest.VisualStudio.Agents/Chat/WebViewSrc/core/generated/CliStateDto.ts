@@ -14,6 +14,7 @@ export interface CliStateDto {
     alwaysThinkingEnabled?: boolean | null;
     switchModelsOnFlag?: boolean | null;
     ultracode?: boolean | null;
+    bypassPermissionsDisabled?: boolean;
     fastModeState: string;
     spinnerVerbsConfig: SpinnerVerbsConfigDto | null;
 }

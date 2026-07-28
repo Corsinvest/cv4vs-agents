@@ -41,6 +41,8 @@ interface AppState {
     fastMode: boolean;
     /** Auto-switch model when a message is flagged (Model menu toggle). */
     switchModelsOnFlag: boolean;
+    /** An org policy (CLI settings) forbids the bypass mode → the selector must not offer it. */
+    bypassPermissionsDisabled: boolean;
 
     isBusy: boolean;
     // Raw CLI work status (system/status): "compacting" while compacting, "" otherwise. The spinner
@@ -161,6 +163,7 @@ const _impl = new StoreImpl<AppState>({
     inDev: false,
     fastMode: false,
     switchModelsOnFlag: true, // default on, like VS Code (get_settings overrides)
+    bypassPermissionsDisabled: false, // permissive until the CLI says otherwise
 
     isBusy: false,
     status: '',

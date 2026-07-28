@@ -285,12 +285,13 @@ See [Options → Profiles](docs/options.md#profiles).
 
 ### Permissions
 
-- **Permission-mode selector** in the toolbar — Ask before edits / Edit automatically / Plan /
+- **Permission-mode selector** in the toolbar — Manual / Edit automatically / Plan /
   Auto / Bypass (Bypass is gated behind an option).
 - **Permission prompts & AskUserQuestion** — an inline approval banner for tool use with
   per-session/project "allow" suggestions, and interactive answering of `AskUserQuestion`. The Ask
   answer can be **structured** — several questions in one panel, each single- or multi-select — not
-  just a plain yes/no.
+  just a plain yes/no. Once answered, the row is compact by default (only what you picked); turn off
+  **Compact Ask answers** in Options to keep every option listed with your pick highlighted.
 
 ### Context, usage & stats
 

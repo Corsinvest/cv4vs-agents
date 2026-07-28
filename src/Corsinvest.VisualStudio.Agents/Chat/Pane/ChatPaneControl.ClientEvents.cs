@@ -160,6 +160,7 @@ public partial class ChatPaneControl
                     AlwaysThinkingEnabled = e.AlwaysThinkingEnabled,
                     SwitchModelsOnFlag = e.SwitchModelsOnFlag,
                     Ultracode = e.Ultracode,
+                    BypassPermissionsDisabled = e.BypassPermissionsDisabled,
                     FastModeState = e.FastModeState,
                     SpinnerVerbsConfig = e.SpinnerVerbs == null ? null : new Contracts.SpinnerVerbsConfigDto
                     {
