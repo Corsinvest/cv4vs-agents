@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -26,8 +26,9 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 internal sealed partial class WebViewMessageHandler
 {
     /// <summary>Project a tool's raw input JSON to the text shown when opening its IN:
-    /// the tool's main field for the verbose ones (Agent→prompt, Bash→command), else the
-    /// whole indented JSON. Mirrors the per-tool renderers on the WebView side.</summary>
+    /// the tool's main field for the verbose ones (Agent→prompt, Bash→command, Write→content),
+    /// else the whole indented JSON. Mirrors the per-tool renderers on the WebView side — a tool
+    /// missing here opens as JSON with its content escaped onto one line.</summary>
     private static string ProjectInput(string toolName, JObject input)
     {
         var field = toolName switch
@@ -35,6 +36,7 @@ internal sealed partial class WebViewMessageHandler
             "Bash" or "PowerShell" => input.Val("command"),
             "Agent" => input.Val("prompt"),
             "Skill" => input.Val("args"),
+            "Write" => input.Val("content"),
             _ => null,
         };
         return !string.IsNullOrEmpty(field) ? field : input.ToIndentedString();
