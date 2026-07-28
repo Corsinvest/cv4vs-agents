@@ -299,7 +299,7 @@ export abstract class ToolRenderer {
     /** The standard IN/OUT body: raw input (IN) + cleaned output (OUT), each a
      *  clickable cell (opens in VS) with an inline copy button. Pass showOut=false
      *  to render IN only (e.g. Agent, whose result is just launch metadata). */
-    protected ioGrid(inText = '', showOut = true): TemplateResult {
+    protected ioGrid(inText = '', showOut = true, inLabel = 'IN'): TemplateResult {
         const outText = showOut ? cleanResult(this.host.result, this.host.status === 'error') : '';
         if (!inText && !outText) {
             return html`${nothing}`;
@@ -322,7 +322,11 @@ export abstract class ToolRenderer {
                                   style="cursor:pointer"
                                   @click=${() => this.host.openOutput('in')}
                               >
-                                  <span class="cv-tool-body-label">IN</span>
+                                  ${
+                                      inLabel
+                                          ? html`<span class="cv-tool-body-label">${inLabel}</span>`
+                                          : nothing
+                                  }
                                   <div class="cv-tool-body-cell">
                                       <pre class="cv-tool-body-pre">${preview(inText)}</pre>
                                       ${copyBtn(inText, 'in')}
