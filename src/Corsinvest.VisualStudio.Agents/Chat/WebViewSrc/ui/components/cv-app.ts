@@ -602,6 +602,18 @@ export class CvApp extends LitElement {
                     if (!d?.taskId || !this._subagentTasks.has(d.taskId)) {
                         return;
                     }
+                    // The Agent row's own tool_result is launch metadata — it arrives at once and is
+                    // never is_error, so the row would settle green however the sub-agent ended. This
+                    // notification carries the real outcome; 'stopped' is a cancellation the user
+                    // asked for, so only 'failed' turns the row red.
+                    const toolUseId = this._subagentTasks.get(d.taskId)?.toolUseId;
+                    if (d.status === 'failed' && toolUseId) {
+                        const row = this._findTool(toolUseId);
+                        if (row) {
+                            row.status = 'error';
+                            this._commit(row);
+                        }
+                    }
                     const m = new Map(this._subagentTasks);
                     m.delete(d.taskId);
                     this._subagentTasks = m;
