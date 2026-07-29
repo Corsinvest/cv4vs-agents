@@ -552,12 +552,12 @@ export class CvApp extends LitElement {
                     });
                     this._subagentTasks = m;
                     this._publishSubagentTasks(m);
-                    // The Agent row usually arrives after this, and picks the id up in
-                    // buildToolEntry; tag it here too in case it got in first.
+                    // The Agent row is usually created after this and reads the id in
+                    // buildToolEntry; when it got in first, tag it here. No _commit — the row
+                    // was just appended, so its render is still pending and will read the id.
                     const row = d.toolUseId ? this._findTool(d.toolUseId) : null;
                     if (row && !row.agentId) {
                         row.agentId = d.taskId;
-                        this._commit(row);
                     }
                 },
             ),
