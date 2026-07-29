@@ -277,10 +277,10 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 }
 /* A tool row's nested children (Agent / Skill transcript today) — indented and
  * separated by a left border to show the parent/child relationship. */
+/* No rule down the side: the indent already says "these belong to the row above". */
 .cv-children {
     margin-left: 16px;
     padding-left: 8px;
-    border-left: 2px solid var(--colorNeutralStroke1);
     margin-top: 2px;
 }
 /* Only the scrolling area is capped — the actions footer is a sibling below it (outside this box)
@@ -360,9 +360,10 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     position: relative;
 }
 
+/* The content already sits in .cv-tool-body-box, which is bordered on all four sides —
+   a rule down the left of it only doubles up. */
 .cv-tool-body {
     margin: 2px 0 4px 0;
-    border-left: 2px solid var(--colorNeutralStroke1);
     padding-left: 8px;
     overflow-x: hidden;
 }
