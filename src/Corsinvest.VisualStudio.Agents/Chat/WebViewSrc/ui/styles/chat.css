@@ -697,8 +697,11 @@ cv-message:focus-within .cv-msg-actions {
 .cv-message.slash-result.error {
     color: var(--colorPaletteRedForeground1);
 }
+/* .cv-message.error below already gives the box its own red rail; the rail on the pre
+ * would sit just inside it, two red lines saying the same thing. */
 .cv-message.slash-result.error pre {
-    border-left-color: var(--colorPaletteRedForeground1);
+    border-left: none;
+    padding-left: 0;
 }
 
 .cv-message.error {
