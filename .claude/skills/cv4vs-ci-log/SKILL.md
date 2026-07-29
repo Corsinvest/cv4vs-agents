@@ -15,7 +15,7 @@ through a `success` build:
 - `tgconfig.json` was shipped inside the VSIX (23 entries instead of 22).
 
 None of them was an error in the log. They were **absences** — a line that should have been printed
-and wasn't, or an `MSB3073` buried under 147 known warnings. Reading the log by hand took five
+and wasn't, or an `MSB3073` buried under 164 known warnings. Reading the log by hand took five
 attempts and two wrong filters, because CodeQL query *names* contain the word "error".
 
 This skill reads a finished run and answers one question: did every check actually run, and did
@@ -61,7 +61,7 @@ Everything below is background and must not reach the report — except as a cou
 | CodeQL banners | `CODEQL_ACTION_CLI_VERSION_INFO`, `CODEQL_DIST`, any `CODEQL_*` |
 | CodeQL query names | `Loaded C:`, `Starting evaluation`, `Evaluation done`, `.qlx`, `.bqrs` |
 | Script echo | lines containing `^[[36;1m` |
-| Known warnings | `VSTHRD*`, `VSSDK*` (147 of them), `no-explicit-any` (7) |
+| Known warnings | `VSTHRD*`, `VSSDK*` (164 of them), `no-explicit-any` (7) |
 | Infrastructure deprecations | Node 20→24, CodeQL Action v3, `DEP0169`, `npm warn deprecated` |
 | CodeQL informational | `overlay database`, `TRAP caching` |
 
@@ -108,7 +108,7 @@ Expected checks
 Anomalies
   <job> / <step>: <line>
 
-Noise skipped: 147 VSTHRD/VSSDK, 7 ESLint, Node 20 + CodeQL v3 deprecations
+Noise skipped: 164 VSTHRD/VSSDK, 7 ESLint, Node 20 + CodeQL v3 deprecations
 ```
 
 Lead with anything `MISSING` or any anomaly — at the bottom of a report they get skimmed past, and

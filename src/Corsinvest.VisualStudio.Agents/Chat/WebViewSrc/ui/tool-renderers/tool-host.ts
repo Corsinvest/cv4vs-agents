@@ -55,6 +55,9 @@ export class BridgeToolHost implements ToolHost {
     get agentId(): string {
         return this.row.agentId ?? '';
     }
+    get containerAgentId(): string {
+        return this.row.containerAgentId ?? '';
+    }
     get expanded(): boolean {
         return this.row.expanded;
     }
@@ -140,7 +143,7 @@ export class BridgeToolHost implements ToolHost {
             toolUseId: this.toolUseId,
             title: `[${this.name || 'Tool'}] ${detail.slice(0, 60)}`,
             which,
-            agentId: this.agentId,
+            agentId: this.containerAgentId,
             // Lets the host project the IN to the tool's main field (Agent→prompt,
             // Bash→command) instead of dumping the whole input JSON.
             toolName: this.name,
@@ -152,7 +155,7 @@ export class BridgeToolHost implements ToolHost {
             toolUseId: this.toolUseId,
             title: `[${this.name || 'Tool'}] error`,
             which: 'out',
-            agentId: this.agentId,
+            agentId: this.containerAgentId,
         });
     }
 }

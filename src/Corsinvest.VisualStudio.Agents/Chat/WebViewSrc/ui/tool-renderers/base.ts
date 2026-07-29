@@ -25,6 +25,7 @@ import '../components/cv-copy-btn';
 import '../components/cv-diff-preview';
 import { cleanResult, previewText, formatElapsed } from './tool-host';
 import { state as appState } from '../../core/state';
+import { renderMarkdown } from '../../core/markdown';
 import type { ToolHost } from './types';
 
 export abstract class ToolRenderer {
@@ -296,16 +297,42 @@ export abstract class ToolRenderer {
         >`;
     }
 
-    /** The standard IN/OUT body: raw input (IN) + cleaned output (OUT), each a
-     *  clickable cell (opens in VS) with an inline copy button. Pass showOut=false
-     *  to render IN only (e.g. Agent, whose result is just launch metadata). */
-    protected ioGrid(inText = '', showOut = true, inLabel = 'IN'): TemplateResult {
+    /** A path:line reference inside a markdown cell opens that file, not the cell's own temp doc —
+     *  the enclosing row listens for clicks too, so this has to stop the event from reaching it. */
+    protected onMarkdownClick = (e: Event): void => {
+        const a = (e.target as HTMLElement | null)?.closest('a.cv-file-link');
+        const file = a?.getAttribute('data-file');
+        if (!file) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        const line = Number(a?.getAttribute('data-line') ?? 0) || 0;
+        this.host.openFile(file, line, Number(a?.getAttribute('data-line-end') ?? 0) || line);
+    };
+
+    /** The standard IN/OUT body: raw input (IN) + cleaned output (OUT), each a clickable cell
+     *  (opens in VS) with an inline copy button. `showOut: false` renders IN only; `inLabel: ''`
+     *  drops the IN label; `markdown: true` is for cells holding prose instead of tool output. */
+    protected ioGrid(
+        inText = '',
+        opts: { showOut?: boolean; inLabel?: string; markdown?: boolean } = {},
+    ): TemplateResult {
+        const { showOut = true, inLabel = 'IN', markdown = false } = opts;
         const outText = showOut ? cleanResult(this.host.result, this.host.status === 'error') : '';
         if (!inText && !outText) {
             return html`${nothing}`;
         }
-        const preview = (t: string) =>
-            previewText(t, appState.ui.previewLines, this.host.expanded, this.host.clipsOutput);
+        // Markdown cells hold prose (an Agent's prompt and its report), so they render as rich
+        // text and in full: clipping a paragraph mid-sentence hides the answer, and the preview
+        // cap exists for tool output — logs, file dumps — where the first lines are enough.
+        const cell = (t: string, extra = '') =>
+            markdown
+                ? html`<div class="cv-tool-body-md md" @click=${this.onMarkdownClick}>
+                      ${unsafeHTML(renderMarkdown(t))}
+                  </div>`
+                : html`<pre class="cv-tool-body-pre ${extra}">
+${previewText(t, appState.ui.previewLines, this.host.expanded, this.host.clipsOutput)}</pre>`;
         const copyBtn = (text: string, slot: 'in' | 'out') =>
             html`<cv-copy-btn
                 class="cv-tool-body-copy-btn cv-tool-body-copy-${slot}"
@@ -328,8 +355,7 @@ export abstract class ToolRenderer {
                                           : nothing
                                   }
                                   <div class="cv-tool-body-cell">
-                                      <pre class="cv-tool-body-pre">${preview(inText)}</pre>
-                                      ${copyBtn(inText, 'in')}
+                                      ${cell(inText)}${copyBtn(inText, 'in')}
                                   </div>
                               </div>`
                             : nothing
@@ -345,9 +371,7 @@ export abstract class ToolRenderer {
                                       >${this.host.status === 'error' ? 'ERR' : 'OUT'}</span
                                   >
                                   <div class="cv-tool-body-cell">
-                                      <pre class="cv-tool-body-pre cv-tool-body-result">
-${preview(outText)}</pre>
-                                      ${copyBtn(outText, 'out')}
+                                      ${cell(outText, 'cv-tool-body-result')}${copyBtn(outText, 'out')}
                                   </div>
                               </div>`
                             : nothing

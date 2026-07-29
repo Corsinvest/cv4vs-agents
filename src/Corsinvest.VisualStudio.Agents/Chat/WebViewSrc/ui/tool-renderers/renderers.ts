@@ -88,7 +88,10 @@ export class WriteRenderer extends ToolRenderer {
      *  the result only repeats the path already in the header ("File created successfully at: …"),
      *  so it is dropped too — an error still gets its row, being the one thing the header can't say. */
     override body(): TemplateResult | null {
-        return this.ioGrid(this.inputText(), this.host.status === 'error', '');
+        return this.ioGrid(this.inputText(), {
+            showOut: this.host.status === 'error',
+            inLabel: '',
+        });
     }
 }
 
@@ -222,17 +225,18 @@ export class AgentRenderer extends ToolRenderer {
             : nothing;
         return html`${this.nameSpan('Agent')}${this.detailSpan(desc)}${badge}`;
     }
-    // IN = the sub-agent prompt (like the VS Code extension). The tool's own
-    // result is just launch metadata ("Async agent launched… do not mention"),
-    // so there is no OUT — the real work shows as the nested sub-agent rows below.
+    // IN = the sub-agent prompt (like the VS Code extension).
     override inputText(): string {
         return String(
             this.host.input.prompt ?? this.host.input.message ?? this.host.input.description ?? '',
         );
     }
+    // IN is the prompt we handed the sub-agent, OUT the report it handed back — prose on both
+    // sides, so they render as markdown and in full. Keeping the pair on the row itself puts the
+    // answer next to the question, where it is readable without scrolling past the nested rows.
     override body(): TemplateResult | null {
         const inText = this.inputText();
-        return inText ? this.ioGrid(inText, false) : null;
+        return inText ? this.ioGrid(inText, { markdown: true }) : null;
     }
     // A sub-agent's whole transcript (prompt IN + nested rows) is a lot of content, so the
     // row starts collapsed even when previews are on — dot + description until expanded — and

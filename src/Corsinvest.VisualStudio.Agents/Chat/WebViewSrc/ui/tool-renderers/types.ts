@@ -20,9 +20,11 @@ export interface ToolRowState {
     readonly fullLineCount: number;
     readonly elapsedSec: number;
     readonly expanded: boolean;
-    /** Sub-agent id when this row is a child of an Agent — routes open-output to the
-     *  sub-agent transcript. Empty for top-level tools. */
+    /** The sub-agent this row SPAWNED (Agent tool only) — the transcript to fetch on expand. */
     readonly agentId: string;
+    /** The transcript this row LIVES in — routes open-output to that agent-<id>.jsonl.
+     *  Empty in the main session. */
+    readonly containerAgentId: string;
     /** How many nested children this row holds (Agent tool today). 0 for a normal tool. */
     readonly childCount: number;
     clipsOutput: boolean;

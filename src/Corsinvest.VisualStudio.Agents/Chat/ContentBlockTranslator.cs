@@ -127,7 +127,17 @@ internal static class ContentBlockTranslator
                     string text;
                     if (resultContent is JArray arr)
                     {
-                        text = string.Join("\n", arr.Where(c => c.Val("type", "") == "text").Select(c => c.Val("text", "")));
+                        var texts = arr.Where(c => c.Val("type", "") == "text").Select(c => c.Val("text", "")).ToList();
+                        // The Agent tool's result is padded with blocks addressed to the model, not
+                        // the user: a trailing handle ("agentId: … use SendMessage to continue this
+                        // agent" + counters the UI already gets structured from task_progress), and
+                        // sometimes a leading harness warning about instruction-shaped output. Both
+                        // belong to the hand-off, not to the sub-agent — the transcript the history
+                        // path reads has neither. Its report is the last block before the handle;
+                        // keeping just that one makes live and history show the same thing.
+                        text = agentId != null && texts.Count > 1
+                            ? texts[texts.Count - 2]
+                            : string.Join("\n", texts);
                     }
                     else
                     {
@@ -137,7 +147,10 @@ internal static class ContentBlockTranslator
                     send(BridgeMessages.ToWebView.Chat.ToolResult, new Contracts.ToolResultNotification
                     {
                         ToolUseId = item.Val("tool_use_id", ""),
-                        Result = TruncateLines(text, previewLines),
+                        // The sub-agent's report is a message to read whole, not a tool output to
+                        // preview — the history path shows it in full, from the transcript. Every
+                        // other tool stays capped and opens in full on demand.
+                        Result = agentId == null ? TruncateLines(text, previewLines) : text,
                         IsError = item.Val("is_error", false),
                         ParentToolUseId = parentToolUseId,
                         AgentId = agentId,
