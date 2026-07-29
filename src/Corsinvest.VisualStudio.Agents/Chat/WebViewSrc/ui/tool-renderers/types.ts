@@ -18,6 +18,10 @@ export interface ToolRowState {
     readonly status: ToolStatus;
     readonly result: string;
     readonly fullLineCount: number;
+    /** Lines the edit landed on, straight from the CLI's patch. 0 when the tool isn't an edit,
+     *  wrote a new file, or hasn't finished yet. */
+    readonly editStartLine: number;
+    readonly editEndLine: number;
     readonly elapsedSec: number;
     readonly expanded: boolean;
     /** The sub-agent this row SPAWNED (Agent tool only) — the transcript to fetch on expand. */

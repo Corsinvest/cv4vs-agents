@@ -336,6 +336,14 @@ public sealed partial class SessionManager
                         ? subagent.SpawnedAgentIdFor(msg)
                         : ToolUseResultField(obj, "agentId");
                     if (!string.IsNullOrEmpty(agentId)) { msg["agentId"] = agentId; }
+                    // Same lift for the edit's line range: toolUseResult doesn't survive into the
+                    // replay, so what HistoryReplay needs has to travel on the message itself.
+                    var editRange = ToolUseResultEditRange(obj["toolUseResult"] as JObject);
+                    if (editRange.Start > 0)
+                    {
+                        msg["editStartLine"] = editRange.Start;
+                        msg["editEndLine"] = editRange.End;
+                    }
                     messagesNewestFirst.Add(msg);
                 }
 

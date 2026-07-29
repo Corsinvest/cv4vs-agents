@@ -94,7 +94,8 @@ internal static class ContentBlockTranslator
                                 string parentToolUseId = null,
                                 string uuid = null,
                                 string agentId = null,
-                                long? timestamp = null)
+                                long? timestamp = null,
+                                (int Start, int End) editRange = default)
     {
         if (content == null) { return; }
         // agentId (the Agent tool's sub-agent id) is surfaced on the tool_result so
@@ -157,6 +158,8 @@ internal static class ContentBlockTranslator
                         // Full (untruncated) non-empty line count; count-only renderers
                         // (Grep/Glob) show this instead of counting the clipped preview.
                         FullLineCount = StringHelpers.NonEmptyLineCount(text),
+                        EditStartLine = editRange.Start,
+                        EditEndLine = editRange.End,
                     });
                 }
                 else if (type == "text")

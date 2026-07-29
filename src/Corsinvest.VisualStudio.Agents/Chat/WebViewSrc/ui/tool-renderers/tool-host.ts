@@ -12,7 +12,6 @@ import { openDiffDialog } from '../../core/dialog-host';
 import type { ToolHost, ToolRowState } from './types';
 import type {
     IdeFileNotification,
-    IdeFileAtEditNotification,
     ExternalUrlNotification,
     DiffDialogNotification,
     ToolOutputNotification,
@@ -51,6 +50,12 @@ export class BridgeToolHost implements ToolHost {
     }
     get fullLineCount(): number {
         return this.row.fullLineCount ?? 0;
+    }
+    get editStartLine(): number {
+        return this.row.editStartLine ?? 0;
+    }
+    get editEndLine(): number {
+        return this.row.editEndLine ?? 0;
     }
     get agentId(): string {
         return this.row.agentId ?? '';
@@ -99,14 +104,10 @@ export class BridgeToolHost implements ToolHost {
         if (!filePath) {
             return;
         }
-        const inp = this.input;
-        bridge.sendNotification<IdeFileAtEditNotification>(Msg.fromWebView.open.ideFileAtEdit, {
-            filePath,
-            oldString: String(inp.old_string ?? ''),
-            newString: String(inp.new_string ?? inp.content ?? ''),
-            startLine: 0,
-            endLine: 0,
-        });
+        // The lines come from the patch the CLI computed applying the edit, carried on the tool
+        // result — no searching the file for text that may well have changed since. 0 while the
+        // tool is still running, or when it created a new file: then it just opens.
+        this.openFile(filePath, this.row.editStartLine, this.row.editEndLine);
     }
 
     openUrl(url: string): void {

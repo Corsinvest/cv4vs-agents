@@ -54,7 +54,6 @@ internal static class BridgeMessages
         public static class Open
         {
             public const string IdeFile = "open_ide_file";
-            public const string IdeFileAtEdit = "open_ide_file_at_edit";
             public const string IdeOutputWindow = "open_ide_output_window";
             public const string ToolOutput = "open_tool_output";
             public const string ExternalUrl = "open_external_url";
