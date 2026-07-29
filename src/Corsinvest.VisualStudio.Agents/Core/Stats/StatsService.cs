@@ -272,13 +272,16 @@ internal static class StatsService
             .OrderByDescending(d => d, StringComparer.Ordinal)
             .ToList();
 
-        // Sessions: one per .jsonl (whole file), placed by last activity, titled via SessionManager
-        // (realtime — no stale cached title). Range filter on last-activity day.
-        var titles = SessionTitles(paths, cwd);
-        var sessions = new DirectoryInfo(projectDir)
-            .EnumerateFiles("*.jsonl", SearchOption.TopDirectoryOnly)
-            .Select(f => (id: SessionIdOf(f.Name),
-                when: lastActivity.TryGetValue(SessionIdOf(f.Name), out var la) ? la : f.CreationTime))
+        // Sessions: whatever SessionManager considers a session, so this branch and the chat's own
+        // picker agree on what one IS. Enumerating the .jsonl directly counted every file the CLI
+        // ever opened — sessions with no prompt in them, and sub-agent transcripts — which is how a
+        // project came to list a thousand undated rows. Load() drops both (no title of any kind →
+        // no prompt was ever sent; IsSidechain → a sub-agent) and brings the title along.
+        // Placed by cached last-activity, NOT the file's mtime: SetAiTitle and a rename touch the
+        // file without adding a message, and a copied file carries today's mtime with old contents.
+        var sessions = SessionsFor(paths, cwd)
+            .Select(s => (id: s.Id, title: s.Title,
+                when: lastActivity.TryGetValue(s.Id, out var la) ? la : s.LastUsedAt))
             .Where(s => s.when.Date >= minDay)
             .OrderByDescending(s => s.when)
             .ToList();
@@ -333,12 +336,11 @@ internal static class StatsService
             }
             foreach (var s in sessions)
             {
-                titles.TryGetValue(s.id, out var title);
                 var time = s.when.ToString("g", CultureInfo.CurrentCulture);
                 parent.Children.Add(new StatsTreeNode
                 {
-                    Label = string.IsNullOrEmpty(title) ? time : title,
-                    Tooltip = string.IsNullOrEmpty(title) ? null : $"{time} — {title}",
+                    Label = string.IsNullOrEmpty(s.title) ? time : s.title,
+                    Tooltip = string.IsNullOrEmpty(s.title) ? null : $"{time} — {s.title}",
                     Selection = new StatsSelection
                     {
                         Scope = StatsScope.Session,
@@ -374,21 +376,25 @@ internal static class StatsService
         return seen;
     }
 
-    // sessionId → title, read live via SessionManager (custom/ai title or last prompt). Empty when
-    // the working directory is unknown (no cwd yet) or the folder is missing.
-    private static Dictionary<string, string> SessionTitles(ClaudePaths paths, string cwd)
+    // The project's real sessions, read live via SessionManager — the same list the chat's picker
+    // shows, titles included. Empty when the working directory is unknown (not indexed yet, so the
+    // cache holds no cwd) or the folder is missing; the tree then shows the project's Days only.
+    private static List<Sessions.SessionInfo> SessionsFor(ClaudePaths paths, string cwd)
     {
-        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrEmpty(cwd)) { return map; }
+        if (string.IsNullOrEmpty(cwd))
+        {
+            OutputWindowLogger.Warn("[stats] no cwd for this project — listing its sessions is not possible");
+            return [];
+        }
         try
         {
-            foreach (var s in new Sessions.SessionManager(paths, cwd).Load())
-            {
-                if (s.Id != null && !string.IsNullOrEmpty(s.Title)) { map[s.Id] = s.Title; }
-            }
+            return [.. new Sessions.SessionManager(paths, cwd).Load().Where(s => s.Id != null)];
         }
-        catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".SessionTitles", ex); }
-        return map;
+        catch (Exception ex)
+        {
+            OutputWindowLogger.LogException(nameof(StatsService) + ".SessionsFor", ex);
+            return [];
+        }
     }
 
     /// <summary>A readable label for a CLI project dir. The dir name is a LOSSY encoding of the real
