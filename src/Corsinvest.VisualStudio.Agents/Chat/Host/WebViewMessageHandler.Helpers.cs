@@ -188,12 +188,42 @@ internal sealed partial class WebViewMessageHandler
         Contracts.StatsRangeDto.Days7 => Core.Stats.StatsRange.Last7d,
         _ => Core.Stats.StatsRange.All,
     };
+    /// <summary>Open <paramref name="filePath"/> in the text editor, or null when VS won't.
+    /// A file the solution itself owns — the .csproj of a loaded project — is not the shell's to
+    /// hand out: it throws "already open as a project or solution", and asking for the primary
+    /// view instead throws the same. There is no view kind that opens it, so that case is reported
+    /// rather than retried; unloading the project to satisfy a chat link would be worse than the
+    /// link not working.</summary>
+    private static Window OpenWindow(DTE2 dte, string filePath)
+    {
+        try
+        {
+            return dte?.ItemOperations?.OpenFile(filePath, Constants.vsViewKindTextView);
+        }
+        catch (ArgumentException ex)
+        {
+            // What VS throws for a project/solution file; the caller's Warn already names the file.
+            OutputWindowLogger.Debug(() => $"[chat] OpenFile refused: {ex.Message}");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.LogException("OpenFileInEditor", ex);
+            return null;
+        }
+    }
+
     private static async Task OpenFileInEditorAsync(string filePath, int startLine, int endLine)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
-        var window = dte?.ItemOperations?.OpenFile(filePath, Constants.vsViewKindTextView);
-        if (window == null) { return; }
+        var window = OpenWindow(dte, filePath);
+        if (window == null)
+        {
+            // A click on a file link that does nothing at all reads as a broken link, so say why.
+            OutputWindowLogger.Warn($"[chat] Visual Studio would not open '{filePath}' — it refuses a file already open as a project or solution (its own .csproj, say)");
+            return;
+        }
         window.Activate();
         if (startLine <= 0) { return; }
         await Task.Yield();
