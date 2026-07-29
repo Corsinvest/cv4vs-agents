@@ -51,18 +51,6 @@ public class IdeFileNotification
     public int EndLine { get; set; }
 }
 
-/// <summary>Open a file at an edit site (open_ide_file_at_edit): when startLine is 0 the
-/// host locates the range by matching oldString. newString is sent by the WebView but not
-/// used host-side (kept so the payload type matches what's posted).</summary>
-public class IdeFileAtEditNotification
-{
-    public string FilePath { get; set; }
-    public int StartLine { get; set; }
-    public int EndLine { get; set; }
-    public string OldString { get; set; }
-    public string NewString { get; set; }
-}
-
 /// <summary>Query for @-mention file/dir suggestions (file_get_suggestions).</summary>
 public class GetSuggestionsRequest
 {

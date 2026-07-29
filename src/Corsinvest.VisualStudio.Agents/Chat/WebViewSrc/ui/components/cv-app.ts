@@ -1095,6 +1095,8 @@ export class CvApp extends LitElement {
             status: 'pending',
             result: '',
             fullLineCount: 0,
+            editStartLine: 0,
+            editEndLine: 0,
             elapsedSec: 0,
             agentId: spawned?.taskId,
         };
@@ -1105,6 +1107,8 @@ export class CvApp extends LitElement {
         e.status = d.isError ? 'error' : 'done';
         e.result = d.result ?? '';
         e.fullLineCount = d.fullLineCount ?? 0;
+        e.editStartLine = d.editStartLine ?? 0;
+        e.editEndLine = d.editEndLine ?? 0;
         if (d.agentId) {
             e.agentId = d.agentId;
         }
@@ -1474,6 +1478,8 @@ export class CvApp extends LitElement {
             .elapsedSec=${e.elapsedSec}
             .childItems=${e.children?.items ?? []}
             .fullLineCount=${e.fullLineCount}
+            .editStartLine=${e.editStartLine}
+            .editEndLine=${e.editEndLine}
             .agentId=${e.agentId ?? ''}
             .hasMore=${e.children?.hasMore ?? false}
             .showAll=${e.children?.showAll ?? false}

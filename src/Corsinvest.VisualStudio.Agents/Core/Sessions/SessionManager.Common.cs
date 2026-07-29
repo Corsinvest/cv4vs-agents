@@ -81,6 +81,47 @@ public sealed partial class SessionManager
     /// indexer access would throw — this guards the object shape.</summary>
     internal static string ToolUseResultField(JObject line, string field)
         => (line?["toolUseResult"] as JObject)?[field]?.Value<string>();
+
+    /// <summary>Lines the CLI computed when it applied an edit, from the first hunk of
+    /// structuredPatch. Takes the toolUseResult object itself — live already holds one, history
+    /// reads it off the line. (0, 0) when there is no patch (a Write on a new file has none) or
+    /// the shape isn't the expected one. MultiEdit yields several non-contiguous hunks; the first
+    /// is where the change starts, which is where to jump.
+    /// newStart/newLines span the whole hunk, context lines included — selecting that range would
+    /// highlight three untouched lines either side. The added lines are the answer, so walk
+    /// `lines`: '+' and context both exist in the file after the edit and advance the counter,
+    /// '-' lines are gone and don't. An all-context hunk (no '+') falls back to the whole
+    /// span.</summary>
+    internal static (int Start, int End) ToolUseResultEditRange(JObject toolUseResult)
+    {
+        if (toolUseResult?["structuredPatch"] is not JArray hunks
+            || hunks.Count == 0
+            || hunks[0] is not JObject first)
+        {
+            return (0, 0);
+        }
+        var hunkStart = first["newStart"]?.Value<int>() ?? 0;
+        if (hunkStart <= 0) { return (0, 0); }
+
+        var line = hunkStart;
+        var addedStart = 0;
+        var addedEnd = 0;
+        foreach (var entry in first["lines"] as JArray ?? [])
+        {
+            var text = entry?.Value<string>() ?? "";
+            if (text.StartsWith("-")) { continue; }
+            if (text.StartsWith("+"))
+            {
+                if (addedStart == 0) { addedStart = line; }
+                addedEnd = line;
+            }
+            line++;
+        }
+        if (addedStart > 0) { return (addedStart, addedEnd); }
+
+        var span = first["newLines"]?.Value<int>() ?? 0;
+        return span > 0 ? (hunkStart, hunkStart + span - 1) : (hunkStart, hunkStart);
+    }
     /// <summary>A path token (sessionId/agentId) is safe only if it's a plain id —
     /// letters, digits, '-' and '_'. Blocks separators and '..' traversal.</summary>
     internal static bool IsSafePathToken(string s)

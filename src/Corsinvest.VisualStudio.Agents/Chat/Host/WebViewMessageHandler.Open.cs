@@ -29,39 +29,6 @@ internal sealed partial class WebViewMessageHandler
         }).FileAndForget(nameof(WebViewMessageHandler));
     }
 
-    private void HandleIdeFileAtEdit(JObject data, int? id)
-    {
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var p = data.ToObject<Contracts.IdeFileAtEditNotification>();
-            var filePath = ResolveFilePath(p.FilePath ?? "");
-            if (filePath == null) { return; }
-            var fileLines = File.ReadAllLines(filePath);
-            int startLine = p.StartLine;
-            int endLine = p.EndLine;
-            if (startLine == 0)
-            {
-                var oldString = p.OldString ?? "";
-                if (!string.IsNullOrEmpty(oldString))
-                {
-                    var oldLines = oldString.Replace("\r\n", "\n").Split('\n');
-                    var firstLine = oldLines[0].Trim();
-                    for (int i = 0; i <= fileLines.Length - oldLines.Length; i++)
-                    {
-                        if (fileLines[i].Contains(firstLine))
-                        {
-                            startLine = i + 1;
-                            endLine = i + oldLines.Length;
-                            break;
-                        }
-                    }
-                }
-            }
-            await OpenFileInEditorAsync(filePath, startLine, endLine);
-        }).FileAndForget(nameof(WebViewMessageHandler));
-    }
-
     private void HandleToolOutput(JObject data, int? id)
     {
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>

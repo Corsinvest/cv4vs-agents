@@ -162,7 +162,6 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.UpdatedPermissions)).Optional();
         AddInterface<SetSendSelectionNotification>();
         AddInterface<IdeFileNotification>();
-        AddInterface<IdeFileAtEditNotification>();
         AddInterface<GetSuggestionsRequest>();
         // agentId/toolName omitted by openError() → optional.
         AddInterface<ToolOutputNotification>()

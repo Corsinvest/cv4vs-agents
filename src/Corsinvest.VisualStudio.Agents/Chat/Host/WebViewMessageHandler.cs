@@ -64,10 +64,6 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge, IClaud
                 HandleIdeFile(data, id);
                 break;
 
-            case BridgeMessages.FromWebView.Open.IdeFileAtEdit:
-                HandleIdeFileAtEdit(data, id);
-                break;
-
             case BridgeMessages.FromWebView.File.GetSuggestions:
                 HandleGetSuggestions(data, id);
                 break;
