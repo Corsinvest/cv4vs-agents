@@ -169,6 +169,26 @@ export class CvSubagentChip extends LitElement {
         }
     };
 
+    /** Left padding in px per task, walking up parentTaskId. The list arrives ordered depth-first,
+     *  so a child always sits under its parent and the indent reads as the tree. */
+    private _indents(): Map<string, number> {
+        const byId = new Map(this.tasks.map((t) => [t.taskId, t]));
+        const out = new Map<string, number>();
+        for (const t of this.tasks) {
+            let depth = 0;
+            let cur: SubagentTask | undefined = t;
+            // The cap is a cycle guard: parentTaskId is derived, not guaranteed acyclic.
+            while (cur?.parentTaskId && depth < 8) {
+                cur = byId.get(cur.parentTaskId);
+                if (cur) {
+                    depth++;
+                }
+            }
+            out.set(t.taskId, depth * 16);
+        }
+        return out;
+    }
+
     /** The CLI prefixes the description with its own status verb ("Running Run build…"), which
      *  the live dot already conveys — strip it so the row reads as the task itself. */
     private _desc(t: SubagentTask): string {
@@ -203,6 +223,7 @@ export class CvSubagentChip extends LitElement {
         if (n === 0) {
             return nothing;
         }
+        const indents = this._indents();
         return html`<fluent-button
                 id="cv-subagent-chip-btn"
                 class="chip"
@@ -236,10 +257,17 @@ export class CvSubagentChip extends LitElement {
                 </div>
                 ${this.tasks.map(
                     (t) =>
-                        html`<div class="row">
+                        html`<div
+                            class="row"
+                            style=${
+                                indents.get(t.taskId)
+                                    ? `padding-left:${indents.get(t.taskId)}px`
+                                    : ''
+                            }
+                        >
                             <span class="cv-dot active"></span>
                             <div class="main">
-                                <div class="desc">${this._desc(t)}</div>
+                                <div class="desc" title=${this._desc(t)}>${this._desc(t)}</div>
                                 <div class="meta">
                                     <span class="now"
                                         >${t.recentTools[t.recentTools.length - 1] ?? '—'}</span

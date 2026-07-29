@@ -200,7 +200,7 @@ export class CvApp extends LitElement {
                         // The final assistant notification carries the message time; live fallback = now.
                         streaming.timestamp = data?.timestamp ?? Date.now();
                         this._streamingMsgs.delete(parentId);
-                        this._entries = [...this._entries];
+                        this._commit(streaming);
                     } else {
                         const entry = CvApp.buildAssistantEntry(data);
                         entry.timestamp = data?.timestamp ?? Date.now();
@@ -228,7 +228,7 @@ export class CvApp extends LitElement {
                         // Auto-follow only if already near the bottom.
                         const atBottom = this._isNearBottom();
                         streaming.text += delta;
-                        this._entries = [...this._entries];
+                        this._commit(streaming);
                         if (atBottom) {
                             queueMicrotask(() => this._scrollToBottom('instant'));
                         }
@@ -269,7 +269,7 @@ export class CvApp extends LitElement {
                             entry.tokens = (entry.tokens ?? 0) + data.estimatedTokens;
                         }
                     }
-                    this._entries = [...this._entries];
+                    this._commit(entry);
                 },
             ),
         );
@@ -294,7 +294,7 @@ export class CvApp extends LitElement {
                     entry.streaming = false;
                     entry.durationMs = entry.startedAt ? Date.now() - entry.startedAt : 0;
                     this._thinkingMsgs.delete(parentId);
-                    this._entries = [...this._entries];
+                    this._commit(entry);
                 },
             ),
         );
@@ -432,13 +432,10 @@ export class CvApp extends LitElement {
                             name: data.name,
                             input: (data.input ?? {}) as Record<string, unknown>,
                         };
-                        this._entries = [...this._entries];
+                        this._commit(existing);
                         return;
                     }
-                    this._appendEntry(
-                        CvApp.buildToolEntry(data),
-                        data.parentToolUseId ?? undefined,
-                    );
+                    this._appendEntry(this.buildToolEntry(data), data.parentToolUseId ?? undefined);
                     queueMicrotask(() => this._scrollToBottom());
                 },
             ),
@@ -455,7 +452,7 @@ export class CvApp extends LitElement {
                 }
                 const atBottom = this._isNearBottom();
                 CvApp.applyToolResult(tool, data);
-                this._entries = [...this._entries];
+                this._commit(tool);
                 // The result grows the tool row (e.g. an answered ask); follow it down so the
                 // view doesn't stay stuck on the tool until the next message arrives.
                 if (atBottom) {
@@ -478,7 +475,7 @@ export class CvApp extends LitElement {
                     // Wire field is elapsedSeconds (from the host); the entry keeps it as
                     // elapsedSec (internal UI state).
                     tool.elapsedSec = data.elapsedSeconds ?? 0;
-                    this._entries = [...this._entries];
+                    this._commit(tool);
                 },
             ),
         );
@@ -554,7 +551,14 @@ export class CvApp extends LitElement {
                         usage: { totalTokens: 0, toolUses: 0, durationMs: 0 },
                     });
                     this._subagentTasks = m;
-                    appState.subagentTasks = [...m.values()];
+                    this._publishSubagentTasks(m);
+                    // The Agent row usually arrives after this, and picks the id up in
+                    // buildToolEntry; tag it here too in case it got in first.
+                    const row = d.toolUseId ? this._findTool(d.toolUseId) : null;
+                    if (row && !row.agentId) {
+                        row.agentId = d.taskId;
+                        this._commit(row);
+                    }
                 },
             ),
         );
@@ -584,7 +588,7 @@ export class CvApp extends LitElement {
                         usage: d.usage ?? prev.usage,
                     });
                     this._subagentTasks = m;
-                    appState.subagentTasks = [...m.values()];
+                    this._publishSubagentTasks(m);
                 },
             ),
         );
@@ -598,7 +602,7 @@ export class CvApp extends LitElement {
                     const m = new Map(this._subagentTasks);
                     m.delete(d.taskId);
                     this._subagentTasks = m;
-                    appState.subagentTasks = [...m.values()];
+                    this._publishSubagentTasks(m);
                 },
             ),
         );
@@ -699,7 +703,7 @@ export class CvApp extends LitElement {
                 case Msg.toWebView.chat.toolPermission: {
                     const d = ev.data as ToolPermissionNotification;
                     if (d.id && d.name) {
-                        place(CvApp.buildToolEntry(d), d.parentToolUseId);
+                        place(this.buildToolEntry(d), d.parentToolUseId);
                     }
                     break;
                 }
@@ -772,15 +776,6 @@ export class CvApp extends LitElement {
                                     c.text?.trim() === prompt
                                 ),
                         );
-                    }
-                    // Child tool rows inherit the Agent's agentId so the open-output path
-                    // routes to the sub-agent transcript file (agent-<agentId>.jsonl).
-                    if (e.agentId) {
-                        for (const c of children) {
-                            if (c.kind === 'tool') {
-                                c.agentId = e.agentId;
-                            }
-                        }
                     }
                     e.children = {
                         items: children.slice(-3),
@@ -871,11 +866,6 @@ export class CvApp extends LitElement {
                 ) {
                     return;
                 }
-                // Inherit agentId from the parent Agent entry to child tool rows,
-                // so the open-output path can route to the sub-agent transcript.
-                if (parent.agentId && entry.kind === 'tool') {
-                    (entry as UiToolEntry).agentId = parent.agentId;
-                }
                 // First child under this parent creates the children block.
                 const kids = (parent.children ??= { items: [], hasMore: false, showAll: false });
                 if (kids.showAll) {
@@ -889,7 +879,7 @@ export class CvApp extends LitElement {
                     }
                     kids.items = [...kids.items, entry].slice(-3);
                 }
-                this._entries = [...this._entries];
+                this._commit(parent);
                 return;
             }
         }
@@ -914,6 +904,8 @@ export class CvApp extends LitElement {
             //    already streamed them in → no fetch.
             //  - Show all (preview=false): mark showAll; fetch the whole transcript only if there's
             //    more than we hold (hasMore = a history preview). Live/already-full → just show all.
+            // The CLI writes the transcript as the agent runs, so a fetch mid-run returns
+            // everything that has happened so far — no need to special-case a running agent.
             const showAll = !preview;
             // Show all sets the flag; preview (chevron open) leaves it false → renderChildren shows ≤3.
             // Row open/closed is the component's own `_expanded`, not tracked here.
@@ -923,12 +915,8 @@ export class CvApp extends LitElement {
                 ? kids.items.length === 0 // history preview
                 : kids.hasMore; // Show all with more on disk than we hold
             if (!needFetch) {
-                this._entries = [...this._entries];
+                this._commit(parent);
                 return;
-            }
-            // Show all replaces with the whole transcript, so clear first (it re-adds in order).
-            if (showAll) {
-                kids.items = [];
             }
             fetchSubagent(agentId, { preview: !!preview })
                 .then((data) => {
@@ -938,19 +926,26 @@ export class CvApp extends LitElement {
                     }
                     const pk = (p.children ??= { items: [], hasMore: false, showAll: false });
                     const full = this._replayEvents(data.events ?? []);
-                    // The transcript's first user message echoes the launch prompt (already shown as
-                    // the Agent row's IN). Its events carry no parentToolUseId, so the _replayEvents
-                    // post-pass filter doesn't reach them — drop the echo here.
+                    // The transcript opens and closes with what the Agent row already shows in its
+                    // own cells: the launch prompt (IN) and the closing report (OUT, from the
+                    // tool_result the parent recorded). Both would read as duplicates among the
+                    // sub-agent's steps. Their events carry no parentToolUseId, so the
+                    // _replayEvents post-pass filter doesn't reach them — drop them here.
                     const prompt = String(p.data?.input?.prompt ?? '').trim();
-                    let list = pk.items;
+                    const report = (p.result ?? '').trim();
+                    // Show all replaces the kept ≤3 with the whole transcript, in file order.
+                    // Cleared HERE, not before the fetch: an empty list hides the Show all button
+                    // (componentHeaderActions), so the row would lose its control mid-flight.
+                    let list = showAll ? [] : pk.items;
                     for (const child of full) {
-                        if (
-                            prompt &&
-                            child.kind === 'text' &&
-                            child.role === 'user' &&
-                            child.text?.trim() === prompt
-                        ) {
-                            continue;
+                        if (child.kind === 'text') {
+                            const t = child.text?.trim();
+                            if (prompt && child.role === 'user' && t === prompt) {
+                                continue;
+                            }
+                            if (report && child.role === 'assistant' && t === report) {
+                                continue;
+                            }
                         }
                         list = this._upsertChild(list, child);
                     }
@@ -959,7 +954,7 @@ export class CvApp extends LitElement {
                     pk.items = preview ? list.slice(-3) : list;
                     pk.hasMore = preview ? list.length > 3 : false;
                     pk.showAll = !preview;
-                    this._entries = [...this._entries];
+                    this._commit(p);
                 })
                 .catch(() => {
                     /* timeout / not found — leave the kept children as-is */
@@ -971,7 +966,7 @@ export class CvApp extends LitElement {
             kids.showAll = false;
             kids.hasMore = kids.items.length > 3;
         }
-        this._entries = [...this._entries];
+        this._commit(parent);
     };
 
     /** A compact separator's <details> opened for the first time: fetch the summary lazily
@@ -1082,9 +1077,13 @@ export class CvApp extends LitElement {
         };
     }
 
-    /** ToolPermissionNotification → a pending tool row. */
-    private static buildToolEntry(d: ToolPermissionNotification): UiToolEntry {
+    /** ToolPermissionNotification → a pending tool row. An Agent row takes the id of the
+     *  sub-agent it launched: task_started names both ids and lands just before this, whereas
+     *  the result only carries agentId in history — live it is null, and without it the row has
+     *  no transcript to open. */
+    private buildToolEntry(d: ToolPermissionNotification): UiToolEntry {
         const input = (d.input ?? {}) as Record<string, unknown>;
+        const spawned = [...this._subagentTasks.values()].find((t) => t.toolUseId === d.id);
         return {
             kind: 'tool',
             id: ++_entryIdSeq,
@@ -1094,6 +1093,7 @@ export class CvApp extends LitElement {
             result: '',
             fullLineCount: 0,
             elapsedSec: 0,
+            agentId: spawned?.taskId,
         };
     }
 
@@ -1120,6 +1120,93 @@ export class CvApp extends LitElement {
         return next;
     }
 
+    /** Publish the running sub-agents, each linked to the task that launched it and ordered so a
+     *  child follows its parent. The wire has no parent link — task_started only names the Agent
+     *  row — so it is read off the tree, where nesting is the row's position. Recomputed on every
+     *  update: a task can beat its own row by a few ms and would otherwise stay flat. */
+    private _publishSubagentTasks(tasks: Map<string, SubagentTask>): void {
+        // The Agent row enclosing the one that launched this task. Descends carrying the current
+        // container, so finding the row IS finding its parent.
+        const enclosingToolOf = (toolUseId?: string): string | undefined => {
+            if (!toolUseId) {
+                return undefined;
+            }
+            const walk = (list: UiEntry[], container?: string): string | undefined | false => {
+                for (const e of list) {
+                    if (e.kind !== 'tool') {
+                        continue;
+                    }
+                    if (e.toolUseId === toolUseId) {
+                        return container;
+                    }
+                    if (e.children?.items.length) {
+                        const hit = walk(e.children.items, e.toolUseId);
+                        if (hit !== false) {
+                            return hit;
+                        }
+                    }
+                }
+                return false; // not in this branch — distinct from "found, no container"
+            };
+            const hit = walk(this._entries);
+            return hit === false ? undefined : hit;
+        };
+
+        const byToolUse = new Map<string, string>();
+        for (const t of tasks.values()) {
+            if (t.toolUseId) {
+                byToolUse.set(t.toolUseId, t.taskId);
+            }
+        }
+        const linked = [...tasks.values()].map((t) => {
+            const parentTool = enclosingToolOf(t.toolUseId);
+            return { ...t, parentTaskId: parentTool ? byToolUse.get(parentTool) : undefined };
+        });
+        // Depth-first: every task is emitted right after its parent, so the indent in the popover
+        // lines up with who launched whom.
+        const childrenOf = (parentTaskId?: string) =>
+            linked.filter((t) => t.parentTaskId === parentTaskId);
+        const flatten = (parentTaskId?: string): SubagentTask[] =>
+            childrenOf(parentTaskId).flatMap((t) => [t, ...flatten(t.taskId)]);
+        const ordered = flatten(undefined);
+        // A task whose parent is gone (ended while the child runs) would vanish from the walk —
+        // keep it, at top level.
+        const seen = new Set(ordered.map((t) => t.taskId));
+        appState.subagentTasks = [...ordered, ...linked.filter((t) => !seen.has(t.taskId))];
+    }
+
+    /** Commit an in-place change to `target` so it reaches the DOM. Lit diffs properties by
+     *  identity and requestUpdate() only refreshes the component it's called on, so mutating a
+     *  row nested inside an Agent leaves every array ABOVE it untouched: the ancestors skip their
+     *  update and their renderChildren never re-reads the new list. Re-identifying just the
+     *  arrays on the path is Lit's prescribed top-down immutable flow, and leaves rows that
+     *  didn't change alone. Pass the row itself, or the Agent holding it for a text child. */
+    private _commit(target?: UiEntry | null): void {
+        if (target) {
+            // Walk down re-identifying each children array that leads to the target; returns
+            // true for the branch that holds it, so the copy happens on the way back up.
+            const refresh = (list: UiEntry[]): boolean => {
+                let found = false;
+                for (const e of list) {
+                    if (e.kind !== 'tool' || !e.children?.items.length) {
+                        continue;
+                    }
+                    if (e.children.items.includes(target) || refresh(e.children.items)) {
+                        e.children = { ...e.children, items: [...e.children.items] };
+                        found = true;
+                    }
+                }
+                return found;
+            };
+            // render() maps _exchanges, not _entries: the entry objects are shared between the
+            // two, so only the group array holding the path needs a new identity.
+            this._exchanges = this._exchanges.map((g) =>
+                g.includes(target) || refresh(g) ? [...g] : g,
+            );
+        }
+        this._entries = [...this._entries];
+    }
+
     /** Find a tool entry by toolUseId, walking nested children. */
     private _findTool(toolUseId: string): UiToolEntry | null {
         const visit = (list: UiEntry[]): UiToolEntry | null => {
@@ -1142,7 +1229,8 @@ export class CvApp extends LitElement {
         return visit(this._entries);
     }
 
-    /** Locate an Agent tool entry by its sub-agent id (set on the Agent record). */
+    /** Locate an Agent tool entry by the sub-agent it spawned. Unique: only an Agent row carries
+     *  an agentId, and it names the transcript that row alone opened. */
     private _findToolByAgentId(agentId: string): UiToolEntry | null {
         const visit = (list: UiEntry[]): UiToolEntry | null => {
             for (const e of list) {
