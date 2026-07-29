@@ -233,9 +233,7 @@
     <Compile Include="Core\Stats\StatsAggregator.cs" />
     <Compile Include="Core\Stats\StatsCache.cs" />
     <Compile Include="Core\Stats\StatsService.cs" />
-    <Compile Include="Core\Stats\StatisticsEditorFactory.cs" />
-    <Compile Include="Core\Stats\StatisticsEditorPane.cs" />
-    <Compile Include="Core\Stats\StatisticsDocument.cs" />
+    <Compile Include="Core\Stats\StatisticsWindow.cs" />
     <Compile Include="Core\Stats\StatsPalette.cs" />
     <Compile Include="Core\Stats\ModelRow.cs" />
     <Compile Include="Core\Stats\StatsChart.cs" />
@@ -249,18 +247,14 @@
     </Compile>
     <Compile Include="Core\Usage\UsageMapper.cs" />
     <Compile Include="Core\Usage\UsageProbe.cs" />
-    <Compile Include="Core\Usage\UsageEditorFactory.cs" />
-    <Compile Include="Core\Usage\UsageEditorPane.cs" />
-    <Compile Include="Core\Usage\UsageDocument.cs" />
+    <Compile Include="Core\Usage\UsageWindow.cs" />
     <Compile Include="Core\Usage\UsageControl.xaml.cs">
       <DependentUpon>UsageControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Core\Context\ContextProbe.cs" />
     <Compile Include="Core\Context\CvContextPalette.cs" />
     <Compile Include="Core\Context\CvMemoryMap.cs" />
-    <Compile Include="Core\Context\ContextEditorFactory.cs" />
-    <Compile Include="Core\Context\ContextEditorPane.cs" />
-    <Compile Include="Core\Context\ContextDocument.cs" />
+    <Compile Include="Core\Context\ContextWindow.cs" />
     <Compile Include="Core\Context\ContextUsageControl.xaml.cs">
       <DependentUpon>ContextUsageControl.xaml</DependentUpon>
     </Compile>
