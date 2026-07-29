@@ -7,7 +7,9 @@
 
 import HandRight20Regular from '@fluentui/svg-icons/icons/hand_right_20_regular.svg';
 import Code20Regular from '@fluentui/svg-icons/icons/code_20_regular.svg';
-import ClipboardTask20Regular from '@fluentui/svg-icons/icons/clipboard_task_20_regular.svg';
+// A bullet list, not the task clipboard: that one carries a tick, and at 16px next to the
+// menu's own selection check it reads as a second checkbox saying the opposite.
+import ClipboardBulletListLtr20Regular from '@fluentui/svg-icons/icons/clipboard_bullet_list_ltr_20_regular.svg';
 import Flash20Regular from '@fluentui/svg-icons/icons/flash_20_regular.svg';
 import ShieldDismiss20Regular from '@fluentui/svg-icons/icons/shield_dismiss_20_regular.svg';
 import { state as appState } from './state';
@@ -43,7 +45,7 @@ export const PERMISSION_ITEMS: PermissionItem[] = [
         value: 'plan',
         label: 'Plan',
         description: 'Reads and explores freely, then proposes a plan — no file is changed',
-        icon: ClipboardTask20Regular,
+        icon: ClipboardBulletListLtr20Regular,
     },
     {
         value: 'auto',
