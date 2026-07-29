@@ -5,6 +5,7 @@
 
 using Corsinvest.VisualStudio.Agents.Helpers;
 using Microsoft.VisualStudio.Shell;
+using System;
 using System.Collections.Generic;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
@@ -18,6 +19,10 @@ internal static class PaneAttentionService
 {
     // One live InfoBar per pane (by SeqNo) so repeated events replace instead of stacking.
     private static readonly Dictionary<int, PaneAttentionInfoBar> _bars = [];
+
+    // The toast raised alongside it, same key. To the user the two are one notification, so they
+    // are taken down together — the balloon outlives its InfoBar otherwise, until it expires.
+    private static readonly Dictionary<int, IDisposable> _toasts = [];
 
     /// <summary>A pane is asking for input (blocking). Always notifies (unless the pane is active):
     /// the model is waiting on the user.</summary>
@@ -53,18 +58,49 @@ internal static class PaneAttentionService
         // the user regardless of layout; clicking it brings VS to the front and activates the pane.
         if (!vsForeground)
         {
-            Win32Focus.ShowToast("Claude Code", message, onClick: () => entry.ActivateAction?.Invoke());
+            DismissToast(seq);
+            IDisposable toast = null;
+            toast = Win32Focus.ShowToast(
+                "Claude Code",
+                message,
+                onClick: () => entry.ActivateAction?.Invoke(),
+                // Only drop our own handle: a replacement toast may already hold the slot.
+                onClosed: () =>
+                {
+                    if (_toasts.TryGetValue(seq, out var held) && ReferenceEquals(held, toast))
+                    {
+                        _toasts.Remove(seq);
+                    }
+                });
+            if (toast != null) { _toasts[seq] = toast; }
         }
     }
 
-    /// <summary>Dismiss any attention InfoBar for this pane (e.g. the user answered / navigated to it).</summary>
+    /// <summary>Dismiss this pane's attention notification — InfoBar and toast alike (e.g. the user
+    /// answered / navigated to it).</summary>
     public static void Clear(PaneEntry entry)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        if (entry != null && _bars.TryGetValue(entry.SeqNo, out var bar))
+        if (entry == null) { return; }
+        if (_bars.TryGetValue(entry.SeqNo, out var bar))
         {
             bar.Close();
             _bars.Remove(entry.SeqNo);
+        }
+        DismissToast(entry.SeqNo);
+    }
+
+    private static void DismissToast(int seq)
+    {
+        if (!_toasts.TryGetValue(seq, out var toast)) { return; }
+        _toasts.Remove(seq);
+        try
+        {
+            toast.Dispose();
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Warn($"[panes] toast dismiss failed for #{seq}: {ex.Message}");
         }
     }
 }
