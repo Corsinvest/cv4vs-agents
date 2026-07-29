@@ -2,9 +2,11 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-// Language alias maps for highlight.js. Used by both the markdown code
-// block renderer (fence label → language) and the diff renderer (file
-// extension → language for the patch header).
+import hljs from 'highlight.js';
+
+// Language alias maps for highlight.js. Used by the markdown code block renderer (fence label →
+// language), the diff renderer (file extension → language for the patch header) and Write's body
+// (the file's own extension).
 //
 // Only entries that hljs does NOT recognise natively. hljs already covers:
 // bash/sh/zsh, json/jsonc/json5, xml/html/xhtml/plist/svg, dockerfile,
@@ -33,6 +35,7 @@ export const ALIASES: Record<string, string> = {
     manifest: 'xml',
     appxmanifest: 'xml',
     slnx: 'xml',
+    vsct: 'xml',
 
     // Razor / WPF / Xamarin / WinUI / Avalonia / Android markup (XML).
     // cshtml/razor would need highlightjs-cshtml-razor (separate package);
@@ -59,7 +62,10 @@ export const ALIASES: Record<string, string> = {
     containerfile: 'dockerfile',
     compose: 'yaml',
 
-    // Shell variants not covered by hljs (bash already covers sh/zsh)
+    // Shell variants not covered by hljs (bash already covers sh/zsh; ps1 is native,
+    // the module/manifest extensions are not)
+    psm1: 'powershell',
+    psd1: 'powershell',
     ksh: 'bash',
     fish: 'bash',
     bashrc: 'bash',
@@ -102,4 +108,21 @@ export const FILE_NAME_LANGS: Record<string, string> = {
 export function resolveLang(label: string | undefined | null): string {
     const lc = (label ?? '').toLowerCase();
     return ALIASES[lc] || lc;
+}
+
+/**
+ * Highlight `code` as `label` (a fence label or a file extension), returning HTML.
+ * Null when the language is unknown or hljs throws — the caller then renders the text
+ * plain, which is what an unhighlighted file should look like anyway.
+ */
+export function highlightCode(code: string, label: string | undefined | null): string | null {
+    const language = resolveLang(label);
+    if (!language || !hljs.getLanguage(language)) {
+        return null;
+    }
+    try {
+        return hljs.highlight(code, { language, ignoreIllegals: true }).value;
+    } catch {
+        return null;
+    }
 }
