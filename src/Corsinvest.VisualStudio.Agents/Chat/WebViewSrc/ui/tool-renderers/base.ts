@@ -26,6 +26,7 @@ import '../components/cv-diff-preview';
 import { cleanResult, previewText, formatElapsed } from './tool-host';
 import { state as appState } from '../../core/state';
 import { renderMarkdown } from '../../core/markdown';
+import { highlightCode } from '../../core/lang';
 import type { ToolHost } from './types';
 
 export abstract class ToolRenderer {
@@ -316,9 +317,14 @@ export abstract class ToolRenderer {
      *  drops the IN label; `markdown: true` is for cells holding prose instead of tool output. */
     protected ioGrid(
         inText = '',
-        opts: { showOut?: boolean; inLabel?: string; markdown?: boolean } = {},
+        opts: {
+            showOut?: boolean;
+            inLabel?: string;
+            markdown?: boolean;
+            highlightAs?: string;
+        } = {},
     ): TemplateResult {
-        const { showOut = true, inLabel = 'IN', markdown = false } = opts;
+        const { showOut = true, inLabel = 'IN', markdown = false, highlightAs = '' } = opts;
         const outText = showOut ? cleanResult(this.host.result, this.host.status === 'error') : '';
         if (!inText && !outText) {
             return html`${nothing}`;
@@ -326,13 +332,27 @@ export abstract class ToolRenderer {
         // Markdown cells hold prose (an Agent's prompt and its report), so they render as rich
         // text and in full: clipping a paragraph mid-sentence hides the answer, and the preview
         // cap exists for tool output — logs, file dumps — where the first lines are enough.
-        const cell = (t: string, extra = '') =>
-            markdown
-                ? html`<div class="cv-tool-body-md md" @click=${this.onMarkdownClick}>
-                      ${unsafeHTML(renderMarkdown(t))}
-                  </div>`
-                : html`<pre class="cv-tool-body-pre ${extra}">
-${previewText(t, appState.ui.previewLines, this.host.expanded, this.host.clipsOutput)}</pre>`;
+        const cell = (t: string, extra = '') => {
+            if (markdown) {
+                return html`<div class="cv-tool-body-md md" @click=${this.onMarkdownClick}>
+                    ${unsafeHTML(renderMarkdown(t))}
+                </div>`;
+            }
+            const shown = previewText(
+                t,
+                appState.ui.previewLines,
+                this.host.expanded,
+                this.host.clipsOutput,
+            );
+            // Highlight only what a caller asked to (Write's file content): tool OUTPUT is logs
+            // and dumps, where colouring guesses at structure that isn't there.
+            const code = highlightAs ? highlightCode(shown, highlightAs) : null;
+            return code
+                ? html`<pre
+                      class="cv-tool-body-pre hljs ${extra}"
+                  ><code>${unsafeHTML(code)}</code></pre>`
+                : html`<pre class="cv-tool-body-pre ${extra}">${shown}</pre>`;
+        };
         const copyBtn = (text: string, slot: 'in' | 'out') =>
             html`<cv-copy-btn
                 class="cv-tool-body-copy-btn cv-tool-body-copy-${slot}"

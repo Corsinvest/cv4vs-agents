@@ -7,8 +7,7 @@
 
 import { marked, type Renderer, type Tokens } from 'marked';
 import DOMPurify from 'dompurify';
-import hljs from 'highlight.js';
-import { resolveLang } from './lang';
+import { resolveLang, highlightCode } from './lang';
 import { escapeHtml } from './html';
 import { findFileRefs, firstRefHint, parseFileRef } from './file-links';
 
@@ -26,19 +25,13 @@ const renderer = new marked.Renderer() as Renderer & {
 renderer.code = function (token: Tokens.Code): string {
     const code = token.text ?? '';
     const lang = resolveLang(token.lang ?? '');
-    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-    let highlighted: string;
-    try {
-        highlighted =
-            language !== 'plaintext' ? hljs.highlight(code, { language }).value : escapeHtml(code);
-    } catch {
-        highlighted = escapeHtml(code);
-    }
+    const hl = highlightCode(code, lang);
+    const language = hl !== null ? lang : 'plaintext';
     // <cv-copy-btn> is upgraded on innerHTML parse; it reads its text from
     // the sibling <pre> at click time (`frompre` attribute).
     return (
         `<div class="cv-md-code-wrap">` +
-        `<pre><code class="hljs language-${language}">${highlighted}</code></pre>` +
+        `<pre><code class="hljs language-${language}">${hl ?? escapeHtml(code)}</code></pre>` +
         `<cv-copy-btn class="cv-md-copy-btn" frompre="1" title="Copy"></cv-copy-btn>` +
         `</div>`
     );

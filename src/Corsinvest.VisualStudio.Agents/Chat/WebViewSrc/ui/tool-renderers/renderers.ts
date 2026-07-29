@@ -86,11 +86,19 @@ export class WriteRenderer extends ToolRenderer {
     }
     /** No IN label: there is no in/out pair to tell apart, the body IS the file. And on success
      *  the result only repeats the path already in the header ("File created successfully at: …"),
-     *  so it is dropped too — an error still gets its row, being the one thing the header can't say. */
+     *  so it is dropped too — an error still gets its row, being the one thing the header can't say.
+     *  The body is a file, so it is highlighted as one, by its own extension. */
     override body(): TemplateResult | null {
+        const name =
+            String(this.host.input.file_path ?? '')
+                .split(/[\\/]/)
+                .pop() ?? '';
+        const dot = name.lastIndexOf('.');
         return this.ioGrid(this.inputText(), {
             showOut: this.host.status === 'error',
             inLabel: '',
+            // Extension only when there is one: an extensionless name is not its own language.
+            highlightAs: dot > 0 ? name.slice(dot + 1) : '',
         });
     }
 }

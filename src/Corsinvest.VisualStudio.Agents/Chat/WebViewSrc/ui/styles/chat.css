@@ -277,10 +277,10 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 }
 /* A tool row's nested children (Agent / Skill transcript today) — indented and
  * separated by a left border to show the parent/child relationship. */
+/* No rule down the side: the indent already says "these belong to the row above". */
 .cv-children {
     margin-left: 16px;
     padding-left: 8px;
-    border-left: 2px solid var(--colorNeutralStroke1);
     margin-top: 2px;
 }
 /* Only the scrolling area is capped — the actions footer is a sibling below it (outside this box)
@@ -360,9 +360,10 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     position: relative;
 }
 
+/* The content already sits in .cv-tool-body-box, which is bordered on all four sides —
+   a rule down the left of it only doubles up. */
 .cv-tool-body {
     margin: 2px 0 4px 0;
-    border-left: 2px solid var(--colorNeutralStroke1);
     padding-left: 8px;
     overflow-x: hidden;
 }
@@ -553,17 +554,15 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     overflow: hidden;
     background: var(--colorNeutralBackground1);
 }
+/* IN/OUT label above its block, not beside it: a 44px gutter plus its gap cost every row 52px
+   of width for two three-letter words, and width is what a docked tool window hasn't got —
+   height scrolls. A labelless row (Write: the body IS the file) needs no special case now. */
 .cv-tool-body-row {
     display: grid;
-    grid-template-columns: 44px 1fr;
+    grid-template-columns: 1fr;
     align-items: start;
     padding: 6px 8px;
-    gap: 8px;
-}
-/* Labelless row (Write: the body IS the file, there is no in/out pair to tell apart) —
-   drop the 44px gutter instead of leaving it empty. */
-.cv-tool-body-row:not(:has(.cv-tool-body-label)) {
-    grid-template-columns: 1fr;
+    gap: 2px;
 }
 .cv-tool-body-row-in + .cv-tool-body-row-out {
     border-top: 1px solid var(--colorNeutralStroke1);
@@ -581,7 +580,7 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     font-weight: 600;
     color: var(--colorNeutralForeground3);
     letter-spacing: 0.05em;
-    padding-top: 2px;
+    opacity: 0.75;
 }
 
 .cv-message.user:hover {
