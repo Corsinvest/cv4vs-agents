@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -59,7 +59,15 @@ internal static class HistoryReplay
             }
             else // user (and tool_result-carrying user lines)
             {
-                ContentBlockTranslator.EmitUser(content, previewLines, Collect, parentToolUseId, uuid, agentId, timestamp: tsMs);
+                var editRange = (msg.Val("editStartLine", 0), msg.Val("editEndLine", 0));
+                ContentBlockTranslator.EmitUser(content,
+                                                previewLines,
+                                                Collect,
+                                                parentToolUseId,
+                                                uuid,
+                                                agentId,
+                                                timestamp: tsMs,
+                                                editRange: editRange);
             }
         }
         return events;

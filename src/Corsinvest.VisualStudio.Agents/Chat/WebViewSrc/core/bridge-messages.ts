@@ -26,7 +26,6 @@ export const Msg = {
         },
         open: {
             ideFile: 'open_ide_file',
-            ideFileAtEdit: 'open_ide_file_at_edit',
             ideOutputWindow: 'open_ide_output_window',
             toolOutput: 'open_tool_output',
             externalUrl: 'open_external_url',

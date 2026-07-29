@@ -197,8 +197,16 @@ public class ToolResultNotification
     public string Result { get; set; }
     public bool IsError { get; set; }
     public string ParentToolUseId { get; set; }
+    // Below: extras only one tool family reads. Absent (null/0) for every other tool.
+    // The sub-agent this row spawned — Agent.
     public string AgentId { get; set; }
+    // Untruncated non-empty line count — the count-only renderers (Grep/Glob).
     public int FullLineCount { get; set; }
+    // Lines the edit landed on, from the patch the CLI computed applying it — Edit/Write/
+    // MultiEdit. Sent back verbatim when the user clicks the path, so the editor never has to
+    // search the file for them. 0 for a brand-new file, which has no patch.
+    public int EditStartLine { get; set; }
+    public int EditEndLine { get; set; }
 }
 
 /// <summary>A rate-limit notice for the composer banner (chat_rate_limit). severity is

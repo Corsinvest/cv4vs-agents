@@ -32,6 +32,10 @@ export class CvToolRow extends LitElement implements ToolRowState {
     @property() result = '';
     /** Full output line count (before preview clipping), 0 when empty; count-only renderers use it. */
     @property({ type: Number }) fullLineCount = 0;
+    /** Lines the edit landed on, from the CLI's own patch — what clicking the path jumps to.
+     *  0 when the tool isn't an edit, wrote a new file, or hasn't finished yet. */
+    @property({ type: Number }) editStartLine = 0;
+    @property({ type: Number }) editEndLine = 0;
     @property({ type: Number }) elapsedSec = 0;
     // Named childItems, not `children`: HTMLElement.children (the DOM child collection) is reserved.
     @property({ attribute: false }) childItems: UiEntry[] = [];
@@ -205,6 +209,8 @@ export class CvToolRow extends LitElement implements ToolRowState {
                                     .elapsedSec=${c.elapsedSec}
                                     .childItems=${c.children?.items ?? []}
                                     .fullLineCount=${c.fullLineCount}
+                                    .editStartLine=${c.editStartLine}
+                                    .editEndLine=${c.editEndLine}
                                     .agentId=${c.agentId ?? ''}
                                     .containerAgentId=${this.agentId || this.containerAgentId}
                                     .hasMore=${c.children?.hasMore ?? false}

@@ -10,4 +10,6 @@ export interface ToolResultNotification {
     parentToolUseId: string | null;
     agentId: string | null;
     fullLineCount: number;
+    editStartLine: number;
+    editEndLine: number;
 }

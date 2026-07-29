@@ -169,7 +169,6 @@ export type { SendPromptNotification } from './generated/SendPromptNotification'
 export type { RespondPermissionNotification } from './generated/RespondPermissionNotification';
 export type { SetSendSelectionNotification } from './generated/SetSendSelectionNotification';
 export type { IdeFileNotification } from './generated/IdeFileNotification';
-export type { IdeFileAtEditNotification } from './generated/IdeFileAtEditNotification';
 export type { GetSuggestionsRequest } from './generated/GetSuggestionsRequest';
 export type { ToolOutputNotification } from './generated/ToolOutputNotification';
 export type { GetSubagentRequest } from './generated/GetSubagentRequest';
@@ -391,6 +390,11 @@ export interface UiToolEntry {
     /** Non-empty line count of the FULL output (before preview truncation), 0 when empty.
      *  Count-only renderers (Grep/Glob) show this; the full text is re-read on click. */
     fullLineCount: number;
+    /** Lines the edit landed on, from the patch the CLI computed applying it. 0 while the tool
+     *  is still running, when it isn't an edit, or when it wrote a brand-new file — clicking the
+     *  path then just opens it. */
+    editStartLine: number;
+    editEndLine: number;
     elapsedSec: number;
     /** Nested children (Agent tool today; any tool with children). Present only when the tool
      *  has children — undefined for a normal leaf tool. NOT the row open/closed state: that's
