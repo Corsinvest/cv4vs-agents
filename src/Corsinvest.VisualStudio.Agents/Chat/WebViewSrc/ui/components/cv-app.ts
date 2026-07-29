@@ -340,8 +340,11 @@ export class CvApp extends LitElement {
                         for (const m of this._streamingMsgs.values()) {
                             m.streaming = false;
                         }
+                        // Keyed by parentToolUseId, so a sub-agent's message is nested and needs
+                        // its path refreshed like any other nested change. Before the clear —
+                        // after it there is nothing left to pass.
+                        this._commit(...this._streamingMsgs.values());
                         this._streamingMsgs.clear();
-                        this._entries = [...this._entries];
                     }
                 },
             ),
@@ -987,7 +990,7 @@ export class CvApp extends LitElement {
             .then((res) => {
                 entry.summary = res.summary;
                 entry.loaded = true;
-                this._entries = [...this._entries];
+                this._commit(entry);
             })
             .catch(() => {
                 /* timeout / not found — leave "Loading…" as-is */
@@ -1181,17 +1184,21 @@ export class CvApp extends LitElement {
      *  update and their renderChildren never re-reads the new list. Re-identifying just the
      *  arrays on the path is Lit's prescribed top-down immutable flow, and leaves rows that
      *  didn't change alone. Pass the row itself, or the Agent holding it for a text child. */
-    private _commit(target?: UiEntry | null): void {
-        if (target) {
-            // Walk down re-identifying each children array that leads to the target; returns
-            // true for the branch that holds it, so the copy happens on the way back up.
+    private _commit(...targets: Array<UiEntry | null | undefined>): void {
+        const wanted = targets.filter(Boolean) as UiEntry[];
+        if (wanted.length > 0) {
+            // Walk down re-identifying each children array that leads to a target; returns
+            // true for the branch that holds one, so the copy happens on the way back up.
             const refresh = (list: UiEntry[]): boolean => {
                 let found = false;
                 for (const e of list) {
                     if (e.kind !== 'tool' || !e.children?.items.length) {
                         continue;
                     }
-                    if (e.children.items.includes(target) || refresh(e.children.items)) {
+                    if (
+                        e.children.items.some((c) => wanted.includes(c)) ||
+                        refresh(e.children.items)
+                    ) {
                         e.children = { ...e.children, items: [...e.children.items] };
                         found = true;
                     }
@@ -1201,7 +1208,7 @@ export class CvApp extends LitElement {
             // render() maps _exchanges, not _entries: the entry objects are shared between the
             // two, so only the group array holding the path needs a new identity.
             this._exchanges = this._exchanges.map((g) =>
-                g.includes(target) || refresh(g) ? [...g] : g,
+                g.some((e) => wanted.includes(e)) || refresh(g) ? [...g] : g,
             );
         }
         this._entries = [...this._entries];
