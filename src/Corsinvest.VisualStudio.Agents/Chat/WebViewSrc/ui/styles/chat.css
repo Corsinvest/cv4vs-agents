@@ -378,6 +378,18 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     margin: 0;
     padding: 0;
 }
+/* Prose cell (Agent IN/OUT): .md brings the typography, this only caps the height so a long
+   report scrolls inside the row instead of pushing the nested rows off screen. The caps differ
+   because the two cells are read differently: IN is the prompt the user just wrote, OUT is the
+   answer they opened the row for. */
+.cv-tool-body-md {
+    font-size: 12px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+.cv-tool-body-row-in .cv-tool-body-md {
+    max-height: 110px;
+}
 .cv-tool-body-error {
     margin-top: 4px;
     padding: 6px 8px;

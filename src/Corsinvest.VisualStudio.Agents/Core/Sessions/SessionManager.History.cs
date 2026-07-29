@@ -290,7 +290,8 @@ public sealed partial class SessionManager
         ref string lastUserText,
         List<JToken> messagesNewestFirst,
         ref int parsedLines,
-        ref int skippedLines)
+        ref int skippedLines,
+        SubagentContext subagent = null)
     {
         JObject obj;
         try { obj = JObject.Parse(line); }
@@ -325,10 +326,15 @@ public sealed partial class SessionManager
                     // lift it too so HistoryReplay's ValTimestampMs finds it (the "x ago" on replay).
                     var ts = obj.Val("timestamp");
                     if (!string.IsNullOrEmpty(ts)) { msg["timestamp"] = ts; }
-                    // The Agent tool's result carries the sub-agent id at the line's
-                    // top-level toolUseResult.agentId (camelCase on disk). Lift it onto
-                    // the message so HistoryReplay can nest the sub-agent's tools.
-                    var agentId = ToolUseResultField(obj, "agentId");
+                    // The sub-agent this line SPAWNED, so the WebView knows which transcript to
+                    // open when the row is expanded. The main JSONL carries it inline on
+                    // toolUseResult.agentId (camelCase on disk); a transcript has no
+                    // toolUseResult at all, so there the link survives only in the sidecars.
+                    // Not to be confused with the line's own top-level agentId, which names the
+                    // file the line sits in — a different question, answered WebView-side.
+                    var agentId = subagent != null
+                        ? subagent.SpawnedAgentIdFor(msg)
+                        : ToolUseResultField(obj, "agentId");
                     if (!string.IsNullOrEmpty(agentId)) { msg["agentId"] = agentId; }
                     messagesNewestFirst.Add(msg);
                 }
@@ -489,7 +495,7 @@ public sealed partial class SessionManager
     /// <summary>Build a HistoryPage from a flat array of JSONL lines (chronological order).
     /// Used by ReadSubagentHistory (forward pass). ReadHistoryRaw keeps its own reverse-scan
     /// paginated reader — its algorithm can't share this simple forward builder.</summary>
-    private static HistoryPage BuildHistoryPageFromLines(string[] lines)
+    private static HistoryPage BuildHistoryPageFromLines(string[] lines, SubagentContext subagent = null)
     {
         var messages = new List<JToken>();
         string lastUserText = null;
@@ -497,9 +503,59 @@ public sealed partial class SessionManager
         foreach (var line in lines)
         {
             if (string.IsNullOrWhiteSpace(line)) { continue; }
-            TryProcessHistoryLine(line, null, ref lastUserText, messages, ref parsed, ref skipped);
+            TryProcessHistoryLine(line, null, ref lastUserText, messages, ref parsed, ref skipped, subagent);
         }
         return new HistoryPage { Messages = new JArray(messages) };
+    }
+
+    /// <summary>Which Agent row spawned which sub-agent, keyed by tool_use_id. A transcript can't
+    /// say it: toolUseResult — where the main JSONL carries the id inline — never appears in one,
+    /// so the link survives only in the subagents/*.meta.json sidecars the CLI writes beside it.
+    /// ~150 bytes each, read once per page.</summary>
+    private sealed class SubagentContext
+    {
+        private readonly Dictionary<string, string> _spawnedByToolUse =
+            new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>A session with no sidecars yields an empty map, which leaves every row exactly
+        /// as it was before this existed.</summary>
+        public static SubagentContext Read(string dir)
+        {
+            var ctx = new SubagentContext();
+            if (!Directory.Exists(dir)) { return ctx; }
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(dir, "agent-*.meta.json"))
+                {
+                    try
+                    {
+                        var toolUseId = JObject.Parse(File.ReadAllText(file, Encoding.UTF8)).Val("toolUseId");
+                        if (string.IsNullOrEmpty(toolUseId)) { continue; }
+                        // The agentId IS the file name (agent-<id>.meta.json) — the same convention
+                        // the transcript uses, so it can be opened straight away.
+                        var name = Path.GetFileNameWithoutExtension(file);   // agent-<id>.meta
+                        ctx._spawnedByToolUse[toolUseId] =
+                            name.Substring("agent-".Length, name.Length - "agent-".Length - ".meta".Length);
+                    }
+                    catch { /* a malformed sidecar only costs that one link */ }
+                }
+            }
+            catch (Exception ex) { OutputWindowLogger.LogException("SessionManager.SubagentContext.Read", ex); }
+            return ctx;
+        }
+
+        /// <summary>The sub-agent a message spawned, or null when it isn't an Agent tool_result.
+        /// Keyed by the tool_use_id it answers.</summary>
+        public string SpawnedAgentIdFor(JToken msg)
+        {
+            if (_spawnedByToolUse.Count == 0 || msg?["content"] is not JArray blocks) { return null; }
+            foreach (var b in blocks)
+            {
+                if (b.Val("type", "") != "tool_result") { continue; }
+                return _spawnedByToolUse.TryGetValue(b.Val("tool_use_id", ""), out var spawned) ? spawned : null;
+            }
+            return null;
+        }
     }
 
     /// <summary>Read a sub-agent transcript (subagents/agent-<agentId>.jsonl) into a HistoryPage,
@@ -507,11 +563,13 @@ public sealed partial class SessionManager
     /// tools); true reads the whole file. Missing file or empty agentId → empty page (no throw).</summary>
     public HistoryPage ReadSubagentHistory(string sessionId, string agentId, bool fullFile)
     {
+        using var _ = OutputWindowLogger.PerfSpan($"ReadSubagentHistory({agentId}, full={fullFile})");
         // agentId/sessionId reach here from the WebView; reject anything that isn't a
         // plain id token so they can't traverse out of the session dir into the path.
         if (!IsSafePathToken(sessionId) || !IsSafePathToken(agentId)) { return new HistoryPage { Messages = [] }; }
         var folder = FolderFor();
-        var path = Path.Combine(folder, sessionId, "subagents", $"agent-{agentId}.jsonl");
+        var dir = Path.Combine(folder, sessionId, "subagents");
+        var path = Path.Combine(dir, $"agent-{agentId}.jsonl");
         if (!File.Exists(path)) { return new HistoryPage { Messages = [] }; }
         try
         {
@@ -529,7 +587,7 @@ public sealed partial class SessionManager
                 var size = fs.Length;
                 lines = ReadWindow(fs, Math.Max(0, size - LiteReadWindowBytes), dropPartialFirstLine: size > LiteReadWindowBytes);
             }
-            return BuildHistoryPageFromLines(lines);
+            return BuildHistoryPageFromLines(lines, SubagentContext.Read(dir));
         }
         catch (Exception ex) { OutputWindowLogger.LogException("SessionManager.ReadSubagentHistory", ex); return new HistoryPage { Messages = [] }; }
     }

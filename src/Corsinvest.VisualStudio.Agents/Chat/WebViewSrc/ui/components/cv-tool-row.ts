@@ -37,8 +37,11 @@ export class CvToolRow extends LitElement implements ToolRowState {
     @property({ attribute: false }) childItems: UiEntry[] = [];
     /** More children exist on disk beyond the (≤3) kept in `childItems`. */
     @property({ type: Boolean }) hasMore = false;
-    /** Sub-agent id (Agent tool), used to fetch the full transcript on expand. */
+    /** The sub-agent this row SPAWNED (Agent tool only) — the transcript to fetch on expand. */
     @property() agentId = '';
+    /** The transcript this row LIVES in, i.e. which agent-<id>.jsonl holds its untruncated
+     *  text. Empty in the main session. A nested Agent row has both, and they differ. */
+    @property() containerAgentId = '';
     /** Show-all — owned by cv-app (UiToolEntry.showAll), read here. True shows the full
      *  list; false shows the last 3. NOT the row open/closed state (that's `_expanded`). */
     @property({ type: Boolean }) showAll = false;
@@ -154,7 +157,10 @@ export class CvToolRow extends LitElement implements ToolRowState {
     }
 
     /** Nested child rows/messages (Agent tool today; generic). Lit-owned, so it stays in the
-     *  component; the host exposes it to the renderer via renderChildren(). */
+     *  component; the host exposes it to the renderer via renderChildren().
+     *  Children live in the transcript we opened (or, for a plain tool, in ours) — that is what
+     *  routes their open-output. Their own agentId stays untouched: a nested Agent row must keep
+     *  the transcript IT opens, or expanding it would reopen us. */
     renderChildren() {
         if (this.childItems.length === 0) {
             return nothing;
@@ -199,7 +205,8 @@ export class CvToolRow extends LitElement implements ToolRowState {
                                     .elapsedSec=${c.elapsedSec}
                                     .childItems=${c.children?.items ?? []}
                                     .fullLineCount=${c.fullLineCount}
-                                    .agentId=${this.agentId}
+                                    .agentId=${c.agentId ?? ''}
+                                    .containerAgentId=${this.agentId || this.containerAgentId}
                                     .hasMore=${c.children?.hasMore ?? false}
                                     .showAll=${c.children?.showAll ?? false}
                                 ></cv-tool-row>`,

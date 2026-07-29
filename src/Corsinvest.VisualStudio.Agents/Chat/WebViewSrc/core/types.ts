@@ -254,6 +254,10 @@ export interface SubagentTask {
     recentTools: string[]; // last 3 tool names — at(-1) is what it is doing now
     summary?: string;
     usage: SubagentUsageDto;
+    /** The task that launched this one, undefined at top level. The wire carries no parent link,
+     *  so it is derived from where the launching row sits in the entry tree; it settles once that
+     *  row has arrived (the task can beat it by a few ms). */
+    parentTaskId?: string;
 }
 
 /** Status of a tool call: pending (spinner) | done (green) | error (red). */
