@@ -6,6 +6,110 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-30
+
+A pass over the chat's composer, the permission modes, and the sub-agents — plus the panes finally
+behaving like the rest of the IDE's windows.
+
+### Added
+
+- **Back to the latest message**: scrolling up during a turn no longer means scrolling all the way
+  down again. A button appears once you are far enough up, and goes away when you are back.
+
+- **Clicking an edit selects the lines that changed**, not just the file. The range comes from the
+  patch the CLI itself computed, so it is right even after the edit has landed and the file has
+  moved on.
+
+- **Active sessions in the menu**: View → cv4vs Agents now lists the open panes by their full title,
+  session and profile included. Docked panes hide each other behind tabs captioned "Chat 1"/"Chat 2",
+  and this is the way to tell them apart and to reach one that drifted behind its siblings.
+
+- **Bypass permissions can be chosen** from the composer and set as a profile's initial mode, gated
+  on a new "Allow dangerously skip permissions" option — and on the CLI's own policy, which an
+  organisation can impose.
+
+- **Written files are syntax-highlighted** by their extension, including the ones the .NET world
+  uses (`csproj`, `xaml`, `props`, `targets`, `resx`, `vsct`, `psm1`, `psd1`).
+
+- A profile's **Description is now multi-line Notes** — what the account is, when the token expires,
+  why the profile exists.
+
+### Changed
+
+- **The composer is one row again.** Attach, commands and the file in context on the left — what
+  goes into the message; model, effort, permission mode and send on the right — how and when it
+  leaves. The mode names are shorter, so it all fits in a docked pane.
+
+- **Statistics, Usage and Context usage are tool windows**, not document tabs. None of them owns a
+  file, and each used to write an empty placeholder to disk purely to have something to open.
+
+- **The context gauge and the effort control open menus** like everything else in the composer,
+  instead of hand-written panels of their own.
+
+- **`Write` shows the file, not a diff.** A diff where every line is an addition distinguishes
+  nothing; the header now carries the size instead, the way `Read` shows its line range.
+
+- **A sub-agent's report reads as a report** — rendered as markdown, untruncated, with its file
+  links opening in the editor.
+
+- Tool output gained back the 52px of width that the IN/OUT gutter was spending on two three-letter
+  words — width being what a docked pane hasn't got.
+
+### Fixed
+
+- **Panes vanished when the debugger started.** Visual Studio keeps a separate window layout for
+  run time, and a pane opened while writing code was simply absent from it. They now come back, and
+  dock against windows VS owns — Chat beside Solution Explorer, CLI beside Output.
+
+- **In Bypass, Claude could not ask you anything.** The flag that registers the question tool was
+  withheld in that mode, so the model did not merely lose the right to ask — it lost the tool. Turns
+  ended successfully with nothing surfaced.
+
+- **Shift+Tab in Bypass threw you into the most restrictive mode.** It cycled a hand-written list
+  that honoured none of the gates the rest of the UI applies.
+
+- **A permission mode that failed to change still showed as changed** — you would believe you were
+  in Plan while the CLI wrote. The same applied to the model. Both now roll back on failure.
+
+- **A nested sub-agent opened its parent's transcript** when expanded, and its own tools could not
+  be loaded at all.
+
+- **A sub-agent that failed left its row green.** The row settled on launch metadata, which is never
+  an error; the real outcome arrives later and was being dropped.
+
+- **Answering a permission closed whatever diff you had open**, including one you opened yourself.
+  Diffs are now identified by the tool call they preview rather than by being the most recent.
+
+- **Icons, themes and the light theme in general**: file icons kept the theme they were first drawn
+  under; a new pane opened dark whatever theme VS was in; the hover on every icon button was
+  invisible on light; the effort slider was styled with tokens that only exist in VS Code's webview
+  and had never been wired to our theme at all.
+
+- **A file link VS won't open now says so** instead of doing nothing — a `.csproj` the solution
+  already owns cannot be opened as a document, and the failure went nowhere.
+
+- **The context gauge gave up before a resuming CLI could answer.** On a large transcript the reply
+  arrived correct and complete, fifty seconds after a ten-second timeout.
+
+- Clicking into a pane left its OS balloon toast on screen after the in-IDE notice had gone.
+
+- The Sessions list counted every `.jsonl` the CLI had ever opened — sessions where nothing was ever
+  asked, and sub-agent transcripts — which is why it read as a wall of dates.
+
+- The image lightbox opened far wider than the image inside it.
+
+- The "x ago" stamp on a message never updated; it now refreshes when the pointer reaches it.
+
+- The effort popover grew off the edge of the composer, and its slider's fill stopped short of its
+  own track.
+
+- A failed turn drew two red rails a few pixels apart.
+
+- WebView DevTools disappeared from development builds when the 1.0.0 release dropped its
+  `-rc1` suffix.
+
+- A file type VS declines to rasterise (`.sh`) showed a broken-image glyph.
+
 ## [1.0.0] - 2026-07-27
 
 First stable release. Everything from the preview, plus the work below.
