@@ -618,9 +618,15 @@ cv-message:focus-within .cv-msg-actions {
     cursor: pointer;
     opacity: 0.75;
 }
+/* NOT --colorSubtleBackgroundHover: in the light theme that token is #f5f5f5, three points of
+ * luminance off the #ffffff behind it — the hover is there and invisible. Mixing the foreground
+ * inverts with the theme by construction. Kept in step with iconButtonStyles (shared.ts). */
 .icon-btn:hover {
-    background: var(--colorSubtleBackgroundHover, rgba(127, 127, 127, 0.12));
+    background: color-mix(in srgb, var(--colorNeutralForeground1) 10%, transparent);
     opacity: 1;
+}
+.icon-btn:active {
+    background: color-mix(in srgb, var(--colorNeutralForeground1) 16%, transparent);
 }
 .icon-btn:focus-visible {
     outline: 1px solid var(--colorStrokeFocus2, currentColor);

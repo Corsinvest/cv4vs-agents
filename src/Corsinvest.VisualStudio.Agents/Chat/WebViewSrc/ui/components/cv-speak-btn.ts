@@ -64,7 +64,7 @@ export class CvSpeakBtn extends LitElement {
                 opacity: 0.75;
             }
             .icon-btn:hover {
-                background: var(--colorSubtleBackgroundHover, rgba(127, 127, 127, 0.12));
+                background: color-mix(in srgb, var(--colorNeutralForeground1) 10%, transparent);
                 opacity: 1;
             }
             .icon-btn:focus-visible {

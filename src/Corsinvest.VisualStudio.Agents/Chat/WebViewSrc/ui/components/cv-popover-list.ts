@@ -224,8 +224,10 @@ export class CvPopoverList extends LitElement {
                 align-items: center;
                 gap: 8px;
             }
+            /* Wide enough for the longest level ("Extra high"): the value sits after the slider, so
+               a box that grows with the word drags the slider sideways while you are dragging it. */
             .dots-val {
-                min-width: 3.5em;
+                min-width: 6em;
                 text-align: right;
                 font-size: var(--fontSizeBase200);
                 color: var(--colorNeutralForeground3);

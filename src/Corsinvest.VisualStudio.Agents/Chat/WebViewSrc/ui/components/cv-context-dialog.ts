@@ -142,7 +142,7 @@ export class CvContextDialog extends CvDialogBase {
                 border-radius: var(--borderRadiusSmall);
             }
             .row-toggle:hover {
-                background: var(--colorSubtleBackgroundHover, rgba(127, 127, 127, 0.1));
+                background: color-mix(in srgb, var(--colorNeutralForeground1) 10%, transparent);
             }
             .dot {
                 width: 10px;

@@ -30,6 +30,11 @@ public sealed partial class ClaudeClient
         => subtype switch
         {
             "initialize" => InitializeTimeout,
+            // The gauge asks for this as the pane opens, which is exactly when the CLI is busiest:
+            // resuming a large session it answers nothing for tens of seconds, then drains its
+            // queue at once. Ten seconds lost the answer to a request the CLI did go on to serve.
+            // Safe to wait on — it reads, changes nothing, and an empty gauge is the only cost.
+            "get_context_usage" => InitializeTimeout,
             "generate_session_title" => LongRunningTimeout,
             "rewind_files" => LongRunningTimeout,
             _ => DefaultRequestTimeout,
