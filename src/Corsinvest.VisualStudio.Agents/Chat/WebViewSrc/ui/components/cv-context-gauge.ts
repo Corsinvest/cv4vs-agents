@@ -4,6 +4,13 @@
  */
 import { LitElement, html, css, svg } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+// The same two the VS menu's Analytics group uses (AgentsPackage.vsct): Statistics is a
+// bar chart there, Context usage a doughnut. Usage keeps the gauge, which command-icons
+// already maps to the same glyph.
+import DataBarVertical16Regular from '@fluentui/svg-icons/icons/data_bar_vertical_16_regular.svg';
+import DataPie16Regular from '@fluentui/svg-icons/icons/data_pie_16_regular.svg';
+import { iconForCommandName } from '../../core/commands/command-icons';
 import { iconStyles, tooltipStyles } from '../styles/shared';
 import { state as appState } from '../../core/state';
 import { bridge } from '../../core/bridge';
@@ -55,71 +62,41 @@ export class CvContextGauge extends LitElement {
         iconStyles,
         tooltipStyles,
         css`
-            /* Relative host so the click panel can be absolutely positioned above the ring — plain
-           position:absolute, not CSS anchor-positioning (position-area is unreliable in the VS
-           WebView2's Chromium: the top-layer popover jumps to the viewport corner). */
             :host {
-                position: relative;
                 display: inline-flex;
             }
-            /* Ring hit-area, sized to hug the small ring exactly. Clickable (opens the panel). */
+            /* Fluent's own button, cut to the row's density: even size="small" is padded for a
+               control standing alone. The ring is 14px like every other glyph here. */
             .gauge {
+                padding: 3px;
+                min-width: 0;
+            }
+            /* Wraps the ring so it can be the tooltip's anchor while the button stays the menu's
+               — see cv-attach-menu for what happens when they share one. */
+            .tip-anchor {
                 display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                width: 22px;
-                height: 22px;
-                border-radius: 4px;
-                border: none;
-                background: none;
-                padding: 0;
-                cursor: pointer;
-            }
-            /* Same tint as the icon buttons beside it (iconButtonStyles): the Subtle* tokens are
-               near-white in the light theme, so an hover drawn with them never showed. */
-            .gauge:hover {
-                background: color-mix(in srgb, var(--colorNeutralForeground1) 10%, transparent);
-            }
-            .gauge:active {
-                background: color-mix(in srgb, var(--colorNeutralForeground1) 16%, transparent);
-            }
-            .gauge:focus-visible {
-                outline: 1px solid var(--colorStrokeFocus2, currentColor);
-                outline-offset: 1px;
             }
             .gauge svg {
-                flex: 0 0 auto;
                 display: block;
             }
-            /* Small hover tooltip: just the % (one line). The detail + actions live in the click panel. */
-
-            /* Click panel: info + actions, absolutely positioned above the ring. Right-aligned:
-               the ring sits at the right end of the toolbar, so a 340px panel anchored left would
-               run off the composer's right edge. */
-            .popover {
-                position: absolute;
-                bottom: calc(100% + 4px);
-                right: 0;
-                z-index: 1000;
-                padding: 8px 10px;
-                width: 340px;
-                max-width: 90vw;
-                font-size: var(--fontSizeBase300);
+            /* The reading at the top of the menu: not an action, so a plain div rather than a
+               menu-item — the focusgroup skips what has no menuitem role, and arrow keys land on
+               the four actions below. */
+            /* Colour set here, not inherited: the div is slotted into fluent-menu-list, whose own
+               foreground doesn't reach a plain child — it would fall back to the UA black. */
+            .reading {
+                padding: 6px 10px 8px;
+                min-width: 280px;
+                font-size: var(--fontSizeBase200);
                 line-height: var(--lineHeightBase200);
-                background: var(--colorNeutralBackground1);
                 color: var(--colorNeutralForeground1);
-                border: 1px solid var(--colorNeutralStroke1);
-                border-radius: var(--borderRadiusMedium);
-                box-shadow: var(--shadow16);
+                border-bottom: 1px solid var(--colorNeutralStroke2);
             }
-            .popover[hidden] {
-                display: none;
-            }
-            .tip-head {
+            .reading-head {
                 font-weight: var(--fontWeightSemibold);
             }
-            /* fluent-progress-bar stays pure — only vertical spacing (colour comes from validation-state,
-           matching the donut's green/amber/red bands). */
+            /* fluent-progress-bar stays pure — only vertical spacing (colour comes from
+               validation-state, matching the donut's green/amber/red bands). */
             .bar {
                 margin: 8px 0 2px;
             }
@@ -129,25 +106,34 @@ export class CvContextGauge extends LitElement {
                 font-size: 0.82em;
                 color: var(--colorNeutralForeground3);
                 font-variant-numeric: tabular-nums;
-                margin-bottom: 4px;
             }
-            .tip-actions {
-                display: flex;
-                flex-wrap: nowrap;
-                gap: 14px;
-                margin-top: 6px;
-                padding-top: 6px;
-                border-top: 1px solid var(--colorNeutralStroke2);
+            /* Hung from the ring's right edge, not its left: Fluent aligns the list's start to the
+               trigger's, which on the last control in the row throws 280px of menu out to the left
+               and leaves the pointer crossing open air to reach it. */
+            fluent-menu-list {
+                inset-inline-start: unset;
+                /* Negative, so the right edge lands past the ring rather than flush with it: the
+                   composer's own padding is to the right of the trigger, and hanging into it keeps
+                   the menu from crowding the row it belongs to. */
+                inset-inline-end: calc(anchor(self-end) - 24px);
             }
-            .tip-actions fluent-link {
-                white-space: nowrap;
+            .sep {
+                height: 1px;
+                margin: 4px 0;
+                background: var(--colorNeutralStroke2);
+            }
+            /* Centre the glyph in the item's start cell — Fluent's default hugs the cell edge,
+               too tight at this density. Same rule as cv-attach-menu. */
+            fluent-menu-item [slot='start'] {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
             }
         `,
     ];
 
     @state() private _usage: ContextUsageDto | null = appState.contextUsage;
     @state() private _window = appState.contextWindow;
-    @state() private _open = false;
 
     private _offUsage?: () => void;
     private _offWindow?: () => void;
@@ -160,26 +146,13 @@ export class CvContextGauge extends LitElement {
         this._offWindow = appState.on('contextWindow', (v) => {
             this._window = v;
         });
-        // Light dismiss: a click anywhere outside the gauge closes the panel.
-        document.addEventListener('pointerdown', this._onDocPointerDown, true);
     }
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         this._offUsage?.();
         this._offWindow?.();
-        document.removeEventListener('pointerdown', this._onDocPointerDown, true);
     }
-
-    private _onDocPointerDown = (e: PointerEvent): void => {
-        if (!this._open) {
-            return;
-        }
-        // composedPath crosses the shadow boundary; if the click isn't on us, close.
-        if (!e.composedPath().includes(this)) {
-            this._open = false;
-        }
-    };
 
     /** Compact the conversation via the CLI's `/compact` command (mirrors cv-prompt._dispatch). */
     private _onCompact = (): void => {
@@ -193,16 +166,6 @@ export class CvContextGauge extends LitElement {
             uuid: crypto.randomUUID(),
         });
     };
-
-    private _toggle = (): void => {
-        this._open = !this._open;
-    };
-
-    // Run an action, then close the panel (like a menu item).
-    private _act(fn: () => void): void {
-        fn();
-        this._open = false;
-    }
 
     // Open each panel directly via dialog-host (no parent host needed).
     private _onViewUsage = (): void => openUsageDialog();
@@ -228,18 +191,27 @@ export class CvContextGauge extends LitElement {
         const remainingPct = known ? remainingPercent(u) : 100;
         const window = autoCompactWindow();
 
-        // Clickable ring (<button>) → opens a light-dismiss popover with the usage detail + actions
-        // (like cv-subagent-chip). Click, not hover: the panel is interactive (Compact/dialogs) and
-        // a hover panel above the ring overlaps the composer / vanishes as the mouse moves to it.
+        // The ring opens a menu: the reading at the top, then what you can do about it. Click, not
+        // hover — the items are actions, and a hover panel above the ring would vanish as the
+        // mouse travelled to them.
         return html`
-            <button
-                id="cv-context-gauge-btn"
-                class="gauge"
-                type="button"
-                aria-label="Context usage"
-                @click=${this._toggle}
-            >
-                ${svg`
+            <fluent-menu>
+                <!-- id="menu-trigger" is load-bearing: fluent-menu-list anchors itself to
+                     --menu-trigger, and the trigger's anchor-name comes from its id. The tooltip
+                     hangs off the span inside instead — anchoring it here would overwrite that
+                     name and drop the list at 0,0 (see cv-attach-menu). -->
+                <fluent-button
+                    id="menu-trigger"
+                    slot="trigger"
+                    class="gauge"
+                    appearance="subtle"
+                    shape="rounded"
+                    size="small"
+                    icon-only
+                    aria-label="Context usage"
+                >
+                    <span id="gauge-tip" class="tip-anchor">
+                        ${svg`
                     <svg width=${SIZE} height=${SIZE} viewBox="0 0 ${SIZE} ${SIZE}">
                         <circle
                             cx=${SIZE / 2}
@@ -263,55 +235,60 @@ export class CvContextGauge extends LitElement {
                         />
                     </svg>
                 `}
-            </button>
-            <div id="cv-gauge-popover" class="popover" ?hidden=${!this._open}>
-                <div class="tip-head">
-                    ${
-                        known
-                            ? `${remainingPct.toFixed(0)}% of context remaining until auto-compact`
-                            : 'Context usage is reported after the first reply'
-                    }
-                </div>
-                <fluent-progress-bar
-                    class="bar"
-                    min="0"
-                    max="100"
-                    value=${limit > 0 ? Math.min(100, (used / limit) * 100) : 0}
-                    validation-state=${gaugeValidationState(percent)}
-                ></fluent-progress-bar>
-                <div class="bar-legend">
-                    <span>${formatTokens(used)} used</span>
-                    <span>${formatTokens(window)} before compact</span>
-                    <span>${formatTokens(limit)} total</span>
-                </div>
-                <div class="tip-actions">
-                    <fluent-button
-                        appearance="transparent"
-                        size="small"
-                        @click=${(): void => this._act(this._onCompact)}
-                        >Compact</fluent-button
-                    >
-                    <fluent-button
-                        appearance="transparent"
-                        size="small"
-                        @click=${(): void => this._act(this._onViewUsage)}
-                        >Usage…</fluent-button
-                    >
-                    <fluent-button
-                        appearance="transparent"
-                        size="small"
-                        @click=${(): void => this._act(this._onViewContext)}
-                        >Context…</fluent-button
-                    >
-                    <fluent-button
-                        appearance="transparent"
-                        size="small"
-                        @click=${(): void => this._act(this._onViewStats)}
-                        >Statistics…</fluent-button
-                    >
-                </div>
-            </div>
-            <fluent-tooltip anchor="cv-context-gauge-btn" positioning="above-end">
+                    </span>
+                </fluent-button>
+                <fluent-menu-list>
+                    <!-- A plain div, not a menu-item: the reading is what the menu is for, but it
+                         is not an action. Without role=menuitem the focusgroup skips it, so arrow
+                         keys go straight to the four below. -->
+                    <div class="reading">
+                        <div class="reading-head">
+                            ${
+                                known
+                                    ? `${remainingPct.toFixed(0)}% of context remaining until auto-compact`
+                                    : 'Context usage is reported after the first reply'
+                            }
+                        </div>
+                        <fluent-progress-bar
+                            class="bar"
+                            min="0"
+                            max="100"
+                            value=${limit > 0 ? Math.min(100, (used / limit) * 100) : 0}
+                            validation-state=${gaugeValidationState(percent)}
+                        ></fluent-progress-bar>
+                        <div class="bar-legend">
+                            <span>${formatTokens(used)} used</span>
+                            <span>${formatTokens(window)} before compact</span>
+                            <span>${formatTokens(limit)} total</span>
+                        </div>
+                    </div>
+                    <fluent-menu-item @click=${this._onCompact}>
+                        <span slot="start">${unsafeHTML(iconForCommandName('compact'))}</span>
+                        Compact
+                    </fluent-menu-item>
+                    <!-- Compact acts on the conversation; the three below open a window to look at
+                         it. A plain div, not fluent-divider: that one ships no package entry point
+                         (only dist/esm), and a rule is a rule. -->
+                    <div class="sep" role="separator"></div>
+                    <!-- Statistics, Usage, Context usage — the order and the icons of the VS
+                         menu's own Analytics group, so the two ways in read the same. No trailing
+                         ellipsis, for the same reason: these open a window, they don't ask for
+                         anything first. -->
+                    <fluent-menu-item @click=${this._onViewStats}>
+                        <span slot="start">${unsafeHTML(DataBarVertical16Regular)}</span>
+                        Statistics
+                    </fluent-menu-item>
+                    <fluent-menu-item @click=${this._onViewUsage}>
+                        <span slot="start">${unsafeHTML(iconForCommandName('usage'))}</span>
+                        Usage
+                    </fluent-menu-item>
+                    <fluent-menu-item @click=${this._onViewContext}>
+                        <span slot="start">${unsafeHTML(DataPie16Regular)}</span>
+                        Context usage
+                    </fluent-menu-item>
+                </fluent-menu-list>
+            </fluent-menu>
+            <fluent-tooltip anchor="gauge-tip" positioning="above-end">
                 <span class="tip-name"
                     >${known ? `${remainingPct.toFixed(0)}% of context left` : 'Context'}</span
                 >
