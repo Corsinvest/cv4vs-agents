@@ -5,7 +5,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
-import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
+import { tooltipStyles } from '../styles/shared';
 import type { PermissionMode } from '../../core/types';
 import { permissionItems } from '../../core/permission-modes';
 import { SwitchPermissionModeCommand } from '../../core/commands/builtin-commands';
@@ -21,12 +21,16 @@ import { SwitchPermissionModeCommand } from '../../core/commands/builtin-command
 @customElement('cv-permission-selector')
 export class CvPermissionSelector extends LitElement {
     static override styles = [
-        iconStyles,
-        iconButtonStyles,
         tooltipStyles,
         css`
             :host {
                 display: contents;
+            }
+            /* See cv-model-selector: Fluent's own pill, ours only the metrics. */
+            .trigger {
+                font-size: var(--fontSizeBase200);
+                padding-inline: 8px;
+                min-width: 0;
             }
         `,
     ];
@@ -69,9 +73,15 @@ export class CvPermissionSelector extends LitElement {
         const items = permissionItems();
         const item = items.find((it) => it.value === this._current) ?? items[0];
         return html`
-            <button id="perm-trigger" class="icon-btn" type="button" @click=${this._onClick}>
+            <fluent-button
+                id="perm-trigger"
+                class="trigger"
+                shape="circular"
+                size="small"
+                @click=${this._onClick}
+            >
                 <span>${item.short}</span>
-            </button>
+            </fluent-button>
             <fluent-tooltip anchor="perm-trigger" positioning="above-end">
                 <span class="tip-name">${item.label}</span>
                 <span class="tip-desc">${item.description}</span>

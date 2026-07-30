@@ -10,7 +10,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Add16Regular from '@fluentui/svg-icons/icons/add_16_regular.svg';
 import ArrowUpload16Regular from '@fluentui/svg-icons/icons/arrow_upload_16_regular.svg';
 import DocumentText16Regular from '@fluentui/svg-icons/icons/document_text_16_regular.svg';
-import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, tooltipStyles } from '../styles/shared';
 
 /**
  * Attach-actions button in the input toolbar, built on `<fluent-menu>`.
@@ -21,7 +21,6 @@ import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
 export class CvAttachMenu extends LitElement {
     static override styles = [
         iconStyles,
-        iconButtonStyles,
         tooltipStyles,
         css`
             :host {
@@ -50,9 +49,18 @@ export class CvAttachMenu extends LitElement {
                 align-items: center;
                 justify-content: center;
             }
-            /* Attach trigger: green, at the shared 14px. */
-            .icon-btn {
-                color: var(--colorPaletteGreenForeground1);
+            /* Fluent's own button, cut to the row's density: even size="small" is padded for a
+               control standing alone. No accent colour — in this row colour means state (the
+               gauge's bands, the mic while recording, send when there is something to send), and
+               a permanently green plus says nothing while competing with the ones that do. */
+            .trigger {
+                padding: 3px;
+                min-width: 0;
+            }
+            /* Wraps the glyph so it can be the tooltip's anchor while the button stays the menu's.
+               A real box (not display:contents) — an anchor has to be laid out to be anchored to. */
+            .tip-anchor {
+                display: inline-flex;
             }
         `,
     ];
@@ -69,9 +77,25 @@ export class CvAttachMenu extends LitElement {
     override render() {
         return html`
             <fluent-menu>
-                <button id="attach-trigger" slot="trigger" class="icon-btn" type="button">
-                    ${unsafeHTML(Add16Regular)}
-                </button>
+                <!-- A fluent-button, not the fluent-menu-button the docs show in this slot: that
+                     one always draws a chevron beside the glyph, which on a toolbar icon is a
+                     second symbol for what the plus already says. The id is load-bearing —
+                     fluent-menu-list anchors itself to --menu-trigger, and the trigger's
+                     anchor-name comes from its id, so any other id opens the list at 0,0. -->
+                <fluent-button
+                    id="menu-trigger"
+                    slot="trigger"
+                    class="trigger"
+                    appearance="subtle"
+                    shape="rounded"
+                    size="small"
+                    icon-only
+                >
+                    <!-- The tooltip anchors to this span, not to the button: fluent-tooltip writes
+                         anchor-name onto whatever it points at, and on the button that overwrote
+                         the name fluent-menu-list needs — the list then opened at 0,0. -->
+                    <span id="attach-tip" class="tip-anchor">${unsafeHTML(Add16Regular)}</span>
+                </fluent-button>
                 <fluent-menu-list>
                     <fluent-menu-item @click=${this._onUpload}>
                         <span slot="start">${unsafeHTML(ArrowUpload16Regular)}</span>
@@ -83,11 +107,13 @@ export class CvAttachMenu extends LitElement {
                     </fluent-menu-item>
                 </fluent-menu-list>
             </fluent-menu>
-            <!-- Outside the menu: inside it the tooltip would be a menu child, and fluent-menu
-                 lays out only its trigger and its list. -->
-            <fluent-tooltip anchor="attach-trigger" positioning="above-start"
-                >Add files or content</fluent-tooltip
-            >
+            <!-- Outside the menu: inside it the tooltip would be a menu child, and fluent-menu lays
+                 out only its trigger and its list. Anchored to the same id the list uses — one
+                 names the anchor, the other looks the element up, and they don't collide. -->
+            <fluent-tooltip anchor="attach-tip" positioning="above-start">
+                <span class="tip-name">Add</span>
+                <span class="tip-action">A file from disk, or a path from the workspace</span>
+            </fluent-tooltip>
         `;
     }
 }

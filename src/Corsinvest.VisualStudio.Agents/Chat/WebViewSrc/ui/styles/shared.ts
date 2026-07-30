@@ -18,12 +18,12 @@ export const iconStyles = css`
     svg[fill='none'] {
         fill: none;
     }
-    /* Fluent's small icon-only button scales its glyph to 20px; pin it to the nominal
-     * 16px so the action icons (copy, chevron, toggles) read as one size in the dense
-     * chat and don't look oversized. Only icon-only buttons — labelled ones keep theirs. */
+    /* Fluent's small icon-only button scales its glyph to 20px; pin it to 14, the size every
+     * action icon in the chat is drawn at (see iconButtonStyles), so the two kinds of button
+     * read as one set. Only icon-only buttons — labelled ones keep theirs. */
     fluent-button[icon-only] svg {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
     }
 `;
 
@@ -34,8 +34,11 @@ export const iconStyles = css`
  * fluent-pure rule forbids. Owning the element instead keeps that rule intact.
  *
  * Glyph size comes from `--cv-icon-btn-size` (default 14px, the density of an action inside the
- * transcript). A composer control sets 16px: it is permanent chrome, sits beside a text label, and
- * has to be worth aiming at.
+ * transcript); a component can raise it where the icon has to carry more.
+ *
+ * Icon-only buttons. A control with a word instead of a glyph is a `fluent-button` with
+ * `shape="circular"` — Fluent's own pill, so its hover and focus come with it (see
+ * cv-model-selector).
  */
 export const iconButtonStyles = css`
     .icon-btn {
@@ -77,36 +80,6 @@ export const iconButtonStyles = css`
         display: block;
         fill: currentColor;
     }
-    /* The label of a button that carries one (the composer's model/effort/permission triggers).
-       Base200: below the body text, since these name a setting rather than say anything, but above
-       the Base100 of the IDE-context chip — on those three the word is the whole control, with no
-       glyph to carry it. nowrap so the button never wraps onto a second row. */
-    .icon-btn span {
-        font-size: var(--fontSizeBase200);
-        white-space: nowrap;
-    }
-    /* A labelled button reads as a pill: a word on its own needs more room than a glyph (3px is
-       right for a 14px icon, cramped for text), and a faint fill with a full radius says "this is
-       one control" where three bare words in a row would read as one phrase. Enough on its own
-       that no separator is needed between them. */
-    .icon-btn:has(span) {
-        padding: 2px 8px;
-        border-radius: 999px;
-        border: 1px solid var(--colorNeutralStroke2);
-        background: var(--colorNeutralBackground1);
-        opacity: 1;
-    }
-    .icon-btn:has(span):hover {
-        border-color: var(--colorNeutralStroke1);
-        background: color-mix(
-            in srgb,
-            var(--colorNeutralForeground1) 8%,
-            var(--colorNeutralBackground1)
-        );
-    }
-    .icon-btn svg + span {
-        margin-left: 4px;
-    }
 `;
 
 /**
@@ -128,6 +101,9 @@ export const tooltipStyles = css`
     fluent-tooltip {
         padding: 6px 8px;
         max-width: 320px;
+        /* Lets a plain string with newlines break where it says to, so a tooltip with two or three
+           lines doesn't need an element per line. */
+        white-space: pre-line;
     }
     .tip-name {
         font-weight: var(--fontWeightSemibold);

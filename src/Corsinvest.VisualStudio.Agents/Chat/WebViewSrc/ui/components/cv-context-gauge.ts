@@ -4,7 +4,7 @@
  */
 import { LitElement, html, css, svg } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, tooltipStyles } from '../styles/shared';
 import { state as appState } from '../../core/state';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
@@ -53,6 +53,7 @@ const CIRC = 2 * Math.PI * RADIUS;
 export class CvContextGauge extends LitElement {
     static override styles = [
         iconStyles,
+        tooltipStyles,
         css`
             /* Relative host so the click panel can be absolutely positioned above the ring — plain
            position:absolute, not CSS anchor-positioning (position-area is unreliable in the VS
@@ -91,10 +92,6 @@ export class CvContextGauge extends LitElement {
                 display: block;
             }
             /* Small hover tooltip: just the % (one line). The detail + actions live in the click panel. */
-            fluent-tooltip {
-                padding: 4px 8px;
-                white-space: nowrap;
-            }
 
             /* Click panel: info + actions, absolutely positioned above the ring. Right-aligned:
                the ring sits at the right end of the toolbar, so a 340px panel anchored left would
@@ -315,7 +312,12 @@ export class CvContextGauge extends LitElement {
                 </div>
             </div>
             <fluent-tooltip anchor="cv-context-gauge-btn" positioning="above-end">
-                ${known ? `${remainingPct.toFixed(0)}% of context remaining` : 'Context usage'}
+                <span class="tip-name"
+                    >${known ? `${remainingPct.toFixed(0)}% of context left` : 'Context'}</span
+                >
+                <span class="tip-action"
+                    >${known ? 'Click for the breakdown' : 'Known once the first turn lands'}</span
+                >
             </fluent-tooltip>
         `;
     }

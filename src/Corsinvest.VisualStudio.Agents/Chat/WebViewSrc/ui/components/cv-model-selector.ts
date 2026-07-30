@@ -5,7 +5,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
-import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, tooltipStyles } from '../styles/shared';
 import { modelLabel, modelLabelShort, resolveModelValue } from '../../core/ai-models';
 import { SwitchModelCommand } from '../../core/commands/builtin-commands';
 
@@ -22,7 +22,6 @@ import { SwitchModelCommand } from '../../core/commands/builtin-commands';
 export class CvModelSelector extends LitElement {
     static override styles = [
         iconStyles,
-        iconButtonStyles,
         tooltipStyles,
         css`
             :host {
@@ -30,7 +29,17 @@ export class CvModelSelector extends LitElement {
             }
             /* A provider can return a long id as the display name; cap it rather than
                letting the toolbar reflow. */
-            .icon-btn span {
+            /* The pill is Fluent's own — shape="circular" and the default appearance, so its
+               hover, pressed and focus come with it in either theme rather than being written out
+               here. Only the metrics are ours: even size="small" is padded for a control standing
+               alone, and min-width holds a floor a word like "Opus" never reaches. Both live on
+               the host (the template is a single content span), so no ::part is involved. */
+            .trigger {
+                font-size: var(--fontSizeBase200);
+                padding-inline: 8px;
+                min-width: 0;
+            }
+            .trigger span {
                 max-width: 14ch;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -80,9 +89,15 @@ export class CvModelSelector extends LitElement {
         // fluent-tooltip, not a title attribute: the native one is drawn by the OS, so it keeps the
         // system's light/dark regardless of the theme VS is in. Same reason the gauge uses one.
         return html`
-            <button id="model-trigger" class="icon-btn" type="button" @click=${this._onClick}>
+            <fluent-button
+                id="model-trigger"
+                class="trigger"
+                shape="circular"
+                size="small"
+                @click=${this._onClick}
+            >
                 <span>${modelLabelShort(this._current)}</span>
-            </button>
+            </fluent-button>
             <fluent-tooltip anchor="model-trigger" positioning="above-end">
                 <span class="tip-name">${full}</span>
                 ${info?.description ? html`<span class="tip-desc">${info.description}</span>` : nothing}

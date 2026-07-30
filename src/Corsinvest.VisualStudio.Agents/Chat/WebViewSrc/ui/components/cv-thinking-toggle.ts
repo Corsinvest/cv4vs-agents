@@ -10,7 +10,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Lightbulb16Filled from '@fluentui/svg-icons/icons/lightbulb_16_filled.svg';
 import Lightbulb16Regular from '@fluentui/svg-icons/icons/lightbulb_16_regular.svg';
 import { state as appState } from '../../core/state';
-import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, tooltipStyles } from '../styles/shared';
 import { ThinkingCommand } from '../../core/commands/model-controls';
 import type { CommandHost } from '../../core/commands/base';
 
@@ -28,11 +28,16 @@ import type { CommandHost } from '../../core/commands/base';
 export class CvThinkingToggle extends LitElement {
     static override styles = [
         iconStyles,
-        iconButtonStyles,
         tooltipStyles,
         css`
             :host {
                 display: contents;
+            }
+            /* Fluent's own button, cut to the row's density: even size="small" is padded for a
+               control standing alone. */
+            .trigger {
+                padding: 3px;
+                min-width: 0;
             }
         `,
     ];
@@ -86,15 +91,18 @@ export class CvThinkingToggle extends LitElement {
         }
         const on = this._enabled;
         return html`
-            <button
+            <fluent-button
                 id="thinking-trigger"
-                class="icon-btn"
-                type="button"
+                class="trigger"
+                appearance="subtle"
+                shape="rounded"
+                size="small"
+                icon-only
                 aria-pressed=${on ? 'true' : 'false'}
                 @click=${this._onClick}
             >
                 ${unsafeHTML(on ? Lightbulb16Filled : Lightbulb16Regular)}
-            </button>
+            </fluent-button>
             <fluent-tooltip anchor="thinking-trigger" positioning="above-end">
                 <span class="tip-name">${this._command.label}: ${on ? 'on' : 'off'}</span>
                 <span class="tip-action">${this._command.description}</span>

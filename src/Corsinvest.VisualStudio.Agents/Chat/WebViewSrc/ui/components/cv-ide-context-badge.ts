@@ -26,34 +26,32 @@ export class CvIdeContextBadge extends LitElement {
         css`
             /* inline-flex, not the default inline: an inline host sits on the text baseline, which
                left the chip a pixel low against the icon buttons beside it. */
+            /* The one thing in the row that gives way: min-width:0 lets a flex item go below its
+               content width, which is what makes the name truncate instead of pushing the row
+               wider than the composer. */
             :host {
                 display: inline-flex;
                 align-items: center;
-            }
-            /* Single clickable chip = the share toggle (the file is already open in VS). */
-            .badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 4px;
                 min-width: 0;
+                flex-shrink: 1;
+            }
+            /* Single clickable chip = the share toggle (the file is already open in VS). Fluent's
+               own button so its hover and focus come with it; ours are the metrics and the cap. */
+            .badge {
                 /* The ceiling belongs to the whole chip, not to the name: capping the name alone
                    let the icon and the :24-27 range add to it, so selecting lines made the chip
                    wider than a chip without one. The name is the part that gives way. */
                 max-width: 160px;
+                min-width: 0;
                 font-size: var(--fontSizeBase100);
-                color: var(--colorNeutralForeground3);
-                background: none;
-                border: none;
-                padding: 2px 4px;
-                cursor: pointer;
-                border-radius: var(--borderRadiusSmall);
-                font-family: inherit;
+                padding-inline: 6px;
             }
-            .badge:hover {
-                background: color-mix(in srgb, var(--colorNeutralForeground1) 8%, transparent);
-            }
-            .badge:hover .name {
-                color: var(--colorNeutralForeground1);
+            .badge::part(content) {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                min-width: 0;
+                overflow: hidden;
             }
             .badge.is-disabled {
                 opacity: 0.55;
@@ -149,7 +147,14 @@ export class CvIdeContextBadge extends LitElement {
         const lineInfo = ctx.hasSelection ? `:${ctx.startLine}-${ctx.endLine}` : '';
 
         return html`
-            <button id="ide-badge" class=${cls} type="button" @click=${this._onToggleEye}>
+            <fluent-button
+                id="ide-badge"
+                class=${cls}
+                appearance="subtle"
+                shape="circular"
+                size="small"
+                @click=${this._onToggleEye}
+            >
                 <!-- Only when paused. Sharing is the normal state and the file icon and name
                      already say which file is in play; a second glyph beside them adds nothing.
                      Not being sent is the exception, and the one worth marking — otherwise the
@@ -162,7 +167,7 @@ export class CvIdeContextBadge extends LitElement {
                 <img class="file-icon" src=${iconUrl(ctx.fileName)} width="16" height="16" alt="" />
                 <span class="name"><bdi>${ctx.fileName}</bdi></span>
                 ${lineInfo ? html`<span class="info">${lineInfo}</span>` : nothing}
-            </button>
+            </fluent-button>
             <!-- The chip truncates the name, so the tooltip is where it can be read in full. -->
             <fluent-tooltip anchor="ide-badge" positioning="above-start">
                 <span class="tip-name">${ctx.fileName}${lineInfo}</span>

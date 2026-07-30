@@ -6,7 +6,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Mic16Regular from '@fluentui/svg-icons/icons/mic_16_regular.svg';
-import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, tooltipStyles } from '../styles/shared';
 
 /**
  * Mic button using Web Speech API. Fires a `transcript` CustomEvent with
@@ -18,16 +18,21 @@ import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
 export class CvMicButton extends LitElement {
     static override styles = [
         iconStyles,
-        iconButtonStyles,
         tooltipStyles,
         css`
-            /* While recording: red button that pulses, reads as "stop". Full opacity so it holds
-               its own colour rather than the resting 0.75 of the shared style. */
-            .icon-btn.is-recording,
-            .icon-btn.is-recording:hover {
+            /* Fluent's own button, cut to the row's density: even size="small" is padded for a
+               control standing alone. */
+            .trigger {
+                padding: 3px;
+                min-width: 0;
+            }
+            /* While recording: red button that pulses, reads as "stop". The colour is set on the
+               host, over the subtle appearance — this state is the one thing Fluent has no
+               variant for. */
+            .trigger.is-recording,
+            .trigger.is-recording:hover {
                 background: var(--colorPaletteRedBackground3);
                 color: var(--colorNeutralForegroundOnBrand);
-                opacity: 1;
                 animation: mic-pulse 1.8s ease-in-out infinite;
             }
             @keyframes mic-pulse {
@@ -107,17 +112,27 @@ export class CvMicButton extends LitElement {
         if (!this._hasSpeech) {
             return nothing;
         }
-        return html`<button
+        return html`<fluent-button
                 id="btn-mic"
-                type="button"
-                class=${`icon-btn${this._recording ? ' is-recording' : ''}`}
+                class=${`trigger${this._recording ? ' is-recording' : ''}`}
+                appearance="subtle"
+                shape="rounded"
+                size="small"
+                icon-only
                 @click=${this._onClick}
             >
                 ${unsafeHTML(Mic16Regular)}
-            </button>
-            <fluent-tooltip anchor="btn-mic" positioning="above-end"
-                >${this._recording ? 'Stop recording' : 'Voice dictation'}</fluent-tooltip
-            >`;
+            </fluent-button>
+            <fluent-tooltip anchor="btn-mic" positioning="above-end">
+                <span class="tip-name">${this._recording ? 'Recording' : 'Dictate'}</span>
+                <span class="tip-action"
+                    >${
+                        this._recording
+                            ? 'Click to stop — what was heard stays in the message'
+                            : 'Speak instead of typing'
+                    }</span
+                >
+            </fluent-tooltip>`;
     }
 }
 
