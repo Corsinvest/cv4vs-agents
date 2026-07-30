@@ -89,7 +89,7 @@ export class CvPermissionSelector extends LitElement {
                 @click=${this._onClick}
             >
                 ${unsafeHTML(item.icon)}
-                <span>${item.label}</span>
+                <span>${item.short}</span>
             </fluent-button>
         `;
     }
