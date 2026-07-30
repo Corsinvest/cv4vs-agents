@@ -5,7 +5,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, tooltipStyles } from '../styles/shared';
 import Send16Filled from '@fluentui/svg-icons/icons/send_16_filled.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
 import { iconUrl } from '../../core/icon-url';
@@ -150,6 +150,7 @@ function readAsAttachment(file: File): Promise<Attachment> {
 export class CvPrompt extends LitElement implements CommandHost {
     static override styles = [
         iconStyles,
+        tooltipStyles,
         css`
             :host {
                 display: contents;
@@ -233,32 +234,35 @@ export class CvPrompt extends LitElement implements CommandHost {
             #toolbar-right {
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                gap: 4px;
             }
-            /* Turn settings on their own row: effort, model and permission mode answer "how should
-               this turn run", while the row above is about the message itself (attach, commands,
-               context, send). Splitting them means the labels always fit, at any pane width — no
-               truncation and no width-dependent hiding. */
-            #toolbar-settings {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                padding: 4px;
-                border-top: 1px solid var(--colorNeutralStroke2);
+            /* One row for everything, so the left side has to be able to shrink: min-width:0 lets
+               it go below its content width, and the file chip — the only elastic thing in it —
+               is what gives way. The right side keeps its buttons at full size. */
+            #toolbar-left {
+                min-width: 0;
+            }
+            /* Everything on the left keeps its size except the file chip — it is the one carrying
+               text that can be shortened, so it absorbs whatever the row runs out of. */
+            #toolbar-left > *:not(cv-ide-context-badge) {
+                flex-shrink: 0;
+            }
+            #toolbar-right {
+                flex: 0 0 auto;
             }
             /* Send button: shrink the inline icon to 16px (Fluent default 20px dominates
              * a small button); turn it red when the CLI is busy so it reads as "stop". */
-            #send svg {
-                width: 16px;
-                height: 16px;
+            /* The one filled button in the composer: appearance="primary" brings the brand fill,
+               its hover and its disabled state, so only the metrics are ours. */
+            #send {
+                padding: 3px;
+                min-width: 0;
             }
             /* Busy = "Stop": red like the mic's recording state (same "click to stop the live
-               action" pattern). Set on the element (not ::part) so it beats the neutral appearance,
-               matching how cv-mic-button colours its recording button. */
+               action" pattern) — the one state Fluent has no appearance for. */
             #send.is-busy {
                 background: var(--colorPaletteRedBackground3);
                 border-color: var(--colorPaletteRedBackground3);
-                color: var(--colorNeutralForegroundOnBrand);
             }
             #send.is-busy:hover {
                 background: var(--colorPaletteRedForeground1);
@@ -291,6 +295,9 @@ export class CvPrompt extends LitElement implements CommandHost {
     // True when the palette was opened from the lightning button (owns its own
     // search box + focus); false when opened by typing `/` (textarea drives it).
     @state() private _cmdSearchable = false;
+    // Non-null when the palette was opened on one specific row (the Effort trigger): the ids to
+    // show, instead of the whole list.
+    @state() private _cmdOnly: string[] | null = null;
     @state() private _modelListOpen = false;
     @state() private _permissionListOpen = false;
     @state() private _permissionMode = appState.permissionMode;
@@ -504,16 +511,20 @@ export class CvPrompt extends LitElement implements CommandHost {
                 this._permissionListOpen = false;
             }
         }
-        if (!this._cmdOpen || !this._cmdSearchable) {
+        // Only the palettes a click opened: the `/` one is driven by the textarea and closes when
+        // the token goes away, so an outside click must not touch it.
+        if (!this._cmdOpen || !(this._cmdSearchable || this._cmdOnly)) {
             return;
         }
         const path = e.composedPath();
         if (!path.some((n) => n instanceof Element && n.tagName === 'CV-COMMAND-MENU')) {
-            // Let the lightning button's own click do the toggle; don't double-close.
-            const onLightning = path.some(
-                (n) => n instanceof Element && n.tagName === 'CV-SLASH-MENU',
+            // Both triggers toggle themselves; closing here too would reopen-then-close.
+            const onTrigger = path.some(
+                (n) =>
+                    n instanceof Element &&
+                    (n.tagName === 'CV-SLASH-MENU' || n.tagName === 'CV-EFFORT-SELECTOR'),
             );
-            if (!onLightning) {
+            if (!onTrigger) {
                 this._closeCommandMenu();
             }
         }
@@ -585,6 +596,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._cmdOpen = true;
             this._cmdSearchable = false; // textarea drives the filter
             this._cmdQuery = slashQuery;
+            this._cmdOnly = null; // typing `/` searches everything, whatever opened it last
             this._atOpen = false;
             return;
         }
@@ -1264,15 +1276,34 @@ export class CvPrompt extends LitElement implements CommandHost {
     /** Lightning button: toggle the full palette with its own search box focused
      *  (all sections, the menu owns filtering + keyboard nav). */
     private _onOpenCommands = (): void => {
-        // Re-clicking the lightning while it's open closes it (toggle).
-        if (this._cmdOpen && this._cmdSearchable) {
+        // Re-clicking the lightning while its own list is open closes it (toggle). Not when the
+        // palette is open on a single row: that came from another trigger, so this click means
+        // "show me all of them", not "close".
+        if (this._cmdOpen && this._cmdSearchable && !this._cmdOnly) {
             this._closeCommandMenu();
             return;
         }
         this._cmdQuery = '';
         this._cmdSearchable = true;
+        this._cmdOnly = null; // the full list, even if the Effort trigger narrowed it last
         this._cmdOpen = true;
         this._atOpen = false;
+    };
+
+    /** The Effort trigger: the same palette, opened on its Effort row alone. The row already
+     *  carries the slider, so there is nothing here the menu doesn't already do. */
+    private _onOpenEffort = (): void => {
+        if (this._cmdOpen && this._cmdOnly) {
+            this._closeCommandMenu();
+            return;
+        }
+        this._modelListOpen = false;
+        this._permissionListOpen = false;
+        this._atOpen = false;
+        this._cmdQuery = '';
+        this._cmdSearchable = false;
+        this._cmdOnly = ['effort'];
+        this._cmdOpen = true;
     };
 
     private _closeCommandMenu = (): void => {
@@ -1280,6 +1311,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._cmdOpen = false;
             this._cmdQuery = '';
             this._cmdSearchable = false;
+            this._cmdOnly = null;
         }
     };
 
@@ -1438,6 +1470,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                     .query=${this._cmdQuery}
                     ?open=${this._cmdOpen}
                     .searchable=${this._cmdSearchable}
+                    .only=${this._cmdOnly}
                     .host=${this}
                     @select-command=${this._onSelectCommand}
                     @close-commands=${this._closeCommandMenu}
@@ -1459,11 +1492,26 @@ export class CvPrompt extends LitElement implements CommandHost {
                     >
                         <cv-attach-menu></cv-attach-menu>
                         <cv-slash-menu></cv-slash-menu>
-                        <cv-context-gauge></cv-context-gauge>
                         <cv-subagent-chip .tasks=${this._subagentTasks}></cv-subagent-chip>
                         <cv-ide-context-badge></cv-ide-context-badge>
                     </div>
-                    <div id="toolbar-right">
+                    <div
+                        id="toolbar-right"
+                        @open-models=${this._onOpenModels}
+                        @open-permissions=${this._onOpenPermissions}
+                        @open-effort=${this._onOpenEffort}
+                    >
+                        <!-- Turn settings with send, not with attach/commands: the left of the row
+                             is what goes into the message, the right is how and when it leaves.
+                             The gap between the two groups is the separation. -->
+                        <cv-thinking-toggle .host=${this}></cv-thinking-toggle>
+                        <cv-effort-selector></cv-effort-selector>
+                        <cv-model-selector></cv-model-selector>
+                        <cv-permission-selector></cv-permission-selector>
+                        <!-- The gauge sits with send, not with attach/commands: those act on the
+                             message you are writing, while how much context is left is about the
+                             conversation you are about to add to. -->
+                        <cv-context-gauge></cv-context-gauge>
                         <cv-mic-button
                             @transcript=${this._onMicTranscript}
                             @recording-start=${this._onMicStart}
@@ -1472,26 +1520,22 @@ export class CvPrompt extends LitElement implements CommandHost {
                         <fluent-button
                             id="send"
                             class=${this._isBusy ? 'is-busy' : ''}
-                            appearance=${this._isBusy ? 'neutral' : 'primary'}
-                            icon-only
+                            appearance="primary"
+                            shape="rounded"
                             size="small"
-                            title=${this._isBusy ? 'Stop' : 'Send'}
+                            icon-only
                             ?disabled=${!this._isBusy && !this._hasText && this._attachments.length === 0}
                             @click=${this._onSendClick}
                         >
                             ${unsafeHTML(this._isBusy ? Stop16Filled : Send16Filled)}
                         </fluent-button>
+                        <fluent-tooltip anchor="send" positioning="above-end">
+                            <span class="tip-name">${this._isBusy ? 'Stop' : 'Send'}</span>
+                            <span class="tip-action"
+                                >${this._isBusy ? 'Interrupt the turn — Esc' : 'Enter'}</span
+                            >
+                        </fluent-tooltip>
                     </div>
-                </div>
-                <div
-                    id="toolbar-settings"
-                    @open-models=${this._onOpenModels}
-                    @open-permissions=${this._onOpenPermissions}
-                >
-                    <cv-thinking-toggle .host=${this}></cv-thinking-toggle>
-                    <cv-effort-selector .host=${this}></cv-effort-selector>
-                    <cv-model-selector></cv-model-selector>
-                    <cv-permission-selector></cv-permission-selector>
                 </div>
                 <input
                     data-cv-file-picker

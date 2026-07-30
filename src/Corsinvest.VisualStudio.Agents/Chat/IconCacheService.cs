@@ -41,14 +41,29 @@ internal static class IconCacheService
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         var key = string.IsNullOrEmpty(iconKey) ? "file" : iconKey.ToLowerInvariant();
-        Directory.CreateDirectory(AppPaths.IconCacheFolder);
-        var pngPath = Path.Combine(AppPaths.IconCacheFolder, key + ".png");
+        // Keyed by the background the PNG is rendered against (see RenderMonikerToPng), not by the
+        // theme's name: that colour is what decides the glyph, so two themes sharing a background
+        // can share the cache, and one that only LOOKS dark still gets its own. Before this the
+        // cache was flat, so a dark-theme run left pale icons that stayed pale on white.
+        // The light-/dark- prefix is for whoever opens the folder; the hex is what makes it correct.
+        var themeBg = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
+        var bucket = $"{(VsThemeReader.IsDark() ? "dark" : "light")}-{themeBg.R:x2}{themeBg.G:x2}{themeBg.B:x2}";
+        var folder = Path.Combine(AppPaths.IconCacheFolder, bucket);
+        Directory.CreateDirectory(folder);
+        var pngPath = Path.Combine(folder, key + ".png");
         if (File.Exists(pngPath)) { return pngPath; }
 
         try
         {
-            var moniker = ResolveMoniker(key);
-            var bytes = RenderMonikerToPng(moniker);
+            var bytes = RenderMonikerToPng(ResolveMoniker(key), themeBg);
+            // A moniker VS knows but won't rasterise (".sh" is one) renders to nothing, and the
+            // path returned below would then 404 into a broken-image glyph. Fall back to the
+            // generic document rather than serve a file that isn't there.
+            if (bytes == null && key != "file")
+            {
+                OutputWindowLogger.Debug(() => $"[icons] no bitmap for '{key}' — using the generic document");
+                bytes = RenderMonikerToPng(KnownMonikers.Document, themeBg);
+            }
             if (bytes != null) { File.WriteAllBytes(pngPath, bytes); }
         }
         catch (Exception ex)
@@ -75,15 +90,16 @@ internal static class IconCacheService
         return m.Guid != Guid.Empty || m.Id != 0 ? m : KnownMonikers.Document;
     }
 
-    private static byte[] RenderMonikerToPng(ImageMoniker moniker)
+    /// <summary>Render at the given background — the same colour the caller keyed the cache folder
+    /// on, so what is drawn and where it is filed can't drift apart.</summary>
+    private static byte[] RenderMonikerToPng(ImageMoniker moniker, System.Drawing.Color themeBg)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
 
         if (Package.GetGlobalService(typeof(SVsImageService)) is not IVsImageService2 imageService) { return null; }
 
-        // Pass the tool-window background as theming hint so the icon matches
-        // Solution Explorer (light icons on dark theme, dark on light).
-        var themeBg = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
+        // The background is a theming hint: it makes the icon match Solution Explorer
+        // (light glyphs on a dark theme, dark on light).
         uint bgUint = ((uint)themeBg.A << 24)
                     | ((uint)themeBg.R << 16)
                     | ((uint)themeBg.G << 8)

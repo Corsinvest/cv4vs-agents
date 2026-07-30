@@ -44,20 +44,24 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
             gap: 8px;
             font: inherit;
             user-select: none;
-            /* Themable parts — the host row overrides these (e.g. on a brand
-             * background) so the slider stays legible. Defaults track VS Code. */
-            --cv-slider-track: var(--vscode-input-background, #3c3c3c);
-            --cv-slider-fill: var(--vscode-button-background, #0e639c);
-            --cv-slider-knob: var(--vscode-button-foreground, #fff);
-            --cv-slider-dot: var(--vscode-descriptionForeground, #888);
-            --cv-slider-border: transparent;
+            /* The tokens fluent-switch itself uses (switch.styles.js), so this reads as one of the
+             * family in either theme: a transparent track outlined in StrokeAccessible, filled with
+             * CompoundBrand, and a thumb that is Foreground3 over the track and ForegroundInverted
+             * over the fill. Previously --vscode-* names, which exist in VS Code's webview and
+             * nowhere here — every one fell through to a hard-coded dark default, so the track
+             * stayed charcoal on a light theme. The host row can still override them. */
+            --cv-slider-track: var(--colorTransparentBackground);
+            --cv-slider-fill: var(--colorCompoundBrandBackground);
+            --cv-slider-knob: var(--colorNeutralForegroundInverted);
+            --cv-slider-dot: var(--colorNeutralForeground3);
+            --cv-slider-border: var(--colorNeutralStrokeAccessible);
         }
         .lead {
-            color: var(--vscode-descriptionForeground, #999);
+            color: var(--colorNeutralForeground3);
             white-space: nowrap;
         }
         .lead strong {
-            color: var(--vscode-foreground, #ccc);
+            color: var(--colorNeutralForeground1);
             font-weight: 600;
         }
         .track {
@@ -75,7 +79,7 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
             outline: none;
         }
         .track:focus-visible {
-            box-shadow: 0 0 0 2px var(--vscode-focusBorder, #007fd4);
+            box-shadow: 0 0 0 2px var(--colorStrokeFocus2, currentColor);
         }
         /* Accent stop (ultracode): purple fill/knob past the max. */
         .track.accent {
@@ -119,7 +123,7 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
             height: 16px;
             border-radius: 50%;
             background: var(--cv-slider-knob);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            box-shadow: var(--shadow4);
             transform: translate(-50%, -50%);
             transition: left 120ms ease;
             z-index: 2;
@@ -201,7 +205,12 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
         const active = this.stops[idx];
         // knob/fill position as a percentage of the padded track span
         const pos = n > 1 ? (idx / (n - 1)) * 100 : 0;
-        const fillPx = `calc(11px + (100% - 22px) * ${pos / 100})`;
+        const knobPx = `calc(11px + (100% - 22px) * ${pos / 100})`;
+        // The fill runs past the knob, like fluent-switch — but it is measured from the track's own
+        // edges, not from the knob: derived from knobPx it inherited the 11px padding the knob is
+        // inset by, so at the last stop it stopped short of the right edge and left a sliver of
+        // bare track. 19px is that inset plus the knob's 8px half.
+        const fillPx = `calc(19px + (100% - 19px) * ${pos / 100})`;
 
         return html`
             ${
@@ -236,7 +245,7 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
                             ></span>`,
                     )}
                 </div>
-                <div class="knob" style=${`left:${fillPx}`}></div>
+                <div class="knob" style=${`left:${knobPx}`}></div>
             </div>
         `;
     }

@@ -18,12 +18,103 @@ export const iconStyles = css`
     svg[fill='none'] {
         fill: none;
     }
-    /* Fluent's small icon-only button scales its glyph to 20px; pin it to the nominal
-     * 16px so the action icons (copy, chevron, toggles) read as one size in the dense
-     * chat and don't look oversized. Only icon-only buttons — labelled ones keep theirs. */
+    /* Fluent's small icon-only button scales its glyph to 20px; pin it to 14, the size every
+     * action icon in the chat is drawn at (see iconButtonStyles), so the two kinds of button
+     * read as one set. Only icon-only buttons — labelled ones keep theirs. */
     fluent-button[icon-only] svg {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
+    }
+`;
+
+/**
+ * Shared icon-action button — the Shadow-DOM twin of `.icon-btn` in chat.css, which the light DOM
+ * uses for the same thing. A bare `<button>`, not a fluent-button: Fluent sizes a standalone
+ * control, and cutting it down to an icon's own size means overriding its tokens, which the
+ * fluent-pure rule forbids. Owning the element instead keeps that rule intact.
+ *
+ * Glyph size comes from `--cv-icon-btn-size` (default 14px, the density of an action inside the
+ * transcript); a component can raise it where the icon has to carry more.
+ *
+ * Icon-only buttons. A control with a word instead of a glyph is a `fluent-button` with
+ * `shape="circular"` — Fluent's own pill, so its hover and focus come with it (see
+ * cv-model-selector).
+ */
+export const iconButtonStyles = css`
+    .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3px;
+        border: 0;
+        border-radius: var(--borderRadiusSmall);
+        background: transparent;
+        /* Foreground2, not the inherited Foreground1: these sit beside the message they act on and
+           should not compete with it. Full strength on hover, below. */
+        color: var(--colorNeutralForeground2);
+        cursor: pointer;
+        opacity: 0.75;
+    }
+    .icon-btn:hover,
+    .icon-btn:focus-visible {
+        color: var(--colorNeutralForeground1);
+    }
+    /* NOT --colorSubtleBackgroundHover: in the light theme that token is #f5f5f5, three points of
+       luminance off the #ffffff behind it — the hover is there and invisible. Mixing the foreground
+       inverts with the theme by construction, so the tint reads on either. Same as the IDE-context
+       chip beside these buttons. */
+    .icon-btn:hover {
+        background: color-mix(in srgb, var(--colorNeutralForeground1) 10%, transparent);
+        opacity: 1;
+    }
+    .icon-btn:active {
+        background: color-mix(in srgb, var(--colorNeutralForeground1) 16%, transparent);
+    }
+    .icon-btn:focus-visible {
+        outline: 1px solid var(--colorStrokeFocus2, currentColor);
+        outline-offset: 1px;
+    }
+    .icon-btn svg {
+        width: var(--cv-icon-btn-size, 14px);
+        height: var(--cv-icon-btn-size, 14px);
+        display: block;
+        fill: currentColor;
+    }
+`;
+
+/**
+ * Shared tooltip for the composer's triggers. A `title` attribute is drawn by the OS, so it keeps
+ * the system's light/dark whatever theme VS is in — `fluent-tooltip` is themed like the rest.
+ *
+ * Three optional lines, in the order the reader needs them: what the setting is on (`.tip-name`),
+ * what that means (`.tip-desc`), and what clicking does (`.tip-action`).
+ */
+export const tooltipStyles = css`
+    /* :popover-open, not the bare tag: fluent-tooltip is a popover, and a closed popover is hidden
+       by a UA display:none that a plain display:flex here would override — which left the tooltip
+       on screen permanently. Layout only applies once it opens. */
+    fluent-tooltip:popover-open {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    fluent-tooltip {
+        padding: 6px 8px;
+        max-width: 320px;
+        /* Lets a plain string with newlines break where it says to, so a tooltip with two or three
+           lines doesn't need an element per line. */
+        white-space: pre-line;
+    }
+    .tip-name {
+        font-weight: var(--fontWeightSemibold);
+    }
+    .tip-desc {
+        color: var(--colorNeutralForeground2);
+    }
+    /* The verb, set apart from the description of what is currently in force. */
+    .tip-action {
+        color: var(--colorNeutralForeground3);
+        font-size: var(--fontSizeBase100);
     }
 `;
 

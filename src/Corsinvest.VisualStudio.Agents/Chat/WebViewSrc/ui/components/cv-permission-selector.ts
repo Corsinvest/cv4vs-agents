@@ -4,9 +4,8 @@
  */
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { state as appState } from '../../core/state';
-import { iconStyles } from '../styles/shared';
+import { tooltipStyles } from '../styles/shared';
 import type { PermissionMode } from '../../core/types';
 import { permissionItems } from '../../core/permission-modes';
 import { SwitchPermissionModeCommand } from '../../core/commands/builtin-commands';
@@ -22,23 +21,16 @@ import { SwitchPermissionModeCommand } from '../../core/commands/builtin-command
 @customElement('cv-permission-selector')
 export class CvPermissionSelector extends LitElement {
     static override styles = [
-        iconStyles,
+        tooltipStyles,
         css`
             :host {
                 display: contents;
             }
-            /* Trigger is a <fluent-button> — keep it pure (layout only). */
-            .trigger svg {
-                width: 16px;
-                height: 16px;
-                margin-right: 4px;
-            }
-            /* Two-word labels ("Edit automatically") otherwise wrap inside the button and make the
-               whole toolbar two rows tall. On the span too: the label is our own light-DOM node,
-               so it takes the rule even where the Fluent shadow wouldn't inherit it. */
-            .trigger,
-            .trigger span {
-                white-space: nowrap;
+            /* See cv-model-selector: Fluent's own pill, ours only the metrics. */
+            .trigger {
+                font-size: var(--fontSizeBase200);
+                padding-inline: 8px;
+                min-width: 0;
             }
         `,
     ];
@@ -82,15 +74,19 @@ export class CvPermissionSelector extends LitElement {
         const item = items.find((it) => it.value === this._current) ?? items[0];
         return html`
             <fluent-button
+                id="perm-trigger"
                 class="trigger"
-                appearance="subtle"
+                shape="circular"
                 size="small"
-                title=${`${item.label}\n${item.description}\n${this._command.description} — Shift+Tab to switch`}
                 @click=${this._onClick}
             >
-                ${unsafeHTML(item.icon)}
-                <span>${item.label}</span>
+                <span>${item.short}</span>
             </fluent-button>
+            <fluent-tooltip anchor="perm-trigger" positioning="above-end">
+                <span class="tip-name">${item.label}</span>
+                <span class="tip-desc">${item.description}</span>
+                <span class="tip-action">${this._command.description} — Shift+Tab to switch</span>
+            </fluent-tooltip>
         `;
     }
 }

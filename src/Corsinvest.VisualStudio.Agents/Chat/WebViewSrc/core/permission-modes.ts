@@ -19,6 +19,9 @@ import type { PermissionMode } from './types';
 export interface PermissionItem {
     value: PermissionMode;
     label: string;
+    /** What the composer button shows: the menu has room to explain, a docked pane hasn't. Set on
+     *  every mode, equal to `label` where that is already short enough. */
+    short: string;
     description: string;
     icon: string;
 }
@@ -31,12 +34,14 @@ export const PERMISSION_ITEMS: PermissionItem[] = [
     {
         value: 'default',
         label: 'Manual',
+        short: 'Manual',
         description: 'Every edit and command waits for your approval',
         icon: HandRight20Regular,
     },
     {
         value: 'acceptEdits',
         label: 'Edit automatically',
+        short: 'Auto-edit',
         description:
             'Files in the working directory are edited without asking — anything outside it, and commands, still ask',
         icon: Code20Regular,
@@ -44,18 +49,21 @@ export const PERMISSION_ITEMS: PermissionItem[] = [
     {
         value: 'plan',
         label: 'Plan',
+        short: 'Plan',
         description: 'Reads and explores freely, then proposes a plan — no file is changed',
         icon: ClipboardBulletListLtr20Regular,
     },
     {
         value: 'auto',
         label: 'Auto',
+        short: 'Auto',
         description: 'Decides per task when to act and when to ask, based on how risky it is',
         icon: Flash20Regular,
     },
     {
         value: 'bypassPermissions',
         label: 'Bypass permissions',
+        short: 'Bypass',
         description: 'Nothing is ever asked, including commands that can destroy data',
         icon: ShieldDismiss20Regular,
     },

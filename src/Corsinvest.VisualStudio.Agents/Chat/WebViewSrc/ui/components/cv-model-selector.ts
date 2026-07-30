@@ -2,13 +2,10 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-// Same icon the menu's "Switch model…" row uses — one glyph for one concept.
-import Brain16Regular from '@fluentui/svg-icons/icons/brain_16_regular.svg';
 import { state as appState } from '../../core/state';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, tooltipStyles } from '../styles/shared';
 import { modelLabel, modelLabelShort, resolveModelValue } from '../../core/ai-models';
 import { SwitchModelCommand } from '../../core/commands/builtin-commands';
 
@@ -25,23 +22,27 @@ import { SwitchModelCommand } from '../../core/commands/builtin-commands';
 export class CvModelSelector extends LitElement {
     static override styles = [
         iconStyles,
+        tooltipStyles,
         css`
             :host {
                 display: contents;
             }
-            /* Trigger is a <fluent-button> — keep it pure (layout only). */
-            .trigger svg {
-                width: 16px;
-                height: 16px;
-                margin-right: 4px;
-            }
             /* A provider can return a long id as the display name; cap it rather than
                letting the toolbar reflow. */
+            /* The pill is Fluent's own — shape="circular" and the default appearance, so its
+               hover, pressed and focus come with it in either theme rather than being written out
+               here. Only the metrics are ours: even size="small" is padded for a control standing
+               alone, and min-width holds a floor a word like "Opus" never reaches. Both live on
+               the host (the template is a single content span), so no ::part is involved. */
+            .trigger {
+                font-size: var(--fontSizeBase200);
+                padding-inline: 8px;
+                min-width: 0;
+            }
             .trigger span {
                 max-width: 14ch;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                white-space: nowrap;
             }
         `,
     ];
@@ -85,18 +86,23 @@ export class CvModelSelector extends LitElement {
         // everyday, complex tasks"), then the command's line for what clicking does. The button has
         // no room for any of it; the tooltip has plenty.
         const info = this._models.find((m) => m.value === resolveModelValue(this._current));
-        const tip = [full, info?.description, this._command.description].filter(Boolean).join('\n');
+        // fluent-tooltip, not a title attribute: the native one is drawn by the OS, so it keeps the
+        // system's light/dark regardless of the theme VS is in. Same reason the gauge uses one.
         return html`
             <fluent-button
+                id="model-trigger"
                 class="trigger"
-                appearance="subtle"
+                shape="circular"
                 size="small"
-                title=${tip}
                 @click=${this._onClick}
             >
-                ${unsafeHTML(Brain16Regular)}
                 <span>${modelLabelShort(this._current)}</span>
             </fluent-button>
+            <fluent-tooltip anchor="model-trigger" positioning="above-end">
+                <span class="tip-name">${full}</span>
+                ${info?.description ? html`<span class="tip-desc">${info.description}</span>` : nothing}
+                <span class="tip-action">${this._command.description}</span>
+            </fluent-tooltip>
         `;
     }
 }
