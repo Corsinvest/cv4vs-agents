@@ -13,6 +13,25 @@
     overflow-anchor: auto;
 }
 
+/* Sticky, not absolute: it is the scroller's own last child, so sticking it to the bottom edge
+ * keeps it in view as the content moves under it — no wrapper, which cv-app's light DOM can't
+ * take. float:right pulls it out of the flow so it adds no height of its own.
+ * Fluent's default appearance, not outline: this floats over the transcript, and an outline
+ * button is near-transparent — the text underneath showed straight through it. */
+#jump-to-bottom {
+    position: sticky;
+    float: right;
+    bottom: 12px;
+    right: 6px;
+    z-index: 3;
+    padding: 4px;
+    min-width: 0;
+    box-shadow: var(--shadow16);
+}
+#jump-to-bottom[hidden] {
+    display: none;
+}
+
 .cv-message {
     display: flex;
     flex-direction: column;
