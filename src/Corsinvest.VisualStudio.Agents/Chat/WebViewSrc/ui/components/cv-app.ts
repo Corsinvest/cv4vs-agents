@@ -4,6 +4,8 @@
  */
 import { LitElement, html, nothing } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { fetchSubagent, fetchContextUsage, fetchCompactSummary } from '../../core/lazy';
@@ -87,6 +89,9 @@ export class CvApp extends LitElement {
     @state() private _awaitingUser = appState.pendingPermission != null;
 
     @query('#messages') private _messagesEl!: HTMLDivElement;
+    /** Whether the "jump to the latest" button is showing — see _updateJump for the hysteresis. */
+    @state() private _showJump = false;
+    private _jumpRaf = 0;
     @query('#system-notices') private _systemNotices!: CvNoticeStack | null;
 
     private _offs: Array<() => void> = [];
@@ -640,6 +645,10 @@ export class CvApp extends LitElement {
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         this._messagesEl?.removeEventListener('scroll', this._onMessagesScroll);
+        if (this._jumpRaf !== 0) {
+            cancelAnimationFrame(this._jumpRaf);
+            this._jumpRaf = 0;
+        }
         window.removeEventListener('keydown', this._onGlobalEsc);
         this.removeEventListener('subagent-toggle', this._onChildrenToggle as EventListener);
         this.removeEventListener('compact-expand', this._onCompactExpand as EventListener);
@@ -811,6 +820,10 @@ export class CvApp extends LitElement {
         if (!el) {
             return;
         }
+        // Before the lazy-load guards below: those return early on most scrolls, and the jump
+        // button has to follow every one of them. This listener is already passive — a second one
+        // for the same event is what we are avoiding.
+        this._queueJumpUpdate();
         if (!appState.hasMoreHistory || appState.loadingOlder) {
             return;
         }
@@ -1300,6 +1313,37 @@ export class CvApp extends LitElement {
 
     /** True when scrolled at/near the bottom. Gates stream auto-follow so
      *  the user isn't yanked down while reading scrolled-up content. */
+    /** Coalesce to one measurement per frame: a scroll fires far more often than it repaints, and
+     *  reading scrollHeight on each event is a forced layout for a value that can't have changed
+     *  twice in a frame. */
+    private _queueJumpUpdate(): void {
+        if (this._jumpRaf !== 0) {
+            return;
+        }
+        this._jumpRaf = requestAnimationFrame(() => {
+            this._jumpRaf = 0;
+            this._updateJump();
+        });
+    }
+
+    /** Two thresholds, not one: during streaming the distance to the bottom oscillates as content
+     *  lands, and a single line would flicker the button in and out on every delta. It takes a
+     *  real scroll of 300px to show it, and coming back within 120px to hide it again. */
+    private _updateJump(): void {
+        const el = this._messagesEl;
+        // clientHeight reads 0 while WebView2 is suspended in the background; a distance measured
+        // then is meaningless, so leave the button as it is rather than acting on a false.
+        if (!el || el.clientHeight === 0) {
+            return;
+        }
+        const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+        if (!this._showJump && distance > 300) {
+            this._showJump = true;
+        } else if (this._showJump && distance < 120) {
+            this._showJump = false;
+        }
+    }
+
     private _isNearBottom(threshold = 80): boolean {
         const el = this._messagesEl;
         if (!el) {
@@ -1508,16 +1552,32 @@ export class CvApp extends LitElement {
 
             <div id="messages" aria-live="polite">
                 ${
-                    this._entries.length === 0 && !this._isBusy
-                        ? html`<cv-welcome></cv-welcome>`
-                        : nothing
-                }
+                        this._entries.length === 0 && !this._isBusy
+                            ? html`<cv-welcome></cv-welcome>`
+                            : nothing
+                    }
                 ${this._exchanges.map((group) => this.renderExchange(group))}
                 ${
-                    this._isBusy && this._streamingMsgs.size === 0 && !this._awaitingUser
-                        ? html`<cv-spinner .status=${this._status}></cv-spinner>`
-                        : nothing
-                }
+                        this._isBusy && this._streamingMsgs.size === 0 && !this._awaitingUser
+                            ? html`<cv-spinner .status=${this._status}></cv-spinner>`
+                            : nothing
+                    }
+                <!-- Last child of the scroller, stuck to its bottom edge: position:sticky keeps it
+                     in view without a wrapper. A wrapper would have been cleaner, but cv-app
+                     renders into the light DOM, and re-parenting #messages moves nodes Lit holds
+                     markers into — the next update then writes a property onto a node that is
+                     gone. -->
+                <fluent-button
+                    id="jump-to-bottom"
+                    shape="circular"
+                    size="small"
+                    icon-only
+                    title="Jump to the latest"
+                    ?hidden=${!this._showJump}
+                    @click=${(): void => this._scrollToBottom()}
+                >
+                    ${unsafeHTML(ChevronDown16Regular)}
+                </fluent-button>
             </div>
 
             <div id="composer-area">
