@@ -6,7 +6,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import SlashForward16Regular from '@fluentui/svg-icons/icons/slash_forward_16_regular.svg';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
 
 /**
  * Slash button in the input toolbar. Opens the unified command palette
@@ -18,11 +18,11 @@ import { iconStyles } from '../styles/shared';
 export class CvSlashMenu extends LitElement {
     static override styles = [
         iconStyles,
+        iconButtonStyles,
+        tooltipStyles,
         css`
-            /* 16px slash glyph, marigold "system" accent (like the model/permission triggers). */
-            svg {
-                width: 16px;
-                height: 16px;
+            /* Marigold "system" accent (like the model/permission triggers), at the shared 14px. */
+            .icon-btn {
                 color: var(--colorPaletteMarigoldForeground1);
             }
         `,
@@ -34,15 +34,12 @@ export class CvSlashMenu extends LitElement {
 
     override render() {
         return html`
-            <fluent-button
-                appearance="subtle"
-                size="small"
-                icon-only
-                title="Commands"
-                @click=${this._onClick}
-            >
+            <button id="slash-trigger" class="icon-btn" type="button" @click=${this._onClick}>
                 ${unsafeHTML(SlashForward16Regular)}
-            </fluent-button>
+            </button>
+            <fluent-tooltip anchor="slash-trigger" positioning="above-start"
+                >Commands</fluent-tooltip
+            >
         `;
     }
 }

@@ -74,11 +74,17 @@ export class CvContextGauge extends LitElement {
                 padding: 0;
                 cursor: pointer;
             }
+            /* Same tint as the icon buttons beside it (iconButtonStyles): the Subtle* tokens are
+               near-white in the light theme, so an hover drawn with them never showed. */
             .gauge:hover {
-                background: var(--colorSubtleBackgroundHover, rgba(127, 127, 127, 0.15));
+                background: color-mix(in srgb, var(--colorNeutralForeground1) 10%, transparent);
             }
             .gauge:active {
-                background: var(--colorSubtleBackgroundPressed, rgba(127, 127, 127, 0.25));
+                background: color-mix(in srgb, var(--colorNeutralForeground1) 16%, transparent);
+            }
+            .gauge:focus-visible {
+                outline: 1px solid var(--colorStrokeFocus2, currentColor);
+                outline-offset: 1px;
             }
             .gauge svg {
                 flex: 0 0 auto;
@@ -90,11 +96,13 @@ export class CvContextGauge extends LitElement {
                 white-space: nowrap;
             }
 
-            /* Click panel: info + actions, absolutely positioned above the ring, left-aligned to it. */
+            /* Click panel: info + actions, absolutely positioned above the ring. Right-aligned:
+               the ring sits at the right end of the toolbar, so a 340px panel anchored left would
+               run off the composer's right edge. */
             .popover {
                 position: absolute;
                 bottom: calc(100% + 4px);
-                left: 0;
+                right: 0;
                 z-index: 1000;
                 padding: 8px 10px;
                 width: 340px;

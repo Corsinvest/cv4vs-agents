@@ -6,7 +6,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Mic16Regular from '@fluentui/svg-icons/icons/mic_16_regular.svg';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
 
 /**
  * Mic button using Web Speech API. Fires a `transcript` CustomEvent with
@@ -18,17 +18,16 @@ import { iconStyles } from '../styles/shared';
 export class CvMicButton extends LitElement {
     static override styles = [
         iconStyles,
+        iconButtonStyles,
+        tooltipStyles,
         css`
-            /* Shrink the inline icon to 16px (Fluent defaults to 20px, too big here). */
-            svg {
-                width: 16px;
-                height: 16px;
-            }
-            /* While recording: red button that pulses, reads as "stop". */
-            fluent-button.is-recording {
+            /* While recording: red button that pulses, reads as "stop". Full opacity so it holds
+               its own colour rather than the resting 0.75 of the shared style. */
+            .icon-btn.is-recording,
+            .icon-btn.is-recording:hover {
                 background: var(--colorPaletteRedBackground3);
-                border-color: var(--colorPaletteRedBackground3);
                 color: var(--colorNeutralForegroundOnBrand);
+                opacity: 1;
                 animation: mic-pulse 1.8s ease-in-out infinite;
             }
             @keyframes mic-pulse {
@@ -108,16 +107,17 @@ export class CvMicButton extends LitElement {
         if (!this._hasSpeech) {
             return nothing;
         }
-        return html`<fluent-button
-            id="btn-mic"
-            appearance="subtle"
-            icon-only
-            size="small"
-            title=${this._recording ? 'Stop recording' : 'Voice dictation'}
-            class=${this._recording ? 'is-recording' : ''}
-            @click=${this._onClick}
-            >${unsafeHTML(Mic16Regular)}</fluent-button
-        >`;
+        return html`<button
+                id="btn-mic"
+                type="button"
+                class=${`icon-btn${this._recording ? ' is-recording' : ''}`}
+                @click=${this._onClick}
+            >
+                ${unsafeHTML(Mic16Regular)}
+            </button>
+            <fluent-tooltip anchor="btn-mic" positioning="above-end"
+                >${this._recording ? 'Stop recording' : 'Voice dictation'}</fluent-tooltip
+            >`;
     }
 }
 

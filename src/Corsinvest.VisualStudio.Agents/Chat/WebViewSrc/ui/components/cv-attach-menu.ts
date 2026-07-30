@@ -10,7 +10,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Add16Regular from '@fluentui/svg-icons/icons/add_16_regular.svg';
 import ArrowUpload16Regular from '@fluentui/svg-icons/icons/arrow_upload_16_regular.svg';
 import DocumentText16Regular from '@fluentui/svg-icons/icons/document_text_16_regular.svg';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
 
 /**
  * Attach-actions button in the input toolbar, built on `<fluent-menu>`.
@@ -21,6 +21,8 @@ import { iconStyles } from '../styles/shared';
 export class CvAttachMenu extends LitElement {
     static override styles = [
         iconStyles,
+        iconButtonStyles,
+        tooltipStyles,
         css`
             :host {
                 display: inline-flex;
@@ -48,10 +50,8 @@ export class CvAttachMenu extends LitElement {
                 align-items: center;
                 justify-content: center;
             }
-            /* Attach trigger icon: 16px green. */
-            fluent-button[slot='trigger'] svg {
-                width: 16px;
-                height: 16px;
+            /* Attach trigger: green, at the shared 14px. */
+            .icon-btn {
                 color: var(--colorPaletteGreenForeground1);
             }
         `,
@@ -69,15 +69,9 @@ export class CvAttachMenu extends LitElement {
     override render() {
         return html`
             <fluent-menu>
-                <fluent-button
-                    slot="trigger"
-                    appearance="subtle"
-                    size="small"
-                    icon-only
-                    title="Add files or content"
-                >
+                <button id="attach-trigger" slot="trigger" class="icon-btn" type="button">
                     ${unsafeHTML(Add16Regular)}
-                </fluent-button>
+                </button>
                 <fluent-menu-list>
                     <fluent-menu-item @click=${this._onUpload}>
                         <span slot="start">${unsafeHTML(ArrowUpload16Regular)}</span>
@@ -89,6 +83,11 @@ export class CvAttachMenu extends LitElement {
                     </fluent-menu-item>
                 </fluent-menu-list>
             </fluent-menu>
+            <!-- Outside the menu: inside it the tooltip would be a menu child, and fluent-menu
+                 lays out only its trigger and its list. -->
+            <fluent-tooltip anchor="attach-trigger" positioning="above-start"
+                >Add files or content</fluent-tooltip
+            >
         `;
     }
 }

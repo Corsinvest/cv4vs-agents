@@ -5,10 +5,10 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-// Same icon the menu's "Effort" row uses — one glyph for one concept.
+// The menu's own Effort glyph, shown in the panel header.
 import Dumbbell16Regular from '@fluentui/svg-icons/icons/dumbbell_16_regular.svg';
 import { state as appState } from '../../core/state';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
 import { currentEffortLevels, EffortCommand } from '../../core/commands/model-controls';
 import type { CommandHost } from '../../core/commands/base';
 import { effortLabel } from '../../core/types';
@@ -33,6 +33,8 @@ import type { SliderStop } from './cv-segmented-slider';
 export class CvEffortSelector extends LitElement {
     static override styles = [
         iconStyles,
+        iconButtonStyles,
+        tooltipStyles,
         css`
             /* Relative host so the popover can sit above the chip — plain absolute positioning,
                like cv-context-gauge (CSS anchor-positioning misplaces top-layer popovers in the
@@ -41,24 +43,13 @@ export class CvEffortSelector extends LitElement {
                 position: relative;
                 display: inline-flex;
             }
-            /* Trigger is a <fluent-button> — keep it pure (layout only). */
-            .trigger svg {
-                width: 16px;
-                height: 16px;
-                margin-right: 4px;
-            }
-            /* "Extra high" is the only two-word level, and it must not wrap the button onto a
-               second row. */
-            .trigger {
-                white-space: nowrap;
-            }
             .popover {
                 position: absolute;
                 bottom: calc(100% + 4px);
-                /* Anchored left: the chip leads the settings row, so its left edge is the one
-                   against the composer's. Anchoring right would grow the panel outwards from a
-                   chip whose width changes with the level's name, off the left of the box. */
-                left: 0;
+                /* Anchored right: the chip sits in the row's right-hand group, so a panel growing
+                   leftwards stays inside the composer. Anchored left it would run off the right
+                   edge, and the chip's own width changes with the level's name. */
+                right: 0;
                 z-index: 1000;
                 padding: 8px 10px;
                 display: flex;
@@ -83,8 +74,15 @@ export class CvEffortSelector extends LitElement {
                 font-size: var(--fontSizeBase200);
             }
             .head-title {
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
                 font-weight: var(--fontWeightSemibold);
                 color: var(--colorNeutralForeground1);
+            }
+            .head-title svg {
+                width: 14px;
+                height: 14px;
             }
             /* The active stop's name. Right-aligned in a fixed box so stepping through the levels
                doesn't resize the popover under the pointer. */
@@ -159,19 +157,18 @@ export class CvEffortSelector extends LitElement {
         const label = effortLabel(this._effort, this._ultracode);
         const ctrl = this._command.trailingControl;
         return html`
-            <fluent-button
-                class="trigger"
-                appearance="subtle"
-                size="small"
-                title=${`${this._command.label}: ${label}\n${this._command.description}`}
-                @click=${this._toggle}
-            >
-                ${unsafeHTML(Dumbbell16Regular)}
+            <button id="effort-trigger" class="icon-btn" type="button" @click=${this._toggle}>
                 <span>${label}</span>
-            </fluent-button>
+            </button>
+            <fluent-tooltip anchor="effort-trigger" positioning="above-end">
+                <span class="tip-name">${this._command.label}: ${label}</span>
+                <span class="tip-action">${this._command.description}</span>
+            </fluent-tooltip>
             <div class="popover" ?hidden=${!this._open}>
                 <div class="head">
-                    <span class="head-title">Effort</span>
+                    <!-- The glyph lives here now that the trigger is a word-only pill: the panel
+                         has the room the toolbar row hasn't, and it's the menu's own Effort icon. -->
+                    <span class="head-title">${unsafeHTML(Dumbbell16Regular)} Effort</span>
                     <span class="value">${label}</span>
                 </div>
                 <cv-segmented-slider

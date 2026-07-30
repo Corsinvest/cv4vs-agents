@@ -5,7 +5,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, iconButtonStyles, tooltipStyles } from '../styles/shared';
 import Send16Filled from '@fluentui/svg-icons/icons/send_16_filled.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
 import { iconUrl } from '../../core/icon-url';
@@ -150,6 +150,8 @@ function readAsAttachment(file: File): Promise<Attachment> {
 export class CvPrompt extends LitElement implements CommandHost {
     static override styles = [
         iconStyles,
+        iconButtonStyles,
+        tooltipStyles,
         css`
             :host {
                 display: contents;
@@ -233,36 +235,45 @@ export class CvPrompt extends LitElement implements CommandHost {
             #toolbar-right {
                 display: flex;
                 align-items: center;
-                gap: 6px;
+                gap: 4px;
             }
-            /* Turn settings on their own row: effort, model and permission mode answer "how should
-               this turn run", while the row above is about the message itself (attach, commands,
-               context, send). Splitting them means the labels always fit, at any pane width — no
-               truncation and no width-dependent hiding. */
-            #toolbar-settings {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                padding: 4px;
-                border-top: 1px solid var(--colorNeutralStroke2);
+            /* One row for everything, so the left side has to be able to shrink: min-width:0 lets
+               it go below its content width, and the file chip — the only elastic thing in it —
+               is what gives way. The right side keeps its buttons at full size. */
+            #toolbar-left {
+                min-width: 0;
+            }
+            #toolbar-right {
+                flex: 0 0 auto;
             }
             /* Send button: shrink the inline icon to 16px (Fluent default 20px dominates
              * a small button); turn it red when the CLI is busy so it reads as "stop". */
-            #send svg {
-                width: 16px;
-                height: 16px;
+            /* The one filled button in the composer: it carries the turn, and everything around it
+               is a subtle icon. Its own colours rather than .icon-btn's transparent resting state
+               — but the same element, so the row shares one set of metrics. */
+            #send {
+                background: var(--colorBrandBackground);
+                color: var(--colorNeutralForegroundOnBrand);
+                opacity: 1;
+            }
+            #send:hover {
+                background: var(--colorBrandBackgroundHover);
+                color: var(--colorNeutralForegroundOnBrand);
+            }
+            #send:disabled {
+                background: var(--colorNeutralBackgroundDisabled);
+                color: var(--colorNeutralForegroundDisabled);
+                cursor: default;
             }
             /* Busy = "Stop": red like the mic's recording state (same "click to stop the live
-               action" pattern). Set on the element (not ::part) so it beats the neutral appearance,
-               matching how cv-mic-button colours its recording button. */
-            #send.is-busy {
+               action" pattern). */
+            #send.is-busy,
+            #send.is-busy:hover {
                 background: var(--colorPaletteRedBackground3);
-                border-color: var(--colorPaletteRedBackground3);
                 color: var(--colorNeutralForegroundOnBrand);
             }
             #send.is-busy:hover {
                 background: var(--colorPaletteRedForeground1);
-                border-color: var(--colorPaletteRedForeground1);
             }
             #attachments {
                 display: flex;
@@ -1459,39 +1470,43 @@ export class CvPrompt extends LitElement implements CommandHost {
                     >
                         <cv-attach-menu></cv-attach-menu>
                         <cv-slash-menu></cv-slash-menu>
-                        <cv-context-gauge></cv-context-gauge>
                         <cv-subagent-chip .tasks=${this._subagentTasks}></cv-subagent-chip>
                         <cv-ide-context-badge></cv-ide-context-badge>
                     </div>
-                    <div id="toolbar-right">
+                    <div
+                        id="toolbar-right"
+                        @open-models=${this._onOpenModels}
+                        @open-permissions=${this._onOpenPermissions}
+                    >
+                        <!-- Turn settings with send, not with attach/commands: the left of the row
+                             is what goes into the message, the right is how and when it leaves.
+                             The gap between the two groups is the separation. -->
+                        <cv-thinking-toggle .host=${this}></cv-thinking-toggle>
+                        <cv-effort-selector .host=${this}></cv-effort-selector>
+                        <cv-model-selector></cv-model-selector>
+                        <cv-permission-selector></cv-permission-selector>
+                        <!-- The gauge sits with send, not with attach/commands: those act on the
+                             message you are writing, while how much context is left is about the
+                             conversation you are about to add to. -->
+                        <cv-context-gauge></cv-context-gauge>
                         <cv-mic-button
                             @transcript=${this._onMicTranscript}
                             @recording-start=${this._onMicStart}
                             @recording-end=${this._onMicEnd}
                         ></cv-mic-button>
-                        <fluent-button
+                        <button
                             id="send"
-                            class=${this._isBusy ? 'is-busy' : ''}
-                            appearance=${this._isBusy ? 'neutral' : 'primary'}
-                            icon-only
-                            size="small"
-                            title=${this._isBusy ? 'Stop' : 'Send'}
+                            type="button"
+                            class=${`icon-btn${this._isBusy ? ' is-busy' : ''}`}
                             ?disabled=${!this._isBusy && !this._hasText && this._attachments.length === 0}
                             @click=${this._onSendClick}
                         >
                             ${unsafeHTML(this._isBusy ? Stop16Filled : Send16Filled)}
-                        </fluent-button>
+                        </button>
+                        <fluent-tooltip anchor="send" positioning="above-end"
+                            >${this._isBusy ? 'Stop' : 'Send'}</fluent-tooltip
+                        >
                     </div>
-                </div>
-                <div
-                    id="toolbar-settings"
-                    @open-models=${this._onOpenModels}
-                    @open-permissions=${this._onOpenPermissions}
-                >
-                    <cv-thinking-toggle .host=${this}></cv-thinking-toggle>
-                    <cv-effort-selector .host=${this}></cv-effort-selector>
-                    <cv-model-selector></cv-model-selector>
-                    <cv-permission-selector></cv-permission-selector>
                 </div>
                 <input
                     data-cv-file-picker
