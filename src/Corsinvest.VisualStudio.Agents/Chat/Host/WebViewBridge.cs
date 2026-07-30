@@ -208,7 +208,10 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2 
         {
             _ = RegisterBootThemeScriptAsync(isDark);
         }
-        if (_ready) { SendDirect(BridgeMessages.ToWebView.Ui.ThemeChanged, new Contracts.ThemeChangedNotification { Dark = isDark }); }
+        // Send, not SendDirect: a pane sends its theme once while opening, before the WebView is
+        // ready, and dropping that one left every new pane on the dark default no matter what VS
+        // was set to. Send queues it instead, and the queue drains on ready.
+        Send(BridgeMessages.ToWebView.Ui.ThemeChanged, new Contracts.ThemeChangedNotification { Dark = isDark });
     }
 
     /// <summary>
