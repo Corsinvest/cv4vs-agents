@@ -55,8 +55,15 @@ internal static class IconCacheService
 
         try
         {
-            var moniker = ResolveMoniker(key);
-            var bytes = RenderMonikerToPng(moniker, themeBg);
+            var bytes = RenderMonikerToPng(ResolveMoniker(key), themeBg);
+            // A moniker VS knows but won't rasterise (".sh" is one) renders to nothing, and the
+            // path returned below would then 404 into a broken-image glyph. Fall back to the
+            // generic document rather than serve a file that isn't there.
+            if (bytes == null && key != "file")
+            {
+                OutputWindowLogger.Debug(() => $"[icons] no bitmap for '{key}' — using the generic document");
+                bytes = RenderMonikerToPng(KnownMonikers.Document, themeBg);
+            }
             if (bytes != null) { File.WriteAllBytes(pngPath, bytes); }
         }
         catch (Exception ex)
