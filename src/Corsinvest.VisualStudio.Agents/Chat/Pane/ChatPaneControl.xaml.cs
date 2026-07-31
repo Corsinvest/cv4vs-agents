@@ -219,14 +219,14 @@ public partial class ChatPaneControl : PaneControlBase
         }
     }
 
-    /// <summary>Chat-only extra for the toolbar's "More" menu: the WebView DevTools, on preview and
-    /// Debug builds. Testers on a release candidate are exactly who needs to inspect the WebView to
-    /// report a bug, and so is anyone building the extension — the DEBUG arm is what keeps it around
-    /// once a version drops its -rc suffix, which is when it silently disappeared. A stable
-    /// Marketplace build, which is neither, hides it unless the user opts in from Options: a chat
-    /// that renders wrongly or stops taking input can only be diagnosed from the browser console,
-    /// and that happens on stable builds too. (Info is shared, so it lives on the base; the CLI
-    /// returns none.)</summary>
+    /// <summary>Chat-only extras for the toolbar's "More" menu — the WebView DevTools and the
+    /// browser's task manager — on preview and Debug builds. Testers on a release candidate are
+    /// exactly who needs to inspect the WebView to report a bug, and so is anyone building the
+    /// extension — the DEBUG arm is what keeps them around once a version drops its -rc suffix,
+    /// which is when they silently disappeared. A stable Marketplace build, which is neither, hides
+    /// them unless the user opts in from Options: a chat that renders wrongly or stops taking input
+    /// can only be diagnosed from the browser console, and that happens on stable builds too.
+    /// (Info is shared, so it lives on the base; the CLI returns none.)</summary>
     public override IEnumerable<ButtonAction> MoreMenuActions
     {
         get
@@ -236,7 +236,7 @@ public partial class ChatPaneControl : PaneControlBase
 #else
             const bool devBuild = false;
 #endif
-            if (BuildInfo.IsPreRelease || devBuild || AgentsOptions.Chat.ShowDevToolsButton)
+            if (BuildInfo.IsPreRelease || devBuild || AgentsOptions.Chat.ShowWebViewDevEntries)
             {
                 yield return new ButtonAction("WebView DevTools", () => _bridge?.OpenDevTools(), "DevTools");
                 yield return new ButtonAction("WebView task manager", () => _bridge?.OpenTaskManager(), "TaskManager");

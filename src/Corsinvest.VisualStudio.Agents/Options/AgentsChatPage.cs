@@ -68,9 +68,9 @@ public class AgentsChatPage : AgentsOptionsPage
     public int ChatFontSize { get; set; } = 13;
 
     [Category("Display")]
-    [DisplayName("Show WebView DevTools button")]
-    [Description("Add \"WebView DevTools\" to the chat toolbar's \"More\" (…) menu. It opens the WebView2 developer tools (browser console, DOM, network) on the chat itself — how you diagnose a chat that renders wrongly or stops responding. Pre-release builds always offer it.")]
-    public bool ShowDevToolsButton { get; set; } = false;
+    [DisplayName("Show WebView developer entries")]
+    [Description("Add \"WebView DevTools\" and \"WebView task manager\" to the chat toolbar's \"More\" (…) menu. DevTools opens the WebView2 developer tools (browser console, DOM, network) on the chat itself — how you diagnose a chat that renders wrongly or stops responding. The task manager lists the browser's processes with their memory and CPU. Pre-release builds always offer both.")]
+    public bool ShowWebViewDevEntries { get; set; } = false;
 
     [Category("Files")]
     [DisplayName("Autosave before Claude reads/writes")]
