@@ -5,6 +5,7 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { repeat } from 'lit/directives/repeat.js';
 import ArrowExpandAll16Regular from '@fluentui/svg-icons/icons/arrow_expand_all_16_regular.svg';
 import ArrowCollapseAll16Regular from '@fluentui/svg-icons/icons/arrow_collapse_all_16_regular.svg';
 import './cv-message';
@@ -186,36 +187,39 @@ export class CvToolRow extends LitElement implements ToolRowState {
                               </div>`
                             : nothing
                     }
-                    ${shown.map((c: UiEntry) =>
-                        c.kind === 'text' && c.role === 'thinking'
-                            ? html`<cv-thinking
-                                  .text=${c.text}
-                                  ?streaming=${!!c.streaming}
-                                  .tokens=${c.tokens ?? 0}
-                                  .durationMs=${c.durationMs ?? 0}
-                                  ?redacted=${!!c.redacted}
-                              ></cv-thinking>`
-                            : c.kind === 'text'
-                              ? html`<cv-message
-                                    .role=${c.role}
-                                    .text=${c.text}
-                                    ?streaming=${c.role === 'assistant' ? !!c.streaming : false}
-                                    ?isError=${c.role === 'slash-result' ? c.isError : false}
-                                ></cv-message>`
-                              : html`<cv-tool-row
-                                    .data=${c.data}
-                                    .status=${c.status}
-                                    .result=${c.result}
-                                    .elapsedSec=${c.elapsedSec}
-                                    .childItems=${c.children?.items ?? []}
-                                    .fullLineCount=${c.fullLineCount}
-                                    .editStartLine=${c.editStartLine}
-                                    .editEndLine=${c.editEndLine}
-                                    .agentId=${c.agentId ?? ''}
-                                    .containerAgentId=${this.agentId || this.containerAgentId}
-                                    .hasMore=${c.children?.hasMore ?? false}
-                                    .showAll=${c.children?.showAll ?? false}
-                                ></cv-tool-row>`,
+                    ${repeat(
+                        shown,
+                        (c: UiEntry) => c.id,
+                        (c: UiEntry) =>
+                            c.kind === 'text' && c.role === 'thinking'
+                                ? html`<cv-thinking
+                                      .text=${c.text}
+                                      ?streaming=${!!c.streaming}
+                                      .tokens=${c.tokens ?? 0}
+                                      .durationMs=${c.durationMs ?? 0}
+                                      ?redacted=${!!c.redacted}
+                                  ></cv-thinking>`
+                                : c.kind === 'text'
+                                  ? html`<cv-message
+                                        .role=${c.role}
+                                        .text=${c.text}
+                                        ?streaming=${c.role === 'assistant' ? !!c.streaming : false}
+                                        ?isError=${c.role === 'slash-result' ? c.isError : false}
+                                    ></cv-message>`
+                                  : html`<cv-tool-row
+                                        .data=${c.data}
+                                        .status=${c.status}
+                                        .result=${c.result}
+                                        .elapsedSec=${c.elapsedSec}
+                                        .childItems=${c.children?.items ?? []}
+                                        .fullLineCount=${c.fullLineCount}
+                                        .editStartLine=${c.editStartLine}
+                                        .editEndLine=${c.editEndLine}
+                                        .agentId=${c.agentId ?? ''}
+                                        .containerAgentId=${this.agentId || this.containerAgentId}
+                                        .hasMore=${c.children?.hasMore ?? false}
+                                        .showAll=${c.children?.showAll ?? false}
+                                    ></cv-tool-row>`,
                     )}
                 </div>
                 ${this._renderChildrenActions()}
