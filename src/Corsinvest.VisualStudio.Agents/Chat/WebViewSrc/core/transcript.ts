@@ -1,10 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (C) 2026 Corsinvest Srl
 
-import type { UiEntry } from './types';
+import type { UiEntry, UiToolEntry } from './types';
 
 /** Chain of toolUseId from the root down to a nested entry; empty for a top-level one. */
 type EntryPath = string[];
+
+/** Replace the child sharing `key(entry)`, or append when there is none. */
+function upsert(list: UiEntry[], entry: UiEntry, key: (e: UiEntry) => string): UiEntry[] {
+    const k = key(entry);
+    const i = list.findIndex((e) => key(e) === k);
+    if (i < 0) {
+        return [...list, entry];
+    }
+    const next = [...list];
+    next[i] = entry;
+    return next;
+}
 
 /**
  * Owns the chat transcript and updates it without ever mutating an entry.
@@ -66,6 +78,71 @@ export class Transcript {
         return this.update<UiEntry>(id, (e) =>
             'text' in e ? ({ ...e, text: e.text + delta } as UiEntry) : e,
         );
+    }
+
+    /**
+     * Append `entry` under the tool row `parentToolUseId`. A collapsed row keeps a ring of the
+     * last three children and flags hasMore; showAll keeps the whole list and upserts, so a
+     * re-emitted row (pending → done) updates in place instead of duplicating.
+     *
+     * `upsertKey` comes from the caller: what makes two children the same row is a presentation
+     * decision (toolUseId for tools, uuid for text), and this class does not need to know it.
+     */
+    appendChild(
+        parentToolUseId: string,
+        entry: UiEntry,
+        upsertKey: (e: UiEntry) => string,
+    ): boolean {
+        const parent = this.findTool(parentToolUseId);
+        if (!parent) {
+            return false;
+        }
+        const parentPath = this._index.get(parent.id);
+        const ok = this.update<UiToolEntry>(parent.id, (p) => {
+            const kids = p.children ?? { items: [], hasMore: false, showAll: false };
+            if (kids.showAll) {
+                return { ...p, children: { ...kids, items: upsert(kids.items, entry, upsertKey) } };
+            }
+            return {
+                ...p,
+                children: {
+                    ...kids,
+                    hasMore: kids.hasMore || kids.items.length >= 3,
+                    items: [...kids.items, entry].slice(-3),
+                },
+            };
+        });
+        if (ok) {
+            this._index.set(entry.id, [...(parentPath ?? []), parentToolUseId]);
+        }
+        return ok;
+    }
+
+    /** Find a tool row by toolUseId, walking nested children. */
+    findTool(toolUseId: string): UiToolEntry | null {
+        return this._visitTools((e) => e.toolUseId === toolUseId);
+    }
+
+    /** First tool row matching `pred`, depth-first. */
+    private _visitTools(pred: (e: UiToolEntry) => boolean): UiToolEntry | null {
+        const visit = (list: readonly UiEntry[]): UiToolEntry | null => {
+            for (const e of list) {
+                if (e.kind !== 'tool') {
+                    continue;
+                }
+                if (pred(e)) {
+                    return e;
+                }
+                if (e.children?.items.length) {
+                    const hit = visit(e.children.items);
+                    if (hit) {
+                        return hit;
+                    }
+                }
+            }
+            return null;
+        };
+        return visit(this._entries);
     }
 
     /** Rebuild `list` with the entry at `path[depth…]`/`id` replaced. Returns null when the path
