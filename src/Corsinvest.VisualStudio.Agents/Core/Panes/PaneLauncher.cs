@@ -48,7 +48,6 @@ internal static class PaneLauncher
             }
             catch (Exception ex)
             {
-                // One pane failing to hide must not stop the others.
                 OutputWindowLogger.LogException($"PaneLauncher.HideExisting({entry.Title})", ex);
             }
         }

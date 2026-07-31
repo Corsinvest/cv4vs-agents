@@ -168,7 +168,6 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         OutputWindowLogger.Debug(() => $"[reload] watch armed for {dueMs} ms (folder={_closingSolutionFolder ?? "(none)"})");
     }
 
-    /// <summary>Stop the watch — a solution finished opening, or the package is going away.</summary>
     private void DisarmReloadWatch()
         => _reloadWatch?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
 
@@ -201,7 +200,6 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         foreach (var p in ws.Panes)
         {
             // A reload leaves its panes alive: restoring them again would double every chat.
-            // Matched on session id, the only field that survives on both sides.
             if (!string.IsNullOrEmpty(p.SessionId)
                 && Core.Panes.PaneRegistry.Instance.Entries.Any(e =>
                        string.Equals(e.ActiveSessionId, p.SessionId, StringComparison.OrdinalIgnoreCase)))
@@ -343,7 +341,6 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
                 _debugger?.UnadviseDebuggerEvents(_debuggerEventsCookie);
                 _debuggerEventsCookie = 0;
             }
-            // A watch still armed here would fire into a package that is going away.
             _reloadWatch?.Dispose();
             _reloadWatch = null;
             Mcp.McpServerHost.Instance.Stop();
@@ -451,7 +448,6 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     int IVsSolutionEvents.OnBeforeCloseSolution(object pUnkReserved)
     {
         OutputWindowLogger.Debug(() => $"[reload] solution closing: {CurrentSolutionFolder ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
-        // Snapshot while the frames are still valid and the pane list is complete.
         SaveWorkspace();
         // Last point where the folder is still known — OnAfterCloseSolution clears it. The panes are
         // NOT closed here: a reload would take the live CLI down with them, losing the turn in flight.
