@@ -943,16 +943,10 @@ export class CvApp extends LitElement {
         return entry.id;
     }
 
-    /**
-     * Append `entry` under the tool row `parentId`, or to the root list
-     * when no/unknown parent. Arrays are replaced (not mutated) for Lit.
-     *
-     * Memoria-minima: when appending a child under an Agent parent, keep only
-     * the last 3 children — a ring of 3 (`slice(-3)`). The `hasMore` flag flips
-     * true once a 4th child arrives (children.items already holds 3 before the push):
-     * the "…" indicator only signals "more exist", not the count, so a boolean
-     * is enough — no running counter needed.
-     */
+    /** Append `entry` under the tool row `parentId`, or to the root list when there is no parent
+     *  or it isn't in the tree. The ring of three and the upsert live in Transcript.appendChild;
+     *  what stays here is the one thing that is a rendering decision — dropping the sub-agent's
+     *  echo of its own launch prompt. */
     private _appendEntry(entry: UiEntry, parentId?: string): void {
         if (parentId) {
             const parent = this._transcript.findTool(parentId);
