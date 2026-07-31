@@ -148,9 +148,6 @@ jobs:
       # Marketplace takes neither a -rc suffix nor a second upload of the same version. Stable
       # releases are installed from the Marketplace, so attaching the file there would offer a
       # second copy that updates itself and one that doesn't.
-      #
-      # Marketplace upload stays manual for now: the portal asks for categories, screenshots and
-      # the overview, and those are set once by hand before automating around them.
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -160,3 +157,23 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ steps.version.outputs.prerelease }}
           files: ${{ steps.version.outputs.prerelease == 'true' && 'src/Corsinvest.VisualStudio.Agents/bin/Release/*.vsix' || '' }}
+
+      # Stable only: the Marketplace rejects a -rc suffix, and previews are distributed as the
+      # attached .vsix instead. Runs after the GitHub release so a Marketplace failure leaves the
+      # release page standing rather than the reverse — the upload can be retried by hand, an
+      # already-published version cannot be re-tagged.
+      #
+      # vs-publish.json is the listing itself, not just credentials: publishing overwrites the
+      # Marketplace's categories, tags, overview and Q&A with whatever it says. It was filled in
+      # from what the portal already showed, so keep the two in step — a field edited on the portal
+      # and not here is reverted by the next release.
+      #
+      # VS_MARKETPLACE_TOKEN is a Marketplace PAT with Acquire + Manage, scoped to all accessible
+      # organizations — a narrower scope authenticates and then fails on the upload.
+      - name: Publish to the Marketplace
+        if: steps.version.outputs.prerelease == 'false'
+        uses: madskristensen/publish-marketplace@v2
+        with:
+          extension-file: src/Corsinvest.VisualStudio.Agents/bin/Release/Corsinvest.VisualStudio.Agents.vsix
+          publish-manifest-file: vs-publish.json
+          personal-access-code: ${{ secrets.VS_MARKETPLACE_TOKEN }}

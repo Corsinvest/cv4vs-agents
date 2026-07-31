@@ -96,7 +96,11 @@ Full description in [docs/architecture.md](docs/architecture.md). What matters w
 `docs/*.md` is public and **written in English** (README, options, mcp-tools, sub-agents,
 architecture, context-and-usage, settings-and-data).
 
-`docs/marketplace-overview.md` is the odd one out: it is not documentation but the listing text,
-kept in git so edits are reviewable. Nothing reads it at build time — it is pasted into the portal
-by hand, and its images need absolute `raw.githubusercontent.com` URLs to resolve there.
+`docs/marketplace-overview.md` is the odd one out: it is not documentation but the listing text.
+`vs-publish.json` points the release workflow at it, so a stable tag uploads it along with the
+package — the file in git *is* what the Marketplace shows. Its images still need absolute
+`raw.githubusercontent.com` URLs: the portal resolves nothing relative.
+
+That manifest carries the rest of the listing too (categories, Q&A, price). Publishing overwrites
+them, so a field changed on the portal and not there is reverted by the next release.
 
