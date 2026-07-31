@@ -226,7 +226,7 @@ export class CvApp extends LitElement {
                         // The final assistant notification carries the message time; live fallback = now.
                         streaming.timestamp = data?.timestamp ?? Date.now();
                         this._streamingMsgs.delete(parentId);
-                        this._commit(streaming);
+                        this._invalidate(streaming);
                     } else {
                         const entry = CvApp.buildAssistantEntry(data);
                         entry.timestamp = data?.timestamp ?? Date.now();
@@ -254,7 +254,7 @@ export class CvApp extends LitElement {
                         // Auto-follow only if already near the bottom.
                         const atBottom = this._isNearBottom();
                         streaming.text += delta;
-                        this._commit(streaming);
+                        this._invalidate(streaming);
                         if (atBottom) {
                             queueMicrotask(() => this._scrollToBottom('instant'));
                         }
@@ -295,7 +295,7 @@ export class CvApp extends LitElement {
                             entry.tokens = (entry.tokens ?? 0) + data.estimatedTokens;
                         }
                     }
-                    this._commit(entry);
+                    this._invalidate(entry);
                 },
             ),
         );
@@ -320,7 +320,7 @@ export class CvApp extends LitElement {
                     entry.streaming = false;
                     entry.durationMs = entry.startedAt ? Date.now() - entry.startedAt : 0;
                     this._thinkingMsgs.delete(parentId);
-                    this._commit(entry);
+                    this._invalidate(entry);
                 },
             ),
         );
@@ -369,7 +369,7 @@ export class CvApp extends LitElement {
                         // Keyed by parentToolUseId, so a sub-agent's message is nested and needs
                         // its path refreshed like any other nested change. Before the clear —
                         // after it there is nothing left to pass.
-                        this._commit(...this._streamingMsgs.values());
+                        this._invalidate(...this._streamingMsgs.values());
                         this._streamingMsgs.clear();
                     }
                 },
@@ -464,7 +464,7 @@ export class CvApp extends LitElement {
                             name: data.name,
                             input: (data.input ?? {}) as Record<string, unknown>,
                         };
-                        this._commit(existing);
+                        this._invalidate(existing);
                         return;
                     }
                     this._appendEntry(this.buildToolEntry(data), data.parentToolUseId ?? undefined);
@@ -484,7 +484,7 @@ export class CvApp extends LitElement {
                 }
                 const atBottom = this._isNearBottom();
                 CvApp.applyToolResult(tool, data);
-                this._commit(tool);
+                this._invalidate(tool);
                 // The result grows the tool row (e.g. an answered ask); follow it down so the
                 // view doesn't stay stuck on the tool until the next message arrives.
                 if (atBottom) {
@@ -507,7 +507,7 @@ export class CvApp extends LitElement {
                     // Wire field is elapsedSeconds (from the host); the entry keeps it as
                     // elapsedSec (internal UI state).
                     tool.elapsedSec = data.elapsedSeconds ?? 0;
-                    this._commit(tool);
+                    this._invalidate(tool);
                 },
             ),
         );
@@ -584,8 +584,9 @@ export class CvApp extends LitElement {
                     this._subagentTasks = m;
                     this._publishSubagentTasks(m);
                     // The Agent row is usually created after this and reads the id in
-                    // buildToolEntry; when it got in first, tag it here. No _commit — the row
-                    // was just appended, so its render is still pending and will read the id.
+                    // buildToolEntry; when it got in first, tag it here. Nothing marks the view
+                    // stale — the row was just appended, so its render is still pending and will
+                    // read the id.
                     const row = d.toolUseId ? this._findTool(d.toolUseId) : null;
                     if (row && !row.agentId) {
                         row.agentId = d.taskId;
@@ -639,7 +640,7 @@ export class CvApp extends LitElement {
                         const row = this._findTool(toolUseId);
                         if (row) {
                             row.status = 'error';
-                            this._commit(row);
+                            this._invalidate(row);
                         }
                     }
                     const m = new Map(this._subagentTasks);
@@ -932,7 +933,7 @@ export class CvApp extends LitElement {
                     }
                     kids.items = [...kids.items, entry].slice(-3);
                 }
-                this._commit(parent);
+                this._invalidate(parent);
                 return;
             }
         }
@@ -967,7 +968,7 @@ export class CvApp extends LitElement {
                 ? kids.items.length === 0 // history preview
                 : kids.hasMore; // Show all with more on disk than we hold
             if (!needFetch) {
-                this._commit(parent);
+                this._invalidate(parent);
                 return;
             }
             fetchSubagent(agentId, { preview: !!preview })
@@ -1006,7 +1007,7 @@ export class CvApp extends LitElement {
                     pk.items = preview ? list.slice(-3) : list;
                     pk.hasMore = preview ? list.length > 3 : false;
                     pk.showAll = !preview;
-                    this._commit(p);
+                    this._invalidate(p);
                 })
                 .catch(() => {
                     /* timeout / not found — leave the kept children as-is */
@@ -1018,7 +1019,7 @@ export class CvApp extends LitElement {
             kids.showAll = false;
             kids.hasMore = kids.items.length > 3;
         }
-        this._commit(parent);
+        this._invalidate(parent);
     };
 
     /** A compact separator's <details> opened for the first time: fetch the summary lazily
@@ -1039,7 +1040,7 @@ export class CvApp extends LitElement {
             .then((res) => {
                 entry.summary = res.summary;
                 entry.loaded = true;
-                this._commit(entry);
+                this._invalidate(entry);
             })
             .catch(() => {
                 /* timeout / not found — leave "Loading…" as-is */
@@ -1234,10 +1235,10 @@ export class CvApp extends LitElement {
         appState.subagentTasks = [...ordered, ...linked.filter((t) => !seen.has(t.taskId))];
     }
 
-    /** Temporary bridge while the call sites move to Transcript: the entries they mutate are
-     *  still mutated in place, so all this can do is tell Lit to re-render. Removed once nothing
-     *  calls it. */
-    private _commit(..._targets: Array<UiEntry | null | undefined>): void {
+    /** Temporary bridge while the call sites move to Transcript. The entries they name are still
+     *  mutated in place, so there is nothing to commit — the arguments are ignored and all this
+     *  does is mark the view stale. Gone once nothing calls it. */
+    private _invalidate(..._targets: Array<UiEntry | null | undefined>): void {
         this._rev++;
     }
 
