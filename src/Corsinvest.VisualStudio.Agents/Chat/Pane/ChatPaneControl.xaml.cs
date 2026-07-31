@@ -239,7 +239,7 @@ public partial class ChatPaneControl : PaneControlBase
             if (BuildInfo.IsPreRelease || devBuild || AgentsOptions.Chat.ShowDevToolsButton)
             {
                 yield return new ButtonAction("WebView DevTools", () => _bridge?.OpenDevTools(), "DevTools");
-                yield return new ButtonAction("WebView task manager", () => _bridge?.OpenTaskManager(), "DevTools");
+                yield return new ButtonAction("WebView task manager", () => _bridge?.OpenTaskManager(), "TaskManager");
             }
         }
     }
