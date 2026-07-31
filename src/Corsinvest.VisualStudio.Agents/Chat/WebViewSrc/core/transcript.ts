@@ -64,11 +64,24 @@ export class Transcript {
         }
         // The caller names the member it expects (update<UiToolEntry>); the walk below is
         // type-blind, so the callback is widened for it.
+        const before = this.find(id);
         const next = this._replace(this._entries, path, 0, id, (e) => fn(e as T));
         if (!next) {
             return false;
         }
         this._entries = next;
+        // A caller may hand over a whole new children list rather than append one at a time —
+        // "Show all" swaps the kept three for the fetched transcript. Those entries never went
+        // through appendChild, so nothing indexed them: a live event for one of them would find
+        // no path, or the stale path of the child it replaced, and update the wrong branch.
+        const after = this.find(id);
+        if (
+            before?.kind === 'tool' &&
+            after?.kind === 'tool' &&
+            before.children?.items !== after.children?.items
+        ) {
+            this._reindex();
+        }
         return true;
     }
 
