@@ -192,7 +192,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         var ws = Core.Workspace.WorkspaceStore.Load(folder);
         if (ws?.Panes == null)
         {
-            OutputWindowLogger.Debug(() => $"[restore] no workspace/panes for {folder ?? "<null>"}");
+            OutputWindowLogger.Debug(() => $"[restore] no workspace/panes for {folder ?? "(none)"}");
             return;
         }
         // Load(forEdit:false) normally includes the native "Claude" profile → profiles[0] is the fallback.
@@ -359,7 +359,6 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnAfterOpenSolution(object pUnkReserved, int fNewSolution)
     {
-        OutputWindowLogger.Debug(() => $"[reload] OnAfterOpenSolution fNew={fNewSolution} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         // Redundant with OnBeforeOpenSolution, but covers the rare load path
         // that skips IVsSolutionLoadEvents.
         RefreshCurrentSolutionFolder();
@@ -368,10 +367,11 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         // Panes belong to the folder they were born in: their CLI runs there and can't follow a move.
         // Same folder → the session is still valid, so the pane (and its live process) stays. This is
         // what makes a reload survivable. Everything else closes, home-born panes included.
+        var had = Core.Panes.PaneRegistry.Instance.Entries.Count;
         var kept = 0;
         try { kept = Core.Panes.PaneRegistry.Instance.CloseWhereWorkdirDiffers(CurrentSolutionFolder); }
         catch (Exception ex) { OutputWindowLogger.LogException("Pkg.OnAfterOpenSolution", ex); }
-        OutputWindowLogger.Info($"[reload] OnAfterOpenSolution kept={kept} pane(s) on {CurrentSolutionFolder ?? "(none)"}");
+        OutputWindowLogger.Info($"[reload] solution open on {CurrentSolutionFolder ?? "(none)"} — kept {kept} of {had} pane(s)");
         // Reopen the panes saved for THIS solution — minus the ones a reload just kept alive (see
         // RestorePanesForCurrentSolution). Deferred to shell-idle (see RestorePanesDeferred):
         // spawning panes inside this COM event reenters solution state.
@@ -389,7 +389,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionLoadEvents.OnBeforeOpenSolution(string pszSolutionFilename)
     {
-        OutputWindowLogger.Debug(() => $"[reload] OnBeforeOpenSolution file={pszSolutionFilename ?? "(none)"} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        OutputWindowLogger.Debug(() => $"[reload] solution opening: {pszSolutionFilename ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         // Rearm rather than disarm: if this load fails or is cancelled, OnAfterOpenSolution never
         // comes and no close event follows either — the solution was already closed — so the panes
         // would stay pinned forever.
@@ -413,7 +413,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnAfterCloseSolution(object pUnkReserved)
     {
-        OutputWindowLogger.Debug(() => $"[reload] OnAfterCloseSolution panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        OutputWindowLogger.Debug(() => $"[reload] solution closed — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         CurrentSolutionFolder = null;
         // Armed here, not on the Before: unloading the projects happens in between and would eat the
         // window on a large solution.
@@ -436,7 +436,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnBeforeCloseSolution(object pUnkReserved)
     {
-        OutputWindowLogger.Debug(() => $"[reload] OnBeforeCloseSolution folder={CurrentSolutionFolder ?? "(none)"} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        OutputWindowLogger.Debug(() => $"[reload] solution closing: {CurrentSolutionFolder ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         // Snapshot while the frames are still valid and the pane list is complete.
         SaveWorkspace();
         // Last point where the folder is still known — OnAfterCloseSolution clears it. The panes are
