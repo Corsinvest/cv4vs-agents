@@ -7,6 +7,7 @@
     "scripts": {
         "gen-bridge": "node tools/gen-bridge.mjs",
         "build": "node tools/gen-bridge.mjs && node esbuild.config.mjs",
+        "build:dev": "node tools/gen-bridge.mjs && node esbuild.config.mjs --dev",
         "dev": "node tools/gen-bridge.mjs && node esbuild.config.mjs --watch",
         "typecheck": "tsc --noEmit",
         "lint": "eslint \"{core,ui}/**/*.ts\"",
