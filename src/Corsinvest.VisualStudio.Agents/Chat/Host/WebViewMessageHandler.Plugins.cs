@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -90,7 +90,8 @@ internal sealed partial class WebViewMessageHandler
                 Message = message,
                 AffectsActive = affectsActive && ok,
             });
-            // TODO(Task 5): broadcast plugins_changed to ALL live chats when (ok && affectsActive).
+            // Only this pane hears about it: a plugin change affects every live chat, but there is
+            // no broadcast channel yet, so the others find out on their next reload.
             if (ok && affectsActive) { bridge.Send(BridgeMessages.ToWebView.Plugins.Changed, null); }
         }).FileAndForget(nameof(WebViewMessageHandler));
     }
