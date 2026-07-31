@@ -200,6 +200,15 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         if (profiles.Count == 0) { return; }   // defensive: nothing enabled → nothing to restore onto
         foreach (var p in ws.Panes)
         {
+            // A reload leaves its panes alive: restoring them again would double every chat.
+            // Matched on session id, the only field that survives on both sides.
+            if (!string.IsNullOrEmpty(p.SessionId)
+                && Core.Panes.PaneRegistry.Instance.Entries.Any(e =>
+                       string.Equals(e.ActiveSessionId, p.SessionId, StringComparison.OrdinalIgnoreCase)))
+            {
+                OutputWindowLogger.Debug(() => $"[restore] session {p.SessionId} still open → skip");
+                continue;
+            }
             var kind = string.Equals(p.Kind, "Cli", StringComparison.OrdinalIgnoreCase)
                 ? Core.Panes.PaneKind.Cli : Core.Panes.PaneKind.Chat;
             var profile = profiles.FirstOrDefault(x =>
@@ -334,6 +343,9 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
                 _debugger?.UnadviseDebuggerEvents(_debuggerEventsCookie);
                 _debuggerEventsCookie = 0;
             }
+            // A watch still armed here would fire into a package that is going away.
+            _reloadWatch?.Dispose();
+            _reloadWatch = null;
             Mcp.McpServerHost.Instance.Stop();
             AgentsOptions.Applied -= ProfilesMenuCommand.InvalidateCache;
             // Unadvise the selection sink (MS pattern: at package dispose). Dispose was never
