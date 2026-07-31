@@ -43,9 +43,7 @@ in either, or in VS Code.*
 
 | | |
 |---|---|
-| **Visual Studio** | 2022 or 2026 (17.0+) — Community, Professional or Enterprise |
-| **OS** | Windows (the CLI pane uses ConPTY, Windows 10 1809+) |
-| **.NET Framework** | 4.8 (already present on any machine running VS 2022) |
+| **Visual Studio** | 2022 or 2026 (17.0+), any edition — on Windows 10 1809 or later |
 | **Claude Code CLI** | installed separately — see below |
 
 ---

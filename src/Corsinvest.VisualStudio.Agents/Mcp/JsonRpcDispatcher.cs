@@ -19,10 +19,6 @@ internal sealed class JsonRpcDispatcher
     /// <summary>MCP protocol version we implement; sent in the <c>initialize</c> response.</summary>
     private const string ProtocolVersion = "2024-11-05";
 
-    /// <summary>Server name shown in the CLI's <c>/mcp</c>. Keep stable; bump the version field instead.</summary>
-    private const string ServerName = "cv4vs-agents";
-    private const string ServerVersion = "1.0.0";
-
     private readonly Dictionary<string, IMcpTool> _tools;
 
     /// <summary>camelCase serializer matching the MCP wire format the CLI expects; PascalCase POCOs
@@ -96,7 +92,11 @@ internal sealed class JsonRpcDispatcher
         {
             tools = new { listChanged = false },
         },
-        serverInfo = new { name = ServerName, version = ServerVersion },
+        serverInfo = new
+        {
+            name = AppConstants.AppId,
+            version = BuildInfo.Version
+        },
     };
 
     private object BuildToolsList()
