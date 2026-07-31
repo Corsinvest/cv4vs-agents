@@ -233,6 +233,36 @@ test('findToolByAgentId: trova la riga Agent che ha lanciato il sub-agent', () =
     assert.equal(t.findToolByAgentId('nope'), null);
 });
 
+// Il difetto del 2026-07-31 (secondo giro): "Show all" su un Agent ancora in esecuzione.
+// La fetch sostituisce children.items con l'intera cronologia, ma quei figli non erano mai
+// passati da appendChild — restano fuori dall'index. L'evento live che arriva subito dopo non
+// li trova, e l'update tocca il ramo sbagliato.
+test('update: sostituire children.items indicizza i figli arrivati da fuori', () => {
+    const t = new Transcript();
+    t.append(toolEntry(1, 'agent'));
+    t.appendChild('agent', userEntry(2), childKey);
+
+    // la fetch di "Show all": rimpiazza i 3 tenuti con la cronologia completa
+    t.update<UiToolEntry>(1, (e) => ({
+        ...e,
+        children: {
+            items: [userEntry(10), userEntry(11), toolEntry(12, 'inner')],
+            hasMore: false,
+            showAll: true,
+        },
+    }));
+
+    // l'agent sta ancora lavorando: arriva un evento per un figlio della lista sostituita
+    assert.equal(t.find(11)?.id, 11, 'i figli sostituiti devono essere raggiungibili');
+    assert.equal(
+        t.update<UiUserEntry>(11, (e) => ({ ...e, text: 'aggiornato' })),
+        true,
+        'update deve raggiungere un figlio arrivato dalla sostituzione',
+    );
+    assert.equal(t.findTool('inner')?.id, 12);
+    assert.equal(t.find(2), null, 'il figlio rimpiazzato non deve piu risolvere');
+});
+
 test('appendChild annidato: l index risolve un figlio di figlio', () => {
     const t = new Transcript();
     t.append(toolEntry(1, 'outer'));
