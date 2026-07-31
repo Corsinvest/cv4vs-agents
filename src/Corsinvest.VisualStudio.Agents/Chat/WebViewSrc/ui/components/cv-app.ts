@@ -111,10 +111,10 @@ export class CvApp extends LitElement {
      * (`''` for root). Lets a sub-agent stream concurrently with the root
      * without mixing the two; delta lookups default to `''`.
      */
-    private _streamingMsgs = new Map<string, UiAssistantEntry>();
+    private _streamingMsgs = new Map<string, number>();
     /** Currently-streaming thinking block, keyed by parentToolUseId (same nesting rule
      *  as _streamingMsgs). Never persisted — cleared on session clear. */
-    private _thinkingMsgs = new Map<string, UiThinkingEntry>();
+    private _thinkingMsgs = new Map<string, number>();
 
     /** Derived, never stored: recomputed only when the tree changes identity. Holding the groups
      *  as state gave them two writers, and that is how they and the entries drifted apart. */
@@ -231,14 +231,19 @@ export class CvApp extends LitElement {
                     if (!parentId && data?.usage) {
                         appState.contextUsage = data.usage;
                     }
-                    const streaming = this._streamingMsgs.get(parentId);
-                    if (streaming) {
-                        streaming.text = data?.text ?? streaming.text;
-                        streaming.streaming = false;
-                        // The final assistant notification carries the message time; live fallback = now.
-                        streaming.timestamp = data?.timestamp ?? Date.now();
+                    const streamingId = this._streamingMsgs.get(parentId);
+                    if (streamingId !== undefined) {
+                        this._mutate(() =>
+                            this._transcript.update<UiAssistantEntry>(streamingId, (e) => ({
+                                ...e,
+                                text: data?.text ?? e.text,
+                                streaming: false,
+                                // The final assistant notification carries the message time;
+                                // live fallback = now.
+                                timestamp: data?.timestamp ?? Date.now(),
+                            })),
+                        );
                         this._streamingMsgs.delete(parentId);
-                        this._invalidate();
                     } else {
                         const entry = CvApp.buildAssistantEntry(data);
                         entry.timestamp = data?.timestamp ?? Date.now();
@@ -255,18 +260,19 @@ export class CvApp extends LitElement {
                 (data) => {
                     const delta = data?.text ?? '';
                     const parentId = data?.parentToolUseId ?? '';
-                    let streaming = this._streamingMsgs.get(parentId);
-                    if (!streaming) {
-                        streaming = this._addText<UiAssistantEntry>(
-                            { role: 'assistant', text: delta, streaming: true },
+                    const streamingId = this._streamingMsgs.get(parentId);
+                    if (streamingId === undefined) {
+                        this._streamingMsgs.set(
                             parentId,
+                            this._addText<UiAssistantEntry>(
+                                { role: 'assistant', text: delta, streaming: true },
+                                parentId,
+                            ),
                         );
-                        this._streamingMsgs.set(parentId, streaming);
                     } else {
                         // Auto-follow only if already near the bottom.
                         const atBottom = this._isNearBottom();
-                        streaming.text += delta;
-                        this._invalidate();
+                        this._mutate(() => this._transcript.appendText(streamingId, delta));
                         if (atBottom) {
                             queueMicrotask(() => this._scrollToBottom('instant'));
                         }
@@ -280,9 +286,9 @@ export class CvApp extends LitElement {
                 Msg.toWebView.chat.thinkingDelta,
                 (data) => {
                     const parentId = data?.parentToolUseId ?? '';
-                    let entry = this._thinkingMsgs.get(parentId);
-                    if (!entry) {
-                        entry = this._addText<UiThinkingEntry>(
+                    let entryId = this._thinkingMsgs.get(parentId);
+                    if (entryId === undefined) {
+                        entryId = this._addText<UiThinkingEntry>(
                             {
                                 role: 'thinking',
                                 text: '',
@@ -292,22 +298,27 @@ export class CvApp extends LitElement {
                             },
                             parentId,
                         );
-                        this._thinkingMsgs.set(parentId, entry);
+                        this._thinkingMsgs.set(parentId, entryId);
                     }
-                    if (data?.text) {
-                        entry.text += data.text;
-                    }
-                    // Token: authoritative thinking_tokens (text empty + estimate>=0) SETS and locks;
-                    // deltas accumulate until then.
-                    if (data && data.estimatedTokens >= 0) {
-                        if (!data.text) {
-                            entry.tokens = data.estimatedTokens;
-                            entry.tokensAuthoritative = true;
-                        } else if (!entry.tokensAuthoritative) {
-                            entry.tokens = (entry.tokens ?? 0) + data.estimatedTokens;
-                        }
-                    }
-                    this._invalidate();
+                    this._mutate(() =>
+                        this._transcript.update<UiThinkingEntry>(entryId, (e) => {
+                            const next = { ...e };
+                            if (data?.text) {
+                                next.text += data.text;
+                            }
+                            // Token: authoritative thinking_tokens (text empty + estimate>=0) SETS
+                            // and locks; deltas accumulate until then.
+                            if (data && data.estimatedTokens >= 0) {
+                                if (!data.text) {
+                                    next.tokens = data.estimatedTokens;
+                                    next.tokensAuthoritative = true;
+                                } else if (!next.tokensAuthoritative) {
+                                    next.tokens = (next.tokens ?? 0) + data.estimatedTokens;
+                                }
+                            }
+                            return next;
+                        }),
+                    );
                 },
             ),
         );
@@ -317,22 +328,26 @@ export class CvApp extends LitElement {
                 Msg.toWebView.chat.thinkingEnded,
                 (data) => {
                     const parentId = data?.parentToolUseId ?? '';
-                    let entry = this._thinkingMsgs.get(parentId);
+                    let entryId = this._thinkingMsgs.get(parentId);
                     // A redacted_thinking block has no preceding delta → no entry yet: create a static,
                     // text-less one here so it still shows (like VS Code's "✻ Thinking…").
-                    if (!entry) {
+                    if (entryId === undefined) {
                         if (!data?.redacted) {
                             return;
                         }
-                        entry = this._addText<UiThinkingEntry>(
+                        entryId = this._addText<UiThinkingEntry>(
                             { role: 'thinking', text: '', redacted: true },
                             parentId,
                         );
                     }
-                    entry.streaming = false;
-                    entry.durationMs = entry.startedAt ? Date.now() - entry.startedAt : 0;
+                    this._mutate(() =>
+                        this._transcript.update<UiThinkingEntry>(entryId, (e) => ({
+                            ...e,
+                            streaming: false,
+                            durationMs: e.startedAt ? Date.now() - e.startedAt : 0,
+                        })),
+                    );
                     this._thinkingMsgs.delete(parentId);
-                    this._invalidate();
                 },
             ),
         );
@@ -375,10 +390,12 @@ export class CvApp extends LitElement {
                         });
                     }
                     if (this._streamingMsgs.size > 0) {
-                        for (const m of this._streamingMsgs.values()) {
-                            m.streaming = false;
-                        }
-                        this._invalidate();
+                        const ids = [...this._streamingMsgs.values()];
+                        this._mutate(() =>
+                            this._transcript.updateMany(ids, (e) =>
+                                'streaming' in e ? { ...e, streaming: false } : e,
+                            ),
+                        );
                         this._streamingMsgs.clear();
                     }
                 },
@@ -558,7 +575,10 @@ export class CvApp extends LitElement {
 
                     appState.loadingOlder = false;
                     this._mutate(() => this._transcript.replaceAll(out));
+                    // Both, like chat_cleared: the entries these named are not in the tree any
+                    // more, so a delta arriving for one would update nothing and look dropped.
                     this._streamingMsgs.clear();
+                    this._thinkingMsgs.clear();
                     // Land at the bottom. Re-jump for several frames because async-rendered
                     // children (markdown, diff2html, lazy images) keep growing scrollHeight.
                     void this.updateComplete.then(() => {
@@ -895,14 +915,16 @@ export class CvApp extends LitElement {
     // Generic over the concrete text-entry type: call sites pass the type argument explicitly
     // (e.g. _addText<UiAssistantEntry>({role:'assistant', …})) so `Omit` works on a single member
     // — Omit over the whole union would collapse to the common keys and drop the role-specific ones.
+    /** Returns the id, not the entry: the transcript replaces an entry on every change, so a
+     *  reference kept by the caller would name something the tree no longer holds. */
     private _addText<E extends Extract<UiEntry, { kind: 'text' }>>(
         msg: Omit<E, 'kind' | 'id'>,
         parentId = '',
-    ): E {
+    ): number {
         const entry = { kind: 'text', id: ++_entryIdSeq, ...msg } as E;
         this._appendEntry(entry, parentId);
         queueMicrotask(() => this._scrollToBottom());
-        return entry;
+        return entry.id;
     }
 
     /**
