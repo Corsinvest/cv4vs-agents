@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-07-30
+## [1.1.0] - 2026-07-31
 
 A pass over the chat's composer, the permission modes, and the sub-agents — plus the panes finally
 behaving like the rest of the IDE's windows.
@@ -23,6 +23,12 @@ behaving like the rest of the IDE's windows.
 - **Active sessions in the menu**: View → cv4vs Agents now lists the open panes by their full title,
   session and profile included. Docked panes hide each other behind tabs captioned "Chat 1"/"Chat 2",
   and this is the way to tell them apart and to reach one that drifted behind its siblings.
+
+- **The session info dialog names the processes behind the pane** — the CLI's own PID for both pane
+  kinds, and for the chat the WebView2 browser plus the renderer that pane actually runs in, matched
+  by frame rather than guessed from a list. A new option adds the WebView DevTools and the browser's
+  task manager to the "More" menu on stable builds, for when a chat renders wrongly and the browser
+  console is the only way to find out why.
 
 - **Bypass permissions can be chosen** from the composer and set as a profile's initial mode, gated
   on a new "Allow dangerously skip permissions" option — and on the CLI's own policy, which an
@@ -56,6 +62,15 @@ behaving like the rest of the IDE's windows.
   words — width being what a docked pane hasn't got.
 
 ### Fixed
+
+- **Adding a project to the solution cost you the conversation.** Visual Studio reloads the solution
+  whenever the `.sln`/`.slnx` changes on disk, and the panes were closed on the way down — taking
+  the running `claude.exe`, and the turn in flight, with them. Nothing in the SDK distinguishes a
+  reload from a real close at the time it happens, so the close is now deferred: the panes go out of
+  sight immediately but stay alive, and come back where they were if the same solution returns.
+
+- **A closed chat pane left its renderer running.** The WebView2 control was never disposed, so the
+  browser accumulated one renderer process per pane ever opened, for the lifetime of the IDE.
 
 - **Panes vanished when the debugger started.** Visual Studio keeps a separate window layout for
   run time, and a pane opened while writing code was simply absent from it. They now come back, and
