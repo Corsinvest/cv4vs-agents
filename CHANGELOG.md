@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-07-31
+
+Two ways the chat could stop showing what the CLI was doing, and a dead link that said nothing.
+
+### Fixed
+
+- **The chat stops rendering mid-conversation.** With sub-agents running, the transcript could reach
+  a state where every later update threw and nothing appeared again — a pane that looked alive but
+  was frozen, with the reason visible only in the browser console. The tree was updated in place
+  while Lit still held references into it, so a row skipped its update and was left rendering into
+  nodes that no longer existed. The transcript is now rebuilt rather than mutated, which the type
+  system enforces instead of a comment.
+
+- **Options → Apply during a turn made the running reply disappear.** Applying options re-read the
+  transcript from the session file, where a reply still streaming does not exist yet. Mid-turn the
+  settings are now applied on their own and the transcript is left alone.
+
+- **A file link that cannot be opened says so.** Clicking a path that no longer resolves did nothing
+  at all, which reads as a broken feature rather than a missing file.
+
 ## [1.1.0] - 2026-07-31
 
 A pass over the chat's composer, the permission modes, and the sub-agents — plus the panes finally

@@ -2,7 +2,7 @@
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011"
                  xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Id="Corsinvest.VisualStudio.Agents" Version="1.1.0" Language="en-US"
+    <Identity Id="Corsinvest.VisualStudio.Agents" Version="1.1.1" Language="en-US"
               Publisher="Corsinvest Srl" />
     <DisplayName>cv4vs Agents</DisplayName>
     <Description xml:space="preserve">Claude Code inside Visual Studio — agentic coding with a rich chat pane and an interactive terminal, wired into the editor, solution and debugger through an in-process MCP server.</Description>
