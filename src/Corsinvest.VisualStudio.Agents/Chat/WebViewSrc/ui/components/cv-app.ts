@@ -86,7 +86,7 @@ export class CvApp extends LitElement {
     private _transcript = new Transcript();
     /** The only thing Lit watches for a transcript change. Lit re-renders on a reactive property
      *  it sees change by identity, and the tree lives in a plain object it cannot see into — so
-     *  _invalidate() bumps this instead. A counter and not a flag: Lit compares the value from
+     *  _mutate() bumps this instead. A counter and not a flag: Lit compares the value from
      *  before the batch with the one after, so two invalidations in the same microtask would
      *  toggle a boolean back to where it started and the render would be skipped. */
     @state() private _rev = 0;
@@ -126,16 +126,10 @@ export class CvApp extends LitElement {
         return this._groupCache.groups;
     }
 
-    /** Mark the rendered view stale. Transcript is deliberately not reactive — bumping this is
-     *  the one thing Lit watches, and the number itself means nothing. */
-    private _invalidate(): void {
-        this._rev++;
-    }
-
     /** Every transcript change goes through here, so one place tells Lit about all of them. */
     private _mutate(fn: () => void): void {
         fn();
-        this._invalidate();
+        this._rev++;
     }
 
     override createRenderRoot() {
@@ -483,7 +477,7 @@ export class CvApp extends LitElement {
                         appState.contextUsage = data.usage;
                     }
                     // Dedup by toolUseId (arrives twice: can_use_tool + assistant msg).
-                    const existing = this._findTool(data.id);
+                    const existing = this._transcript.findTool(data.id);
                     if (existing) {
                         this._mutate(() =>
                             this._transcript.update<UiToolEntry>(existing.id, (e) => ({
@@ -508,7 +502,7 @@ export class CvApp extends LitElement {
                 if (!data?.toolUseId) {
                     return;
                 }
-                const tool = this._findTool(data.toolUseId);
+                const tool = this._transcript.findTool(data.toolUseId);
                 if (!tool) {
                     return;
                 }
@@ -533,7 +527,7 @@ export class CvApp extends LitElement {
                     if (!data?.toolUseId) {
                         return;
                     }
-                    const tool = this._findTool(data.toolUseId);
+                    const tool = this._transcript.findTool(data.toolUseId);
                     if (!tool) {
                         return;
                     }
@@ -627,7 +621,7 @@ export class CvApp extends LitElement {
                     // buildToolEntry; when it got in first, tag it here. Nothing marks the view
                     // stale — the row was just appended, so its render is still pending and will
                     // read the id.
-                    const row = d.toolUseId ? this._findTool(d.toolUseId) : null;
+                    const row = d.toolUseId ? this._transcript.findTool(d.toolUseId) : null;
                     if (row && !row.agentId) {
                         this._mutate(() =>
                             this._transcript.update<UiToolEntry>(row.id, (e) => ({
@@ -682,7 +676,7 @@ export class CvApp extends LitElement {
                     // asked for, so only 'failed' turns the row red.
                     const toolUseId = this._subagentTasks.get(d.taskId)?.toolUseId;
                     if (d.status === 'failed' && toolUseId) {
-                        const row = this._findTool(toolUseId);
+                        const row = this._transcript.findTool(toolUseId);
                         if (row) {
                             this._mutate(() =>
                                 this._transcript.update<UiToolEntry>(row.id, (e) => ({
@@ -961,7 +955,7 @@ export class CvApp extends LitElement {
      */
     private _appendEntry(entry: UiEntry, parentId?: string): void {
         if (parentId) {
-            const parent = this._findTool(parentId);
+            const parent = this._transcript.findTool(parentId);
             if (parent) {
                 // The sub-agent's first message echoes the prompt the Agent tool was
                 // launched with — it's already shown as the Agent row's IN, so drop the
@@ -985,12 +979,12 @@ export class CvApp extends LitElement {
         e: CustomEvent<{ agentId: string; expand: boolean; preview?: boolean }>,
     ): void => {
         const { agentId, expand, preview } = e.detail ?? {};
-        const parent = agentId ? this._findToolByAgentId(agentId) : null;
+        const parent = agentId ? this._transcript.findToolByAgentId(agentId) : null;
         if (!parent) {
             return;
         }
-        // Ensure the children block exists (a history Agent may not have fetched anything yet).
-        const kids = (parent.children ??= { items: [], hasMore: false, showAll: false });
+        // A history Agent may not have fetched anything yet.
+        const kids = parent.children ?? { items: [], hasMore: false, showAll: false };
         if (expand) {
             // Rule: history FETCHES, live SHOWS what it already has in memory.
             //  - preview (first chevron expand): fetch only if children are empty (history). Live
@@ -1002,22 +996,26 @@ export class CvApp extends LitElement {
             const showAll = !preview;
             // Show all sets the flag; preview (chevron open) leaves it false → renderChildren shows ≤3.
             // Row open/closed is the component's own `_expanded`, not tracked here.
-            kids.showAll = showAll;
+            this._mutate(() =>
+                this._transcript.update<UiToolEntry>(parent.id, (e) => ({
+                    ...e,
+                    children: { ...(e.children ?? kids), showAll },
+                })),
+            );
 
             const needFetch = preview
                 ? kids.items.length === 0 // history preview
                 : kids.hasMore; // Show all with more on disk than we hold
             if (!needFetch) {
-                this._invalidate();
                 return;
             }
             fetchSubagent(agentId, { preview: !!preview })
                 .then((data) => {
-                    const p = this._findToolByAgentId(data.agentId);
+                    const p = this._transcript.findToolByAgentId(data.agentId);
                     if (!p) {
                         return;
                     }
-                    const pk = (p.children ??= { items: [], hasMore: false, showAll: false });
+                    const pk = p.children ?? { items: [], hasMore: false, showAll: false };
                     const full = this._replayEvents(data.events ?? []);
                     // The transcript opens and closes with what the Agent row already shows in its
                     // own cells: the launch prompt (IN) and the closing report (OUT, from the
@@ -1044,10 +1042,17 @@ export class CvApp extends LitElement {
                     }
                     // Preview keeps the last 3 (and flags "…" if more); full keeps everything and is
                     // now complete in memory (hasMore=false → no more fetches).
-                    pk.items = preview ? list.slice(-3) : list;
-                    pk.hasMore = preview ? list.length > 3 : false;
-                    pk.showAll = !preview;
-                    this._invalidate();
+                    const items = preview ? list.slice(-3) : list;
+                    this._mutate(() =>
+                        this._transcript.update<UiToolEntry>(p.id, (e) => ({
+                            ...e,
+                            children: {
+                                items,
+                                hasMore: preview ? list.length > 3 : false,
+                                showAll: !preview,
+                            },
+                        })),
+                    );
                 })
                 .catch(() => {
                     /* timeout / not found — leave the kept children as-is */
@@ -1056,10 +1061,16 @@ export class CvApp extends LitElement {
             // "Reduce" (Show all → off): show the last 3 again, but KEEP the full list in memory so a
             // later Show all doesn't refetch (and live never can). renderChildren slices the view.
             // hasMore reflects that more is held than shown.
-            kids.showAll = false;
-            kids.hasMore = kids.items.length > 3;
+            this._mutate(() =>
+                this._transcript.update<UiToolEntry>(parent.id, (e) => {
+                    const c = e.children ?? kids;
+                    return {
+                        ...e,
+                        children: { ...c, showAll: false, hasMore: c.items.length > 3 },
+                    };
+                }),
+            );
         }
-        this._invalidate();
     };
 
     /** A compact separator's <details> opened for the first time: fetch the summary lazily
@@ -1078,9 +1089,13 @@ export class CvApp extends LitElement {
         }
         fetchCompactSummary(appState.currentSessionId, uuid)
             .then((res) => {
-                entry.summary = res.summary;
-                entry.loaded = true;
-                this._invalidate();
+                this._mutate(() =>
+                    this._transcript.update<UiCompactEntry>(entry.id, (en) => ({
+                        ...en,
+                        summary: res.summary,
+                        loaded: true,
+                    })),
+                );
             })
             .catch(() => {
                 /* timeout / not found — leave "Loading…" as-is */
@@ -1274,51 +1289,6 @@ export class CvApp extends LitElement {
         // keep it, at top level.
         const seen = new Set(ordered.map((t) => t.taskId));
         appState.subagentTasks = [...ordered, ...linked.filter((t) => !seen.has(t.taskId))];
-    }
-
-    /** Find a tool entry by toolUseId, walking nested children. */
-    private _findTool(toolUseId: string): UiToolEntry | null {
-        const visit = (list: readonly UiEntry[]): UiToolEntry | null => {
-            for (const e of list) {
-                if (e.kind !== 'tool') {
-                    continue;
-                }
-                if (e.toolUseId === toolUseId) {
-                    return e;
-                }
-                if (e.children?.items.length) {
-                    const hit = visit(e.children.items);
-                    if (hit) {
-                        return hit;
-                    }
-                }
-            }
-            return null;
-        };
-        return visit(this._transcript.entries);
-    }
-
-    /** Locate an Agent tool entry by the sub-agent it spawned. Unique: only an Agent row carries
-     *  an agentId, and it names the transcript that row alone opened. */
-    private _findToolByAgentId(agentId: string): UiToolEntry | null {
-        const visit = (list: readonly UiEntry[]): UiToolEntry | null => {
-            for (const e of list) {
-                if (e.kind !== 'tool') {
-                    continue;
-                }
-                if (e.agentId === agentId) {
-                    return e;
-                }
-                if (e.children?.items.length) {
-                    const hit = visit(e.children.items);
-                    if (hit) {
-                        return hit;
-                    }
-                }
-            }
-            return null;
-        };
-        return visit(this._transcript.entries);
     }
 
     /** True when scrolled at/near the bottom. Gates stream auto-follow so
