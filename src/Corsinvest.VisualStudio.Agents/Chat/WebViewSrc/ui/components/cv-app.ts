@@ -84,7 +84,13 @@ export class CvApp extends LitElement {
     /** Owns the transcript. Deliberately not reactive — _mutate() is the one place that tells
      *  Lit something changed, so there is no second path that can forget to. */
     private _transcript = new Transcript();
+    /** The only thing Lit watches for a transcript change. Lit re-renders on a reactive property
+     *  it sees change by identity, and the tree lives in a plain object it cannot see into — so
+     *  _invalidate() bumps this instead. A counter and not a flag: Lit compares the value from
+     *  before the batch with the one after, so two invalidations in the same microtask would
+     *  toggle a boolean back to where it started and the render would be skipped. */
     @state() private _rev = 0;
+    /** Groups for the current tree, keyed by the array they were built from. */
     private _groupCache: { src: readonly UiEntry[]; groups: UiEntry[][] } | null = null;
     @state() private _subagentTasks = new Map<string, SubagentTask>();
     @state() private _isBusy = appState.isBusy;
@@ -120,10 +126,16 @@ export class CvApp extends LitElement {
         return this._groupCache.groups;
     }
 
+    /** Mark the rendered view stale. Transcript is deliberately not reactive — bumping this is
+     *  the one thing Lit watches, and the number itself means nothing. */
+    private _invalidate(): void {
+        this._rev++;
+    }
+
     /** Every transcript change goes through here, so one place tells Lit about all of them. */
     private _mutate(fn: () => void): void {
         fn();
-        this._rev++;
+        this._invalidate();
     }
 
     override createRenderRoot() {
@@ -226,7 +238,7 @@ export class CvApp extends LitElement {
                         // The final assistant notification carries the message time; live fallback = now.
                         streaming.timestamp = data?.timestamp ?? Date.now();
                         this._streamingMsgs.delete(parentId);
-                        this._invalidate(streaming);
+                        this._invalidate();
                     } else {
                         const entry = CvApp.buildAssistantEntry(data);
                         entry.timestamp = data?.timestamp ?? Date.now();
@@ -254,7 +266,7 @@ export class CvApp extends LitElement {
                         // Auto-follow only if already near the bottom.
                         const atBottom = this._isNearBottom();
                         streaming.text += delta;
-                        this._invalidate(streaming);
+                        this._invalidate();
                         if (atBottom) {
                             queueMicrotask(() => this._scrollToBottom('instant'));
                         }
@@ -295,7 +307,7 @@ export class CvApp extends LitElement {
                             entry.tokens = (entry.tokens ?? 0) + data.estimatedTokens;
                         }
                     }
-                    this._invalidate(entry);
+                    this._invalidate();
                 },
             ),
         );
@@ -320,7 +332,7 @@ export class CvApp extends LitElement {
                     entry.streaming = false;
                     entry.durationMs = entry.startedAt ? Date.now() - entry.startedAt : 0;
                     this._thinkingMsgs.delete(parentId);
-                    this._invalidate(entry);
+                    this._invalidate();
                 },
             ),
         );
@@ -366,10 +378,7 @@ export class CvApp extends LitElement {
                         for (const m of this._streamingMsgs.values()) {
                             m.streaming = false;
                         }
-                        // Keyed by parentToolUseId, so a sub-agent's message is nested and needs
-                        // its path refreshed like any other nested change. Before the clear —
-                        // after it there is nothing left to pass.
-                        this._invalidate(...this._streamingMsgs.values());
+                        this._invalidate();
                         this._streamingMsgs.clear();
                     }
                 },
@@ -464,7 +473,7 @@ export class CvApp extends LitElement {
                             name: data.name,
                             input: (data.input ?? {}) as Record<string, unknown>,
                         };
-                        this._invalidate(existing);
+                        this._invalidate();
                         return;
                     }
                     this._appendEntry(this.buildToolEntry(data), data.parentToolUseId ?? undefined);
@@ -484,7 +493,7 @@ export class CvApp extends LitElement {
                 }
                 const atBottom = this._isNearBottom();
                 CvApp.applyToolResult(tool, data);
-                this._invalidate(tool);
+                this._invalidate();
                 // The result grows the tool row (e.g. an answered ask); follow it down so the
                 // view doesn't stay stuck on the tool until the next message arrives.
                 if (atBottom) {
@@ -507,7 +516,7 @@ export class CvApp extends LitElement {
                     // Wire field is elapsedSeconds (from the host); the entry keeps it as
                     // elapsedSec (internal UI state).
                     tool.elapsedSec = data.elapsedSeconds ?? 0;
-                    this._invalidate(tool);
+                    this._invalidate();
                 },
             ),
         );
@@ -640,7 +649,7 @@ export class CvApp extends LitElement {
                         const row = this._findTool(toolUseId);
                         if (row) {
                             row.status = 'error';
-                            this._invalidate(row);
+                            this._invalidate();
                         }
                     }
                     const m = new Map(this._subagentTasks);
@@ -933,7 +942,7 @@ export class CvApp extends LitElement {
                     }
                     kids.items = [...kids.items, entry].slice(-3);
                 }
-                this._invalidate(parent);
+                this._invalidate();
                 return;
             }
         }
@@ -968,7 +977,7 @@ export class CvApp extends LitElement {
                 ? kids.items.length === 0 // history preview
                 : kids.hasMore; // Show all with more on disk than we hold
             if (!needFetch) {
-                this._invalidate(parent);
+                this._invalidate();
                 return;
             }
             fetchSubagent(agentId, { preview: !!preview })
@@ -1007,7 +1016,7 @@ export class CvApp extends LitElement {
                     pk.items = preview ? list.slice(-3) : list;
                     pk.hasMore = preview ? list.length > 3 : false;
                     pk.showAll = !preview;
-                    this._invalidate(p);
+                    this._invalidate();
                 })
                 .catch(() => {
                     /* timeout / not found — leave the kept children as-is */
@@ -1019,7 +1028,7 @@ export class CvApp extends LitElement {
             kids.showAll = false;
             kids.hasMore = kids.items.length > 3;
         }
-        this._invalidate(parent);
+        this._invalidate();
     };
 
     /** A compact separator's <details> opened for the first time: fetch the summary lazily
@@ -1040,7 +1049,7 @@ export class CvApp extends LitElement {
             .then((res) => {
                 entry.summary = res.summary;
                 entry.loaded = true;
-                this._invalidate(entry);
+                this._invalidate();
             })
             .catch(() => {
                 /* timeout / not found — leave "Loading…" as-is */
@@ -1233,13 +1242,6 @@ export class CvApp extends LitElement {
         // keep it, at top level.
         const seen = new Set(ordered.map((t) => t.taskId));
         appState.subagentTasks = [...ordered, ...linked.filter((t) => !seen.has(t.taskId))];
-    }
-
-    /** Temporary bridge while the call sites move to Transcript. The entries they name are still
-     *  mutated in place, so there is nothing to commit — the arguments are ignored and all this
-     *  does is mark the view stale. Gone once nothing calls it. */
-    private _invalidate(..._targets: Array<UiEntry | null | undefined>): void {
-        this._rev++;
     }
 
     /** Find a tool entry by toolUseId, walking nested children. */
