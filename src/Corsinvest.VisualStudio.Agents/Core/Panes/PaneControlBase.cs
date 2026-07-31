@@ -7,6 +7,7 @@ using Corsinvest.VisualStudio.Agents.Core.Client;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -107,9 +108,22 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     /// custom-title JSONL; CLI keeps the no-op (no editable title).</summary>
     public virtual void RenameSession(string newTitle) { }
 
+    /// <summary>OS process id of the claude CLI behind this pane, or 0 when it isn't running.
+    /// Both kinds have one — chat drives it over stdio, cli through the ConPTY — so the info
+    /// dialog's row is built once here rather than duplicated per kind.</summary>
+    protected abstract int CliProcessId { get; }
+
+    /// <summary>Extra info rows for <see cref="ShowSessionInfo"/>, appended after the shared ones
+    /// and after the CLI PID. Chat adds the WebView2 processes; the CLI pane adds none — its
+    /// process is the shared row. Kept as label/value pairs rather than formatted lines so the
+    /// base owns the column alignment — a longer label added here must not leave the whole dialog
+    /// ragged.</summary>
+    protected virtual IEnumerable<(string Label, string Value)> ExtraSessionInfo => [];
+
     /// <summary>Read-only session info (id, session file, workdir, CLI) for debug and bug reports.
-    /// Built entirely from <see cref="Entry"/>, which both pane kinds keep current — so the terminal
-    /// gets the same dialog as the chat, with no duplicated code.</summary>
+    /// Built from <see cref="Entry"/>, which both pane kinds keep current — so the terminal gets the
+    /// same dialog as the chat, with no duplicated code — plus whatever
+    /// <see cref="ExtraSessionInfo"/> adds for the kind.</summary>
     public void ShowSessionInfo()
     {
         try
@@ -123,14 +137,22 @@ public abstract class PaneControlBase : UserControl, IPaneControl
                 ? Path.Combine(paths.SessionFolder(wd), sid + ".jsonl")
                 : "(none)";
 
-            var info = string.Join("\n",
-                $"Session title:  {(string.IsNullOrEmpty(SessionTitle) ? "(untitled)" : SessionTitle)}",
-                $"Session ID:     {sid ?? "(none)"}",
-                $"Session file:   {sessionFile}",
-                $"Workdir:        {wd ?? "(none)"}",
-                $"Profile:        {Entry.Profile?.Name ?? "(native)"}",
-                $"CLI path:       {ClaudeInstall.ResolveExecutable() ?? "(not found)"}",
-                $"CLI version:    {ClaudeInstall.Version() ?? "(unknown)"}");
+            List<(string Label, string Value)> rows =
+            [
+                ("Session title", string.IsNullOrEmpty(SessionTitle) ? "(untitled)" : SessionTitle),
+                ("Session ID", sid ?? "(none)"),
+                ("Session file", sessionFile),
+                ("Workdir", wd ?? "(none)"),
+                ("Profile", Entry.Profile?.Name ?? "(native)"),
+                ("CLI path", ClaudeInstall.ResolveExecutable() ?? "(not found)"),
+                ("CLI version", ClaudeInstall.Version() ?? "(unknown)"),
+                ("CLI PID", CliProcessId > 0 ? CliProcessId.ToString() : "(not running)"),
+                .. ExtraSessionInfo,
+            ];
+
+            // Widest label decides the column, so an added row can't misalign the others.
+            var width = rows.Max(r => r.Label.Length) + 2;
+            var info = string.Join("\n", rows.Select(r => (r.Label + ":").PadRight(width) + r.Value));
 
             new DevInfoDialog(info).ShowDialog();
         }

@@ -53,6 +53,10 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
     /// <summary>No kind-specific "More" actions for the terminal pane.</summary>
     public override IEnumerable<ButtonAction> MoreMenuActions => [];
 
+    /// <summary>The ConPTY child. 0 both before Start and after Dispose, which is what the base
+    /// renders as "not running".</summary>
+    protected override int CliProcessId => _process?.ProcessId ?? 0;
+
     /// <summary>ITerminalConnection requires IDisposable; route the terminal-driven
     /// dispose through the shared pane teardown (guarded by _disposed in the base).</summary>
     public void Dispose() => DisposePane();

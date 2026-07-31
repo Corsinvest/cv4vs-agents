@@ -42,6 +42,11 @@ public sealed partial class ClaudeClient : IClaudeClient
     public AccountInfo Account { get; private set; }
     public bool IsRunning => _transport.IsRunning;
 
+    /// <summary>PID of the claude.exe this client drives, or -1 when no process is running. For the
+    /// info dialog and bug reports: with several panes open, "which claude.exe is this one" is
+    /// otherwise only answerable by matching command lines.</summary>
+    public int Pid => _transport.Pid;
+
     public event EventHandler<InitializedEventArgs> Initialized;
     /// <summary>The CLI startup state (model + toggles from initialize+get_settings), gathered
     /// without a user turn so the UI can seed on open. Fired once per StartProcess (open + respawn).</summary>
