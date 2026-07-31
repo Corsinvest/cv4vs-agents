@@ -8,7 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [1.1.1] - 2026-07-31
 
-Two ways the chat could stop showing what the CLI was doing, and a dead link that said nothing.
+Ways the chat could stop showing what the CLI was doing, a dialog that froze the IDE, and a dead
+link that said nothing.
 
 ### Fixed
 
@@ -18,6 +19,16 @@ Two ways the chat could stop showing what the CLI was doing, and a dead link tha
   while Lit still held references into it, so a row skipped its update and was left rendering into
   nodes that no longer existed. The transcript is now rebuilt rather than mutated, which the type
   system enforces instead of a comment.
+
+  The same failure had a second way in, one level down: opening **Show all** on an Agent row *while
+  the sub-agent was still working* replaced its children with the fetched transcript, and those
+  entries were not in the lookup the live events use. The next event for one of them reached the
+  wrong branch. Both paths are covered by tests now.
+
+- **Session info could freeze Visual Studio.** `More → Info` asked the WebView for the process
+  hosting the pane and waited for the answer on the UI thread — the same thread the answer needed in
+  order to arrive. A busy or missing renderer left nothing to break the wait. It now gives up after
+  two seconds and reports the process as unknown.
 
 - **Options → Apply during a turn made the running reply disappear.** Applying options re-read the
   transcript from the session file, where a reply still streaming does not exist yet. Mid-turn the
