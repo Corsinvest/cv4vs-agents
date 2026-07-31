@@ -213,15 +213,31 @@ internal sealed partial class WebViewMessageHandler
         }
     }
 
-    private static async Task OpenFileInEditorAsync(string filePath, int startLine, int endLine)
+    /// <summary>Say that a click did not open the file. The Output window is gated behind a log
+    /// level that defaults to None, so the Warn is invisible where it matters — this lands in the
+    /// chat. Short on purpose: the reader wants to know the click failed, not how VS treats project
+    /// files; the Warn keeps the detail for whoever is debugging. Keyed on the path so clicking the
+    /// same dead link twice doesn't stack.</summary>
+    private void NoticeOpenFailed(string path, string reason)
+    {
+        OutputWindowLogger.Warn($"[chat] can't open '{path}' — {reason}");
+        bridge.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
+        {
+            Key = "openfile:" + path,
+            Severity = Contracts.NoticeVariantDto.Error,
+            Message = $"{Path.GetFileName(path)} — {reason}",
+            Position = Contracts.NoticePositionDto.Top,
+        });
+    }
+
+    private async Task OpenFileInEditorAsync(string filePath, int startLine, int endLine)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
         var window = OpenWindow(dte, filePath);
         if (window == null)
         {
-            // A click on a file link that does nothing at all reads as a broken link, so say why.
-            OutputWindowLogger.Warn($"[chat] Visual Studio would not open '{filePath}' — it refuses a file already open as a project or solution (its own .csproj, say)");
+            NoticeOpenFailed(filePath, "Visual Studio would not open it");
             return;
         }
         window.Activate();
