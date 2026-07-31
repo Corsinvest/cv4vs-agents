@@ -21,8 +21,17 @@ internal sealed partial class WebViewMessageHandler
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             var p = data.ToObject<Contracts.IdeFileNotification>();
-            var filePath = ResolveFilePath(p.FilePath ?? "");
-            if (filePath == null) { return; }
+            var raw = p.FilePath ?? "";
+            var filePath = ResolveFilePath(raw);
+            if (filePath == null)
+            {
+                // Nothing was found anywhere ResolveFilePath looks, so name the path the link
+                // carried rather than one we resolved — that is what the user can act on. The
+                // reason stays open: moved, renamed, deleted, or a temp file Windows cleared out
+                // are all the same miss from here.
+                NoticeOpenFailed(raw, "not found");
+                return;
+            }
             // endLine defaults to startLine when the WebView omits it (single-line open).
             var endLine = p.EndLine != 0 ? p.EndLine : p.StartLine;
             await OpenFileInEditorAsync(filePath, p.StartLine, endLine);
