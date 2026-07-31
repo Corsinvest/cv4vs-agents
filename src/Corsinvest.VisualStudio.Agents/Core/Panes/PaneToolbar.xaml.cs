@@ -306,7 +306,7 @@ public partial class PaneToolbar : UserControl
             Moniker = iconId switch
             {
                 "DevTools" => KnownMonikers.JSConsole,
-                "TaskManager" => KnownMonikers.ActivityMonitor,
+                "TaskManager" => KnownMonikers.Checklist,
                 "Refresh" => KnownMonikers.Refresh,
                 "Info" => KnownMonikers.StatusInformation,
                 _ => KnownMonikers.Code,
