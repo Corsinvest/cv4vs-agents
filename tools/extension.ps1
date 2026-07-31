@@ -11,7 +11,8 @@
     instead of a double-click, a dialog and a manual cleanup.
 
     Experimental hives by default: that is where an extension under test belongs, and it keeps the
-    IDE you actually work in untouched.
+    IDE you actually work in untouched — including while this runs, since only instances on the hive
+    being written to have to be closed.
 
     Why this exists rather than "just use Manage Extensions":
 
@@ -147,13 +148,31 @@ function Find-InstalledCopies {
 }
 
 # VS holds its extension folders open, and VSIXInstaller writes into the hive VS reads at startup:
-# either one under a running instance leaves a half-applied state.
+# either one under a running instance leaves a half-applied state. Only the instances on the hive
+# being touched matter, though — the hives are separate folders and separate registry nodes, so a
+# normal instance neither locks the experimental extension folder nor minds it being rewritten.
+# That is what lets the chat pane in the normal instance stay open while a build is installed for
+# testing next door.
+# Reading the command line can fail (permissions, a process exiting mid-enumeration); an instance we
+# cannot classify counts as one on our hive, because a wrong guess here is a half-installed
+# extension.
 function Assert-VisualStudioClosed {
-    $running = Get-Process devenv -ErrorAction SilentlyContinue
-    if (-not $running) { return }
+    $onOurHive = @(
+        Get-CimInstance Win32_Process -Filter "Name='devenv.exe'" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $cmd = $_.CommandLine
+                if (-not $cmd) { return $true }
+                $isExp = $cmd -match '/rootsuffix\s+\S+'
+                if ($Normal) { -not $isExp } else { $isExp }
+            }
+    )
+    if (-not $onOurHive) { return }
 
-    Write-Host "Visual Studio is running ($($running.Count) instance(s)). Close it first." -ForegroundColor Red
-    $running | Select-Object Id, MainWindowTitle | Format-Table | Out-String | Write-Host
+    $which = if ($Normal) { 'normal' } else { 'experimental' }
+    Write-Host "Visual Studio is running on the $which hive ($($onOurHive.Count) instance(s)). Close it first." -ForegroundColor Red
+    $onOurHive |
+        Select-Object @{ n = 'Id'; e = { $_.ProcessId } }, @{ n = 'CommandLine'; e = { $_.CommandLine } } |
+        Format-Table -Wrap | Out-String | Write-Host
     exit 1
 }
 
@@ -235,8 +254,16 @@ function Invoke-Uninstall {
     foreach ($copy in $copies) {
         if ($PSCmdlet.ShouldProcess($copy.Path, 'Remove extension folder')) {
             Write-Host "removing  $($copy.Path)"
-            Remove-Item $copy.Path -Recurse -Force
-            $removed = $true
+            try {
+                Remove-Item $copy.Path -Recurse -Force -ErrorAction Stop
+                $removed = $true
+            }
+            catch {
+                # An instance on this hive still has the assemblies loaded. The guard above should
+                # have caught it, so say which folder is stuck rather than dying on a raw exception.
+                Write-Host "  locked — close every Visual Studio on this hive and re-run: $($_.Exception.Message)" -ForegroundColor Red
+                exit 1
+            }
         }
     }
 
