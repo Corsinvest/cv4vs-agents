@@ -8,7 +8,6 @@ using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
-using System.Linq;
 using Task = System.Threading.Tasks.Task;
 
 namespace Corsinvest.VisualStudio.Agents.Menu;
