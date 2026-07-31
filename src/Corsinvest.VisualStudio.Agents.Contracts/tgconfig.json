@@ -1,4 +1,4 @@
-﻿{
+{
     "$schema": "https://raw.githubusercontent.com/jburzynski/TypeGen/master/schema/tgconfig.schema.json",
     "assemblies": [ "Corsinvest.VisualStudio.Agents.Contracts.dll" ],
     "generationSpecs": [ "Corsinvest.VisualStudio.Agents.Contracts.BridgeGenerationSpec" ],

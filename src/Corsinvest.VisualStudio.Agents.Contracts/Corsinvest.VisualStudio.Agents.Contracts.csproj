@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <!--
     Wire contracts (DTOs) shared C#<->TS. Kept in a separate, dependency-free
