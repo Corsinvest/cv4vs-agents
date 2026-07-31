@@ -64,8 +64,8 @@ public sealed class PaneRegistry
     }
 
     /// <summary>Close every live pane via its CloseAction (which disposes the pane and
-    /// removes the entry). Used on solution close, since panes are bound to its workdir.
-    /// Snapshot first — CloseAction mutates Entries.</summary>
+    /// removes the entry). Used when no solution came back after a close, and on package
+    /// teardown. Snapshot first — CloseAction mutates Entries.</summary>
     public void CloseAll()
     {
         foreach (var entry in Entries.ToArray())
@@ -74,6 +74,29 @@ public sealed class PaneRegistry
             catch (Exception ex) { OutputWindowLogger.LogException("PaneRegistry.CloseAll", ex); }
         }
     }
+
+    /// <summary>Close every pane whose working directory differs from <paramref name="workingDirectory"/>,
+    /// and return how many were left alive. A solution reload reopens the same folder, so the panes on
+    /// it keep their live CLI process instead of being torn down and resumed from disk. A null or empty
+    /// folder means "no solution" — nothing can match, so everything closes.
+    /// Snapshot first: CloseAction mutates Entries.</summary>
+    public int CloseWhereWorkdirDiffers(string workingDirectory)
+    {
+        var kept = 0;
+        foreach (var entry in Entries.ToArray())
+        {
+            if (SameFolder(entry.WorkingDirectory, workingDirectory)) { kept++; continue; }
+            try { entry.CloseAction?.Invoke(); }
+            catch (Exception ex) { OutputWindowLogger.LogException("PaneRegistry.CloseWhereWorkdirDiffers", ex); }
+        }
+        return kept;
+    }
+
+    /// <summary>Folder comparison for the reload check: case-insensitive (Windows) and blind to a
+    /// trailing separator, which IVsSolution and Path.GetDirectoryName disagree about.</summary>
+    private static bool SameFolder(string a, string b)
+        => !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b)
+           && string.Equals(a.TrimEnd('\\', '/'), b.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Live entries of one kind — what the toolbar open-panes list binds to.</summary>
     public IEnumerable<PaneEntry> OfKind(PaneKind kind) => Entries.Where(e => e.Kind == kind);

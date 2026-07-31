@@ -64,6 +64,19 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     private uint _debuggerEventsCookie;
     private IVsDebugger _debugger;
 
+    // Solution reload watch. VS models a reload as close-then-open and no event tells the two apart
+    // from a plain close, so the close is deferred and the panes are kept until we know which it was.
+    private System.Threading.Timer _reloadWatch;
+    private string _closingSolutionFolder;
+
+    // Close→open gap, measured at ~850 ms on a small solution. Timed from OnAfterCloseSolution, so it
+    // excludes unloading the projects and does not grow with the solution.
+    private const int ReloadWatchCloseMs = 10_000;
+    // Once a solution is loading, the wait covers the load itself, which does grow with the solution.
+    // Long on purpose: a load that never completes must still trip the timer rather than leave panes
+    // pinned to a solution that never came back.
+    private const int ReloadWatchOpenMs = 120_000;
+
     static AgentsPackage() =>
         // Microsoft.Terminal.Wpf ships with VS but isn't on any VSIX probing
         // path, so resolve it from VS's own Terminal folder.
@@ -138,6 +151,38 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         Core.Workspace.WorkspaceStore.Save(folder, DateTime.Now.ToString("o"));
     }
 
+    /// <summary>(Re)start the reload watch. Fires once; rearmed with a longer window when a solution
+    /// starts loading. The callback lands on a pool thread and closing panes touches VS frames, hence
+    /// the hop back to the UI thread.</summary>
+    private void ArmReloadWatch(int dueMs)
+    {
+        if (_reloadWatch == null)
+        {
+            _reloadWatch = new System.Threading.Timer(_ => OnReloadWatchElapsed(), null,
+                                                      dueMs, System.Threading.Timeout.Infinite);
+        }
+        else
+        {
+            _reloadWatch.Change(dueMs, System.Threading.Timeout.Infinite);
+        }
+        OutputWindowLogger.Debug(() => $"[reload] watch armed for {dueMs} ms (folder={_closingSolutionFolder ?? "(none)"})");
+    }
+
+    private void DisarmReloadWatch()
+        => _reloadWatch?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+
+    /// <summary>No solution came back in time: the close was a real one. Close every pane, which is
+    /// what OnBeforeCloseSolution used to do inline.</summary>
+    private void OnReloadWatchElapsed()
+        => JoinableTaskFactory.RunAsync(async () =>
+        {
+            await JoinableTaskFactory.SwitchToMainThreadAsync();
+            _closingSolutionFolder = null;
+            OutputWindowLogger.Info($"[reload] watch elapsed — closing {Core.Panes.PaneRegistry.Instance.Entries.Count} pane(s)");
+            try { Core.Panes.PaneRegistry.Instance.CloseAll(); }
+            catch (Exception ex) { OutputWindowLogger.LogException("Pkg.ReloadWatchElapsed", ex); }
+        }).FileAndForget(nameof(AgentsPackage));
+
     /// <summary>Reopen the panes saved for the current solution's workspace.json. Each saved pane is
     /// validated: an unknown profile falls back to native; a missing session .jsonl opens fresh.</summary>
     private void RestorePanesForCurrentSolution()
@@ -146,7 +191,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         var ws = Core.Workspace.WorkspaceStore.Load(folder);
         if (ws?.Panes == null)
         {
-            OutputWindowLogger.Debug(() => $"[restore] no workspace/panes for {folder ?? "<null>"}");
+            OutputWindowLogger.Debug(() => $"[restore] no workspace/panes for {folder ?? "(none)"}");
             return;
         }
         // Load(forEdit:false) normally includes the native "Claude" profile → profiles[0] is the fallback.
@@ -154,6 +199,14 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         if (profiles.Count == 0) { return; }   // defensive: nothing enabled → nothing to restore onto
         foreach (var p in ws.Panes)
         {
+            // A reload leaves its panes alive: restoring them again would double every chat.
+            if (!string.IsNullOrEmpty(p.SessionId)
+                && Core.Panes.PaneRegistry.Instance.Entries.Any(e =>
+                       string.Equals(e.ActiveSessionId, p.SessionId, StringComparison.OrdinalIgnoreCase)))
+            {
+                OutputWindowLogger.Debug(() => $"[restore] session {p.SessionId} still open → skip");
+                continue;
+            }
             var kind = string.Equals(p.Kind, "Cli", StringComparison.OrdinalIgnoreCase)
                 ? Core.Panes.PaneKind.Cli : Core.Panes.PaneKind.Chat;
             var profile = profiles.FirstOrDefault(x =>
@@ -288,6 +341,8 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
                 _debugger?.UnadviseDebuggerEvents(_debuggerEventsCookie);
                 _debuggerEventsCookie = 0;
             }
+            _reloadWatch?.Dispose();
+            _reloadWatch = null;
             Mcp.McpServerHost.Instance.Stop();
             AgentsOptions.Applied -= ProfilesMenuCommand.InvalidateCache;
             // Unadvise the selection sink (MS pattern: at package dispose). Dispose was never
@@ -304,15 +359,29 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         // Redundant with OnBeforeOpenSolution, but covers the rare load path
         // that skips IVsSolutionLoadEvents.
         RefreshCurrentSolutionFolder();
-        // Close any panes born WITHOUT a solution (home-dir workdir): a pane belongs to the
-        // context it was born in, and their workdir can't follow a solution change. On normal
-        // startup the solution is already open before the user opens a pane, so the registry is
-        // empty here and this is a no-op — it only fires for pre-existing home-born panes.
-        try { Core.Panes.PaneRegistry.Instance.CloseAll(); }
+        DisarmReloadWatch();
+        _closingSolutionFolder = null;
+        // Panes belong to the folder they were born in: their CLI runs there and can't follow a move.
+        // Same folder → the session is still valid, so the pane (and its live process) stays. This is
+        // what makes a reload survivable. Everything else closes, home-born panes included.
+        var had = Core.Panes.PaneRegistry.Instance.Entries.Count;
+        var kept = 0;
+        try { kept = Core.Panes.PaneRegistry.Instance.CloseWhereWorkdirDiffers(CurrentSolutionFolder); }
         catch (Exception ex) { OutputWindowLogger.LogException("Pkg.OnAfterOpenSolution", ex); }
-        // Reopen the panes saved for THIS solution. After CloseAll, so we start from a clean registry
-        // and don't stack restored panes on top of home-born leftovers. Deferred to shell-idle (see
-        // RestorePanesDeferred): spawning panes inside this COM event reenters solution state.
+        OutputWindowLogger.Info($"[reload] solution open on {CurrentSolutionFolder ?? "(none)"} — kept {kept} of {had} pane(s)");
+        // Bring back what the close hid. StartOnIdle for the same reason the restore defers: showing
+        // a frame from inside this COM event freezes the shell, which is still mid-transition.
+        if (kept > 0)
+        {
+            _ = JoinableTaskFactory.StartOnIdle(() =>
+            {
+                try { Core.Panes.PaneLauncher.ShowExisting(); }
+                catch (Exception ex) { OutputWindowLogger.LogException("Pkg.ShowPanesOnReload", ex); }
+            });
+        }
+        // Reopen the panes saved for THIS solution — minus the ones a reload just kept alive (see
+        // RestorePanesForCurrentSolution). Deferred to shell-idle (see RestorePanesDeferred):
+        // spawning panes inside this COM event reenters solution state.
         RestorePanesDeferred();
         _ = Mcp.McpServerHost.Instance.RewriteLockFileAsync();
         // VS may restore editor tabs without firing a DTE event we listen to;
@@ -327,6 +396,11 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionLoadEvents.OnBeforeOpenSolution(string pszSolutionFilename)
     {
+        OutputWindowLogger.Debug(() => $"[reload] solution opening: {pszSolutionFilename ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        // Rearm rather than disarm: if this load fails or is cancelled, OnAfterOpenSolution never
+        // comes and no close event follows either — the solution was already closed — so the panes
+        // would stay pinned forever.
+        if (_closingSolutionFolder != null) { ArmReloadWatch(ReloadWatchOpenMs); }
         // Cache the folder eagerly from the .sln path so consumers don't hit
         // IVsSolution before it's populated (projects may still be loading).
         if (!string.IsNullOrEmpty(pszSolutionFilename))
@@ -346,29 +420,38 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnAfterCloseSolution(object pUnkReserved)
     {
+        OutputWindowLogger.Debug(() => $"[reload] solution closed — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         CurrentSolutionFolder = null;
+        // Out of sight straight away, so closing a solution looks like it always did — but alive, so
+        // a reload can hand them back with the session intact.
+        try { Core.Panes.PaneLauncher.HideExisting(); }
+        catch (Exception ex) { OutputWindowLogger.LogException("Pkg.HidePanesOnClose", ex); }
+        // Armed here, not on the Before: unloading the projects happens in between and would eat the
+        // window on a large solution.
+        ArmReloadWatch(ReloadWatchCloseMs);
         _ = Mcp.McpServerHost.Instance.RewriteLockFileAsync();
         return VSConstants.S_OK;
     }
 
     int IVsSolutionEvents.OnQueryCloseSolution(object pUnkReserved, ref int pfCancel) => VSConstants.S_OK;
 
+    // Project-level events stay no-ops. A project reload is an unload followed by a load (the SDK
+    // has no reload event of its own), but SDK-style projects absorb an edited .csproj in place and
+    // never take that path — traced once and confirmed silent, so there is nothing to hook here.
     int IVsSolutionEvents.OnAfterOpenProject(IVsHierarchy pHierarchy, int fAdded) => VSConstants.S_OK;
     int IVsSolutionEvents.OnQueryCloseProject(IVsHierarchy pHierarchy, int fRemoving, ref int pfCancel) => VSConstants.S_OK;
     int IVsSolutionEvents.OnBeforeCloseProject(IVsHierarchy pHierarchy, int fRemoved) => VSConstants.S_OK;
     int IVsSolutionEvents.OnAfterLoadProject(IVsHierarchy pStubHierarchy, IVsHierarchy pRealHierarchy) => VSConstants.S_OK;
     int IVsSolutionEvents.OnQueryUnloadProject(IVsHierarchy pRealHierarchy, ref int pfCancel) => VSConstants.S_OK;
     int IVsSolutionEvents.OnBeforeUnloadProject(IVsHierarchy pRealHierarchy, IVsHierarchy pStubHierarchy) => VSConstants.S_OK;
+
     int IVsSolutionEvents.OnBeforeCloseSolution(object pUnkReserved)
     {
-        // Snapshot before CloseAll drains the registry, so the closing solution's
-        // workspace.json reflects the panes it actually had open.
+        OutputWindowLogger.Debug(() => $"[reload] solution closing: {CurrentSolutionFolder ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         SaveWorkspace();
-        // Panes are bound to the solution's workdir and can't follow a change,
-        // so close them all here (frames still valid) to avoid orphan sessions
-        // against a dead workdir. Draining the registry also stops MCP.
-        try { Core.Panes.PaneRegistry.Instance.CloseAll(); }
-        catch (Exception ex) { OutputWindowLogger.LogException("Pkg.OnBeforeCloseSolution", ex); }
+        // Last point where the folder is still known — OnAfterCloseSolution clears it. The panes are
+        // NOT closed here: a reload would take the live CLI down with them, losing the turn in flight.
+        _closingSolutionFolder = CurrentSolutionFolder;
         return VSConstants.S_OK;
     }
 }
