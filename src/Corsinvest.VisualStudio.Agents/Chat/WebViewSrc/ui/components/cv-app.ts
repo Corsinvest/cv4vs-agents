@@ -485,12 +485,16 @@ export class CvApp extends LitElement {
                     // Dedup by toolUseId (arrives twice: can_use_tool + assistant msg).
                     const existing = this._findTool(data.id);
                     if (existing) {
-                        existing.data = {
-                            id: data.id,
-                            name: data.name,
-                            input: (data.input ?? {}) as Record<string, unknown>,
-                        };
-                        this._invalidate();
+                        this._mutate(() =>
+                            this._transcript.update<UiToolEntry>(existing.id, (e) => ({
+                                ...e,
+                                data: {
+                                    id: data.id,
+                                    name: data.name,
+                                    input: (data.input ?? {}) as Record<string, unknown>,
+                                },
+                            })),
+                        );
                         return;
                     }
                     this._appendEntry(this.buildToolEntry(data), data.parentToolUseId ?? undefined);
@@ -509,8 +513,11 @@ export class CvApp extends LitElement {
                     return;
                 }
                 const atBottom = this._isNearBottom();
-                CvApp.applyToolResult(tool, data);
-                this._invalidate();
+                this._mutate(() =>
+                    this._transcript.update<UiToolEntry>(tool.id, (e) =>
+                        CvApp.applyToolResult(e, data),
+                    ),
+                );
                 // The result grows the tool row (e.g. an answered ask); follow it down so the
                 // view doesn't stay stuck on the tool until the next message arrives.
                 if (atBottom) {
@@ -532,8 +539,12 @@ export class CvApp extends LitElement {
                     }
                     // Wire field is elapsedSeconds (from the host); the entry keeps it as
                     // elapsedSec (internal UI state).
-                    tool.elapsedSec = data.elapsedSeconds ?? 0;
-                    this._invalidate();
+                    this._mutate(() =>
+                        this._transcript.update<UiToolEntry>(tool.id, (e) => ({
+                            ...e,
+                            elapsedSec: data.elapsedSeconds ?? 0,
+                        })),
+                    );
                 },
             ),
         );
@@ -618,7 +629,12 @@ export class CvApp extends LitElement {
                     // read the id.
                     const row = d.toolUseId ? this._findTool(d.toolUseId) : null;
                     if (row && !row.agentId) {
-                        row.agentId = d.taskId;
+                        this._mutate(() =>
+                            this._transcript.update<UiToolEntry>(row.id, (e) => ({
+                                ...e,
+                                agentId: d.taskId,
+                            })),
+                        );
                     }
                 },
             ),
@@ -668,8 +684,12 @@ export class CvApp extends LitElement {
                     if (d.status === 'failed' && toolUseId) {
                         const row = this._findTool(toolUseId);
                         if (row) {
-                            row.status = 'error';
-                            this._invalidate();
+                            this._mutate(() =>
+                                this._transcript.update<UiToolEntry>(row.id, (e) => ({
+                                    ...e,
+                                    status: 'error',
+                                })),
+                            );
                         }
                     }
                     const m = new Map(this._subagentTasks);
@@ -790,7 +810,9 @@ export class CvApp extends LitElement {
                     const d = ev.data as ToolResultNotification;
                     const hit = d.toolUseId ? findTool(d.toolUseId) : null;
                     if (hit) {
-                        CvApp.applyToolResult(hit, d);
+                        // Replay builds a fresh list nothing is rendering yet, so writing into
+                        // the entry here is safe — it reaches the tree already folded.
+                        Object.assign(hit, CvApp.applyToolResult(hit, d));
                     }
                     break;
                 }
@@ -951,20 +973,7 @@ export class CvApp extends LitElement {
                 ) {
                     return;
                 }
-                // First child under this parent creates the children block.
-                const kids = (parent.children ??= { items: [], hasMore: false, showAll: false });
-                if (kids.showAll) {
-                    // Show-all: keep the full list, upsert (a re-emitted tool row updates
-                    // in place — e.g. pending → done — instead of duplicating).
-                    kids.items = this._upsertChild(kids.items, entry);
-                } else {
-                    // Collapsed: ring of 3. A 4th child means more exist beyond the window.
-                    if (kids.items.length >= 3) {
-                        kids.hasMore = true;
-                    }
-                    kids.items = [...kids.items, entry].slice(-3);
-                }
-                this._invalidate();
+                this._mutate(() => this._transcript.appendChild(parentId, entry, CvApp._childKey));
                 return;
             }
         }
@@ -1183,16 +1192,17 @@ export class CvApp extends LitElement {
         };
     }
 
-    /** Apply a ToolResultNotification onto an already-built tool row (in place). */
-    private static applyToolResult(e: UiToolEntry, d: ToolResultNotification): void {
-        e.status = d.isError ? 'error' : 'done';
-        e.result = d.result ?? '';
-        e.fullLineCount = d.fullLineCount ?? 0;
-        e.editStartLine = d.editStartLine ?? 0;
-        e.editEndLine = d.editEndLine ?? 0;
-        if (d.agentId) {
-            e.agentId = d.agentId;
-        }
+    /** Fold a ToolResultNotification into a tool row, returning a new entry. */
+    private static applyToolResult(e: UiToolEntry, d: ToolResultNotification): UiToolEntry {
+        return {
+            ...e,
+            status: d.isError ? 'error' : 'done',
+            result: d.result ?? '',
+            fullLineCount: d.fullLineCount ?? 0,
+            editStartLine: d.editStartLine ?? 0,
+            editEndLine: d.editEndLine ?? 0,
+            ...(d.agentId ? { agentId: d.agentId } : {}),
+        };
     }
 
     /** Upsert `entry` into `list` by child key: replace the matching entry (keeps the
