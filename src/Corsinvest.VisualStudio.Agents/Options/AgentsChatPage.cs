@@ -67,6 +67,11 @@ public class AgentsChatPage : AgentsOptionsPage
     [Description("Font size (px) of the chat message text. Default: 13.")]
     public int ChatFontSize { get; set; } = 13;
 
+    [Category("Display")]
+    [DisplayName("Show WebView DevTools button")]
+    [Description("Add \"WebView DevTools\" to the chat toolbar's \"More\" (…) menu. It opens the WebView2 developer tools (browser console, DOM, network) on the chat itself — how you diagnose a chat that renders wrongly or stops responding. Pre-release builds always offer it.")]
+    public bool ShowDevToolsButton { get; set; } = false;
+
     [Category("Files")]
     [DisplayName("Autosave before Claude reads/writes")]
     [Description("Automatically save a file with unsaved changes before Claude reads or writes it, so Claude sees your in-editor edits (not the stale on-disk version).")]

@@ -14,6 +14,7 @@ using Microsoft.VisualStudio.Shell;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -196,12 +197,36 @@ public partial class ChatPaneControl : PaneControlBase
         return true;
     }
 
+    /// <summary>Only while the transport is up: a dead client keeps the exited process's id, which
+    /// would show as a live PID pointing at nothing (or at whatever reused the number).</summary>
+    protected override int CliProcessId => _client is { IsRunning: true } c ? c.Pid : 0;
+
+    /// <summary>The WebView processes behind this pane, for the info dialog (the CLI's own PID is
+    /// the base's shared row). What a frozen or misbehaving chat comes down to is "which process is
+    /// mine" — with several panes open that is otherwise a command-line hunt in Task Manager, so
+    /// the renderer is the pane's own, resolved by frame, not the browser's whole list.</summary>
+    protected override IEnumerable<(string Label, string Value)> ExtraSessionInfo
+    {
+        get
+        {
+            yield return ("WebView PID", _bridge?.BrowserProcessId?.ToString() ?? "(not started)");
+            // Blocking on the UI thread: the dialog is modal and about to show anyway, and the
+            // call is a single in-process round-trip to the browser.
+            var renderer = _bridge == null
+                ? null
+                : ThreadHelper.JoinableTaskFactory.Run(_bridge.RendererProcessIdAsync);
+            yield return ("WebView renderer", renderer?.ToString() ?? "(unknown)");
+        }
+    }
+
     /// <summary>Chat-only extra for the toolbar's "More" menu: the WebView DevTools, on preview and
     /// Debug builds. Testers on a release candidate are exactly who needs to inspect the WebView to
     /// report a bug, and so is anyone building the extension — the DEBUG arm is what keeps it around
     /// once a version drops its -rc suffix, which is when it silently disappeared. A stable
-    /// Marketplace build, which is neither, should not expose it. (Info is shared, so it lives on
-    /// the base; the CLI returns none.)</summary>
+    /// Marketplace build, which is neither, hides it unless the user opts in from Options: a chat
+    /// that renders wrongly or stops taking input can only be diagnosed from the browser console,
+    /// and that happens on stable builds too. (Info is shared, so it lives on the base; the CLI
+    /// returns none.)</summary>
     public override IEnumerable<ButtonAction> MoreMenuActions
     {
         get
@@ -211,9 +236,10 @@ public partial class ChatPaneControl : PaneControlBase
 #else
             const bool devBuild = false;
 #endif
-            if (BuildInfo.IsPreRelease || devBuild)
+            if (BuildInfo.IsPreRelease || devBuild || AgentsOptions.Chat.ShowDevToolsButton)
             {
                 yield return new ButtonAction("WebView DevTools", () => _bridge?.OpenDevTools(), "DevTools");
+                yield return new ButtonAction("WebView task manager", () => _bridge?.OpenTaskManager(), "DevTools");
             }
         }
     }
