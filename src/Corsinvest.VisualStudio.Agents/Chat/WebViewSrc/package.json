@@ -7,13 +7,15 @@
     "scripts": {
         "gen-bridge": "node tools/gen-bridge.mjs",
         "build": "node tools/gen-bridge.mjs && node esbuild.config.mjs",
+        "build:dev": "node tools/gen-bridge.mjs && node esbuild.config.mjs --dev",
         "dev": "node tools/gen-bridge.mjs && node esbuild.config.mjs --watch",
-        "typecheck": "tsc --noEmit",
+        "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+        "test": "node --test \"core/**/*.test.ts\" \"ui/**/*.test.ts\"",
         "lint": "eslint \"{core,ui}/**/*.ts\"",
         "lint:fix": "eslint --fix \"{core,ui}/**/*.ts\"",
         "format": "prettier --write \"{core,ui}/**/*.ts\" \"*.ts\"",
         "format:check": "prettier --check \"{core,ui}/**/*.ts\" \"*.ts\"",
-        "check": "npm run typecheck && npm run lint && npm run format:check"
+        "check": "npm run typecheck && npm run lint && npm run format:check && npm run test"
     },
     "dependencies": {
         "@fluentui/svg-icons": "^1.1.331",
@@ -31,6 +33,7 @@
         "@eslint/js": "^10.0.1",
         "@types/diff": "^7.0.2",
         "@types/dompurify": "^3.0.5",
+        "@types/node": "24.13.3",
         "@typescript-eslint/eslint-plugin": "^8.65.0",
         "@typescript-eslint/parser": "^8.65.0",
         "esbuild": "^0.28.1",

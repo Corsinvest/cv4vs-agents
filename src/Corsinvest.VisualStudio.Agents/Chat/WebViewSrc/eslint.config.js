@@ -22,7 +22,9 @@ export default tseslint.config(
     {
         languageOptions: {
             parserOptions: {
-                project: './tsconfig.json',
+                // Both: the app config excludes *.test.ts (they never reach the bundle), so
+                // without the test one every test file is a parse error here.
+                project: ['./tsconfig.json', './tsconfig.test.json'],
                 tsconfigRootDir: import.meta.dirname,
             },
         },

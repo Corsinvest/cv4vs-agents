@@ -7,7 +7,7 @@
 // later include dist/** as Content so the VSIX picks it up.
 
 import { context, build } from 'esbuild';
-import { mkdir, copyFile, cp, readdir } from 'node:fs/promises';
+import { mkdir, copyFile, cp, readdir, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
@@ -57,8 +57,18 @@ async function mirrorTargets() {
     return targets;
 }
 
+// esbuild only writes, never deletes: a .map left by an earlier --dev build would survive a
+// Release one and be mirrored — and packaged — alongside a bundle that no longer references it.
+async function dropStaleMaps() {
+    if (dev || !existsSync('dist')) { return; }
+    for (const name of await readdir('dist')) {
+        if (name.endsWith('.map')) { await rm(path.join('dist', name)); }
+    }
+}
+
 async function mirrorDist() {
     if (!existsSync('dist')) { return; }
+    await dropStaleMaps();
     for (const dest of await mirrorTargets()) {
         await cp('dist', dest, { recursive: true });
     }
@@ -83,7 +93,12 @@ const config = {
     // would trigger strict CORS and be blocked on file: origins).
     format: 'iife',
     target: 'es2020',
-    sourcemap: dev ? 'inline' : false,
+    // External, not inline: inline pushes the bundle from 1.8mb to 9.5mb and the WebView pays
+    // that on every pane open. A .map next to it leaves the bundle alone — DevTools fetches it
+    // only when the panel is open — and mirrorTargets copies the whole dist/, so it follows the
+    // bundle into the Exp hives on its own. Off in Release: a minified stack there is the price
+    // of not shipping the sources.
+    sourcemap: dev ? true : false,
     minify: !dev,
     outfile: 'dist/bundle.js',
     logLevel: 'info',

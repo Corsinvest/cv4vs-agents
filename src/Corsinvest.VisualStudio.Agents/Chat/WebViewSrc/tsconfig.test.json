@@ -1,0 +1,14 @@
+// Tests run straight off the .ts through `node --test` (Node strips the types), never through
+// esbuild — so they import with an explicit .ts extension, which the bundle's own imports must
+// not carry. That is the one setting this config adds; everything else is the app's.
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "allowImportingTsExtensions": true,
+        "types": ["node"]
+    },
+    // The base excludes *.test.ts so the app build ignores them; restate it here without that
+    // entry, or extends would cancel the include below.
+    "include": ["core/**/*.test.ts", "ui/**/*.test.ts"],
+    "exclude": ["node_modules", "dist"]
+}

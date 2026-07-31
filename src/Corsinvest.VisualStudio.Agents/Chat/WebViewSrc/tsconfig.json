@@ -30,5 +30,5 @@
         }
     },
     "include": ["index.ts", "globals.d.ts", "core/**/*.ts", "ui/**/*.ts"],
-    "exclude": ["node_modules", "dist"]
+    "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }
