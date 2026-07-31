@@ -52,6 +52,11 @@ behaving like the rest of the IDE's windows.
 - **The context gauge and the effort control open menus** like everything else in the composer,
   instead of hand-written panels of their own.
 
+- **The eye on the context chip appears only when sharing is paused.** Sharing is the ordinary state
+  and needs no badge; not sharing is the exception, and without a mark a chip carrying a file name
+  reads as "this goes with your message" when it doesn't. The tooltips say what happens rather than
+  naming the machinery — "File.cs goes with every message".
+
 - **`Write` shows the file, not a diff.** A diff where every line is an addition distinguishes
   nothing; the header now carries the size instead, the way `Read` shows its line range.
 
