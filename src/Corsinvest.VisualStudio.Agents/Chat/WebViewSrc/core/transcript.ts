@@ -118,9 +118,50 @@ export class Transcript {
         return ok;
     }
 
+    /** Swap the whole transcript (a history page load). The index is rebuilt from scratch: one
+     *  that outlives its entries would resolve an id to a path that leads nowhere. */
+    replaceAll(entries: UiEntry[]): void {
+        this._entries = entries;
+        this._reindex();
+    }
+
+    /** Put an older page in front, keeping the rest as-is. */
+    prepend(older: UiEntry[]): void {
+        this._entries = [...older, ...this._entries];
+        this._reindex();
+    }
+
+    /** Update several entries at once — the streaming messages a turn ends with. */
+    updateMany(ids: number[], fn: (e: UiEntry) => UiEntry): void {
+        for (const id of ids) {
+            this.update(id, fn);
+        }
+    }
+
     /** Find a tool row by toolUseId, walking nested children. */
     findTool(toolUseId: string): UiToolEntry | null {
         return this._visitTools((e) => e.toolUseId === toolUseId);
+    }
+
+    /** Locate an Agent row by the sub-agent it spawned. Unique: only an Agent row carries an
+     *  agentId, and it names the transcript that row alone opened. */
+    findToolByAgentId(agentId: string): UiToolEntry | null {
+        return this._visitTools((e) => e.agentId === agentId);
+    }
+
+    /** Rebuild id → path for the whole tree, children included. History hands a page over with
+     *  its children already nested, where the live path builds them one appendChild at a time. */
+    private _reindex(): void {
+        this._index.clear();
+        const walk = (list: readonly UiEntry[], path: EntryPath): void => {
+            for (const e of list) {
+                this._index.set(e.id, path);
+                if (e.kind === 'tool' && e.children?.items.length) {
+                    walk(e.children.items, [...path, e.toolUseId]);
+                }
+            }
+        };
+        walk(this._entries, []);
     }
 
     /** First tool row matching `pred`, depth-first. */

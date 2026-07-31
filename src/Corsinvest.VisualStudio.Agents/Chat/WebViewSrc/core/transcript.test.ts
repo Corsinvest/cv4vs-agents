@@ -168,6 +168,71 @@ test('appendChild: parent inesistente ritorna false', () => {
     assert.equal(t.appendChild('nope', userEntry(1), childKey), false);
 });
 
+test('replaceAll: sostituisce l albero e ricostruisce l index da zero', () => {
+    const t = new Transcript();
+    t.append(userEntry(1));
+    t.append(toolEntry(2, 'tool-2'));
+    t.appendChild('tool-2', userEntry(3), childKey);
+
+    t.replaceAll([userEntry(10), toolEntry(11, 'nuovo')]);
+
+    assert.equal(t.entries.length, 2);
+    assert.equal(t.find(1), null, 'gli id vecchi non devono sopravvivere');
+    assert.equal(t.find(3), null, 'nemmeno quelli annidati');
+    assert.equal(t.find(10)?.id, 10);
+});
+
+test('replaceAll: indicizza anche i figli annidati gia presenti', () => {
+    const parent = toolEntry(1, 'p');
+    parent.children = { items: [userEntry(2)], hasMore: false, showAll: false };
+    const t = new Transcript();
+
+    t.replaceAll([parent]);
+
+    assert.equal(t.find(2)?.id, 2, 'i figli arrivati da history devono essere indicizzati');
+    assert.equal(
+        t.update<UiUserEntry>(2, (e) => ({ ...e, text: 'x' })),
+        true,
+    );
+});
+
+test('prepend: mette in testa e mantiene l index coerente', () => {
+    const t = new Transcript();
+    t.append(userEntry(5));
+
+    t.prepend([userEntry(1), userEntry(2)]);
+
+    assert.deepEqual(
+        t.entries.map((e) => e.id),
+        [1, 2, 5],
+    );
+    assert.equal(t.find(1)?.id, 1);
+    assert.equal(t.find(5)?.id, 5, 'anche gli id preesistenti restano risolvibili');
+});
+
+test('updateMany: aggiorna N entry in un colpo', () => {
+    const t = new Transcript();
+    t.append(userEntry(1, 'a'));
+    t.append(userEntry(2, 'b'));
+    const before = t.entries;
+
+    t.updateMany([1, 2], (e) => ('text' in e ? { ...e, text: e.text + '!' } : e));
+
+    assert.notEqual(t.entries, before);
+    assert.equal((t.entries[0] as UiUserEntry).text, 'a!');
+    assert.equal((t.entries[1] as UiUserEntry).text, 'b!');
+});
+
+test('findToolByAgentId: trova la riga Agent che ha lanciato il sub-agent', () => {
+    const t = new Transcript();
+    const row = toolEntry(1, 'tool-1');
+    row.agentId = 'agent-42';
+    t.append(row);
+
+    assert.equal(t.findToolByAgentId('agent-42')?.id, 1);
+    assert.equal(t.findToolByAgentId('nope'), null);
+});
+
 test('appendChild annidato: l index risolve un figlio di figlio', () => {
     const t = new Transcript();
     t.append(toolEntry(1, 'outer'));
