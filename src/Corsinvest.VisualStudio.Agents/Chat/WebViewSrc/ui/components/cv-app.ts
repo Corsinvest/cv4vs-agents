@@ -5,7 +5,6 @@
 import { LitElement, html, nothing } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { repeat } from 'lit/directives/repeat.js';
 import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
@@ -1478,19 +1477,11 @@ export class CvApp extends LitElement {
         const leadUsers = group.slice(0, i);
         const response = group.slice(i);
         return html`<section class="cv-exchange">
-            ${repeat(
-                leadUsers,
-                (e) => e.id,
-                (e) => this.renderEntry(e),
-            )}
+            ${leadUsers.map((e) => this.renderEntry(e))}
             ${
                 response.length > 0
                     ? html`<div class="cv-response">
-                          ${repeat(
-                              response,
-                              (e) => e.id,
-                              (e) => this.renderEntry(e),
-                          )}
+                          ${response.map((e) => this.renderEntry(e))}
                           ${this.renderResponseActions(response)}
                       </div>`
                     : nothing
@@ -1571,11 +1562,7 @@ export class CvApp extends LitElement {
                         ? html`<cv-welcome></cv-welcome>`
                         : nothing
                 }
-                ${repeat(
-                    this._exchanges,
-                    (group) => group[0]?.id ?? -1,
-                    (group) => this.renderExchange(group),
-                )}
+                ${this._exchanges.map((group) => this.renderExchange(group))}
                 ${
                     this._isBusy && this._streamingMsgs.size === 0 && !this._awaitingUser
                         ? html`<cv-spinner .status=${this._status}></cv-spinner>`
