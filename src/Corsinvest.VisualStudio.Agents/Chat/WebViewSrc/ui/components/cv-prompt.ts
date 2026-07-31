@@ -86,6 +86,10 @@ function unsupportedMessage(names: string[]): string {
 // re-opened history image look identical. Slightly above the 16px render size for high-DPI.
 const THUMB_PX = 24;
 
+// Builtins that end or reset the current turn's state rather than adding to it: queueing these
+// behind a running turn would hold back the one command that gets the session out of it.
+const RESET_COMMANDS = new Set(['/clear', '/compact']);
+
 /** Downscale an image data-URL to a tiny PNG data-URL for the chip. Resolves to undefined on
  *  any failure (decode error, unsupported codec) — the chip then falls back to its file icon. */
 function makeThumb(dataUrl: string): Promise<string | undefined> {
@@ -277,6 +281,18 @@ export class CvPrompt extends LitElement implements CommandHost {
                 margin-bottom: 6px;
                 border-bottom: 1px solid var(--colorNeutralStroke2);
                 position: relative;
+            }
+            /* Same band as #attachments: what is staged above the box the user is typing in. */
+            #queued {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 0 2px 6px;
+                margin-bottom: 6px;
+                border-bottom: 1px solid var(--colorNeutralStroke2);
+                color: var(--colorNeutralForeground3);
+                font-size: 11px;
             }
         `,
     ];
@@ -913,7 +929,7 @@ export class CvPrompt extends LitElement implements CommandHost {
 
     private _onSendClick = (): void => {
         if (this._isBusy) {
-            this._stop();
+            this.stop();
         } else {
             this._submit();
         }
@@ -1125,7 +1141,9 @@ export class CvPrompt extends LitElement implements CommandHost {
         if (echo) {
             this._echoUserMessage(payload);
         }
-        if (this._isBusy) {
+        // A builtin that resets the session is also the way out of a stuck one, so it must not
+        // queue behind the very turn it is meant to clear — the CLI takes these mid-turn.
+        if (this._isBusy && !RESET_COMMANDS.has(text.trim().split(/\s+/, 1)[0])) {
             this._queue = [...this._queue, payload];
         } else {
             this._dispatch(payload);
@@ -1265,8 +1283,13 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
     };
 
-    private _stop(): void {
+    /** Stop the turn: interrupt the CLI, drop anything queued behind it, free the UI.
+     *  Public because Esc (handled globally in cv-app) is the same gesture as the Stop
+     *  button — it must not stop halfway and leave the queue to fire on the next flush. */
+    stop(): void {
         bridge.sendNotification(Msg.fromWebView.cli.stop, {});
+        // Queued prompts were meant to follow the turn being stopped; flushing them after an
+        // interrupt would send messages the user never confirmed at a CLI they just halted.
         this._queue = [];
         // Optimistic reset: free the UI now in case the CLI is wedged and
         // never sends `result`.
@@ -1400,6 +1423,30 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._ta?.focus();
     };
 
+    /** Messages typed while a turn was running, waiting for it to end. The bubble for each is
+     *  already in the transcript (the echo goes in on submit), so without this row a queued
+     *  message is indistinguishable from a sent one — the whole reason it looked like the chat
+     *  had swallowed them. */
+    private _renderQueue() {
+        const n = this._queue.length;
+        if (n === 0) {
+            return nothing;
+        }
+        return html`
+            <div id="queued" title=${this._queue.map((q) => q.text).join('\n\n')}>
+                <span>${n === 1 ? '1 message queued' : `${n} messages queued`}</span>
+                <fluent-button
+                    appearance="transparent"
+                    size="small"
+                    @click=${(): void => {
+                        this._queue = [];
+                    }}
+                    >Clear</fluent-button
+                >
+            </div>
+        `;
+    }
+
     private _renderChips() {
         if (this._attachments.length === 0) {
             return nothing;
@@ -1441,7 +1488,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 @drop=${this._onDrop}
             >
                 <cv-notice-stack></cv-notice-stack>
-                ${this._renderChips()}
+                ${this._renderQueue()} ${this._renderChips()}
                 <textarea
                     id="input"
                     placeholder=${

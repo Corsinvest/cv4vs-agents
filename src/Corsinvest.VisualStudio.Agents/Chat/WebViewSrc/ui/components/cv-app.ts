@@ -677,8 +677,10 @@ export class CvApp extends LitElement {
             return;
         }
         e.preventDefault();
-        bridge.sendNotification(Msg.fromWebView.cli.stop, {});
-        appState.isBusy = false;
+        // Same gesture as the Stop button, so it goes through the composer's own stop: doing the
+        // interrupt here and nothing else left the queue intact, and the next flush then sent
+        // prompts the user had written behind a turn they had just cancelled.
+        this.querySelector('cv-prompt')?.stop();
     };
 
     /** Build UiEntry[] from a replayed page of typed events (chat_history / subagent_loaded).
