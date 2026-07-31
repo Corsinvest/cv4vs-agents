@@ -252,6 +252,7 @@ public abstract class PaneWindowBase : ToolWindowPane
         if (disposing)
         {
             Ide.IdeContextService.ActiveFrameChanged -= OnActiveFrameChanged;
+            OutputWindowLogger.Info($"[reload] pane frame disposed: {GetType().Name} #{PaneId}");
             try { PaneControl.DisposePane(); }
             catch (System.Exception ex) { OutputWindowLogger.LogException($"{GetType().Name}.Dispose", ex); }
         }

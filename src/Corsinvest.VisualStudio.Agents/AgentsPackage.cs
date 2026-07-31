@@ -301,6 +301,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnAfterOpenSolution(object pUnkReserved, int fNewSolution)
     {
+        OutputWindowLogger.Info($"[reload] OnAfterOpenSolution fNew={fNewSolution} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         // Redundant with OnBeforeOpenSolution, but covers the rare load path
         // that skips IVsSolutionLoadEvents.
         RefreshCurrentSolutionFolder();
@@ -327,6 +328,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionLoadEvents.OnBeforeOpenSolution(string pszSolutionFilename)
     {
+        OutputWindowLogger.Info($"[reload] OnBeforeOpenSolution file={pszSolutionFilename ?? "(none)"} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         // Cache the folder eagerly from the .sln path so consumers don't hit
         // IVsSolution before it's populated (projects may still be loading).
         if (!string.IsNullOrEmpty(pszSolutionFilename))
@@ -346,21 +348,72 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnAfterCloseSolution(object pUnkReserved)
     {
+        OutputWindowLogger.Info($"[reload] OnAfterCloseSolution folder={CurrentSolutionFolder ?? "(none)"} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         CurrentSolutionFolder = null;
         _ = Mcp.McpServerHost.Instance.RewriteLockFileAsync();
         return VSConstants.S_OK;
     }
 
-    int IVsSolutionEvents.OnQueryCloseSolution(object pUnkReserved, ref int pfCancel) => VSConstants.S_OK;
+    int IVsSolutionEvents.OnQueryCloseSolution(object pUnkReserved, ref int pfCancel)
+    {
+        OutputWindowLogger.Info($"[reload] OnQueryCloseSolution cancelIn={pfCancel} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        return VSConstants.S_OK;
+    }
 
-    int IVsSolutionEvents.OnAfterOpenProject(IVsHierarchy pHierarchy, int fAdded) => VSConstants.S_OK;
-    int IVsSolutionEvents.OnQueryCloseProject(IVsHierarchy pHierarchy, int fRemoving, ref int pfCancel) => VSConstants.S_OK;
-    int IVsSolutionEvents.OnBeforeCloseProject(IVsHierarchy pHierarchy, int fRemoved) => VSConstants.S_OK;
-    int IVsSolutionEvents.OnAfterLoadProject(IVsHierarchy pStubHierarchy, IVsHierarchy pRealHierarchy) => VSConstants.S_OK;
-    int IVsSolutionEvents.OnQueryUnloadProject(IVsHierarchy pRealHierarchy, ref int pfCancel) => VSConstants.S_OK;
-    int IVsSolutionEvents.OnBeforeUnloadProject(IVsHierarchy pRealHierarchy, IVsHierarchy pStubHierarchy) => VSConstants.S_OK;
+    /// <summary>Project name off a hierarchy, for the trace below — the events carry the project
+    /// only as an IVsHierarchy, and "which project" is half of what the sequence has to tell us.</summary>
+    private static string HierName(IVsHierarchy hier)
+    {
+        if (hier == null) { return "(null)"; }
+        try
+        {
+            hier.GetProperty(VSConstants.VSITEMID_ROOT, (int)__VSHPROPID.VSHPROPID_Name, out var name);
+            return name as string ?? "(unnamed)";
+        }
+        catch { return "(error)"; }
+    }
+
+    // Project-level events: no-ops we only trace. A project reload (the "modified outside the
+    // environment" prompt) is an unload followed by a load — the SDK has no reload event of its
+    // own — and the open question is whether it takes the chat panes down with it.
+    int IVsSolutionEvents.OnAfterOpenProject(IVsHierarchy pHierarchy, int fAdded)
+    {
+        OutputWindowLogger.Info($"[reload] OnAfterOpenProject proj={HierName(pHierarchy)} fAdded={fAdded} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        return VSConstants.S_OK;
+    }
+
+    int IVsSolutionEvents.OnQueryCloseProject(IVsHierarchy pHierarchy, int fRemoving, ref int pfCancel)
+    {
+        OutputWindowLogger.Info($"[reload] OnQueryCloseProject proj={HierName(pHierarchy)} fRemoving={fRemoving} cancelIn={pfCancel} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        return VSConstants.S_OK;
+    }
+
+    int IVsSolutionEvents.OnBeforeCloseProject(IVsHierarchy pHierarchy, int fRemoved)
+    {
+        OutputWindowLogger.Info($"[reload] OnBeforeCloseProject proj={HierName(pHierarchy)} fRemoved={fRemoved} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        return VSConstants.S_OK;
+    }
+
+    int IVsSolutionEvents.OnAfterLoadProject(IVsHierarchy pStubHierarchy, IVsHierarchy pRealHierarchy)
+    {
+        OutputWindowLogger.Info($"[reload] OnAfterLoadProject stub={HierName(pStubHierarchy)} real={HierName(pRealHierarchy)} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        return VSConstants.S_OK;
+    }
+
+    int IVsSolutionEvents.OnQueryUnloadProject(IVsHierarchy pRealHierarchy, ref int pfCancel)
+    {
+        OutputWindowLogger.Info($"[reload] OnQueryUnloadProject proj={HierName(pRealHierarchy)} cancelIn={pfCancel} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        return VSConstants.S_OK;
+    }
+
+    int IVsSolutionEvents.OnBeforeUnloadProject(IVsHierarchy pRealHierarchy, IVsHierarchy pStubHierarchy)
+    {
+        OutputWindowLogger.Info($"[reload] OnBeforeUnloadProject real={HierName(pRealHierarchy)} stub={HierName(pStubHierarchy)} panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        return VSConstants.S_OK;
+    }
     int IVsSolutionEvents.OnBeforeCloseSolution(object pUnkReserved)
     {
+        OutputWindowLogger.Info($"[reload] OnBeforeCloseSolution folder={CurrentSolutionFolder ?? "(none)"} panes={Core.Panes.PaneRegistry.Instance.Entries.Count} — CLOSING ALL");
         // Snapshot before CloseAll drains the registry, so the closing solution's
         // workspace.json reflects the panes it actually had open.
         SaveWorkspace();
