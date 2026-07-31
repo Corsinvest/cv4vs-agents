@@ -209,11 +209,24 @@ public partial class ChatPaneControl : PaneControlBase
         get
         {
             yield return ("WebView PID", _bridge?.BrowserProcessId?.ToString() ?? "(not started)");
-            // Blocking on the UI thread: the dialog is modal and about to show anyway, and the
-            // call is a single in-process round-trip to the browser.
+            // Blocking on the UI thread, with a deadline. The round-trip is in-process and
+            // normally instant, but the answer comes back through the browser — which needs this
+            // same thread to deliver it. A renderer that is busy or gone therefore hangs the IDE
+            // on a row that is only diagnostic. Two seconds, then "(unknown)": nobody opens this
+            // dialog for the renderer PID badly enough to freeze Visual Studio over it.
             var renderer = _bridge == null
                 ? null
-                : ThreadHelper.JoinableTaskFactory.Run(_bridge.RendererProcessIdAsync);
+                : ThreadHelper.JoinableTaskFactory.Run(async () =>
+                {
+                    var call = _bridge.RendererProcessIdAsync();
+                    var done = await Task.WhenAny(call, Task.Delay(2000)).ConfigureAwait(true);
+                    if (done != call)
+                    {
+                        OutputWindowLogger.Warn("[chat] renderer PID timed out — WebView not answering");
+                        return null;
+                    }
+                    return await call.ConfigureAwait(true);
+                });
             yield return ("WebView renderer", renderer?.ToString() ?? "(unknown)");
         }
     }
