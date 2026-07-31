@@ -1552,16 +1552,16 @@ export class CvApp extends LitElement {
 
             <div id="messages" aria-live="polite">
                 ${
-                        this._entries.length === 0 && !this._isBusy
-                            ? html`<cv-welcome></cv-welcome>`
-                            : nothing
-                    }
+                    this._entries.length === 0 && !this._isBusy
+                        ? html`<cv-welcome></cv-welcome>`
+                        : nothing
+                }
                 ${this._exchanges.map((group) => this.renderExchange(group))}
                 ${
-                        this._isBusy && this._streamingMsgs.size === 0 && !this._awaitingUser
-                            ? html`<cv-spinner .status=${this._status}></cv-spinner>`
-                            : nothing
-                    }
+                    this._isBusy && this._streamingMsgs.size === 0 && !this._awaitingUser
+                        ? html`<cv-spinner .status=${this._status}></cv-spinner>`
+                        : nothing
+                }
                 <!-- Last child of the scroller, stuck to its bottom edge: position:sticky keeps it
                      in view without a wrapper. A wrapper would have been cleaner, but cv-app
                      renders into the light DOM, and re-parenting #messages moves nodes Lit holds

@@ -21,8 +21,10 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 /// and dispatching messages received from JS to the host via <see cref="MessageReceived"/>.
 /// </summary>
 internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2 webView, Dispatcher dispatcher)
+    : IDisposable
 {
     private bool _ready;
+    private bool _disposed;
     private readonly ConcurrentQueue<(string type, object data)> _pending = new();
     private bool? _pendingTheme;
     private string _docCreatedScriptId;
@@ -80,6 +82,9 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2 
             var isFirstLoad = true;
             webView.CoreWebView2.NavigationCompleted += (s, args) =>
             {
+                // A navigation landing during teardown would re-arm _ready and drain the queue
+                // into a WebView being disposed.
+                if (_disposed) { return; }
                 _ready = true;
                 if (isFirstLoad)
                 {
@@ -169,6 +174,29 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2 
     }
 
     public void OpenDevTools() => webView.CoreWebView2?.OpenDevToolsWindow();
+
+    /// <summary>Release the WebView2 control, and with it the CoreWebView2Controller and the
+    /// renderer process behind this pane. VS keeps the closed tool window's control alive, so
+    /// without this the renderer outlives the pane and the browser accumulates one per pane ever
+    /// opened. Handlers are unhooked first: they run on the controller being torn down.</summary>
+    public void Dispose()
+    {
+        if (_disposed) { return; }
+        _disposed = true;
+        _ready = false;
+        try
+        {
+            var core = webView.CoreWebView2;
+            if (core != null)
+            {
+                core.WebMessageReceived -= OnRawMessage;
+                core.ContextMenuRequested -= OnContextMenuRequested;
+                core.WebResourceRequested -= OnIconRequested;
+            }
+            webView.Dispose();
+        }
+        catch (Exception ex) { OutputWindowLogger.LogException("WebViewBridge.Dispose", ex); }
+    }
 
     /// <summary>Give the WebView2 control the native (WPF) focus, so the keyboard
     /// actually reaches the page. Without this a JS `element.focus()` only shows a
