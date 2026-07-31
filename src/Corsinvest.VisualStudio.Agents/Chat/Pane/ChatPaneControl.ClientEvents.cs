@@ -251,6 +251,7 @@ public partial class ChatPaneControl
     private void OnResult(object sender, ResultEventArgs e)
         => Dispatcher.Invoke(() =>
         {
+            _turnInFlight = false;
             // NOTE: do NOT clear active sub-agents here. `result` ends the main turn, but
             // background agents (run_in_background / async) outlive it and keep running —
             // clearing here would hide the chip while they still work. Each agent sends its
@@ -429,6 +430,10 @@ public partial class ChatPaneControl
             var subtype = obj.Val("subtype", "");
             if (subtype == ClientMessages.SystemSubtype.Status)
             {
+                // The CLI reports a status the moment it starts working on a turn, and `result`
+                // ends it — the two bounds of "a turn is in flight", which OnOptionsApplied needs
+                // so it doesn't re-render the transcript out from under a running turn.
+                _turnInFlight = true;
                 // Forward the raw work status ("compacting" at start, null→"" at end). The WebView
                 // maps known values to a spinner label; VS Code does the same.
                 _bridge.Send(BridgeMessages.ToWebView.Chat.Status, new Contracts.StatusNotification

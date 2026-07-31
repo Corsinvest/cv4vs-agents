@@ -364,6 +364,10 @@ export class CvApp extends LitElement {
                 this._exchanges = [];
                 this._streamingMsgs.clear();
                 this._thinkingMsgs.clear();
+                // The transcript this turn belonged to is gone, so its `result` — the only thing
+                // that clears busy — would land on nothing. Without this the spinner outlives the
+                // session that started it, with no message under it to explain what it is waiting for.
+                appState.isBusy = false;
                 appState.currentSessionId = null;
                 appState.oldestLoadedOffset = -1;
                 appState.hasMoreHistory = false;
