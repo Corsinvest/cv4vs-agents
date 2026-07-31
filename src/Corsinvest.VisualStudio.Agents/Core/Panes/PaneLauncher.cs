@@ -26,10 +26,38 @@ internal static class PaneLauncher
     private static Type WindowType(PaneKind kind)
         => kind == PaneKind.Cli ? typeof(CliPaneWindow) : typeof(ChatPaneWindow);
 
+    /// <summary>Hide every pane the registry knows about, keeping the frames (and the CLI processes
+    /// behind them) alive. Used while a closing solution might still be a reload coming back: the
+    /// panes have to look gone straight away, but closing them would kill the session for good.
+    /// Hide leaves the dock position untouched, so <see cref="ShowExisting"/> brings them back where
+    /// they were. Main thread only — IVsWindowFrame is not free-threaded.</summary>
+    public static void HideExisting()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var pkg = AgentsPackage.Instance;
+        if (pkg == null) { return; }
+
+        foreach (var entry in PaneRegistry.Instance.Entries.ToList())
+        {
+            try
+            {
+                if (Frame(pkg, entry) is IVsWindowFrame frame && frame.IsVisible() == VSConstants.S_OK)
+                {
+                    frame.Hide();
+                }
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.LogException($"PaneLauncher.HideExisting({entry.Title})", ex);
+            }
+        }
+    }
+
     /// <summary>Re-show the panes the registry already knows about, without creating any. VS holds a
     /// separate window layout for design time and run time, so panes opened while writing code are
     /// missing from the run-time one and look closed when the debugger starts — the frames are alive,
-    /// they are simply not in that layout. Called on debugger mode changes.
+    /// they are simply not in that layout. Called on debugger mode changes, and after a solution
+    /// reload to bring back what <see cref="HideExisting"/> put away.
     ///
     /// create: false throughout: a pane the user closed is gone from the registry and must stay
     /// closed, and a frame we cannot find is not one to conjure up.
