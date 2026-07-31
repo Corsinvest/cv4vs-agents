@@ -372,6 +372,16 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         try { kept = Core.Panes.PaneRegistry.Instance.CloseWhereWorkdirDiffers(CurrentSolutionFolder); }
         catch (Exception ex) { OutputWindowLogger.LogException("Pkg.OnAfterOpenSolution", ex); }
         OutputWindowLogger.Info($"[reload] solution open on {CurrentSolutionFolder ?? "(none)"} — kept {kept} of {had} pane(s)");
+        // Bring back what the close hid. StartOnIdle for the same reason the restore defers: showing
+        // a frame from inside this COM event freezes the shell, which is still mid-transition.
+        if (kept > 0)
+        {
+            _ = JoinableTaskFactory.StartOnIdle(() =>
+            {
+                try { Core.Panes.PaneLauncher.ShowExisting(); }
+                catch (Exception ex) { OutputWindowLogger.LogException("Pkg.ShowPanesOnReload", ex); }
+            });
+        }
         // Reopen the panes saved for THIS solution — minus the ones a reload just kept alive (see
         // RestorePanesForCurrentSolution). Deferred to shell-idle (see RestorePanesDeferred):
         // spawning panes inside this COM event reenters solution state.
@@ -415,6 +425,10 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     {
         OutputWindowLogger.Debug(() => $"[reload] solution closed — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         CurrentSolutionFolder = null;
+        // Out of sight straight away, so closing a solution looks like it always did — but alive, so
+        // a reload can hand them back with the session intact.
+        try { Core.Panes.PaneLauncher.HideExisting(); }
+        catch (Exception ex) { OutputWindowLogger.LogException("Pkg.HidePanesOnClose", ex); }
         // Armed here, not on the Before: unloading the projects happens in between and would eat the
         // window on a large solution.
         ArmReloadWatch(ReloadWatchCloseMs);
