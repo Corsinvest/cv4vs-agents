@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
@@ -174,6 +175,42 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2 
     }
 
     public void OpenDevTools() => webView.CoreWebView2?.OpenDevToolsWindow();
+
+    /// <summary>PID of the WebView2 browser process, or null before the WebView is up. WebView2
+    /// keys the browser on the user-data folder, not on the host: every pane shares this one, and
+    /// so does a second VS instance running the extension. It identifies the group, not the pane —
+    /// <see cref="RendererProcessIdAsync"/> is the per-pane process.</summary>
+    public uint? BrowserProcessId => webView.CoreWebView2?.BrowserProcessId;
+
+    /// <summary>PID of the renderer hosting THIS pane, or null if it can't be resolved. Matched on
+    /// the main frame's id: the browser's process list alone can't say which renderer is ours, and
+    /// with panes from another VS instance in there too, listing them all answers nobody's
+    /// question. Async because the frame→process map is only exposed that way.</summary>
+    public async Task<int?> RendererProcessIdAsync()
+    {
+        try
+        {
+            var core = webView.CoreWebView2;
+            if (core == null) { return null; }
+
+            var frameId = core.FrameId;
+            var infos = await core.Environment.GetProcessExtendedInfosAsync();
+            return infos.FirstOrDefault(
+                p => p.ProcessInfo.Kind == CoreWebView2ProcessKind.Renderer
+                     && p.AssociatedFrameInfos.Any(f => f.FrameId == frameId))?.ProcessInfo.ProcessId;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.LogException("WebViewBridge.RendererProcessId", ex);
+            return null;
+        }
+    }
+
+    /// <summary>The browser's own task manager — the Edge one, with live memory/CPU per process.
+    /// It covers every pane on the user-data folder, panes in another VS instance included, which
+    /// is what makes it worth having: a stray renderer or a process count that doesn't add up is a
+    /// question about the whole browser, not about this pane.</summary>
+    public void OpenTaskManager() => webView.CoreWebView2?.OpenTaskManagerWindow();
 
     /// <summary>Release the WebView2 control, and with it the CoreWebView2Controller and the
     /// renderer process behind this pane. VS keeps the closed tool window's control alive, so
