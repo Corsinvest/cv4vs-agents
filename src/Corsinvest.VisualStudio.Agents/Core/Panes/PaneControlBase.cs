@@ -78,7 +78,7 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     }
 
     /// <summary>Kind-specific release: chat unsubs Options.Applied + editor context + disposes
-    /// the client; cli disposes the ConPTY process. Theme unsub lives here too (handler name
+    /// the client and the WebView; cli disposes the ConPTY process. Theme unsub lives here too (handler name
     /// differs per kind). Runs before the base drops the registry entry.</summary>
     protected abstract void DisposeCore();
 

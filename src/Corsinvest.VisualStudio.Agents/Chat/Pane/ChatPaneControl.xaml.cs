@@ -290,7 +290,7 @@ public partial class ChatPaneControl : PaneControlBase
 
     /// <summary>Kind-specific release (the base handles _disposed guard, solution-events
     /// unadvise, and the registry drop). Unhook the theme + static Options subscriptions and
-    /// dispose the client. The IdeContextService singleton is owned by the package
+    /// dispose the client and the WebView. The IdeContextService singleton is owned by the package
     /// (McpServerHost lifetime) — only unhook our handler, don't dispose it.</summary>
     protected override void DisposeCore()
     {
@@ -306,6 +306,9 @@ public partial class ChatPaneControl : PaneControlBase
         // stdout line as the process closes) would otherwise reach this disposed control.
         if (_client != null) { DetachClientEvents(_client); }
         _client?.Dispose();
+        // Last: the bridge tears down the WebView2, and anything above may still post to it.
+        _bridge?.Dispose();
+        _bridge = null;
     }
 
     private void OnEditorContextChanged(EditorContext ctx)
