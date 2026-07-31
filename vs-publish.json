@@ -2,20 +2,7 @@
     "$schema": "http://json.schemastore.org/vsix-publish",
     "categories": [ "coding", "other" ],
     "identity": {
-        "internalName": "cv4vs-agents",
-        "tags": [
-            "agent",
-            "agentic",
-            "ai",
-            "anthropic",
-            "assistant",
-            "chat",
-            "claude",
-            "claude-code",
-            "coding-agent",
-            "llm",
-            "mcp"
-        ]
+        "internalName": "cv4vs-agents"
     },
     "overview": "docs/marketplace-overview.md",
     "priceCategory": "free",

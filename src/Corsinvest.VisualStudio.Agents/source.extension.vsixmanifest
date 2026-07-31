@@ -19,8 +19,11 @@
     <Icon>Resources\marketplace-logo.png</Icon>
     <PreviewImage>Resources\preview.png</PreviewImage>
     <!-- Search hints, capped at 100 characters. copilot/chat/mcp/assistant are what people
-         actually type when looking for this kind of extension, not what it is called. -->
-    <Tags>claude,anthropic,ai,claude-code,llm,agent,agentic,coding-agent,copilot,chat,mcp,assistant</Tags>
+         actually type when looking for this kind of extension, not what it is called.
+         Semicolons, not commas: that is what the schema delimits on, and VsixPublisher takes a
+         comma-separated string as ONE tag — which then trips the Marketplace's 50-character
+         per-tag limit and fails the publish, as v1.1.0 did. -->
+    <Tags>claude;anthropic;ai;claude-code;llm;agent;agentic;coding-agent;copilot;chat;mcp;assistant</Tags>
   </Metadata>
   <Installation>
     <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0,)">
