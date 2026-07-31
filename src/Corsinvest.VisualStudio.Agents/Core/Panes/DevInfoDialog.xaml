@@ -1,4 +1,4 @@
-﻿<!-- Fixed size + NoResize, same as AboutDialog: a resizable dialog gets picked up and tiled
+<!-- Fixed size + NoResize, same as AboutDialog: a resizable dialog gets picked up and tiled
      by window managers instead of floating over the IDE. The info text scrolls, so a fixed
      width costs nothing. -->
 <vsui:DialogWindow x:Class="Corsinvest.VisualStudio.Agents.Core.Panes.DevInfoDialog"
