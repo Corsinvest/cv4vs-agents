@@ -252,6 +252,9 @@ public partial class ChatPaneControl : PaneControlBase
     // True while background agents are running (from background_tasks_changed). Gates the
     // "turn finished" attention notification so async agents don't trigger a premature one.
     private bool _hasBackgroundTasks;
+    // True between the CLI's first status for a turn and its `result`. Keeps Options → Apply from
+    // re-rendering the transcript mid-turn, which would drop the reply still being streamed.
+    private bool _turnInFlight;
 
     // When set (by PaneLauncher before the pane loads), this pane opens ON this
     // session instead of a fresh one — used to land a fork in its own pane.
@@ -369,6 +372,17 @@ public partial class ChatPaneControl : PaneControlBase
         var sid = _client?.SessionId;
         if (string.IsNullOrEmpty(sid)) { return; }
 
+        // Mid-turn the re-render would be destructive: the reply being streamed is not in the
+        // .jsonl yet, so Cleared drops it and the page read back is the transcript as it stood
+        // before the turn — the running turn disappears from the chat while the CLI is still
+        // working on it. The options above are already applied; the rows rendered so far keep
+        // the previous ones until the next re-render.
+        if (_turnInFlight)
+        {
+            OutputWindowLogger.Debug(() => $"[chat] options applied mid-turn on {sid} — settings only, transcript left alone");
+            return;
+        }
+
         // Reload the transcript into the WebView only; do NOT call ResumeSessionAsync
         // (a respawn isn't needed to re-render UI options, and triggered a crash).
         _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
@@ -468,6 +482,9 @@ public partial class ChatPaneControl : PaneControlBase
             McpMessageHandler = json => Mcp.McpServerHost.Instance.ServeMcpMessageAsync(json)
         };
         AttachClientEvents(_client);
+        // Unhook first, like MessageReceived below: the subscription lives on a singleton that
+        // outlives the client, so a second pass here would send every selection change twice.
+        IdeContextService.Instance.ContextChanged -= OnEditorContextChangedForChat;
         IdeContextService.Instance.ContextChanged += OnEditorContextChangedForChat;
 
         _handler = new WebViewMessageHandler(_bridge, _client, Entry);
@@ -506,7 +523,6 @@ public partial class ChatPaneControl : PaneControlBase
                 break;
         }
     }
-
 
     private void OnEditorContextChangedForChat(EditorContext ctx)
     {

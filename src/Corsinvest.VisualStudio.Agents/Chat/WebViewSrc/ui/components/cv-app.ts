@@ -9,6 +9,8 @@ import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regu
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { fetchSubagent, fetchContextUsage, fetchCompactSummary } from '../../core/lazy';
+import { Transcript } from '../../core/transcript';
+import { buildGroups } from '../../core/exchanges';
 import './cv-notice-stack';
 import type { CvNoticeStack } from './cv-notice-stack';
 import './cv-welcome';
@@ -79,8 +81,17 @@ const CLI_EXITED_KEY = 'cli-exited';
  */
 @customElement('cv-app')
 export class CvApp extends LitElement {
-    @state() private _entries: UiEntry[] = [];
-    @state() private _exchanges: UiEntry[][] = [];
+    /** Owns the transcript. Deliberately not reactive — _mutate() is the one place that tells
+     *  Lit something changed, so there is no second path that can forget to. */
+    private _transcript = new Transcript();
+    /** The only thing Lit watches for a transcript change. Lit re-renders on a reactive property
+     *  it sees change by identity, and the tree lives in a plain object it cannot see into — so
+     *  _mutate() bumps this instead. A counter and not a flag: Lit compares the value from
+     *  before the batch with the one after, so two invalidations in the same microtask would
+     *  toggle a boolean back to where it started and the render would be skipped. */
+    @state() private _rev = 0;
+    /** Groups for the current tree, keyed by the array they were built from. */
+    private _groupCache: { src: readonly UiEntry[]; groups: UiEntry[][] } | null = null;
     @state() private _subagentTasks = new Map<string, SubagentTask>();
     @state() private _isBusy = appState.isBusy;
     @state() private _status = appState.status;
@@ -100,10 +111,26 @@ export class CvApp extends LitElement {
      * (`''` for root). Lets a sub-agent stream concurrently with the root
      * without mixing the two; delta lookups default to `''`.
      */
-    private _streamingMsgs = new Map<string, UiAssistantEntry>();
+    private _streamingMsgs = new Map<string, number>();
     /** Currently-streaming thinking block, keyed by parentToolUseId (same nesting rule
      *  as _streamingMsgs). Never persisted — cleared on session clear. */
-    private _thinkingMsgs = new Map<string, UiThinkingEntry>();
+    private _thinkingMsgs = new Map<string, number>();
+
+    /** Derived, never stored: recomputed only when the tree changes identity. Holding the groups
+     *  as state gave them two writers, and that is how they and the entries drifted apart. */
+    private get _exchanges(): UiEntry[][] {
+        const src = this._transcript.entries;
+        if (this._groupCache?.src !== src) {
+            this._groupCache = { src, groups: buildGroups(src) };
+        }
+        return this._groupCache.groups;
+    }
+
+    /** Every transcript change goes through here, so one place tells Lit about all of them. */
+    private _mutate(fn: () => void): void {
+        fn();
+        this._rev++;
+    }
 
     override createRenderRoot() {
         return this;
@@ -198,14 +225,19 @@ export class CvApp extends LitElement {
                     if (!parentId && data?.usage) {
                         appState.contextUsage = data.usage;
                     }
-                    const streaming = this._streamingMsgs.get(parentId);
-                    if (streaming) {
-                        streaming.text = data?.text ?? streaming.text;
-                        streaming.streaming = false;
-                        // The final assistant notification carries the message time; live fallback = now.
-                        streaming.timestamp = data?.timestamp ?? Date.now();
+                    const streamingId = this._streamingMsgs.get(parentId);
+                    if (streamingId !== undefined) {
+                        this._mutate(() =>
+                            this._transcript.update<UiAssistantEntry>(streamingId, (e) => ({
+                                ...e,
+                                text: data?.text ?? e.text,
+                                streaming: false,
+                                // The final assistant notification carries the message time;
+                                // live fallback = now.
+                                timestamp: data?.timestamp ?? Date.now(),
+                            })),
+                        );
                         this._streamingMsgs.delete(parentId);
-                        this._commit(streaming);
                     } else {
                         const entry = CvApp.buildAssistantEntry(data);
                         entry.timestamp = data?.timestamp ?? Date.now();
@@ -222,18 +254,19 @@ export class CvApp extends LitElement {
                 (data) => {
                     const delta = data?.text ?? '';
                     const parentId = data?.parentToolUseId ?? '';
-                    let streaming = this._streamingMsgs.get(parentId);
-                    if (!streaming) {
-                        streaming = this._addText<UiAssistantEntry>(
-                            { role: 'assistant', text: delta, streaming: true },
+                    const streamingId = this._streamingMsgs.get(parentId);
+                    if (streamingId === undefined) {
+                        this._streamingMsgs.set(
                             parentId,
+                            this._addText<UiAssistantEntry>(
+                                { role: 'assistant', text: delta, streaming: true },
+                                parentId,
+                            ),
                         );
-                        this._streamingMsgs.set(parentId, streaming);
                     } else {
                         // Auto-follow only if already near the bottom.
                         const atBottom = this._isNearBottom();
-                        streaming.text += delta;
-                        this._commit(streaming);
+                        this._mutate(() => this._transcript.appendText(streamingId, delta));
                         if (atBottom) {
                             queueMicrotask(() => this._scrollToBottom('instant'));
                         }
@@ -247,9 +280,9 @@ export class CvApp extends LitElement {
                 Msg.toWebView.chat.thinkingDelta,
                 (data) => {
                     const parentId = data?.parentToolUseId ?? '';
-                    let entry = this._thinkingMsgs.get(parentId);
-                    if (!entry) {
-                        entry = this._addText<UiThinkingEntry>(
+                    let entryId = this._thinkingMsgs.get(parentId);
+                    if (entryId === undefined) {
+                        entryId = this._addText<UiThinkingEntry>(
                             {
                                 role: 'thinking',
                                 text: '',
@@ -259,22 +292,27 @@ export class CvApp extends LitElement {
                             },
                             parentId,
                         );
-                        this._thinkingMsgs.set(parentId, entry);
+                        this._thinkingMsgs.set(parentId, entryId);
                     }
-                    if (data?.text) {
-                        entry.text += data.text;
-                    }
-                    // Token: authoritative thinking_tokens (text empty + estimate>=0) SETS and locks;
-                    // deltas accumulate until then.
-                    if (data && data.estimatedTokens >= 0) {
-                        if (!data.text) {
-                            entry.tokens = data.estimatedTokens;
-                            entry.tokensAuthoritative = true;
-                        } else if (!entry.tokensAuthoritative) {
-                            entry.tokens = (entry.tokens ?? 0) + data.estimatedTokens;
-                        }
-                    }
-                    this._commit(entry);
+                    this._mutate(() =>
+                        this._transcript.update<UiThinkingEntry>(entryId, (e) => {
+                            const next = { ...e };
+                            if (data?.text) {
+                                next.text += data.text;
+                            }
+                            // Token: authoritative thinking_tokens (text empty + estimate>=0) SETS
+                            // and locks; deltas accumulate until then.
+                            if (data && data.estimatedTokens >= 0) {
+                                if (!data.text) {
+                                    next.tokens = data.estimatedTokens;
+                                    next.tokensAuthoritative = true;
+                                } else if (!next.tokensAuthoritative) {
+                                    next.tokens = (next.tokens ?? 0) + data.estimatedTokens;
+                                }
+                            }
+                            return next;
+                        }),
+                    );
                 },
             ),
         );
@@ -284,22 +322,26 @@ export class CvApp extends LitElement {
                 Msg.toWebView.chat.thinkingEnded,
                 (data) => {
                     const parentId = data?.parentToolUseId ?? '';
-                    let entry = this._thinkingMsgs.get(parentId);
+                    let entryId = this._thinkingMsgs.get(parentId);
                     // A redacted_thinking block has no preceding delta → no entry yet: create a static,
                     // text-less one here so it still shows (like VS Code's "✻ Thinking…").
-                    if (!entry) {
+                    if (entryId === undefined) {
                         if (!data?.redacted) {
                             return;
                         }
-                        entry = this._addText<UiThinkingEntry>(
+                        entryId = this._addText<UiThinkingEntry>(
                             { role: 'thinking', text: '', redacted: true },
                             parentId,
                         );
                     }
-                    entry.streaming = false;
-                    entry.durationMs = entry.startedAt ? Date.now() - entry.startedAt : 0;
+                    this._mutate(() =>
+                        this._transcript.update<UiThinkingEntry>(entryId, (e) => ({
+                            ...e,
+                            streaming: false,
+                            durationMs: e.startedAt ? Date.now() - e.startedAt : 0,
+                        })),
+                    );
                     this._thinkingMsgs.delete(parentId);
-                    this._commit(entry);
                 },
             ),
         );
@@ -342,13 +384,12 @@ export class CvApp extends LitElement {
                         });
                     }
                     if (this._streamingMsgs.size > 0) {
-                        for (const m of this._streamingMsgs.values()) {
-                            m.streaming = false;
-                        }
-                        // Keyed by parentToolUseId, so a sub-agent's message is nested and needs
-                        // its path refreshed like any other nested change. Before the clear —
-                        // after it there is nothing left to pass.
-                        this._commit(...this._streamingMsgs.values());
+                        const ids = [...this._streamingMsgs.values()];
+                        this._mutate(() =>
+                            this._transcript.updateMany(ids, (e) =>
+                                'streaming' in e ? { ...e, streaming: false } : e,
+                            ),
+                        );
                         this._streamingMsgs.clear();
                     }
                 },
@@ -360,10 +401,13 @@ export class CvApp extends LitElement {
                 // Abort in-flight requests for the old session so their Promises reject
                 // instead of resolving against the new session (or hanging until timeout).
                 bridge.rejectAllPending('session changed');
-                this._entries = [];
-                this._exchanges = [];
+                this._mutate(() => this._transcript.clear());
                 this._streamingMsgs.clear();
                 this._thinkingMsgs.clear();
+                // The transcript this turn belonged to is gone, so its `result` — the only thing
+                // that clears busy — would land on nothing. Without this the spinner outlives the
+                // session that started it, with no message under it to explain what it is waiting for.
+                appState.isBusy = false;
                 appState.currentSessionId = null;
                 appState.oldestLoadedOffset = -1;
                 appState.hasMoreHistory = false;
@@ -433,14 +477,18 @@ export class CvApp extends LitElement {
                         appState.contextUsage = data.usage;
                     }
                     // Dedup by toolUseId (arrives twice: can_use_tool + assistant msg).
-                    const existing = this._findTool(data.id);
+                    const existing = this._transcript.findTool(data.id);
                     if (existing) {
-                        existing.data = {
-                            id: data.id,
-                            name: data.name,
-                            input: (data.input ?? {}) as Record<string, unknown>,
-                        };
-                        this._commit(existing);
+                        this._mutate(() =>
+                            this._transcript.update<UiToolEntry>(existing.id, (e) => ({
+                                ...e,
+                                data: {
+                                    id: data.id,
+                                    name: data.name,
+                                    input: (data.input ?? {}) as Record<string, unknown>,
+                                },
+                            })),
+                        );
                         return;
                     }
                     this._appendEntry(this.buildToolEntry(data), data.parentToolUseId ?? undefined);
@@ -454,13 +502,16 @@ export class CvApp extends LitElement {
                 if (!data?.toolUseId) {
                     return;
                 }
-                const tool = this._findTool(data.toolUseId);
+                const tool = this._transcript.findTool(data.toolUseId);
                 if (!tool) {
                     return;
                 }
                 const atBottom = this._isNearBottom();
-                CvApp.applyToolResult(tool, data);
-                this._commit(tool);
+                this._mutate(() =>
+                    this._transcript.update<UiToolEntry>(tool.id, (e) =>
+                        CvApp.applyToolResult(e, data),
+                    ),
+                );
                 // The result grows the tool row (e.g. an answered ask); follow it down so the
                 // view doesn't stay stuck on the tool until the next message arrives.
                 if (atBottom) {
@@ -476,14 +527,18 @@ export class CvApp extends LitElement {
                     if (!data?.toolUseId) {
                         return;
                     }
-                    const tool = this._findTool(data.toolUseId);
+                    const tool = this._transcript.findTool(data.toolUseId);
                     if (!tool) {
                         return;
                     }
                     // Wire field is elapsedSeconds (from the host); the entry keeps it as
                     // elapsedSec (internal UI state).
-                    tool.elapsedSec = data.elapsedSeconds ?? 0;
-                    this._commit(tool);
+                    this._mutate(() =>
+                        this._transcript.update<UiToolEntry>(tool.id, (e) => ({
+                            ...e,
+                            elapsedSec: data.elapsedSeconds ?? 0,
+                        })),
+                    );
                 },
             ),
         );
@@ -524,9 +579,11 @@ export class CvApp extends LitElement {
                     }
 
                     appState.loadingOlder = false;
-                    this._entries = out;
-                    this._rebuildExchanges();
+                    this._mutate(() => this._transcript.replaceAll(out));
+                    // Both, like chat_cleared: the entries these named are not in the tree any
+                    // more, so a delta arriving for one would update nothing and look dropped.
                     this._streamingMsgs.clear();
+                    this._thinkingMsgs.clear();
                     // Land at the bottom. Re-jump for several frames because async-rendered
                     // children (markdown, diff2html, lazy images) keep growing scrollHeight.
                     void this.updateComplete.then(() => {
@@ -561,11 +618,17 @@ export class CvApp extends LitElement {
                     this._subagentTasks = m;
                     this._publishSubagentTasks(m);
                     // The Agent row is usually created after this and reads the id in
-                    // buildToolEntry; when it got in first, tag it here. No _commit — the row
-                    // was just appended, so its render is still pending and will read the id.
-                    const row = d.toolUseId ? this._findTool(d.toolUseId) : null;
+                    // buildToolEntry; when it got in first, tag it here. Nothing marks the view
+                    // stale — the row was just appended, so its render is still pending and will
+                    // read the id.
+                    const row = d.toolUseId ? this._transcript.findTool(d.toolUseId) : null;
                     if (row && !row.agentId) {
-                        row.agentId = d.taskId;
+                        this._mutate(() =>
+                            this._transcript.update<UiToolEntry>(row.id, (e) => ({
+                                ...e,
+                                agentId: d.taskId,
+                            })),
+                        );
                     }
                 },
             ),
@@ -613,10 +676,14 @@ export class CvApp extends LitElement {
                     // asked for, so only 'failed' turns the row red.
                     const toolUseId = this._subagentTasks.get(d.taskId)?.toolUseId;
                     if (d.status === 'failed' && toolUseId) {
-                        const row = this._findTool(toolUseId);
+                        const row = this._transcript.findTool(toolUseId);
                         if (row) {
-                            row.status = 'error';
-                            this._commit(row);
+                            this._mutate(() =>
+                                this._transcript.update<UiToolEntry>(row.id, (e) => ({
+                                    ...e,
+                                    status: 'error',
+                                })),
+                            );
                         }
                     }
                     const m = new Map(this._subagentTasks);
@@ -672,8 +739,10 @@ export class CvApp extends LitElement {
             return;
         }
         e.preventDefault();
-        bridge.sendNotification(Msg.fromWebView.cli.stop, {});
-        appState.isBusy = false;
+        // Same gesture as the Stop button, so it goes through the composer's own stop: doing the
+        // interrupt here and nothing else left the queue intact, and the next flush then sent
+        // prompts the user had written behind a turn they had just cancelled.
+        this.querySelector('cv-prompt')?.stop();
     };
 
     /** Build UiEntry[] from a replayed page of typed events (chat_history / subagent_loaded).
@@ -735,7 +804,9 @@ export class CvApp extends LitElement {
                     const d = ev.data as ToolResultNotification;
                     const hit = d.toolUseId ? findTool(d.toolUseId) : null;
                     if (hit) {
-                        CvApp.applyToolResult(hit, d);
+                        // Replay builds a fresh list nothing is rendering yet, so writing into
+                        // the entry here is safe — it reaches the tree already folded.
+                        Object.assign(hit, CvApp.applyToolResult(hit, d));
                     }
                     break;
                 }
@@ -860,29 +931,25 @@ export class CvApp extends LitElement {
     // Generic over the concrete text-entry type: call sites pass the type argument explicitly
     // (e.g. _addText<UiAssistantEntry>({role:'assistant', …})) so `Omit` works on a single member
     // — Omit over the whole union would collapse to the common keys and drop the role-specific ones.
+    /** Returns the id, not the entry: the transcript replaces an entry on every change, so a
+     *  reference kept by the caller would name something the tree no longer holds. */
     private _addText<E extends Extract<UiEntry, { kind: 'text' }>>(
         msg: Omit<E, 'kind' | 'id'>,
         parentId = '',
-    ): E {
+    ): number {
         const entry = { kind: 'text', id: ++_entryIdSeq, ...msg } as E;
         this._appendEntry(entry, parentId);
         queueMicrotask(() => this._scrollToBottom());
-        return entry;
+        return entry.id;
     }
 
-    /**
-     * Append `entry` under the tool row `parentId`, or to the root list
-     * when no/unknown parent. Arrays are replaced (not mutated) for Lit.
-     *
-     * Memoria-minima: when appending a child under an Agent parent, keep only
-     * the last 3 children — a ring of 3 (`slice(-3)`). The `hasMore` flag flips
-     * true once a 4th child arrives (children.items already holds 3 before the push):
-     * the "…" indicator only signals "more exist", not the count, so a boolean
-     * is enough — no running counter needed.
-     */
+    /** Append `entry` under the tool row `parentId`, or to the root list when there is no parent
+     *  or it isn't in the tree. The ring of three and the upsert live in Transcript.appendChild;
+     *  what stays here is the one thing that is a rendering decision — dropping the sub-agent's
+     *  echo of its own launch prompt. */
     private _appendEntry(entry: UiEntry, parentId?: string): void {
         if (parentId) {
-            const parent = this._findTool(parentId);
+            const parent = this._transcript.findTool(parentId);
             if (parent) {
                 // The sub-agent's first message echoes the prompt the Agent tool was
                 // launched with — it's already shown as the Agent row's IN, so drop the
@@ -894,25 +961,11 @@ export class CvApp extends LitElement {
                 ) {
                     return;
                 }
-                // First child under this parent creates the children block.
-                const kids = (parent.children ??= { items: [], hasMore: false, showAll: false });
-                if (kids.showAll) {
-                    // Show-all: keep the full list, upsert (a re-emitted tool row updates
-                    // in place — e.g. pending → done — instead of duplicating).
-                    kids.items = this._upsertChild(kids.items, entry);
-                } else {
-                    // Collapsed: ring of 3. A 4th child means more exist beyond the window.
-                    if (kids.items.length >= 3) {
-                        kids.hasMore = true;
-                    }
-                    kids.items = [...kids.items, entry].slice(-3);
-                }
-                this._commit(parent);
+                this._mutate(() => this._transcript.appendChild(parentId, entry, CvApp._childKey));
                 return;
             }
         }
-        this._entries = [...this._entries, entry];
-        this._rebuildExchanges();
+        this._mutate(() => this._transcript.append(entry));
     }
 
     /** Expand/collapse a nested Agent box (CustomEvent from cv-tool-row). */
@@ -920,12 +973,12 @@ export class CvApp extends LitElement {
         e: CustomEvent<{ agentId: string; expand: boolean; preview?: boolean }>,
     ): void => {
         const { agentId, expand, preview } = e.detail ?? {};
-        const parent = agentId ? this._findToolByAgentId(agentId) : null;
+        const parent = agentId ? this._transcript.findToolByAgentId(agentId) : null;
         if (!parent) {
             return;
         }
-        // Ensure the children block exists (a history Agent may not have fetched anything yet).
-        const kids = (parent.children ??= { items: [], hasMore: false, showAll: false });
+        // A history Agent may not have fetched anything yet.
+        const kids = parent.children ?? { items: [], hasMore: false, showAll: false };
         if (expand) {
             // Rule: history FETCHES, live SHOWS what it already has in memory.
             //  - preview (first chevron expand): fetch only if children are empty (history). Live
@@ -937,22 +990,26 @@ export class CvApp extends LitElement {
             const showAll = !preview;
             // Show all sets the flag; preview (chevron open) leaves it false → renderChildren shows ≤3.
             // Row open/closed is the component's own `_expanded`, not tracked here.
-            kids.showAll = showAll;
+            this._mutate(() =>
+                this._transcript.update<UiToolEntry>(parent.id, (e) => ({
+                    ...e,
+                    children: { ...(e.children ?? kids), showAll },
+                })),
+            );
 
             const needFetch = preview
                 ? kids.items.length === 0 // history preview
                 : kids.hasMore; // Show all with more on disk than we hold
             if (!needFetch) {
-                this._commit(parent);
                 return;
             }
             fetchSubagent(agentId, { preview: !!preview })
                 .then((data) => {
-                    const p = this._findToolByAgentId(data.agentId);
+                    const p = this._transcript.findToolByAgentId(data.agentId);
                     if (!p) {
                         return;
                     }
-                    const pk = (p.children ??= { items: [], hasMore: false, showAll: false });
+                    const pk = p.children ?? { items: [], hasMore: false, showAll: false };
                     const full = this._replayEvents(data.events ?? []);
                     // The transcript opens and closes with what the Agent row already shows in its
                     // own cells: the launch prompt (IN) and the closing report (OUT, from the
@@ -979,10 +1036,17 @@ export class CvApp extends LitElement {
                     }
                     // Preview keeps the last 3 (and flags "…" if more); full keeps everything and is
                     // now complete in memory (hasMore=false → no more fetches).
-                    pk.items = preview ? list.slice(-3) : list;
-                    pk.hasMore = preview ? list.length > 3 : false;
-                    pk.showAll = !preview;
-                    this._commit(p);
+                    const items = preview ? list.slice(-3) : list;
+                    this._mutate(() =>
+                        this._transcript.update<UiToolEntry>(p.id, (e) => ({
+                            ...e,
+                            children: {
+                                items,
+                                hasMore: preview ? list.length > 3 : false,
+                                showAll: !preview,
+                            },
+                        })),
+                    );
                 })
                 .catch(() => {
                     /* timeout / not found — leave the kept children as-is */
@@ -991,10 +1055,16 @@ export class CvApp extends LitElement {
             // "Reduce" (Show all → off): show the last 3 again, but KEEP the full list in memory so a
             // later Show all doesn't refetch (and live never can). renderChildren slices the view.
             // hasMore reflects that more is held than shown.
-            kids.showAll = false;
-            kids.hasMore = kids.items.length > 3;
+            this._mutate(() =>
+                this._transcript.update<UiToolEntry>(parent.id, (e) => {
+                    const c = e.children ?? kids;
+                    return {
+                        ...e,
+                        children: { ...c, showAll: false, hasMore: c.items.length > 3 },
+                    };
+                }),
+            );
         }
-        this._commit(parent);
     };
 
     /** A compact separator's <details> opened for the first time: fetch the summary lazily
@@ -1004,7 +1074,7 @@ export class CvApp extends LitElement {
         if (!uuid) {
             return;
         }
-        const entry = this._entries.find(
+        const entry = this._transcript.entries.find(
             (en): en is UiCompactEntry =>
                 en.kind === 'text' && en.role === 'compact' && en.uuid === uuid,
         );
@@ -1013,9 +1083,13 @@ export class CvApp extends LitElement {
         }
         fetchCompactSummary(appState.currentSessionId, uuid)
             .then((res) => {
-                entry.summary = res.summary;
-                entry.loaded = true;
-                this._commit(entry);
+                this._mutate(() =>
+                    this._transcript.update<UiCompactEntry>(entry.id, (en) => ({
+                        ...en,
+                        summary: res.summary,
+                        loaded: true,
+                    })),
+                );
             })
             .catch(() => {
                 /* timeout / not found — leave "Loading…" as-is */
@@ -1026,7 +1100,7 @@ export class CvApp extends LitElement {
      *  during a live chat, not on an empty transcript (nothing above it would be noise). */
     private _onModelSwitched = (e: CustomEvent<{ value: string }>): void => {
         const value = e.detail?.value;
-        if (!value || this._entries.length === 0) {
+        if (!value || this._transcript.entries.length === 0) {
             return;
         }
         this._addText({ role: 'status', text: `Switched to ${modelLabel(value)}` });
@@ -1127,16 +1201,17 @@ export class CvApp extends LitElement {
         };
     }
 
-    /** Apply a ToolResultNotification onto an already-built tool row (in place). */
-    private static applyToolResult(e: UiToolEntry, d: ToolResultNotification): void {
-        e.status = d.isError ? 'error' : 'done';
-        e.result = d.result ?? '';
-        e.fullLineCount = d.fullLineCount ?? 0;
-        e.editStartLine = d.editStartLine ?? 0;
-        e.editEndLine = d.editEndLine ?? 0;
-        if (d.agentId) {
-            e.agentId = d.agentId;
-        }
+    /** Fold a ToolResultNotification into a tool row, returning a new entry. */
+    private static applyToolResult(e: UiToolEntry, d: ToolResultNotification): UiToolEntry {
+        return {
+            ...e,
+            status: d.isError ? 'error' : 'done',
+            result: d.result ?? '',
+            fullLineCount: d.fullLineCount ?? 0,
+            editStartLine: d.editStartLine ?? 0,
+            editEndLine: d.editEndLine ?? 0,
+            ...(d.agentId ? { agentId: d.agentId } : {}),
+        };
     }
 
     /** Upsert `entry` into `list` by child key: replace the matching entry (keeps the
@@ -1163,7 +1238,10 @@ export class CvApp extends LitElement {
             if (!toolUseId) {
                 return undefined;
             }
-            const walk = (list: UiEntry[], container?: string): string | undefined | false => {
+            const walk = (
+                list: readonly UiEntry[],
+                container?: string,
+            ): string | undefined | false => {
                 for (const e of list) {
                     if (e.kind !== 'tool') {
                         continue;
@@ -1180,7 +1258,7 @@ export class CvApp extends LitElement {
                 }
                 return false; // not in this branch — distinct from "found, no container"
             };
-            const hit = walk(this._entries);
+            const hit = walk(this._transcript.entries);
             return hit === false ? undefined : hit;
         };
 
@@ -1205,110 +1283,6 @@ export class CvApp extends LitElement {
         // keep it, at top level.
         const seen = new Set(ordered.map((t) => t.taskId));
         appState.subagentTasks = [...ordered, ...linked.filter((t) => !seen.has(t.taskId))];
-    }
-
-    /** Commit an in-place change to `target` so it reaches the DOM. Lit diffs properties by
-     *  identity and requestUpdate() only refreshes the component it's called on, so mutating a
-     *  row nested inside an Agent leaves every array ABOVE it untouched: the ancestors skip their
-     *  update and their renderChildren never re-reads the new list. Re-identifying just the
-     *  arrays on the path is Lit's prescribed top-down immutable flow, and leaves rows that
-     *  didn't change alone. Pass the row itself, or the Agent holding it for a text child. */
-    private _commit(...targets: Array<UiEntry | null | undefined>): void {
-        const wanted = targets.filter(Boolean) as UiEntry[];
-        if (wanted.length > 0) {
-            // Walk down re-identifying each children array that leads to a target; returns
-            // true for the branch that holds one, so the copy happens on the way back up.
-            const refresh = (list: UiEntry[]): boolean => {
-                let found = false;
-                for (const e of list) {
-                    if (e.kind !== 'tool' || !e.children?.items.length) {
-                        continue;
-                    }
-                    if (
-                        e.children.items.some((c) => wanted.includes(c)) ||
-                        refresh(e.children.items)
-                    ) {
-                        e.children = { ...e.children, items: [...e.children.items] };
-                        found = true;
-                    }
-                }
-                return found;
-            };
-            // render() maps _exchanges, not _entries: the entry objects are shared between the
-            // two, so only the group array holding the path needs a new identity.
-            this._exchanges = this._exchanges.map((g) =>
-                g.some((e) => wanted.includes(e)) || refresh(g) ? [...g] : g,
-            );
-        }
-        this._entries = [...this._entries];
-    }
-
-    /** Find a tool entry by toolUseId, walking nested children. */
-    private _findTool(toolUseId: string): UiToolEntry | null {
-        const visit = (list: UiEntry[]): UiToolEntry | null => {
-            for (const e of list) {
-                if (e.kind !== 'tool') {
-                    continue;
-                }
-                if (e.toolUseId === toolUseId) {
-                    return e;
-                }
-                if (e.children?.items.length) {
-                    const hit = visit(e.children.items);
-                    if (hit) {
-                        return hit;
-                    }
-                }
-            }
-            return null;
-        };
-        return visit(this._entries);
-    }
-
-    /** Locate an Agent tool entry by the sub-agent it spawned. Unique: only an Agent row carries
-     *  an agentId, and it names the transcript that row alone opened. */
-    private _findToolByAgentId(agentId: string): UiToolEntry | null {
-        const visit = (list: UiEntry[]): UiToolEntry | null => {
-            for (const e of list) {
-                if (e.kind !== 'tool') {
-                    continue;
-                }
-                if (e.agentId === agentId) {
-                    return e;
-                }
-                if (e.children?.items.length) {
-                    const hit = visit(e.children.items);
-                    if (hit) {
-                        return hit;
-                    }
-                }
-            }
-            return null;
-        };
-        return visit(this._entries);
-    }
-
-    /** Rebuilds _exchanges from _entries. Each user message opens a new
-     *  exchange; entries before the first user (history page boundary) go
-     *  in their own leading group. Called after structural changes only —
-     *  in-place mutations (streaming text, tool status) skip this. */
-    private _rebuildExchanges(): void {
-        const groups: UiEntry[][] = [];
-        let current: UiEntry[] = [];
-        for (const e of this._entries) {
-            if (e.kind === 'text' && e.role === 'user') {
-                if (current.length) {
-                    groups.push(current);
-                }
-                current = [e];
-            } else {
-                current.push(e);
-            }
-        }
-        if (current.length) {
-            groups.push(current);
-        }
-        this._exchanges = groups;
     }
 
     /** True when scrolled at/near the bottom. Gates stream auto-follow so
@@ -1385,8 +1359,7 @@ export class CvApp extends LitElement {
     private _prependWithAnchor(older: UiEntry[]): void {
         const el = this._messagesEl;
         if (!el) {
-            this._entries = [...older, ...this._entries];
-            this._rebuildExchanges();
+            this._mutate(() => this._transcript.prepend(older));
             appState.loadingOlder = false;
             return;
         }
@@ -1398,8 +1371,7 @@ export class CvApp extends LitElement {
             el.scrollTop = el.scrollHeight - distFromBottom;
         };
 
-        this._entries = [...older, ...this._entries];
-        this._rebuildExchanges();
+        this._mutate(() => this._transcript.prepend(older));
         // Commit the DOM synchronously and re-anchor in the SAME task, before
         // the browser can paint a frame at the stale scrollTop — that paint is
         // the residual upward flicker. updateComplete then handles the async
@@ -1552,7 +1524,7 @@ export class CvApp extends LitElement {
 
             <div id="messages" aria-live="polite">
                 ${
-                    this._entries.length === 0 && !this._isBusy
+                    this._transcript.entries.length === 0 && !this._isBusy
                         ? html`<cv-welcome></cv-welcome>`
                         : nothing
                 }
