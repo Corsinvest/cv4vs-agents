@@ -417,8 +417,28 @@
     <Folder Include="WebView2\images\" />
   </ItemGroup>
   <Target Name="BuildWebViewSrc" BeforeTargets="BeforeBuild" Condition="Exists('Chat\WebViewSrc\package.json')">
+    <!-- Debug builds the readable bundle, Release the minified one. A Debug build is something you
+         are about to F5 into and read a stack trace from, and a minified bundle names every frame
+         `t.$` — which is what made the 2026-07-31 crash take two days to place. `build:dev` also
+         mirrors dist\ into the Exp hives, so a TypeScript-only change is picked up by reopening the
+         pane; the mirror only writes to folders that already exist, so CI and a first build are
+         untouched. Release must stay `build`: the sourcemaps would otherwise ship in the VSIX. -->
+    <PropertyGroup>
+      <_WebViewNpmScript Condition="'$(Configuration)' == 'Debug'">build:dev</_WebViewNpmScript>
+      <_WebViewNpmScript Condition="'$(_WebViewNpmScript)' == ''">build</_WebViewNpmScript>
+    </PropertyGroup>
     <Exec Command="npm install --no-fund --no-audit" WorkingDirectory="$(MSBuildProjectDirectory)\Chat\WebViewSrc" Condition="!Exists('Chat\WebViewSrc\node_modules')" />
-    <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)\Chat\WebViewSrc" />
+    <!-- Delete the sourcemaps a previous Debug build left behind. MSBuild globs dist\ during
+         evaluation, before this target runs, so those .map files are already in @(Content) — and a
+         Release build then removes them, leaving @(Content) pointing at files that no longer exist
+         (MSB3030 at copy time). Deleting them here means the glob below re-runs against a dist\
+         that npm is about to rewrite either way. -->
+    <ItemGroup Condition="'$(_WebViewNpmScript)' == 'build'">
+      <_WebViewStaleMaps Include="Chat\WebViewSrc\dist\**\*.map" />
+      <Content Remove="@(_WebViewStaleMaps)" />
+    </ItemGroup>
+    <Delete Files="@(_WebViewStaleMaps)" Condition="'$(_WebViewNpmScript)' == 'build'" />
+    <Exec Command="npm run $(_WebViewNpmScript)" WorkingDirectory="$(MSBuildProjectDirectory)\Chat\WebViewSrc" />
 
     <!-- Re-add what npm just produced. The static glob above ran during evaluation, before this
          target: on a clean check-out it found nothing, so without this the VSIX would install fine
@@ -430,6 +450,11 @@
          first, then attach the metadata to @(_WebViewDist). Remove first so the files the static
          glob did pick up are not added a second time. -->
     <ItemGroup>
+      <!-- Clear first: a Debug build leaves .map files in dist\, the static glob above picks them
+           up during evaluation, and the Release build then deletes them — leaving @(Content) with
+           two entries that no longer exist on disk (MSB3030 at copy time). Re-globbing after npm
+           is what makes the item list match what was actually produced. -->
+      <_WebViewDist Remove="@(_WebViewDist)" />
       <_WebViewDist Include="Chat\WebViewSrc\dist\**\*" />
       <Content Remove="Chat\WebViewSrc\dist\**\*" />
       <Content Include="@(_WebViewDist)">

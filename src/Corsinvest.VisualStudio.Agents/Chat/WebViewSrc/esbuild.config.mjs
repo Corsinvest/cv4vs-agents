@@ -168,5 +168,10 @@ if (watch) {
 } else {
     await copyStatic();
     await build(config);
-    console.log('[esbuild] build complete → dist/bundle.js');
+    // Which bundle landed in dist\, not just that one did: MSBuild picks the script by
+    // configuration, so from the build output alone there is otherwise no way to tell whether a
+    // stack trace is about to name real functions or `t.$`.
+    console.log(
+        `[esbuild] build complete → dist/bundle.js (${dev ? 'dev: readable, sourcemaps' : 'production: minified, no sourcemaps'})`,
+    );
 }
