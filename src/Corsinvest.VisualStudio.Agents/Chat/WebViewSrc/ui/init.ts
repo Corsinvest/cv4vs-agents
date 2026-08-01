@@ -142,14 +142,6 @@ function wireBridgeHandlers(): void {
         input?.focusInput();
     });
 
-    // Host tells us the pane lost the active VS frame → blur the prompt so its caret stops
-    // blinking (the WebView2 gets no DOM blur across the HwndHost boundary on its own).
-    bridge.onNotification(Msg.toWebView.ui.blurInput, () => {
-        const input = document.querySelector('cv-prompt') as
-            import('./components/cv-prompt').CvPrompt | null;
-        input?.blurInput();
-    });
-
     // Forked pane: pre-fill the composer with the forked-at message text.
     bridge.onNotification<SetComposerNotification>(Msg.toWebView.ui.setComposer, (data) => {
         const input = document.querySelector('cv-prompt') as
@@ -218,16 +210,6 @@ function wireBridgeHandlers(): void {
     bridge.onNotification<ModelsNotification>(Msg.toWebView.chat.models, (data) => {
         state.models = Array.isArray(data?.models) ? data.models : [];
     });
-
-    // Real click inside the WebView → ask the host to activate this VS pane, so keys flow to the
-    // chat. WPF mouse/focus events can't cross the WebView2 HwndHost boundary; a DOM pointerdown
-    // is the only reliable "the user clicked in the chat" signal, and it never fires while
-    // switching to a sibling VS tab (that click lands outside the WebView).
-    window.addEventListener(
-        'pointerdown',
-        () => bridge.sendNotification(Msg.fromWebView.ui.paneActivate, {}),
-        true,
-    );
 }
 
 /**

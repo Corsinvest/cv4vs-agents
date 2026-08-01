@@ -5,7 +5,10 @@
              xmlns:panes="clr-namespace:Corsinvest.VisualStudio.Agents.Core.Panes"
              Background="{DynamicResource VsBrush.Window}">
   <Grid>
-    <wv2:WebView2 x:Name="WebView" />
+    <!-- CompositionControl, not WebView2: renders through Windows.UI.Composition inside the WPF
+         visual tree instead of a child HWND, so VS's floating tool windows can draw over the chat
+         (a child HWND always wins the z-order against WPF — the airspace issue). -->
+    <wv2:WebView2CompositionControl x:Name="WebView" />
     <StackPanel x:Name="StatusPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
                 Height="48" Visibility="Visible">
       <TextBlock HorizontalAlignment="Center"

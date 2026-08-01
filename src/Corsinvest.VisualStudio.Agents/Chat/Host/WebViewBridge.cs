@@ -21,7 +21,7 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 /// Manages the WebView2 control: initialisation, posting messages to JS,
 /// and dispatching messages received from JS to the host via <see cref="MessageReceived"/>.
 /// </summary>
-internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2 webView, Dispatcher dispatcher)
+internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2CompositionControl webView, Dispatcher dispatcher)
     : IDisposable
 {
     private bool _ready;
@@ -45,9 +45,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2 
             // Initialize CoreWebView2 with our own user-data folder. Required
             // before touching any CoreWebView2 member below.
             var env = await CoreWebView2Environment.CreateAsync(null, AppPaths.WebView2Folder);
-            var controllerOpts = env.CreateCoreWebView2ControllerOptions();
-            controllerOpts.AllowHostInputProcessing = true;
-            await webView.EnsureCoreWebView2Async(env, controllerOpts);
+            await webView.EnsureCoreWebView2Async(env);
 
             // WebView2 defaults to an opaque WHITE background before the first paint, which flashes as
             // a blank/black block until the bundle renders. Make it transparent so the WPF host's

@@ -167,11 +167,6 @@ public partial class ChatPaneControl : PaneControlBase
         _bridge?.Send(BridgeMessages.ToWebView.Ui.FocusInput, null);
     }
 
-    /// <summary>Blur the WebView prompt (dual of <see cref="FocusInput"/>). Only the JS blur is
-    /// needed — no native focus dance, since we're dropping focus, not taking it.</summary>
-    public override void BlurInput()
-        => _bridge?.Send(BridgeMessages.ToWebView.Ui.BlurInput, null);
-
     /// <summary>Open the WebView2 native find bar (Ctrl+F), invoked by ChatPaneWindow when it
     /// intercepts the Find command from VS. Returns false if the WebView isn't ready.</summary>
     internal bool ShowFind()
@@ -290,10 +285,6 @@ public partial class ChatPaneControl : PaneControlBase
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
-        // Pane activation on a real in-chat click is driven from JS (pointerdown → bridge
-        // ui_pane_activate → OnBridgeMessage): WPF mouse/focus events can't cross the WebView2
-        // HwndHost boundary, and GotFocus fired repeatedly during sibling-tab switches, looping
-        // frame.Show() and blocking the switch. The JS click never fires during a tab switch.
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -519,15 +510,6 @@ public partial class ChatPaneControl : PaneControlBase
                 // future ContextChanged events, so without this the badge stays empty until the
                 // first editor click. Force a snapshot emit now that the WebView can receive it.
                 IdeContextService.Instance.ForceEmitCurrentContext();
-                break;
-
-            // A real click inside the WebView (JS pointerdown → bridge): activate the VS frame so
-            // keys flow to the chat. Sent from JS because mouse events can't cross the HwndHost to
-            // WPF, and it fires only on genuine in-chat clicks (never during a sibling-tab switch).
-            case BridgeMessages.FromWebView.Ui.PaneActivate:
-                Pane?.ActivateFrame();
-                // The user clicked into this pane → any attention InfoBar for it has done its job.
-                PaneAttentionService.Clear(Entry);
                 break;
 
             // Everything else is chat protocol — hand it to the message handler.

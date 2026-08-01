@@ -56,11 +56,6 @@ internal sealed partial class IdeContextService : IDisposable
     private IWpfTextView _trackedView;
     private bool _subscribed;
 
-    /// <summary>Raised (UI thread) when VS's active window frame changes. Panes use it to blur
-    /// their input when they are no longer the active frame — the WebView2 gets no DOM blur across
-    /// the HwndHost boundary, so the caret would keep blinking otherwise.</summary>
-    internal static event Action ActiveFrameChanged;
-
     // Debounced push: SelectionChanged can fire rapidly while dragging; coalesce
     // to one emit per 150ms. The dedup below drops no-op re-emits on top.
     private Timer _debounce;
@@ -498,7 +493,6 @@ internal sealed partial class IdeContextService : IDisposable
             if (elementid == (uint)VSConstants.VSSELELEMID.SEID_WindowFrame)
             {
                 owner.TrackActiveView(varValueNew as IVsWindowFrame);
-                ActiveFrameChanged?.Invoke();
             }
             return VSConstants.S_OK;
         }

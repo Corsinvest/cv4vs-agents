@@ -556,12 +556,6 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._ta?.focus();
     }
 
-    /** Drop keyboard focus from the prompt textarea (host ui_blur_input) so the DOM's focus
-     *  state matches reality and the caret stops blinking when the pane loses the VS frame. */
-    blurInput(): void {
-        this._ta?.blur();
-    }
-
     /** Pre-fill the composer with text and focus it, caret at the end (a forked
      *  pane drops the forked-at message here so the user can edit/resend it). */
     setComposerText(text: string): void {

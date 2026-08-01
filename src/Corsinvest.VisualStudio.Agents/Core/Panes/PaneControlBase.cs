@@ -162,7 +162,6 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     public abstract void NewSession();
     public abstract void LoadSession(string sessionId);
     public abstract void FocusInput();
-    public abstract void BlurInput();
 
     public abstract IEnumerable<ButtonAction> MoreMenuActions { get; }
 }
