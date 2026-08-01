@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-08-01
+
+The chat could still stop rendering. 1.1.1 said that was fixed; it was not, and this is the actual
+cause.
+
+### Fixed
+
+- **Hovering a timestamp stopped the chat from rendering.** The "x ago" stamp under a message wrote
+  its own text into the element on hover — and that element's content belonged to the rendering
+  engine, which was left holding references to nodes that no longer existed. From that moment every
+  later update threw, and the pane went on looking alive while showing nothing new. One hover was
+  enough: no click, no command, nothing in any log, and the failure surfaced on whatever came next,
+  often minutes later. That delay is why the two fixes in 1.1.1 landed elsewhere — both were sound
+  in themselves, and neither was this.
+
+  The stamp is now a component that re-renders itself, so the text changes the only way it safely
+  can.
+
+### Changed
+
+- **A Debug build produces the readable WebView bundle**, with sourcemaps, instead of the minified
+  one. A stack trace from the chat now names real functions — which is most of the reason the crash
+  above took two days to find. Release is unchanged, and still ships without sourcemaps.
+
 ## [1.1.1] - 2026-07-31
 
 Ways the chat could stop showing what the CLI was doing, a dialog that froze the IDE, and a dead
