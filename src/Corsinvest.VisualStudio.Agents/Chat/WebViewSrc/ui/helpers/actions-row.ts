@@ -9,7 +9,6 @@
 import { html, nothing } from 'lit';
 import '../components/cv-copy-btn';
 import '../components/cv-speak-btn';
-import { renderTimeAgo } from '../../core/time';
 
 /** Copy button (+ optional Read-aloud when `speak`) + "x ago" timestamp. Hover-gating is CSS:
  *  `.cv-response-actions` has base opacity 0 and a hover rule on the container reveals it — pass that
@@ -26,7 +25,7 @@ export function renderActionsRow(
         <div class="cv-response-actions ${extraClass}">
             <cv-copy-btn .text=${text} title=${title}></cv-copy-btn>
             ${speak ? html`<cv-speak-btn .text=${text}></cv-speak-btn>` : nothing}
-            ${ts > 0 ? renderTimeAgo(ts) : nothing}
+            ${ts > 0 ? html`<cv-time-ago .ms=${ts}></cv-time-ago>` : nothing}
         </div>
     `;
 }

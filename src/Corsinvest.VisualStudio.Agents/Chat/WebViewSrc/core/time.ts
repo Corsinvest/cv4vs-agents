@@ -4,10 +4,8 @@
  */
 
 // Human "time ago" + absolute date/time for message action rows. Uses the platform Intl APIs
-// (browser locale). The relative form is computed on render and refreshed on hover — see
-// renderTimeAgo; there is no ticking timer.
-
-import { html, type TemplateResult } from 'lit';
+// (browser locale). Formatting only, no rendering: the stamp that refreshes itself on hover is
+// `ui/components/cv-time-ago`, which calls these.
 
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 
@@ -21,9 +19,10 @@ const UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
     ['second', 1000],
 ];
 
-/** "20 minutes ago", "2 hours ago", "yesterday" — localized. */
-export function formatTimeAgo(ms: number): string {
-    const diff = ms - Date.now(); // negative = in the past
+/** "20 minutes ago", "2 hours ago", "yesterday" — localized. `now` is injectable so the caller
+ *  can re-render the same stamp against a later clock without reaching into the DOM. */
+export function formatTimeAgo(ms: number, now: number = Date.now()): string {
+    const diff = ms - now; // negative = in the past
     const abs = Math.abs(diff);
     for (const [unit, size] of UNITS) {
         if (abs >= size || unit === 'second') {
@@ -36,26 +35,4 @@ export function formatTimeAgo(ms: number): string {
 /** Full localized date + time, for the tooltip. */
 export function formatAbsolute(ms: number): string {
     return new Date(ms).toLocaleString();
-}
-
-/** The "x ago" stamp for an action row, refreshing itself when the pointer arrives.
- *
- *  Lit renders on property change, and elapsed time is not a property — so a stamp rendered when
- *  the message arrived said "1 second ago" for as long as the message stayed on screen. The action
- *  row is always in the DOM and only revealed by `opacity` on hover, so the hover alone changed
- *  nothing: no re-render came with it.
- *
- *  Writing the text straight onto the element on `mouseenter` is enough, and is why this is a plain
- *  function rather than a timer: the stamp is only legible while the row is revealed, and the row is
- *  only revealed under the pointer. A ticking timer would instead keep hundreds of history messages
- *  re-rendering to move "2 hours ago" to "3 hours ago", which nobody is reading. */
-export function renderTimeAgo(ms: number): TemplateResult {
-    return html`<span
-        class="cv-ts"
-        title=${formatAbsolute(ms)}
-        @mouseenter=${(e: Event) => {
-            (e.currentTarget as HTMLElement).textContent = formatTimeAgo(ms);
-        }}
-        >${formatTimeAgo(ms)}</span
-    >`;
 }
