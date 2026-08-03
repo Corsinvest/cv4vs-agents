@@ -148,7 +148,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Ignore")]
     [DisplayName("Respect .gitignore")]
-    [Description("Also hide files/folders matched by the workspace's `.gitignore` from the `@` file picker. Re-read on every change to the file (cached when unchanged).")]
+    [Description("Also hide files/folders matched by the workspace's `.gitignore`, and by git's global excludes file (`core.excludesFile`), from the `@` file picker. Re-read on every change to either file (cached when unchanged).")]
     public bool UseGitIgnore { get; set; } = true;
 
     [Category("Ignore")]
