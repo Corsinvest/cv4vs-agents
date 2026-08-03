@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -58,7 +58,7 @@ internal sealed class JsonRpcDispatcher
         // Notifications (id absent): spec forbids any response.
         if (id == null)
         {
-            OutputWindowLogger.Trace(() => $"Mcp: notification '{method}' (ignored)");
+            OutputWindowLogger.Global.Trace(() => $"Mcp: notification '{method}' (ignored)");
             return null;
         }
 
@@ -78,7 +78,7 @@ internal sealed class JsonRpcDispatcher
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException($"Mcp.{method}", ex);
+            OutputWindowLogger.Global.LogException($"Mcp.{method}", ex);
             return Error(id, -32603, $"Internal error: {ex.Message}");
         }
     }

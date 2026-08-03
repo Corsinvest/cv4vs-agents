@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -43,7 +43,7 @@ internal sealed class IdeDiagnosticsTracker
         // Fallback to filePath when toolUseId is missing (edge case) — collision-prone but better
         // than dropping the baseline outright.
         _baseline[Key(toolUseId ?? filePath)] = (ReadFileDiagnosticsAsync(filePath), DateTime.UtcNow);
-        OutputWindowLogger.Debug(() => $"[diag] baseline capture started for {filePath}");
+        OutputWindowLogger.Global.Debug(() => $"[diag] baseline capture started for {filePath}");
     }
 
     public async Task<string> FindNewDiagnosticsAsync(string toolUseId, string filePath, bool editorVisible)
@@ -51,7 +51,7 @@ internal sealed class IdeDiagnosticsTracker
         if (string.IsNullOrEmpty(filePath)) { return null; }
         _baseline.TryRemove(Key(toolUseId ?? filePath), out var b);           // consume the baseline
         var before = b.Diags != null ? await b.Diags : [];
-        OutputWindowLogger.Debug(() => $"[diag] check start {filePath} visible={editorVisible} baseline={before.Count} items");
+        OutputWindowLogger.Global.Debug(() => $"[diag] check start {filePath} visible={editorVisible} baseline={before.Count} items");
 
         // The Error List refreshes after the edit lands; wait like VS Code. Visible editors settle
         // faster (2×750ms, bail at first hit); background files get a single 1000ms wait.
@@ -63,15 +63,15 @@ internal sealed class IdeDiagnosticsTracker
             var after = await ReadFileDiagnosticsAsync(filePath);
             sw.Stop();
             var step = i;
-            OutputWindowLogger.Debug(() => $"[diag] step {step + 1}: read {after.Count} items in {sw.ElapsedMilliseconds}ms (after {steps[step]}ms wait)");
+            OutputWindowLogger.Global.Debug(() => $"[diag] step {step + 1}: read {after.Count} items in {sw.ElapsedMilliseconds}ms (after {steps[step]}ms wait)");
             var added = after.Where(a => !before.Any(x => SameDiag(x, a))).ToList();
             if (added.Count > 0)
             {
-                OutputWindowLogger.Debug(() => $"[diag] {added.Count} new diagnostics for {filePath}");
+                OutputWindowLogger.Global.Debug(() => $"[diag] {added.Count} new diagnostics for {filePath}");
                 return Format(filePath, added);
             }
         }
-        OutputWindowLogger.Debug(() => $"[diag] no new diagnostics for {filePath}");
+        OutputWindowLogger.Global.Debug(() => $"[diag] no new diagnostics for {filePath}");
         return null;
     }
 
@@ -87,7 +87,7 @@ internal sealed class IdeDiagnosticsTracker
         {
             // Must not fault: this task is awaited both as the baseline and inside the post-edit
             // read, and a faulted baseline would throw out of FindNewDiagnosticsAsync's await.
-            OutputWindowLogger.LogException("IdeDiagnosticsTracker.ReadFileDiagnosticsAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDiagnosticsTracker.ReadFileDiagnosticsAsync", ex);
             return [];
         }
     }

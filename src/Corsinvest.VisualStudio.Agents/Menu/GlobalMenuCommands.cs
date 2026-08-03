@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -27,7 +27,7 @@ internal static class GlobalMenuCommands
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (await package.GetServiceAsync(typeof(IMenuCommandService)) is not OleMenuCommandService svc)
         {
-            OutputWindowLogger.Warn("[menu] no command service — the View entries won't respond");
+            OutputWindowLogger.Global.Warn("[menu] no command service — the View entries won't respond");
             return;
         }
 
@@ -77,6 +77,6 @@ internal static class GlobalMenuCommands
         => svc.AddCommand(new MenuCommand((_, _) =>
         {
             try { run(); }
-            catch (Exception ex) { OutputWindowLogger.LogException($"GlobalMenu.0x{id:X}", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException($"GlobalMenu.0x{id:X}", ex); }
         }, new CommandID(PackageGuids.AgentsCommandSet, id)));
 }

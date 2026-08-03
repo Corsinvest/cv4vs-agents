@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -291,7 +291,7 @@ public partial class PaneToolbar : UserControl
             if (!System.IO.Directory.Exists(folder)) { System.IO.Directory.CreateDirectory(folder); }
             ShellHelpers.OpenExternal(folder);
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("PaneToolbar.SessionsFolder", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("PaneToolbar.SessionsFolder", ex); }
     }
 
     private static CrispImage MonikerImage(string iconId)

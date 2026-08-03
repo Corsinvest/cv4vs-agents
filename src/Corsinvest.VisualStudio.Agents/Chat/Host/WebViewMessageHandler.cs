@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -14,7 +14,10 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 /// <summary>
 /// Handles all messages received from the WebView JS and dispatches the appropriate action.
 /// </summary>
-internal sealed partial class WebViewMessageHandler(WebViewBridge bridge, IClaudeClient client, PaneEntry entry)
+internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
+                                                   IClaudeClient client,
+                                                   PaneEntry entry,
+                                                   OutputWindowLogger log)
 {
     // Subscribe to the stats indexer's completion once (first GetStats), so we forward a
     // StatsIndexDone notification to this WebView when a background pass finishes.

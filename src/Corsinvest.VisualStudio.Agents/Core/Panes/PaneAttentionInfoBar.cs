@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -49,7 +49,7 @@ internal sealed class PaneAttentionInfoBar : IVsInfoBarUIEvents
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("PaneAttentionInfoBar.TryShow", ex);
+            OutputWindowLogger.Global.LogException("PaneAttentionInfoBar.TryShow", ex);
             return null;
         }
     }

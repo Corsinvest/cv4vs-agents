@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -50,7 +50,7 @@ internal static class ContextProbe
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.Warn($"[context] fetch failed for session '{sessionId}': {ex.Message}");
+            OutputWindowLogger.Global.Warn($"[context] fetch failed for session '{sessionId}': {ex.Message}");
             throw;
         }
         finally

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -68,7 +68,7 @@ internal sealed partial class WebViewMessageHandler
             }
             if (string.IsNullOrEmpty(content))
             {
-                OutputWindowLogger.Debug(() => $"[open-output] no content found for tool_use_id={toolUseId}");
+                log.Debug(() => $"[open-output] no content found for tool_use_id={toolUseId}");
                 return;
             }
             // Strip the CLI's <tool_use_error> wrapper (protocol detail).

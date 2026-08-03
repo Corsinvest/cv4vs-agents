@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -35,7 +35,7 @@ internal sealed partial class IdeDiffViewer
                 var match = owner.FindPendingTempPath(path);
                 if (match != null) { owner.TryResolve(match, FileSaved); }
             }
-            catch (Exception ex) { OutputWindowLogger.LogException("RdtSaveListener.OnAfterSave", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("RdtSaveListener.OnAfterSave", ex); }
             return VSConstants.S_OK;
         }
 
@@ -151,7 +151,7 @@ internal sealed partial class IdeDiffViewer
             }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException("DiffInfoBar.TryAttach", ex);
+                OutputWindowLogger.Global.LogException("DiffInfoBar.TryAttach", ex);
                 return null;
             }
         }

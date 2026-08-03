@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -100,7 +100,7 @@ internal static class PaneAttentionService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.Warn($"[panes] toast dismiss failed for #{seq}: {ex.Message}");
+            OutputWindowLogger.Global.Warn($"[panes] toast dismiss failed for #{seq}: {ex.Message}");
         }
     }
 }

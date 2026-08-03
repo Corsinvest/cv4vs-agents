@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -16,7 +16,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Sessions;
 /// the 64 KB window reader, user-text extraction, toolUseResult field access, and path-token
 /// validation (the last two are also called from the WebView message handler).
 /// </summary>
-public sealed partial class SessionManager
+internal sealed partial class SessionManager
 {
     /// <summary>Read up to <see cref="LiteReadWindowBytes"/> from <paramref name="offset"/>,
     /// decode UTF-8 once (single block — no chunk seams to corrupt multi-byte chars),

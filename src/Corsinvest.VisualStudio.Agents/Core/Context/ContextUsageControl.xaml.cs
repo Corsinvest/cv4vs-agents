@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -75,7 +75,7 @@ public partial class ContextUsageControl : UserControl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("ContextUsageControl.InitialSelection", ex);
+            OutputWindowLogger.Global.LogException("ContextUsageControl.InitialSelection", ex);
             return new StatsSelection { Scope = StatsScope.All };
         }
     }
@@ -232,7 +232,7 @@ public partial class ContextUsageControl : UserControl
             catch (OperationCanceledException) { /* superseded */ }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException("ContextUsageControl.Fetch", ex);
+                OutputWindowLogger.Global.LogException("ContextUsageControl.Fetch", ex);
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 if (!ct.IsCancellationRequested) { SetFetching(false); ShowUnavailable(); }
             }

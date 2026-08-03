@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -42,7 +42,7 @@ internal static class StatsCache
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("StatsCache.LoadProjectCwd", ex);
+            OutputWindowLogger.Global.LogException("StatsCache.LoadProjectCwd", ex);
             return null;
         }
     }
@@ -73,7 +73,7 @@ internal static class StatsCache
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("StatsCache.Load", ex);
+            OutputWindowLogger.Global.LogException("StatsCache.Load", ex);
         }
         return result;
     }
@@ -109,7 +109,7 @@ internal static class StatsCache
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("StatsCache.Save", ex);
+            OutputWindowLogger.Global.LogException("StatsCache.Save", ex);
         }
     }
 }

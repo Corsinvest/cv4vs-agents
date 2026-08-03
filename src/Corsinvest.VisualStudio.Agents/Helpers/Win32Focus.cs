@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -88,7 +88,7 @@ internal static class Win32Focus
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Win32Focus.ShowToast", ex);
+            OutputWindowLogger.Global.LogException("Win32Focus.ShowToast", ex);
             return null;
         }
     }
@@ -145,7 +145,7 @@ internal static class Win32Focus
                 var id = type.GetField("id", flags)?.GetValue(icon);
                 if (window == null || window.Handle == IntPtr.Zero || id == null)
                 {
-                    OutputWindowLogger.Warn("[panes] balloon retract skipped: NotifyIcon internals not found");
+                    OutputWindowLogger.Global.Warn("[panes] balloon retract skipped: NotifyIcon internals not found");
                     return;
                 }
 
@@ -161,12 +161,12 @@ internal static class Win32Focus
                 };
                 if (!Shell_NotifyIcon(NIM_MODIFY, ref data))
                 {
-                    OutputWindowLogger.Warn("[panes] balloon retract refused by the shell");
+                    OutputWindowLogger.Global.Warn("[panes] balloon retract refused by the shell");
                 }
             }
             catch (Exception ex)
             {
-                OutputWindowLogger.Warn($"[panes] balloon retract failed: {ex.Message}");
+                OutputWindowLogger.Global.Warn($"[panes] balloon retract failed: {ex.Message}");
             }
         }
     }

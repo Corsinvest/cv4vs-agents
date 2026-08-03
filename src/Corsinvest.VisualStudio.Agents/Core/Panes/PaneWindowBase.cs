@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -28,7 +28,7 @@ public abstract class PaneWindowBase : ToolWindowPane
 
     protected PaneWindowBase() : base(null)
     {
-        OutputWindowLogger.Perf(() => $"{GetType().Name}: ctor begin");
+        OutputWindowLogger.Global.Perf(() => $"{GetType().Name}: ctor begin");
         try
         {
             // Toolbar on top, control filling the rest; toolbar drives the pane
@@ -52,11 +52,11 @@ public abstract class PaneWindowBase : ToolWindowPane
             _toolbar.Attach(PaneControl);
             Content = dock;
 
-            OutputWindowLogger.Perf(() => $"{GetType().Name}: ctor done");
+            OutputWindowLogger.Global.Perf(() => $"{GetType().Name}: ctor done");
         }
         catch (System.Exception ex)
         {
-            OutputWindowLogger.LogException($"{GetType().Name}.ctor", ex);
+            OutputWindowLogger.Global.LogException($"{GetType().Name}.ctor", ex);
             throw;
         }
     }
@@ -124,7 +124,7 @@ public abstract class PaneWindowBase : ToolWindowPane
         if (PaneId == paneId && _assigned) { return; }
         PaneId = paneId;
         _assigned = true;
-        OutputWindowLogger.Perf(() => $"{GetType().Name}: AssignPaneId={PaneId}");
+        OutputWindowLogger.Global.Perf(() => $"{GetType().Name}: AssignPaneId={PaneId}");
         PaneControl.RegisterInstance(this);
     }
 
@@ -184,11 +184,11 @@ public abstract class PaneWindowBase : ToolWindowPane
         }
         catch (System.ObjectDisposedException)
         {
-            OutputWindowLogger.Warn("[panes] ActivatePane skipped: the pane was already closed");
+            OutputWindowLogger.Global.Warn("[panes] ActivatePane skipped: the pane was already closed");
         }
         catch (System.Runtime.InteropServices.COMException ex)
         {
-            OutputWindowLogger.LogException("[panes] ActivatePane", ex);
+            OutputWindowLogger.Global.LogException("[panes] ActivatePane", ex);
         }
     }
 
@@ -203,7 +203,7 @@ public abstract class PaneWindowBase : ToolWindowPane
         entry.DismissHistoryAction = () => _toolbar?.DismissSessionHistory() == true;
         PaneRegistry.Instance.Add(entry);
         SetSessionCaption(entry);
-        OutputWindowLogger.Info($"{GetType().Name}: attached pane #{PaneId} (seq {entry.SeqNo}), registry now has {PaneRegistry.Instance.Entries.Count} entries");
+        OutputWindowLogger.Global.Info($"{GetType().Name}: attached pane #{PaneId} (seq {entry.SeqNo}), registry now has {PaneRegistry.Instance.Entries.Count} entries");
     }
 
     /// <summary>Programmatically close this pane (used by the toolbar ✕).</summary>
@@ -223,9 +223,9 @@ public abstract class PaneWindowBase : ToolWindowPane
     {
         if (disposing)
         {
-            OutputWindowLogger.Debug(() => $"[pane] frame disposed: {GetType().Name} #{PaneId}");
+            OutputWindowLogger.Global.Debug(() => $"[pane] frame disposed: {GetType().Name} #{PaneId}");
             try { PaneControl.DisposePane(); }
-            catch (System.Exception ex) { OutputWindowLogger.LogException($"{GetType().Name}.Dispose", ex); }
+            catch (System.Exception ex) { OutputWindowLogger.Global.LogException($"{GetType().Name}.Dispose", ex); }
         }
         base.Dispose(disposing);
     }

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -185,7 +185,7 @@ internal sealed partial class IdeDiffViewer
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             try { pending.InfoBar?.Close(); } catch { /* best effort */ }
             try { pending.Frame?.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave); }
-            catch (Exception ex) { OutputWindowLogger.LogException("IdeDiffViewer.AutoClose", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.AutoClose", ex); }
 
             // Cleanup pending + open-frames registration (file is
             // auto-removed by VS since we marked it temporary).
@@ -195,7 +195,7 @@ internal sealed partial class IdeDiffViewer
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDiffViewer.Open", ex);
+            OutputWindowLogger.Global.LogException("IdeDiffViewer.Open", ex);
             return new DiffResult { Status = DiffRejected };
         }
     }
@@ -230,7 +230,7 @@ internal sealed partial class IdeDiffViewer
                 if (!string.IsNullOrEmpty(toolUseId)) { _chatDiffs[toolUseId] = frame; }
             }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("IdeDiffViewer.ShowFromContents", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.ShowFromContents", ex); }
     }
 
     /// <summary>Close a specific diff frame by tab name. Lookup is
@@ -243,7 +243,7 @@ internal sealed partial class IdeDiffViewer
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (!_openFrames.TryGetValue(tabName, out var frame)) { return; }
         try { frame.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave); }
-        catch (Exception ex) { OutputWindowLogger.LogException("IdeDiffViewer.CloseTab", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.CloseTab", ex); }
         _openFrames.Remove(tabName);
     }
 
@@ -260,7 +260,7 @@ internal sealed partial class IdeDiffViewer
         foreach (var kv in snapshot)
         {
             try { kv.Value.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave); closed++; }
-            catch (Exception ex) { OutputWindowLogger.LogException("IdeDiffViewer.CloseAll", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.CloseAll", ex); }
             _openFrames.Remove(kv.Key);
         }
         return closed;
@@ -306,7 +306,7 @@ internal sealed partial class IdeDiffViewer
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         try { frame.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave); }
-        catch (Exception ex) { OutputWindowLogger.LogException("IdeDiffViewer.CloseChatFrame", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.CloseChatFrame", ex); }
         _chatDiffs.Remove(toolUseId);
         foreach (var kv in new List<KeyValuePair<string, IVsWindowFrame>>(_openFrames))
         {
@@ -374,7 +374,7 @@ internal sealed partial class IdeDiffViewer
         ThreadHelper.ThrowIfNotOnUIThread();
         if (Package.GetGlobalService(typeof(SVsDifferenceService)) is not IVsDifferenceService svc)
         {
-            OutputWindowLogger.Warn("[diff] difference service unavailable — diff cannot open");
+            OutputWindowLogger.Global.Warn("[diff] difference service unavailable — diff cannot open");
             return null;
         }
         uint opts = 0;

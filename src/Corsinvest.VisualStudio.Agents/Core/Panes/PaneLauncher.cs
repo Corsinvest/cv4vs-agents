@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -48,7 +48,7 @@ internal static class PaneLauncher
             }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException($"PaneLauncher.HideExisting({entry.Title})", ex);
+                OutputWindowLogger.Global.LogException($"PaneLauncher.HideExisting({entry.Title})", ex);
             }
         }
     }
@@ -80,7 +80,7 @@ internal static class PaneLauncher
             catch (Exception ex)
             {
                 // One pane failing to come back must not stop the others.
-                OutputWindowLogger.LogException($"PaneLauncher.ShowExisting({entry.Title})", ex);
+                OutputWindowLogger.Global.LogException($"PaneLauncher.ShowExisting({entry.Title})", ex);
             }
         }
     }
@@ -99,7 +99,7 @@ internal static class PaneLauncher
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException($"PaneLauncher.Activate({entry.Title})", ex);
+            OutputWindowLogger.Global.LogException($"PaneLauncher.Activate({entry.Title})", ex);
         }
     }
 
@@ -135,10 +135,10 @@ internal static class PaneLauncher
     public static void OpenNew(PaneKind kind, Profile profile, string forkSessionId = null, string initialPrompt = null, string resumeSessionId = null)
     {
         var pkg = AgentsPackage.Instance;
-        if (pkg == null) { OutputWindowLogger.Warn("PaneLauncher: package not yet initialized"); return; }
+        if (pkg == null) { OutputWindowLogger.Global.Warn("PaneLauncher: package not yet initialized"); return; }
         var paneType = WindowType(kind);
 
-        OutputWindowLogger.Debug(() => $"PaneLauncher: OpenNew({paneType.Name}) requested");
+        OutputWindowLogger.Global.Debug(() => $"PaneLauncher: OpenNew({paneType.Name}) requested");
         _ = pkg.JoinableTaskFactory.RunAsync(async () =>
         {
             try
@@ -150,9 +150,9 @@ internal static class PaneLauncher
                     var existing = pkg.FindToolWindow(paneType, id, create: false);
                     if (existing != null) { continue; }
                     _nextPaneId[paneType] = id + 1;
-                    OutputWindowLogger.Info($"PaneLauncher: creating {paneType.Name} #{id}");
+                    OutputWindowLogger.Global.Info($"PaneLauncher: creating {paneType.Name} #{id}");
                     var pane = pkg.FindToolWindow(paneType, id, create: true);
-                    if (pane == null) { OutputWindowLogger.Warn($"PaneLauncher: FindToolWindow null for {paneType.Name} #{id}"); return; }
+                    if (pane == null) { OutputWindowLogger.Global.Warn($"PaneLauncher: FindToolWindow null for {paneType.Name} #{id}"); return; }
                     // VS doesn't always sync VSFPROPID_MultiInstanceToolNum
                     // before OnToolWindowCreated — pass the id we know for sure.
                     if (pane is PaneWindowBase paneWindow)
@@ -197,9 +197,9 @@ internal static class PaneLauncher
             }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException("PaneLauncher.OpenNew", ex);
+                OutputWindowLogger.Global.LogException("PaneLauncher.OpenNew", ex);
                 var inner = ex.InnerException;
-                while (inner != null) { OutputWindowLogger.LogException("  inner", inner); inner = inner.InnerException; }
+                while (inner != null) { OutputWindowLogger.Global.LogException("  inner", inner); inner = inner.InnerException; }
             }
         });
     }

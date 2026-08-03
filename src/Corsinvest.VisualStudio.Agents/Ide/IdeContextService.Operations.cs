@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -111,7 +111,7 @@ internal sealed partial class IdeContextService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Ide.BuildAsync", ex);
+            OutputWindowLogger.Global.LogException("Ide.BuildAsync", ex);
             return new BuildResult { Ok = false, Message = $"Build error: {ex.Message}" };
         }
     }
@@ -219,7 +219,7 @@ internal sealed partial class IdeContextService
                 CollectProject(p, result.Projects);
             }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Ide.GetProjectStructureAsync", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.GetProjectStructureAsync", ex); }
         return result;
     }
 
@@ -443,7 +443,7 @@ internal sealed partial class IdeContextService
                 return frame.IsVisible() == VSConstants.S_OK;
             }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Ide.IsFileVisible", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.IsFileVisible", ex); }
         return false;
     }
 
@@ -486,7 +486,7 @@ internal sealed partial class IdeContextService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Ide.OpenFile", ex);
+            OutputWindowLogger.Global.LogException("Ide.OpenFile", ex);
             return false;
         }
     }
@@ -573,7 +573,7 @@ internal sealed partial class IdeContextService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException($"Ide.{dteCommand}", ex);
+            OutputWindowLogger.Global.LogException($"Ide.{dteCommand}", ex);
             return false;
         }
     }
@@ -595,7 +595,7 @@ internal sealed partial class IdeContextService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Ide.ExecuteInteractiveCode", ex);
+            OutputWindowLogger.Global.LogException("Ide.ExecuteInteractiveCode", ex);
             return false;
         }
     }

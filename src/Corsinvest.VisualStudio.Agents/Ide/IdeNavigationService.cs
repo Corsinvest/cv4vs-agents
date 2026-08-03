@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -92,14 +92,14 @@ internal sealed partial class IdeNavigationService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeNavigationService.EnsureProbed", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureProbed", ex);
             return false;
         }
     }
 
     private static bool ProbeFailed(string step)
     {
-        OutputWindowLogger.Debug(() => $"[IdeNavigationService] navigation unavailable — probe failed at: {step}");
+        OutputWindowLogger.Global.Debug(() => $"[IdeNavigationService] navigation unavailable — probe failed at: {step}");
         return false;
     }
 
