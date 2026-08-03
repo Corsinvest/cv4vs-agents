@@ -68,6 +68,9 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     // from a plain close, so the close is deferred and the panes are kept until we know which it was.
     private System.Threading.Timer _reloadWatch;
     private string _closingSolutionFolder;
+    // Separate from the watch above: that one decides whether the panes live, this one only decides
+    // whether they are on screen, and the two answers are needed at very different times.
+    private System.Threading.Timer _hidePanesTimer;
 
     // Close→open gap, measured at ~850 ms on a small solution. Timed from OnAfterCloseSolution, so it
     // excludes unloading the projects and does not grow with the solution.
@@ -76,6 +79,12 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     // Long on purpose: a load that never completes must still trip the timer rather than leave panes
     // pinned to a solution that never came back.
     private const int ReloadWatchOpenMs = 120_000;
+
+    // Hiding the panes is held back this long so a reload doesn't blink them off and on. Comfortably
+    // past the ~850 ms close→open gap, and the gap is the only thing being waited on here — it is
+    // timed from the close, so it doesn't grow with the solution the way the load does. On a real
+    // close the panes linger for this long, which reads as part of the solution tearing down.
+    private const int HidePanesDelayMs = 1_000;
 
     static AgentsPackage() =>
         // Microsoft.Terminal.Wpf ships with VS but isn't on any VSIX probing
@@ -170,6 +179,37 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     private void DisarmReloadWatch()
         => _reloadWatch?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+
+    /// <summary>Hide the panes shortly, unless a solution starts opening first. VS models a reload as
+    /// close-then-open, so hiding on the close alone blinks them off and back on for the whole load —
+    /// on a reload nothing was going away, and nothing should have moved.</summary>
+    private void ArmHidePanes()
+    {
+        if (_hidePanesTimer == null)
+        {
+            _hidePanesTimer = new System.Threading.Timer(_ => OnHidePanesElapsed(), null,
+                                                         HidePanesDelayMs, System.Threading.Timeout.Infinite);
+        }
+        else
+        {
+            _hidePanesTimer.Change(HidePanesDelayMs, System.Threading.Timeout.Infinite);
+        }
+    }
+
+    private void DisarmHidePanes()
+        => _hidePanesTimer?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+
+    /// <summary>No solution started opening in time: this was a real close, so take the panes off
+    /// screen — alive, so a later reload can still hand them back.</summary>
+    private void OnHidePanesElapsed()
+        => JoinableTaskFactory.RunAsync(async () =>
+        {
+            // Showing or hiding a frame has to happen on the UI thread; the timer lands on a pool one.
+            await JoinableTaskFactory.SwitchToMainThreadAsync();
+            OutputWindowLogger.Global.Debug(() => "[reload] no solution opening — hiding panes");
+            try { Core.Panes.PaneLauncher.HideExisting(); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.HidePanesOnClose", ex); }
+        }).FileAndForget(nameof(AgentsPackage));
 
     /// <summary>No solution came back in time: the close was a real one. Close every pane, which is
     /// what OnBeforeCloseSolution used to do inline.</summary>
@@ -349,6 +389,8 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             }
             _reloadWatch?.Dispose();
             _reloadWatch = null;
+            _hidePanesTimer?.Dispose();
+            _hidePanesTimer = null;
             Mcp.McpServerHost.Instance.Stop();
             AgentsOptions.Applied -= ProfilesMenuCommand.InvalidateCache;
             // Unadvise the selection sink (MS pattern: at package dispose). Dispose was never
@@ -366,6 +408,10 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         // that skips IVsSolutionLoadEvents.
         RefreshCurrentSolutionFolder();
         DisarmReloadWatch();
+        // Also here, for the rare load path that skips OnBeforeOpenSolution: a solution is open, so
+        // there is nothing left to hide for. Harmless when the timer already fired — ShowExisting
+        // below puts back whatever it took off screen.
+        DisarmHidePanes();
         _closingSolutionFolder = null;
         // Panes belong to the folder they were born in: their CLI runs there and can't follow a move.
         // Same folder → the session is still valid, so the pane (and its live process) stays. This is
@@ -407,6 +453,10 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         // comes and no close event follows either — the solution was already closed — so the panes
         // would stay pinned forever.
         if (_closingSolutionFolder != null) { ArmReloadWatch(ReloadWatchOpenMs); }
+        // A solution is opening, so whatever closed was a reload — the panes belong on screen and
+        // were never taken off it. Unconditional: opening one from a state with no solution has
+        // nothing armed to cancel.
+        DisarmHidePanes();
         // Cache the folder eagerly from the .sln path so consumers don't hit
         // IVsSolution before it's populated (projects may still be loading).
         if (!string.IsNullOrEmpty(pszSolutionFilename))
@@ -428,10 +478,10 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     {
         OutputWindowLogger.Global.Debug(() => $"[reload] solution closed — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         CurrentSolutionFolder = null;
-        // Out of sight straight away, so closing a solution looks like it always did — but alive, so
-        // a reload can hand them back with the session intact.
-        try { Core.Panes.PaneLauncher.HideExisting(); }
-        catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.HidePanesOnClose", ex); }
+        // Out of sight shortly, so closing a solution looks like it always did — but alive, so a
+        // reload can hand them back with the session intact. Deferred rather than immediate because
+        // a reload arrives here too, and hiding on the spot made the panes blink off and back on.
+        ArmHidePanes();
         // Armed here, not on the Before: unloading the projects happens in between and would eat the
         // window on a large solution.
         ArmReloadWatch(ReloadWatchCloseMs);

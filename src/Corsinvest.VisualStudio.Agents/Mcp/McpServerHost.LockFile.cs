@@ -36,9 +36,33 @@ internal sealed partial class McpServerHost
             authToken = _authToken,
         };
         var newPath = Path.Combine(ideFolder, $"{_port}.lock");
-        File.WriteAllText(newPath, JsonConvert.SerializeObject(lockObj));
+        // Serialised against other writers of the same file: a solution reload fires
+        // RewriteLockFileAsync twice within a second (close, then open) and both land on the pool,
+        // so two WriteAllText calls can meet on this path — the second one throwing IOException
+        // because the first still has it open.
+        lock (_writeGate)
+        {
+            try
+            {
+                File.WriteAllText(newPath, JsonConvert.SerializeObject(lockObj));
+            }
+            catch (IOException ex)
+            {
+                // Whoever is holding it writes the same contents — same pid, same port, same token —
+                // so losing this write costs nothing. Worth a line, though: a lock that cannot be
+                // written for any other reason leaves the CLI unable to discover this server.
+                OutputWindowLogger.Global.Warn($"[mcp] lock file busy, write skipped: {ex.Message}");
+                return;
+            }
+        }
         lock (_lockFoldersGate) { _lockFolders.Add(ideFolder); }
     }
+
+    /// <summary>Held across the lock-file write only. Separate from _lockFoldersGate, which guards
+    /// the folder set and is deliberately not held across file I/O. Static: one server per process,
+    /// so there is nothing per-instance to serialise, and a type initialiser runs even for an object
+    /// that was already alive — which an instance field's initialiser does not, under Hot Reload.</summary>
+    private static readonly object _writeGate = new();
 
     private static string[] ResolveWorkspaceFoldersBlocking()
     {
