@@ -89,22 +89,6 @@ public abstract class PaneWindowBase : ToolWindowPane
     /// <summary>Build the hosted control (ChatPaneControl / CliPaneControl).</summary>
     protected abstract PaneControlBase CreateControl();
 
-    /// <summary>Tell VS this pane is the active window. A WebView2 (HwndHost) takes native focus
-    /// without updating VS's logical focus, so the shell still thinks the editor is active and
-    /// routes keys (Home/End → tab switch) and typing there. Driven by a real in-WebView click
-    /// (JS pointerdown → bridge ui_pane_activate), since WPF mouse/focus events can't cross the
-    /// HwndHost boundary and GotFocus looped frame.Show() during sibling-tab switches.</summary>
-    internal void ActivateFrame()
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        if (Frame is IVsWindowFrame frame)
-        {
-            // Show() activates the frame without changing its dock state — VS updates its
-            // "active window" to this pane, so keyboard input now flows to the WebView.
-            frame.Show();
-        }
-    }
-
     /// <summary>True when this pane's frame is VS's active window frame (the user is looking at it).
     /// VS hands out distinct COM proxies for the same window, so ReferenceEquals is unreliable —
     /// compare the hosted DocView object instead.</summary>
@@ -142,18 +126,6 @@ public abstract class PaneWindowBase : ToolWindowPane
         _assigned = true;
         OutputWindowLogger.Perf(() => $"{GetType().Name}: AssignPaneId={PaneId}");
         PaneControl.RegisterInstance(this);
-        // Blur our input when VS moves the active frame elsewhere (below). AssignPaneId is
-        // idempotent (early-returns when already assigned), so this subscribes once.
-        Ide.IdeContextService.ActiveFrameChanged += OnActiveFrameChanged;
-    }
-
-    /// <summary>When VS's active frame changes and this pane is no longer it, blur its input:
-    /// the WebView2 gets no DOM blur across the HwndHost boundary, so its caret would keep
-    /// blinking. Gate strictly on IsActiveFrame so the newly-active pane keeps its caret.</summary>
-    private void OnActiveFrameChanged()
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        if (!IsActiveFrame()) { PaneControl.BlurInput(); }
     }
 
     /// <summary>Inject the entry into the hosted control, then activate the in-IDE diff for its
@@ -251,7 +223,6 @@ public abstract class PaneWindowBase : ToolWindowPane
     {
         if (disposing)
         {
-            Ide.IdeContextService.ActiveFrameChanged -= OnActiveFrameChanged;
             OutputWindowLogger.Debug(() => $"[pane] frame disposed: {GetType().Name} #{PaneId}");
             try { PaneControl.DisposePane(); }
             catch (System.Exception ex) { OutputWindowLogger.LogException($"{GetType().Name}.Dispose", ex); }

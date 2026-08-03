@@ -302,7 +302,13 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         // Lazy MCP lifecycle: server runs only while >=1 session is open,
         // driven by PaneRegistry's 0->1 / ->0 transitions.
         Core.Panes.PaneRegistry.Instance.FirstSessionStarted += () => Mcp.McpServerHost.Instance.EnsureStarted();
-        Core.Panes.PaneRegistry.Instance.LastSessionEnded += () => Mcp.McpServerHost.Instance.Stop();
+        Core.Panes.PaneRegistry.Instance.LastSessionEnded += () =>
+        {
+            Mcp.McpServerHost.Instance.Stop();
+            // Same 0-session boundary: the controller behind the browser's task manager is shared
+            // by every pane, so it outlives any one of them but not all of them.
+            Chat.Pane.ChatWebView.CloseTaskManagerOwner();
+        };
 
         // Subscribe to solution events so the MCP lock file's workspaceFolders
         // stay in sync; otherwise a later `claude --ide` skips us in discovery.

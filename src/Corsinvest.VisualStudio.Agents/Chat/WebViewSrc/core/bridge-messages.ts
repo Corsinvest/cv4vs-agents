@@ -61,7 +61,6 @@ export const Msg = {
         },
         ui: {
             ready: 'webview_ready',
-            paneActivate: 'ui_pane_activate',
         },
     },
     toWebView: {
@@ -116,9 +115,9 @@ export const Msg = {
             vsSettings: 'vs_settings',
             themeChanged: 'ui_theme_changed',
             focusInput: 'ui_focus_input',
-            blurInput: 'ui_blur_input',
             setComposer: 'ui_set_composer',
             escape: 'ui_escape',
+            hostKey: 'ui_host_key',
         },
         plugins: {
             listResult: 'plugins_list_result',

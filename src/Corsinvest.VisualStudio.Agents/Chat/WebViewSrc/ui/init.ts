@@ -13,6 +13,7 @@ import { normPath } from '../core/path';
 import { closeTopDialog } from '../core/dialog-focus';
 import { setExtraLinkableExtensions } from '../core/file-links';
 import type {
+    HostKeyNotification,
     InitPayloadNotification,
     ModelsNotification,
     PermissionMode,
@@ -25,6 +26,7 @@ import type {
     Theme,
     VsOptionsDto,
 } from '../core/types';
+import { applyHostKey } from './host-keys';
 import { installDebugApi } from './debug';
 import { logger } from '../core/logger';
 import { initFluent, applyFluentTheme, applyFontScale } from './fluent';
@@ -142,19 +144,18 @@ function wireBridgeHandlers(): void {
         input?.focusInput();
     });
 
-    // Host tells us the pane lost the active VS frame → blur the prompt so its caret stops
-    // blinking (the WebView2 gets no DOM blur across the HwndHost boundary on its own).
-    bridge.onNotification(Msg.toWebView.ui.blurInput, () => {
-        const input = document.querySelector('cv-prompt') as
-            import('./components/cv-prompt').CvPrompt | null;
-        input?.blurInput();
-    });
-
     // Forked pane: pre-fill the composer with the forked-at message text.
     bridge.onNotification<SetComposerNotification>(Msg.toWebView.ui.setComposer, (data) => {
         const input = document.querySelector('cv-prompt') as
             import('./components/cv-prompt').CvPrompt | null;
         input?.setComposerText(data?.text ?? '');
+    });
+
+    // A key the composition control dropped, claimed by the pane on our behalf — see host-keys.ts.
+    bridge.onNotification<HostKeyNotification>(Msg.toWebView.ui.hostKey, (data) => {
+        if (data?.key) {
+            applyHostKey(data);
+        }
     });
 
     // Esc: VS routed its Cancel command to the pane (ChatPaneWindow claims it so VS
@@ -218,16 +219,6 @@ function wireBridgeHandlers(): void {
     bridge.onNotification<ModelsNotification>(Msg.toWebView.chat.models, (data) => {
         state.models = Array.isArray(data?.models) ? data.models : [];
     });
-
-    // Real click inside the WebView → ask the host to activate this VS pane, so keys flow to the
-    // chat. WPF mouse/focus events can't cross the WebView2 HwndHost boundary; a DOM pointerdown
-    // is the only reliable "the user clicked in the chat" signal, and it never fires while
-    // switching to a sibling VS tab (that click lands outside the WebView).
-    window.addEventListener(
-        'pointerdown',
-        () => bridge.sendNotification(Msg.fromWebView.ui.paneActivate, {}),
-        true,
-    );
 }
 
 /**

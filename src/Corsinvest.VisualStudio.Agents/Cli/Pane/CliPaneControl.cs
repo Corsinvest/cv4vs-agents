@@ -41,9 +41,6 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
     /// <summary>Focus = the terminal.</summary>
     public override void FocusInput() => FocusTerminal();
 
-    /// <summary>No DOM caret in the ConPTY terminal — nothing to blur.</summary>
-    public override void BlurInput() { }
-
     // No editable title for the CLI pane: the interactive terminal doesn't expose its live
     // session id (raw ConPTY, not stream-json), so there's nothing to track/rename. The base's
     // SupportsTitleEditing default is false, but state it explicitly for clarity; SessionTitle

@@ -231,10 +231,6 @@ public partial class PaneToolbar : UserControl
         _historyPopup = popup;
         _historyPicker = picker;
         popup.IsOpen = true;
-        // Opened from the chat command the caret sits in WebView2 — a separate HWND. Blurring it
-        // only clears the DOM caret (and asynchronously at that), so Win32 focus has to be pulled
-        // onto the popup's own window or the search box takes no typing.
-        _pane.BlurInput();
         // At Render priority the popup has its own HwndSource; before that there's nothing to
         // focus. FocusSearch runs at the same priority, so it lands right after this.
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>

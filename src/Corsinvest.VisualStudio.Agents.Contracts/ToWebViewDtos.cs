@@ -364,6 +364,22 @@ public class SetComposerNotification
     public string Text { get; set; }
 }
 
+/// <summary>A keystroke the host claimed on the WebView's behalf (ui_host_key).
+/// <para>WebView2CompositionControl renders through Windows.UI.Composition, and its
+/// CoreWebView2CompositionController exposes SendMouseInput/SendPointerInput but no keyboard
+/// equivalent — so the keys it drops never reach the browser, and WPF hands them to Visual Studio
+/// instead. The pane claims those and forwards them here for the page to act on.</para></summary>
+public class HostKeyNotification
+{
+    /// <summary>DOM <c>KeyboardEvent.key</c> name ("Home", "End", …), not the WPF enum, so the
+    /// page compares against the same strings a real key event would carry.</summary>
+    public string Key { get; set; } = "";
+
+    public bool Ctrl { get; set; }
+    public bool Shift { get; set; }
+    public bool Alt { get; set; }
+}
+
 /// <summary>The ↑/↓ prompt history for a session (chat_prompt_history). The WebView
 /// keeps prompts; sessionId gates stale updates (only apply if it matches).</summary>
 public class PromptHistoryNotification

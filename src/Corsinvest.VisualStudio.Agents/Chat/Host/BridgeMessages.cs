@@ -109,11 +109,6 @@ internal static class BridgeMessages
             /// <summary>The app mounted and painted its first frame — hide the
             /// native "Initializing…" placeholder now.</summary>
             public const string Ready = "webview_ready";
-
-            /// <summary>A real pointer-down happened inside the WebView: activate this pane's VS
-            /// frame. Fires only on genuine clicks in the chat (never during a sibling-tab switch),
-            /// unlike WPF focus events that can't cross the WebView2 HwndHost boundary.</summary>
-            public const string PaneActivate = "ui_pane_activate";
         }
     }
 
@@ -198,15 +193,15 @@ internal static class BridgeMessages
             public const string ThemeChanged = "ui_theme_changed";
             /// <summary>Ask the WebView to focus the prompt box (e.g. after a session switch).</summary>
             public const string FocusInput = "ui_focus_input";
-            /// <summary>Blur the prompt textarea (dual of FocusInput). Sent when the pane loses the
-            /// active VS frame, so the DOM drops focus and the caret stops blinking.</summary>
-            public const string BlurInput = "ui_blur_input";
             /// <summary>Pre-fill the composer with text (the forked-at message), focused and ready to send.</summary>
             public const string SetComposer = "ui_set_composer";
             /// <summary>Esc pressed: VS routed its Cancel command to the pane (ChatPaneWindow
             /// claims it so VS doesn't move focus to an open editor). The WebView decides:
             /// stop generation if busy, close an open menu, else no-op.</summary>
             public const string Escape = "ui_escape";
+            /// <summary>A key the composition control dropped, claimed by the pane and forwarded
+            /// for the page to act on. See <c>HostKeyNotification</c>.</summary>
+            public const string HostKey = "ui_host_key";
         }
 
         /// <summary>Plugin-manager results + the global "plugins changed" broadcast.</summary>

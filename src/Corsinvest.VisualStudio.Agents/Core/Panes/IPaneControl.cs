@@ -72,10 +72,6 @@ public interface IPaneControl
     /// Called after switching/loading a session.</summary>
     void FocusInput();
 
-    /// <summary>Drop input focus (dual of <see cref="FocusInput"/>). Called when the pane loses
-    /// the active VS frame. Chat blurs its WebView textarea; CLI has no DOM caret (no-op).</summary>
-    void BlurInput();
-
     /// <summary>Extra, kind-specific actions for the "More" (⋯) menu. Chat
     /// adds WebView DevTools; CLI returns none. Empty by default.</summary>
     IEnumerable<ButtonAction> MoreMenuActions { get; }
