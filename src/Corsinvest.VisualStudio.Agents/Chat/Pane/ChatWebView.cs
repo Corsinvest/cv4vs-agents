@@ -9,7 +9,6 @@ using Microsoft.Web.WebView2.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Pane;
@@ -66,9 +65,10 @@ internal sealed class ChatWebView : WebView2CompositionControl
         e.Handled = true;
     }
 
-    // A second, windowed controller kept alive only to own the task manager window — see
-    // OpenTaskManagerAsync.
-    private CoreWebView2Controller _taskManagerOwner;
+    // Static: the browser has ONE task manager, so one owner serves every pane. A per-pane field
+    // grew a spare renderer for each chat that had opened it, all of them then listed in the very
+    // window they had opened.
+    private static CoreWebView2Controller _taskManagerOwner;
 
     // The message-only window: a parent for things that must never be shown.
     private static readonly IntPtr HwndMessage = new(-3);
@@ -115,15 +115,13 @@ internal sealed class ChatWebView : WebView2CompositionControl
         }
     }
 
-    /// <summary>Drop the task-manager controller with the pane: it holds a browser-side controller
-    /// that would otherwise outlive the window it was created for.</summary>
-    protected override void OnVisualParentChanged(DependencyObject oldParent)
+    /// <summary>Release the shared task-manager owner. Called when the last pane goes: it can't be
+    /// tied to any single one, and closing it takes the task-manager window with it.</summary>
+    internal static void CloseTaskManagerOwner()
     {
-        base.OnVisualParentChanged(oldParent);
-        if (VisualParent != null) { return; }
-
-        try { _taskManagerOwner?.Close(); }
-        catch (Exception ex) { OutputWindowLogger.LogException($"{nameof(ChatWebView)}.Close", ex); }
+        if (_taskManagerOwner == null) { return; }
+        try { _taskManagerOwner.Close(); }
+        catch (Exception ex) { OutputWindowLogger.LogException($"{nameof(ChatWebView)}.CloseTaskManagerOwner", ex); }
         _taskManagerOwner = null;
     }
 }
