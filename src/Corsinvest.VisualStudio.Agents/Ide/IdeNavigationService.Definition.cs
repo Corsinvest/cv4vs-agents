@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -52,7 +52,7 @@ internal sealed partial class IdeNavigationService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeNavigationService.EnsureDefProbed", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureDefProbed", ex);
             return false;
         }
     }
@@ -96,7 +96,7 @@ internal sealed partial class IdeNavigationService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeNavigationService.GetDefinitionAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.GetDefinitionAsync", ex);
             return new NavResult { Supported = false, Reason = "Navigation failed (internal API changed?)." };
         }
     }

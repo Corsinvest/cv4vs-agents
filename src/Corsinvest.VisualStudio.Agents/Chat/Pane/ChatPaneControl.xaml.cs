@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -71,7 +71,7 @@ public partial class ChatPaneControl : PaneControlBase
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("[chat] rename_session", ex);
+            _log.LogException("[chat] rename_session", ex);
         }
         Sessions.Rename(sessionId, newTitle);
     }
@@ -222,7 +222,7 @@ public partial class ChatPaneControl : PaneControlBase
                     var done = await Task.WhenAny(call, Task.Delay(2000)).ConfigureAwait(true);
                     if (done != call)
                     {
-                        OutputWindowLogger.Warn("[chat] renderer PID timed out — WebView not answering");
+                        _log.Warn("[chat] renderer PID timed out — WebView not answering");
                         return null;
                     }
                     return await call.ConfigureAwait(true);
@@ -256,6 +256,9 @@ public partial class ChatPaneControl : PaneControlBase
         }
     }
 
+    // Resolved per line, not captured: Entry (and its PaneId) is injected after construction.
+    // Assigned in the constructor because a field initializer can't reach an instance member.
+    private readonly OutputWindowLogger _log;
     private ClaudeClient _client;
     private WebViewBridge _bridge;
     private WebViewMessageHandler _handler;
@@ -287,6 +290,7 @@ public partial class ChatPaneControl : PaneControlBase
 
     public ChatPaneControl()
     {
+        _log = OutputWindowLogger.For("chat", () => Entry?.PaneId ?? 0);
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
@@ -314,11 +318,11 @@ public partial class ChatPaneControl : PaneControlBase
             if (_initialized) { return; }
             _initialized = true;
 
-            OutputWindowLogger.Info("load: OnLoaded start");
+            _log.Info("load: OnLoaded start");
 
-            _bridge = new WebViewBridge(WebView, Dispatcher);
+            _bridge = new WebViewBridge(WebView, Dispatcher, _log);
 
-            using (OutputWindowLogger.PerfSpan("WebView.Init"))
+            using (OutputWindowLogger.Global.PerfSpan("WebView.Init"))
             {
                 await _bridge.InitAsync();
             }
@@ -385,7 +389,7 @@ public partial class ChatPaneControl : PaneControlBase
     private void SendTheme()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        try { _bridge?.InjectTheme(VsThemeReader.IsDark()); } catch (Exception ex) { OutputWindowLogger.LogException("SendTheme", ex); }
+        try { _bridge?.InjectTheme(VsThemeReader.IsDark()); } catch (Exception ex) { _log.LogException("SendTheme", ex); }
     }
 
     /// <summary>Options → Apply. Send vs_settings (updates state.ui: font size, sticky, …)
@@ -406,7 +410,7 @@ public partial class ChatPaneControl : PaneControlBase
         // the previous ones until the next re-render.
         if (_turnInFlight)
         {
-            OutputWindowLogger.Debug(() => $"[chat] options applied mid-turn on {sid} — settings only, transcript left alone");
+            _log.Debug(() => $"[chat] options applied mid-turn on {sid} — settings only, transcript left alone");
             return;
         }
 
@@ -420,7 +424,7 @@ public partial class ChatPaneControl : PaneControlBase
     private async Task InitAsync()
     {
         var workDir = Entry.WorkingDirectory;
-        using var _ = OutputWindowLogger.PerfSpan($"InitAsync({workDir})");
+        using var _ = OutputWindowLogger.Global.PerfSpan($"InitAsync({workDir})");
 
         // Every "New Chat" pane starts FRESH (else N panes share one conversation). Exception: a
         // forked or workspace-restored pane — _startupSessionId points at the JSONL to resume
@@ -448,7 +452,7 @@ public partial class ChatPaneControl : PaneControlBase
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
         _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
-        OutputWindowLogger.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode})");
+        _log.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode})");
 
         // Client-first: the WebView starts empty here. Once the client starts, StartupAsync gathers
         // the CLI state (initialize + get_settings, no user turn) and OnCliStateReceived sends the one
@@ -467,7 +471,7 @@ public partial class ChatPaneControl : PaneControlBase
         // installed" panel as the CLI pane instead of throwing when the transport spawns a null exe.
         if (ClaudeInstall.ResolveExecutable() == null)
         {
-            OutputWindowLogger.Warn("[chat] claude.exe not found — showing 'not installed' panel");
+            _log.Warn("[chat] claude.exe not found — showing 'not installed' panel");
             Content = ClaudeInstall.BuildMissingPanel();
             return;
         }
@@ -504,7 +508,7 @@ public partial class ChatPaneControl : PaneControlBase
     {
         if (_client != null) { return; }
 
-        _client = new ClaudeClient
+        _client = new ClaudeClient(_log)
         {
             // IDE tools exposed as in-process SDK MCP server (mcp_set_servers after init).
             // Name must be "vs", NOT "ide" — the CLI reserves "ide" for its own internal
@@ -519,7 +523,7 @@ public partial class ChatPaneControl : PaneControlBase
         IdeContextService.Instance.ContextChanged -= OnEditorContextChangedForChat;
         IdeContextService.Instance.ContextChanged += OnEditorContextChangedForChat;
 
-        _handler = new WebViewMessageHandler(_bridge, _client, Entry);
+        _handler = new WebViewMessageHandler(_bridge, _client, Entry, _log);
         _bridge.MessageReceived -= OnBridgeMessage;
         _bridge.MessageReceived += OnBridgeMessage;
     }
@@ -562,19 +566,19 @@ public partial class ChatPaneControl : PaneControlBase
     {
         if (_client == null)
         {
-            OutputWindowLogger.Trace("[ChatSelection] skip: _client null");
+            _log.Trace(() => "[ChatSelection] skip: _client null");
             return;
         }
         // Eye closed for this session (the composer's IDE-context badge): don't leak the editor
         // selection into the chat. Send an empty selection so the CLI drops any cached one.
         if (ctx == null || Entry?.Options.SendSelection == false)
         {
-            OutputWindowLogger.Trace("[ChatSelection] no context / eye off → empty selection");
+            _log.Trace(() => "[ChatSelection] no context / eye off → empty selection");
             _client.SendSelectionChanged(string.Empty, null, null, 0, 0, 0, 0, isEmpty: true);
         }
         else
         {
-            OutputWindowLogger.Trace(() => $"[ChatSelection] file={ctx.FilePath} sel={ctx.HasSelection} lines={ctx.StartLine}-{ctx.EndLine} running={_client.IsRunning}");
+            _log.Trace(() => $"[ChatSelection] file={ctx.FilePath} sel={ctx.HasSelection} lines={ctx.StartLine}-{ctx.EndLine} running={_client.IsRunning}");
             _client.SendSelectionChanged(ctx.SelectedText ?? string.Empty,
                                          ctx.FilePath,
                                          PathHelpers.ToFileUri(ctx.FilePath),

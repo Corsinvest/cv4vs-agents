@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -33,7 +33,7 @@ internal sealed partial class WebViewMessageHandler
         }
         else
         {
-            OutputWindowLogger.Debug(() => $"[fork] ForkSession returned null (uuid={forkAtUuid}) — no pane opened");
+            log.Debug(() => $"[fork] ForkSession returned null (uuid={forkAtUuid}) — no pane opened");
         }
     }
 

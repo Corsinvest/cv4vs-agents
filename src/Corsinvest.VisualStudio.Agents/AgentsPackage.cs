@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -137,9 +137,9 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             // shifts between Newtonsoft minor builds and would MissingMethodException
             // against VS's own Newtonsoft. See JsonExtensions.ToIndentedString.
             File.WriteAllText(settingsPath, root.ToIndentedString());
-            OutputWindowLogger.Info($"Pkg: set diffTool=auto in {settingsPath}");
+            OutputWindowLogger.Global.Info($"Pkg: set diffTool=auto in {settingsPath}");
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Pkg.EnsureDiffToolAuto", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.EnsureDiffToolAuto", ex); }
     }
 
     /// <summary>Snapshot the open panes into the current solution's workspace.json. Called on solution
@@ -165,7 +165,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         {
             _reloadWatch.Change(dueMs, System.Threading.Timeout.Infinite);
         }
-        OutputWindowLogger.Debug(() => $"[reload] watch armed for {dueMs} ms (folder={_closingSolutionFolder ?? "(none)"})");
+        OutputWindowLogger.Global.Debug(() => $"[reload] watch armed for {dueMs} ms (folder={_closingSolutionFolder ?? "(none)"})");
     }
 
     private void DisarmReloadWatch()
@@ -178,9 +178,9 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync();
             _closingSolutionFolder = null;
-            OutputWindowLogger.Info($"[reload] watch elapsed — closing {Core.Panes.PaneRegistry.Instance.Entries.Count} pane(s)");
+            OutputWindowLogger.Global.Info($"[reload] watch elapsed — closing {Core.Panes.PaneRegistry.Instance.Entries.Count} pane(s)");
             try { Core.Panes.PaneRegistry.Instance.CloseAll(); }
-            catch (Exception ex) { OutputWindowLogger.LogException("Pkg.ReloadWatchElapsed", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.ReloadWatchElapsed", ex); }
         }).FileAndForget(nameof(AgentsPackage));
 
     /// <summary>Reopen the panes saved for the current solution's workspace.json. Each saved pane is
@@ -191,7 +191,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         var ws = Core.Workspace.WorkspaceStore.Load(folder);
         if (ws?.Panes == null)
         {
-            OutputWindowLogger.Debug(() => $"[restore] no workspace/panes for {folder ?? "(none)"}");
+            OutputWindowLogger.Global.Debug(() => $"[restore] no workspace/panes for {folder ?? "(none)"}");
             return;
         }
         // Load(forEdit:false) normally includes the native "Claude" profile → profiles[0] is the fallback.
@@ -204,7 +204,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
                 && Core.Panes.PaneRegistry.Instance.Entries.Any(e =>
                        string.Equals(e.ActiveSessionId, p.SessionId, StringComparison.OrdinalIgnoreCase)))
             {
-                OutputWindowLogger.Debug(() => $"[restore] session {p.SessionId} still open → skip");
+                OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} still open → skip");
                 continue;
             }
             var kind = string.Equals(p.Kind, "Cli", StringComparison.OrdinalIgnoreCase)
@@ -222,7 +222,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             }
             else
             {
-                OutputWindowLogger.Debug(() => $"[restore] session {p.SessionId} missing on disk → opening fresh");
+                OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} missing on disk → opening fresh");
                 sessionId = null;
             }
             PaneLauncher.OpenNew(kind, profile, resumeSessionId: sessionId);
@@ -240,7 +240,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         _ = JoinableTaskFactory.StartOnIdle(() =>
         {
             try { RestorePanesForCurrentSolution(); }
-            catch (Exception ex) { OutputWindowLogger.LogException("Pkg.RestorePanesDeferred", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.RestorePanesDeferred", ex); }
         });
     }
 
@@ -259,12 +259,12 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             _ = JoinableTaskFactory.StartOnIdle(() =>
             {
                 try { Core.Panes.PaneLauncher.ShowExisting(); }
-                catch (Exception ex) { OutputWindowLogger.LogException("Pkg.OnModeChange.Show", ex); }
+                catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.OnModeChange.Show", ex); }
             });
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Pkg.OnModeChange", ex);
+            OutputWindowLogger.Global.LogException("Pkg.OnModeChange", ex);
         }
         return VSConstants.S_OK;
     }
@@ -282,7 +282,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Pkg.RefreshCurrentSolutionFolder", ex);
+            OutputWindowLogger.Global.LogException("Pkg.RefreshCurrentSolutionFolder", ex);
             CurrentSolutionFolder = null;
         }
     }
@@ -373,8 +373,8 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         var had = Core.Panes.PaneRegistry.Instance.Entries.Count;
         var kept = 0;
         try { kept = Core.Panes.PaneRegistry.Instance.CloseWhereWorkdirDiffers(CurrentSolutionFolder); }
-        catch (Exception ex) { OutputWindowLogger.LogException("Pkg.OnAfterOpenSolution", ex); }
-        OutputWindowLogger.Info($"[reload] solution open on {CurrentSolutionFolder ?? "(none)"} — kept {kept} of {had} pane(s)");
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.OnAfterOpenSolution", ex); }
+        OutputWindowLogger.Global.Info($"[reload] solution open on {CurrentSolutionFolder ?? "(none)"} — kept {kept} of {had} pane(s)");
         // Bring back what the close hid. StartOnIdle for the same reason the restore defers: showing
         // a frame from inside this COM event freezes the shell, which is still mid-transition.
         if (kept > 0)
@@ -382,7 +382,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             _ = JoinableTaskFactory.StartOnIdle(() =>
             {
                 try { Core.Panes.PaneLauncher.ShowExisting(); }
-                catch (Exception ex) { OutputWindowLogger.LogException("Pkg.ShowPanesOnReload", ex); }
+                catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.ShowPanesOnReload", ex); }
             });
         }
         // Reopen the panes saved for THIS solution — minus the ones a reload just kept alive (see
@@ -393,7 +393,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         // VS may restore editor tabs without firing a DTE event we listen to;
         // force an emit so MCP clients see the current file context now.
         try { Ide.IdeContextService.Instance.ForceEmitCurrentContext(); }
-        catch (Exception ex) { OutputWindowLogger.LogException("Pkg.ForceEmit", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.ForceEmit", ex); }
         return VSConstants.S_OK;
     }
 
@@ -402,7 +402,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionLoadEvents.OnBeforeOpenSolution(string pszSolutionFilename)
     {
-        OutputWindowLogger.Debug(() => $"[reload] solution opening: {pszSolutionFilename ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        OutputWindowLogger.Global.Debug(() => $"[reload] solution opening: {pszSolutionFilename ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         // Rearm rather than disarm: if this load fails or is cancelled, OnAfterOpenSolution never
         // comes and no close event follows either — the solution was already closed — so the panes
         // would stay pinned forever.
@@ -426,12 +426,12 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnAfterCloseSolution(object pUnkReserved)
     {
-        OutputWindowLogger.Debug(() => $"[reload] solution closed — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        OutputWindowLogger.Global.Debug(() => $"[reload] solution closed — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         CurrentSolutionFolder = null;
         // Out of sight straight away, so closing a solution looks like it always did — but alive, so
         // a reload can hand them back with the session intact.
         try { Core.Panes.PaneLauncher.HideExisting(); }
-        catch (Exception ex) { OutputWindowLogger.LogException("Pkg.HidePanesOnClose", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.HidePanesOnClose", ex); }
         // Armed here, not on the Before: unloading the projects happens in between and would eat the
         // window on a large solution.
         ArmReloadWatch(ReloadWatchCloseMs);
@@ -453,7 +453,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnBeforeCloseSolution(object pUnkReserved)
     {
-        OutputWindowLogger.Debug(() => $"[reload] solution closing: {CurrentSolutionFolder ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        OutputWindowLogger.Global.Debug(() => $"[reload] solution closing: {CurrentSolutionFolder ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         SaveWorkspace();
         // Last point where the folder is still known — OnAfterCloseSolution clears it. The panes are
         // NOT closed here: a reload would take the live CLI down with them, losing the turn in flight.

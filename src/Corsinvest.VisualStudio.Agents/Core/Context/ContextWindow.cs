@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -36,14 +36,14 @@ public sealed class ContextWindow : ToolWindowPane
                 var window = pkg.FindToolWindow(typeof(ContextWindow), 0, create: true);
                 if (window?.Frame is not IVsWindowFrame frame)
                 {
-                    OutputWindowLogger.Warn("[context] the Context usage window has no frame — cannot show it");
+                    OutputWindowLogger.Global.Warn("[context] the Context usage window has no frame — cannot show it");
                     return;
                 }
                 ErrorHandler.ThrowOnFailure(frame.Show());
             }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException("ContextWindow.Open", ex);
+                OutputWindowLogger.Global.LogException("ContextWindow.Open", ex);
             }
         });
     }

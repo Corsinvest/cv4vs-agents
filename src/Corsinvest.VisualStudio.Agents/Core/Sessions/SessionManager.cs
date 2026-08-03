@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -18,7 +18,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Sessions;
 /// <summary>Reads/writes CLI session JSONL files for one config-dir. The config-dir is
 /// constant for a pane's lifetime, so it's injected once via the constructor rather than
 /// threaded through every call — a config-dir can never be silently forgotten.</summary>
-public sealed partial class SessionManager
+internal sealed partial class SessionManager
 {
     // VS Code-style metadata scan: read a fixed 64 KB window from the start and
     // from the end of the JSONL in one read each, decode once, scan the lines.
@@ -30,10 +30,14 @@ public sealed partial class SessionManager
 
     private readonly ClaudePaths _paths;
     private readonly string _workingDirectory;
-    public SessionManager(ClaudePaths paths, string workingDirectory)
+    private readonly OutputWindowLogger _log;
+
+    // Optional: the session dialog builds one with no pane behind it (→ Global, unprefixed).
+    public SessionManager(ClaudePaths paths, string workingDirectory, OutputWindowLogger log = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _workingDirectory = workingDirectory ?? throw new ArgumentNullException(nameof(workingDirectory));
+        _log = log ?? OutputWindowLogger.Global;
     }
 
     // The session folder / a session .jsonl path for this instance's workdir, honouring
@@ -43,7 +47,7 @@ public sealed partial class SessionManager
 
     public List<SessionInfo> Load()
     {
-        using var _ = OutputWindowLogger.PerfSpan("SessionManager.Load");
+        using var _ = OutputWindowLogger.Global.PerfSpan("SessionManager.Load");
         var folder = FolderFor();
         if (!Directory.Exists(folder)) { return []; }
 
@@ -51,7 +55,7 @@ public sealed partial class SessionManager
             .OrderByDescending(f => f.LastWriteTime)
             .ToArray();
 
-        OutputWindowLogger.Perf(() => $"sessions: loading {files.Length} files");
+        OutputWindowLogger.Global.Perf(() => $"sessions: loading {files.Length} files");
 
         return files
             .AsParallel()
@@ -80,7 +84,7 @@ public sealed partial class SessionManager
             info.Title = StringHelpers.Truncate(rawTitle, 60);
             return info;
         }
-        catch { OutputWindowLogger.Debug(() => "[sessions] skipped an unreadable/corrupt session file"); return null; }
+        catch { _log.Debug(() => "[sessions] skipped an unreadable/corrupt session file"); return null; }
     }
 
     private static SessionInfo ScanMetadata(string path)
@@ -363,7 +367,7 @@ public sealed partial class SessionManager
                 if (!string.IsNullOrEmpty(uuid)) { uuidMap[uuid] = Guid.NewGuid().ToString(); }
                 kept.Add(obj);
             }
-            if (!foundCut) { OutputWindowLogger.Debug(() => "[sessions] fork-at uuid not found in source session → fork aborted"); return null; }
+            if (!foundCut) { _log.Debug(() => "[sessions] fork-at uuid not found in source session → fork aborted"); return null; }
 
             // Remap every id that references a message — leaving one pointing at an
             // old uuid would dangle, since those ids are all regenerated above.
@@ -379,7 +383,7 @@ public sealed partial class SessionManager
                 writer.WriteLine(obj.ToString(Formatting.None));
             }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("SessionManager.fork", ex); return null; }
+        catch (Exception ex) { _log.LogException("SessionManager.fork", ex); return null; }
 
         return new ForkResult { NewSessionId = newSessionId, ExcludedPrompt = excludedPrompt };
     }

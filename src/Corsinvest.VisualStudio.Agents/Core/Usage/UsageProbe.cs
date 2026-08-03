@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -51,7 +51,7 @@ internal static class UsageProbe
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.Warn($"[usage] fetch failed for profile '{profile?.Name}': {ex.Message}");
+            OutputWindowLogger.Global.Warn($"[usage] fetch failed for profile '{profile?.Name}': {ex.Message}");
             throw;
         }
         finally

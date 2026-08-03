@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -278,7 +278,7 @@ internal sealed partial class WebViewMessageHandler
             catch (Exception ex)
             {
                 // Nothing opens and the click looks dead otherwise — say why.
-                OutputWindowLogger.LogException($"[chat] open attachment '{name}'", ex);
+                log.LogException($"[chat] open attachment '{name}'", ex);
             }
         }).FileAndForget(nameof(WebViewMessageHandler));
     }

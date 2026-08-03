@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -80,7 +80,7 @@ public partial class SessionManagerControl : UserControl
         }
         catch
         {
-            OutputWindowLogger.Warn("[sessions] failed to load the session list — picker may be empty");
+            OutputWindowLogger.Global.Warn("[sessions] failed to load the session list — picker may be empty");
             // Silent: an unreadable folder shouldn't crash the picker.
         }
         ApplyActiveFlag();

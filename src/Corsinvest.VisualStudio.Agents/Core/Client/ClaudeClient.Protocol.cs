@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -20,7 +20,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 /// stream/result/rate-limit events) to handlers. The public API, lifecycle, and
 /// process management live in ClaudeClient.cs.
 /// </summary>
-public sealed partial class ClaudeClient
+internal sealed partial class ClaudeClient
 {
     private static readonly TimeSpan DefaultRequestTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan InitializeTimeout = TimeSpan.FromSeconds(30);
@@ -117,7 +117,7 @@ public sealed partial class ClaudeClient
                         ? s
                         : (obj["request"] as JObject).Val("subtype", "");
 
-        OutputWindowLogger.Trace(() => $"[CLI line] type={type}{(string.IsNullOrEmpty(subtype) ? "" : $" subtype={subtype}")}");
+        _log.Trace(() => $"[CLI line] type={type}{(string.IsNullOrEmpty(subtype) ? "" : $" subtype={subtype}")}");
         switch (type)
         {
             case ClientMessages.Type.ControlResponse: HandleControlResponse(obj); break;
@@ -134,7 +134,7 @@ public sealed partial class ClaudeClient
             case ClientMessages.Type.ConversationReset:
                 ConversationReset?.Invoke(this, obj.Val("new_conversation_id"));
                 break;
-            default: OutputWindowLogger.Trace(() => $"[unhandled] type={type}"); break;
+            default: _log.Trace(() => $"[unhandled] type={type}"); break;
         }
     }
 
@@ -206,7 +206,7 @@ public sealed partial class ClaudeClient
                 // decline is the protocol's expected "unsupported" answer; an error would be a bug.
                 // Warn (not silent): from the user's side an MCP action silently didn't happen —
                 // this line is the only trace of why (e.g. an MCP login that never prompts).
-                OutputWindowLogger.Warn($"[client] elicitation from MCP server '{req.Val("mcp_server_name", "?")}' declined — no elicitation UI");
+                _log.Warn($"[client] elicitation from MCP server '{req.Val("mcp_server_name", "?")}' declined — no elicitation UI");
                 SendControlResponse(rid, success: true, response: new { action = "decline" });
                 break;
 
@@ -266,7 +266,7 @@ public sealed partial class ClaudeClient
             }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException("ClaudeClient.HandleMcpMessage", ex);
+                _log.LogException("ClaudeClient.HandleMcpMessage", ex);
                 SendControlResponse(rid, success: false, error: ex.Message);
             }
         });

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -75,7 +75,7 @@ internal sealed partial class IdeNavigationService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeNavigationService.EnsureRenameProbed", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureRenameProbed", ex);
             return false;
         }
     }
@@ -180,7 +180,7 @@ internal sealed partial class IdeNavigationService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeNavigationService.RenameSymbolAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.RenameSymbolAsync", ex);
             return new RenameResult { Supported = false, Reason = "Rename failed (internal API changed?)." };
         }
     }

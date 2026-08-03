@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -69,7 +69,7 @@ internal static class StatsAggregator
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("StatsAggregator.AggregateFile", ex);
+            OutputWindowLogger.Global.LogException("StatsAggregator.AggregateFile", ex);
             return null;
         }
         return (agg, size, cwd);

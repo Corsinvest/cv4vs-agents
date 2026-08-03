@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -369,7 +369,7 @@ public partial class ContextUsageControl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("ContextUsageControl.OpenInEditor", ex);
+            OutputWindowLogger.Global.LogException("ContextUsageControl.OpenInEditor", ex);
         }
     }
 

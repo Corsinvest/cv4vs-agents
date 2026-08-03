@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -16,7 +16,7 @@ internal sealed partial class WebViewMessageHandler
         // The WebView echoes the user bubble itself (stream-json doesn't
         // reflect the submitted message back); the host only forwards to the CLI.
         var p = data.ToObject<Contracts.SendPromptNotification>();
-        OutputWindowLogger.Debug(() => $"[{BridgeMessages.FromWebView.Cli.SendPrompt}] text len={(p.Text ?? "").Length} sessionId={client.SessionId ?? "(none)"} running={client.IsRunning}");
+        log.Debug(() => $"[{BridgeMessages.FromWebView.Cli.SendPrompt}] text len={(p.Text ?? "").Length} sessionId={client.SessionId ?? "(none)"} running={client.IsRunning}");
         // attachments stays a raw JArray: BuildContentBlocks turns it into CLI blocks.
         var blocks = WebViewBridge.BuildContentBlocks(p.Text ?? "", data["attachments"] as JArray);
         client.SendPrompt(blocks, p.Uuid ?? "");
@@ -73,7 +73,7 @@ internal sealed partial class WebViewMessageHandler
         {
             if (t.IsFaulted)
             {
-                OutputWindowLogger.Warn($"!!! interrupt failed: {t.Exception?.GetBaseException().Message}");
+                log.Warn($"!!! interrupt failed: {t.Exception?.GetBaseException().Message}");
             }
         });
     }
@@ -88,7 +88,7 @@ internal sealed partial class WebViewMessageHandler
         {
             if (t.IsFaulted)
             {
-                OutputWindowLogger.Warn($"!!! set_permission_mode failed: {t.Exception?.GetBaseException().Message}");
+                log.Warn($"!!! set_permission_mode failed: {t.Exception?.GetBaseException().Message}");
             }
             // Either way, tell the WebView what the mode REALLY is. The selector switched
             // optimistically before asking, and the client only advances PermissionMode once
@@ -108,7 +108,7 @@ internal sealed partial class WebViewMessageHandler
         {
             if (t.IsFaulted)
             {
-                OutputWindowLogger.Warn($"!!! set_model failed: {t.Exception?.GetBaseException().Message}");
+                log.Warn($"!!! set_model failed: {t.Exception?.GetBaseException().Message}");
             }
             // Same rollback as the permission mode: the picker switched before asking, so echo
             // back what the client actually holds. Null means "Default", which the WebView

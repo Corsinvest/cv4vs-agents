@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -70,6 +70,9 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
             : $"{baseCmd} --resume {_activeSessionId}";
     }
 
+    // Resolved per line, not captured: Entry (and its PaneId) is injected after construction.
+    // Assigned in the constructor because a field initializer can't reach an instance member.
+    private readonly OutputWindowLogger _log;
     private TerminalControl _term;
     private TerminalProcess _process;
     private bool _started;
@@ -86,12 +89,13 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
 
     public CliPaneControl()
     {
-        OutputWindowLogger.Perf("CliPaneControl: ctor begin");
+        _log = OutputWindowLogger.For("cli", () => Entry?.PaneId ?? 0);
+        OutputWindowLogger.Global.Perf("CliPaneControl: ctor begin");
         try
         {
             // Probe Microsoft.Terminal.Wpf loadability first: otherwise the
             // next `new TerminalControl()` throws a generic TypeInitializationException.
-            OutputWindowLogger.Perf(() => $"CliPaneControl: TerminalControl assembly = {typeof(TerminalControl).Assembly.Location ?? "<dynamic>"}");
+            OutputWindowLogger.Global.Perf(() => $"CliPaneControl: TerminalControl assembly = {typeof(TerminalControl).Assembly.Location ?? "<dynamic>"}");
             _term = new TerminalControl
             {
                 Focusable = true,
@@ -99,11 +103,11 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
                 AutoResize = true,
             };
             Content = _term;
-            OutputWindowLogger.Perf("CliPaneControl: ctor done");
+            OutputWindowLogger.Global.Perf("CliPaneControl: ctor done");
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("CliPaneControl.ctor", ex);
+            _log.LogException("CliPaneControl.ctor", ex);
             throw;
         }
 
@@ -155,7 +159,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
                 }
                 catch (Exception ex)
                 {
-                    OutputWindowLogger.LogException("CliPane.Start", ex);
+                    _log.LogException("CliPane.Start", ex);
                 }
             }));
         }
@@ -200,14 +204,14 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         // The session now exists on disk. A later respawn (e.g. solution-change) must --resume it,
         // NOT re-pass --session-id (which the CLI rejects as "already in use").
         _sessionIsNew = false;
-        OutputWindowLogger.Info($"CliPane: starting {cmd ?? "<null>"} in {Entry.WorkingDirectory}");
+        _log.Info($"CliPane: starting {cmd ?? "<null>"} in {Entry.WorkingDirectory}");
 
         // claude.exe must be installed via the official npm package (see
         // ClaudeCliLauncher for why no cmd-shim/PATH fallback). When missing,
         // swap in the inline "not installed" panel instead of a modal dialog.
         if (cmd == null)
         {
-            OutputWindowLogger.Warn("[cli] claude.exe not found — showing 'not installed' panel");
+            _log.Warn("[cli] claude.exe not found — showing 'not installed' panel");
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             ShowMissingPanel();
             return;
@@ -242,7 +246,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("CliPane.StartOrRestart", ex);
+            _log.LogException("CliPane.StartOrRestart", ex);
             _process?.Dispose();
             _process = null;
         }
@@ -272,7 +276,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("CliPane.OutputToControl", ex);
+            _log.LogException("CliPane.OutputToControl", ex);
         }
     }
 
@@ -303,7 +307,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         _ = Dispatcher.BeginInvoke(new Action(() =>
         {
             if (_disposed) { return; }
-            OutputWindowLogger.Info("[cli] claude.exe exited — auto-closing pane");
+            _log.Info("[cli] claude.exe exited — auto-closing pane");
             Pane?.ClosePane();
         }));
     }
@@ -323,7 +327,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("CliPane.ApplyTheme", ex);
+            _log.LogException("CliPane.ApplyTheme", ex);
         }
     }
 
@@ -353,7 +357,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         _activeSessionId = sessionId;
         _sessionIsNew = false;   // picker/restore ids exist on disk (or null → the start block re-mints a fresh one)
         Entry.ActiveSessionId = sessionId;
-        OutputWindowLogger.Info($"CliPane: session → {sessionId ?? "<new>"}");
+        _log.Info($"CliPane: session → {sessionId ?? "<new>"}");
         if (_started) { _ = StartOrRestartAsync(); }
     }
 

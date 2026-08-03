@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -94,7 +94,7 @@ public partial class UsageControl : UserControl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("UsageControl.Fetch", ex);
+            OutputWindowLogger.Global.LogException("UsageControl.Fetch", ex);
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             if (!cts.IsCancellationRequested) { ShowMessage("Usage unavailable for this profile."); }
         }
@@ -175,7 +175,7 @@ public partial class UsageControl : UserControl
     private void OnLinkNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
     {
         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
-        catch (Exception ex) { OutputWindowLogger.LogException("UsageControl.LinkNavigate", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("UsageControl.LinkNavigate", ex); }
         e.Handled = true;
     }
 

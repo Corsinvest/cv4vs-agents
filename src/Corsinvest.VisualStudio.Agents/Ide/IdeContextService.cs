@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -90,11 +90,11 @@ internal sealed partial class IdeContextService : IDisposable
                     ?.GetService<IVsEditorAdaptersFactoryService>();
             if (_editorAdapters == null)
             {
-                OutputWindowLogger.Warn("[ide-context] editor adapters unavailable — selection tracking will not fire");
+                OutputWindowLogger.Global.Warn("[ide-context] editor adapters unavailable — selection tracking will not fire");
             }
             else
             {
-                OutputWindowLogger.Info("[ide-context] editor-events subscribed");
+                OutputWindowLogger.Global.Info("[ide-context] editor-events subscribed");
             }
             _debounce = new Timer(_ => OnDebounceElapsed(), null, Timeout.Infinite, Timeout.Infinite);
 
@@ -105,7 +105,7 @@ internal sealed partial class IdeContextService : IDisposable
             _subscribed = true;
             TrackActiveView();
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Ide.SubscribeToEditorEvents", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.SubscribeToEditorEvents", ex); }
     }
 
     /// <summary>(Re)attach the SelectionChanged listener to the active text
@@ -152,7 +152,7 @@ internal sealed partial class IdeContextService : IDisposable
             _trackedView.Closed += OnViewClosed;
             CaptureAndSchedule();
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Ide.TrackActiveView", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.TrackActiveView", ex); }
     }
 
     private void UntrackView()
@@ -213,7 +213,7 @@ internal sealed partial class IdeContextService : IDisposable
             // synthetic path like "\temp\readonly\Grep output" / "Temp.txt").
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             {
-                OutputWindowLogger.Trace(() => $"[ide-context] drop: path missing/synthetic='{filePath}'");
+                OutputWindowLogger.Global.Trace(() => $"[ide-context] drop: path missing/synthetic='{filePath}'");
                 ScheduleEmit(null);
                 return;
             }
@@ -238,7 +238,7 @@ internal sealed partial class IdeContextService : IDisposable
             };
             ScheduleEmit(ctx);
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Ide.CaptureAndSchedule", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.CaptureAndSchedule", ex); }
     }
 
     private void ScheduleEmit(EditorContext ctx)
@@ -304,7 +304,7 @@ internal sealed partial class IdeContextService : IDisposable
         if (ctx.HasSelection) { RememberSelection(ctx.ToSelection()); }
 
         try { ContextChanged?.Invoke(ctx); }
-        catch (Exception ex) { OutputWindowLogger.LogException("Ide.ContextChanged", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.ContextChanged", ex); }
     }
 
     /// <summary>Synchronous snapshot of the editor for the live badge
@@ -353,7 +353,7 @@ internal sealed partial class IdeContextService : IDisposable
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Ide.GetCurrentContext", ex);
+            OutputWindowLogger.Global.LogException("Ide.GetCurrentContext", ex);
             return null;
         }
     }
@@ -382,7 +382,7 @@ internal sealed partial class IdeContextService : IDisposable
                     }
                 }
             }
-            catch (Exception ex) { OutputWindowLogger.LogException("Ide.SaveIfDirty", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.SaveIfDirty", ex); }
         }).FileAndForget("cv4vs/Ide.SaveIfDirty");
     }
 
@@ -411,7 +411,7 @@ internal sealed partial class IdeContextService : IDisposable
                 }
             }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Ide.SaveDocumentAsync", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.SaveDocumentAsync", ex); }
         return false;
     }
 
@@ -430,7 +430,7 @@ internal sealed partial class IdeContextService : IDisposable
                 if (PathEquals(FrameMoniker(frame), target)) { return FrameDirty(frame); }
             }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Ide.IsDocumentDirtyAsync", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.IsDocumentDirtyAsync", ex); }
         return null;
     }
 

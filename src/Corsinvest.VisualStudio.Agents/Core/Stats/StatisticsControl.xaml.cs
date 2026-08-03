@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -73,7 +73,7 @@ public partial class StatisticsControl : UserControl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("StatisticsControl.InitialSelection", ex);
+            OutputWindowLogger.Global.LogException("StatisticsControl.InitialSelection", ex);
             return new StatsSelection { Scope = StatsScope.All };
         }
     }
@@ -211,7 +211,7 @@ public partial class StatisticsControl : UserControl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("StatisticsControl.Reload", ex);
+            OutputWindowLogger.Global.LogException("StatisticsControl.Reload", ex);
         }
     }
 

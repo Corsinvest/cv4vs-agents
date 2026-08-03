@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -73,7 +73,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.GetStateAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.GetStateAsync", ex);
             return new DebugState { Mode = "unknown" };
         }
     }
@@ -97,7 +97,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.StartAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.StartAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to start debugging." };
         }
     }
@@ -119,7 +119,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.StopAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.StopAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to stop debugging." };
         }
     }
@@ -162,7 +162,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.SetBreakpointAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.SetBreakpointAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to set breakpoint." };
         }
     }
@@ -200,7 +200,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.SetFunctionBreakpointAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.SetFunctionBreakpointAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to set function breakpoint." };
         }
     }
@@ -237,7 +237,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.RemoveBreakpointAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.RemoveBreakpointAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to remove breakpoint." };
         }
     }
@@ -260,7 +260,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.ClearBreakpointsAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.ClearBreakpointsAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to clear breakpoints." };
         }
     }
@@ -298,7 +298,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.ListBreakpointsAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.ListBreakpointsAsync", ex);
             return new BreakpointsResult { Ok = false, Reason = "Failed to list breakpoints." };
         }
     }
@@ -321,7 +321,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.BreakAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.BreakAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to break." };
         }
     }
@@ -355,7 +355,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.ListProcessesAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.ListProcessesAsync", ex);
             return new ProcessesResult { Ok = false, Reason = "Failed to list processes." };
         }
     }
@@ -405,7 +405,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.AttachAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.AttachAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to attach (admin rights may be required)." };
         }
     }
@@ -432,7 +432,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.RestartAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.RestartAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to restart debugging." };
         }
     }
@@ -456,7 +456,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.StartWithoutDebuggingAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.StartWithoutDebuggingAsync", ex);
             return (false, "Failed to start without debugging.");
         }
     }
@@ -490,7 +490,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.ApplyHotReloadAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.ApplyHotReloadAsync", ex);
             return new DebugResult { Ok = false, Reason = "Hot Reload failed or not available (no changes, or a rude edit needing restart)." };
         }
     }
@@ -514,7 +514,7 @@ internal sealed partial class IdeDebugService
             var groups = dbg.GetType().GetProperty("ExceptionGroups")?.GetValue(dbg);
             if (groups == null)
             {
-                OutputWindowLogger.Debug(() => "[debug] Debugger3.ExceptionGroups unavailable — exception-break config skipped");
+                OutputWindowLogger.Global.Debug(() => "[debug] Debugger3.ExceptionGroups unavailable — exception-break config skipped");
                 return new DebugResult { Ok = false, Reason = "Exception settings not available (no solution loaded?)." };
             }
 
@@ -537,7 +537,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.SetExceptionBreakAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.SetExceptionBreakAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to set exception break." };
         }
     }

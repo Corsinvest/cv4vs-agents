@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -42,7 +42,7 @@ internal static class ProfileStore
         }
         catch (IOException)
         {
-            OutputWindowLogger.Warn("[profiles] failed to read profiles.json (IO) — profiles unavailable this session");
+            OutputWindowLogger.Global.Warn("[profiles] failed to read profiles.json (IO) — profiles unavailable this session");
             return [];
         }
     }
@@ -66,7 +66,7 @@ internal static class ProfileStore
         }
         catch (JsonException)
         {
-            OutputWindowLogger.Warn("[profiles] profiles.json is corrupt — ignoring, profiles will appear empty");
+            OutputWindowLogger.Global.Warn("[profiles] profiles.json is corrupt — ignoring, profiles will appear empty");
             return [];
         }
     }

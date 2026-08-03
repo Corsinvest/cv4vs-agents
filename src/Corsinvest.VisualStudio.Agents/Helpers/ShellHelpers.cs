@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -23,7 +23,7 @@ internal static class ShellHelpers
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("ShellHelpers.OpenExternal", ex);
+            OutputWindowLogger.Global.LogException("ShellHelpers.OpenExternal", ex);
         }
     }
 }

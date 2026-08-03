@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -99,7 +99,7 @@ internal sealed partial class McpServerHost
             _dispatcher = new JsonRpcDispatcher(BuildToolRegistry());
 
             SyncLockFolders(); // publish a lock into every profile's config-dir
-            OutputWindowLogger.Info($"Mcp: server started on 127.0.0.1:{_port}");
+            OutputWindowLogger.Global.Info($"Mcp: server started on 127.0.0.1:{_port}");
 
             // Subscribe to editor changes (idempotent; the WebView chat path may also call it).
             Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.Run(async () =>
@@ -116,7 +116,7 @@ internal sealed partial class McpServerHost
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Mcp.Start", ex);
+            OutputWindowLogger.Global.LogException("Mcp.Start", ex);
             // Best-effort cleanup so we don't leave a half-open listener.
             try { _listener?.Stop(); } catch { }
             _listener = null;
@@ -151,11 +151,11 @@ internal sealed partial class McpServerHost
             _listener?.Stop();
             _ = IdeDiffViewer.Instance.CancelAllPendingAsync();
             DeleteAllLockFiles();
-            OutputWindowLogger.Info("Mcp: server stopped");
+            OutputWindowLogger.Global.Info("Mcp: server stopped");
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Mcp.Stop", ex);
+            OutputWindowLogger.Global.LogException("Mcp.Stop", ex);
         }
         finally
         {
@@ -183,7 +183,7 @@ internal sealed partial class McpServerHost
                 foreach (var folder in folders) { WriteLockFile(folder); }
             });
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Mcp.RewriteLockFile", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Mcp.RewriteLockFile", ex); }
     }
 
     //  Tool registry
@@ -255,7 +255,7 @@ internal sealed partial class McpServerHost
             catch (ObjectDisposedException) { break; }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException("Mcp.Accept", ex);
+                OutputWindowLogger.Global.LogException("Mcp.Accept", ex);
                 continue;
             }
 
@@ -271,14 +271,14 @@ internal sealed partial class McpServerHost
                    ?? ctx.Request.Headers["Authorization"];
         if (string.IsNullOrEmpty(auth) || !auth.EndsWith(_authToken, StringComparison.Ordinal))
         {
-            OutputWindowLogger.Warn("[mcp] rejected client: missing/invalid auth token (401)");
+            OutputWindowLogger.Global.Warn("[mcp] rejected client: missing/invalid auth token (401)");
             ctx.Response.StatusCode = 401;
             ctx.Response.Close();
             return;
         }
         if (!ctx.Request.IsWebSocketRequest)
         {
-            OutputWindowLogger.Debug(() => "[mcp] non-websocket request dropped (400)");
+            OutputWindowLogger.Global.Debug(() => "[mcp] non-websocket request dropped (400)");
             ctx.Response.StatusCode = 400;
             ctx.Response.Close();
             return;
@@ -290,7 +290,7 @@ internal sealed partial class McpServerHost
         try { wsCtx = await ctx.AcceptWebSocketAsync(subProtocol: "mcp"); }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Mcp.AcceptWebSocket", ex);
+            OutputWindowLogger.Global.LogException("Mcp.AcceptWebSocket", ex);
             return;
         }
 
@@ -323,7 +323,7 @@ internal sealed partial class McpServerHost
                 while (!res.EndOfMessage);
 
                 var raw = sb.ToString();
-                OutputWindowLogger.Trace(() => $"Mcp: <- {StringHelpers.Truncate(raw, 200)}");
+                OutputWindowLogger.Global.Trace(() => $"Mcp: <- {StringHelpers.Truncate(raw, 200)}");
                 var reply = await _dispatcher.HandleMessageAsync(raw);
                 // Seed initial context on tools/list (not initialized): the CLI's useIdeSelection
                 // hook only subscribes once the server reaches 'connected', around tools/list time.
@@ -334,7 +334,7 @@ internal sealed partial class McpServerHost
                 }
                 if (reply != null && ws.State == WebSocketState.Open)
                 {
-                    OutputWindowLogger.Trace(() => $"Mcp: -> {StringHelpers.Truncate(reply, 200)}");
+                    OutputWindowLogger.Global.Trace(() => $"Mcp: -> {StringHelpers.Truncate(reply, 200)}");
                     var bytes = Encoding.UTF8.GetBytes(reply);
                     await ws.SendAsync(new ArraySegment<byte>(bytes),
                         WebSocketMessageType.Text, endOfMessage: true, ct);
@@ -344,13 +344,13 @@ internal sealed partial class McpServerHost
         catch (OperationCanceledException) { /* expected on shutdown */ }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("Mcp.ClientLoop", ex);
+            OutputWindowLogger.Global.LogException("Mcp.ClientLoop", ex);
             // WebSocket exceptions wrap the real cause in InnerException — unwrap for diagnostics.
             var inner = ex.InnerException;
             int depth = 0;
             while (inner != null && depth++ < 5)
             {
-                OutputWindowLogger.LogException($"Mcp.ClientLoop.inner[{depth}]", inner);
+                OutputWindowLogger.Global.LogException($"Mcp.ClientLoop.inner[{depth}]", inner);
                 inner = inner.InnerException;
             }
         }
@@ -436,12 +436,12 @@ internal sealed partial class McpServerHost
                     isEmpty: !ctx.HasSelection);
             }
             if (ws.State != WebSocketState.Open) { return; }
-            OutputWindowLogger.Trace(() => $"Mcp: -> (initial) {StringHelpers.Truncate(json, 200)}");
+            OutputWindowLogger.Global.Trace(() => $"Mcp: -> (initial) {StringHelpers.Truncate(json, 200)}");
             var bytes = Encoding.UTF8.GetBytes(json);
             await ws.SendAsync(new ArraySegment<byte>(bytes),
                 WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None);
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Mcp.SendInitialContext", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Mcp.SendInitialContext", ex); }
     }
 
     private static string BuildSelectionNotification(
@@ -476,7 +476,7 @@ internal sealed partial class McpServerHost
             if (_clients.Count == 0) { return; }
             snapshot = [.. _clients];
         }
-        OutputWindowLogger.Trace(() => $"Mcp: broadcast to {snapshot.Length} client(s) -> {StringHelpers.Truncate(json, 200)}");
+        OutputWindowLogger.Global.Trace(() => $"Mcp: broadcast to {snapshot.Length} client(s) -> {StringHelpers.Truncate(json, 200)}");
         var bytes = Encoding.UTF8.GetBytes(json);
         foreach (var conn in snapshot)
         {
@@ -489,7 +489,7 @@ internal sealed partial class McpServerHost
                 {
                     if (t.Exception != null)
                     {
-                        OutputWindowLogger.LogException("Mcp.Broadcast", t.Exception);
+                        OutputWindowLogger.Global.LogException("Mcp.Broadcast", t.Exception);
                     }
                 }, TaskScheduler.Default);
         }

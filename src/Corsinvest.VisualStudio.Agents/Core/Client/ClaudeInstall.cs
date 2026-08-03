@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -42,12 +42,12 @@ public static class ClaudeInstall
         {
             if (!configured.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
-                OutputWindowLogger.Warn($"[cli] configured Claude executable must be an .exe (a .cmd/.bat/.ps1 shim can't be launched): {configured} — falling back to auto-detection");
+                OutputWindowLogger.Global.Warn($"[cli] configured Claude executable must be an .exe (a .cmd/.bat/.ps1 shim can't be launched): {configured} — falling back to auto-detection");
             }
             else if (File.Exists(configured)) { return configured; }
             else
             {
-                OutputWindowLogger.Warn($"[cli] configured Claude executable not found: {configured} — falling back to auto-detection");
+                OutputWindowLogger.Global.Warn($"[cli] configured Claude executable not found: {configured} — falling back to auto-detection");
             }
         }
 

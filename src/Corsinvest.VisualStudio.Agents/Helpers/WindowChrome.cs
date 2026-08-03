@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -49,7 +49,7 @@ internal static class WindowChrome
             var border = ThemedBorderColor();
             DwmSetWindowAttribute(handle, DwmwaBorderColor, ref border, sizeof(int));
         }
-        catch (Exception ex) { OutputWindowLogger.LogException($"{nameof(WindowChrome)}.{nameof(ApplyTheme)}", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException($"{nameof(WindowChrome)}.{nameof(ApplyTheme)}", ex); }
     }
 
     /// <summary>The border colour as a COLORREF (0x00BBGGRR — the reverse of RGB), taken from the

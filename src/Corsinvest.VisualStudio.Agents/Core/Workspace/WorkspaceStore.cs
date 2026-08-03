@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -46,7 +46,7 @@ internal static class WorkspaceStore
             if (File.Exists(path)) { File.Delete(path); }
             File.Move(tmp, path);
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("WorkspaceStore.Save", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("WorkspaceStore.Save", ex); }
     }
 
     /// <summary>Load the solution's workspace, or null if absent/unreadable.</summary>
@@ -59,6 +59,6 @@ internal static class WorkspaceStore
             if (!File.Exists(path)) { return null; }
             return JsonConvert.DeserializeObject<WorkspaceState>(File.ReadAllText(path));
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("WorkspaceStore.Load", ex); return null; }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("WorkspaceStore.Load", ex); return null; }
     }
 }

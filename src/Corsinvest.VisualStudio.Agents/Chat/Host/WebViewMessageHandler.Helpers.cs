@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -41,6 +41,8 @@ internal sealed partial class WebViewMessageHandler
         };
         return !string.IsNullOrEmpty(field) ? field : input.ToIndentedString();
     }
+    // The static helpers below log through OutputWindowLogger, not the pane logger: a primary
+    // constructor parameter isn't in scope in a static member (CS9105).
     private static string FindToolInput(string workingDirectory, string sessionId, string toolUseId, ClaudePaths paths, string toolName = "", string agentId = null)
     {
         if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(toolUseId)) { return null; }
@@ -73,7 +75,7 @@ internal sealed partial class WebViewMessageHandler
                 catch { /* silent: skip malformed JSONL line */ }
             }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("FindToolInput/Result", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("FindToolInput/Result", ex); }
         return null;
     }
     private static string FindToolResult(string workingDirectory, string sessionId, string toolUseId, ClaudePaths paths, string agentId = null)
@@ -120,7 +122,7 @@ internal sealed partial class WebViewMessageHandler
                 catch { /* silent: skip malformed JSONL line */ }
             }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("FindToolInput/Result", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("FindToolInput/Result", ex); }
         return null;
     }
     private static bool TryOpenInVs(string filePath)
@@ -203,12 +205,12 @@ internal sealed partial class WebViewMessageHandler
         catch (ArgumentException ex)
         {
             // What VS throws for a project/solution file; the caller's Warn already names the file.
-            OutputWindowLogger.Debug(() => $"[chat] OpenFile refused: {ex.Message}");
+            OutputWindowLogger.Global.Debug(() => $"[chat] OpenFile refused: {ex.Message}");
             return null;
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("OpenFileInEditor", ex);
+            OutputWindowLogger.Global.LogException("OpenFileInEditor", ex);
             return null;
         }
     }
@@ -220,7 +222,7 @@ internal sealed partial class WebViewMessageHandler
     /// same dead link twice doesn't stack.</summary>
     private void NoticeOpenFailed(string path, string reason)
     {
-        OutputWindowLogger.Warn($"[chat] can't open '{path}' — {reason}");
+        log.Warn($"[chat] can't open '{path}' — {reason}");
         bridge.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
         {
             Key = "openfile:" + path,
@@ -284,7 +286,7 @@ internal sealed partial class WebViewMessageHandler
             var found = FindFileByNameUnderRoot(wd, name);
             if (found != null) { return found; }
         }
-        OutputWindowLogger.Debug(() => $"[OpenFile] Path not found. raw='{filePath}' normalized='{normalized}' combined='{combined}' workingDir='{client.WorkingDirectory}'");
+        log.Debug(() => $"[OpenFile] Path not found. raw='{filePath}' normalized='{normalized}' combined='{combined}' workingDir='{client.WorkingDirectory}'");
         return null;
     }
 
