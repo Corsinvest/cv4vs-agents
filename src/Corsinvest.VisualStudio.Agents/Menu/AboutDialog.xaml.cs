@@ -4,6 +4,7 @@
  */
 
 using Microsoft.VisualStudio.PlatformUI;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.Windows;
 using System.Windows.Documents;
@@ -23,7 +24,11 @@ public partial class AboutDialog : DialogWindow
         LnkRepo.NavigateUri = new Uri("https://github.com/Corsinvest/cv4vs-agents");
         LnkCorsinvest.NavigateUri = new Uri("https://www.corsinvest.it");
         // The content follows the theme through WPF; the title bar and border need telling separately.
-        SourceInitialized += (s, e) => Helpers.WindowChrome.ApplyTheme(this);
+        SourceInitialized += (s, e) =>
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            Helpers.WindowChrome.ApplyTheme(this);
+        };
     }
 
     private void OnLink_Click(object sender, RoutedEventArgs e)

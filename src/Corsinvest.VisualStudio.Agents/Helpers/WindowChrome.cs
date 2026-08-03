@@ -28,6 +28,10 @@ internal static class WindowChrome
     /// older build simply keeps its default chrome instead of failing.</para></summary>
     public static void ApplyTheme(Window window)
     {
+        // Reads themed colours off the shell, so it belongs on the UI thread — as does the
+        // SourceInitialized handler every caller hooks this from.
+        ThreadHelper.ThrowIfNotOnUIThread();
+
         var handle = new WindowInteropHelper(window).Handle;
         if (handle == IntPtr.Zero) { return; }
 
