@@ -480,10 +480,10 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
         if (this._modelListOpen) {
             this._modelListOpen = false;
-            this._ta?.focus();
+            this._ta?.focus({ preventScroll: true });
         } else if (this._permissionListOpen) {
             this._permissionListOpen = false;
-            this._ta?.focus();
+            this._ta?.focus({ preventScroll: true });
         } else if (this._cmdOpen) {
             this._closeCommandMenu();
         } else if (this._atOpen) {
@@ -551,9 +551,13 @@ export class CvPrompt extends LitElement implements CommandHost {
         return this._ta?.value ?? '';
     }
 
-    /** Move keyboard focus to the prompt textarea (host ui_focus_input). */
+    /** Move keyboard focus to the prompt textarea (host ui_focus_input).
+     *  `preventScroll` because the host calls this while VS is still relaying the pane out — after
+     *  an InfoBar closes, say. The browser would measure a textarea that is momentarily outside the
+     *  viewport and scroll to it, and a frame later the layout settles: the scroll was pointless but
+     *  visible as a jump. The composer is pinned to the bottom and always in view anyway. */
     focusInput(): void {
-        this._ta?.focus();
+        this._ta?.focus({ preventScroll: true });
     }
 
     /** Pre-fill the composer with text and focus it, caret at the end (a forked
@@ -566,7 +570,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         ta.value = text;
         this._hasText = text.trim().length > 0;
         this._autoResize();
-        ta.focus();
+        ta.focus({ preventScroll: true });
         ta.setSelectionRange(text.length, text.length);
     }
 
@@ -720,7 +724,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             if (e.key === 'Escape') {
                 e.preventDefault();
                 this._modelListOpen = false;
-                this._ta?.focus();
+                this._ta?.focus({ preventScroll: true });
                 return;
             }
         }
@@ -745,7 +749,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             if (e.key === 'Escape') {
                 e.preventDefault();
                 this._permissionListOpen = false;
-                this._ta?.focus();
+                this._ta?.focus({ preventScroll: true });
                 return;
             }
         }
@@ -888,7 +892,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._atOpen = false;
             this._atItems = [];
         }
-        ta.focus();
+        ta.focus({ preventScroll: true });
     };
 
     private _micPrefix = '';
@@ -968,7 +972,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._resetHistoryNav();
         this._attachments = [];
         this.clear();
-        this._ta.focus();
+        this._ta.focus({ preventScroll: true });
     }
 
     private _resetHistoryNav(): void {
@@ -1152,7 +1156,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         if (!ta) {
             return;
         }
-        ta.focus();
+        ta.focus({ preventScroll: true });
         const start = ta.selectionStart ?? ta.value.length;
         const end = ta.selectionEnd ?? ta.value.length;
         const before = ta.value.slice(0, start);
@@ -1376,7 +1380,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             }),
         );
         this._modelListOpen = false;
-        this._ta?.focus();
+        this._ta?.focus({ preventScroll: true });
     };
 
     /** Toolbar trigger asked for the model picker. Toggles (unlike openModelPicker(), which the
@@ -1389,7 +1393,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         // Same reason as the permission trigger: navigation is driven from the textarea's
         // keydown, so give focus back after the click for the list to be keyboard-navigable.
         if (this._modelListOpen) {
-            this._ta?.focus();
+            this._ta?.focus({ preventScroll: true });
         }
     };
 
@@ -1403,7 +1407,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         // menus are driven from), but clicking the toolbar trigger leaves focus on the
         // button — put it back so the list is keyboard-navigable straight away.
         if (this._permissionListOpen) {
-            this._ta?.focus();
+            this._ta?.focus({ preventScroll: true });
         }
     };
 
@@ -1414,7 +1418,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             { mode: e.detail.value },
         );
         this._permissionListOpen = false;
-        this._ta?.focus();
+        this._ta?.focus({ preventScroll: true });
     };
 
     /** Messages typed while a turn was running, waiting for it to end. The bubble for each is

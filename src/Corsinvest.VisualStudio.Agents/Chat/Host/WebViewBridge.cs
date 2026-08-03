@@ -247,12 +247,12 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         catch (Exception ex) { OutputWindowLogger.LogException("WebViewBridge.Dispose", ex); }
     }
 
-    /// <summary>Give the WebView2 control the native (WPF) focus, so the keyboard
-    /// actually reaches the page. Without this a JS `element.focus()` only shows a
-    /// blinking caret while keystrokes still go to VS — the WebView host must own
-    /// the focus first. Call before posting ui_focus_input.</summary>
-    /// <summary>Guarded: a session switch can land after the pane closed, and Focus() on a
-    /// disposed control throws where every other member here quietly no-ops.</summary>
+    /// <summary>Give the WebView2 control the native (WPF) focus, so the keyboard actually reaches
+    /// the page. Without this a JS `element.focus()` only shows a blinking caret while keystrokes
+    /// still go to VS — the WebView host must own the focus first. Call before posting
+    /// ui_focus_input.
+    /// <para>Guarded: a session switch can land after the pane closed, and Focus() on a disposed
+    /// control throws where every other member here quietly no-ops.</para></summary>
     public void FocusWebView()
     {
         if (_disposed) { return; }
