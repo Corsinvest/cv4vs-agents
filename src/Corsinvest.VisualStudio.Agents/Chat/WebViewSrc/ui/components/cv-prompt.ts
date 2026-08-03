@@ -874,16 +874,10 @@ export class CvPrompt extends LitElement implements CommandHost {
         ta.setSelectionRange(newCaret, newCaret);
         this._hasText = ta.value.trim().length > 0;
         this._autoResize();
-        if (e.detail.isDir) {
-            // Stay open: refetch with the new "<folder>/" query.
-            const q = this._getAtQuery();
-            if (q !== null) {
-                this._fetchSuggestions(q);
-            }
-        } else {
-            this._atOpen = false;
-            this._atItems = [];
-        }
+        // Folders used to keep the menu open so it could be re-queried one level down; the
+        // recursive search made that walk pointless, so every pick now ends the token.
+        this._atOpen = false;
+        this._atItems = [];
         ta.focus({ preventScroll: true });
     };
 

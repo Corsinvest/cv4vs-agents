@@ -33,86 +33,105 @@ internal static class FileSuggestions
             var patterns = ParsePatterns(opts.IgnoredPatterns);
             var ignore = opts.UseGitIgnore ? GitIgnoreCache.Get(root) : null;
 
-            var q = query.Replace('\\', '/');
-            var qLower = q.ToLowerInvariant();
+            // Backslashes accepted as separators so a path pasted from Explorer still matches.
+            var qLower = query.Replace('\\', '/').ToLowerInvariant();
 
-            var searchDir = root;
-            var namePart = qLower;
-            var lastSlash = q.LastIndexOf('/');
-            if (lastSlash >= 0)
+            // One walk of the whole tree, filtered on the relative path — the way the VS Code
+            // extension asks `workspace.findFiles` for `**/*`. A depth cap or a minimum query
+            // length would only mean a file that exists cannot be found, which is the one thing
+            // this menu is for. Pruning ignored directories keeps the cost off node_modules.
+            // Keyed by relative path so directories and files can be interleaved in tree order at
+            // the end: a folder immediately followed by what matched inside it. Listing every
+            // directory first reads fine with five of them and not at all once they nest, which is
+            // what the recursive walk now produces.
+            var hits = new SortedList<string, FileSuggestionItem>(StringComparer.OrdinalIgnoreCase);
+            var visited = 0;
+
+            foreach (var file in EnumerateFiles(root, root, patterns, ignore))
             {
-                var sub = q.Substring(0, lastSlash);
-                searchDir = Path.Combine(root, sub.Replace('/', Path.DirectorySeparatorChar));
-                namePart = qLower.Substring(lastSlash + 1);
-            }
+                // This runs on every keystroke, so the walk is bounded by how much of the tree it
+                // touches, not by how deep it goes: depth is what hides files, sheer volume is what
+                // costs. Reached only by trees far past the point where a flat list is any use.
+                // One budget for every row, files and derived folders alike, and the walk stops when
+                // it is gone. Counting only files let folders keep coming after the cut, leaving a
+                // tail of directories whose contents had all been dropped — `tools/cli-probe/` and
+                // nothing under it. Alphabetical order means the cut lands wherever it lands; that
+                // is the same deal the VS Code extension takes with its own limit of 100.
+                if (hits.Count >= MaxRows || ++visited > MaxVisited) { break; }
 
-            if (!Directory.Exists(searchDir)) { return result; }
+                var rel = PathHelpers.Relative(root, file);
+                // Matched against the whole query, not just the part after the last slash: the
+                // relative path carries the directories with it, so `src/foo` can be typed as one
+                // filter instead of being split into a folder to walk into and a name to match.
+                if (!string.IsNullOrEmpty(qLower) && !rel.ToLowerInvariant().Contains(qLower)) { continue; }
 
-            var dirs = new List<FileSuggestionItem>();
-            var files = new List<FileSuggestionItem>();
-
-            foreach (var dir in Directory.GetDirectories(searchDir).OrderBy(a => a))
-            {
-                var name = Path.GetFileName(dir);
-                if (IsIgnored(name, dir, root, isDir: true, patterns, ignore)) { continue; }
-                if (!string.IsNullOrEmpty(namePart) && !name.ToLowerInvariant().Contains(namePart)) { continue; }
-                var parentRel = PathHelpers.Relative(root, Path.GetDirectoryName(dir) ?? root);
-                dirs.Add(new FileSuggestionItem
+                // Directories on the way to a match are suggestions too — derived rather than
+                // enumerated, so the two lists can never disagree and empty (or fully ignored)
+                // folders stay out: selecting those gives you nothing. Each still has to match
+                // the query on its own, or `foo` would offer every ancestor of every hit.
+                for (var slash = rel.IndexOf('/'); slash >= 0; slash = rel.IndexOf('/', slash + 1))
                 {
-                    Name = name + "/",
-                    Path = dir,
-                    Dir = parentRel,
-                    IsDir = true,
-                });
-                if (dirs.Count >= 10) { break; }
-            }
+                    var dirRel = rel.Substring(0, slash);
+                    // Sorted under the trailing slash, which is what interleaves the two kinds:
+                    // "docs/" sorts before "docs/chat/" and both before "docs/readme.md", because
+                    // '/' orders below every letter. The VS Code extension gets the same result by
+                    // sorting its combined list on the path with that slash appended.
+                    var dirKey = dirRel + "/";
+                    if (hits.ContainsKey(dirKey)) { continue; }
+                    if (!string.IsNullOrEmpty(qLower) && !dirRel.ToLowerInvariant().Contains(qLower)) { continue; }
+                    hits.Add(dirKey, new FileSuggestionItem
+                    {
+                        // Whole relative path on one line, no parent column beside it — nested
+                        // folders are the common case here, and a bare leaf leaves you guessing
+                        // which of the four `cv4vs-*` you are looking at. (The VS Code extension
+                        // renders directory rows the same way: one `path`, no second column.)
+                        Name = dirKey,
+                        Path = Path.Combine(root, dirRel.Replace('/', Path.DirectorySeparatorChar)),
+                        Dir = string.Empty,
+                        IsDir = true,
+                    });
+                }
 
-            // files: recursive only when searching with 3+ chars; flat (root + 1 subdir level) otherwise
-            var deepSearch = namePart.Length >= 3;
-            var allFiles = deepSearch
-                            ? GetFilesRecursive(root, root, 4, patterns, ignore)
-                            : GetFilesRecursive(searchDir, root, 1, patterns, ignore);
-
-            foreach (var file in allFiles.OrderBy(a => a))
-            {
-                var name = Path.GetFileName(file);
-                if (IsIgnored(name, file, root, isDir: false, patterns, ignore)) { continue; }
-                if (!string.IsNullOrEmpty(namePart) && !name.ToLowerInvariant().Contains(namePart)) { continue; }
-                var relDir = PathHelpers.Relative(root, Path.GetDirectoryName(file) ?? root);
-                files.Add(new FileSuggestionItem
+                hits.Add(rel, new FileSuggestionItem
                 {
-                    Name = name,
+                    Name = Path.GetFileName(file),
                     Path = file,
-                    Dir = relDir,
+                    Dir = PathHelpers.Relative(root, Path.GetDirectoryName(file) ?? root),
                     IsDir = false,
                 });
-                if (files.Count >= 30) { break; }
             }
 
-            result.AddRange(dirs);
-            result.AddRange(files);
+            result.AddRange(hits.Values);
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("FileSuggestions.Get", ex); }
         return result;
     }
 
-    private static IEnumerable<string> GetFilesRecursive(string dir, string root, int depth, List<IgnorePattern> patterns, GitIgnore ignore)
+    /// <summary>Rows shown, files and derived directories together. Higher than the 100 the VS Code
+    /// extension asks `workspace.findFiles` for, because the cut is not the same thing: the walk is
+    /// alphabetical, so a low cap does not sample the tree, it stops partway through and hides
+    /// everything from there to the end of the alphabet — `tools/` never showed up. Bounded all the
+    /// same: cv-popover-list renders every row it is given, with no virtualisation.</summary>
+    private const int MaxRows = 600;
+
+    /// <summary>Files the walk will look at before giving up, ignored ones excluded. Guards the
+    /// per-keystroke cost on a huge tree; it is not a depth limit.</summary>
+    private const int MaxVisited = 20000;
+
+    /// <summary>Files under <paramref name="dir"/>, at any depth, ignored ones left out.
+    /// Directories are pruned rather than filtered so their contents cost nothing.</summary>
+    private static IEnumerable<string> EnumerateFiles(string dir, string root, List<IgnorePattern> patterns, GitIgnore ignore)
     {
-        foreach (var file in Directory.GetFiles(dir))
+        foreach (var file in Directory.GetFiles(dir).OrderBy(a => a, StringComparer.OrdinalIgnoreCase))
         {
+            if (IsIgnored(Path.GetFileName(file), file, root, isDir: false, patterns, ignore)) { continue; }
             yield return file;
         }
 
-        if (depth <= 0)
+        foreach (var sub in Directory.GetDirectories(dir).OrderBy(a => a, StringComparer.OrdinalIgnoreCase))
         {
-            yield break;
-        }
-
-        foreach (var sub in Directory.GetDirectories(dir))
-        {
-            var name = Path.GetFileName(sub);
-            if (IsIgnored(name, sub, root, isDir: true, patterns, ignore)) { continue; }
-            foreach (var file in GetFilesRecursive(sub, root, depth - 1, patterns, ignore))
+            if (IsIgnored(Path.GetFileName(sub), sub, root, isDir: true, patterns, ignore)) { continue; }
+            foreach (var file in EnumerateFiles(sub, root, patterns, ignore))
             {
                 yield return file;
             }
@@ -224,9 +243,14 @@ internal static class GitIgnoreCache
     public static GitIgnore Get(string root)
     {
         var path = Path.Combine(root, ".gitignore");
-        if (!File.Exists(path)) { return null; }
+        var globalPath = GlobalExcludesFile.Value;
+        var hasLocal = File.Exists(path);
+        var hasGlobal = globalPath != null && File.Exists(globalPath);
+        if (!hasLocal && !hasGlobal) { return null; }
 
-        var mtime = File.GetLastWriteTimeUtc(path);
+        // Both files in the freshness key: editing either one has to invalidate the cache.
+        var mtime = (hasLocal ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue)
+                    + (hasGlobal ? File.GetLastWriteTimeUtc(globalPath).TimeOfDay : TimeSpan.Zero);
         lock (_lock)
         {
             if (_cache.TryGetValue(root, out var cached) && cached.Mtime == mtime)
@@ -236,7 +260,12 @@ internal static class GitIgnoreCache
 
             try
             {
-                var ignore = GitIgnore.Parse(File.ReadAllText(path));
+                // The workspace file plus git's global excludes, which is where a personal rule
+                // like `**/.claude/settings.local.json` lives: git honours both, so a file hidden
+                // from the repo has no business showing up in the picker either.
+                var text = hasLocal ? File.ReadAllText(path) : string.Empty;
+                if (hasGlobal) { text += "\n" + File.ReadAllText(globalPath); }
+                var ignore = GitIgnore.Parse(text);
                 _cache[root] = (mtime, ignore);
                 return ignore;
             }
@@ -247,6 +276,38 @@ internal static class GitIgnoreCache
             }
         }
     }
+
+    /// <summary>Git's global excludes file. Resolved once: `core.excludesFile` can point anywhere,
+    /// so it is asked of git rather than guessed, with git's own default as the fallback.</summary>
+    private static readonly Lazy<string> GlobalExcludesFile = new(() =>
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo("git", "config --global core.excludesFile")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using var p = System.Diagnostics.Process.Start(psi);
+            var configured = p.StandardOutput.ReadToEnd().Trim();
+            if (!p.WaitForExit(2000)) { return null; }
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (configured.Length > 0)
+            {
+                return configured.StartsWith("~/", StringComparison.Ordinal)
+                        ? Path.Combine(home, configured.Substring(2).Replace('/', Path.DirectorySeparatorChar))
+                        : configured;
+            }
+            return Path.Combine(home, ".config", "git", "ignore");
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("GitIgnoreCache.GlobalExcludesFile", ex);
+            return null;
+        }
+    });
 }
 
 /// <summary>
@@ -332,8 +393,19 @@ internal sealed class GitIgnore
     {
         var sb = new System.Text.StringBuilder();
         sb.Append('^');
-        foreach (var ch in glob)
+        for (var i = 0; i < glob.Length; i++)
         {
+            var ch = glob[i];
+            // `**` spans separators where `*` stops at one — `**/.claude/settings.local.json` has
+            // to reach a file at any depth. Written as an optional group so the pattern also
+            // matches at the root, where there is no directory before it to consume.
+            if (ch == '*' && i + 1 < glob.Length && glob[i + 1] == '*')
+            {
+                i++;
+                if (i + 1 < glob.Length && glob[i + 1] == '/') { i++; }
+                sb.Append("(?:.*/)?");
+                continue;
+            }
             switch (ch)
             {
                 case '*': sb.Append("[^/]*"); break;

@@ -37,8 +37,12 @@ export class CvAtMenu extends LitElement {
         this._list?.pickActive();
     }
 
-    /** Folder shown next to the file name: path relative to the working directory, minus filename. */
+    /** Folder shown next to the file name: path relative to the working directory, minus filename.
+     *  Nothing for a directory row — its own label is the full path already. */
     private _dirLabel(it: AtItemDto): string {
+        if (it.isDir) {
+            return '';
+        }
         if (it.dir) {
             return it.dir;
         }
@@ -51,10 +55,14 @@ export class CvAtMenu extends LitElement {
         const wd = appState.workingDirectory;
         const rel = relPath(item.path, wd);
         if (item.isDir) {
+            // Trailing space, like a file: picking a folder finishes the token. It used to be left
+            // open so the menu could be re-queried and walked into, which was the only way down
+            // when the search stopped at the first level — the recursive one finds a file wherever
+            // it sits, so the walk is gone and a folder is now a reference in its own right.
             const dirToken = rel && rel !== normPath(item.path) ? rel : fileName(item.path);
             this.dispatchEvent(
                 new CustomEvent<{ token: string; isDir: true }>('select-at', {
-                    detail: { token: `@${dirToken}/`, isDir: true },
+                    detail: { token: `@${dirToken}/ `, isDir: true },
                     bubbles: true,
                     composed: true,
                 }),
