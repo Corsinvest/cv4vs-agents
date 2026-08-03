@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Pane;
 
@@ -290,7 +291,16 @@ public partial class ChatPaneControl : PaneControlBase
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         WebView.HostKeyPressed += OnHostKeyPressed;
+        // Clicking into the chat is the user answering the attention notice, so take it down.
+        // Composition rendering is what makes this possible: the control lives in the WPF tree,
+        // so mouse events reach us. The HwndHost version had to be told from JS instead.
+        WebView.PreviewMouseDown += OnWebViewClicked;
     }
+
+    /// <summary>The user clicked into this pane: whatever InfoBar or toast was calling them here
+    /// has done its job.</summary>
+    private void OnWebViewClicked(object sender, MouseButtonEventArgs e)
+        => PaneAttentionService.Clear(Entry);
 
     /// <summary>A key <see cref="ChatWebView"/> claimed because composition rendering drops it:
     /// hand it to the page, which acts on whatever it has focused. Dropped silently before the
@@ -340,6 +350,7 @@ public partial class ChatPaneControl : PaneControlBase
         VSColorTheme.ThemeChanged -= OnVsThemeChanged;
         AgentsOptions.Applied -= OnOptionsApplied;
         WebView.HostKeyPressed -= OnHostKeyPressed;
+        WebView.PreviewMouseDown -= OnWebViewClicked;
         IdeContextService.Instance.ContextChanged -= OnEditorContextChanged;
         // EnsureClient hooked this on the IdeContextService singleton; without the unhook the
         // closed pane leaks (singleton keeps it alive) and its dead _client keeps logging

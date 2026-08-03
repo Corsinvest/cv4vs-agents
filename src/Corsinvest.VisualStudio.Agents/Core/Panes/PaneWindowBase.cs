@@ -89,19 +89,6 @@ public abstract class PaneWindowBase : ToolWindowPane
     /// <summary>Build the hosted control (ChatPaneControl / CliPaneControl).</summary>
     protected abstract PaneControlBase CreateControl();
 
-    /// <summary>Tell VS this pane is the active window, so the shell routes keys and typing here
-    /// rather than to the editor it still considers active.</summary>
-    internal void ActivateFrame()
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        if (Frame is IVsWindowFrame frame)
-        {
-            // Show() activates the frame without changing its dock state — VS updates its
-            // "active window" to this pane, so keyboard input now flows to the WebView.
-            frame.Show();
-        }
-    }
-
     /// <summary>True when this pane's frame is VS's active window frame (the user is looking at it).
     /// VS hands out distinct COM proxies for the same window, so ReferenceEquals is unreliable —
     /// compare the hosted DocView object instead.</summary>
