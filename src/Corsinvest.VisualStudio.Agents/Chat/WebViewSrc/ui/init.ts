@@ -13,6 +13,7 @@ import { normPath } from '../core/path';
 import { closeTopDialog } from '../core/dialog-focus';
 import { setExtraLinkableExtensions } from '../core/file-links';
 import type {
+    CliStateNotification,
     HostKeyNotification,
     InitPayloadNotification,
     ModelsNotification,
@@ -59,37 +60,15 @@ function applyVsOptions(o: VsOptionsDto): void {
 }
 
 function wireBridgeHandlers(): void {
+    // Pane config + VS options: everything the host has without asking the CLI. Arrives right
+    // after ui_ready, ahead of the first history, so paths are shortened from the very first row.
     bridge.onNotification<InitPayloadNotification>(Msg.toWebView.ui.init, (data) => {
         if (!data?.config) {
             return;
         }
-        const wasInitialized = state.initialized;
-        // Pane config
         state.workingDirectory = normPath(data.config.workingDirectory);
         state.inDev = data.config.inDev;
 
-        // CLI state — always applied (the CLI init is the reliable source on every respawn).
-        const c = data.cliState;
-        if (c) {
-            state.currentModel = c.model;
-            state.permissionMode = (c.permissionMode as PermissionMode) || 'default';
-            if (c.effortLevel) {
-                state.effortLevel = c.effortLevel;
-            }
-            state.ultracodeEnabled = !!c.ultracode;
-            state.thinkingEnabled = !!c.alwaysThinkingEnabled;
-            if (c.switchModelsOnFlag !== null && c.switchModelsOnFlag !== undefined) {
-                state.switchModelsOnFlag = c.switchModelsOnFlag;
-            }
-            // Absent → false: a missing policy means the mode is allowed.
-            state.bypassPermissionsDisabled = !!c.bypassPermissionsDisabled;
-            state.fastMode = (c.fastModeState ?? 'off') !== 'off';
-            // Custom spinner verbs from settings (replace/append the defaults). Migrated
-            // from vsOptions into cliState — applied here rather than in applyVsOptions.
-            setVerbsConfig(c.spinnerVerbsConfig ?? null);
-        }
-
-        // VS Options
         if (data.vsOptions) {
             applyVsOptions(data.vsOptions);
             // The welcome screen reads appVersion/appCopyright from state at render time, but
@@ -101,17 +80,32 @@ function wireBridgeHandlers(): void {
                     (HTMLElement & { requestUpdate?(): void }) | null
             )?.requestUpdate?.();
         }
-
-        const firstInit = !wasInitialized;
         state.initialized = true;
-        // Tell the host the app has mounted and painted its first frame, so it can
-        // hide the native "Initializing…" placeholder exactly when the chat is
-        // visible underneath — no white gap, no double placeholder.
-        if (firstInit) {
-            requestAnimationFrame(() =>
-                requestAnimationFrame(() => bridge.sendNotification(Msg.fromWebView.ui.ready, {})),
-            );
+    });
+
+    // The CLI's startup state, seconds behind the rest: claude.exe has to answer initialize +
+    // get_settings first. Re-sent on every respawn, which is the reliable source for these.
+    bridge.onNotification<CliStateNotification>(Msg.toWebView.cli.state, (data) => {
+        const c = data?.cliState;
+        if (!c) {
+            return;
         }
+        state.currentModel = c.model;
+        state.permissionMode = (c.permissionMode as PermissionMode) || 'default';
+        if (c.effortLevel) {
+            state.effortLevel = c.effortLevel;
+        }
+        state.ultracodeEnabled = !!c.ultracode;
+        state.thinkingEnabled = !!c.alwaysThinkingEnabled;
+        if (c.switchModelsOnFlag !== null && c.switchModelsOnFlag !== undefined) {
+            state.switchModelsOnFlag = c.switchModelsOnFlag;
+        }
+        // Absent → false: a missing policy means the mode is allowed.
+        state.bypassPermissionsDisabled = !!c.bypassPermissionsDisabled;
+        state.fastMode = (c.fastModeState ?? 'off') !== 'off';
+        // Custom spinner verbs from settings (replace/append the defaults). Migrated
+        // from vsOptions into cliState — applied here rather than in applyVsOptions.
+        setVerbsConfig(c.spinnerVerbsConfig ?? null);
     });
 
     // VS Options re-pushed standalone when the user changes the Options page while
@@ -237,4 +231,13 @@ export function init(): void {
     wireBridgeHandlers();
     installDebugApi();
     bridge.start();
+
+    // Tell the host the app has mounted and painted its first frame, so it can hide the native
+    // "Initializing…" placeholder exactly when the chat is visible underneath — no white gap, no
+    // double placeholder. Two frames, because the first only schedules the initial render.
+    // Announced from here rather than on receiving ui_init: the host now answers this signal WITH
+    // ui_init, and waiting for the payload to declare ourselves ready would deadlock the pair.
+    requestAnimationFrame(() =>
+        requestAnimationFrame(() => bridge.sendNotification(Msg.fromWebView.ui.ready, {})),
+    );
 }

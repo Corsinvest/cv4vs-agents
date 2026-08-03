@@ -162,6 +162,9 @@ export type { ExchangeEndedNotification } from './generated/ExchangeEndedNotific
 // greppable across both languages; do not hand-edit the generated files.
 export type { VsOptionsDto } from './generated/VsOptionsDto';
 export type { InitPayloadNotification } from './generated/InitPayloadNotification';
+// The CLI's own startup state, on its own message: it arrives seconds after the init payload,
+// once claude.exe has answered initialize + get_settings.
+export type { CliStateNotification } from './generated/CliStateNotification';
 
 export type PermissionMode = 'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions';
 

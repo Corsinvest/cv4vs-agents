@@ -107,7 +107,7 @@ internal static class BridgeMessages
         public static class Ui
         {
             /// <summary>The app mounted and painted its first frame — hide the
-            /// native "Initializing…" placeholder now.</summary>
+            /// native "Initializing…" placeholder now. The host answers it with ui_init.</summary>
             public const string Ready = "webview_ready";
         }
     }
@@ -132,6 +132,7 @@ internal static class BridgeMessages
             public const string Started = "cli_started";
             public const string Exited = "cli_exited";
             public const string Error = "cli_error";
+            public const string State = "cli_state";                       // initialize + get_settings, re-sent on respawn
             public const string ModelChanged = "cli_model_changed";
             public const string PermissionModeChanged = "cli_permission_mode_changed";
         }
