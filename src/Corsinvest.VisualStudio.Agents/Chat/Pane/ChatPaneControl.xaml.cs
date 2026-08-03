@@ -246,7 +246,7 @@ public partial class ChatPaneControl : PaneControlBase
             if (BuildInfo.IsPreRelease || devBuild || AgentsOptions.Chat.ShowWebViewDevEntries)
             {
                 yield return new ButtonAction("WebView DevTools", () => _bridge?.OpenDevTools(), "DevTools");
-                yield return new ButtonAction("WebView task manager", () => _bridge?.OpenTaskManager(), "TaskManager");
+                yield return new ButtonAction("WebView task manager", () => WebView.OpenTaskManager(), "TaskManager");
             }
         }
     }
@@ -285,7 +285,14 @@ public partial class ChatPaneControl : PaneControlBase
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        WebView.HostKeyPressed += OnHostKeyPressed;
     }
+
+    /// <summary>A key <see cref="ChatWebView"/> claimed because composition rendering drops it:
+    /// hand it to the page, which acts on whatever it has focused. Dropped silently before the
+    /// bridge is up — there is nothing focused to act on yet.</summary>
+    private void OnHostKeyPressed(Contracts.HostKeyNotification key)
+        => _bridge?.Send(BridgeMessages.ToWebView.Ui.HostKey, key);
 
     private void OnLoaded(object sender, RoutedEventArgs e)
         => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
@@ -328,6 +335,7 @@ public partial class ChatPaneControl : PaneControlBase
     {
         VSColorTheme.ThemeChanged -= OnVsThemeChanged;
         AgentsOptions.Applied -= OnOptionsApplied;
+        WebView.HostKeyPressed -= OnHostKeyPressed;
         IdeContextService.Instance.ContextChanged -= OnEditorContextChanged;
         // EnsureClient hooked this on the IdeContextService singleton; without the unhook the
         // closed pane leaks (singleton keeps it alive) and its dead _client keeps logging

@@ -199,6 +199,9 @@ internal static class BridgeMessages
             /// claims it so VS doesn't move focus to an open editor). The WebView decides:
             /// stop generation if busy, close an open menu, else no-op.</summary>
             public const string Escape = "ui_escape";
+            /// <summary>A key the composition control dropped, claimed by the pane and forwarded
+            /// for the page to act on. See <c>HostKeyNotification</c>.</summary>
+            public const string HostKey = "ui_host_key";
         }
 
         /// <summary>Plugin-manager results + the global "plugins changed" broadcast.</summary>

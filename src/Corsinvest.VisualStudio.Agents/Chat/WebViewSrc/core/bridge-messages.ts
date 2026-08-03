@@ -117,6 +117,7 @@ export const Msg = {
             focusInput: 'ui_focus_input',
             setComposer: 'ui_set_composer',
             escape: 'ui_escape',
+            hostKey: 'ui_host_key',
         },
         plugins: {
             listResult: 'plugins_list_result',

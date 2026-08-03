@@ -45,12 +45,16 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             // Initialize CoreWebView2 with our own user-data folder. Required
             // before touching any CoreWebView2 member below.
             var env = await CoreWebView2Environment.CreateAsync(null, AppPaths.WebView2Folder);
-            await webView.EnsureCoreWebView2Async(env);
 
-            // WebView2 defaults to an opaque WHITE background before the first paint, which flashes as
-            // a blank/black block until the bundle renders. Make it transparent so the WPF host's
-            // VsBrush.Window shows through (matches the theme) during that gap. On the WPF control the
-            // color lives on the control itself, not on CoreWebView2Controller.
+            // WebView2 defaults to an opaque WHITE background before the first paint, which flashes
+            // as a blank block until the bundle renders. Setting it on the control alone is too
+            // late — by then the controller exists and has already painted once — so it goes into
+            // the controller options, which is what "initialize the DefaultBackgroundColor early"
+            // is for. Transparent lets the WPF host's VsBrush.Window (themed) show through instead.
+            var controllerOpts = env.CreateCoreWebView2ControllerOptions();
+            controllerOpts.DefaultBackgroundColor = System.Drawing.Color.Transparent;
+            await webView.EnsureCoreWebView2Async(env, controllerOpts);
+
             webView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
 
             webView.CoreWebView2.WebMessageReceived += OnRawMessage;
@@ -209,7 +213,6 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
     /// is what makes it worth having: a stray renderer or a process count that doesn't add up is a
     /// question about the whole browser, not about this pane.</summary>
     public void OpenTaskManager() => webView.CoreWebView2?.OpenTaskManagerWindow();
-
     /// <summary>Release the WebView2 control, and with it the CoreWebView2Controller and the
     /// renderer process behind this pane. VS keeps the closed tool window's control alive, so
     /// without this the renderer outlives the pane and the browser accumulates one per pane ever

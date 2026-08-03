@@ -13,6 +13,7 @@ import { normPath } from '../core/path';
 import { closeTopDialog } from '../core/dialog-focus';
 import { setExtraLinkableExtensions } from '../core/file-links';
 import type {
+    HostKeyNotification,
     InitPayloadNotification,
     ModelsNotification,
     PermissionMode,
@@ -25,6 +26,7 @@ import type {
     Theme,
     VsOptionsDto,
 } from '../core/types';
+import { applyHostKey } from './host-keys';
 import { installDebugApi } from './debug';
 import { logger } from '../core/logger';
 import { initFluent, applyFluentTheme, applyFontScale } from './fluent';
@@ -147,6 +149,13 @@ function wireBridgeHandlers(): void {
         const input = document.querySelector('cv-prompt') as
             import('./components/cv-prompt').CvPrompt | null;
         input?.setComposerText(data?.text ?? '');
+    });
+
+    // A key the composition control dropped, claimed by the pane on our behalf — see host-keys.ts.
+    bridge.onNotification<HostKeyNotification>(Msg.toWebView.ui.hostKey, (data) => {
+        if (data?.key) {
+            applyHostKey(data);
+        }
     });
 
     // Esc: VS routed its Cancel command to the pane (ChatPaneWindow claims it so VS

@@ -315,6 +315,7 @@
     <Compile Include="Chat\VsThemeReader.cs" />
     <Compile Include="PackageGuids.cs" />
     <Compile Include="Chat\Pane\ChatPaneWindow.cs" />
+    <Compile Include="Chat\Pane\ChatWebView.cs" />
     <Compile Include="Cli\Pane\CliPaneWindow.cs" />
     <Compile Include="Cli\Pane\CliPaneControl.cs" />
     <Compile Include="Cli\ConPty.cs" />
