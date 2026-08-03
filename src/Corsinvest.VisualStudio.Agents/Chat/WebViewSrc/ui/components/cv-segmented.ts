@@ -25,11 +25,13 @@ export interface SegOption<V extends string = string> {
  * accent) and the rest `subtle`; only layout (join + end radii) is styled here.
  *
  * Buttons size to their content. Emits `change` (CustomEvent, `detail.value`) on
- * selection; re-selecting the active option is a no-op.
+ * selection; re-selecting the active option is a no-op. `icon-size` overrides the
+ * 20px Fluent draws a slotted glyph at, for rows where that reads too heavy.
  *
  *   <cv-segmented
  *       .options=${[{value:'all',label:'All'}, …]}
  *       .activeValue=${current}
+ *       icon-size="14"
  *       @change=${(e) => onChange(e.detail.value)}
  *   ></cv-segmented>
  */
@@ -62,6 +64,19 @@ export class CvSegmented<V extends string = string> extends LitElement {
                 border-top-right-radius: var(--borderRadiusMedium);
                 border-bottom-right-radius: var(--borderRadiusMedium);
             }
+            /* Sized only when icon-size was given: the fallback of unset leaves the glyph size
+               Fluent picked in place, so nothing that already looks right moves. The slot wrapper
+               shrinks with the glyph, or the button keeps the taller line box around it. */
+            .seg [slot='start'] {
+                display: inline-flex;
+                align-items: center;
+                width: var(--seg-icon, unset);
+                height: var(--seg-icon, unset);
+            }
+            .seg [slot='start'] svg {
+                width: var(--seg-icon, unset);
+                height: var(--seg-icon, unset);
+            }
             fluent-tooltip {
                 padding: 4px 8px;
                 white-space: nowrap;
@@ -73,6 +88,9 @@ export class CvSegmented<V extends string = string> extends LitElement {
     @property({ attribute: false }) activeValue?: V;
     /** Show only the icon (label becomes the tooltip). Needs each option to have an `icon`. */
     @property({ type: Boolean, attribute: 'icon-only' }) iconOnly = false;
+    /** Glyph size in px. Fluent draws a slotted icon at 20px, which is a lot next to a small
+     *  button's text; unset leaves that alone so nothing that already looks right moves. */
+    @property({ type: Number, attribute: 'icon-size' }) iconSize?: number;
 
     private _select(v: V): void {
         if (v === this.activeValue) {
@@ -89,7 +107,11 @@ export class CvSegmented<V extends string = string> extends LitElement {
 
     override render(): TemplateResult {
         return html`
-            <div class="seg ${this.iconOnly ? 'icon-only' : ''}" role="group">
+            <div
+                class="seg ${this.iconOnly ? 'icon-only' : ''}"
+                style=${this.iconSize ? `--seg-icon: ${this.iconSize}px` : nothing}
+                role="group"
+            >
                 ${this.options.map((o) => {
                     // A fluent-tooltip anchored by id gives a reliable tooltip (the button's own
                     // `title` attribute isn't surfaced across the shadow boundary). Always show it —

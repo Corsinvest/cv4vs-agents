@@ -161,6 +161,7 @@ export class CvDiffDialog extends CvDialogBase {
                         slot="title-action"
                         .options=${MODES}
                         .activeValue=${this._mode}
+                        icon-size="14"
                         @change=${this._onModeChange}
                     ></cv-segmented>
 
