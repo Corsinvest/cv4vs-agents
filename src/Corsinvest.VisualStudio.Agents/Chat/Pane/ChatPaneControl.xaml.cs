@@ -541,6 +541,10 @@ public partial class ChatPaneControl : PaneControlBase
                 // long after this. Only on the pane that VS considers active, so opening a second
                 // chat in the background doesn't steal focus from the one being used.
                 if (Pane?.IsActiveFrame() == true) { FocusInput(); }
+                // Name this pane's page after the pane. The browser's task manager labels each row
+                // with the document title, and every chat ships the same index.html — so without
+                // this they all read "cv4vs Agents" and none of them says which pane it is.
+                _bridge?.SetDocumentTitle(Entry?.Title);
                 // Seed the IDE-context badge with the already-open editor: we only subscribe to
                 // future ContextChanged events, so without this the badge stays empty until the
                 // first editor click. Force a snapshot emit now that the WebView can receive it.

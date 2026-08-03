@@ -247,6 +247,20 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         catch (Exception ex) { OutputWindowLogger.LogException("WebViewBridge.Dispose", ex); }
     }
 
+    /// <summary>Name the page after the pane, so the browser's task manager can tell one chat's
+    /// renderer from another's — every pane loads the same index.html, so they otherwise share one
+    /// title. Diagnostics only: nothing in the UI shows it.</summary>
+    public void SetDocumentTitle(string title)
+    {
+        if (_disposed || string.IsNullOrEmpty(title)) { return; }
+        try
+        {
+            _ = webView.CoreWebView2?.ExecuteScriptAsync(
+                $"document.title = {JsonConvert.SerializeObject(title)}");
+        }
+        catch (Exception ex) { OutputWindowLogger.LogException("WebViewBridge.SetDocumentTitle", ex); }
+    }
+
     /// <summary>Give the WebView2 control the native (WPF) focus, so the keyboard actually reaches
     /// the page. Without this a JS `element.focus()` only shows a blinking caret while keystrokes
     /// still go to VS — the WebView host must own the focus first. Call before posting

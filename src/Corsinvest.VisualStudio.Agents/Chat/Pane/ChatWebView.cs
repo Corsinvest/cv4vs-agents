@@ -97,7 +97,16 @@ internal sealed class ChatWebView : WebView2CompositionControl
             // HWND_MESSAGE is documented for exactly this — a WebView that never becomes visible —
             // and keeps the child window the controller creates out of our pane, where it would
             // otherwise land and take part in the z-order.
-            _taskManagerOwner ??= await core.Environment.CreateCoreWebView2ControllerAsync(HwndMessage);
+            if (_taskManagerOwner == null)
+            {
+                _taskManagerOwner = await core.Environment.CreateCoreWebView2ControllerAsync(HwndMessage);
+                // It shows up in the very list it opens, and "WebView2: about:blank" says nothing
+                // about why a second renderer is there. The task manager labels each row with the
+                // document title, so give it one.
+                _taskManagerOwner.CoreWebView2.NavigateToString(
+                    "<!doctype html><title>cv4vs Agents — task manager host</title>");
+            }
+
             _taskManagerOwner.CoreWebView2.OpenTaskManagerWindow();
         }
         catch (Exception ex)
