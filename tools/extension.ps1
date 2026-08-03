@@ -116,9 +116,12 @@ function Get-InstanceName {
     if ($HiveName -like '*Exp') { "$name (experimental)" } else { $name }
 }
 
-# Returns the folder of every installed copy, across both layouts: VSIXInstaller writes
-# Extensions\<random>\ while the F5 deploy writes Extensions\Corsinvest\<display name>\, hence
-# -Depth 2 and the match on the manifest rather than on the folder name.
+# Returns the folder of every installed copy, across every layout: VSIXInstaller writes
+# Extensions\<random>\, the F5 deploy writes Extensions\Corsinvest\<display name>\, and a
+# per-version install adds a third level, Extensions\<publisher>\<display name>\<version>\ —
+# hence -Depth 3 and the match on the manifest rather than on the folder name. Too shallow a
+# depth is silent: nothing matches, and the script reports "Nothing installed" over a hive that
+# has copies in it, so -Uninstall leaves them behind and -Install stacks on top.
 function Find-InstalledCopies {
     if (-not (Test-Path $hiveRoot)) { return @() }
 
@@ -129,7 +132,7 @@ function Find-InstalledCopies {
             $extensions = Join-Path $hive.FullName 'Extensions'
             if (-not (Test-Path $extensions)) { return }
 
-            Get-ChildItem $extensions -Recurse -Depth 2 -Filter 'extension.vsixmanifest' -ErrorAction SilentlyContinue |
+            Get-ChildItem $extensions -Recurse -Depth 3 -Filter 'extension.vsixmanifest' -ErrorAction SilentlyContinue |
                 Where-Object { (Get-Content $_.FullName -Raw -ErrorAction SilentlyContinue) -match $IdentityPattern } |
                 ForEach-Object {
                     $identity = ([xml](Get-Content $_.FullName -Raw)).PackageManifest.Metadata.Identity
