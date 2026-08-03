@@ -4,11 +4,9 @@
  */
 
 import { InitConfigDto } from './InitConfigDto';
-import { CliStateDto } from './CliStateDto';
 import { VsOptionsDto } from './VsOptionsDto';
 
 export interface InitPayloadNotification {
     config: InitConfigDto;
-    cliState: CliStateDto | null;
     vsOptions: VsOptionsDto | null;
 }

@@ -133,22 +133,17 @@ public partial class ChatPaneControl
         return await IdeDiagnosticsTracker.Instance.FindNewDiagnosticsAsync(toolUseId, filePath, visible);
     }
 
-    // The ONE ui_init, seeded from the CLI's startup state (initialize + get_settings, gathered by
-    // ClaudeClient.StartupAsync WITHOUT a user turn — system/init only arrives on the first turn, too
-    // late to enable the toolbar). Fired on every startup (open + respawn). PermissionMode isn't in
-    // the CLI's reply — we pass it via --permission-mode, so it's read from the client here.
+    // The CLI's startup state (initialize + get_settings, gathered by ClaudeClient.StartupAsync
+    // WITHOUT a user turn — system/init only arrives on the first turn, too late to enable the
+    // toolbar). Fired on every startup (open + respawn). PermissionMode isn't in the CLI's reply —
+    // we pass it via --permission-mode, so it's read from the client here.
+    // Its own message, not ui_init: this lands seconds after the pane opens, and the config the
+    // WebView needs to render its first history cannot wait for it.
     private void OnCliStateReceived(object sender, CliStateReceivedEventArgs e)
         => Dispatcher.Invoke(() =>
         {
-            _bridge.Send(BridgeMessages.ToWebView.Ui.Init, new Contracts.InitPayloadNotification
+            _bridge.Send(BridgeMessages.ToWebView.Cli.State, new Contracts.CliStateNotification
             {
-                Config = new Contracts.InitConfigDto
-                {
-                    WorkingDirectory = Entry.WorkingDirectory ?? "",
-#if DEBUG
-                    InDev = true,
-#endif
-                },
                 CliState = new Contracts.CliStateDto
                 {
                     // Empty model → the webview shows "Default"; get_settings usually fills it in.
@@ -168,7 +163,6 @@ public partial class ChatPaneControl
                         Verbs = e.SpinnerVerbs.Verbs,
                     },
                 },
-                VsOptions = WebViewBridge.BuildVsOptions(),
             });
         });
 

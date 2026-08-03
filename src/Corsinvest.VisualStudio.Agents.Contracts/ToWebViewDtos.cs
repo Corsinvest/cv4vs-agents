@@ -511,14 +511,24 @@ public class VsOptionsDto
     public int LogLevel { get; set; }
 }
 
-/// <summary>The init payload (ui_init): the WebView's whole boot state, all 3 categories in one
-/// shot (config, CLI state, VS options). The gate populates it when ready — no loading
-/// placeholder (the previous Loading/LoadingMessage fields were always false/null).</summary>
+/// <summary>The init payload (ui_init): what the host knows on its own — pane config and VS
+/// options. Sent as soon as the WebView is up, before any history, so the first rows already
+/// have the working directory they need to shorten paths against.
+/// <para>The CLI's own state travels separately, on cli_state: it is not available until
+/// claude.exe has answered initialize + get_settings, seconds later, and holding this back for
+/// it was what left that first history rendering absolute paths.</para></summary>
 public class InitPayloadNotification
 {
     public InitConfigDto Config { get; set; }
-    public CliStateDto CliState { get; set; }
     public VsOptionsDto VsOptions { get; set; }
+}
+
+/// <summary>The CLI's startup state (cli_state), from initialize + get_settings — model, effort,
+/// toggles. Sent on every startup, so a respawn re-seeds the UI without re-sending pane config
+/// and VS options that did not change.</summary>
+public class CliStateNotification
+{
+    public CliStateDto CliState { get; set; }
 }
 
 /// <summary>The signed-in account shown in the Account & Usage dialog (nested in chat_usage).</summary>
