@@ -26,6 +26,9 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
 {
     private bool _ready;
     private bool _disposed;
+    // The bundle's first paint: NavigationCompleted fires again on every reload, and only the
+    // first one needs to seed the options and drain the queue.
+    private bool _firstLoadDone;
     private readonly ConcurrentQueue<(string type, object data)> _pending = new();
     private bool? _pendingTheme;
     private string _docCreatedScriptId;
@@ -68,37 +71,9 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
             webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
 
-            webView.CoreWebView2.PermissionRequested += (s, args) =>
-            {
-                if (args.PermissionKind == CoreWebView2PermissionKind.ClipboardRead)
-                {
-                    args.State = CoreWebView2PermissionState.Allow;
-                }
-            };
-
-            webView.CoreWebView2.NewWindowRequested += (s, args) =>
-            {
-                args.Handled = true;
-                ShellHelpers.OpenExternal(args.Uri);
-            };
-
-            var isFirstLoad = true;
-            webView.CoreWebView2.NavigationCompleted += (s, args) =>
-            {
-                // A navigation landing during teardown would re-arm _ready and drain the queue
-                // into a WebView being disposed.
-                if (_disposed) { return; }
-                _ready = true;
-                if (isFirstLoad)
-                {
-                    isFirstLoad = false;
-                    // Boot paint: give the bundle the VS Options (theme/font) for its first frame before the CLI
-                    // client exists. The one real ui_init (with model/permission/toggles) comes from
-                    // ChatPaneControl.OnCliStateReceived once initialize + get_settings land (no user turn needed).
-                    SendDirect(BridgeMessages.ToWebView.Ui.VsSettings, WebViewBridge.BuildVsOptions());
-                    while (_pending.TryDequeue(out var msg)) { SendDirect(msg.type, msg.data); }
-                }
-            };
+            webView.CoreWebView2.PermissionRequested += OnPermissionRequested;
+            webView.CoreWebView2.NewWindowRequested += OnNewWindowRequested;
+            webView.CoreWebView2.NavigationCompleted += OnNavigationCompleted;
 
             // Inject boot-time theme script BEFORE navigation to avoid FOUC (refreshed via InjectTheme).
             if (_pendingTheme.HasValue) { await RegisterBootThemeScriptAsync(_pendingTheme.Value); }
@@ -127,6 +102,45 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         {
             OutputWindowLogger.LogException("WebViewBridge.Init", ex);
             throw;
+        }
+    }
+
+    // The three below are named, not lambdas, for the same reason as OnRawMessage: Dispose has to
+    // be able to -= them. They run on the controller being torn down, and an event still in flight
+    // would otherwise reach a bridge that has already released its WebView.
+
+    /// <summary>Paste needs clipboard read; nothing else is granted.</summary>
+    private void OnPermissionRequested(object sender, CoreWebView2PermissionRequestedEventArgs args)
+    {
+        if (args.PermissionKind == CoreWebView2PermissionKind.ClipboardRead)
+        {
+            args.State = CoreWebView2PermissionState.Allow;
+        }
+    }
+
+    /// <summary>Links open in the user's browser, never in a WebView window of our own.</summary>
+    private void OnNewWindowRequested(object sender, CoreWebView2NewWindowRequestedEventArgs args)
+    {
+        args.Handled = true;
+        ShellHelpers.OpenExternal(args.Uri);
+    }
+
+    /// <summary>First paint of the bundle: hand it the VS Options and drain whatever was queued
+    /// while it wasn't ready.</summary>
+    private void OnNavigationCompleted(object sender, CoreWebView2NavigationCompletedEventArgs args)
+    {
+        // A navigation landing during teardown would re-arm _ready and drain the queue
+        // into a WebView being disposed.
+        if (_disposed) { return; }
+        _ready = true;
+        if (!_firstLoadDone)
+        {
+            _firstLoadDone = true;
+            // Boot paint: give the bundle the VS Options (theme/font) for its first frame before the CLI
+            // client exists. The one real ui_init (with model/permission/toggles) comes from
+            // ChatPaneControl.OnCliStateReceived once initialize + get_settings land (no user turn needed).
+            SendDirect(BridgeMessages.ToWebView.Ui.VsSettings, BuildVsOptions());
+            while (_pending.TryDequeue(out var msg)) { SendDirect(msg.type, msg.data); }
         }
     }
 
@@ -208,12 +222,6 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         }
     }
 
-    /// <summary>The browser's own task manager — the Edge one, with live memory/CPU per process.
-    /// It covers every pane on the user-data folder, panes in another VS instance included, which
-    /// is what makes it worth having: a stray renderer or a process count that doesn't add up is a
-    /// question about the whole browser, not about this pane.</summary>
-    public void OpenTaskManager() => webView.CoreWebView2?.OpenTaskManagerWindow();
-    /// <summary>Release the WebView2 control, and with it the CoreWebView2Controller and the
     /// renderer process behind this pane. VS keeps the closed tool window's control alive, so
     /// without this the renderer outlives the pane and the browser accumulates one per pane ever
     /// opened. Handlers are unhooked first: they run on the controller being torn down.</summary>
@@ -230,6 +238,9 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
                 core.WebMessageReceived -= OnRawMessage;
                 core.ContextMenuRequested -= OnContextMenuRequested;
                 core.WebResourceRequested -= OnIconRequested;
+                core.PermissionRequested -= OnPermissionRequested;
+                core.NewWindowRequested -= OnNewWindowRequested;
+                core.NavigationCompleted -= OnNavigationCompleted;
             }
             webView.Dispose();
         }
@@ -240,7 +251,13 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
     /// actually reaches the page. Without this a JS `element.focus()` only shows a
     /// blinking caret while keystrokes still go to VS — the WebView host must own
     /// the focus first. Call before posting ui_focus_input.</summary>
-    public void FocusWebView() => webView.Focus();
+    /// <summary>Guarded: a session switch can land after the pane closed, and Focus() on a
+    /// disposed control throws where every other member here quietly no-ops.</summary>
+    public void FocusWebView()
+    {
+        if (_disposed) { return; }
+        webView.Focus();
+    }
 
     /// <summary>Open WebView2's native find bar over the chat content (Ctrl+F). We host it
     /// ourselves because AreBrowserAcceleratorKeysEnabled=false turns off the browser's own Ctrl+F.
