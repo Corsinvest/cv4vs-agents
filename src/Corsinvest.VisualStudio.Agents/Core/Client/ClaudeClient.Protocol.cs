@@ -47,7 +47,11 @@ internal sealed partial class ClaudeClient
     /// </summary>
     private Task<JObject> SendControlRequestAsync(string subtype, object extra, TimeSpan? timeout = null)
     {
-        if (!_transport.IsRunning) { return Task.FromException<JObject>(new InvalidOperationException("CLI not running")); }
+        // One read of the field, then work off the local: a respawn between the check and the
+        // write would otherwise register the pending request against one transport and send it
+        // down another, leaving the caller to wait out the timeout for an answer nobody heard.
+        var transport = _transport;
+        if (!transport.IsRunning) { return Task.FromException<JObject>(new InvalidOperationException("CLI not running")); }
 
         var id = NextRequestId();
         var tcs = new TaskCompletionSource<JObject>();
@@ -60,7 +64,7 @@ internal sealed partial class ClaudeClient
             foreach (var prop in extraObj.Properties()) { request[prop.Name] = prop.Value; }
         }
 
-        _transport.Write(new
+        transport.Write(new
         {
             type = "control_request",
             request_id = id,
@@ -81,9 +85,10 @@ internal sealed partial class ClaudeClient
 
     private void SendControlResponse(string requestId, bool success, object response = null, string error = null)
     {
-        if (!_transport.IsRunning) { return; }
+        var transport = _transport;
+        if (!transport.IsRunning) { return; }
 
-        _transport.Write(new
+        transport.Write(new
         {
             type = "control_response",
             response = success
