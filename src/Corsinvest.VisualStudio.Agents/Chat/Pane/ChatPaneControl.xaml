@@ -11,13 +11,16 @@
          against WPF — the airspace issue). The subclass adds back the caret keys that
          composition rendering drops. -->
     <chat:ChatWebView x:Name="WebView" />
-    <StackPanel x:Name="StatusPanel" HorizontalAlignment="Center" VerticalAlignment="Center"
-                Height="48" Visibility="Visible">
-      <TextBlock HorizontalAlignment="Center"
+    <!-- Fills the pane and is opaque on purpose: the WebView is transparent until its first paint
+         (so no white flash), which would otherwise let the chat show through this placeholder while
+         it is still loading. Collapsed on webview_ready. -->
+    <Grid x:Name="StatusPanel" Background="{DynamicResource VsBrush.Window}" Visibility="Visible">
+      <!-- Text only, no progress bar: EnsureCoreWebView2Async blocks the UI thread for ~2s while
+           the composition controller and the browser processes come up (measured), so an
+           indeterminate bar would sit frozen for most of the wait — worse than saying nothing. -->
+      <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
                  Foreground="{DynamicResource VsBrush.WindowText}" FontSize="13"
                  Text="Initializing..."/>
-      <ProgressBar IsIndeterminate="True" Width="160" Height="2" Margin="0,8,0,0"
-                   Background="Transparent" BorderThickness="0"/>
-    </StackPanel>
+    </Grid>
   </Grid>
 </panes:PaneControlBase>

@@ -406,7 +406,6 @@ public partial class ChatPaneControl : PaneControlBase
     {
         var workDir = Entry.WorkingDirectory;
         using var _ = OutputWindowLogger.PerfSpan($"InitAsync({workDir})");
-        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
         // Every "New Chat" pane starts FRESH (else N panes share one conversation). Exception: a
         // forked or workspace-restored pane — _startupSessionId points at the JSONL to resume
@@ -424,8 +423,14 @@ public partial class ChatPaneControl : PaneControlBase
         SessionInfo resumeInfo = null;
         if (restoreState)
         {
-            (permMode, resumePage, resumeInfo) = ReadSessionState(_startupSessionId);
+            // Off the UI thread: this reads and scans the session's .jsonl, which on a long
+            // session is disk work the dispatcher shouldn't be holding.
+            var sessionId = _startupSessionId;
+            (permMode, resumePage, resumeInfo) = await Task.Run(() => ReadSessionState(sessionId));
         }
+
+        // Everything below talks to the WebView and the client, so it belongs on the UI thread.
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
         _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
         OutputWindowLogger.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode})");
