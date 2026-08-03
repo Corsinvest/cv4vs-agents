@@ -4,6 +4,7 @@
  */
 
 using Microsoft.VisualStudio.PlatformUI;
+using Microsoft.VisualStudio.Shell;
 using System.Windows;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
@@ -17,6 +18,12 @@ public partial class DevInfoDialog : DialogWindow
     {
         InitializeComponent();
         TxtInfo.Text = info;
+        // The content follows the theme through WPF; the title bar and border need telling separately.
+        SourceInitialized += (s, e) =>
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            Helpers.WindowChrome.ApplyTheme(this);
+        };
     }
 
     private void OnCopy_Click(object sender, RoutedEventArgs e)

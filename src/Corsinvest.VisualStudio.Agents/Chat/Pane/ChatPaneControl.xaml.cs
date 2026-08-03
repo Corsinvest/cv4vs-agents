@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Pane;
 
@@ -85,6 +86,10 @@ public partial class ChatPaneControl : PaneControlBase
         // client's Model/PermissionMode); the respawn's system/init re-arms the gate, which
         // re-populates the selector — no seed push needed here.
         _ = _client?.NewSessionAsync();
+        // Nothing else focuses the composer here: the pane is already active, so the frame doesn't
+        // change and PaneWindowBase's activation path never runs. Without this the user has to
+        // click into an empty chat before typing.
+        FocusInput();
     }
 
     /// <summary>Resume a past session in THIS pane: clear the transcript,
@@ -167,11 +172,6 @@ public partial class ChatPaneControl : PaneControlBase
         _bridge?.Send(BridgeMessages.ToWebView.Ui.FocusInput, null);
     }
 
-    /// <summary>Blur the WebView prompt (dual of <see cref="FocusInput"/>). Only the JS blur is
-    /// needed — no native focus dance, since we're dropping focus, not taking it.</summary>
-    public override void BlurInput()
-        => _bridge?.Send(BridgeMessages.ToWebView.Ui.BlurInput, null);
-
     /// <summary>Open the WebView2 native find bar (Ctrl+F), invoked by ChatPaneWindow when it
     /// intercepts the Find command from VS. Returns false if the WebView isn't ready.</summary>
     internal bool ShowFind()
@@ -251,7 +251,7 @@ public partial class ChatPaneControl : PaneControlBase
             if (BuildInfo.IsPreRelease || devBuild || AgentsOptions.Chat.ShowWebViewDevEntries)
             {
                 yield return new ButtonAction("WebView DevTools", () => _bridge?.OpenDevTools(), "DevTools");
-                yield return new ButtonAction("WebView task manager", () => _bridge?.OpenTaskManager(), "TaskManager");
+                yield return new ButtonAction("WebView task manager", () => WebView.OpenTaskManager(), "TaskManager");
             }
         }
     }
@@ -290,11 +290,23 @@ public partial class ChatPaneControl : PaneControlBase
         InitializeComponent();
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
-        // Pane activation on a real in-chat click is driven from JS (pointerdown → bridge
-        // ui_pane_activate → OnBridgeMessage): WPF mouse/focus events can't cross the WebView2
-        // HwndHost boundary, and GotFocus fired repeatedly during sibling-tab switches, looping
-        // frame.Show() and blocking the switch. The JS click never fires during a tab switch.
+        WebView.HostKeyPressed += OnHostKeyPressed;
+        // Clicking into the chat is the user answering the attention notice, so take it down.
+        // Composition rendering is what makes this possible: the control lives in the WPF tree,
+        // so mouse events reach us. The HwndHost version had to be told from JS instead.
+        WebView.PreviewMouseDown += OnWebViewClicked;
     }
+
+    /// <summary>The user clicked into this pane: whatever InfoBar or toast was calling them here
+    /// has done its job.</summary>
+    private void OnWebViewClicked(object sender, MouseButtonEventArgs e)
+        => PaneAttentionService.Clear(Entry);
+
+    /// <summary>A key <see cref="ChatWebView"/> claimed because composition rendering drops it:
+    /// hand it to the page, which acts on whatever it has focused. Dropped silently before the
+    /// bridge is up — there is nothing focused to act on yet.</summary>
+    private void OnHostKeyPressed(Contracts.HostKeyNotification key)
+        => _bridge?.Send(BridgeMessages.ToWebView.Ui.HostKey, key);
 
     private void OnLoaded(object sender, RoutedEventArgs e)
         => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
@@ -337,6 +349,8 @@ public partial class ChatPaneControl : PaneControlBase
     {
         VSColorTheme.ThemeChanged -= OnVsThemeChanged;
         AgentsOptions.Applied -= OnOptionsApplied;
+        WebView.HostKeyPressed -= OnHostKeyPressed;
+        WebView.PreviewMouseDown -= OnWebViewClicked;
         IdeContextService.Instance.ContextChanged -= OnEditorContextChanged;
         // EnsureClient hooked this on the IdeContextService singleton; without the unhook the
         // closed pane leaks (singleton keeps it alive) and its dead _client keeps logging
@@ -407,7 +421,6 @@ public partial class ChatPaneControl : PaneControlBase
     {
         var workDir = Entry.WorkingDirectory;
         using var _ = OutputWindowLogger.PerfSpan($"InitAsync({workDir})");
-        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
         // Every "New Chat" pane starts FRESH (else N panes share one conversation). Exception: a
         // forked or workspace-restored pane — _startupSessionId points at the JSONL to resume
@@ -425,8 +438,14 @@ public partial class ChatPaneControl : PaneControlBase
         SessionInfo resumeInfo = null;
         if (restoreState)
         {
-            (permMode, resumePage, resumeInfo) = ReadSessionState(_startupSessionId);
+            // Off the UI thread: this reads and scans the session's .jsonl, which on a long
+            // session is disk work the dispatcher shouldn't be holding.
+            var sessionId = _startupSessionId;
+            (permMode, resumePage, resumeInfo) = await Task.Run(() => ReadSessionState(sessionId));
         }
+
+        // Everything below talks to the WebView and the client, so it belongs on the UI thread.
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
         _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
         OutputWindowLogger.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode})");
@@ -515,19 +534,21 @@ public partial class ChatPaneControl : PaneControlBase
             case BridgeMessages.FromWebView.Ui.Ready:
                 StatusPanel.Visibility = Visibility.Collapsed;
                 SetReady(true);
+                // First open: focus the composer now, not earlier. A ui_focus_input sent during
+                // startup lands before the bundle has mounted cv-prompt, so the textarea it looks
+                // for isn't there yet and the call is a no-op — which is why the pane opened
+                // needing a click. Later activations work because they come from a frame change,
+                // long after this. Only on the pane that VS considers active, so opening a second
+                // chat in the background doesn't steal focus from the one being used.
+                if (Pane?.IsActiveFrame() == true) { FocusInput(); }
+                // Name this pane's page after the pane. The browser's task manager labels each row
+                // with the document title, and every chat ships the same index.html — so without
+                // this they all read "cv4vs Agents" and none of them says which pane it is.
+                _bridge?.SetDocumentTitle(Entry?.Title);
                 // Seed the IDE-context badge with the already-open editor: we only subscribe to
                 // future ContextChanged events, so without this the badge stays empty until the
                 // first editor click. Force a snapshot emit now that the WebView can receive it.
                 IdeContextService.Instance.ForceEmitCurrentContext();
-                break;
-
-            // A real click inside the WebView (JS pointerdown → bridge): activate the VS frame so
-            // keys flow to the chat. Sent from JS because mouse events can't cross the HwndHost to
-            // WPF, and it fires only on genuine in-chat clicks (never during a sibling-tab switch).
-            case BridgeMessages.FromWebView.Ui.PaneActivate:
-                Pane?.ActivateFrame();
-                // The user clicked into this pane → any attention InfoBar for it has done its job.
-                PaneAttentionService.Clear(Entry);
                 break;
 
             // Everything else is chat protocol — hand it to the message handler.

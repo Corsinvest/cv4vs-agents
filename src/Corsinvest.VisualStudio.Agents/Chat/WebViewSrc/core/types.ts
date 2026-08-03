@@ -131,6 +131,9 @@ export type { GetSubagentResponse } from './generated/GetSubagentResponse';
 /** Prefill the composer (`ui_set_composer`). Generated from C# by TypeGen. */
 export type { SetComposerNotification } from './generated/SetComposerNotification';
 
+/** A key the host claimed for us (`ui_host_key`). Generated from C# by TypeGen. */
+export type { HostKeyNotification } from './generated/HostKeyNotification';
+
 /** Prompt history, slash-command catalogue, streamed text delta, tool-progress tick,
  *  CLI-started notice. Generated from C# by TypeGen — re-exported here. */
 export type { PromptHistoryNotification } from './generated/PromptHistoryNotification';
