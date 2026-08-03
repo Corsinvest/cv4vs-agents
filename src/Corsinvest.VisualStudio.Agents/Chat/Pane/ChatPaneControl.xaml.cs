@@ -85,6 +85,10 @@ public partial class ChatPaneControl : PaneControlBase
         // client's Model/PermissionMode); the respawn's system/init re-arms the gate, which
         // re-populates the selector — no seed push needed here.
         _ = _client?.NewSessionAsync();
+        // Nothing else focuses the composer here: the pane is already active, so the frame doesn't
+        // change and PaneWindowBase's activation path never runs. Without this the user has to
+        // click into an empty chat before typing.
+        FocusInput();
     }
 
     /// <summary>Resume a past session in THIS pane: clear the transcript,
@@ -519,6 +523,13 @@ public partial class ChatPaneControl : PaneControlBase
             case BridgeMessages.FromWebView.Ui.Ready:
                 StatusPanel.Visibility = Visibility.Collapsed;
                 SetReady(true);
+                // First open: focus the composer now, not earlier. A ui_focus_input sent during
+                // startup lands before the bundle has mounted cv-prompt, so the textarea it looks
+                // for isn't there yet and the call is a no-op — which is why the pane opened
+                // needing a click. Later activations work because they come from a frame change,
+                // long after this. Only on the pane that VS considers active, so opening a second
+                // chat in the background doesn't steal focus from the one being used.
+                if (Pane?.IsActiveFrame() == true) { FocusInput(); }
                 // Seed the IDE-context badge with the already-open editor: we only subscribe to
                 // future ContextChanged events, so without this the badge stays empty until the
                 // first editor click. Force a snapshot emit now that the WebView can receive it.
