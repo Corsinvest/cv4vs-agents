@@ -17,6 +17,8 @@ public partial class DevInfoDialog : DialogWindow
     {
         InitializeComponent();
         TxtInfo.Text = info;
+        // The content follows the theme through WPF; the title bar and border need telling separately.
+        SourceInitialized += (s, e) => Helpers.WindowChrome.ApplyTheme(this);
     }
 
     private void OnCopy_Click(object sender, RoutedEventArgs e)
