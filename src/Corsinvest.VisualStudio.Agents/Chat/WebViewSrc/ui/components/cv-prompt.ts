@@ -802,9 +802,11 @@ export class CvPrompt extends LitElement implements CommandHost {
                 return;
             }
         }
-        // Prompt history (shell-style ↑/↓): ↑ recalls an older prompt only when the
-        // caret is on the first line, ↓ goes forward only on the last line — so
-        // navigating a multi-line draft with the arrows still works. No modifiers.
+        // Prompt history (shell-style ↑/↓): ↑ recalls an older prompt only from the
+        // first visual line, ↓ goes forward only from the last one — so navigating a
+        // multi-line draft with the arrows still works. No modifiers. The key is NOT
+        // swallowed here: _historyOnArrow needs the caret to move first to tell the
+        // two cases apart, and decides once the default has run.
         if (
             (e.key === 'ArrowUp' || e.key === 'ArrowDown') &&
             !e.shiftKey &&
@@ -812,17 +814,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             !e.altKey &&
             !e.metaKey
         ) {
-            if (e.key === 'ArrowUp' && this._caretOnFirstLine()) {
-                if (this._historyPrev()) {
-                    e.preventDefault();
-                    return;
-                }
-            } else if (e.key === 'ArrowDown' && this._caretOnLastLine()) {
-                if (this._historyNext()) {
-                    e.preventDefault();
-                    return;
-                }
-            }
+            this._historyOnArrow(e.key === 'ArrowUp' ? -1 : 1);
         }
         // Shift+Tab cycles through permission modes (Anthropic CLI parity).
         if (e.key === 'Tab' && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
@@ -980,18 +972,40 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._historyDraft = '';
     }
 
-    /** True if the caret is on the first visual line (so ↑ recalls history rather
-     *  than moving the cursor up within a multi-line draft). */
-    private _caretOnFirstLine(): boolean {
+    /** ↑/↓ drive the prompt history, but only from the first/last **visual** line —
+     *  anywhere else they must still move the caret, recalled prompt included: a long
+     *  one is there to be edited, and losing it to the next history entry on the first
+     *  ↑ is the same bug in the other direction. Soft wrap has no `\n` to look for, and
+     *  only the engine that laid the text out knows where the visual lines fall, so let
+     *  the default run and read the outcome: a caret that did not move had no line to
+     *  move to. */
+    private _historyOnArrow(dir: -1 | 1): void {
         const ta = this._ta;
-        return ta.value.lastIndexOf('\n', (ta.selectionStart ?? 0) - 1) < 0;
-    }
-
-    /** True if the caret is on the last visual line (so ↓ goes forward in history
-     *  rather than moving the cursor down). */
-    private _caretOnLastLine(): boolean {
-        const ta = this._ta;
-        return ta.value.indexOf('\n', ta.selectionEnd ?? 0) < 0;
+        if (ta.selectionStart !== ta.selectionEnd) {
+            return; // a selection collapses instead of moving — not a line change
+        }
+        const before = ta.selectionStart ?? 0;
+        // Read the caret only once the default action has moved it — keydown fires
+        // before that. A macrotask is the way to land after it: a microtask drains at
+        // the end of THIS task and would always see the caret unmoved, and rAF ties
+        // the read to the paint cycle, which has nothing to do with the caret.
+        setTimeout(() => {
+            // Moved at all → there was a line to move to, so the caret was not on the
+            // edge line and the history stays out of it. Landing on 0/value.length is
+            // NOT a reliable second signal: ↓ from a long line onto a short last one
+            // ends at value.length having genuinely changed line, and a recalled prompt
+            // starts there to begin with. So the caret sitting mid-line on the edge row
+            // costs one extra keypress to reach the history — the way a shell behaves,
+            // and the harmless way to be wrong: the draft is never lost.
+            if ((ta.selectionStart ?? 0) !== before) {
+                return;
+            }
+            if (dir === -1) {
+                this._historyPrev();
+            } else {
+                this._historyNext();
+            }
+        }, 0);
     }
 
     /** ↑: recall an older prompt. Returns true if it handled the key. */
@@ -1008,7 +1022,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         } else {
             return true; // at the oldest — swallow the key, stay put
         }
-        this._applyHistoryEntry(this._promptHistory[this._historyIdx]);
+        this._applyHistoryEntry(this._promptHistory[this._historyIdx], -1);
         return true;
     }
 
@@ -1029,11 +1043,15 @@ export class CvPrompt extends LitElement implements CommandHost {
         return true;
     }
 
-    /** Apply a recalled entry, caret at the end (ready to edit, shell-style). */
-    private _applyHistoryEntry(text: string): void {
+    /** Apply a recalled entry, caret parked on the edge line the arrow came from: ↑
+     *  leaves it at the start, ↓ at the end (VS Code and zsh both keep the caret on
+     *  that line). Parking it at the far end instead would make the next press climb
+     *  the whole recalled prompt before it could reach the entry beyond it. */
+    private _applyHistoryEntry(text: string, dir: -1 | 1 = 1): void {
         const ta = this._ta;
         ta.value = text;
-        ta.setSelectionRange(text.length, text.length);
+        const caret = dir === -1 ? 0 : text.length;
+        ta.setSelectionRange(caret, caret);
         this._hasText = text.trim().length > 0;
         this._autoResize();
     }
