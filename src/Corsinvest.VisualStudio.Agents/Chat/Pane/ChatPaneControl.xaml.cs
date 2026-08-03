@@ -124,6 +124,22 @@ public partial class ChatPaneControl : PaneControlBase
         return (mode, page, info);
     }
 
+    /// <summary>Push the boot state the host owns outright — pane config and VS options. Neither
+    /// waits on claude.exe, so this goes out the moment the WebView is up, ahead of any history.
+    /// The CLI's own state follows on cli_state when it answers.</summary>
+    private void SendUiInit()
+        => _bridge?.Send(BridgeMessages.ToWebView.Ui.Init, new Contracts.InitPayloadNotification
+        {
+            Config = new Contracts.InitConfigDto
+            {
+                WorkingDirectory = Entry.WorkingDirectory ?? "",
+#if DEBUG
+                InDev = true,
+#endif
+            },
+            VsOptions = WebViewBridge.BuildVsOptions(),
+        });
+
     /// <summary>Send a loaded history page to the WebView (messages + paging), then kick off the
     /// input ↑/↓ prompt history load in the background. Loading a session's transcript always loads
     /// its prompt history too — same act; both read the entry's constant workdir.</summary>
@@ -454,13 +470,15 @@ public partial class ChatPaneControl : PaneControlBase
         _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
         _log.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode})");
 
-        // Client-first: the WebView starts empty here. Once the client starts, StartupAsync gathers
-        // the CLI state (initialize + get_settings, no user turn) and OnCliStateReceived sends the one
-        // fully-populated ui_init — enabling the toolbar. permMode below is what we pass via
-        // --permission-mode (the CLI doesn't report it); OnCliStateReceived reads it off the client.
+        // Before the history, never after: those rows shorten their paths against the working
+        // directory, and a row drawn without one keeps the absolute path it was born with. This
+        // is why ui_init no longer waits for the CLI — permMode below is what we pass via
+        // --permission-mode (the CLI doesn't report it), and the rest of the CLI's state follows
+        // on cli_state when StartupAsync has gathered it, seconds later, enabling the toolbar.
         // Seed the resumed session's transcript + title (after Cleared, from the read above).
         // SendHistoryPage → LoadPromptHistory read the entry's constant workdir, so this works even
         // though _client doesn't exist yet on the resume-path.
+        SendUiInit();
         if (restoreState)
         {
             SendHistoryPage(resumePage, _startupSessionId);

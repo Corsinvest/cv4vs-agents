@@ -98,8 +98,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<InitConfigDto>();
         AddInterface<VsOptionsDto>();
         AddInterface<InitPayloadNotification>()
-            .Member(x => nameof(x.CliState)).Null()
             .Member(x => nameof(x.VsOptions)).Null();
+        AddInterface<CliStateNotification>();
         AddInterface<AccountDto>();
         // Usage (get_usage), decoded once in HandleGetUsage into this typed shape.
         AddInterface<RateWindowDto>()

@@ -74,6 +74,7 @@ export const Msg = {
             started: 'cli_started',
             exited: 'cli_exited',
             error: 'cli_error',
+            state: 'cli_state',
             modelChanged: 'cli_model_changed',
             permissionModeChanged: 'cli_permission_mode_changed',
         },
