@@ -118,21 +118,26 @@ internal sealed class NdjsonTransport : IDisposable
     /// </summary>
     public void Write(object message)
     {
-        if (!IsRunning)
-        {
-            _log.Warn("!!! transport.Write called but IsRunning=false");
-            return;
-        }
         try
         {
             var json = JsonConvert.SerializeObject(message, Formatting.None);
             _log.Trace(() => $">>> stdin: {StringHelpers.Truncate(json, 500)}");
             // Lock so a worker-thread MCP response and a UI-thread write can't
-            // interleave into one corrupt NDJSON line.
+            // interleave into one corrupt NDJSON line. The liveness check belongs
+            // INSIDE it: checked outside, Dispose() can null _stdin in between, and
+            // the write then dies in the catch below — silently, as far as the caller
+            // is concerned, leaving a SendControlRequestAsync to wait out its timeout
+            // instead of failing now.
             lock (_writeLock)
             {
-                _stdin.WriteLine(json);
-                _stdin.Flush();
+                var stdin = _stdin;
+                if (!IsRunning || stdin == null)
+                {
+                    _log.Warn("!!! transport.Write called but the process is gone");
+                    return;
+                }
+                stdin.WriteLine(json);
+                stdin.Flush();
             }
         }
         catch (Exception ex)
@@ -194,8 +199,14 @@ internal sealed class NdjsonTransport : IDisposable
     {
         if (_disposed) { return; }
         _disposed = true;
-        try { _stdin?.Close(); } catch { /* silent: cleanup */ }
-        _stdin = null;
+        // Under the write lock: a Write() already inside it holds a local copy of the
+        // stream and must be allowed to finish its line, rather than have it closed
+        // out from under it mid-flush.
+        lock (_writeLock)
+        {
+            try { _stdin?.Close(); } catch { /* silent: cleanup */ }
+            _stdin = null;
+        }
         try { if (_process?.HasExited == false) { _process.Kill(); } } catch { /* silent: cleanup */ }
         try { _process?.Dispose(); } catch { /* silent: cleanup */ }
         _process = null;

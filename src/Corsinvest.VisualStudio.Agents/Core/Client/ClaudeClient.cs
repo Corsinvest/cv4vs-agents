@@ -21,8 +21,11 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 internal sealed partial class ClaudeClient : IClaudeClient
 {
     // Built in the constructor, not here: a field initializer runs before _log is assigned, so the
-    // first transport would lose the pane tag.
-    private NdjsonTransport _transport;
+    // first transport would lose the pane tag. Volatile because StartProcess swaps it on respawn
+    // while MCP worker threads are reading it to write — without it they can go on addressing the
+    // disposed instance. Readers that then USE it must copy it to a local first: the field can
+    // change between two reads of it.
+    private volatile NdjsonTransport _transport;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<JObject>> _pending = new();
     private int _requestCounter;
 
@@ -671,13 +674,14 @@ internal sealed partial class ClaudeClient : IClaudeClient
                                       int startLine, int startChar, int endLine, int endChar,
                                       bool isEmpty)
     {
-        if (!_transport.IsRunning)
+        var transport = _transport;
+        if (!transport.IsRunning)
         {
             _log.Trace(() => "[ChatSelection] SendSelectionChanged skip: transport not running");
             return;
         }
         _log.Trace(() => $"[ChatSelection] SendSelectionChanged → filePath={filePath} isEmpty={isEmpty} line={startLine}-{endLine}");
-        _transport.Write(new
+        transport.Write(new
         {
             type = "request",
             channelId = "",
@@ -717,10 +721,11 @@ internal sealed partial class ClaudeClient : IClaudeClient
             parent_tool_use_id = (string)null,
             uuid,
         };
-        _log.Debug(() => $"[ClaudeClient.SendPrompt] BEFORE Write running={_transport.IsRunning} sessionId={SessionId ?? "(none)"} blocks={contentBlocks?.Count ?? 0}");
+        var transport = _transport;
+        _log.Debug(() => $"[ClaudeClient.SendPrompt] BEFORE Write running={transport.IsRunning} sessionId={SessionId ?? "(none)"} blocks={contentBlocks?.Count ?? 0}");
         try
         {
-            _transport.Write(msg);
+            transport.Write(msg);
         }
         catch (Exception ex)
         {
