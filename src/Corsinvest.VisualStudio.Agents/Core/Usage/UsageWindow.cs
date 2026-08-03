@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -35,14 +35,14 @@ public sealed class UsageWindow : ToolWindowPane
                 var window = pkg.FindToolWindow(typeof(UsageWindow), 0, create: true);
                 if (window?.Frame is not IVsWindowFrame frame)
                 {
-                    OutputWindowLogger.Warn("[usage] the Usage window has no frame — cannot show it");
+                    OutputWindowLogger.Global.Warn("[usage] the Usage window has no frame — cannot show it");
                     return;
                 }
                 ErrorHandler.ThrowOnFailure(frame.Show());
             }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException("UsageWindow.Open", ex);
+                OutputWindowLogger.Global.LogException("UsageWindow.Open", ex);
             }
         });
     }

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -111,7 +111,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException($"{nameof(ChatWebView)}.{nameof(OpenTaskManager)}", ex);
+            OutputWindowLogger.Global.LogException($"{nameof(ChatWebView)}.{nameof(OpenTaskManager)}", ex);
         }
     }
 
@@ -121,7 +121,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
     {
         if (_taskManagerOwner == null) { return; }
         try { _taskManagerOwner.Close(); }
-        catch (Exception ex) { OutputWindowLogger.LogException($"{nameof(ChatWebView)}.CloseTaskManagerOwner", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException($"{nameof(ChatWebView)}.CloseTaskManagerOwner", ex); }
         _taskManagerOwner = null;
     }
 }

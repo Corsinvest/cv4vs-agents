@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -37,14 +37,14 @@ public sealed class StatisticsWindow : ToolWindowPane
                 var window = pkg.FindToolWindow(typeof(StatisticsWindow), 0, create: true);
                 if (window?.Frame is not Microsoft.VisualStudio.Shell.Interop.IVsWindowFrame frame)
                 {
-                    OutputWindowLogger.Warn("[stats] the Statistics window has no frame — cannot show it");
+                    OutputWindowLogger.Global.Warn("[stats] the Statistics window has no frame — cannot show it");
                     return;
                 }
                 Microsoft.VisualStudio.ErrorHandler.ThrowOnFailure(frame.Show());
             }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException("StatisticsWindow.Open", ex);
+                OutputWindowLogger.Global.LogException("StatisticsWindow.Open", ex);
             }
         });
     }

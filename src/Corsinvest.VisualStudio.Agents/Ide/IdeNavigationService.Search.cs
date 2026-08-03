@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -69,7 +69,7 @@ internal sealed partial class IdeNavigationService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeNavigationService.EnsureSearchProbed", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureSearchProbed", ex);
             return false;
         }
     }
@@ -127,7 +127,7 @@ internal sealed partial class IdeNavigationService
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeNavigationService.SearchWorkspaceAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.SearchWorkspaceAsync", ex);
             return new SearchResult { Supported = false, Reason = "Search failed (internal API changed?)." };
         }
     }
@@ -224,7 +224,7 @@ internal sealed partial class IdeNavigationService
         catch (Exception ex)
         {
             // Signature mismatch or API change — log once, return whatever we collected so far.
-            OutputWindowLogger.LogException("IdeNavigationService.InvokeNavigateToSearchAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.InvokeNavigateToSearchAsync", ex);
         }
         return results;
     }

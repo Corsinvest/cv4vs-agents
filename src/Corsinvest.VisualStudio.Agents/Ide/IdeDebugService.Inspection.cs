@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -42,7 +42,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.ContinueAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.ContinueAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to continue." };
         }
     }
@@ -74,7 +74,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.StepAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.StepAsync", ex);
             return new StepResult { Ok = false, Reason = "Failed to step." };
         }
     }
@@ -118,7 +118,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.GetCallStackAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.GetCallStackAsync", ex);
             return new CallStackResult { Ok = false, Reason = "Failed to get call stack." };
         }
     }
@@ -156,7 +156,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeDebugService.GetLocalsAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeDebugService.GetLocalsAsync", ex);
             return new LocalsResult { Ok = false, Reason = "Failed to get locals." };
         }
     }
@@ -193,7 +193,7 @@ internal sealed partial class IdeDebugService
         }
         catch (Exception exc)
         {
-            OutputWindowLogger.LogException("IdeDebugService.EvaluateAsync", exc);
+            OutputWindowLogger.Global.LogException("IdeDebugService.EvaluateAsync", exc);
             return new EvalResult { Ok = false, Reason = "Failed to evaluate." };
         }
     }

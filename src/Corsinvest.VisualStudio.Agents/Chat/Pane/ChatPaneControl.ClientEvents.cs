@@ -104,7 +104,7 @@ public partial class ChatPaneControl
                     // exceptions, so there's no unobserved-exception fallout from abandoning it here.
                     var timedOut = await Task.WhenAny(work, Task.Delay(3000)) != work;
                     var ctx = timedOut ? null : await work;
-                    if (timedOut) { OutputWindowLogger.Debug(() => $"[diag] check timed out (3s) for {filePath} — feedback dropped"); }
+                    if (timedOut) { _log.Debug(() => $"[diag] check timed out (3s) for {filePath} — feedback dropped"); }
                     if (!string.IsNullOrEmpty(ctx))
                     {
                         _client?.RespondToHookCallback(e.RequestId, new
@@ -120,7 +120,7 @@ public partial class ChatPaneControl
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("ChatPaneControl.OnHookCallback", ex);
+            _log.LogException("ChatPaneControl.OnHookCallback", ex);
             _client?.RespondToHookCallback(e.RequestId, new { @continue = true });
         }
     }
@@ -330,7 +330,7 @@ public partial class ChatPaneControl
 
         // Captured client's workdir, not the live Sessions property — this runs async and
         // must stay keyed on the client that started it, even if the pane's client is swapped.
-        var sessions = new SessionManager(PaneClaudePaths, client.WorkingDirectory);
+        var sessions = new SessionManager(PaneClaudePaths, client.WorkingDirectory, _log);
         // Skip the CLI round-trip entirely if the session already has a title
         // (resumed session, or generated on a previous run).
         if (sessions.HasTitle(sid)) { return; }

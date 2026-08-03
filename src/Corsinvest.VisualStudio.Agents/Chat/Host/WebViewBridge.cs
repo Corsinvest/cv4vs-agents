@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -21,7 +21,9 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 /// Manages the WebView2 control: initialisation, posting messages to JS,
 /// and dispatching messages received from JS to the host via <see cref="MessageReceived"/>.
 /// </summary>
-internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2CompositionControl webView, Dispatcher dispatcher)
+internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2CompositionControl webView,
+                                            Dispatcher dispatcher,
+                                            OutputWindowLogger log)
     : IDisposable
 {
     private bool _ready;
@@ -86,7 +88,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             {
                 // Mapping a missing folder throws a bare DirectoryNotFoundException that names
                 // nothing — say which path we resolved before it does.
-                OutputWindowLogger.Warn($"[webview] index.html not found at '{indexPath}' — the chat can't load");
+                log.Warn($"[webview] index.html not found at '{indexPath}' — the chat can't load");
             }
             webView.CoreWebView2.SetVirtualHostNameToFolderMapping("cv4vs.local", folder, CoreWebView2HostResourceAccessKind.Allow);
 
@@ -100,7 +102,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("WebViewBridge.Init", ex);
+            log.LogException("WebViewBridge.Init", ex);
             throw;
         }
     }
@@ -217,7 +219,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("WebViewBridge.RendererProcessId", ex);
+            log.LogException("WebViewBridge.RendererProcessId", ex);
             return null;
         }
     }
@@ -244,7 +246,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             }
             webView.Dispose();
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("WebViewBridge.Dispose", ex); }
+        catch (Exception ex) { log.LogException("WebViewBridge.Dispose", ex); }
     }
 
     /// <summary>Name the page after the pane, so the browser's task manager can tell one chat's
@@ -258,7 +260,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             _ = webView.CoreWebView2?.ExecuteScriptAsync(
                 $"document.title = {JsonConvert.SerializeObject(title)}");
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("WebViewBridge.SetDocumentTitle", ex); }
+        catch (Exception ex) { log.LogException("WebViewBridge.SetDocumentTitle", ex); }
     }
 
     /// <summary>Give the WebView2 control the native (WPF) focus, so the keyboard actually reaches
@@ -288,7 +290,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("WebViewBridge.ShowFind", ex);
+            log.LogException("WebViewBridge.ShowFind", ex);
         }
     }
 
@@ -342,7 +344,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             ";
             _docCreatedScriptId = await core.AddScriptToExecuteOnDocumentCreatedAsync(script);
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("RegisterBootThemeScript", ex); }
+        catch (Exception ex) { log.LogException("RegisterBootThemeScript", ex); }
     }
 
     public void Send(string type, object data)
@@ -352,7 +354,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         // channel means a case forgot Send→SendResponse → the WebView Promise would time out.
         if (_responseChannels.Contains(type))
         {
-            OutputWindowLogger.Warn($"!!! Send() on response channel '{type}' — use SendResponse(id). The request Promise will time out.");
+            log.Warn($"!!! Send() on response channel '{type}' — use SendResponse(id). The request Promise will time out.");
         }
 #endif
         if (!_ready) { _pending.Enqueue((type, data)); return; }
@@ -374,10 +376,10 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         try
         {
             var json = JsonConvert.SerializeObject(new { type, id, error = message }, _jsonSettings);
-            OutputWindowLogger.Trace(() => $"[bridge → web] {type} ERROR#{id} {message}");
+            log.Trace(() => $"[bridge → web] {type} ERROR#{id} {message}");
             webView.CoreWebView2?.PostWebMessageAsJson(json);
         }
-        catch (Exception ex) { OutputWindowLogger.LogException($"WebViewBridge.SendError[{type}]", ex); }
+        catch (Exception ex) { log.LogException($"WebViewBridge.SendError[{type}]", ex); }
     }
 
     // The 5 ToWebView channels that carry request responses. In DEBUG, Send() warns if called
@@ -414,7 +416,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             // Trace bridge traffic; skip streaming/progress channels that would flood the log.
             if (!IsNoisyChannel(type))
             {
-                OutputWindowLogger.Trace(() => $"[bridge → web] {type} {StringHelpers.Truncate(json)}");
+                log.Trace(() => $"[bridge → web] {type} {StringHelpers.Truncate(json)}");
             }
             // CoreWebView2 is thread-affine (UI thread). Callers on a background thread
             // (e.g. a CLI-event handler continuation) would otherwise throw. Marshal the
@@ -422,7 +424,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             if (dispatcher.CheckAccess()) { webView.CoreWebView2?.PostWebMessageAsJson(json); }
             else { dispatcher.BeginInvoke(new Action(() => webView.CoreWebView2?.PostWebMessageAsJson(json))); }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException($"WebViewBridge.SendDirect[{type}]", ex); }
+        catch (Exception ex) { log.LogException($"WebViewBridge.SendDirect[{type}]", ex); }
     }
 
     private static bool IsNoisyChannel(string type)
@@ -464,7 +466,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.Warn("!!! IconRequested error: " + ex.Message);
+            log.Warn("!!! IconRequested error: " + ex.Message);
         }
     }
 
@@ -478,10 +480,10 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             var data = node["data"] is JObject dataObj ? dataObj : [];
             // Correlation id for request/response; absent (null) for notifications.
             int? id = node["id"]?.Type == JTokenType.Integer ? (int)node["id"] : null;
-            OutputWindowLogger.Trace(() => $"[bridge ← web] {type} {StringHelpers.Truncate(raw)}");
+            log.Trace(() => $"[bridge ← web] {type} {StringHelpers.Truncate(raw)}");
             dispatcher.Invoke(() => MessageReceived?.Invoke(type, data, id));
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("WebViewBridge.OnRawMessage", ex); }
+        catch (Exception ex) { log.LogException("WebViewBridge.OnRawMessage", ex); }
     }
 
 }

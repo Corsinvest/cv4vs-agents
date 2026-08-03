@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -156,7 +156,7 @@ public abstract class PaneControlBase : UserControl, IPaneControl
 
             new DevInfoDialog(info).ShowDialog();
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("Pane.ShowSessionInfo", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Pane.ShowSessionInfo", ex); }
     }
 
     public abstract void NewSession();

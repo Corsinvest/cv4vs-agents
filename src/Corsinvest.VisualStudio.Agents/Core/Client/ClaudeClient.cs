@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -18,9 +18,11 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 /// Concrete <see cref="IClaudeClient"/> implementation driving claude.exe through NDJSON
 /// stream-json on stdin/stdout and the bidirectional control protocol.
 /// </summary>
-public sealed partial class ClaudeClient : IClaudeClient
+internal sealed partial class ClaudeClient : IClaudeClient
 {
-    private NdjsonTransport _transport = new();
+    // Built in the constructor, not here: a field initializer runs before _log is assigned, so the
+    // first transport would lose the pane tag.
+    private NdjsonTransport _transport;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<JObject>> _pending = new();
     private int _requestCounter;
 
@@ -89,7 +91,15 @@ public sealed partial class ClaudeClient : IClaudeClient
     private EventHandler<string> _onError;
     private EventHandler<(int exitCode, bool intentional)> _onExited;
 
-    public ClaudeClient() => AttachTransportEvents();
+    private readonly OutputWindowLogger _log;
+
+    // Optional: the context/usage probes build a client with no pane behind it (→ Global, unprefixed).
+    public ClaudeClient(OutputWindowLogger log = null)
+    {
+        _log = log ?? OutputWindowLogger.Global;
+        _transport = new NdjsonTransport(_log);
+        AttachTransportEvents();
+    }
 
     private void AttachTransportEvents()
     {
@@ -156,7 +166,7 @@ public sealed partial class ClaudeClient : IClaudeClient
         // detach listeners from the old one so its late Exited event doesn't bubble up.
         DetachTransportEvents();
         try { _transport.Dispose(); } catch { }
-        _transport = new NdjsonTransport();
+        _transport = new NdjsonTransport(_log);
         AttachTransportEvents();
 
         // Launch-only args. --include-partial-messages enables stream_event + tool_progress.
@@ -254,12 +264,12 @@ public sealed partial class ClaudeClient : IClaudeClient
             // won't reach the CLI (mcp__<name>__* calls fail) — surface it instead of a silent drop.
             if (resp?["errors"] is JObject errors && errors.HasValues)
             {
-                OutputWindowLogger.Warn($"[client] SDK MCP server '{name}' registration failed: {JsonExtensions.ToIndentedString(errors)}");
+                _log.Warn($"[client] SDK MCP server '{name}' registration failed: {JsonExtensions.ToIndentedString(errors)}");
             }
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("ClaudeClient.RegisterSdkMcpServer", ex);
+            _log.LogException("ClaudeClient.RegisterSdkMcpServer", ex);
         }
     }
 
@@ -360,7 +370,7 @@ public sealed partial class ClaudeClient : IClaudeClient
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("ClaudeClient.StartupAsync", ex);
+            _log.LogException("ClaudeClient.StartupAsync", ex);
         }
     }
 
@@ -370,7 +380,7 @@ public sealed partial class ClaudeClient : IClaudeClient
         if (_transport.IsRunning) { return; }
         if (_lastOptions == null)
         {
-            OutputWindowLogger.Warn("[client] SendPrompt before Prepare/StartAsync — transport not running, prompt dropped");
+            _log.Warn("[client] SendPrompt before Prepare/StartAsync — transport not running, prompt dropped");
             return;
         }
 
@@ -384,7 +394,7 @@ public sealed partial class ClaudeClient : IClaudeClient
             // Keep the profile's provider across respawns — else the pane silently reverts to native Claude.
             Env = _env ?? _lastOptions?.Env,
         };
-        OutputWindowLogger.Info($"=== auto-restart workdir={replay.WorkingDirectory} session={replay.ResumeSessionId ?? "(none)"}");
+        _log.Info($"=== auto-restart workdir={replay.WorkingDirectory} session={replay.ResumeSessionId ?? "(none)"}");
         StartProcess(replay);
     }
 
@@ -531,7 +541,7 @@ public sealed partial class ClaudeClient : IClaudeClient
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.Warn($"[client] rename_session refused ({ex.Message}) — falling back to the JSONL");
+            _log.Warn($"[client] rename_session refused ({ex.Message}) — falling back to the JSONL");
             return false;
         }
     }
@@ -571,7 +581,7 @@ public sealed partial class ClaudeClient : IClaudeClient
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.Warn($"[client] list_models refused ({ex.Message}) — keeping the catalogue from initialize");
+            _log.Warn($"[client] list_models refused ({ex.Message}) — keeping the catalogue from initialize");
             return [];
         }
     }
@@ -663,10 +673,10 @@ public sealed partial class ClaudeClient : IClaudeClient
     {
         if (!_transport.IsRunning)
         {
-            OutputWindowLogger.Trace("[ChatSelection] SendSelectionChanged skip: transport not running");
+            _log.Trace(() => "[ChatSelection] SendSelectionChanged skip: transport not running");
             return;
         }
-        OutputWindowLogger.Trace(() => $"[ChatSelection] SendSelectionChanged → filePath={filePath} isEmpty={isEmpty} line={startLine}-{endLine}");
+        _log.Trace(() => $"[ChatSelection] SendSelectionChanged → filePath={filePath} isEmpty={isEmpty} line={startLine}-{endLine}");
         _transport.Write(new
         {
             type = "request",
@@ -707,14 +717,14 @@ public sealed partial class ClaudeClient : IClaudeClient
             parent_tool_use_id = (string)null,
             uuid,
         };
-        OutputWindowLogger.Debug(() => $"[ClaudeClient.SendPrompt] BEFORE Write running={_transport.IsRunning} sessionId={SessionId ?? "(none)"} blocks={contentBlocks?.Count ?? 0}");
+        _log.Debug(() => $"[ClaudeClient.SendPrompt] BEFORE Write running={_transport.IsRunning} sessionId={SessionId ?? "(none)"} blocks={contentBlocks?.Count ?? 0}");
         try
         {
             _transport.Write(msg);
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("ClaudeClient.SendPrompt.Write", ex);
+            _log.LogException("ClaudeClient.SendPrompt.Write", ex);
             throw;
         }
     }
@@ -725,7 +735,7 @@ public sealed partial class ClaudeClient : IClaudeClient
         // tool_use_id keeps concurrent prompts from clobbering each other.
         if (string.IsNullOrEmpty(toolUseId) || !_toolRequestIds.TryRemove(toolUseId, out var requestId))
         {
-            OutputWindowLogger.Warn($"[client] permission for unknown/stale tool_use_id={toolUseId} — ignored");
+            _log.Warn($"[client] permission for unknown/stale tool_use_id={toolUseId} — ignored");
             return false;
         }
 

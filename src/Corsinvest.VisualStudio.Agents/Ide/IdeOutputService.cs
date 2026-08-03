@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -105,7 +105,7 @@ internal sealed class IdeOutputService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeOutputService.ReadAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeOutputService.ReadAsync", ex);
             return new OutputResult { Ok = false, Reason = "Failed to read output window." };
         }
     }
@@ -131,7 +131,7 @@ internal sealed class IdeOutputService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeOutputService.ClearAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeOutputService.ClearAsync", ex);
             return new OutputResult { Ok = false, Reason = "Failed to clear output pane." };
         }
     }
@@ -157,7 +157,7 @@ internal sealed class IdeOutputService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeOutputService.ActivateAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeOutputService.ActivateAsync", ex);
             return new OutputResult { Ok = false, Reason = "Failed to activate output pane." };
         }
     }

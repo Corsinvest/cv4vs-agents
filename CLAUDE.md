@@ -89,6 +89,22 @@ Full description in [docs/architecture.md](docs/architecture.md). What matters w
     happen"). **Info** — few, key lifecycle events. **Debug** — the internal flow of one feature.
     **Trace** — raw wire traffic. Use the lazy `() => $"..."` overloads for Debug/Trace.
   - Prefix new logs with an `[area]` tag (`[client]`, `[mcp]`, `[cli]`, `[sessions]`, …).
+  - **One class, two ways to get it.** `OutputWindowLogger.For(kind, () => paneId)` builds a
+    per-session logger that prepends `[chat#N]`/`[cli#N]` before the `[area]` tag — with several
+    panes open the Output window is one stream, and untagged lines can't be told apart. The id is a
+    `Func<int>` because `PaneId` lands *after* the control is built; capturing the value would tag
+    every start-up line `#0`. `OutputWindowLogger.Global` writes untagged.
+  - A pane injects its logger into what it owns (bridge, handler, client, transport, sessions), so
+    those classes take it in the constructor. A class used both ways (`ClaudeClient`,
+    `SessionManager`) takes it as an optional arg and falls back to `Global`.
+  - Use `Global` for: paths belonging to no session (MCP, IDE, package, stats); **static members**,
+    which have no instance to reach — in a primary-constructor class the parameter isn't even in
+    scope there (`CS9105`); and process-wide resources reached from a pane, like `ChatWebView`'s
+    shared task manager, where a pane tag would claim an ownership that isn't there.
+  - The Output window pane itself is process-wide, so `EnsurePaneOnUIThread`/`ActivatePane` stay
+    static: one pane for the extension, whoever logs into it.
+  - When converting a class, convert **every partial** of it: the compiler won't tell you that one
+    file still logs untagged.
   - A catch returning a default on a user-facing path must `LogException` or `Warn` — never swallow.
 
 ## Docs

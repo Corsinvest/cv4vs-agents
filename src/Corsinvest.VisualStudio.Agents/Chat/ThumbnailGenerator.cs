@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -69,7 +69,7 @@ internal static class ThumbnailGenerator
         catch (Exception ex)
         {
             // Unsupported codec (no WIC decoder), corrupt data, etc. — skip the preview.
-            OutputWindowLogger.LogException("ThumbnailGenerator.Make", ex);
+            OutputWindowLogger.Global.LogException("ThumbnailGenerator.Make", ex);
             return null;
         }
     }

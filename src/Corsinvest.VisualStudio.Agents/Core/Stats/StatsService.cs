@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -60,7 +60,7 @@ internal static class StatsService
                     IndexAllProjects(workingDirectory: null, ClaudePaths.ForProfile(profile), force);
                 }
             }
-            catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".Index", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException(nameof(StatsService) + ".Index", ex); }
             finally
             {
                 System.Threading.Volatile.Write(ref _indexing, 0);
@@ -80,7 +80,7 @@ internal static class StatsService
         {
             // paths is immutable, so capturing it in the closure is safe.
             try { IndexAllProjects(workingDirectory, paths); }
-            catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".Index", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException(nameof(StatsService) + ".Index", ex); }
             finally
             {
                 System.Threading.Volatile.Write(ref _indexing, 0);
@@ -372,7 +372,7 @@ internal static class StatsService
                 }
             }
         }
-        catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".ProjectActiveDays", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException(nameof(StatsService) + ".ProjectActiveDays", ex); }
         return seen;
     }
 
@@ -383,7 +383,7 @@ internal static class StatsService
     {
         if (string.IsNullOrEmpty(cwd))
         {
-            OutputWindowLogger.Warn("[stats] no cwd for this project — listing its sessions is not possible");
+            OutputWindowLogger.Global.Warn("[stats] no cwd for this project — listing its sessions is not possible");
             return [];
         }
         try
@@ -392,7 +392,7 @@ internal static class StatsService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException(nameof(StatsService) + ".SessionsFor", ex);
+            OutputWindowLogger.Global.LogException(nameof(StatsService) + ".SessionsFor", ex);
             return [];
         }
     }
@@ -438,7 +438,7 @@ internal static class StatsService
             }
             return (cwd, hasData, lastActivity);
         }
-        catch (Exception ex) { OutputWindowLogger.LogException(nameof(StatsService) + ".ProjectCacheInfo", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException(nameof(StatsService) + ".ProjectCacheInfo", ex); }
         return (null, null, lastActivity);
     }
 
@@ -453,7 +453,7 @@ internal static class StatsService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException(nameof(StatsService) + ".CwdForProject", ex);
+            OutputWindowLogger.Global.LogException(nameof(StatsService) + ".CwdForProject", ex);
             return null;
         }
     }

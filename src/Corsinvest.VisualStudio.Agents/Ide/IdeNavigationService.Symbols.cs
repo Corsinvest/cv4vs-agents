@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -59,7 +59,7 @@ internal sealed partial class IdeNavigationService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeNavigationService.EnsureSymbolsProbed", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureSymbolsProbed", ex);
             return false;
         }
     }
@@ -96,7 +96,7 @@ internal sealed partial class IdeNavigationService
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("IdeNavigationService.GetDocumentSymbolsAsync", ex);
+            OutputWindowLogger.Global.LogException("IdeNavigationService.GetDocumentSymbolsAsync", ex);
             return new SymbolsResult { Supported = false, Reason = "Document symbols failed (internal API changed?)." };
         }
     }

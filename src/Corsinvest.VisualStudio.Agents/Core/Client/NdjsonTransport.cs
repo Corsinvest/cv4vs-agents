@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -41,8 +41,12 @@ internal sealed class NdjsonTransport : IDisposable
     public int Pid => _process?.Id ?? -1;
     public bool IsRunning => _process?.HasExited == false;
 
-    public NdjsonTransport()
+    private readonly OutputWindowLogger _log;
+
+    // Optional: the probes build a transport with no pane behind it (→ Global, unprefixed).
+    public NdjsonTransport(OutputWindowLogger log = null)
     {
+        _log = log ?? OutputWindowLogger.Global;
         _hJob = NativeMethods.CreateJobObject(IntPtr.Zero, null);
         if (_hJob != IntPtr.Zero)
         {
@@ -60,8 +64,8 @@ internal sealed class NdjsonTransport : IDisposable
     {
         if (_disposed) { return; }
 
-        OutputWindowLogger.Info($"=== transport start exe={exePath} workdir={workingDirectory}");
-        OutputWindowLogger.Debug($">>> args={arguments}");
+        _log.Info($"=== transport start exe={exePath} workdir={workingDirectory}");
+        _log.Debug(() => $">>> args={arguments}");
 
         var psi = new ProcessStartInfo
         {
@@ -88,7 +92,7 @@ internal sealed class NdjsonTransport : IDisposable
         {
             if (!string.IsNullOrEmpty(e.Data))
             {
-                OutputWindowLogger.Warn($"[stderr] {e.Data}");
+                _log.Warn($"[stderr] {e.Data}");
                 ErrorLine?.Invoke(this, e.Data);
             }
         };
@@ -102,7 +106,7 @@ internal sealed class NdjsonTransport : IDisposable
             NativeMethods.AssignProcessToJobObject(_hJob, _process.Handle);
         }
 
-        OutputWindowLogger.Info($"--- transport PID={_process.Id}");
+        _log.Info($"--- transport PID={_process.Id}");
 
         _readerThread = new Thread(ReadLoop) { IsBackground = true, Name = "ClaudeNdjsonReader" };
         _readerThread.Start();
@@ -116,13 +120,13 @@ internal sealed class NdjsonTransport : IDisposable
     {
         if (!IsRunning)
         {
-            OutputWindowLogger.Warn("!!! transport.Write called but IsRunning=false");
+            _log.Warn("!!! transport.Write called but IsRunning=false");
             return;
         }
         try
         {
             var json = JsonConvert.SerializeObject(message, Formatting.None);
-            OutputWindowLogger.Trace(() => $">>> stdin: {StringHelpers.Truncate(json, 500)}");
+            _log.Trace(() => $">>> stdin: {StringHelpers.Truncate(json, 500)}");
             // Lock so a worker-thread MCP response and a UI-thread write can't
             // interleave into one corrupt NDJSON line.
             lock (_writeLock)
@@ -133,13 +137,13 @@ internal sealed class NdjsonTransport : IDisposable
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.LogException("transport.Write", ex);
+            _log.LogException("transport.Write", ex);
         }
     }
 
     private void ReadLoop()
     {
-        OutputWindowLogger.Debug("--- transport ReadLoop started");
+        _log.Debug(() => "--- transport ReadLoop started");
         // Capture the reader locally: Dispose() (respawn) nulls out _process on
         // another thread, and reading the field here would NRE the moment the
         // process exits and ReadLine() returns. The local keeps this loop tied
@@ -152,29 +156,29 @@ internal sealed class NdjsonTransport : IDisposable
             while ((line = reader.ReadLine()) != null)
             {
                 var clean = line.Trim();
-                OutputWindowLogger.Trace(() => $"<<< RAW: {(clean.Length <= 500 ? clean : clean.Substring(0, 500) + "...")}");
+                _log.Trace(() => $"<<< RAW: {(clean.Length <= 500 ? clean : clean.Substring(0, 500) + "...")}");
                 if (clean.Length == 0 || clean[0] != '{') { continue; }
                 JObject obj;
                 try { obj = JObject.Parse(clean); }
                 catch (Exception ex)
                 {
-                    OutputWindowLogger.Warn($"!!! transport parse error: {ex.Message}");
+                    _log.Warn($"!!! transport parse error: {ex.Message}");
                     continue;
                 }
                 LineReceived?.Invoke(this, obj);
             }
-            OutputWindowLogger.Debug("--- transport ReadLoop ended (stdout closed)");
+            _log.Debug(() => "--- transport ReadLoop ended (stdout closed)");
         }
         catch (Exception ex)
         {
             // Closed stdout on a disposed respawn is expected — don't log it as a fault.
-            if (_disposed) { OutputWindowLogger.Debug(() => $"--- transport read loop ended (disposed): {ex.GetType().Name}"); }
-            else { OutputWindowLogger.LogException("transport.ReadLoop", ex); }
+            if (_disposed) { _log.Debug(() => $"--- transport read loop ended (disposed): {ex.GetType().Name}"); }
+            else { _log.LogException("transport.ReadLoop", ex); }
         }
 
         int exitCode = -1;
         try { exitCode = _process?.ExitCode ?? -1; } catch { /* silent: process may already be gone */ }
-        OutputWindowLogger.Info($"--- transport exit code={exitCode} disposed={_disposed}");
+        _log.Info($"--- transport exit code={exitCode} disposed={_disposed}");
 
         if (!_disposed) { Exited?.Invoke(this, (exitCode, false)); }
         else { Exited?.Invoke(this, (exitCode, _intentional)); }

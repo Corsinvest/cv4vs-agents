@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -120,7 +120,7 @@ internal sealed partial class McpServerHost
                     var pid = (int?)obj?["pid"] ?? 0;
                     if (pid > 0 && IsProcessAlive(pid)) { continue; }
                     File.Delete(f);
-                    OutputWindowLogger.Debug(() => $"Mcp: cleaned orphan lock {Path.GetFileName(f)}");
+                    OutputWindowLogger.Global.Debug(() => $"Mcp: cleaned orphan lock {Path.GetFileName(f)}");
                 }
                 catch { /* unreadable / locked: skip */ }
             }

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -92,7 +92,7 @@ internal static class FileSuggestions
             result.AddRange(dirs);
             result.AddRange(files);
         }
-        catch (Exception ex) { OutputWindowLogger.LogException("FileSuggestions.Get", ex); }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("FileSuggestions.Get", ex); }
         return result;
     }
 
@@ -242,7 +242,7 @@ internal static class GitIgnoreCache
             }
             catch (Exception ex)
             {
-                OutputWindowLogger.LogException("GitIgnoreCache.Get", ex);
+                OutputWindowLogger.Global.LogException("GitIgnoreCache.Get", ex);
                 return null;
             }
         }

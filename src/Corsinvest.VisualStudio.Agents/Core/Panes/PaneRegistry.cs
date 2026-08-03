@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -44,7 +44,7 @@ public sealed class PaneRegistry
         Entries.Add(entry);
         if (wasEmpty && Entries.Count > 0)
         {
-            OutputWindowLogger.Info("[registry] first session started — MCP server will start");
+            OutputWindowLogger.Global.Info("[registry] first session started — MCP server will start");
             FirstSessionStarted?.Invoke();
         }
         return entry;
@@ -58,7 +58,7 @@ public sealed class PaneRegistry
         Entries.Remove(entry);
         if (Entries.Count == 0)
         {
-            OutputWindowLogger.Info("[registry] last session ended — MCP server will stop");
+            OutputWindowLogger.Global.Info("[registry] last session ended — MCP server will stop");
             LastSessionEnded?.Invoke();
         }
     }
@@ -71,7 +71,7 @@ public sealed class PaneRegistry
         foreach (var entry in Entries.ToArray())
         {
             try { entry.CloseAction?.Invoke(); }
-            catch (Exception ex) { OutputWindowLogger.LogException("PaneRegistry.CloseAll", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("PaneRegistry.CloseAll", ex); }
         }
     }
 
@@ -87,7 +87,7 @@ public sealed class PaneRegistry
         {
             if (SameFolder(entry.WorkingDirectory, workingDirectory)) { kept++; continue; }
             try { entry.CloseAction?.Invoke(); }
-            catch (Exception ex) { OutputWindowLogger.LogException("PaneRegistry.CloseWhereWorkdirDiffers", ex); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("PaneRegistry.CloseWhereWorkdirDiffers", ex); }
         }
         return kept;
     }
