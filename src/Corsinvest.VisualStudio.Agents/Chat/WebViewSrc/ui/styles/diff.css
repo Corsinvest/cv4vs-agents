@@ -92,9 +92,13 @@ cv-diff-dialog fluent-dialog-body::part(content) {
     flex-direction: column;
 }
 /* rc.24's sticky title row offsets the mode dropdown's popup by one row;
- * static fixes the pointer hit-test (title is always visible anyway). */
+ * static fixes the pointer hit-test (title is always visible anyway).
+ * Centred because the row holds three things of three different heights — text 19px, the mode
+ * buttons 24px, the close button 32px — and Fluent starts them all at the top, which left their
+ * middles 7px apart down the row. */
 cv-diff-dialog fluent-dialog-body::part(title) {
     position: static;
+    align-items: center;
 }
 .cv-diff-dialog-title {
     display: inline-flex;
