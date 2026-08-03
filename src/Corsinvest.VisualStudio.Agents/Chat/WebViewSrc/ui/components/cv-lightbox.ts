@@ -19,14 +19,11 @@ import { CvDialogBase } from './cv-dialog-base';
  */
 @customElement('cv-lightbox')
 export class CvLightbox extends CvDialogBase {
-    /** Viewport caps for the image, as fractions. Kept in step with the max-width/max-height in the
-     *  styles below by hand — the width computation has to agree with what the CSS actually does. */
-    private static readonly MAX_VW = 0.88;
-    private static readonly MAX_VH = 0.84;
-    /** Dialog padding and borders around the image, measured: a 721px frame sat in a 769px dialog. */
-    private static readonly CHROME_PX = 48;
     /** Enough for the header on one line: file name (~90px) + copy and close (~56px) + padding. */
     private static readonly MIN_PX = 200;
+    /** Title row plus the body's vertical padding — the height the image does not get. Matches the
+     *  same subtraction in `.img`'s max-height below; both are the dialog minus its chrome. */
+    private static readonly HEADER_PX = 96;
 
     static override styles = [
         iconStyles,
@@ -57,14 +54,18 @@ export class CvLightbox extends CvDialogBase {
                 width: fit-content;
                 line-height: 0;
                 overflow: hidden;
-                max-width: 88vw;
-                max-height: 84vh;
+                max-width: calc(92vw - 48px);
+                max-height: calc(92vh - 96px);
             }
-            /* Image carries its intrinsic size, capped below the dialog cap (header takes some height). */
+            /* Capped to what is left of the dialog's own 92vw/92vh once its chrome is taken out:
+               24px of body padding each side, and the header above. The two caps used to be set
+               independently — 88vw against the dialog's 92vw — which on a narrow pane left the
+               image wider than the room the dialog could give it, and the overflow came off the
+               right-hand padding, so the image sat flush against that edge and was clipped. */
             .img {
                 display: block;
-                max-width: 88vw;
-                max-height: 84vh;
+                max-width: calc(92vw - 48px);
+                max-height: calc(92vh - 96px);
                 width: auto;
                 height: auto;
                 object-fit: contain;
@@ -90,10 +91,12 @@ export class CvLightbox extends CvDialogBase {
      *  `<dialog>` in the top layer, its host box measures 0, and `width: fit-content` on the inner
      *  part collapses it to 48px instead of tracking the image. The width has to be computed.
      *
-     *  Which is only arithmetic: the image is capped at 88vw/84vh, so its rendered width is the
-     *  natural width times whichever cap bites first. CHROME_PX is the dialog's padding and borders
-     *  around it; MIN_PX keeps the header (file name plus the copy and close buttons) on one line
-     *  when the image is smaller than the words above it. Both measured, not guessed. */
+     *  So it is handed one — as an expression rather than a pixel count, so the browser keeps
+     *  re-evaluating it and the dialog tracks the pane on a resize. A number would only be right
+     *  until the pane changed width: widen it and the image grows into its new cap while the dialog
+     *  stays where it was, and what no longer fits is clipped. MIN_PX keeps the header (file name
+     *  plus the copy and close buttons) on one line when the image is smaller than the words above
+     *  it. */
     private _onImageLoad = (e: Event): void => {
         const img = e.currentTarget as HTMLImageElement;
         const dialog = this.renderRoot.querySelector('fluent-dialog');
@@ -101,14 +104,24 @@ export class CvLightbox extends CvDialogBase {
         if (!part || !img.naturalWidth) {
             return;
         }
-        const scale = Math.min(
-            1,
-            (window.innerWidth * CvLightbox.MAX_VW) / img.naturalWidth,
-            (window.innerHeight * CvLightbox.MAX_VH) / img.naturalHeight,
-        );
-        const width = Math.round(img.naturalWidth * scale) + CvLightbox.CHROME_PX;
+        const body = this.renderRoot.querySelector<HTMLElement>('fluent-dialog-body');
+        const bodyCs = body ? getComputedStyle(body) : null;
+        const chrome = bodyCs
+            ? parseFloat(bodyCs.paddingLeft) + parseFloat(bodyCs.paddingRight)
+            : 0;
+        // Three candidates, smallest wins, mirroring what the CSS caps below do to the image
+        // itself: its natural size, the width the viewport leaves, and the width its aspect ratio
+        // allows once the height cap bites — a tall image is limited by height, and asking for its
+        // full width would pad the dialog out around a picture that never got that wide.
         // !important: Fluent's own width rule on the part would otherwise win.
-        part.style.setProperty('width', `${Math.max(width, CvLightbox.MIN_PX)}px`, 'important');
+        const ratio = img.naturalWidth / img.naturalHeight;
+        const byWidth = `calc(92vw - ${chrome}px)`;
+        const byHeight = `calc((92vh - ${CvLightbox.HEADER_PX}px) * ${ratio.toFixed(4)})`;
+        part.style.setProperty(
+            'width',
+            `max(${CvLightbox.MIN_PX}px, min(${img.naturalWidth}px, ${byWidth}, ${byHeight}) + ${chrome}px)`,
+            'important',
+        );
     };
 
     override render() {
