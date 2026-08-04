@@ -25,7 +25,8 @@ internal sealed class FormatDocumentTool : McpTool<FormatDocumentArgs>
     public override string Name => "document_format";
     public override string Description =>
         "Format a file using the IDE's built-in formatter. " +
-        "Equivalent to Ctrl+K, Ctrl+D in Visual Studio.";
+        "Equivalent to Ctrl+K, Ctrl+D in Visual Studio. " +
+        "The file must live inside the open solution's folder; success=false otherwise.";
 
     protected override async Task<object> InvokeAsync(FormatDocumentArgs args)
     {

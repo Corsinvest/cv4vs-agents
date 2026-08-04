@@ -198,16 +198,17 @@ internal sealed partial class McpServerHost
         yield return new Tools.OpenDiffTool();
         yield return new Tools.CloseTabTool();
         yield return new Tools.CloseAllDiffTabsTool();
-        yield return new Tools.ExecuteCodeTool();
         yield return new Tools.FormatDocumentTool();
         yield return new Tools.OrganizeImportsTool();
         yield return new Tools.RunCleanupTool();
         yield return new Tools.SaveDocumentTool();
         yield return new Tools.CheckDocumentDirtyTool();
+        yield return new Tools.ReadDocumentBufferTool();
         yield return new Tools.GetVisualStudioVersionTool();
         yield return new Tools.GetVisualStudioEditionTool();
         yield return new Tools.BuildSolutionTool();
         yield return new Tools.BuildProjectTool();
+        yield return new Tools.CleanSolutionTool();
         yield return new Tools.SetStartupProjectTool();
         yield return new Tools.GetProjectStructureTool();
         yield return new Tools.GoToDefinitionTool();

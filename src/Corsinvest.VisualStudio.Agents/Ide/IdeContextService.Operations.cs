@@ -66,11 +66,11 @@ internal sealed partial class IdeContextService
 
     //  Build (MCP buildSolution / buildProject)
 
-    /// <summary>Build the whole solution (projectName null) or a single project,
-    /// synchronously, then report success + the current Error List errors. The
-    /// DTE build is blocking, so run it on a background-safe path: switch to the
-    /// UI thread, kick the build, wait via SolutionBuild.BuildState polling.</summary>
-    public async Task<BuildResult> BuildAsync(string projectName)
+    /// <summary>Build the whole solution (projectName null) or a single project, synchronously,
+    /// then report success plus the Error List down to <paramref name="severity"/>. The DTE build is
+    /// blocking, so run it on a background-safe path: switch to the UI thread, kick the build, wait
+    /// via SolutionBuild.BuildState polling.</summary>
+    public async Task<BuildResult> BuildAsync(string projectName, string severity = "error")
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
@@ -100,19 +100,57 @@ internal sealed partial class IdeContextService
 
             // LastBuildInfo = number of projects that FAILED (0 = success).
             var failed = sb.LastBuildInfo;
-            var errors = await CollectBuildErrorsAsync(dte);
+            var (errors, skipped) = await CollectBuildErrorsAsync(dte, severity);
+            var message = failed == 0 ? "Build succeeded." : $"Build failed: {failed} project(s).";
+            // What was filtered out gets a line of its own. Without it a green build reads as
+            // "errors: [] — nothing to see", when there may be a hundred warnings behind it and no
+            // hint that asking would show them.
+            if (skipped > 0)
+            {
+                message += $" {skipped} more item(s) at a lower severity — pass severity:'warning' or 'all' to list them.";
+            }
             return new BuildResult
             {
                 Ok = failed == 0,
                 FailedProjects = failed,
                 Errors = errors,
-                Message = failed == 0 ? "Build succeeded." : $"Build failed: {failed} project(s).",
+                Message = message,
             };
         }
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("Ide.BuildAsync", ex);
             return new BuildResult { Ok = false, Message = $"Build error: {ex.Message}" };
+        }
+    }
+
+    /// <summary>Clean the solution (delete bin/obj outputs) and wait for it.
+    /// No error collection: unlike a build, a clean produces no diagnostics —
+    /// <c>LastBuildInfo</c> is the only outcome there is.</summary>
+    public async Task<BuildResult> CleanAsync()
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        var sb = dte?.Solution?.SolutionBuild;
+        if (sb == null)
+        {
+            return new BuildResult { Ok = false, Message = "No solution open." };
+        }
+        try
+        {
+            sb.Clean(WaitForCleanToFinish: true);
+            var failed = sb.LastBuildInfo;
+            return new BuildResult
+            {
+                Ok = failed == 0,
+                FailedProjects = failed,
+                Message = failed == 0 ? "Clean succeeded." : $"Clean failed: {failed} project(s).",
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.CleanAsync", ex);
+            return new BuildResult { Ok = false, Message = $"Clean error: {ex.Message}" };
         }
     }
 
@@ -130,31 +168,45 @@ internal sealed partial class IdeContextService
         return null;
     }
 
-    /// <summary>Read build errors (severity = error) from the Error List after a build.</summary>
-    private static async Task<List<BuildError>> CollectBuildErrorsAsync(DTE dte)
+    /// <summary>Read the Error List after a build, down to <paramref name="severity"/>: "error"
+    /// (the default), "warning", or "all" — each level meaning that one and everything worse, the
+    /// way a log level does. Reports how many were left out, so a caller taking the default still
+    /// learns there is more to ask for.</summary>
+    private static async Task<(List<BuildError> items, int skipped)> CollectBuildErrorsAsync(DTE dte, string severity)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var list = new List<BuildError>();
+        var skipped = 0;
         var items = (dte as DTE2)?.ToolWindows?.ErrorList?.ErrorItems;
-        if (items == null) { return list; }
+        if (items == null) { return (list, 0); }
+
+        // EnvDTE orders these the other way round — High(4) is an error, Low(2) an info — so the
+        // floor is a minimum level, not a maximum.
+        var floor = severity switch
+        {
+            "all" => vsBuildErrorLevel.vsBuildErrorLevelLow,
+            "warning" => vsBuildErrorLevel.vsBuildErrorLevelMedium,
+            _ => vsBuildErrorLevel.vsBuildErrorLevelHigh,
+        };
+
         for (int i = 1; i <= items.Count; i++)
         {
             try
             {
                 var it = items.Item(i);
-                // ErrorLevel: 4 = error in EnvDTE (vsBuildErrorLevelHigh). Keep errors only.
-                if (it.ErrorLevel != vsBuildErrorLevel.vsBuildErrorLevelHigh) { continue; }
+                if (it.ErrorLevel < floor) { skipped++; continue; }
                 list.Add(new BuildError
                 {
                     File = it.FileName,
                     Line = it.Line,
                     Description = it.Description,
                     Project = it.Project,
+                    Severity = SeverityToLsp(it.ErrorLevel),
                 });
             }
             catch { /* skip malformed item */ }
         }
-        return list;
+        return (list, skipped);
     }
 
     /// <summary>Set the solution's startup project (the one F5/debug_start launches).
@@ -166,10 +218,11 @@ internal sealed partial class IdeContextService
         if (dte?.Solution == null) { return (false, null, "No solution open."); }
         var names = new List<string>();
         Project match = null;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (Project p in dte.Solution.Projects)
         {
             // Recurse into solution folders so nested projects are reachable.
-            CollectStartupCandidate(p, projectName, names, ref match);
+            CollectStartupCandidate(p, projectName, names, seen, 0, ref match);
         }
         if (match == null)
         {
@@ -180,15 +233,21 @@ internal sealed partial class IdeContextService
         return (true, match.Name, null);
     }
 
-    private static void CollectStartupCandidate(Project p, string target, List<string> names, ref Project match)
+    // Walks the same solution-folder graph as CollectProject, so it carries the same cycle guard.
+    private static void CollectStartupCandidate(
+        Project p, string target, List<string> names, HashSet<string> seen, int depth, ref Project match)
     {
-        if (p == null) { return; }
+        if (p == null || depth > MaxProjectDepth) { return; }
+        if (!seen.Add(ProjectIdentity(p))) { return; }
         if (p.Kind == SolutionFolderKind)
         {
             if (p.ProjectItems == null) { return; }
             foreach (ProjectItem item in p.ProjectItems)
             {
-                if (item.SubProject != null) { CollectStartupCandidate(item.SubProject, target, names, ref match); }
+                if (item.SubProject != null)
+                {
+                    CollectStartupCandidate(item.SubProject, target, names, seen, depth + 1, ref match);
+                }
             }
             return;
         }
@@ -214,12 +273,15 @@ internal sealed partial class IdeContextService
         if (dte?.Solution?.Projects == null) { return result; }
         try
         {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Project p in dte.Solution.Projects)
             {
-                CollectProject(p, result.Projects);
+                CollectProject(p, result.Projects, seen, 0);
             }
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.GetProjectStructureAsync", ex); }
+        // Solution enumeration order is not a stable contract — sort for a repeatable result.
+        result.Projects.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
         return result;
     }
 
@@ -227,15 +289,22 @@ internal sealed partial class IdeContextService
     // no real project, but its ProjectItems may nest sub-projects, so recurse.
     private const string SolutionFolderKind = "{66A26720-8FB5-11D2-AA7E-00C04F688DDE}";
 
-    private static void CollectProject(Project p, List<ProjectNode> into)
+    // A solution folder can nest sub-projects, and nothing stops a hand-written .sln from making
+    // that graph cyclic. A StackOverflowException is NOT catchable in .NET — it would take down
+    // devenv.exe, while every other failure here degrades to a clean JSON-RPC error. The visited
+    // set also stops a project reachable by two paths from being reported twice.
+    private const int MaxProjectDepth = 32;
+
+    private static void CollectProject(Project p, List<ProjectNode> into, HashSet<string> seen, int depth)
     {
-        if (p == null) { return; }
+        if (p == null || depth > MaxProjectDepth) { return; }
+        if (!seen.Add(ProjectIdentity(p))) { return; }
         if (p.Kind == SolutionFolderKind)
         {
             if (p.ProjectItems == null) { return; }
             foreach (ProjectItem item in p.ProjectItems)
             {
-                if (item.SubProject != null) { CollectProject(item.SubProject, into); }
+                if (item.SubProject != null) { CollectProject(item.SubProject, into, seen, depth + 1); }
             }
             return;
         }
@@ -246,9 +315,26 @@ internal sealed partial class IdeContextService
             Path = SafeProjectPath(p),
             Files = [],
         };
-        try { CollectFiles(p.ProjectItems, node.Files); }
+        // A file reachable twice (linked item, an item exposing the same path through several
+        // FileNames indices) would otherwise be listed twice — seen in a real solution.
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try { CollectFiles(p.ProjectItems, files, 0); }
         catch { /* partial tree is fine */ }
+        node.Files.AddRange(files);
+        // ProjectItems order follows the project file, not a contract.
+        node.Files.Sort(StringComparer.OrdinalIgnoreCase);
         into.Add(node);
+    }
+
+    /// <summary>Identity for the visited set. <c>UniqueName</c> is the stable one, but it throws
+    /// on projects in a transient state (unloaded, still loading) — fall back to the path, then
+    /// the name, so a hiccup can't make two distinct projects collide on the same empty key.</summary>
+    private static string ProjectIdentity(Project p)
+    {
+        try { if (!string.IsNullOrEmpty(p.UniqueName)) { return "u:" + p.UniqueName; } } catch { }
+        var path = SafeProjectPath(p);
+        if (!string.IsNullOrEmpty(path)) { return "p:" + path; }
+        try { return "n:" + p.Name; } catch { return "?:" + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(p); }
     }
 
     private static string SafeProjectPath(Project p)
@@ -256,9 +342,13 @@ internal sealed partial class IdeContextService
         try { return p.FullName; } catch { return ""; }
     }
 
-    private static void CollectFiles(ProjectItems items, List<string> into)
+    // Same reasoning as CollectProject, but nested items have no stable identity to dedupe on,
+    // so depth is the guard. 64 is far past any real folder nesting.
+    private const int MaxItemDepth = 64;
+
+    private static void CollectFiles(ProjectItems items, HashSet<string> into, int depth)
     {
-        if (items == null) { return; }
+        if (items == null || depth > MaxItemDepth) { return; }
         foreach (ProjectItem item in items)
         {
             try
@@ -267,13 +357,17 @@ internal sealed partial class IdeContextService
                 for (short i = 1; i <= item.FileCount; i++)
                 {
                     var f = item.FileNames[i];
-                    if (!string.IsNullOrEmpty(f) && File.Exists(f)) { into.Add(PathHelpers.LowercaseDrive(f)); }
+                    // Left as DTE gives it: LowercaseDrive exists for the lock file, whose
+                    // workspaceFolders the CLI compares case-sensitively. Applying it here only
+                    // made these paths disagree with solutionPath and the project paths in the
+                    // same response, which breaks anyone comparing them as strings.
+                    if (!string.IsNullOrEmpty(f) && File.Exists(f)) { into.Add(f); }
                 }
             }
             catch { /* skip */ }
             if (item.ProjectItems?.Count > 0)
             {
-                CollectFiles(item.ProjectItems, into);
+                CollectFiles(item.ProjectItems, into, depth + 1);
             }
         }
     }
@@ -368,8 +462,13 @@ internal sealed partial class IdeContextService
 
     /// <summary>Read the IDE's Error List in the LSP shape the Claude CLI
     /// expects (DiagnosticFile[] — see <c>parseDiagnosticResult</c>
-    /// in the CLI source). Optional URI filter restricts to one file.</summary>
-    public async Task<IReadOnlyList<DiagnosticFile>> GetDiagnosticsAsync(string fileUriFilter)
+    /// in the CLI source). Optional URI filter restricts to one file;
+    /// <paramref name="severityFilter"/> ("Error"/"Warning"/"Info") drops the
+    /// other levels, and <paramref name="maxResults"/> caps the diagnostics
+    /// kept. The cap is applied AFTER filtering, so asking for errors under a
+    /// pile of warnings still returns the errors.</summary>
+    public async Task<IReadOnlyList<DiagnosticFile>> GetDiagnosticsAsync(
+        string fileUriFilter, string severityFilter = null, int maxResults = 0)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
@@ -384,6 +483,12 @@ internal sealed partial class IdeContextService
             if (item == null) { continue; }
             var file = item.FileName ?? string.Empty;
             if (string.IsNullOrEmpty(file)) { continue; }
+            var severity = SeverityToLsp(item.ErrorLevel);
+            if (!string.IsNullOrEmpty(severityFilter)
+                && !severity.Equals(severityFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
             // VS gives 1-based line+col; LSP wants 0-based + end coords.
             var lineZero = Math.Max(0, item.Line - 1);
             var colZero = Math.Max(0, item.Column - 1);
@@ -393,7 +498,7 @@ internal sealed partial class IdeContextService
                 // HTML entities (XAML-prepared); without decoding Claude misreads
                 // e.g. `/&quot;/g` instead of `/"/g`.
                 Message = System.Net.WebUtility.HtmlDecode(item.Description ?? string.Empty),
-                Severity = SeverityToLsp(item.ErrorLevel),
+                Severity = severity,
                 Range = new DiagnosticRange
                 {
                     Start = new DiagnosticPosition { Line = lineZero, Character = colZero },
@@ -415,6 +520,25 @@ internal sealed partial class IdeContextService
         }
         // Dictionary iteration order is unspecified — sort by file for a stable result.
         result.Sort((a, b) => string.CompareOrdinal(a.Uri, b.Uri));
+        // Cap after sorting so truncation is deterministic, and count diagnostics
+        // rather than files: one file can carry hundreds on its own.
+        if (maxResults > 0)
+        {
+            var kept = 0;
+            for (int i = 0; i < result.Count; i++)
+            {
+                var diags = result[i].Diagnostics;
+                if (kept + diags.Count <= maxResults) { kept += diags.Count; continue; }
+                var room = maxResults - kept;
+                if (room > 0)
+                {
+                    result[i] = new DiagnosticFile { Uri = result[i].Uri, Diagnostics = [.. diags.Take(room)] };
+                    result.RemoveRange(i + 1, result.Count - i - 1);
+                }
+                else { result.RemoveRange(i, result.Count - i); }
+                break;
+            }
+        }
         return result;
     }
 
@@ -558,12 +682,42 @@ internal sealed partial class IdeContextService
     public Task<bool> RunCleanupAsync(string filePath)
         => RunOnActiveDocumentAsync(filePath, "Edit.CodeCleanup");
 
+    /// <summary>True when the path lies inside the open solution's folder. These commands rewrite
+    /// the file, and File.Exists alone would let any path on disk through: a wrong guess that
+    /// happens to exist — a same-named file in another repo — would be reformatted with nothing to
+    /// show for it. Compares canonical paths, or <c>solution\..\..\elsewhere</c> would pass.</summary>
+    private static bool IsInsideSolution(DTE dte, string filePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var solutionPath = dte?.Solution?.FullName;
+        if (string.IsNullOrEmpty(solutionPath)) { return false; }
+        var root = Path.GetDirectoryName(solutionPath);
+        if (string.IsNullOrEmpty(root)) { return false; }
+        try
+        {
+            var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var fullFile = Path.GetFullPath(filePath);
+            return fullFile.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            // A malformed path can't be shown to be inside the solution — treat it as outside.
+            OutputWindowLogger.Global.LogException("Ide.IsInsideSolution", ex);
+            return false;
+        }
+    }
+
     private async Task<bool> RunOnActiveDocumentAsync(string filePath, string dteCommand)
     {
         filePath = PathHelpers.FromFileUri(filePath);
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) { return false; }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }
+        if (!IsInsideSolution(dte, filePath))
+        {
+            OutputWindowLogger.Global.Warn($"[mcp] {dteCommand} refused: '{filePath}' is outside the open solution");
+            return false;
+        }
         try
         {
             var window = dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
@@ -574,28 +728,6 @@ internal sealed partial class IdeContextService
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException($"Ide.{dteCommand}", ex);
-            return false;
-        }
-    }
-
-    //  C# Interactive (MCP executeCode)
-
-    /// <summary>Submit a snippet to VS's C# Interactive window. MVP only
-    /// opens the window; actual submission requires linking
-    /// Microsoft.VisualStudio.InteractiveWindow (TODO).</summary>
-    public async Task<bool> ExecuteInteractiveCodeAsync(string code)
-    {
-        if (string.IsNullOrWhiteSpace(code)) { return false; }
-        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }
-        try
-        {
-            dte.ExecuteCommand("View.C#Interactive");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("Ide.ExecuteInteractiveCode", ex);
             return false;
         }
     }

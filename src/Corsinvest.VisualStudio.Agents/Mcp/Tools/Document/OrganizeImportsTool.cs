@@ -24,7 +24,8 @@ internal sealed class OrganizeImportsTool : McpTool<OrganizeImportsArgs>
     public override string Name => "document_organize_imports";
     public override string Description =>
         "Organize and remove unused using/import directives in a file " +
-        "via the IDE's Edit.RemoveAndSort command.";
+        "via the IDE's Edit.RemoveAndSort command. " +
+        "The file must live inside the open solution's folder; success=false otherwise.";
 
     protected override async Task<object> InvokeAsync(OrganizeImportsArgs args)
     {
