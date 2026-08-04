@@ -104,11 +104,19 @@ returns `supported=false` instead of pretending it worked.
 
 ## Telling the agent when to reach for them
 
-The tools announce themselves — the agent sees the list without being told. What it cannot work
-out is when one of them beats the shell command it already knows, and left to itself it will
-usually reach for the shell.
+The tools announce themselves — the agent sees the list without being told. Seeing a name in a
+list of fifty is not the same as thinking of it, though, and the habits it brings are the ones
+of a terminal: for a build it reaches for `msbuild`, for an error it re-reads the source, for
+the callers of a method it greps.
 
-A build is the clearest case. The agent knows `msbuild` and `dotnet build`, so that is what it
+What is worth telling it once is the thing all fifty have in common: **there is a live Visual
+Studio behind this session, and it already understands the code.** It has compiled the solution,
+it holds the semantic model, it knows where a symbol is used and what the compiler thinks. From
+that one fact the rest follows on its own — that a build should go through the IDE, that the
+Error List answers faster than re-reading a file, that references come from the language service
+rather than a text search.
+
+A build is the clearest example. The agent knows `msbuild` and `dotnet build`, so that is what it
 runs: it guesses at the MSBuild path, and if you are mid-F5 the build fails on a locked assembly
 in a way that reads like a code error. `build_solution` drives the Visual Studio you already have
 open, so there is no path to guess and no conflict with a running session — and the errors come
@@ -119,6 +127,11 @@ That is what a `CLAUDE.md` in your own repository is for. A few lines are enough
 `mcp__vs__` prefix, which is how the agent sees the names:
 
 ```markdown
+## Visual Studio
+This solution is open in a Visual Studio you can talk to through the `mcp__vs__*` tools: it has
+built the code and holds its semantic model. Prefer asking it over reading files or shelling out —
+diagnostics, references and definitions come from the language service, not from a text search.
+
 ## Build
 Build with `mcp__vs__build_solution` (or `build_project` for one project) — not msbuild or
 dotnet build from the shell. It uses the open IDE, so no path to resolve and no clash with a
@@ -132,6 +145,8 @@ a restart.
 
 Worth writing down, in general:
 
+- **That the IDE is there at all**, and that it already knows the code. One line, and the most
+  useful of the lot: the specific rules below are consequences of it.
 - **Which tool wins over the obvious shell command**, and why — build, output reading, diagnostics.
 - **What needs asking first.** Anything that takes over the IDE or is slow to undo: starting and
   stopping the debugger, `document_run_cleanup`, `nav_rename_symbol` across a solution.
