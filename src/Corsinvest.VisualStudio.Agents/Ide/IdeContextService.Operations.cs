@@ -66,11 +66,11 @@ internal sealed partial class IdeContextService
 
     //  Build (MCP buildSolution / buildProject)
 
-    /// <summary>Build the whole solution (projectName null) or a single project,
-    /// synchronously, then report success + the current Error List errors. The
-    /// DTE build is blocking, so run it on a background-safe path: switch to the
-    /// UI thread, kick the build, wait via SolutionBuild.BuildState polling.</summary>
-    public async Task<BuildResult> BuildAsync(string projectName)
+    /// <summary>Build the whole solution (projectName null) or a single project, synchronously,
+    /// then report success plus the Error List down to <paramref name="severity"/>. The DTE build is
+    /// blocking, so run it on a background-safe path: switch to the UI thread, kick the build, wait
+    /// via SolutionBuild.BuildState polling.</summary>
+    public async Task<BuildResult> BuildAsync(string projectName, string severity = "error")
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
@@ -100,13 +100,21 @@ internal sealed partial class IdeContextService
 
             // LastBuildInfo = number of projects that FAILED (0 = success).
             var failed = sb.LastBuildInfo;
-            var errors = await CollectBuildErrorsAsync(dte);
+            var (errors, skipped) = await CollectBuildErrorsAsync(dte, severity);
+            var message = failed == 0 ? "Build succeeded." : $"Build failed: {failed} project(s).";
+            // What was filtered out gets a line of its own. Without it a green build reads as
+            // "errors: [] — nothing to see", when there may be a hundred warnings behind it and no
+            // hint that asking would show them.
+            if (skipped > 0)
+            {
+                message += $" {skipped} more item(s) at a lower severity — pass severity:'warning' or 'all' to list them.";
+            }
             return new BuildResult
             {
                 Ok = failed == 0,
                 FailedProjects = failed,
                 Errors = errors,
-                Message = failed == 0 ? "Build succeeded." : $"Build failed: {failed} project(s).",
+                Message = message,
             };
         }
         catch (Exception ex)
@@ -130,31 +138,45 @@ internal sealed partial class IdeContextService
         return null;
     }
 
-    /// <summary>Read build errors (severity = error) from the Error List after a build.</summary>
-    private static async Task<List<BuildError>> CollectBuildErrorsAsync(DTE dte)
+    /// <summary>Read the Error List after a build, down to <paramref name="severity"/>: "error"
+    /// (the default), "warning", or "all" — each level meaning that one and everything worse, the
+    /// way a log level does. Reports how many were left out, so a caller taking the default still
+    /// learns there is more to ask for.</summary>
+    private static async Task<(List<BuildError> items, int skipped)> CollectBuildErrorsAsync(DTE dte, string severity)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var list = new List<BuildError>();
+        var skipped = 0;
         var items = (dte as DTE2)?.ToolWindows?.ErrorList?.ErrorItems;
-        if (items == null) { return list; }
+        if (items == null) { return (list, 0); }
+
+        // EnvDTE orders these the other way round — High(4) is an error, Low(2) an info — so the
+        // floor is a minimum level, not a maximum.
+        var floor = severity switch
+        {
+            "all" => vsBuildErrorLevel.vsBuildErrorLevelLow,
+            "warning" => vsBuildErrorLevel.vsBuildErrorLevelMedium,
+            _ => vsBuildErrorLevel.vsBuildErrorLevelHigh,
+        };
+
         for (int i = 1; i <= items.Count; i++)
         {
             try
             {
                 var it = items.Item(i);
-                // ErrorLevel: 4 = error in EnvDTE (vsBuildErrorLevelHigh). Keep errors only.
-                if (it.ErrorLevel != vsBuildErrorLevel.vsBuildErrorLevelHigh) { continue; }
+                if (it.ErrorLevel < floor) { skipped++; continue; }
                 list.Add(new BuildError
                 {
                     File = it.FileName,
                     Line = it.Line,
                     Description = it.Description,
                     Project = it.Project,
+                    Severity = SeverityToLsp(it.ErrorLevel),
                 });
             }
             catch { /* skip malformed item */ }
         }
-        return list;
+        return (list, skipped);
     }
 
     /// <summary>Set the solution's startup project (the one F5/debug_start launches).
