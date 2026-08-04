@@ -315,8 +315,12 @@ internal sealed partial class IdeContextService
             Path = SafeProjectPath(p),
             Files = [],
         };
-        try { CollectFiles(p.ProjectItems, node.Files, 0); }
+        // A file reachable twice (linked item, an item exposing the same path through several
+        // FileNames indices) would otherwise be listed twice — seen in a real solution.
+        var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try { CollectFiles(p.ProjectItems, files, 0); }
         catch { /* partial tree is fine */ }
+        node.Files.AddRange(files);
         // ProjectItems order follows the project file, not a contract.
         node.Files.Sort(StringComparer.OrdinalIgnoreCase);
         into.Add(node);
@@ -342,7 +346,7 @@ internal sealed partial class IdeContextService
     // so depth is the guard. 64 is far past any real folder nesting.
     private const int MaxItemDepth = 64;
 
-    private static void CollectFiles(ProjectItems items, List<string> into, int depth)
+    private static void CollectFiles(ProjectItems items, HashSet<string> into, int depth)
     {
         if (items == null || depth > MaxItemDepth) { return; }
         foreach (ProjectItem item in items)
@@ -353,7 +357,11 @@ internal sealed partial class IdeContextService
                 for (short i = 1; i <= item.FileCount; i++)
                 {
                     var f = item.FileNames[i];
-                    if (!string.IsNullOrEmpty(f) && File.Exists(f)) { into.Add(PathHelpers.LowercaseDrive(f)); }
+                    // Left as DTE gives it: LowercaseDrive exists for the lock file, whose
+                    // workspaceFolders the CLI compares case-sensitively. Applying it here only
+                    // made these paths disagree with solutionPath and the project paths in the
+                    // same response, which breaks anyone comparing them as strings.
+                    if (!string.IsNullOrEmpty(f) && File.Exists(f)) { into.Add(f); }
                 }
             }
             catch { /* skip */ }
