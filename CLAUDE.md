@@ -12,7 +12,20 @@ app in TypeScript + Lit.
 It **drives** the real `claude.exe` (npm `@anthropic-ai/claude-code`) — never bundled (licensing),
 never forked. Version differences are handled by feature-detection, not by pinning a CLI version.
 
+## The IDE is right there
+
+When this solution is open in a Visual Studio running the extension, the `mcp__vs__*` tools reach
+that IDE — the one that has built this code and holds its semantic model. Ask it rather than
+shelling out or re-reading files: `ide_get_diagnostics` for what the compiler thinks,
+`nav_find_references` for callers, `ide_read_output` for what a build or a debug session printed.
+The extension is its own best test case, so the IDE you are talking to is usually running the
+build you just made.
+
 ## Build
+
+Use `mcp__vs__build_solution` when that IDE is open: it drives it, so there is no MSBuild path to
+resolve and no clash with a debug session holding the assembly, and the errors come back as
+file/line/message. Otherwise:
 
 ```powershell
 msbuild cv4vs-agents.sln /t:Build /p:Configuration=Debug   # WebView build is hooked into MSBuild

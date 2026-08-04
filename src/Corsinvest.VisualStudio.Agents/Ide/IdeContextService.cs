@@ -356,32 +356,39 @@ internal sealed partial class IdeContextService : IDisposable
         }
     }
 
-    /// <summary>If <paramref name="filePath"/> is open in an editor with unsaved
-    /// changes, save it. Used by the autosave hook so Claude reads/writes the
-    /// live editor content, not the stale on-disk version. Safe to call from any
-    /// thread (marshals to the UI thread); no-op if the file isn't open or clean.</summary>
-    public void SaveIfDirty(string filePath)
+    /// <summary>If <paramref name="filePath"/> is open in an editor with unsaved changes, save it.
+    /// Used by the autosave hook so Claude reads/writes the live editor content, not the stale
+    /// on-disk version — so the caller must AWAIT this before letting the tool run, or the save
+    /// races the read it exists to precede. Safe to call from any thread (marshals to the UI
+    /// thread); no-op if the file isn't open or clean. False means the file is open, dirty, and
+    /// could NOT be saved: whatever reads it next gets a stale version.</summary>
+    public async Task<bool> SaveIfDirtyAsync(string filePath)
     {
-        if (string.IsNullOrEmpty(filePath)) { return; }
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        if (string.IsNullOrEmpty(filePath)) { return true; }
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
         {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            try
+            var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+            if (dte?.Documents == null) { return true; }
+            var target = PathHelpers.FromFileUri(filePath);
+            foreach (Document doc in dte.Documents)
             {
-                var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
-                if (dte?.Documents == null) { return; }
-                var target = PathHelpers.FromFileUri(filePath);
-                foreach (Document doc in dte.Documents)
+                if (string.Equals(doc.FullName, target, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (string.Equals(doc.FullName, target, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!doc.Saved) { doc.Save(); }
-                        return;
-                    }
+                    if (!doc.Saved) { doc.Save(); }
+                    return true;
                 }
             }
-            catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.SaveIfDirty", ex); }
-        }).FileAndForget("cv4vs/Ide.SaveIfDirty");
+        }
+        catch (Exception ex)
+        {
+            // Read-only file, denied permissions, an editor refusing to save: the caller must
+            // tell Claude, or it reads a stale file believing it is current.
+            OutputWindowLogger.Global.LogException("Ide.SaveIfDirty", ex);
+            return false;
+        }
+        // Not open in any editor — nothing to save, and nothing stale either.
+        return true;
     }
 
     /// <summary>Save the given file if it's open and dirty. Returns true if a save
@@ -432,6 +439,88 @@ internal sealed partial class IdeContextService : IDisposable
         return null;
     }
 
+    public sealed class BufferReadResult
+    {
+        public bool Ok { get; set; }
+        public string Path { get; set; }
+        public bool IsDirty { get; set; }
+        public string Content { get; set; }
+        public int TotalLines { get; set; }
+        public bool Truncated { get; set; }
+        public string Reason { get; set; }
+    }
+
+    /// <summary>Read an open document's editor buffer — the text as it is on screen, unsaved
+    /// changes included. With no path, reads the active document: "what I'm looking at" is the
+    /// gesture this exists for, and it's the user who picks it, not the model. The on-disk
+    /// version is the Read tool's job; this one is for what hasn't been written yet.</summary>
+    public async Task<BufferReadResult> ReadDocumentBufferAsync(string filePath, int maxLines)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+            if (dte == null) { return new BufferReadResult { Reason = "DTE not available." }; }
+
+            Document doc;
+            if (string.IsNullOrEmpty(filePath))
+            {
+                doc = dte.ActiveDocument;
+                if (doc == null) { return new BufferReadResult { Reason = "No active document." }; }
+            }
+            else
+            {
+                doc = null;
+                var target = PathHelpers.FromFileUri(filePath);
+                foreach (Document d in dte.Documents)
+                {
+                    if (string.Equals(d.FullName, target, StringComparison.OrdinalIgnoreCase)) { doc = d; break; }
+                }
+                if (doc == null)
+                {
+                    // Not open means there is no buffer — the file on disk is Read's job.
+                    return new BufferReadResult { Reason = $"'{target}' is not open in an editor; use the Read tool for the on-disk version." };
+                }
+            }
+
+            if (doc.Object("TextDocument") is not TextDocument td)
+            {
+                // Designers, binary editors: a document window without a text buffer.
+                return new BufferReadResult { Reason = $"'{doc.FullName}' has no text buffer (not a text editor)." };
+            }
+
+            var totalLines = td.EndPoint.Line;
+            var truncated = maxLines > 0 && totalLines > maxLines;
+            var start = td.StartPoint.CreateEditPoint();
+            string text;
+            if (truncated)
+            {
+                // Keep the head: unlike an output pane, a file is read top-down.
+                var stop = td.StartPoint.CreateEditPoint();
+                stop.MoveToLineAndOffset(maxLines + 1, 1);
+                text = start.GetText(stop) ?? string.Empty;
+            }
+            else
+            {
+                text = start.GetText(td.EndPoint) ?? string.Empty;
+            }
+
+            return new BufferReadResult
+            {
+                Ok = true,
+                Path = doc.FullName,
+                IsDirty = !doc.Saved,
+                Content = text,
+                TotalLines = totalLines,
+                Truncated = truncated,
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.ReadDocumentBufferAsync", ex);
+            return new BufferReadResult { Reason = $"Read error: {ex.Message}" };
+        }
+    }
 
     public void Dispose()
     {
@@ -582,6 +671,9 @@ internal sealed class BuildResult
     public bool Ok { get; set; }
     public int FailedProjects { get; set; }
     public string Message { get; set; }
+
+    /// <summary>Errors, plus warnings and info when the caller asked for them — one list, each
+    /// entry saying what it is, the way ide_get_diagnostics reports the same Error List.</summary>
     public List<BuildError> Errors { get; set; } = [];
 }
 
@@ -591,6 +683,9 @@ internal sealed class BuildError
     public int Line { get; set; }
     public string Description { get; set; }
     public string Project { get; set; }
+
+    /// <summary>"Error", "Warning" or "Info" — an entry is no longer necessarily an error.</summary>
+    public string Severity { get; set; }
 }
 
 internal sealed class SolutionStructure
