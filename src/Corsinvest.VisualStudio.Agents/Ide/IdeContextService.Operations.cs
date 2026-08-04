@@ -124,6 +124,36 @@ internal sealed partial class IdeContextService
         }
     }
 
+    /// <summary>Clean the solution (delete bin/obj outputs) and wait for it.
+    /// No error collection: unlike a build, a clean produces no diagnostics —
+    /// <c>LastBuildInfo</c> is the only outcome there is.</summary>
+    public async Task<BuildResult> CleanAsync()
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        var sb = dte?.Solution?.SolutionBuild;
+        if (sb == null)
+        {
+            return new BuildResult { Ok = false, Message = "No solution open." };
+        }
+        try
+        {
+            sb.Clean(WaitForCleanToFinish: true);
+            var failed = sb.LastBuildInfo;
+            return new BuildResult
+            {
+                Ok = failed == 0,
+                FailedProjects = failed,
+                Message = failed == 0 ? "Clean succeeded." : $"Clean failed: {failed} project(s).",
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.CleanAsync", ex);
+            return new BuildResult { Ok = false, Message = $"Clean error: {ex.Message}" };
+        }
+    }
+
     private static Project FindProject(DTE dte, string name)
     {
         foreach (Project p in dte.Solution.Projects)
