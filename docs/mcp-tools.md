@@ -94,7 +94,7 @@ returns `supported=false` instead of pretending it worked.
 |---|---|
 | `ide_activate_output` | Bring a Visual Studio Output window pane (by name) to the foreground so the user sees it. Use at a debug checkpoint to show the relevant build/debug output before asking the user to confirm. The pane name is required. Returns ok; ok=false with availablePanes when the pane isn't found. |
 | `ide_clear_output` | Clear a Visual Studio Output window pane (by name). Run it before an action so a later ide_read_output returns only the fresh output, not the old history. The pane name is required (no clear-all). Returns ok; ok=false with availablePanes when the pane isn't found. |
-| `ide_get_diagnostics` | Get language diagnostics from the IDE's Error List. Pass uri (file://...) to limit to one file; omit it to get all. Returns an array of files, each with its diagnostics ([] when there are none). |
+| `ide_get_diagnostics` | Get language diagnostics from the IDE's Error List. Pass uri (file://...) to limit to one file; omit it to get all. Pass severity ('Error'/'Warning'/'Info') and/or maxResults to avoid pulling in hundreds of warnings when you only care about the errors. Returns an array of files, each with its diagnostics ([] when there are none). |
 | `ide_get_edition` |  |
 | `ide_get_project_structure` | Get the solution structure: each project with its name, path, and the files it contains. Recurses solution folders. Useful to learn the layout. |
 | `ide_get_version` |  |

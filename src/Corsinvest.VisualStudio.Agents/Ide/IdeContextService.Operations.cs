@@ -390,8 +390,13 @@ internal sealed partial class IdeContextService
 
     /// <summary>Read the IDE's Error List in the LSP shape the Claude CLI
     /// expects (DiagnosticFile[] — see <c>parseDiagnosticResult</c>
-    /// in the CLI source). Optional URI filter restricts to one file.</summary>
-    public async Task<IReadOnlyList<DiagnosticFile>> GetDiagnosticsAsync(string fileUriFilter)
+    /// in the CLI source). Optional URI filter restricts to one file;
+    /// <paramref name="severityFilter"/> ("Error"/"Warning"/"Info") drops the
+    /// other levels, and <paramref name="maxResults"/> caps the diagnostics
+    /// kept. The cap is applied AFTER filtering, so asking for errors under a
+    /// pile of warnings still returns the errors.</summary>
+    public async Task<IReadOnlyList<DiagnosticFile>> GetDiagnosticsAsync(
+        string fileUriFilter, string severityFilter = null, int maxResults = 0)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
@@ -406,6 +411,12 @@ internal sealed partial class IdeContextService
             if (item == null) { continue; }
             var file = item.FileName ?? string.Empty;
             if (string.IsNullOrEmpty(file)) { continue; }
+            var severity = SeverityToLsp(item.ErrorLevel);
+            if (!string.IsNullOrEmpty(severityFilter)
+                && !severity.Equals(severityFilter, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
             // VS gives 1-based line+col; LSP wants 0-based + end coords.
             var lineZero = Math.Max(0, item.Line - 1);
             var colZero = Math.Max(0, item.Column - 1);
@@ -415,7 +426,7 @@ internal sealed partial class IdeContextService
                 // HTML entities (XAML-prepared); without decoding Claude misreads
                 // e.g. `/&quot;/g` instead of `/"/g`.
                 Message = System.Net.WebUtility.HtmlDecode(item.Description ?? string.Empty),
-                Severity = SeverityToLsp(item.ErrorLevel),
+                Severity = severity,
                 Range = new DiagnosticRange
                 {
                     Start = new DiagnosticPosition { Line = lineZero, Character = colZero },
@@ -437,6 +448,25 @@ internal sealed partial class IdeContextService
         }
         // Dictionary iteration order is unspecified — sort by file for a stable result.
         result.Sort((a, b) => string.CompareOrdinal(a.Uri, b.Uri));
+        // Cap after sorting so truncation is deterministic, and count diagnostics
+        // rather than files: one file can carry hundreds on its own.
+        if (maxResults > 0)
+        {
+            var kept = 0;
+            for (int i = 0; i < result.Count; i++)
+            {
+                var diags = result[i].Diagnostics;
+                if (kept + diags.Count <= maxResults) { kept += diags.Count; continue; }
+                var room = maxResults - kept;
+                if (room > 0)
+                {
+                    result[i] = new DiagnosticFile { Uri = result[i].Uri, Diagnostics = [.. diags.Take(room)] };
+                    result.RemoveRange(i + 1, result.Count - i - 1);
+                }
+                else { result.RemoveRange(i, result.Count - i); }
+                break;
+            }
+        }
         return result;
     }
 
