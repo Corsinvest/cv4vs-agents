@@ -218,10 +218,11 @@ internal sealed partial class IdeContextService
         if (dte?.Solution == null) { return (false, null, "No solution open."); }
         var names = new List<string>();
         Project match = null;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (Project p in dte.Solution.Projects)
         {
             // Recurse into solution folders so nested projects are reachable.
-            CollectStartupCandidate(p, projectName, names, ref match);
+            CollectStartupCandidate(p, projectName, names, seen, 0, ref match);
         }
         if (match == null)
         {
@@ -232,15 +233,21 @@ internal sealed partial class IdeContextService
         return (true, match.Name, null);
     }
 
-    private static void CollectStartupCandidate(Project p, string target, List<string> names, ref Project match)
+    // Walks the same solution-folder graph as CollectProject, so it carries the same cycle guard.
+    private static void CollectStartupCandidate(
+        Project p, string target, List<string> names, HashSet<string> seen, int depth, ref Project match)
     {
-        if (p == null) { return; }
+        if (p == null || depth > MaxProjectDepth) { return; }
+        if (!seen.Add(ProjectIdentity(p))) { return; }
         if (p.Kind == SolutionFolderKind)
         {
             if (p.ProjectItems == null) { return; }
             foreach (ProjectItem item in p.ProjectItems)
             {
-                if (item.SubProject != null) { CollectStartupCandidate(item.SubProject, target, names, ref match); }
+                if (item.SubProject != null)
+                {
+                    CollectStartupCandidate(item.SubProject, target, names, seen, depth + 1, ref match);
+                }
             }
             return;
         }
@@ -266,12 +273,15 @@ internal sealed partial class IdeContextService
         if (dte?.Solution?.Projects == null) { return result; }
         try
         {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (Project p in dte.Solution.Projects)
             {
-                CollectProject(p, result.Projects);
+                CollectProject(p, result.Projects, seen, 0);
             }
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.GetProjectStructureAsync", ex); }
+        // Solution enumeration order is not a stable contract — sort for a repeatable result.
+        result.Projects.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
         return result;
     }
 
@@ -279,15 +289,22 @@ internal sealed partial class IdeContextService
     // no real project, but its ProjectItems may nest sub-projects, so recurse.
     private const string SolutionFolderKind = "{66A26720-8FB5-11D2-AA7E-00C04F688DDE}";
 
-    private static void CollectProject(Project p, List<ProjectNode> into)
+    // A solution folder can nest sub-projects, and nothing stops a hand-written .sln from making
+    // that graph cyclic. A StackOverflowException is NOT catchable in .NET — it would take down
+    // devenv.exe, while every other failure here degrades to a clean JSON-RPC error. The visited
+    // set also stops a project reachable by two paths from being reported twice.
+    private const int MaxProjectDepth = 32;
+
+    private static void CollectProject(Project p, List<ProjectNode> into, HashSet<string> seen, int depth)
     {
-        if (p == null) { return; }
+        if (p == null || depth > MaxProjectDepth) { return; }
+        if (!seen.Add(ProjectIdentity(p))) { return; }
         if (p.Kind == SolutionFolderKind)
         {
             if (p.ProjectItems == null) { return; }
             foreach (ProjectItem item in p.ProjectItems)
             {
-                if (item.SubProject != null) { CollectProject(item.SubProject, into); }
+                if (item.SubProject != null) { CollectProject(item.SubProject, into, seen, depth + 1); }
             }
             return;
         }
@@ -298,9 +315,22 @@ internal sealed partial class IdeContextService
             Path = SafeProjectPath(p),
             Files = [],
         };
-        try { CollectFiles(p.ProjectItems, node.Files); }
+        try { CollectFiles(p.ProjectItems, node.Files, 0); }
         catch { /* partial tree is fine */ }
+        // ProjectItems order follows the project file, not a contract.
+        node.Files.Sort(StringComparer.OrdinalIgnoreCase);
         into.Add(node);
+    }
+
+    /// <summary>Identity for the visited set. <c>UniqueName</c> is the stable one, but it throws
+    /// on projects in a transient state (unloaded, still loading) — fall back to the path, then
+    /// the name, so a hiccup can't make two distinct projects collide on the same empty key.</summary>
+    private static string ProjectIdentity(Project p)
+    {
+        try { if (!string.IsNullOrEmpty(p.UniqueName)) { return "u:" + p.UniqueName; } } catch { }
+        var path = SafeProjectPath(p);
+        if (!string.IsNullOrEmpty(path)) { return "p:" + path; }
+        try { return "n:" + p.Name; } catch { return "?:" + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(p); }
     }
 
     private static string SafeProjectPath(Project p)
@@ -308,9 +338,13 @@ internal sealed partial class IdeContextService
         try { return p.FullName; } catch { return ""; }
     }
 
-    private static void CollectFiles(ProjectItems items, List<string> into)
+    // Same reasoning as CollectProject, but nested items have no stable identity to dedupe on,
+    // so depth is the guard. 64 is far past any real folder nesting.
+    private const int MaxItemDepth = 64;
+
+    private static void CollectFiles(ProjectItems items, List<string> into, int depth)
     {
-        if (items == null) { return; }
+        if (items == null || depth > MaxItemDepth) { return; }
         foreach (ProjectItem item in items)
         {
             try
@@ -325,7 +359,7 @@ internal sealed partial class IdeContextService
             catch { /* skip */ }
             if (item.ProjectItems?.Count > 0)
             {
-                CollectFiles(item.ProjectItems, into);
+                CollectFiles(item.ProjectItems, into, depth + 1);
             }
         }
     }
