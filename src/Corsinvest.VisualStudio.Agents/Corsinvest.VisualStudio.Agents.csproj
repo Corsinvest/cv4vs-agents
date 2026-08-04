@@ -151,7 +151,6 @@
     <Compile Include="Mcp\Tools\Editor\OpenDiffTool.cs" />
     <Compile Include="Mcp\Tools\Editor\CloseTabTool.cs" />
     <Compile Include="Mcp\Tools\Editor\CloseAllDiffTabsTool.cs" />
-    <Compile Include="Mcp\Tools\Ide\ExecuteCodeTool.cs" />
     <Compile Include="Mcp\Tools\Document\FormatDocumentTool.cs" />
     <Compile Include="Mcp\Tools\Document\OrganizeImportsTool.cs" />
     <Compile Include="Mcp\Tools\Document\RunCleanupTool.cs" />
