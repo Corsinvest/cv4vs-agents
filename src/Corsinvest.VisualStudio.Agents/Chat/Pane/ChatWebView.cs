@@ -65,6 +65,18 @@ internal sealed class ChatWebView : WebView2CompositionControl
         e.Handled = true;
     }
 
+    /// <summary>Makes a double click select the word rather than the whole paragraph.
+    /// <para>WPF raises MouseDown → MouseUp → MouseDown → MouseUp → MouseDoubleClick for one double
+    /// click, and the composition control forwards both MouseDown and MouseDoubleClick through
+    /// SendMouseInput. So the browser gets three mousedown for two physical clicks, reads the third
+    /// as a triple click and selects the block. Measured on the page: the second and third arrive
+    /// with the SAME timeStamp — one click delivered twice, not an extra one invented.</para></summary>
+    protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
+    {
+        // Empty on purpose, and no base call: OnMouseDown has already sent this click, with its own
+        // ClickCount, so the page still sees detail=2 and nothing needs the second delivery.
+    }
+
     // Static: the browser has ONE task manager, so one owner serves every pane. A per-pane field
     // grew a spare renderer for each chat that had opened it, all of them then listed in the very
     // window they had opened.
