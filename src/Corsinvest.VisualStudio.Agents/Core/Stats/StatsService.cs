@@ -55,10 +55,21 @@ internal static class StatsService
         {
             try
             {
-                foreach (var profile in ProfileStore.Load(forEdit: false))
+                // Both lists: `false` is the one to index (native profile included, disabled ones
+                // dropped), `true` adds back the disabled — this pass also decides which data
+                // folders are still claimed, and a profile that is merely switched off will want
+                // its own back when it is switched on again.
+                var live = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var configs = ProfileStore.Load(forEdit: false)
+                    .Concat(ProfileStore.Load(forEdit: true))
+                    .Select(ClaudePaths.ForProfile)
+                    .GroupBy(p => p.ConfigId, StringComparer.OrdinalIgnoreCase)
+                    .Select(g => g.First());
+                foreach (var paths in configs)
                 {
-                    IndexAllProjects(workingDirectory: null, ClaudePaths.ForProfile(profile), force);
+                    IndexAllProjects(workingDirectory: null, paths, force, live);
                 }
+                PruneUnclaimedFolders(live);
             }
             catch (Exception ex) { OutputWindowLogger.Global.LogException(nameof(StatsService) + ".Index", ex); }
             finally
@@ -168,19 +179,23 @@ internal static class StatsService
         var root = new FolderBuild { Segment = "", FullPath = "" };
         foreach (var p in projects)
         {
-            // The cwd's last segment is the project itself; the ones before it are folders.
+            // Walked to the folder the project IS, not to the one above it. A project whose cwd also
+            // has projects beneath it — C:\Users\daniele.corsini, with AppData and source under it —
+            // would otherwise be filed one level up while its own name branched separately, showing
+            // the same folder twice. Filed here, it meets that branch and ToFolderNode folds the two
+            // into the single node a folder with nothing under it already produces.
             var segs = SplitPath(p.cwd);
             var node = root;
-            for (var i = 0; i < segs.Count - 1; i++)
+            foreach (var seg in segs)
             {
-                if (!node.Sub.TryGetValue(segs[i], out var child))
+                if (!node.Sub.TryGetValue(seg, out var child))
                 {
                     child = new FolderBuild
                     {
-                        Segment = segs[i],
-                        FullPath = node.FullPath.Length == 0 ? segs[i] : node.FullPath + "\\" + segs[i],
+                        Segment = seg,
+                        FullPath = node.FullPath.Length == 0 ? seg : node.FullPath + "\\" + seg,
                     };
-                    node.Sub[segs[i]] = child;
+                    node.Sub[seg] = child;
                 }
                 node = child;
             }
@@ -215,24 +230,34 @@ internal static class StatsService
             var subNode = ToFolderNode(sub, profile, minDay, includeDays);
             if (subNode != null) { children.Add(subNode); }
         }
+
+        // The project filed here IS this folder, so its Days and Sessions hang off this node rather
+        // than off a child repeating the same name — which is what a folder with nothing else under
+        // it already looked like. More than one only happens when two profiles share a cwd; the
+        // extras stay as children, since there is one node to be absorbed into.
+        StatsTreeNode self = null;
         foreach (var p in fb.Projects.OrderBy(p => p.label, StringComparer.OrdinalIgnoreCase))
         {
             var prjNode = BuildProjectNode(profile, p.dir, p.cwd, p.label, p.lastActivity, minDay, includeDays);
-            if (prjNode != null) { children.Add(prjNode); }
+            if (prjNode == null) { continue; }
+            if (self == null) { self = prjNode; } else { children.Add(prjNode); }
         }
-        if (children.Count == 0) { return null; } // nothing in range under this folder
+        if (children.Count == 0 && self == null) { return null; } // nothing in range under this folder
 
         var node = new StatsTreeNode
         {
             Label = label,
             Tooltip = fb.FullPath,
-            Selection = new StatsSelection
+            // The folder's own project wins the selection: clicking the row then reports that
+            // project's numbers rather than the sum of everything filed beneath it.
+            Selection = self?.Selection ?? new StatsSelection
             {
                 Scope = StatsScope.Folder,
                 Profile = profile,
                 ProjectDirs = CollectProjectDirs(fb),
             },
         };
+        if (self != null) { node.Children.AddRange(self.Children); }
         node.Children.AddRange(children);
         return node;
     }
@@ -465,7 +490,10 @@ internal static class StatsService
     /// <summary>Refresh every project's cache. When a workspace is given, its project is done first
     /// so its stats are ready soonest; a null/empty workspace (the all-profiles pass) just does them
     /// all in folder order. Pure I/O + parse → per-project cache file; nothing kept in RAM.</summary>
-    private static void IndexAllProjects(string workingDirectory, ClaudePaths paths, bool force = false)
+    /// <param name="claimed">When given, collects the data folder each indexed project resolved to.
+    /// The all-profiles pass uses it to tell a folder still in use from one left behind.</param>
+    private static void IndexAllProjects(string workingDirectory, ClaudePaths paths, bool force = false,
+                                         HashSet<string> claimed = null)
     {
         // No workspace (all-profiles pass): no "current" project to front-load.
         var current = string.IsNullOrEmpty(workingDirectory) ? null : paths.SessionFolder(workingDirectory);
@@ -478,7 +506,17 @@ internal static class StatsService
                 if (!string.Equals(d, current, StringComparison.OrdinalIgnoreCase)) { ordered.Add(d); }
             }
         }
-        foreach (var projectDir in ordered) { IndexProject(projectDir, paths, force); }
+        foreach (var projectDir in ordered)
+        {
+            IndexProject(projectDir, paths, force);
+            // The project folder, not the profile subfolder the cache file sits in: what gets kept
+            // or removed is the whole project, across every profile that ever used it.
+            if (claimed != null)
+            {
+                var cwd = ProjectCwdOf(projectDir) ?? projectDir;
+                claimed.Add(Core.Workspace.ProjectStore.FolderName(cwd));
+            }
+        }
     }
 
     // The projectDir is the CLI's dir (source of .jsonl); the cache lives in OUR data folder, named
@@ -489,22 +527,64 @@ internal static class StatsService
     private static string CacheFileFor(ClaudePaths paths, string projectDir)
         => AppPaths.ProjectProfileFile(paths, ProjectCwdOf(projectDir) ?? projectDir, "stats-cache.json");
 
+    /// <summary>Remove the data folders no project claimed during a full pass. What is left there is
+    /// either from the old naming scheme — every folder was the whole path with its separators
+    /// replaced, before they grew past what Windows allows — or belongs to a project that is gone.
+    /// <para>Only ever called after the pass that visits every profile, enabled or not: a partial
+    /// pass would report folders as unclaimed simply because nobody looked for them. And skipped
+    /// entirely when that pass found nothing at all, which is what a failure looks like from here —
+    /// deleting everything because the profiles could not be read is the one outcome worth guarding
+    /// against.</para></summary>
+    private static void PruneUnclaimedFolders(HashSet<string> claimed)
+    {
+        if (claimed.Count == 0) { return; }
+        try
+        {
+            foreach (var folder in Core.Workspace.ProjectStore.All())
+            {
+                if (claimed.Contains(Path.GetFileName(folder))) { continue; }
+                try
+                {
+                    Directory.Delete(folder, recursive: true);
+                    OutputWindowLogger.Global.Debug(() => $"[stats] removed unclaimed data folder {Path.GetFileName(folder)}");
+                }
+                catch (Exception ex) { OutputWindowLogger.Global.LogException(nameof(StatsService) + ".Prune", ex); }
+            }
+        }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException(nameof(StatsService) + ".PruneUnclaimedFolders", ex); }
+    }
+
     /// <summary>The working directory a CLI project folder's sessions ran in, from the first file
-    /// that says. One read of one file: this answers before the cache path is known, so it cannot
-    /// ask the cache.</summary>
+    /// that says. This answers before the cache path is known — the cache lives at a path derived
+    /// from it — so it cannot ask the cache.
+    /// <para>Memoised for the process: CacheFileFor asks on every call, an indexing pass calls it
+    /// once per project per profile, and the answer cannot change while we run — a session's cwd is
+    /// written when it starts. Without this the pass reopens the same .jsonl a dozen times.</para>
+    /// </summary>
     private static string ProjectCwdOf(string projectDir)
     {
+        // Null only under Hot Reload, which adds the field without running its initialiser. Worth
+        // surviving rather than throwing: a throw here empties the claimed set, and an empty claimed
+        // set is what the pruning below reads as "nothing is in use".
+        if (_projectCwd?.TryGetValue(projectDir, out var known) == true) { return known; }
+        string cwd = null;
         try
         {
             foreach (var file in EnumerateSessionFiles(projectDir, ids: null))
             {
-                var cwd = StatsAggregator.ReadCwd(file.FullName);
-                if (!string.IsNullOrEmpty(cwd)) { return cwd; }
+                cwd = StatsAggregator.ReadCwd(file.FullName);
+                if (!string.IsNullOrEmpty(cwd)) { break; }
             }
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException(nameof(StatsService) + ".ProjectCwdOf", ex); }
-        return null;
+        // Cached even when null: a project whose sessions carry no cwd would otherwise be re-scanned
+        // in full every single time, which is the slowest case there is.
+        if (_projectCwd != null) { _projectCwd[projectDir] = cwd; }
+        return cwd;
     }
+
+    private static readonly ConcurrentDictionary<string, string> _projectCwd =
+        new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Refresh one project's cache: re-read changed files (delta for grown ones), prune
     /// vanished, persist. This is the heavy step; Aggregate below only reads the result.</summary>
