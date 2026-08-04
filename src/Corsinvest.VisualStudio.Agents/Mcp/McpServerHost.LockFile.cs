@@ -20,8 +20,6 @@ namespace Corsinvest.VisualStudio.Agents.Mcp;
 /// </summary>
 internal sealed partial class McpServerHost
 {
-    //  Lock file
-
     private void WriteLockFile(string ideFolder)
     {
         Directory.CreateDirectory(ideFolder);

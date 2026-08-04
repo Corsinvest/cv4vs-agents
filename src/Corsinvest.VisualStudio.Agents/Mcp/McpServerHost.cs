@@ -186,8 +186,6 @@ internal sealed partial class McpServerHost
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Mcp.RewriteLockFile", ex); }
     }
 
-    //  Tool registry
-
     private static IEnumerable<IMcpTool> BuildToolRegistry()
     {
         // Add new tools here (order irrelevant; dispatcher is name-keyed). One file per tool under Mcp/Tools/.
@@ -242,8 +240,6 @@ internal sealed partial class McpServerHost
         yield return new Tools.SetExceptionBreakTool();
         yield return new Tools.ApplyHotReloadTool();
     }
-
-    //  Accept loop + per-client loop
 
     private async Task AcceptLoopAsync(CancellationToken ct)
     {
@@ -495,8 +491,6 @@ internal sealed partial class McpServerHost
         }
     }
 
-
-    //  Helpers
 
     private static int AllocateFreePort()
     {

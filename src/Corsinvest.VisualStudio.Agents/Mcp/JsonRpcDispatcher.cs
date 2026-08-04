@@ -83,8 +83,6 @@ internal sealed class JsonRpcDispatcher
         }
     }
 
-    //  Method handlers
-
     private object BuildInitializeResult() => new
     {
         protocolVersion = ProtocolVersion,
@@ -159,8 +157,6 @@ internal sealed class JsonRpcDispatcher
         };
     }
 
-    //  JSON-RPC envelope helpers
-    //
     // Use SerializeObject(anonymous), not JObject.ToString(Formatting): VS loads its own
     // Newtonsoft.Json that may lack that overload and throw MissingMethodException.
 

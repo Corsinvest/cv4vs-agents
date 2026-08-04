@@ -130,10 +130,9 @@ internal sealed partial class IdeDiffViewer
                 rightIsTemp: false, leftIsTemp: leftIsTemp);
             if (frame == null) { return new DiffResult { Status = DiffRejected }; }
 
-            // Track the frame in the global registry so close_tab and
-            // closeAllDiffTabs can address it without caption matching
-            // (which used to take down our own panes because their
-            // caption contained "Claude Code").
+            // Track the frame in the global registry so close_tab and closeAllDiffTabs can
+            // address it by identity: matching on the caption also hits our own panes, whose
+            // caption contains "Claude Code".
             var registryKey = tabName ?? caption;
             _openFrames[registryKey] = frame;
 
@@ -355,8 +354,6 @@ internal sealed partial class IdeDiffViewer
         }
         return null;
     }
-
-    //  Helpers
 
     private IVsWindowFrame OpenComparison(
         string leftPath, string rightPath, string caption,
