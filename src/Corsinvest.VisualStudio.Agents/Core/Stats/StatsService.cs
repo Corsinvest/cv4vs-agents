@@ -604,21 +604,23 @@ internal static class StatsService
         // current: walk back from today while the day is active.
         int current = 0;
         var day = DateTime.Now.Date;
-        while (set.Contains(day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)))
+        while (set.Contains(StatsAggregator.DateKey(day)))
         {
             current++;
             day = day.AddDays(-1);
         }
 
-        // longest: scan sorted dates for the max run of consecutive days.
+        // longest: scan sorted dates for the max run of consecutive days. Skipping what does not
+        // parse also skips the "unknown" bucket an entry with no usable timestamp lands in.
         var sorted = set.OrderBy(d => d, StringComparer.Ordinal).ToList();
         int longest = 1, run = 1;
-        for (int i = 1; i < sorted.Count; i++)
+        DateTime? previous = null;
+        foreach (var key in sorted)
         {
-            var prev = DateTime.ParseExact(sorted[i - 1], "yyyy-MM-dd", CultureInfo.InvariantCulture);
-            var cur = DateTime.ParseExact(sorted[i], "yyyy-MM-dd", CultureInfo.InvariantCulture);
-            run = (cur - prev).Days == 1 ? run + 1 : 1;
+            if (!StatsAggregator.TryParseDateKey(key, out var cur)) { continue; }
+            run = previous is DateTime prev && (cur - prev).Days == 1 ? run + 1 : 1;
             if (run > longest) { longest = run; }
+            previous = cur;
         }
         return (current, longest);
     }
@@ -980,7 +982,6 @@ internal static class StatsService
         if (range == StatsRange.All) { return (null, null); }
         var today = DateTime.Now.Date;
         var days = range == StatsRange.Last7d ? 6 : 29; // inclusive of today
-        var from = today.AddDays(-days).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        return (from, today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+        return (StatsAggregator.DateKey(today.AddDays(-days)), StatsAggregator.DateKey(today));
     }
 }

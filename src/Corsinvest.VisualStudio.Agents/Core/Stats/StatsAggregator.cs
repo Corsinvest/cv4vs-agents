@@ -202,6 +202,20 @@ internal static class StatsAggregator
     {
         if (tsMs <= 0) { return "unknown"; }
         var dt = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds(tsMs).ToLocalTime();
-        return dt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        return DateKey(dt);
     }
+
+    /// <summary>The key a day's bucket is filed under. Nothing on disk uses this shape — the JSONL
+    /// carries an ISO timestamp, and this is what we index it by — so producer and readers only
+    /// agree as long as they go through here. They used to each write the format out, which fails
+    /// quietly: change one and the lookups simply return nothing. Empty heatmap, no exception.</summary>
+    internal static string DateKey(DateTime local)
+        => local.ToString(DayKeyFormat, CultureInfo.InvariantCulture);
+
+    /// <summary>Read a key back into the day it stands for. False on anything this did not write.</summary>
+    internal static bool TryParseDateKey(string key, out DateTime day)
+        => DateTime.TryParseExact(key, DayKeyFormat, CultureInfo.InvariantCulture,
+                                  DateTimeStyles.None, out day);
+
+    private const string DayKeyFormat = "yyyy-MM-dd";
 }

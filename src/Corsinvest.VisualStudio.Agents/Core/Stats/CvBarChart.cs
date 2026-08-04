@@ -123,20 +123,37 @@ internal sealed class CvBarChart : Grid
         SetRowCol(plot, 0, 1);
         Children.Add(plot);
 
-        // X axis: ~8 evenly spaced date labels.
-        var xAxis = new UniformGrid { Rows = 1, Columns = bars.Count, Margin = new Thickness(0, 2, 0, 0) };
-        var step = bars.Count <= 12 ? 1 : bars.Count / 8;
-        for (var i = 0; i < bars.Count; i++)
+        // X axis: ~8 evenly spaced date labels, each centred on its bar.
+        //
+        // A grid column per bar would be the obvious thing, and was — but a column is one bar wide,
+        // a few pixels, and the date is cut off inside it however few labels are drawn. Laying them
+        // out by hand lets each one spill over its neighbours, which is free: the bars either side
+        // of a labelled one have no label of their own.
+        var xAxis = new Canvas { Height = 14, Margin = new Thickness(0, 2, 0, 0), ClipToBounds = false };
+        var step = bars.Count <= 12 ? 1 : Math.Max(1, bars.Count / 8);
+        var slots = new List<(int Index, TextBlock Label)>();
+        for (var i = 0; i < bars.Count; i += step)
         {
-            var show = bars.Count <= 12 || (step > 0 && i % step == 0);
-            xAxis.Children.Add(new TextBlock
+            var label = new TextBlock
             {
-                Text = show ? ShortDate(bars[i].Date) : "",
+                Text = ShortDate(bars[i].Date),
                 FontSize = 10,
                 Opacity = 0.6,
-                HorizontalAlignment = HorizontalAlignment.Center,
-            });
+            };
+            // Measured up front: a Canvas hands out no width, so centring needs the text's own.
+            label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            slots.Add((i, label));
+            xAxis.Children.Add(label);
         }
+        // Positioned on resize, because bar width is only known once the plot has been given one.
+        xAxis.SizeChanged += (_, e) =>
+        {
+            var barWidth = e.NewSize.Width / bars.Count;
+            foreach (var (index, label) in slots)
+            {
+                Canvas.SetLeft(label, (index + 0.5) * barWidth - label.DesiredSize.Width / 2);
+            }
+        };
         SetRowCol(xAxis, 1, 1);
         Children.Add(xAxis);
     }

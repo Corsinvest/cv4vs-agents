@@ -141,7 +141,7 @@ internal static class StatsChart
             var col = new HeatCell[7];
             for (var day = 0; day < 7; day++)
             {
-                var ds = cur.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                var ds = StatsAggregator.DateKey(cur);
                 var future = cur > today;
                 var count = future ? 0 : (infos.TryGetValue(ds, out var inf) ? inf.Messages : 0);
                 var info = infos.TryGetValue(ds, out var i2) ? i2 : new DayInfo { Date = ds };
