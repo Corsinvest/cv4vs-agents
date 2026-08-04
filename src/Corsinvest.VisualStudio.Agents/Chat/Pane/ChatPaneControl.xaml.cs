@@ -430,8 +430,8 @@ public partial class ChatPaneControl : PaneControlBase
             return;
         }
 
-        // Reload the transcript into the WebView only; do NOT call ResumeSessionAsync
-        // (a respawn isn't needed to re-render UI options, and triggered a crash).
+        // Reload the transcript into the WebView only; do NOT call ResumeSessionAsync — re-rendering
+        // UI options needs no respawn, and respawning here is not safe.
         _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
         var page = Sessions.ReadHistoryRaw(sid, SessionManager.HistoryBatchSize, -1, out _);
         SendHistoryPage(page, sid);

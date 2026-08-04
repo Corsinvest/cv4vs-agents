@@ -48,7 +48,7 @@ internal sealed partial class WebViewBridge
             AppVersion = BuildInfo.Version,
             AppCopyright = BuildInfo.Copyright,
             PerfEnabled = dbg.EnablePerfLog,
-            // Always honour the Debug-page LogLevel setting (default None); previously DEBUG forced Trace ignoring it.
+            // The Debug-page LogLevel (default None) is honoured on every build, DEBUG included.
             LogLevel = (int)dbg.LogLevel,
         };
     }

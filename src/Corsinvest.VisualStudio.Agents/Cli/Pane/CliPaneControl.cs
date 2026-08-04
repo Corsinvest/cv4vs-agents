@@ -27,7 +27,6 @@ namespace Corsinvest.VisualStudio.Agents.Cli.Pane;
 ///   • <see cref="OnLoaded"/>     resolve workdir, spawn <c>claude --ide</c>.
 ///   • <see cref="OnUnloaded"/>   no-op (don't kill on hide; user may dock-toggle).
 ///   • <see cref="Dispose"/>      kill process, drop control.
-///   • <see cref="OnSolutionChanged"/> respawn with the new workdir.
 /// </para>
 /// </summary>
 internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposable
@@ -63,7 +62,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
     private string BuildCommand(int mcpPort, string mcpAuthToken)
     {
         var baseCmd = ClaudeCliLauncher.BuildConPtyCommandLine(ide: true, mcpPort, mcpAuthToken);
-        if (string.IsNullOrEmpty(_activeSessionId)) { return baseCmd; }   // safety (shouldn't happen after Step 1)
+        if (string.IsNullOrEmpty(_activeSessionId)) { return baseCmd; }   // StartOrRestartAsync always mints an id first
         // Fresh id we minted → create it (--session-id). Existing id (picker/restore) → resume it.
         return _sessionIsNew
             ? $"{baseCmd} --session-id {_activeSessionId}"
@@ -206,9 +205,8 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         _sessionIsNew = false;
         _log.Info($"CliPane: starting {cmd ?? "<null>"} in {Entry.WorkingDirectory}");
 
-        // claude.exe must be installed via the official npm package (see
-        // ClaudeCliLauncher for why no cmd-shim/PATH fallback). When missing,
-        // swap in the inline "not installed" panel instead of a modal dialog.
+        // claude.exe must be installed (see ClaudeInstall for why only a real .exe will do).
+        // When missing, swap in the inline "not installed" panel instead of a modal dialog.
         if (cmd == null)
         {
             _log.Warn("[cli] claude.exe not found — showing 'not installed' panel");
@@ -289,8 +287,8 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
     }
 
     /// <summary>Replace the embedded terminal with the shared "Claude Code
-    /// not installed" panel produced by <see cref="ClaudeInstall.BuildMissingPanel"/>.
-    /// The chat pane will use the same factory.</summary>
+    /// not installed" panel produced by <see cref="ClaudeInstall.BuildMissingPanel"/>
+    /// (the chat pane shows the same one).</summary>
     private void ShowMissingPanel()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
