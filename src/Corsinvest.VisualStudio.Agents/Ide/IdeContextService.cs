@@ -356,32 +356,39 @@ internal sealed partial class IdeContextService : IDisposable
         }
     }
 
-    /// <summary>If <paramref name="filePath"/> is open in an editor with unsaved
-    /// changes, save it. Used by the autosave hook so Claude reads/writes the
-    /// live editor content, not the stale on-disk version. Safe to call from any
-    /// thread (marshals to the UI thread); no-op if the file isn't open or clean.</summary>
-    public void SaveIfDirty(string filePath)
+    /// <summary>If <paramref name="filePath"/> is open in an editor with unsaved changes, save it.
+    /// Used by the autosave hook so Claude reads/writes the live editor content, not the stale
+    /// on-disk version — so the caller must AWAIT this before letting the tool run, or the save
+    /// races the read it exists to precede. Safe to call from any thread (marshals to the UI
+    /// thread); no-op if the file isn't open or clean. False means the file is open, dirty, and
+    /// could NOT be saved: whatever reads it next gets a stale version.</summary>
+    public async Task<bool> SaveIfDirtyAsync(string filePath)
     {
-        if (string.IsNullOrEmpty(filePath)) { return; }
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        if (string.IsNullOrEmpty(filePath)) { return true; }
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
         {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            try
+            var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+            if (dte?.Documents == null) { return true; }
+            var target = PathHelpers.FromFileUri(filePath);
+            foreach (Document doc in dte.Documents)
             {
-                var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
-                if (dte?.Documents == null) { return; }
-                var target = PathHelpers.FromFileUri(filePath);
-                foreach (Document doc in dte.Documents)
+                if (string.Equals(doc.FullName, target, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (string.Equals(doc.FullName, target, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (!doc.Saved) { doc.Save(); }
-                        return;
-                    }
+                    if (!doc.Saved) { doc.Save(); }
+                    return true;
                 }
             }
-            catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.SaveIfDirty", ex); }
-        }).FileAndForget("cv4vs/Ide.SaveIfDirty");
+        }
+        catch (Exception ex)
+        {
+            // Read-only file, denied permissions, an editor refusing to save: the caller must
+            // tell Claude, or it reads a stale file believing it is current.
+            OutputWindowLogger.Global.LogException("Ide.SaveIfDirty", ex);
+            return false;
+        }
+        // Not open in any editor — nothing to save, and nothing stale either.
+        return true;
     }
 
     /// <summary>Save the given file if it's open and dirty. Returns true if a save
