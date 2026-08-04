@@ -21,9 +21,9 @@ export function resolveModelValue(value: string | null | undefined): string {
         return 'default';
     }
     const models = appState.models;
-    // Match the served id against the catalogue the way the VS Code extension does — by the
-    // explicit `resolvedModel` field, not by guessing the family from the name (which breaks for
-    // env-var-remapped providers like GLM/z.ai). `value` may itself carry a [1m] suffix.
+    // Match the served id against the catalogue by the explicit `resolvedModel` field, not by
+    // guessing the family from the name (which breaks for env-var-remapped providers like
+    // GLM/z.ai). `value` may itself carry a [1m] suffix.
     // Strip the [1m] (1M-context) suffix from BOTH sides: the served id in the transcript may
     // lack it (`claude-opus-4-8`) while the catalogue's resolvedModel carries it
     // (`claude-opus-4-8[1m]`), so compare the bare forms too.
@@ -116,12 +116,12 @@ export function contextPercent(u: ContextUsageDto): number {
     return Math.min(100, Math.max(0, (consumedTokens(u) / limit) * 100));
 }
 
-/** Buffer the CLI keeps free on top of the output reservation (VS Code uses
- *  the same ~13k figure when sizing the auto-compact window). */
+/** Buffer the CLI keeps free on top of the output reservation, so our gauge
+ *  reaches 100% at the point the CLI actually auto-compacts. */
 const AUTO_COMPACT_RESERVE = 13_000;
 
-/** Usable window before auto-compaction: contextWindow − maxOutput − buffer
- *  (mirrors VS Code). 0 until the window is known. */
+/** Usable window before auto-compaction: contextWindow − maxOutput − buffer.
+ *  0 until the window is known. */
 export function autoCompactWindow(): number {
     const limit = appState.contextWindow;
     if (limit <= 0) {

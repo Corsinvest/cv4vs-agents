@@ -299,8 +299,8 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
 
     private void OnProcessExited()
     {
-        // claude.exe ended (exit/Ctrl-C/crash). Auto-close the pane VS Code-style —
-        // process gone means the terminal pane goes too.
+        // claude.exe ended (exit/Ctrl-C/crash). The pane is only a view onto that process,
+        // so auto-close it: process gone means the terminal pane goes too.
 
         // Marshal off the ConPTY read thread; ClosePane → VS → Dispose (which
         // removes us from the registry).

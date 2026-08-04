@@ -286,7 +286,7 @@ internal sealed partial class McpServerHost
 
         WebSocketContext wsCtx;
         // MUST echo the "mcp" subprotocol or the CLI treats the upgrade as failed and aborts the
-        // TCP connection (matches the official VS Code extension behavior).
+        // TCP connection.
         try { wsCtx = await ctx.AcceptWebSocketAsync(subProtocol: "mcp"); }
         catch (Exception ex)
         {
@@ -372,9 +372,9 @@ internal sealed partial class McpServerHost
         }
     }
 
-    /// <summary>Builds a <c>selection_changed</c> notification and broadcasts it. Payload shape
-    /// mirrors the official VS Code extension so the CLI's <c>useIdeSelection</c> hook accepts it
-    /// and injects an <c>&lt;ide_selection&gt;</c> block: { text, filePath, fileUrl, selection }.</summary>
+    /// <summary>Builds a <c>selection_changed</c> notification and broadcasts it. The payload shape
+    /// is what the CLI's <c>useIdeSelection</c> hook accepts before it injects an
+    /// <c>&lt;ide_selection&gt;</c> block: { text, filePath, fileUrl, selection }.</summary>
     private void OnEditorContextChanged(EditorContext ctx)
     {
         if (ctx == null)

@@ -64,7 +64,7 @@ export class ThinkingCommand extends ChatCommand {
     override run(host: CommandHost): void {
         const next = !appState.thinkingEnabled;
         appState.thinkingEnabled = next;
-        // Runtime thinking channel (VS Code's): 31999 + summarized to enable, 0 to disable.
+        // Runtime thinking channel: a non-zero budget + 'summarized' enables, 0 disables.
         host.setMaxThinkingTokens(next ? 31999 : 0, next ? 'summarized' : null);
     }
 }
@@ -127,8 +127,8 @@ export class EffortCommand extends ChatCommand {
     override readonly aliases = ['effort', 'reasoning', 'thinking'];
 
     /** The slider's effort stops for the current model (from the CLI), then an
-     *  "ultracode" stop when available: model supports xhigh (matches VS Code's
-     *  ultracodeAvailable). */
+     *  "ultracode" stop when the model supports xhigh — ultracode is xhigh plus a
+     *  flag, so without that level there is no stop to offer. */
     private stopValues(): string[] {
         const levels = currentEffortLevels() ?? [];
         const ultraAvailable = levels.includes('xhigh');
@@ -158,8 +158,8 @@ export class EffortCommand extends ChatCommand {
         return effortLabel(appState.effortLevel, appState.ultracodeEnabled);
     }
     /** Set the active stop. The ultracode stop is effort=xhigh + the ultracode
-     *  flag (like VS Code); any other stop clears ultracode. `max` is selectable
-     *  but not persisted by the CLI enum, so it isn't pushed to settings. */
+     *  flag; any other stop clears ultracode. `max` is selectable but not
+     *  persisted by the CLI enum, so it isn't pushed to settings. */
     setLevel(host: CommandHost, idx: number): void {
         const stops = this.stopValues();
         const value = stops[Math.max(0, Math.min(idx, stops.length - 1))];

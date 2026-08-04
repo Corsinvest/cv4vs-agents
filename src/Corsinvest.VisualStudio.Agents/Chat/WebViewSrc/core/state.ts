@@ -162,7 +162,7 @@ const _impl = new StoreImpl<AppState>({
     thinkingEnabled: false,
     inDev: false,
     fastMode: false,
-    switchModelsOnFlag: true, // default on, like VS Code (get_settings overrides)
+    switchModelsOnFlag: true, // permissive until get_settings says otherwise
     bypassPermissionsDisabled: false, // permissive until the CLI says otherwise
 
     isBusy: false,

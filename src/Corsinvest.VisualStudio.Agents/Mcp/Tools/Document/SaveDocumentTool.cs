@@ -16,8 +16,8 @@ internal sealed class SaveDocumentArgs
 }
 
 /// <summary>MCP tool: save an open document if it has unsaved changes, so Claude
-/// reads/edits the on-disk version the user actually sees. Mirrors the official
-/// VS Code extension's saveDocument.</summary>
+/// reads/edits the on-disk version the user actually sees. Registered under the
+/// <c>saveDocument</c> name the CLI already knows.</summary>
 internal sealed class SaveDocumentTool : McpTool<SaveDocumentArgs>
 {
     public override string Name => "document_save";

@@ -176,8 +176,8 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // NOTE: no --ide here. In stream-json mode the CLI's --ide auto-connect is
         // UI-only (REPL hook) and never runs, so it does nothing. Instead we expose
         // the IDE tools as an in-process SDK MCP server: declared in the initialize
-        // payload (sdkMcpServers) and registered via mcp_set_servers — the same flow
-        // VS Code uses for its chat. The interactive CLI pane keeps --ide + WS lockfile.
+        // payload (sdkMcpServers) and registered via mcp_set_servers. The interactive
+        // CLI pane keeps --ide + WS lockfile.
         var args = "--output-format stream-json --verbose --input-format stream-json --include-partial-messages";
         // --setting-sources: headless mode loads NO settings by default; re-enable so the user's
         // ~/.claude/settings.json permissions.allow/deny apply (else CLI asks can_use_tool for every tool).
@@ -188,8 +188,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
         {
             args += $" --allowedTools mcp__{SdkMcpServerName}__*";
         }
-        // Model is NOT passed via --model. Like VS Code, we launch without a model and
-        // set it after init with a `set_model` control_request (InitializeAndPublishCatalogAsync).
+        // Model is NOT passed via --model: we launch without one and set it after init with a
+        // `set_model` control_request (InitializeAndPublishCatalogAsync), so a model change is a
+        // hot-swap on the live process instead of a respawn.
         if (!string.IsNullOrEmpty(options.ResumeSessionId)) { args += " --resume " + options.ResumeSessionId; }
 
         // Grants the capability to switch into bypassPermissions later; weakens nothing now.
@@ -236,15 +237,15 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // decides whether to actually save. Best-effort: if the CLI rejects the
         // initialize, autosave simply won't fire (no crash, CLI keeps running).
         SendInitializeHooks();
-        // Like VS Code: the SDK MCP server names are declared in the initialize payload
-        // (sdkMcpServers) AND registered via mcp_set_servers — VS Code does both.
+        // The SDK MCP server names are declared in the initialize payload (sdkMcpServers) AND
+        // registered via mcp_set_servers; the CLI needs both before it will route tool calls.
         RegisterSdkMcpServer();
     }
 
     /// <summary>Register the in-process SDK MCP server so the stream-json chat can
-    /// call our IDE tools (mcp__&lt;name&gt;__*). VS Code does the same via
-    /// `mcp_set_servers` with a `type:"sdk"` server; the CLI then calls tools back
-    /// over `mcp_message` (handled by HandleMcpMessage). No-op when unset.</summary>
+    /// call our IDE tools (mcp__&lt;name&gt;__*). Sent as `mcp_set_servers` with a
+    /// `type:"sdk"` server; the CLI then calls tools back over `mcp_message`
+    /// (handled by HandleMcpMessage). No-op when unset.</summary>
     private void RegisterSdkMcpServer()
     {
         var name = SdkMcpServerName;
@@ -491,8 +492,8 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public Task ApplyFlagSettingsAsync(object settings)
         => SendControlRequestAsync(ClientMessages.ControlSubtype.ApplyFlagSettings, new { settings });
 
-    /// <summary>Enable/disable extended thinking at runtime (VS Code's channel). ON = budget 31999 +
-    /// summarized display; OFF = budget 0. display is omitted when null so the CLI keeps the session mode.</summary>
+    /// <summary>Enable/disable extended thinking at runtime. ON = budget 31999 + summarized display;
+    /// OFF = budget 0. display is omitted when null so the CLI keeps the session mode.</summary>
     public Task SetMaxThinkingTokensAsync(int maxThinkingTokens, string display)
         => SendControlRequestAsync(
             ClientMessages.ControlSubtype.SetMaxThinkingTokens,
@@ -747,10 +748,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
         object payload;
         if (response.Allow)
         {
-            // Match VS Code's PermissionResult: ALWAYS send updatedInput (a record,
-            // never undefined — that triggered the CLI's ZodError) and
-            // updatedPermissions (the chosen permission_suggestion for "allow for
-            // this session", or empty for a one-time allow).
+            // ALWAYS send updatedInput (a record, never undefined — that triggered the
+            // CLI's ZodError) and updatedPermissions (the chosen permission_suggestion
+            // for "allow for this session", or empty for a one-time allow).
             payload = new
             {
                 behavior = "allow",

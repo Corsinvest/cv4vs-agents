@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 /// <summary>MCP tool: returns the IDE's "workspace folders" (in our case,
-/// the single solution folder). Mirrors the VS Code extension's
-/// <c>getWorkspaceFolders</c>.</summary>
+/// the single solution folder), under the <c>getWorkspaceFolders</c> name the
+/// CLI already knows.</summary>
 internal sealed class GetWorkspaceFoldersTool : McpTool<NoArgs>
 {
     public override string Name => "ide_get_workspace_folders";

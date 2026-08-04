@@ -36,10 +36,9 @@ internal static class FileSuggestions
             // Backslashes accepted as separators so a path pasted from Explorer still matches.
             var qLower = query.Replace('\\', '/').ToLowerInvariant();
 
-            // One walk of the whole tree, filtered on the relative path — the way the VS Code
-            // extension asks `workspace.findFiles` for `**/*`. A depth cap or a minimum query
-            // length would only mean a file that exists cannot be found, which is the one thing
-            // this menu is for. Pruning ignored directories keeps the cost off node_modules.
+            // One walk of the whole tree, filtered on the relative path. A depth cap or a minimum
+            // query length would only mean a file that exists cannot be found, which is the one
+            // thing this menu is for. Pruning ignored directories keeps the cost off node_modules.
             // Keyed by relative path so directories and files can be interleaved in tree order at
             // the end: a folder immediately followed by what matched inside it. Listing every
             // directory first reads fine with five of them and not at all once they nest, which is
@@ -55,8 +54,8 @@ internal static class FileSuggestions
                 // One budget for every row, files and derived folders alike, and the walk stops when
                 // it is gone. Counting only files let folders keep coming after the cut, leaving a
                 // tail of directories whose contents had all been dropped — `tools/cli-probe/` and
-                // nothing under it. Alphabetical order means the cut lands wherever it lands; that
-                // is the same deal the VS Code extension takes with its own limit of 100.
+                // nothing under it. Alphabetical order means the cut lands wherever it lands, which
+                // is the trade any capped file picker makes.
                 if (hits.Count >= MaxRows || ++visited > MaxVisited) { break; }
 
                 var rel = PathHelpers.Relative(root, file);
@@ -74,8 +73,7 @@ internal static class FileSuggestions
                     var dirRel = rel.Substring(0, slash);
                     // Sorted under the trailing slash, which is what interleaves the two kinds:
                     // "docs/" sorts before "docs/chat/" and both before "docs/readme.md", because
-                    // '/' orders below every letter. The VS Code extension gets the same result by
-                    // sorting its combined list on the path with that slash appended.
+                    // '/' orders below every letter.
                     var dirKey = dirRel + "/";
                     if (hits.ContainsKey(dirKey)) { continue; }
                     if (!string.IsNullOrEmpty(qLower) && !dirRel.ToLowerInvariant().Contains(qLower)) { continue; }
@@ -83,8 +81,7 @@ internal static class FileSuggestions
                     {
                         // Whole relative path on one line, no parent column beside it — nested
                         // folders are the common case here, and a bare leaf leaves you guessing
-                        // which of the four `cv4vs-*` you are looking at. (The VS Code extension
-                        // renders directory rows the same way: one `path`, no second column.)
+                        // which of the four `cv4vs-*` you are looking at.
                         Name = dirKey,
                         Path = Path.Combine(root, dirRel.Replace('/', Path.DirectorySeparatorChar)),
                         Dir = string.Empty,
@@ -107,9 +104,8 @@ internal static class FileSuggestions
         return result;
     }
 
-    /// <summary>Rows shown, files and derived directories together. Higher than the 100 the VS Code
-    /// extension asks `workspace.findFiles` for, because the cut is not the same thing: the walk is
-    /// alphabetical, so a low cap does not sample the tree, it stops partway through and hides
+    /// <summary>Rows shown, files and derived directories together. Deliberately generous: the walk
+    /// is alphabetical, so a low cap does not sample the tree, it stops partway through and hides
     /// everything from there to the end of the alphabet — `tools/` never showed up. Bounded all the
     /// same: cv-popover-list renders every row it is given, with no virtualisation.</summary>
     private const int MaxRows = 600;
@@ -312,7 +308,8 @@ internal static class GitIgnoreCache
 
 /// <summary>
 /// Lightweight `.gitignore` matcher: plain names, anchored <c>/</c>, dir-only trailing <c>/</c>,
-/// basic <c>*</c>/<c>?</c> globs. Skips negations and brace expansions (as the VS Code extension does).
+/// basic <c>*</c>/<c>?</c> globs. Skips negations and brace expansions — rare enough that a full
+/// gitignore implementation would not pay for itself here.
 /// </summary>
 internal sealed class GitIgnore
 {
