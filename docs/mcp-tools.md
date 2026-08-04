@@ -101,3 +101,42 @@ returns `supported=false` instead of pretending it worked.
 | `ide_get_version` |  |
 | `ide_get_workspace_folders` | Get the workspace folders currently open in the IDE. Returns the solution folder for Visual Studio. |
 | `ide_read_output` | Read text from a Visual Studio Output window pane (e.g. 'Build', 'Debug', or the running program's output). Omit 'pane' to list the available pane names first. 'tailLines' caps how many lines are returned from the end (default 200). Useful to see build/debug output or the debuggee's console writes that don't go through the shell. |
+
+## Telling the agent when to reach for them
+
+The tools announce themselves — the agent sees the list without being told. What it cannot work
+out is when one of them beats the shell command it already knows, and left to itself it will
+usually reach for the shell.
+
+A build is the clearest case. The agent knows `msbuild` and `dotnet build`, so that is what it
+runs: it guesses at the MSBuild path, and if you are mid-F5 the build fails on a locked assembly
+in a way that reads like a code error. `build_solution` drives the Visual Studio you already have
+open, so there is no path to guess and no conflict with a running session — and the errors come
+back as file, line and message rather than as text to be scraped. None of that is inferable from
+the tool's description.
+
+That is what a `CLAUDE.md` in your own repository is for. A few lines are enough — with the
+`mcp__vs__` prefix, which is how the agent sees the names:
+
+```markdown
+## Build
+Build with `mcp__vs__build_solution` (or `build_project` for one project) — not msbuild or
+dotnet build from the shell. It uses the open IDE, so no path to resolve and no clash with a
+debug session, and it returns structured errors.
+
+## Debugging
+Do not call `mcp__vs__debug_start` / `debug_stop` without asking: they take over the IDE.
+After editing during a session, `mcp__vs__debug_apply_hot_reload` applies the change without
+a restart.
+```
+
+Worth writing down, in general:
+
+- **Which tool wins over the obvious shell command**, and why — build, output reading, diagnostics.
+- **What needs asking first.** Anything that takes over the IDE or is slow to undo: starting and
+  stopping the debugger, `document_run_cleanup`, `nav_rename_symbol` across a solution.
+- **Project-specific gotchas.** A startup project that must be set before F5; a pane whose name
+  the agent would not guess; a build configuration that is the only supported one.
+
+Leave out the tool list itself. It arrives with the extension, it changes as the extension is
+updated, and a copy in your repository is one more thing to keep true.
