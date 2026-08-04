@@ -88,8 +88,7 @@ public class ContextTokenGroupDto
     public int Tokens { get; set; }
 }
 
-/// <summary>Breakdown of the "Messages" category into its parts — the detail the VS Code
-/// dialog doesn't surface.</summary>
+/// <summary>Breakdown of the "Messages" category into its parts.</summary>
 public class ContextMessageBreakdownDto
 {
     public int ToolCallTokens { get; set; }

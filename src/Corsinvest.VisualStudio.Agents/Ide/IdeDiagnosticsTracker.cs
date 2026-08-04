@@ -14,9 +14,8 @@ using System.Threading.Tasks;
 namespace Corsinvest.VisualStudio.Agents.Ide;
 
 /// <summary>Tracks per-file diagnostics across a Claude edit: capture a baseline on PreToolUse,
-/// then on PostToolUse re-read and report only the diagnostics the edit introduced. Mirrors the
-/// VS Code extension's captureBaseline/findDiagnosticsProblems pair. Diff is essential — without it
-/// Claude would be spammed with pre-existing errors it didn't cause.</summary>
+/// then on PostToolUse re-read and report only the diagnostics the edit introduced. Diff is
+/// essential — without it Claude would be spammed with pre-existing errors it didn't cause.</summary>
 internal sealed class IdeDiagnosticsTracker
 {
     public static readonly IdeDiagnosticsTracker Instance = new();
@@ -53,8 +52,9 @@ internal sealed class IdeDiagnosticsTracker
         var before = b.Diags != null ? await b.Diags : [];
         OutputWindowLogger.Global.Debug(() => $"[diag] check start {filePath} visible={editorVisible} baseline={before.Count} items");
 
-        // The Error List refreshes after the edit lands; wait like VS Code. Visible editors settle
-        // faster (2×750ms, bail at first hit); background files get a single 1000ms wait.
+        // The Error List refreshes asynchronously after the edit lands, so it has to be given time.
+        // Visible editors settle faster (2×750ms, bail at first hit); background files get a single
+        // 1000ms wait.
         var steps = editorVisible ? new[] { 750, 750 } : new[] { 1000 };
         for (int i = 0; i < steps.Length; i++)
         {
@@ -100,7 +100,8 @@ internal sealed class IdeDiagnosticsTracker
 
     private static string Format(string filePath, List<Diagnostic> diags)
     {
-        // 1-based line/column (our LSP shape is 0-based); shape matches VS Code so Claude reads it as trained.
+        // 1-based line/column (our LSP shape is 0-based): the model expects diagnostics numbered
+        // the way an editor shows them.
         var items = diags.Select(d => new
         {
             filePath,

@@ -31,8 +31,8 @@ public class AvailablePluginDto
     public string Version { get; set; }
     public int InstallCount { get; set; }
     // How to read Source: a ready-to-open URL (git-subdir already resolved to repo/tree/main/<path>
-    // host-side), a marketplace-relative "./path" (the WebView joins it onto the marketplace repo,
-    // like VS Code), or None.
+    // host-side), a marketplace-relative "./path" (the WebView joins it onto the marketplace repo),
+    // or None.
     public PluginSourceKindDto SourceKind { get; set; }
     public string Source { get; set; }
 }

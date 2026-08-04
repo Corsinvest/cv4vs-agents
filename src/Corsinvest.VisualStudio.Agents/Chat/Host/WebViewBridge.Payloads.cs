@@ -139,8 +139,8 @@ internal sealed partial class WebViewBridge
                 }
                 else
                 {
-                    // Text-like file: decode the base64 back to UTF-8 (same as the
-                    // VS Code extension's `atob(...)` before the text block).
+                    // Text-like file: the CLI expects a plain text block, so decode the
+                    // base64 back to UTF-8 rather than attaching it as binary data.
                     string textData;
                     try
                     {

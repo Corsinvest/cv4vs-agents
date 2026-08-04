@@ -45,13 +45,14 @@ interface PermissionSuggestion {
 
 const OTHER = 'Other';
 
-/** Scope destinations the "Yes, allow …" choice can cycle through, in VS Code's
- *  order (`wK` in the bundle). Clicking the scope word advances this cycle. */
+/** Scope destinations the "Yes, allow …" choice can cycle through. The order is
+ *  narrowest-first, so the least far-reaching scope is the default. Clicking the
+ *  scope word advances this cycle. */
 const SCOPE_ORDER = ['localSettings', 'userSettings', 'projectSettings', 'session'] as const;
 type Scope = (typeof SCOPE_ORDER)[number];
 
 /** Short human label for a scope, shown as the clickable suffix of the button.
- *  Matches VS Code's wording exactly. */
+ *  Says who the rule will affect, not the settings file it lands in. */
 const SCOPE_LABEL: Record<Scope, string> = {
     localSettings: 'this project (just you)',
     userSettings: 'all projects',
@@ -59,8 +60,8 @@ const SCOPE_LABEL: Record<Scope, string> = {
     session: 'this session',
 };
 
-/** Tooltip per scope — explains where the permission is persisted. Mirrors the
- *  VS Code `title` map (`JLt`), so the hint changes as the scope cycles. */
+/** Tooltip per scope — explains where the permission is persisted. Keyed by
+ *  scope so the hint follows the button as the scope cycles. */
 const SCOPE_TOOLTIP: Record<Scope, string> = {
     localSettings: 'Saves to .claude/settings.local.json (gitignored)',
     userSettings: 'Saves to ~/.claude/settings.json',
@@ -78,8 +79,8 @@ export class CvPermissionBanner extends LitElement {
         iconStyles,
         css`
             /* In-flow, sitting where the input box is (the input hides while a
-             * prompt is pending) — like VS Code, which swaps the composer for the
-             * permission request rather than overlaying the chat. */
+             * prompt is pending): swapping the composer for the request keeps the
+             * chat readable, where an overlay would cover the tool call being asked about. */
             :host {
                 display: contents;
             }
@@ -101,8 +102,8 @@ export class CvPermissionBanner extends LitElement {
                 font-weight: var(--fontWeightSemibold);
                 margin-bottom: 6px;
             }
-            /* Collapsible "Details" expander (VS Code style): the command/input is
-             * hidden by default behind a small "Details" toggle. */
+            /* Collapsible "Details" expander: the command/input is hidden by
+             * default behind a small "Details" toggle so the banner stays compact. */
             #permission-details {
                 margin-bottom: 8px;
             }
@@ -142,7 +143,7 @@ export class CvPermissionBanner extends LitElement {
                 max-height: 160px;
                 overflow-y: auto;
             }
-            /* Short single-line command shown inline (no expander), like VS Code. */
+            /* Short single-line command shown inline: an expander would cost a click for one line. */
             #permission-detail-inline {
                 font-family: var(--fontFamilyMonospace);
                 font-size: var(--fontSizeBase200);
@@ -189,7 +190,7 @@ export class CvPermissionBanner extends LitElement {
             }
             #permission-buttons {
                 display: flex;
-                /* Stacked vertically (one choice per row), like the VS Code prompt. */
+                /* Stacked vertically (one choice per row): the labels are long sentences. */
                 flex-direction: column;
                 align-items: stretch;
                 gap: 4px;
@@ -232,7 +233,7 @@ export class CvPermissionBanner extends LitElement {
                 white-space: pre-wrap;
                 overflow-y: auto;
             }
-            /* Numbered shortcut badge on each choice (1/2/3), like the VS Code prompt. */
+            /* Numbered shortcut badge on each choice (1/2/3), matching the keys handled in _onKeydown. */
             .num {
                 display: inline-block;
                 min-width: 1.1em;
@@ -294,9 +295,9 @@ export class CvPermissionBanner extends LitElement {
                 flex: 0 0 auto;
             }
             /* Question tabs: fluent-tablist stays pure (active underline is Fluent's).
-             * We colour our own slotted label span, mirroring VS Code's navTab: an
-             * unanswered question stays highlighted (full foreground + medium weight),
-             * an answered one greys out and stays grey even while active. */
+             * We colour our own slotted label span so an unanswered question stays
+             * highlighted (full foreground + medium weight), while an answered one
+             * greys out and stays grey even while active. */
             .tab-label {
                 color: var(--colorNeutralForeground1);
                 font-weight: var(--fontWeightMedium);
@@ -392,12 +393,12 @@ export class CvPermissionBanner extends LitElement {
     @state() private _other: Map<string, string> = new Map();
 
     // Scope cycle for the "Yes, allow … for {scope}" choice. Clicking the
-    // scope word cycles through SCOPE_ORDER (VS Code behaviour); the button
-    // itself confirms with the current scope. Index into SCOPE_ORDER.
+    // scope word cycles through SCOPE_ORDER; the button itself confirms with
+    // the current scope, so picking a scope never costs an extra step. Index into SCOPE_ORDER.
     @state() private _scopeIdx = 0;
     // True once the user has touched the scope cycle: the suggestion choice
-    // becomes the primary (blue) button and "Yes" drops to outline, mirroring
-    // VS Code where the focused choice is the primary one.
+    // becomes the primary (blue) button and "Yes" drops to outline, so the
+    // highlighted button is the one the user just aimed at.
     @state() private _scopeActive = false;
 
     private _offs: Array<() => void> = [];
@@ -419,7 +420,7 @@ export class CvPermissionBanner extends LitElement {
     }
 
     override updated(): void {
-        // Focus the first choice when the prompt opens, like VS Code, so Enter and the arrow keys
+        // Focus the first choice when the prompt opens, so Enter and the arrow keys
         // act on it straight away.
         if (this._pending && !this._focusedOnOpen) {
             if (this.focusFirst()) {
@@ -482,9 +483,9 @@ export class CvPermissionBanner extends LitElement {
             ),
         );
         this._offs.push(bridge.onNotification(Msg.toWebView.chat.cleared, () => this._dismiss()));
-        // Keyboard shortcuts while a prompt is open (like VS Code): Esc cancels,
-        // 1/2/3 pick a choice, Enter confirms the default. Disabled while typing
-        // in the "tell Claude what to do instead" field.
+        // Keyboard shortcuts while a prompt is open: Esc cancels, 1/2/3 pick a
+        // choice, Enter confirms the default. Disabled while typing in the
+        // "tell Claude what to do instead" field.
         document.addEventListener('keydown', this._onKeydown);
     }
 
@@ -526,7 +527,7 @@ export class CvPermissionBanner extends LitElement {
         const inDeny = this._inDenyInput() && !inCommand;
         // Up/Down cycle focus across the choices and the deny field. While editing
         // the command textarea the arrows move the caret; in a multi-line deny
-        // message they do too (VS Code).
+        // message they do too, since caret movement wins inside a text field.
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
             if (inCommand || (inDeny && this._denyValue().includes('\n'))) {
                 return;
@@ -539,7 +540,7 @@ export class CvPermissionBanner extends LitElement {
         if (inCommand || inDeny) {
             return;
         }
-        // Numbered actions in VS Code order: Yes, [suggestion], No, focus the
+        // Numbered actions, least-destructive first: Yes, [suggestion], No, focus the
         // deny field. The last number doesn't confirm — it jumps to the textarea.
         const actions = this._numberedActions();
         // Enter confirms the focused choice, defaulting to the first (Yes).
@@ -556,8 +557,8 @@ export class CvPermissionBanner extends LitElement {
         }
     };
 
-    /** Ordered keyboard actions (1..n), mirroring VS Code: Yes, the suggestion
-     *  (if any), No, then focus the deny field as the final number. */
+    /** Ordered keyboard actions (1..n): Yes, the suggestion (if any), No, then
+     *  focus the deny field as the final number. */
     private _numberedActions(): Array<() => void> {
         const p = this._pending;
         const suggestion = (p?.permissionSuggestions ?? [])[0];
@@ -592,7 +593,7 @@ export class CvPermissionBanner extends LitElement {
         return this._focusables().findIndex((el) => el === active);
     }
 
-    /** Move focus by `delta` across the choices, wrapping around (VS Code `ne`). */
+    /** Move focus by `delta` across the choices, wrapping around. */
     private _navFocus(delta: number): void {
         const items = this._focusables();
         if (!items.length) {
@@ -683,7 +684,7 @@ export class CvPermissionBanner extends LitElement {
 
     /** Toggle an option. Single-select clears the others and auto-advances to
      *  the next question; multi-select just flips. Picking "Other" focuses its
-     *  text field. Mirrors the VS Code AskUserQuestion component. */
+     *  text field. */
     private _toggle(q: AskQuestion, label: string): void {
         const set = new Set(this._picked.get(q.question) ?? []);
         if (q.multiSelect) {
@@ -728,7 +729,7 @@ export class CvPermissionBanner extends LitElement {
     }
 
     /** Enter in the Other field advances to the next question; Shift+Enter adds
-     *  a newline. Mirrors VS Code's Other input. */
+     *  a newline, so a multi-line answer is still possible. */
     private _onOtherKey = (e: KeyboardEvent): void => {
         e.stopPropagation();
         if (e.key !== 'Enter' || e.shiftKey) {
@@ -742,8 +743,8 @@ export class CvPermissionBanner extends LitElement {
     };
 
     /** Up/Down move focus between the options (radio or checkbox), wrapping
-     *  around — selection stays on Enter/Space. Mirrors VS Code; also stops the
-     *  arrows from scrolling the panel. */
+     *  around — selection stays on Enter/Space, so browsing never answers by
+     *  accident. Also stops the arrows from scrolling the panel. */
     private _onOptionsKey = (e: KeyboardEvent): void => {
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
             return;
@@ -836,7 +837,8 @@ export class CvPermissionBanner extends LitElement {
             return;
         }
         const msg: RespondPermissionNotification = { allowed, toolUseId: this._pending.id };
-        // If the user edited the command, allow with the patched input (like VS Code).
+        // If the user edited the command, allow with the patched input: the CLI
+        // runs updatedInput in place of the original.
         if (allowed && this._editedCommand !== null && this._pending.input) {
             msg.updatedInput = { ...(this._pending.input as object), command: this._editedCommand };
         }
@@ -851,8 +853,8 @@ export class CvPermissionBanner extends LitElement {
     private _onDeny = () => this._respond(false);
 
     /** Allow once AND apply a permission_suggestion, overriding its destination
-     *  with the currently-cycled scope (VS Code behaviour). Echoed back verbatim
-     *  as updatedPermissions. `setMode` suggestions carry no rule scope, so they
+     *  with the currently-cycled scope. Echoed back verbatim as
+     *  updatedPermissions. `setMode` suggestions carry no rule scope, so they
      *  go back unchanged. */
     private _onAllowWith(suggestion: PermissionSuggestion): void {
         if (!this._pending) {
@@ -874,7 +876,7 @@ export class CvPermissionBanner extends LitElement {
     }
 
     /** Cycle the scope word forward (localSettings → userSettings → … → session
-     *  → wrap), without confirming. Matches VS Code's clickable scope toggle. */
+     *  → wrap), without confirming: choosing a scope must not grant the tool. */
     private _cycleScope = (e: Event): void => {
         e.stopPropagation();
         this._scopeIdx = (this._scopeIdx + 1) % SCOPE_ORDER.length;
@@ -900,9 +902,9 @@ export class CvPermissionBanner extends LitElement {
         return `Yes, allow ${what}`;
     }
 
-    /** Tool detail under the title. Like VS Code: a short single-line detail
-     *  (≤250 chars, the command/path) is shown inline; a long or multi-line one
-     *  collapses into a "Details" expander so the banner stays compact. */
+    /** Tool detail under the title: a short single-line detail (≤250 chars, the
+     *  command/path) is shown inline; a long or multi-line one collapses into a
+     *  "Details" expander so the banner stays compact. */
     private _renderDetails(p: ToolPermission) {
         const input = p.input as Record<string, unknown> | undefined;
         const hasInput = input && typeof input === 'object' && Object.keys(input).length > 0;
@@ -950,9 +952,10 @@ export class CvPermissionBanner extends LitElement {
         if (p.name === 'AskUserQuestion') {
             return this._renderQuestions();
         }
-        // Like VS Code: at most THREE numbered choices — 1 Yes, 2 "allow … for
-        // this project" (the suggestions collapsed into one), 3 No. Numbers are
-        // keyboard shortcuts (handled in _onKeydown), shown as a badge per row.
+        // At most THREE numbered choices — 1 Yes, 2 "allow … for this project"
+        // (the suggestions collapsed into one), 3 No: more rows than that and the
+        // banner stops being scannable. Numbers are keyboard shortcuts (handled
+        // in _onKeydown), shown as a badge per row.
         const suggestion = (p.permissionSuggestions ?? [])[0];
         let n = 1;
         return html`
@@ -1035,8 +1038,7 @@ export class CvPermissionBanner extends LitElement {
     };
 
     /** Interactive AskUserQuestion UI: per-question tabs, radio/checkbox
-     *  options, an "Other" free-text option, and a Submit footer. Layout and
-     *  behaviour mirror the VS Code extension. */
+     *  options, an "Other" free-text option, and a Submit footer. */
     private _renderQuestions() {
         const qs = this._questions();
         if (!qs.length) {

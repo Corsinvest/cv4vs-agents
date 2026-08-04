@@ -26,7 +26,7 @@ type Tab = 'installed' | 'available' | 'marketplaces';
 // slice client-side). A search narrows the full list first, then the same cap applies.
 const AVAILABLE_LIMIT = 30;
 
-// Anthropic's official marketplace — flagged with a hippo, like VS Code.
+// Anthropic's official marketplace — flagged with a hippo to set it apart from user-added ones.
 const OFFICIAL_MARKETPLACE = 'claude-plugins-official';
 
 // Strip the CLI's leading ✔/✘ (and stray whitespace) — the message-bar icon already conveys it.
@@ -76,7 +76,7 @@ function marketplaceUrl(m: MarketplaceDto): string | null {
 
 // Resolve an available plugin's source to a browsable URL. Url sources are already the final URL
 // (git-subdir resolved host-side); a Relative "./path" is joined onto the owning marketplace's
-// repo tree (mirrors VS Code).
+// repo tree.
 function pluginUrl(p: AvailablePluginDto, marketplaces: MarketplaceDto[]): string | null {
     if (p.sourceKind === 'url') {
         return p.source;
@@ -198,7 +198,8 @@ export class CvPluginManager extends CvDialogBase {
             .card .title {
                 font-weight: var(--fontWeightSemibold);
             }
-            /* Available card head: name left, install count right (like VS Code). */
+            /* Available card head: name left, install count right — popularity is the
+             * secondary signal, so it must not push the name around. */
             .av-head {
                 display: flex;
                 align-items: baseline;
@@ -215,7 +216,8 @@ export class CvPluginManager extends CvDialogBase {
                 font-size: var(--fontSizeBase200);
                 color: var(--colorNeutralForeground3);
                 margin-top: 2px;
-                /* Full text — wrap freely, no clamp (VS Code shows the whole description). */
+                /* Full text — wrap freely, no clamp: the description is what the user
+                 * decides on, so a truncated one is worse than a taller card. */
                 overflow-wrap: anywhere;
             }
             .card .meta {
@@ -417,7 +419,7 @@ export class CvPluginManager extends CvDialogBase {
         }
     };
 
-    // Compact install counts like VS Code: 1636 → "1.6k", 404300 → "404.3k", 1_000_000 → "1m".
+    // Compact install counts so the column never wraps: 1636 → "1.6k", 404300 → "404.3k", 1_000_000 → "1m".
     private _formatInstalls(n: number): string {
         if (n >= 1_000_000) {
             return `${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}m`;
@@ -743,7 +745,7 @@ export class CvPluginManager extends CvDialogBase {
             return;
         }
         // No client-side URL validation — the CLI validates (clones the repo, checks marketplace.json)
-        // and reports failure via the op result, exactly like VS Code.
+        // and reports failure via the op result; a second rule here would only reject sources it accepts.
         this._send(Msg.fromWebView.plugins.marketplaceAdd, { source });
         this._addSource = '';
     };
