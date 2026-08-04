@@ -11,7 +11,7 @@ import CheckmarkCircle16Filled from '@fluentui/svg-icons/icons/checkmark_circle_
 import DismissCircle16Filled from '@fluentui/svg-icons/icons/dismiss_circle_16_filled.svg';
 import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import { bridge } from '../../core/bridge';
-import type { Notice } from '../../core/types';
+import type { Notice, NoticeDismissedDetail } from '../../core/types';
 
 // Same glyph set Fluent's own message-bar uses: info outlined, the actionable severities filled so
 // they read at a glance.
@@ -159,6 +159,21 @@ export class CvNoticeStack extends LitElement {
         }
     }
 
+    /** The ✕. Kept apart from `_remove`, which also serves the auto-dismiss timer and `dismissByKey`
+     *  — neither of those is the user deciding they have read the thing. Only this one is worth
+     *  telling the caller about: one that re-pushes the same key on a schedule it doesn't control
+     *  (the CLI re-sends `rate_limit_info` every turn) has no other way to know to stop. */
+    private _dismissByUser(n: Notice): void {
+        this.dispatchEvent(
+            new CustomEvent<NoticeDismissedDetail>('notice-dismissed', {
+                detail: { key: n.key },
+                bubbles: true,
+                composed: true,
+            }),
+        );
+        this._remove(n.id);
+    }
+
     private _remove(id: string): void {
         this._clearTimer(id);
         this._queue = this._queue.filter((q) => q.id !== id);
@@ -204,7 +219,7 @@ export class CvNoticeStack extends LitElement {
                                 appearance="transparent"
                                 icon-only
                                 title="Dismiss"
-                                @click=${() => this._remove(n.id)}
+                                @click=${() => this._dismissByUser(n)}
                             >
                                 ${unsafeHTML(Dismiss16Regular)}
                             </fluent-button>
