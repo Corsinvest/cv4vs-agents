@@ -411,10 +411,10 @@ internal static class StatsService
         return Path.GetFileName(projectDir.TrimEnd('\\', '/'));
     }
 
-    /// <summary>Read-only cache probe for a project: its working directory (the projectCwd stored at
-    /// the cache root), whether it has any real activity, and each main session's last-activity time
-    /// (for grouping sessions by the day worked, not the file's creation day). hasData is null when
-    /// nothing is cached yet, true when a cached aggregate has messages, false when it has none.</summary>
+    /// <summary>Read-only cache probe for a project: its working directory (read from a session),
+    /// whether it has any real activity, and each main session's last-activity time (for grouping
+    /// sessions by the day worked, not the file's creation day). hasData is null when nothing is
+    /// cached yet, true when a cached aggregate has messages, false when it has none.</summary>
     private static (string cwd, bool? hasData, Dictionary<string, DateTime> lastActivity)
         ProjectCacheInfo(ClaudePaths paths, string projectDir)
     {
@@ -424,7 +424,7 @@ internal static class StatsService
             var cacheFile = CacheFileFor(paths, projectDir);
             var cache = StatsCache.Load(cacheFile);
             if (cache.Count == 0) { return (null, null, lastActivity); } // not indexed yet
-            var cwd = StatsCache.LoadProjectCwd(cacheFile); // stored once at the cache root
+            var cwd = ProjectCwdOf(projectDir); // read from a session, not from the cache
             var hasData = false;
             foreach (var kv in cache)
             {
@@ -442,14 +442,15 @@ internal static class StatsService
         return (null, null, lastActivity);
     }
 
-    /// <summary>The working directory of a project (the projectCwd stored at the cache root), for a
-    /// --resume that needs a real cwd. Read-only; null when the project isn't indexed yet.</summary>
+    /// <summary>The working directory of a project, for a --resume that needs a real cwd. Read from
+    /// the sessions themselves, so it answers for a project that was never indexed too — where the
+    /// cache it used to come from would have been empty.</summary>
     public static string CwdForProject(Profile profile, string projectDir)
     {
         if (profile == null || string.IsNullOrEmpty(projectDir)) { return null; }
         try
         {
-            return StatsCache.LoadProjectCwd(CacheFileFor(ClaudePaths.ForProfile(profile), projectDir));
+            return ProjectCwdOf(projectDir);
         }
         catch (Exception ex)
         {
@@ -480,10 +481,30 @@ internal static class StatsService
         foreach (var projectDir in ordered) { IndexProject(projectDir, paths, force); }
     }
 
-    // The projectDir is the CLI's dir (source of .jsonl); the cache lives in OUR data folder,
-    // keyed by config-id + the same project-hash (the projectDir's basename).
+    // The projectDir is the CLI's dir (source of .jsonl); the cache lives in OUR data folder, named
+    // after the project's real working directory. That path is not recoverable from the CLI folder
+    // name — the separators are gone — so it comes from the `cwd` a session record carries. A
+    // project with no readable session falls back to the CLI folder name: a cache under an odd name
+    // beats no cache at all.
     private static string CacheFileFor(ClaudePaths paths, string projectDir)
-        => AppPaths.ProjectProfileFileByHash(paths, Path.GetFileName(projectDir.TrimEnd('\\', '/')), "stats-cache.json");
+        => AppPaths.ProjectProfileFile(paths, ProjectCwdOf(projectDir) ?? projectDir, "stats-cache.json");
+
+    /// <summary>The working directory a CLI project folder's sessions ran in, from the first file
+    /// that says. One read of one file: this answers before the cache path is known, so it cannot
+    /// ask the cache.</summary>
+    private static string ProjectCwdOf(string projectDir)
+    {
+        try
+        {
+            foreach (var file in EnumerateSessionFiles(projectDir, ids: null))
+            {
+                var cwd = StatsAggregator.ReadCwd(file.FullName);
+                if (!string.IsNullOrEmpty(cwd)) { return cwd; }
+            }
+        }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException(nameof(StatsService) + ".ProjectCwdOf", ex); }
+        return null;
+    }
 
     /// <summary>Refresh one project's cache: re-read changed files (delta for grown ones), prune
     /// vanished, persist. This is the heavy step; Aggregate below only reads the result.</summary>
@@ -496,31 +517,20 @@ internal static class StatsService
             : StatsCache.Load(cacheFile);
         var files = EnumerateSessionFiles(projectDir, ids: null);
         var updated = new ConcurrentDictionary<string, StatsCache.Entry>();
-        // cwd of each freshly-read file (not the reused ones) — used to pick the project label.
-        var freshCwd = new ConcurrentDictionary<string, string>();
         Parallel.ForEach(files, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
             file =>
             {
                 var key = RelativeKey(projectDir, file.FullName);
                 cache.TryGetValue(key, out var cached);
-                var (entry, cwd) = RefreshFile(file, cached);
+                // The cwd RefreshFile also reports is no longer wanted here: the project's path is
+                // what named the folder this cache sits in, so it is known before indexing starts
+                // and recorded once, in project.json, instead of once per profile.
+                var (entry, _) = RefreshFile(file, cached);
                 if (entry != null) { updated[key] = entry; }
-                if (!string.IsNullOrEmpty(cwd)) { freshCwd[key] = cwd; }
             });
         var next = new Dictionary<string, StatsCache.Entry>(StringComparer.OrdinalIgnoreCase);
         foreach (var kv in updated) { next[kv.Key] = kv.Value; }
-
-        // Project label = the most recent session's cwd (a moved older file keeps a stale cwd). The
-        // cwd isn't persisted per file, so pick it among the files re-read this pass, ranked by their
-        // last-activity time; if none were re-read, keep whatever cwd the cache already had.
-        string projectCwd = StatsCache.LoadProjectCwd(cacheFile);
-        long best = long.MinValue;
-        foreach (var kv in freshCwd)
-        {
-            var ts = next.TryGetValue(kv.Key, out var e) ? e.Aggregate?.LastTimestampMs ?? 0 : 0;
-            if (ts >= best) { projectCwd = kv.Value; best = ts; }
-        }
-        StatsCache.Save(cacheFile, next, projectCwd);
+        StatsCache.Save(cacheFile, next);
     }
 
     /// <summary>Aggregate then map to the wire DTO (streaks, %, favorite model computed here).</summary>

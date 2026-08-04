@@ -20,7 +20,10 @@ namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 /// </summary>
 internal static class StatsCache
 {
-    private const int Version = 6;
+    // 7: projectCwd moved out, to project.json beside the project's own data — it was a fact about
+    // the project sitting in each profile's cache. A version that does not match rebuilds from
+    // scratch, which is how the existing caches shed the field.
+    private const int Version = 7;
 
     /// <summary>One cached file: its aggregate + the mtime/size it was computed at.</summary>
     internal sealed class Entry
@@ -28,23 +31,6 @@ internal static class StatsCache
         public long Mtime { get; set; }
         public long Size { get; set; }
         public FileAggregate Aggregate { get; set; }
-    }
-
-    /// <summary>The project's working directory, stored once at the cache root (the most recent
-    /// session's cwd). Null on missing / version mismatch / not yet written.</summary>
-    public static string LoadProjectCwd(string cacheFile)
-    {
-        if (!File.Exists(cacheFile)) { return null; }
-        try
-        {
-            var root = JObject.Parse(File.ReadAllText(cacheFile));
-            return root.Val("version", 0) != Version ? null : root.Val("projectCwd", (string)null);
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("StatsCache.LoadProjectCwd", ex);
-            return null;
-        }
     }
 
     /// <summary>Load the cache from a file (name → entry). Empty on missing / version
@@ -81,7 +67,7 @@ internal static class StatsCache
     /// <summary>Persist the cache atomically (temp + replace) so a crash mid-write can't corrupt
     /// it. Concurrent writers (two panes on the same project) are last-write-wins — the aggregate
     /// is deterministic, so a re-write is idempotent.</summary>
-    public static void Save(string cacheFile, Dictionary<string, Entry> entries, string projectCwd)
+    public static void Save(string cacheFile, Dictionary<string, Entry> entries)
     {
         try
         {
@@ -89,7 +75,6 @@ internal static class StatsCache
             var root = new JObject
             {
                 ["version"] = Version,
-                ["projectCwd"] = projectCwd,
                 ["files"] = new JObject(),
             };
             var files = (JObject)root["files"];
