@@ -69,14 +69,14 @@ export const PERMISSION_ITEMS: PermissionItem[] = [
     },
 ];
 
-/** Gate optional modes like VS Code: `auto` only when the current model supports it,
+/** Gate the optional modes: `auto` only when the current model supports it,
  *  `bypassPermissions` only when the option is enabled. Before the model catalogue
  *  arrives, keep `auto` shown. */
 export function permissionItems(): PermissionItem[] {
     const value = resolveModelValue(appState.currentModel);
     const m = appState.models.find((x) => x.value === value);
     const autoOk = m ? m.supportsAutoMode : true;
-    // Two gates, like VS Code: our own VS option AND the CLI's effective settings — an org can
+    // Two gates: our own VS option AND the CLI's effective settings — an org can
     // forbid the mode via managed settings. Without the second one we would offer a mode the CLI
     // then refuses. Note the different sources: `ui.*` is a VS Option, the other is CLI state.
     const bypassOk =

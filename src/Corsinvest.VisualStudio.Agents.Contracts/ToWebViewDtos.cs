@@ -53,8 +53,8 @@ public class ModelInfoDto
 {
     public string Value { get; set; }
     // The real served model id this catalogue entry maps to (e.g. "claude-opus-4-8[1m]"). Used
-    // to resolve a served id back to its entry — like the VS Code extension — instead of guessing
-    // by family name, which is fragile with alternative providers (env-var remapped models).
+    // to resolve a served id back to its entry instead of guessing by family name, which is
+    // fragile with alternative providers (env-var remapped models).
     public string ResolvedModel { get; set; }
     public string DisplayName { get; set; }
     public string Description { get; set; }
@@ -88,7 +88,7 @@ public class CliStateDto
     public bool? SwitchModelsOnFlag { get; set; }
     public bool? Ultracode { get; set; }
     // effective.permissions.disableBypassPermissionsMode == "disable": an org policy forbids the
-    // bypass mode, so the selector must not offer it (VS Code gates on the same key).
+    // bypass mode, so the selector must not offer it.
     public bool? BypassPermissionsDisabled { get; set; }
     // From init.fast_mode_state (off|cooldown|on). The webview derives only the on/off toggle
     // (on = state != "off"); cooldown is not currently surfaced distinctly. Replaces the

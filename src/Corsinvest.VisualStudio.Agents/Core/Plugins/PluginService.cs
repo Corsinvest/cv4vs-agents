@@ -16,8 +16,8 @@ namespace Corsinvest.VisualStudio.Agents.Core.Plugins;
 /// the output. Plugins are global (~/.claude), so no session/control-protocol is involved: the
 /// live chat process rejects plugin ops (verified: <c>list_plugins</c>/<c>install_plugin</c> as a
 /// control_request return "Unsupported control request subtype" — only <c>reload_plugins</c> is
-/// accepted). This mirrors how VS Code's extension manages plugins (spawn per action). Success is
-/// detected by exit code 0 (✔); failure by exit code 1 (✘) — the CLI never emits JSON on error.
+/// accepted), so every plugin action spawns its own process. Success is detected by exit code 0
+/// (✔); failure by exit code 1 (✘) — the CLI never emits JSON on error.
 /// Analogous to <see cref="Sessions.SessionManager"/>: a static service reading data from outside
 /// the protocol.
 /// </summary>

@@ -133,8 +133,8 @@ public abstract class PaneWindowBase : ToolWindowPane
     internal void Init(PaneEntry entry)
     {
         PaneControl.Init(entry);
-        // The CLI gates the in-IDE diff on diffTool==='auto' but only writes it for VS Code;
-        // ensure the key for this pane's config-dir so our diff works. Idempotent.
+        // The CLI gates the in-IDE diff on diffTool==='auto' but does not write that key for our
+        // entrypoint; ensure it for this pane's config-dir so our diff works. Idempotent.
         AgentsPackage.EnsureDiffToolAuto(entry.ClaudePaths.SettingsFile);
     }
 

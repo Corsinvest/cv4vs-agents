@@ -499,7 +499,7 @@ public partial class ChatPaneControl : PaneControlBase
         // connects to THIS VS's server directly. Idempotent: returns the running port if already up.
         var ssePort = Mcp.McpServerHost.Instance.EnsureStarted();
         // Start the CLI now (not lazily on first prompt) so its `initialize` runs
-        // and the model catalogue / slash commands reach the UI on open, like VS Code.
+        // and the model catalogue / slash commands reach the UI as soon as the pane opens.
         await _client.StartAsync(new ClientOptions
         {
             WorkingDirectory = workDir,

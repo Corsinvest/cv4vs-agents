@@ -141,9 +141,9 @@ export class CvApp extends LitElement {
         this._offs.push(appState.on('isBusy', (v) => (this._isBusy = v)));
         this._offs.push(appState.on('status', (v) => (this._status = v)));
         this._offs.push(appState.on('pendingPermission', (v) => (this._awaitingUser = v != null)));
-        // Global Esc-to-stop (like VS Code): interrupt generation regardless of
-        // focus. Skipped when a permission/Ask prompt is open — there Esc cancels
-        // the prompt (the banner handles it, with stopPropagation).
+        // Global Esc-to-stop: interrupt generation regardless of focus, so stopping
+        // never depends on where the caret is. Skipped when a permission/Ask prompt
+        // is open — there Esc cancels the prompt (the banner handles it, with stopPropagation).
         window.addEventListener('keydown', this._onGlobalEsc);
         // A nested Agent box toggled. Expand: fetch the full transcript (subagent_loaded
         // upserts it + sets expanded). Collapse: drop back to the last 3 here.
@@ -324,7 +324,7 @@ export class CvApp extends LitElement {
                     const parentId = data?.parentToolUseId ?? '';
                     let entryId = this._thinkingMsgs.get(parentId);
                     // A redacted_thinking block has no preceding delta → no entry yet: create a static,
-                    // text-less one here so it still shows (like VS Code's "✻ Thinking…").
+                    // text-less one here so the user still sees that the model thought.
                     if (entryId === undefined) {
                         if (!data?.redacted) {
                             return;
@@ -360,8 +360,7 @@ export class CvApp extends LitElement {
                 (data) => {
                     // A turn can fail with nothing to show for it: max_turns, budget exhausted or a
                     // refusal produce no failing tool row, so without this the stream just stops and
-                    // the user is left guessing. (VS Code only uses this text to improve a crash
-                    // message; in a chat surface a notice is the useful form.)
+                    // the user is left guessing. A visible notice is the only place this reaches them.
                     // …but a turn the user stopped is not one of those: the transcript already
                     // carries "[Request interrupted by user]", so a red notice under it would
                     // report their own decision back to them as a failure.
@@ -834,8 +833,8 @@ export class CvApp extends LitElement {
 
         // A tool_use with no matching tool_result on disk was never completed — the session
         // ended while it was open (e.g. an AskUserQuestion the user closed without answering).
-        // In replay nothing more is coming, so mark it interrupted (static red dot, like the
-        // VS Code extension) instead of leaving it 'pending' (a spinning "in progress" dot).
+        // In replay nothing more is coming, so mark it interrupted (static red dot) instead of
+        // leaving it 'pending' — a spinning "in progress" dot that would never resolve.
         for (const e of out) {
             if (e.kind === 'tool' && e.status === 'pending') {
                 e.status = 'error';
@@ -952,8 +951,7 @@ export class CvApp extends LitElement {
             const parent = this._transcript.findTool(parentId);
             if (parent) {
                 // The sub-agent's first message echoes the prompt the Agent tool was
-                // launched with — it's already shown as the Agent row's IN, so drop the
-                // duplicate (matches the VS Code extension, which renders prompt in IN only).
+                // launched with — it's already shown as the Agent row's IN, so drop the duplicate.
                 if (
                     entry.kind === 'text' &&
                     entry.role === 'user' &&

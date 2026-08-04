@@ -10,11 +10,10 @@ using System.Runtime.InteropServices;
 namespace Corsinvest.VisualStudio.Agents.Options;
 
 /// <summary>Permission mode a new chat session starts in; maps to the CLI's
-/// <c>--permission-mode</c> (see Core/Client/PermissionMode.cs). VS Code's
-/// `initialPermissionMode` also lists `manual`, which their own docs call "an alias for
-/// 'default'" — one behaviour under two names, so it is deliberately not repeated here
-/// ("Manual" is already the label of Default). `auto` stays toolbar-only: it depends on the
-/// model supporting it, which isn't known until the catalogue arrives.</summary>
+/// <c>--permission-mode</c> (see Core/Client/PermissionMode.cs). The CLI also accepts
+/// `manual` as an alias for `default` — one behaviour under two names, so it is deliberately
+/// not repeated here ("Manual" is already the label of Default). `auto` stays toolbar-only:
+/// it depends on the model supporting it, which isn't known until the catalogue arrives.</summary>
 public enum InitialPermissionMode
 {
     /// <summary>Manual — approval required for each edit (prudent default). The name stays
@@ -128,7 +127,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Input")]
     [DisplayName("Allow dangerously skip permissions")]
-    [Description("When enabled, the toolbar's permission menu offers \"Bypass permissions\", which never asks for approval — even for commands that can destroy data. Enabling it does not skip anything by itself: the mode still has to be selected. Takes effect on new sessions (the CLI decides at launch whether the mode can ever be entered). Off by default; mirrors VS Code's allowDangerouslySkipPermissions.")]
+    [Description("When enabled, the toolbar's permission menu offers \"Bypass permissions\", which never asks for approval — even for commands that can destroy data. Enabling it does not skip anything by itself: the mode still has to be selected. Takes effect on new sessions (the CLI decides at launch whether the mode can ever be entered). Off by default.")]
     public bool AllowDangerouslySkipPermissions { get; set; } = false;
 
     [Category("Diff")]

@@ -13,7 +13,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 public sealed class PaneOptions
 {
     /// <summary>When false, the chat's IDE-context "eye" is closed: the host stops forwarding
-    /// the editor selection to this chat. Default: on (matches the VS Code extension).</summary>
+    /// the editor selection to this chat. Default: on.</summary>
     public bool SendSelection { get; set; } = true;
 }
 

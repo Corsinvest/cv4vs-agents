@@ -335,8 +335,8 @@ export interface FileRef {
     end: number;
 }
 
-// Step 1, the anchor: every ".ext" in the text (1-10 chars, VS Code's cap), not followed by more
-// word chars. Global — one run of text can hold several refs.
+// Step 1, the anchor: every ".ext" in the text (1-10 chars — past that it is prose, not a suffix),
+// not followed by more word chars. Global — one run of text can hold several refs.
 const ANCHOR = /\.([A-Za-z0-9]{1,10})(?![A-Za-z0-9])/g;
 
 // Step 2, backwards: the path chars that may precede the dot. Excludes the separators that delimit a
@@ -362,8 +362,8 @@ const DRIVE = /[A-Za-z]:$/;
 
 /** How strict the path check is. Prose is scanned blind, so it needs the extension allow-list to keep
  *  "localhost.net:4040" / "19.99:2" from rendering as dead links; a markdown href was written as a link
- *  by the model on purpose, so any plausible path shape is enough (that's the case VS Code covers and
- *  we used to drop). See the file-link entry in docs/internal/TODO.md for the measurements. */
+ *  by the model on purpose, so any plausible path shape is enough (a case we used to drop).
+ *  See the file-link entry in docs/internal/TODO.md for the measurements. */
 export type RefStrictness = 'known-ext' | 'plausible-path';
 
 /** Scan `text` for file references, growing outwards from each ".ext" anchor. Returns them in order,

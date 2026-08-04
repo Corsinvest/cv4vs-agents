@@ -51,9 +51,9 @@ internal sealed class OpenDiffTool : McpTool<OpenDiffArgs>
         var result = await IdeContextService.Instance.OpenDiffAsync(
             args.OldFilePath, args.NewFilePath, args.NewFileContents, args.TabName);
 
-        // Wire format mirrors the VS Code extension (2.1.169): accept →
-        // [FILE_SAVED, content]; anything else → [DIFF_REJECTED, tab_name].
-        // (2.1.169 dropped TAB_CLOSED; our viewer's TAB_CLOSED maps to reject.)
+        // Wire format the CLI accepts: accept → [FILE_SAVED, content]; anything
+        // else → [DIFF_REJECTED, tab_name]. Current CLI builds no longer act on a
+        // distinct TAB_CLOSED, so our viewer's TAB_CLOSED maps to reject.
         if (result.Status == IdeDiffViewer.FileSaved)
         {
             return new RawMcpContent(

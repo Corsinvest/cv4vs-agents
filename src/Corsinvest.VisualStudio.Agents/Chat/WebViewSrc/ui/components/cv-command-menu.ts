@@ -67,7 +67,8 @@ export class CvCommandMenu extends LitElement {
         }));
     }
 
-    /** Fuse config mirrors the VS Code extension: label/aliases/id weigh more than description. */
+    /** Fuse config: label/aliases/id weigh more than description — you search for a command by
+     *  its name, and the descriptions are long enough to swamp it otherwise. */
     private _fuseSearch(commands: ChatCommand[], query: string): ChatCommand[] {
         const docs = commands.map((c) => ({
             cmd: c,

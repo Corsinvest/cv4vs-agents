@@ -19,10 +19,9 @@ internal sealed partial class WebViewMessageHandler
 {
     private void HandleFork(JObject data, int? id)
     {
-        // Fork like VS Code: write a brand-new JSONL truncated BEFORE the
-        // clicked message (fresh uuids), open it in its OWN pane (this
-        // session stays untouched), and pre-fill that message's text into
-        // the new composer for editing/resend.
+        // Fork: write a brand-new JSONL truncated BEFORE the clicked message
+        // (fresh uuids), open it in its OWN pane (this session stays untouched),
+        // and pre-fill that message's text into the new composer for editing/resend.
         var p = data.ToObject<Contracts.ForkNotification>();
         var forkAtUuid = p.MessageUuid ?? "";
         var forkSourceId = p.SessionId ?? client.SessionId;

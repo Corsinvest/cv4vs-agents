@@ -17,9 +17,9 @@ namespace Corsinvest.VisualStudio.Agents.Mcp;
 /// </summary>
 internal interface IMcpTool
 {
-    /// <summary>Method name used by the CLI in <c>tools/call</c>. camelCase,
-    /// mirrors the VS Code extension's tool names so the CLI needs no
-    /// IDE-specific handling (e.g. <c>getCurrentSelection</c>, <c>openFile</c>).</summary>
+    /// <summary>Method name used by the CLI in <c>tools/call</c>. camelCase, and for the tools the
+    /// CLI special-cases it must be the name the CLI already knows, so it needs no IDE-specific
+    /// handling (e.g. <c>getCurrentSelection</c>, <c>openFile</c>).</summary>
     string Name { get; }
 
     /// <summary>Human-readable description shown in the CLI's tool catalog.
