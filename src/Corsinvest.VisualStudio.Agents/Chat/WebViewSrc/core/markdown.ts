@@ -48,8 +48,8 @@ renderer.link = function (token: Tokens.Link): string {
     // parses as a file ref, render a clickable file link (cv-message routes the click to VS) using
     // the LABEL text as-is. Otherwise fall back to plain text.
     // 'plausible-path', not the prose allow-list: the model wrote this AS a link, so any extension is
-    // fine (.rb/.kt/.tf … used to be dropped here). Unlike VS Code we still degrade to text when the
-    // href isn't path-shaped at all, instead of leaving a blue link that does nothing on click.
+    // fine (.rb/.kt/.tf …). Unlike VS Code we still degrade to text when the href isn't path-shaped
+    // at all, instead of leaving a blue link that does nothing on click.
     const ref = parseFileRef(href, 'plausible-path');
     if (ref) {
         const line = ref.lines[0] ?? 0;
@@ -68,8 +68,8 @@ const fileLinkExtension = {
     name: 'fileLink',
     level: 'inline' as const,
     // Where marked should jump to next — a potential index, per marked's contract. firstRefHint
-    // shares ANCHOR/BACK with the parser, so it can't drift the way a parallel hand-written regex
-    // did (that is how "#L10" in prose stayed unlinked once already).
+    // shares ANCHOR/BACK with the parser so it can't drift: a hint that misses a shape silently
+    // stops the tokenizer from ever being offered that position.
     start: firstRefHint,
     tokenizer(src: string) {
         // A file-ref only counts if it starts at the cursor (offset 0 of the remaining src). Only the

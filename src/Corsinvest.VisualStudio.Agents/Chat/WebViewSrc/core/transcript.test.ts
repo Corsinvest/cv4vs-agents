@@ -119,9 +119,9 @@ test('appendChild: parent, children e items nuovi; fratelli invariati', () => {
     assert.equal(t.entries[1], sibling, 'il fratello mantiene il riferimento');
 });
 
-// Il difetto del 2026-07-31: il ring scartava un figlio mutando items in place, e il blocco
-// children del parent restava identico per ===. cv-tool-row non veniva aggiornato e i suoi
-// ChildPart puntavano a nodi rimossi.
+// If the ring dropped a child by mutating items in place, the parent's children block would stay
+// identical by ===: cv-tool-row would not be updated and its ChildParts would point at removed
+// nodes.
 test('appendChild: il ring che scarta un figlio ricrea comunque il blocco children', () => {
     const t = new Transcript();
     t.append(toolEntry(1, 'tool-1'));
@@ -154,7 +154,7 @@ test('appendChild: showAll tiene tutto e fa upsert invece di duplicare', () => {
         t.appendChild('tool-1', userEntry(i), childKey);
     }
 
-    // re-emissione dello stesso figlio: aggiorna in place, non duplica
+    // re-emitting the same child: updates in place, does not duplicate
     t.appendChild('tool-1', userEntry(3, 'aggiornato'), childKey);
 
     const p = t.entries[0] as UiToolEntry;
@@ -233,16 +233,15 @@ test('findToolByAgentId: trova la riga Agent che ha lanciato il sub-agent', () =
     assert.equal(t.findToolByAgentId('nope'), null);
 });
 
-// Il difetto del 2026-07-31 (secondo giro): "Show all" su un Agent ancora in esecuzione.
-// La fetch sostituisce children.items con l'intera cronologia, ma quei figli non erano mai
-// passati da appendChild — restano fuori dall'index. L'evento live che arriva subito dopo non
-// li trova, e l'update tocca il ramo sbagliato.
+// "Show all" on an Agent still running: the fetch replaces children.items with the whole history,
+// but those children never go through appendChild. Without a reindex they stay out of the index,
+// the live event arriving right after does not find them and the update hits the wrong branch.
 test('update: sostituire children.items indicizza i figli arrivati da fuori', () => {
     const t = new Transcript();
     t.append(toolEntry(1, 'agent'));
     t.appendChild('agent', userEntry(2), childKey);
 
-    // la fetch di "Show all": rimpiazza i 3 tenuti con la cronologia completa
+    // the "Show all" fetch: replaces the 3 kept ones with the full history
     t.update<UiToolEntry>(1, (e) => ({
         ...e,
         children: {
@@ -252,7 +251,7 @@ test('update: sostituire children.items indicizza i figli arrivati da fuori', ()
         },
     }));
 
-    // l'agent sta ancora lavorando: arriva un evento per un figlio della lista sostituita
+    // the agent is still working: an event arrives for a child of the replaced list
     assert.equal(t.find(11)?.id, 11, 'i figli sostituiti devono essere raggiungibili');
     assert.equal(
         t.update<UiUserEntry>(11, (e) => ({ ...e, text: 'aggiornato' })),
