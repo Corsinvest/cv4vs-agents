@@ -51,7 +51,7 @@ internal sealed partial class IdeNavigationService
         public string Preview { get; set; } // the source line's text, trimmed
     }
 
-    // ---- Shared reflection handles, resolved once (feature-detection). Null ⇒ unsupported. ----
+    // Shared reflection handles, resolved once (feature-detection). Null ⇒ unsupported.
 
     private bool _probed;
     private bool _available;

@@ -44,10 +44,8 @@ internal sealed partial class IdeContextService : IDisposable
 
     private IdeContextService() { }
 
-    //  Live selection tracking (real editor, not DTE)
-    //
-    // IWpfTextView.Selection.SelectionChanged is the only reliable signal for
-    // editor selection/caret (the DTE path didn't fire on mouse selection).
+    // Live selection tracking. IWpfTextView.Selection.SelectionChanged is the only reliable
+    // signal for editor selection/caret — DTE doesn't fire on mouse selection.
     // IVsMonitorSelection tells us when the active frame changes so we re-attach.
 
     private IVsEditorAdaptersFactoryService _editorAdapters;
@@ -506,10 +504,7 @@ internal sealed partial class IdeContextService : IDisposable
     }
 }
 
-//  DTOs
-
-/// <summary>Snapshot of the active editor state for the live badge
-/// (formerly <c>Host.EditorContext</c>).</summary>
+/// <summary>Snapshot of the active editor state for the live badge.</summary>
 internal sealed class EditorContext
 {
     public string FilePath { get; set; }
