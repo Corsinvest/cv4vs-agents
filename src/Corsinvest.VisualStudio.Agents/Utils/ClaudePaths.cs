@@ -41,14 +41,43 @@ public sealed class ClaudePaths
     // `replace(/[^a-zA-Z0-9]/g, "-")` — every non-alphanumeric char becomes '-', case PRESERVED.
     // So C:\Users\jane.doe → C--Users-jane-doe (the dot in the username becomes a dash too; an
     // earlier version left dots intact and lowercased, missing the folder).
-    // Not replicated (rare on Windows): the CLI also realpath's the cwd
-    // (symlink/junction canonicalization) and, for names >200 chars, truncates + appends a hash.
-    // Shared so the CLI-reader path (SessionFolder) and our own data path use the SAME hash.
+    // Not replicated (rare on Windows): the CLI also realpath's the cwd (symlink/junction
+    // canonicalization). The >200-char case IS handled, by SessionFolder rather than here.
     public static string ProjectFolderName(string workingDirectory)
         => Regex.Replace(Path.GetFullPath(workingDirectory), "[^a-zA-Z0-9]", "-");
 
+    /// <summary>Longest folder name the CLI writes before it truncates — filesystems cap a single
+    /// path component at 255 bytes, and it leaves room for the suffix it adds.</summary>
+    private const int MaxSanitizedLength = 200;
+
+    /// <summary>The CLI's session folder for a working directory.
+    /// <para>Past 200 characters the name is truncated and a hash appended, and the hash is not
+    /// reproducible from here: it varies with how the CLI was built. So the folder is found by its
+    /// prefix rather than computed — which also survives the day that suffix changes shape. Short
+    /// names, the overwhelming majority, never reach the directory listing.</para></summary>
     public string SessionFolder(string workingDirectory)
-        => Path.Combine(ProjectsFolder, ProjectFolderName(workingDirectory));
+    {
+        var name = ProjectFolderName(workingDirectory);
+        if (name.Length <= MaxSanitizedLength) { return Path.Combine(ProjectsFolder, name); }
+
+        // The untruncated name, on the chance an older CLI wrote one.
+        var verbatim = Path.Combine(ProjectsFolder, name);
+        if (Directory.Exists(verbatim)) { return verbatim; }
+
+        var prefix = name.Substring(0, MaxSanitizedLength) + "-";
+        try
+        {
+            foreach (var dir in Directory.EnumerateDirectories(ProjectsFolder))
+            {
+                if (Path.GetFileName(dir).StartsWith(prefix, StringComparison.Ordinal)) { return dir; }
+            }
+        }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("ClaudePaths.SessionFolder", ex); }
+        // Nothing there yet. Return the truncated stem without a hash: no session exists to be
+        // found, and a path this long is only ever read from — the CLI creates the real folder,
+        // hash and all, the first time it writes one.
+        return Path.Combine(ProjectsFolder, name.Substring(0, MaxSanitizedLength));
+    }
 
     /// <summary>Stable filesystem-safe id for this config-dir, used to namespace our own per-config-dir
     /// data (e.g. stats). Derived from the resolved config-dir path with the same folder-name rule, so it

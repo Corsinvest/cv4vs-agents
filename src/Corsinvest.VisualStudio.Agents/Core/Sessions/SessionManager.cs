@@ -42,8 +42,18 @@ internal sealed partial class SessionManager
 
     // The session folder / a session .jsonl path for this instance's workdir, honouring
     // this instance's config-dir. One place each so the path construction lives in a single spot.
-    private string FolderFor() => _paths.SessionFolder(_workingDirectory);
-    private string FileFor(string sessionId) => Path.Combine(_paths.SessionFolder(_workingDirectory), sessionId + ".jsonl");
+    private string FolderFor() => LongPath(_paths.SessionFolder(_workingDirectory));
+    private string FileFor(string sessionId) => LongPath(Path.Combine(_paths.SessionFolder(_workingDirectory), sessionId + ".jsonl"));
+
+    /// <summary>Past 260 characters .NET Framework refuses the path outright — DirectoryNotFoundException
+    /// on a file that is plainly there — and the CLI happily writes session files that long: its own
+    /// folder name is most of the working directory, and a GUID plus ".jsonl" follows. The \\?\ prefix
+    /// hands the path to Win32 unchecked.
+    /// <para>Applied in the two accessors above, so every read and write below inherits it without
+    /// having to know. Only past the limit: the prefix would otherwise turn up in logs and in
+    /// anything comparing these paths against one built elsewhere.</para></summary>
+    private static string LongPath(string path)
+        => path.Length < 260 || path.StartsWith(@"\\", StringComparison.Ordinal) ? path : @"\\?\" + path;
 
     public List<SessionInfo> Load()
     {
@@ -58,8 +68,11 @@ internal sealed partial class SessionManager
         OutputWindowLogger.Global.Perf(() => $"sessions: loading {files.Length} files");
 
         return files
+            // FullName, not FolderFor's own prefixing: a folder can sit under the limit while the
+            // file inside it goes over — the CLI's folder name is nearly the whole workdir, and a
+            // GUID plus ".jsonl" is another 41 characters on top.
             .AsParallel()
-            .Select(f => ReadSessionFile(f.FullName))
+            .Select(f => ReadSessionFile(LongPath(f.FullName)))
             .Where(x => x != null)
             .OrderByDescending(x => x.LastUsedAt)
             .ToList();
@@ -84,7 +97,7 @@ internal sealed partial class SessionManager
             info.Title = StringHelpers.Truncate(rawTitle, 60);
             return info;
         }
-        catch { _log.Debug(() => "[sessions] skipped an unreadable/corrupt session file"); return null; }
+        catch (Exception ex) { _log.Warn($"[sessions] skipped {Path.GetFileName(path)}: {ex.GetType().Name}: {ex.Message}"); return null; }
     }
 
     private static SessionInfo ScanMetadata(string path)
@@ -335,11 +348,11 @@ internal sealed partial class SessionManager
     public ForkResult ForkSession(string sessionId, string resumeAtMessageUuid)
     {
         var folder = FolderFor();
-        var srcPath = Path.Combine(folder, sessionId + ".jsonl");
+        var srcPath = FileFor(sessionId);
         if (!File.Exists(srcPath)) { return null; }
 
         var newSessionId = Guid.NewGuid().ToString();
-        var dstPath = Path.Combine(folder, newSessionId + ".jsonl");
+        var dstPath = FileFor(newSessionId);
         string excludedPrompt = null;
 
         try

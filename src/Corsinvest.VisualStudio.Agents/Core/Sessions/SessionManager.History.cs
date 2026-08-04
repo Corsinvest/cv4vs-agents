@@ -29,7 +29,7 @@ internal sealed partial class SessionManager
         using var _ = OutputWindowLogger.Global.PerfSpan($"ReadHistoryRaw({sessionId}, batch={batchSize}, before={beforeOffset})");
         var page = new HistoryPage { Messages = [] };
         var folder = FolderFor();
-        var path = Path.Combine(folder, sessionId + ".jsonl");
+        var path = FileFor(sessionId);
 
         info = null;
         if (!File.Exists(path)) { return page; }
@@ -220,7 +220,7 @@ internal sealed partial class SessionManager
         using var _ = OutputWindowLogger.Global.PerfSpan($"ReadUserPrompts({sessionId})");
         var promptsNewestFirst = new List<string>();
         var folder = FolderFor();
-        var path = Path.Combine(folder, sessionId + ".jsonl");
+        var path = FileFor(sessionId);
         if (!File.Exists(path)) { return promptsNewestFirst; }
 
         const int ChunkBytes = 64 * 1024;
@@ -448,7 +448,7 @@ internal sealed partial class SessionManager
     {
         if (string.IsNullOrEmpty(uuid)) { return null; }
         var folder = FolderFor();
-        var path = Path.Combine(folder, sessionId + ".jsonl");
+        var path = FileFor(sessionId);
         if (!File.Exists(path)) { return null; }
         try
         {
@@ -472,7 +472,7 @@ internal sealed partial class SessionManager
     public string ReadCompactSummary(string sessionId, string boundaryUuid)
     {
         if (!IsSafePathToken(sessionId) || string.IsNullOrEmpty(boundaryUuid)) { return ""; }
-        var path = Path.Combine(FolderFor(), sessionId + ".jsonl");
+        var path = FileFor(sessionId);
         if (!File.Exists(path)) { return ""; }
         try
         {
@@ -577,7 +577,7 @@ internal sealed partial class SessionManager
         // plain id token so they can't traverse out of the session dir into the path.
         if (!IsSafePathToken(sessionId) || !IsSafePathToken(agentId)) { return new HistoryPage { Messages = [] }; }
         var folder = FolderFor();
-        var dir = Path.Combine(folder, sessionId, "subagents");
+        var dir = LongPath(Path.Combine(folder, sessionId, "subagents"));
         var path = Path.Combine(dir, $"agent-{agentId}.jsonl");
         if (!File.Exists(path)) { return new HistoryPage { Messages = [] }; }
         try
