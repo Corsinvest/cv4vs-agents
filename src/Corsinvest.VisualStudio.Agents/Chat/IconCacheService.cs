@@ -43,8 +43,8 @@ internal static class IconCacheService
         var key = string.IsNullOrEmpty(iconKey) ? "file" : iconKey.ToLowerInvariant();
         // Keyed by the background the PNG is rendered against (see RenderMonikerToPng), not by the
         // theme's name: that colour is what decides the glyph, so two themes sharing a background
-        // can share the cache, and one that only LOOKS dark still gets its own. Before this the
-        // cache was flat, so a dark-theme run left pale icons that stayed pale on white.
+        // can share the cache, and one that only LOOKS dark still gets its own — a flat cache would
+        // leave a dark-theme run's pale icons in place on white.
         // The light-/dark- prefix is for whoever opens the folder; the hex is what makes it correct.
         var themeBg = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
         var bucket = $"{(VsThemeReader.IsDark() ? "dark" : "light")}-{themeBg.R:x2}{themeBg.G:x2}{themeBg.B:x2}";

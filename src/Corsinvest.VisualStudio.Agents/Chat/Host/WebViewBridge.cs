@@ -224,9 +224,10 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         }
     }
 
-    /// renderer process behind this pane. VS keeps the closed tool window's control alive, so
-    /// without this the renderer outlives the pane and the browser accumulates one per pane ever
-    /// opened. Handlers are unhooked first: they run on the controller being torn down.</summary>
+    /// <summary>Tear down the WebView2, releasing the renderer process behind this pane. VS keeps
+    /// the closed tool window's control alive, so without this the renderer outlives the pane and
+    /// the browser accumulates one per pane ever opened. Handlers are unhooked first: they run on
+    /// the controller being torn down.</summary>
     public void Dispose()
     {
         if (_disposed) { return; }
@@ -382,11 +383,9 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         catch (Exception ex) { log.LogException($"WebViewBridge.SendError[{type}]", ex); }
     }
 
-    // The 5 ToWebView channels that carry request responses. In DEBUG, Send() warns if called
+    // The ToWebView channels that carry request responses. In DEBUG, Send() warns if called
     // on one of these (a case that forgot Send→SendResponse would silently time out the Promise).
-    // chat_history is now a pure response channel (the unprompted push moved to
-    // chat_history_loaded). subagent_loaded is added once its ToWebView listener is removed
-    // (its logic moves into the sendRequest .then).
+    // chat_history is a pure response channel — the unprompted push goes on chat_history_loaded.
     private static readonly System.Collections.Generic.HashSet<string> _responseChannels =
     [
         BridgeMessages.ToWebView.Chat.ImageData,
