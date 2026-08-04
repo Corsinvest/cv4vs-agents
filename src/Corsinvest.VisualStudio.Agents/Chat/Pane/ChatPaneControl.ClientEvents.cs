@@ -84,7 +84,37 @@ public partial class ChatPaneControl
 
             if (e.CallbackId == ClaudeClient.AutosaveHookId && AgentsOptions.Chat.Autosave)
             {
-                if (!string.IsNullOrEmpty(filePath)) { IdeContextService.Instance.SaveIfDirty(filePath); }
+                if (!string.IsNullOrEmpty(filePath))
+                {
+                    // Await it: this hook exists to run BEFORE the tool, and answering {continue}
+                    // while the save is still queued behind a busy UI thread would let Claude read
+                    // the old file. Bounded like the diagnostics branch so a stalled UI thread
+                    // can't hold the tool for the CLI's 60s hook timeout.
+                    var save = IdeContextService.Instance.SaveIfDirtyAsync(filePath);
+                    var saveTimedOut = await Task.WhenAny(save, Task.Delay(3000)) != save;
+                    // await only the completed task: on timeout `save` is left running unobserved,
+                    // which is fine — it swallows its own exceptions.
+                    var saved = !saveTimedOut && await save;
+                    if (!saved)
+                    {
+                        // Say so rather than let Claude treat a stale read as current.
+                        _log.Warn($"[chat] autosave failed for {filePath} — Claude was told the file may be stale");
+                        _client?.RespondToHookCallback(e.RequestId, new
+                        {
+                            @continue = true,
+                            hookSpecificOutput = new
+                            {
+                                hookEventName = "PreToolUse",
+                                additionalContext =
+                                    $"The editor has unsaved changes for {filePath} that could not be written to disk" +
+                                    (saveTimedOut ? " (the save timed out)" : "") +
+                                    ". What you read from disk may not match what the user sees; " +
+                                    "use mcp__vs__document_read_buffer for the editor's version.",
+                            },
+                        });
+                        return;
+                    }
+                }
             }
             else if (e.CallbackId == ClaudeClient.DiagBaselineHookId && AgentsOptions.Chat.PostEditDiagnostics)
             {
