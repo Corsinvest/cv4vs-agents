@@ -582,6 +582,9 @@ internal sealed class BuildResult
     public bool Ok { get; set; }
     public int FailedProjects { get; set; }
     public string Message { get; set; }
+
+    /// <summary>Errors, plus warnings and info when the caller asked for them — one list, each
+    /// entry saying what it is, the way ide_get_diagnostics reports the same Error List.</summary>
     public List<BuildError> Errors { get; set; } = [];
 }
 
@@ -591,6 +594,9 @@ internal sealed class BuildError
     public int Line { get; set; }
     public string Description { get; set; }
     public string Project { get; set; }
+
+    /// <summary>"Error", "Warning" or "Info" — an entry is no longer necessarily an error.</summary>
+    public string Severity { get; set; }
 }
 
 internal sealed class SolutionStructure

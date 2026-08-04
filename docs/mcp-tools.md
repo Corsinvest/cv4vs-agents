@@ -59,9 +59,9 @@ returns `supported=false` instead of pretending it worked.
 
 | Tool | What it does |
 |---|---|
-| `build_project` | Build a single project (by name) in the active configuration and return whether it succeeded plus the list of compiler errors. Blocks until done. |
+| `build_project` | Build a single project (by name) in the active configuration and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until done. Reports errors only unless severity says otherwise; the message says how many items were left out. |
 | `build_set_startup_project` | Set the solution's startup project — the one debug_start (F5) launches. Pass the project name; returns ok plus the resolved startup project, or ok=false with the list of available projects if the name doesn't match. |
-| `build_solution` | Build the entire solution and return whether it succeeded plus the list of compiler errors (file, line, description). Blocks until the build ends. |
+| `build_solution` | Build the entire solution and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until the build ends. Reports errors only unless severity says otherwise; the message says how many items were left out. |
 
 ## Debug (20)
 
