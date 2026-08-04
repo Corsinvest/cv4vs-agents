@@ -22,6 +22,40 @@ internal static class StatsAggregator
 {
     private const string SyntheticModel = "<synthetic>";
 
+    /// <summary>The working directory a session ran in, from the first record that carries one.
+    /// Stops there — the caller wants the project's identity, not its contents, and asks before the
+    /// cache path (which is derived from that identity) can be known, so aggregating first is not an
+    /// option. Null when no record says, or on I/O error.</summary>
+    public static string ReadCwd(string path)
+    {
+        try
+        {
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(fs);
+            string line;
+            // Bounded: every turn carries a cwd, so one is within the first few records of any file
+            // that has one at all. Reading on would only mean scanning a 16 MB session end to end to
+            // conclude what the first page already said.
+            for (var seen = 0; seen < CwdScanLines && (line = reader.ReadLine()) != null; seen++)
+            {
+                // The same cheap pre-filter AggregateFile uses, for the same reason: parsing every
+                // line is the cost worth avoiding.
+                if (line.IndexOf("\"cwd\":", StringComparison.Ordinal) < 0) { continue; }
+                JObject obj;
+                try { obj = JObject.Parse(line); }
+                catch { continue; }
+                var cwd = obj.Val("cwd", "");
+                if (!string.IsNullOrEmpty(cwd)) { return cwd; }
+            }
+        }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("StatsAggregator.ReadCwd", ex); }
+        return null;
+    }
+
+    /// <summary>Records ReadCwd looks at before giving up. Generous: the cwd is on the first user or
+    /// assistant turn, and the records ahead of it are session/hook noise.</summary>
+    private const int CwdScanLines = 200;
+
     /// <summary>Parse one .jsonl into a <see cref="FileAggregate"/>, reading from
     /// <paramref name="fromOffset"/> bytes. Pass a non-null <paramref name="seed"/> to accumulate
     /// onto an existing aggregate (append delta); null starts fresh. Returns the aggregate, the new
