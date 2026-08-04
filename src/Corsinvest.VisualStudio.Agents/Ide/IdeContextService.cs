@@ -432,6 +432,88 @@ internal sealed partial class IdeContextService : IDisposable
         return null;
     }
 
+    public sealed class BufferReadResult
+    {
+        public bool Ok { get; set; }
+        public string Path { get; set; }
+        public bool IsDirty { get; set; }
+        public string Content { get; set; }
+        public int TotalLines { get; set; }
+        public bool Truncated { get; set; }
+        public string Reason { get; set; }
+    }
+
+    /// <summary>Read an open document's editor buffer — the text as it is on screen, unsaved
+    /// changes included. With no path, reads the active document: "what I'm looking at" is the
+    /// gesture this exists for, and it's the user who picks it, not the model. The on-disk
+    /// version is the Read tool's job; this one is for what hasn't been written yet.</summary>
+    public async Task<BufferReadResult> ReadDocumentBufferAsync(string filePath, int maxLines)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+            if (dte == null) { return new BufferReadResult { Reason = "DTE not available." }; }
+
+            Document doc;
+            if (string.IsNullOrEmpty(filePath))
+            {
+                doc = dte.ActiveDocument;
+                if (doc == null) { return new BufferReadResult { Reason = "No active document." }; }
+            }
+            else
+            {
+                doc = null;
+                var target = PathHelpers.FromFileUri(filePath);
+                foreach (Document d in dte.Documents)
+                {
+                    if (string.Equals(d.FullName, target, StringComparison.OrdinalIgnoreCase)) { doc = d; break; }
+                }
+                if (doc == null)
+                {
+                    // Not open means there is no buffer — the file on disk is Read's job.
+                    return new BufferReadResult { Reason = $"'{target}' is not open in an editor; use the Read tool for the on-disk version." };
+                }
+            }
+
+            if (doc.Object("TextDocument") is not TextDocument td)
+            {
+                // Designers, binary editors: a document window without a text buffer.
+                return new BufferReadResult { Reason = $"'{doc.FullName}' has no text buffer (not a text editor)." };
+            }
+
+            var totalLines = td.EndPoint.Line;
+            var truncated = maxLines > 0 && totalLines > maxLines;
+            var start = td.StartPoint.CreateEditPoint();
+            string text;
+            if (truncated)
+            {
+                // Keep the head: unlike an output pane, a file is read top-down.
+                var stop = td.StartPoint.CreateEditPoint();
+                stop.MoveToLineAndOffset(maxLines + 1, 1);
+                text = start.GetText(stop) ?? string.Empty;
+            }
+            else
+            {
+                text = start.GetText(td.EndPoint) ?? string.Empty;
+            }
+
+            return new BufferReadResult
+            {
+                Ok = true,
+                Path = doc.FullName,
+                IsDirty = !doc.Saved,
+                Content = text,
+                TotalLines = totalLines,
+                Truncated = truncated,
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.ReadDocumentBufferAsync", ex);
+            return new BufferReadResult { Reason = $"Read error: {ex.Message}" };
+        }
+    }
 
     public void Dispose()
     {
