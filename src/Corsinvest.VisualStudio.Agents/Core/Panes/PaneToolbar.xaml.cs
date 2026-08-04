@@ -168,9 +168,6 @@ public partial class PaneToolbar : UserControl
 
     private void OnHistory_Click(object sender, RoutedEventArgs e) => ShowSessionHistory();
 
-    /// <summary>Open the session picker for this pane. Public because the chat's
-    /// "Resume conversation" command reaches it through the bridge, not just the
-    /// toolbar button — same popup either way.</summary>
     // The live session-picker popup, so Esc (which VS routes through IOleCommandTarget, never
     // reaching the popup) can dismiss it. Null when closed.
     private Popup _historyPopup;
@@ -194,6 +191,9 @@ public partial class PaneToolbar : UserControl
         return true;
     }
 
+    /// <summary>Open the session picker for this pane. Public because the chat's
+    /// "Resume conversation" command reaches it through the bridge, not just the
+    /// toolbar button — same popup either way.</summary>
     public void ShowSessionHistory()
     {
         var picker = new SessionManagerControl(ClaudePaths.ForProfile(_pane.Entry.Profile), _pane.Entry.WorkingDirectory, _pane.Entry.ActiveSessionId);
