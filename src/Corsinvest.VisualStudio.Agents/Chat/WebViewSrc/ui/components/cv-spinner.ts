@@ -99,7 +99,8 @@ export function setVerbsConfig(cfg: SpinnerVerbsConfigDto | null): void {
         _activeVerbs = DEFAULT_VERBS;
         return;
     }
-    // 'replace' with an empty list falls back to defaults (matches VS Code).
+    // 'replace' with an empty list falls back to defaults: an empty verb pool would
+    // leave the spinner with no label at all.
     _activeVerbs =
         cfg.mode === 'replace'
             ? cfg.verbs.length > 0

@@ -53,8 +53,8 @@ public partial class PaneToolbar : UserControl
     private bool _titleFocused;
 
     // Shown when a titleable pane has no title yet — a fresh chat, or one whose ai-title has not
-    // been generated (or written) yet. Like VS Code's "Untitled": the box stays visible and
-    // editable rather than vanishing, so there is always something to click to rename.
+    // been generated (or written) yet. The box stays visible and editable rather than vanishing,
+    // so there is always something to click to rename.
     private const string UntitledPlaceholder = "Untitled";
 
     /// <summary>Reflect the pane's current title. Hidden only when the pane doesn't support a title
@@ -103,8 +103,7 @@ public partial class PaneToolbar : UserControl
     {
         var newTitle = TitleBox.Text?.Trim();
         // Compare against what the box was showing, placeholder included: leaving "Untitled"
-        // untouched must not rename the session to "Untitled". This mirrors VS Code, which shows
-        // the placeholder as the input's value and commits only a real change against it.
+        // untouched must not rename the session to "Untitled".
         var current = string.IsNullOrWhiteSpace(_pane.SessionTitle) ? UntitledPlaceholder : _pane.SessionTitle;
         if (!string.IsNullOrEmpty(newTitle) && newTitle != current)
         {

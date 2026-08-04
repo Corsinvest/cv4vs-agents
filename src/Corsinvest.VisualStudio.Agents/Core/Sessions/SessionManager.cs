@@ -20,8 +20,8 @@ namespace Corsinvest.VisualStudio.Agents.Core.Sessions;
 /// threaded through every call — a config-dir can never be silently forgotten.</summary>
 internal sealed partial class SessionManager
 {
-    // VS Code-style metadata scan: read a fixed 64 KB window from the start and
-    // from the end of the JSONL in one read each, decode once, scan the lines.
+    // Metadata scan: read a fixed 64 KB window from the start and from the end
+    // of the JSONL in one read each, decode once, scan the lines.
     // Title rows (custom-title / ai-title / last-prompt) and the freshest
     // git/version/model/permissionMode all live within these windows. Reading in
     // a single block avoids the multi-byte-UTF-8 corruption a chunked backward
@@ -335,13 +335,13 @@ internal sealed partial class SessionManager
     {
         public string NewSessionId { get; set; }
         /// <summary>Text of the forked-at message — excluded from the transcript
-        /// and handed back so the user can edit/resend it (VS Code behaviour).</summary>
+        /// and handed back so the user can edit/resend it.</summary>
         public string ExcludedPrompt { get; set; }
     }
 
     /// <summary>Forks a session into a brand-new JSONL: copies messages up to but
-    /// EXCLUDING <paramref name="resumeAtMessageUuid"/> (VS Code forks before the
-    /// clicked message and hands its text back for editing) and rewrites every uuid
+    /// EXCLUDING <paramref name="resumeAtMessageUuid"/> (the cut message's text is
+    /// handed back for editing instead of replayed) and rewrites every uuid
     /// (plus parentUuid / leafUuid / messageId) to fresh ids, so the new transcript
     /// shares no message identity with the source. Stamps the new sessionId on each
     /// line. Returns null if the source is missing or the cut point isn't found.</summary>

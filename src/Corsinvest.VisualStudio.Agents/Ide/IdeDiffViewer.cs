@@ -29,8 +29,8 @@ internal sealed partial class IdeDiffViewer
     public static IdeDiffViewer Instance => _instance.Value;
 
     /// <summary>Diff resolution status strings — the exact wire tokens the Claude
-    /// CLI's openDiff handler expects (see the VS Code extension). FileSaved =
-    /// applied (user saved the proposal); TabClosed = closed without saving;
+    /// CLI's openDiff handler expects. FileSaved = applied (user saved the
+    /// proposal); TabClosed = closed without saving;
     /// Rejected = error / explicit reject. (2.1.169 maps TabClosed → rejected on
     /// the wire; see OpenDiffTool.)</summary>
     public const string FileSaved = "FILE_SAVED";
@@ -94,21 +94,13 @@ internal sealed partial class IdeDiffViewer
         {
             var tempPath = WriteTemp(newFileContents, Path.GetFileName(newFilePath ?? oldFilePath));
 
-            // If the original file has unsaved changes in the editor,
-            // VS's diff service compares the dirty buffer (not the
-            // on-disk content) against our proposed version — mixing
-            // user edits with Claude's edits in the diff. Mirror what
-            // the VS Code extension does: snapshot the on-disk version
-            // to a separate temp and diff against THAT. The user can
-            // still see / handle their dirty changes in the original
-            // editor pane.
             var isNewFile = !File.Exists(oldFilePath);
             var leftPath = oldFilePath;
             var leftIsTemp = false;
             if (isNewFile)
             {
                 // New file (Claude is creating it): diff the proposal against an
-                // empty left side, like the VS Code extension does.
+                // empty left side.
                 leftPath = WriteTemp("", Path.GetFileName(oldFilePath) + ".empty");
                 leftIsTemp = true;
             }

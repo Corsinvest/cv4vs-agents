@@ -206,8 +206,7 @@ internal sealed partial class ClaudeClient
 
             case ClientMessages.ControlSubtype.Elicitation:
                 // An MCP server asks the user for structured input (form) or to open a URL (OAuth).
-                // We have no elicitation UI, so we decline cleanly — same as the VS Code extension,
-                // which passes no onElicitation handler and always replies {action:"decline"}. A
+                // We have no elicitation UI, so we decline cleanly with {action:"decline"}: a
                 // decline is the protocol's expected "unsupported" answer; an error would be a bug.
                 // Warn (not silent): from the user's side an MCP action silently didn't happen —
                 // this line is the only trace of why (e.g. an MCP login that never prompts).
@@ -408,8 +407,8 @@ internal sealed partial class ClaudeClient
     }
 
     /// <summary>The failure text of a `result`: the error subtypes carry `errors[]`, while a
-    /// success-subtype result that is still flagged is_error puts it in `result`. Same split
-    /// VS Code applies. Empty when the turn didn't fail.</summary>
+    /// success-subtype result that is still flagged is_error puts it in `result`. Empty when
+    /// the turn didn't fail.</summary>
     private static string ResultErrorText(JObject obj, string subtype)
     {
         if (!obj.Val("is_error", false)) { return ""; }
@@ -425,7 +424,7 @@ internal sealed partial class ClaudeClient
 
     /// <summary>Fail every in-flight control_request and forget tracked tool
     /// requests. Called when the process exits (so awaiters don't hang to their
-    /// timeout) and on Dispose. Mirrors VS Code's performCleanup.</summary>
+    /// timeout) and on Dispose.</summary>
     private void RejectPendingRequests(string reason)
     {
         foreach (var kv in _pending) { kv.Value.TrySetException(new InvalidOperationException(reason)); }

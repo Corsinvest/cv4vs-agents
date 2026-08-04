@@ -73,7 +73,7 @@ public partial class ChatPaneControl
 
     /// <summary>PreToolUse/PostToolUse hooks (Edit/Write/[Multi]Edit/Read): autosave (save the target
     /// file if it's open dirty, so Claude sees live edits) plus post-edit diagnostics (baseline on
-    /// PreToolUse, new-diagnostics check on PostToolUse — always on, like VS Code). async void because
+    /// PreToolUse, new-diagnostics check on PostToolUse — always on). async void because
     /// the diagnostics check awaits the Error List settling; the try/catch guarantees a response is
     /// always sent so our failure never blocks Claude's tool.</summary>
     private async void OnHookCallback(object sender, HookCallbackEventArgs e)
@@ -175,7 +175,7 @@ public partial class ChatPaneControl
         {
             // Publish the model catalogue only on the first init (fresh pane, no --resume).
             // --resume grafts the session model id onto the catalogue (e.g. duplicating "opus[1m]"),
-            // dirtying the picker on later inits; VS Code avoids this the same way.
+            // dirtying the picker on later inits.
             // Slash commands are re-published every time (they don't dirty).
             if (!_catalogPublished)
             {
@@ -310,8 +310,8 @@ public partial class ChatPaneControl
         }).FileAndForget(nameof(ChatPaneControl));
     }
 
-    // Auto-title the session after its first exchange (like VS Code): ask the CLI
-    // for a short title from the first prompt and save it as the AI title. Done
+    // Auto-title the session after its first exchange: ask the CLI for a short
+    // title from the first prompt and save it as the AI title. Done
     // once per session and only while the CLI is alive (the only time we can ask);
     // SetAiTitle no-ops if the user already set a custom title. The session list
     // (WPF) picks it up from disk next time it loads — no live refresh needed.
@@ -429,7 +429,7 @@ public partial class ChatPaneControl
                 // so it doesn't re-render the transcript out from under a running turn.
                 _turnInFlight = true;
                 // Forward the raw work status ("compacting" at start, null→"" at end). The WebView
-                // maps known values to a spinner label; VS Code does the same.
+                // maps known values to a spinner label; unknown ones fall back to the generic one.
                 _bridge.Send(BridgeMessages.ToWebView.Chat.Status, new Contracts.StatusNotification
                 {
                     Status = obj.Val("status", "") ?? "",
@@ -455,7 +455,8 @@ public partial class ChatPaneControl
             else if (subtype == ClientMessages.SystemSubtype.TaskStarted)
             {
                 var taskType = obj.Val("task_type", (string)null);
-                // Only local_agent tasks appear as sub-agent chips (matches VS Code extension behaviour).
+                // Only local_agent tasks appear as sub-agent chips; other task types have no pane of
+                // their own to open.
                 if (taskType != "local_agent") { return; }
                 _bridge.Send(BridgeMessages.ToWebView.Chat.SubagentStarted, new Contracts.SubagentStartedNotification
                 {
@@ -572,8 +573,8 @@ public partial class ChatPaneControl
             }
         });
 
-    // Map rate_limit_info to a banner: "allowed" clears it, else a message
-    // (wording mirrors the VS Code extension). Webview de-dupes by `key`.
+    // Map rate_limit_info to a banner: "allowed" clears it, else a message.
+    // Webview de-dupes by `key`.
     private void OnRateLimit(object sender, RateLimitEventArgs e)
         => Dispatcher.Invoke(() =>
         {

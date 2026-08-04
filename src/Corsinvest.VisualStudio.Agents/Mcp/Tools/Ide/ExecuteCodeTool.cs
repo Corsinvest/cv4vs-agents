@@ -16,8 +16,8 @@ internal sealed class ExecuteCodeArgs
 }
 
 /// <summary>MCP tool: submit a snippet to VS's C# Interactive window.
-/// Mirrors the VS Code extension's <c>executeCode</c> (Jupyter-targeted)
-/// — same shape, IDE-appropriate backend.</summary>
+/// Registered under the <c>executeCode</c> name the CLI already knows (elsewhere
+/// Jupyter-targeted) — same shape, IDE-appropriate backend.</summary>
 internal sealed class ExecuteCodeTool : McpTool<ExecuteCodeArgs>
 {
     public override string Name => "ide_execute_code";
