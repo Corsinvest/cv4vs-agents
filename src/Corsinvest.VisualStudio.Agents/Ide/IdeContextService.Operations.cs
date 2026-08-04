@@ -599,26 +599,4 @@ internal sealed partial class IdeContextService
             return false;
         }
     }
-
-    //  C# Interactive (MCP executeCode)
-
-    /// <summary>Submit a snippet to VS's C# Interactive window. MVP only
-    /// opens the window; actual submission requires linking
-    /// Microsoft.VisualStudio.InteractiveWindow (TODO).</summary>
-    public async Task<bool> ExecuteInteractiveCodeAsync(string code)
-    {
-        if (string.IsNullOrWhiteSpace(code)) { return false; }
-        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }
-        try
-        {
-            dte.ExecuteCommand("View.C#Interactive");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("Ide.ExecuteInteractiveCode", ex);
-            return false;
-        }
-    }
 }

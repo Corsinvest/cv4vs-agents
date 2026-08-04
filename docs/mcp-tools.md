@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 50 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 49 tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -88,13 +88,12 @@ returns `supported=false` instead of pretending it worked.
 | `debug_step` | Step the paused program by one statement. Direction: 'over' (run the line without entering called methods — default), 'into' (step into the call), 'out' (run to the end of the current method). Returns the new file/line. Only valid in break mode. |
 | `debug_stop` | Stop the current debug session (equivalent to Shift+F5). No-op if not debugging. |
 
-## IDE (9)
+## IDE (8)
 
 | Tool | What it does |
 |---|---|
 | `ide_activate_output` | Bring a Visual Studio Output window pane (by name) to the foreground so the user sees it. Use at a debug checkpoint to show the relevant build/debug output before asking the user to confirm. The pane name is required. Returns ok; ok=false with availablePanes when the pane isn't found. |
 | `ide_clear_output` | Clear a Visual Studio Output window pane (by name). Run it before an action so a later ide_read_output returns only the fresh output, not the old history. The pane name is required (no clear-all). Returns ok; ok=false with availablePanes when the pane isn't found. |
-| `ide_execute_code` | Submit a code snippet to the IDE's interactive REPL (C# Interactive in Visual Studio). Returns whether the snippet was submitted; it does not capture the REPL's output. |
 | `ide_get_diagnostics` | Get language diagnostics from the IDE's Error List. Pass uri (file://...) to limit to one file; omit it to get all. Returns an array of files, each with its diagnostics ([] when there are none). |
 | `ide_get_edition` |  |
 | `ide_get_project_structure` | Get the solution structure: each project with its name, path, and the files it contains. Recurses solution folders. Useful to learn the layout. |

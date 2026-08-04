@@ -198,7 +198,6 @@ internal sealed partial class McpServerHost
         yield return new Tools.OpenDiffTool();
         yield return new Tools.CloseTabTool();
         yield return new Tools.CloseAllDiffTabsTool();
-        yield return new Tools.ExecuteCodeTool();
         yield return new Tools.FormatDocumentTool();
         yield return new Tools.OrganizeImportsTool();
         yield return new Tools.RunCleanupTool();
