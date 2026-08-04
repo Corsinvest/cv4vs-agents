@@ -22,6 +22,33 @@ internal static class StatsAggregator
 {
     private const string SyntheticModel = "<synthetic>";
 
+    /// <summary>The working directory a session ran in, from the first record that carries one.
+    /// Stops there — the caller wants the project's identity, not its contents, and asks before the
+    /// cache path (which is derived from that identity) can be known, so aggregating first is not an
+    /// option. Null when no record says, or on I/O error.</summary>
+    public static string ReadCwd(string path)
+    {
+        try
+        {
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = new StreamReader(fs);
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                // Same cheap pre-filter AggregateFile uses: only user and assistant turns carry a
+                // cwd, and parsing every line of a 16 MB file is the cost worth avoiding.
+                if (line.IndexOf("\"cwd\":", StringComparison.Ordinal) < 0) { continue; }
+                JObject obj;
+                try { obj = JObject.Parse(line); }
+                catch { continue; }
+                var cwd = obj.Val("cwd", "");
+                if (!string.IsNullOrEmpty(cwd)) { return cwd; }
+            }
+        }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("StatsAggregator.ReadCwd", ex); }
+        return null;
+    }
+
     /// <summary>Parse one .jsonl into a <see cref="FileAggregate"/>, reading from
     /// <paramref name="fromOffset"/> bytes. Pass a non-null <paramref name="seed"/> to accumulate
     /// onto an existing aggregate (append delta); null starts fresh. Returns the aggregate, the new
