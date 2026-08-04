@@ -440,3 +440,8 @@ export interface Notice {
     /** Stays until the host clears it (a dead CLI process) — never auto-dismissed. */
     sticky?: boolean;
 }
+
+/** Payload of `notice-dismissed`, raised only when the user clicks a notice's ✕. */
+export interface NoticeDismissedDetail {
+    key?: string;
+}
