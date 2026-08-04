@@ -14,6 +14,10 @@ never forked. Version differences are handled by feature-detection, not by pinni
 
 ## Build
 
+Use the extension's own `mcp__vs__build_solution` when a Visual Studio with it is open: it drives
+that IDE, so there is no MSBuild path to resolve and no clash with a debug session holding the
+assembly, and the errors come back as file/line/message. Otherwise:
+
 ```powershell
 msbuild cv4vs-agents.sln /t:Build /p:Configuration=Debug   # WebView build is hooked into MSBuild
 ```
