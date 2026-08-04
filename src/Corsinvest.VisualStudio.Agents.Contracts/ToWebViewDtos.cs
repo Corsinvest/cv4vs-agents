@@ -515,8 +515,8 @@ public class VsOptionsDto
 /// options. Sent as soon as the WebView is up, before any history, so the first rows already
 /// have the working directory they need to shorten paths against.
 /// <para>The CLI's own state travels separately, on cli_state: it is not available until
-/// claude.exe has answered initialize + get_settings, seconds later, and holding this back for
-/// it was what left that first history rendering absolute paths.</para></summary>
+/// claude.exe has answered initialize + get_settings, seconds later, and this payload must not
+/// wait for it.</para></summary>
 public class InitPayloadNotification
 {
     public InitConfigDto Config { get; set; }
