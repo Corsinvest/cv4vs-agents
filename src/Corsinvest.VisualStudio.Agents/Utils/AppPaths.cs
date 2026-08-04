@@ -28,6 +28,10 @@ internal static class AppPaths
     /// </summary>
     public static readonly string IconCacheFolder = Path.Combine(DataFolder, "icons");
 
+    /// <summary>Where the per-project folders live. ProjectStore names what goes inside — it needs
+    /// the root without going back through ProjectFolder, which delegates to it.</summary>
+    public static readonly string ProjectsRoot = Path.Combine(DataFolder, "data", "projects");
+
     public static string WebViewHtml()
     {
         // The TS+Lit WebView is built from WebViewSrc/ into WebView2/ at

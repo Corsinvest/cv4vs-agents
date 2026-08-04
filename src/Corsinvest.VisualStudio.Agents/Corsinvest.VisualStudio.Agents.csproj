@@ -261,6 +261,7 @@
     <Compile Include="Core\Context\ContextUsageControl.Render.cs">
       <DependentUpon>ContextUsageControl.xaml.cs</DependentUpon>
     </Compile>
+    <Compile Include="Core\Workspace\ProjectStore.cs" />
     <Compile Include="Core\Workspace\WorkspaceState.cs" />
     <Compile Include="Core\Workspace\WorkspaceStore.cs" />
     <Compile Include="Chat\ContentBlockTranslator.cs" />
