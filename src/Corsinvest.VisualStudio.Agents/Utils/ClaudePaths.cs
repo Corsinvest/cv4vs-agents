@@ -39,8 +39,7 @@ public sealed class ClaudePaths
 
     // Mirrors the CLI folder-naming: the CLI resolves the cwd to an absolute path, then
     // `replace(/[^a-zA-Z0-9]/g, "-")` — every non-alphanumeric char becomes '-', case PRESERVED.
-    // So C:\Users\jane.doe → C--Users-jane-doe (the dot in the username becomes a dash too; an
-    // earlier version left dots intact and lowercased, missing the folder).
+    // So C:\Users\jane.doe → C--Users-jane-doe (the dot in the username becomes a dash too).
     // Not replicated (rare on Windows): the CLI also realpath's the cwd (symlink/junction
     // canonicalization). The >200-char case IS handled, by SessionFolder rather than here.
     public static string ProjectFolderName(string workingDirectory)

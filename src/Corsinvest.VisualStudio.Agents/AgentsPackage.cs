@@ -400,8 +400,6 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         base.Dispose(disposing);
     }
 
-    //  IVsSolutionEvents — only the two we actually need; everything else returns S_OK.
-
     int IVsSolutionEvents.OnAfterOpenSolution(object pUnkReserved, int fNewSolution)
     {
         // Redundant with OnBeforeOpenSolution, but covers the rare load path

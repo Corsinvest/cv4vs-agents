@@ -20,9 +20,8 @@ namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 /// </summary>
 internal static class StatsCache
 {
-    // 7: projectCwd moved out, to project.json beside the project's own data — it was a fact about
-    // the project sitting in each profile's cache. A version that does not match rebuilds from
-    // scratch, which is how the existing caches shed the field.
+    // Bump on any shape change: a version that does not match is dropped and rebuilt from scratch,
+    // which is the only way an existing cache sheds a field.
     private const int Version = 7;
 
     /// <summary>One cached file: its aggregate + the mtime/size it was computed at.</summary>

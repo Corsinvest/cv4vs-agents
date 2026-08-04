@@ -80,8 +80,8 @@ public partial class SessionManagerControl : UserControl
         }
         catch
         {
+            // Swallowed: an unreadable folder shouldn't crash the picker.
             OutputWindowLogger.Global.Warn("[sessions] failed to load the session list — picker may be empty");
-            // Silent: an unreadable folder shouldn't crash the picker.
         }
         ApplyActiveFlag();
         ApplyFilter();

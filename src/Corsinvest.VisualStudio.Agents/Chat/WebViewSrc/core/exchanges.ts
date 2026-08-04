@@ -8,7 +8,7 @@ import type { UiEntry } from './types';
  * user message (a history page boundary) gets its own leading group.
  *
  * Pure and derived — cv-app calls this from a memoised getter instead of holding the groups as
- * state. Two writers on one structure is what let the groups and the entries drift apart.
+ * state, so the groups can never drift from the entries they are built from.
  */
 export function buildGroups(entries: readonly UiEntry[]): UiEntry[][] {
     const groups: UiEntry[][] = [];

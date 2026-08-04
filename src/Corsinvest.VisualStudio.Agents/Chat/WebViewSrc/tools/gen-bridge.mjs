@@ -40,7 +40,6 @@ function parse() {
     for (const raw of lines) {
         const line = raw.trim();
 
-        // Direction class
         let m = line.match(reClassDirection);
         if (m) {
             direction = m[1] === 'FromWebView' ? 'fromWebView' : 'toWebView';
@@ -48,7 +47,7 @@ function parse() {
             continue;
         }
 
-        // Domain class — only when we're already inside a direction
+        // reClassDomain also matches a direction class, so only try it once inside one.
         if (direction && (m = line.match(reClassDomain))) {
             domain = m[1].charAt(0).toLowerCase() + m[1].slice(1);
             out[direction][domain] ||= {};
@@ -56,7 +55,6 @@ function parse() {
             continue;
         }
 
-        // Constant
         if (direction && domain && (m = line.match(reConst))) {
             const tsName = m[1].charAt(0).toLowerCase() + m[1].slice(1);
             out[direction][domain][tsName] = m[2];
@@ -70,7 +68,6 @@ function parse() {
                 depth++;
             } else if (ch === '}') {
                 depth--;
-                // Pop any scopes that closed at this depth
                 while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
                     const popped = stack.pop();
                     if (popped.kind === 'domain') { domain = null; }

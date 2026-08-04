@@ -24,8 +24,8 @@ function mount(tag: string, props?: Record<string, unknown>): void {
     const returnFocus = captureFocus();
     // Full teardown, idempotent. Both paths must deregister from the Esc stack: the `close` event
     // (the dialog's own Esc/backdrop/✕) AND closeTopDialog() calling this directly (VS eats the real
-    // Esc → ui_escape → closeTopDialog → close()). Removing the element alone left the entry on the
-    // stack, so the next Esc was swallowed by a phantom dialog and never reached the composer menus.
+    // Esc → ui_escape → closeTopDialog → close()). Removing the element without popping leaves a
+    // phantom entry that swallows the next Esc before it reaches the composer menus.
     let closed = false;
     const close = (): void => {
         if (closed) {

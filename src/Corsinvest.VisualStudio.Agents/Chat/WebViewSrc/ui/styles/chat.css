@@ -294,9 +294,8 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     fill: var(--colorPaletteBerryBorderActive);
     stroke: none;
 }
-/* A tool row's nested children (Agent / Skill transcript today) — indented and
- * separated by a left border to show the parent/child relationship. */
-/* No rule down the side: the indent already says "these belong to the row above". */
+/* A tool row's nested children (Agent / Skill transcript today).
+ * No rule down the side: the indent already says "these belong to the row above". */
 .cv-children {
     margin-left: 16px;
     padding-left: 8px;
@@ -367,9 +366,8 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 .cv-tool-row-chev.always-shown {
     opacity: 1;
 }
-/* Tool header actions — all now come from one renderHeaderActions() per renderer (error / open-diff /
- * sub-agent copy+expand), rendered in flow on the row (not an absolute overlay). This wrapper holds
- * the diff/error buttons; the tints below colour them. Buttons are .icon-btn (shared 14px style). */
+/* Tool header actions (error / open-diff / sub-agent copy+expand), in flow on the row rather than
+ * an absolute overlay. Buttons are .icon-btn (shared 14px style); the tints below colour them. */
 .cv-tool-actions {
     display: inline-flex;
     align-items: center;
@@ -699,9 +697,6 @@ cv-message:focus-within .cv-msg-actions {
     color: var(--colorNeutralForeground3);
     padding: 2px 4px;
 }
-/* A slash command's local output (<local-command-stdout>, e.g. "Set model to X"): a centered
- * berry/purple pill with hairline rules either side — same "special action" language as the
- * model-switch notice, and centered like the VS Code compact divider. stderr → red. */
 /* A slash command's own output (/config, /model, "Unknown command"…) — the CLI's raw terminal
  * text. Rendered as a preformatted monospace block (left-aligned, wraps), faithful to the terminal
  * (no markdown reinterpretation, which would break /config's aligned key=value list). A subtle left
@@ -805,8 +800,6 @@ cv-message:focus-within .cv-msg-actions {
     border: 1px solid color-mix(in srgb, var(--colorPaletteBerryBorderActive) 35%, transparent);
     white-space: nowrap;
 }
-
-/* The .cv-children / -collapsed / -more classes above belong to cv-tool-row. */
 
 /* Elapsed time on a running Agent row (the dot handles the spinner). */
 .cv-agent-time { margin-left: 4px; font-size: 11px; opacity: 0.7; }
