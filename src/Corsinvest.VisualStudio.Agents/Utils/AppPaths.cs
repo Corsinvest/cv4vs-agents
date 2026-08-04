@@ -28,6 +28,10 @@ internal static class AppPaths
     /// </summary>
     public static readonly string IconCacheFolder = Path.Combine(DataFolder, "icons");
 
+    /// <summary>Where the per-project folders live. ProjectStore names what goes inside — it needs
+    /// the root without going back through ProjectFolder, which delegates to it.</summary>
+    public static readonly string ProjectsRoot = Path.Combine(DataFolder, "data", "projects");
+
     public static string WebViewHtml()
     {
         // The TS+Lit WebView is built from WebViewSrc/ into WebView2/ at
@@ -36,11 +40,12 @@ internal static class AppPaths
         return Path.Combine(baseDir, "WebView2", "index.html");
     }
 
-    /// <summary>Root of OUR per-project data: <DataFolder>/data/projects/<project-hash>/. This is the
-    /// PER-SOLUTION scope (independent of profile): workspace.json lives here; per-profile files live
-    /// in the <config-id>/ subfolder below.</summary>
+    /// <summary>Root of OUR per-project data: <ProjectsRoot>/<folder>/. This is the PER-SOLUTION
+    /// scope (independent of profile): workspace.json lives here; per-profile files live in the
+    /// <config-id>/ subfolder below. ProjectStore names the folder and creates it — deliberately
+    /// not this class, which is otherwise all Path.Combine and touches nothing.</summary>
     public static string ProjectFolder(string workingDirectory)
-        => Path.Combine(DataFolder, "data", "projects", ClaudePaths.ProjectFolderName(workingDirectory));
+        => Core.Workspace.ProjectStore.FolderFor(workingDirectory);
 
     /// <summary>The per-solution workspace file (open panes). Depends only on the solution folder,
     /// not on any profile — the panes' profiles are stored inside the JSON.</summary>
@@ -55,9 +60,4 @@ internal static class AppPaths
     /// <summary>A file inside the per-(project, profile) folder (by workdir). Caller creates the dir at Save.</summary>
     public static string ProjectProfileFile(ClaudePaths paths, string workingDirectory, string fileName)
         => Path.Combine(ProjectProfileFolder(paths, workingDirectory), fileName);
-
-    /// <summary>Same, given the project-hash directly (StatsService enumerates CLI projectDirs whose
-    /// basename IS the hash — avoids recomputing it).</summary>
-    public static string ProjectProfileFileByHash(ClaudePaths paths, string projectHash, string fileName)
-        => Path.Combine(DataFolder, "data", "projects", projectHash, paths.ConfigId, fileName);
 }
