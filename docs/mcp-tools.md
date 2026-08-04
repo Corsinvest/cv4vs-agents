@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 50 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 51 tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -45,13 +45,14 @@ returns `supported=false` instead of pretending it worked.
 | `editor_open_diff` | Open a side-by-side diff between an existing file and proposed new content. |
 | `editor_open_file` | Open a file in the editor. Optionally select whole lines with startLine/endLine (1-based). Set activate to focus the tab. |
 
-## Document (5)
+## Document (6)
 
 | Tool | What it does |
 |---|---|
 | `document_check_dirty` | Check whether an open file has unsaved changes. Returns isOpen=false when the file isn't open in any editor; otherwise isDirty true/false. |
 | `document_format` | Format a file using the IDE's built-in formatter. Equivalent to Ctrl+K, Ctrl+D in Visual Studio. |
 | `document_organize_imports` | Organize and remove unused using/import directives in a file via the IDE's Edit.RemoveAndSort command. |
+| `document_read_buffer` | Read an open document's editor buffer, including changes the user hasn't saved. Omit filePath to read the document they are currently looking at. Use the Read tool instead for the version on disk, or when the file isn't open in the IDE. Returns isDirty so you can tell whether what you read differs from disk. |
 | `document_run_cleanup` | Run the IDE's Code Cleanup on a file (Ctrl+K, Ctrl+E): formatting plus the fixers of the user's default cleanup profile. Richer than document_format, but the extra fixers are language-dependent (C#/VB get the most). |
 | `document_save` | Save an open file if it has unsaved changes. Returns saved=true if a save happened, false if the file wasn't open or was already saved. |
 

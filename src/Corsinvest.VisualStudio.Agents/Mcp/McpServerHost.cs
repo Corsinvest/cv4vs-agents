@@ -203,6 +203,7 @@ internal sealed partial class McpServerHost
         yield return new Tools.RunCleanupTool();
         yield return new Tools.SaveDocumentTool();
         yield return new Tools.CheckDocumentDirtyTool();
+        yield return new Tools.ReadDocumentBufferTool();
         yield return new Tools.GetVisualStudioVersionTool();
         yield return new Tools.GetVisualStudioEditionTool();
         yield return new Tools.BuildSolutionTool();
