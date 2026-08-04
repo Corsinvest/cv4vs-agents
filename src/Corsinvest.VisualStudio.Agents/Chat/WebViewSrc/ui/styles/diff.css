@@ -140,7 +140,7 @@ cv-diff-dialog fluent-dialog-body::part(title) {
     overflow: auto;
 }
 
-/*  diff2html minor overrides (colors come from diff2html's dark/light scheme) */
+/* diff2html overrides: layout and typography only — colours stay diff2html's own dark/light scheme. */
 
 .d2h-wrapper {
     font-family: var(--fontFamilyMonospace);
