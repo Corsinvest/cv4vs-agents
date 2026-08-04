@@ -29,7 +29,8 @@ internal sealed class RunCleanupTool : McpTool<RunCleanupArgs>
     public override string Description =>
         "Run the IDE's Code Cleanup on a file (Ctrl+K, Ctrl+E): formatting plus the fixers of " +
         "the user's default cleanup profile. Richer than document_format, but the extra fixers " +
-        "are language-dependent (C#/VB get the most).";
+        "are language-dependent (C#/VB get the most). " +
+        "The file must live inside the open solution's folder; success=false otherwise.";
 
     protected override async Task<object> InvokeAsync(RunCleanupArgs args)
     {

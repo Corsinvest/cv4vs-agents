@@ -50,10 +50,10 @@ returns `supported=false` instead of pretending it worked.
 | Tool | What it does |
 |---|---|
 | `document_check_dirty` | Check whether an open file has unsaved changes. Returns isOpen=false when the file isn't open in any editor; otherwise isDirty true/false. |
-| `document_format` | Format a file using the IDE's built-in formatter. Equivalent to Ctrl+K, Ctrl+D in Visual Studio. |
-| `document_organize_imports` | Organize and remove unused using/import directives in a file via the IDE's Edit.RemoveAndSort command. |
+| `document_format` | Format a file using the IDE's built-in formatter. Equivalent to Ctrl+K, Ctrl+D in Visual Studio. The file must live inside the open solution's folder; success=false otherwise. |
+| `document_organize_imports` | Organize and remove unused using/import directives in a file via the IDE's Edit.RemoveAndSort command. The file must live inside the open solution's folder; success=false otherwise. |
 | `document_read_buffer` | Read an open document's editor buffer, including changes the user hasn't saved. Omit filePath to read the document they are currently looking at. Use the Read tool instead for the version on disk, or when the file isn't open in the IDE. Returns isDirty so you can tell whether what you read differs from disk. |
-| `document_run_cleanup` | Run the IDE's Code Cleanup on a file (Ctrl+K, Ctrl+E): formatting plus the fixers of the user's default cleanup profile. Richer than document_format, but the extra fixers are language-dependent (C#/VB get the most). |
+| `document_run_cleanup` | Run the IDE's Code Cleanup on a file (Ctrl+K, Ctrl+E): formatting plus the fixers of the user's default cleanup profile. Richer than document_format, but the extra fixers are language-dependent (C#/VB get the most). The file must live inside the open solution's folder; success=false otherwise. |
 | `document_save` | Save an open file if it has unsaved changes. Returns saved=true if a save happened, false if the file wasn't open or was already saved. |
 
 ## Build (4)

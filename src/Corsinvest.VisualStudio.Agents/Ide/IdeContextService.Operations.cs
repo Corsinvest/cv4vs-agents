@@ -682,12 +682,42 @@ internal sealed partial class IdeContextService
     public Task<bool> RunCleanupAsync(string filePath)
         => RunOnActiveDocumentAsync(filePath, "Edit.CodeCleanup");
 
+    /// <summary>True when the path lies inside the open solution's folder. These commands rewrite
+    /// the file, and File.Exists alone would let any path on disk through: a wrong guess that
+    /// happens to exist — a same-named file in another repo — would be reformatted with nothing to
+    /// show for it. Compares canonical paths, or <c>solution\..\..\elsewhere</c> would pass.</summary>
+    private static bool IsInsideSolution(DTE dte, string filePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var solutionPath = dte?.Solution?.FullName;
+        if (string.IsNullOrEmpty(solutionPath)) { return false; }
+        var root = Path.GetDirectoryName(solutionPath);
+        if (string.IsNullOrEmpty(root)) { return false; }
+        try
+        {
+            var fullRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var fullFile = Path.GetFullPath(filePath);
+            return fullFile.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            // A malformed path can't be shown to be inside the solution — treat it as outside.
+            OutputWindowLogger.Global.LogException("Ide.IsInsideSolution", ex);
+            return false;
+        }
+    }
+
     private async Task<bool> RunOnActiveDocumentAsync(string filePath, string dteCommand)
     {
         filePath = PathHelpers.FromFileUri(filePath);
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) { return false; }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }
+        if (!IsInsideSolution(dte, filePath))
+        {
+            OutputWindowLogger.Global.Warn($"[mcp] {dteCommand} refused: '{filePath}' is outside the open solution");
+            return false;
+        }
         try
         {
             var window = dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
