@@ -18,6 +18,7 @@ import type {
     AtItemDto,
     RateLimitNotification,
     NoticeNotification,
+    NoticeDismissedDetail,
     PromptHistoryNotification,
     UserTextNotification,
     UserImageDto,
@@ -328,6 +329,16 @@ export class CvPrompt extends LitElement implements CommandHost {
     // (status:type) changes. _rateKey = the live banner's key (null if not a rate limit).
     private _dismissedRateKey: string | null = null;
     private _rateKey: string | null = null;
+
+    /** The user closed a notice by hand. Only the rate limit needs remembering: the CLI re-sends
+     *  `rate_limit_info` on every turn with the same key, so without this the banner comes straight
+     *  back on the next message. A changed key (warning → rejected) is a different condition and
+     *  shows again, which is the point. */
+    private _onNoticeDismissed = (e: CustomEvent<NoticeDismissedDetail>): void => {
+        if (e.detail?.key && e.detail.key === this._rateKey) {
+            this._dismissedRateKey = e.detail.key;
+        }
+    };
 
     @query('textarea') private _ta!: HTMLTextAreaElement;
     @query('input[data-cv-file-picker]') private _filePicker!: HTMLInputElement;
@@ -1497,7 +1508,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 @dragleave=${this._onDragLeave}
                 @drop=${this._onDrop}
             >
-                <cv-notice-stack></cv-notice-stack>
+                <cv-notice-stack @notice-dismissed=${this._onNoticeDismissed}></cv-notice-stack>
                 ${this._renderQueue()} ${this._renderChips()}
                 <textarea
                     id="input"
