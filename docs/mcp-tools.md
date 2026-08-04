@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 49 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 50 tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -55,10 +55,11 @@ returns `supported=false` instead of pretending it worked.
 | `document_run_cleanup` | Run the IDE's Code Cleanup on a file (Ctrl+K, Ctrl+E): formatting plus the fixers of the user's default cleanup profile. Richer than document_format, but the extra fixers are language-dependent (C#/VB get the most). |
 | `document_save` | Save an open file if it has unsaved changes. Returns saved=true if a save happened, false if the file wasn't open or was already saved. |
 
-## Build (3)
+## Build (4)
 
 | Tool | What it does |
 |---|---|
+| `build_clean` | Clean the entire solution: delete the build outputs (bin/obj) of every project. Blocks until the clean ends. Use it when a build result looks stale, then call build_solution to rebuild — cleaning on its own produces no diagnostics. |
 | `build_project` | Build a single project (by name) in the active configuration and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until done. Reports errors only unless severity says otherwise; the message says how many items were left out. |
 | `build_set_startup_project` | Set the solution's startup project — the one debug_start (F5) launches. Pass the project name; returns ok plus the resolved startup project, or ok=false with the list of available projects if the name doesn't match. |
 | `build_solution` | Build the entire solution and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until the build ends. Reports errors only unless severity says otherwise; the message says how many items were left out. |

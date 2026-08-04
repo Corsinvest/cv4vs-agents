@@ -207,6 +207,7 @@ internal sealed partial class McpServerHost
         yield return new Tools.GetVisualStudioEditionTool();
         yield return new Tools.BuildSolutionTool();
         yield return new Tools.BuildProjectTool();
+        yield return new Tools.CleanSolutionTool();
         yield return new Tools.SetStartupProjectTool();
         yield return new Tools.GetProjectStructureTool();
         yield return new Tools.GoToDefinitionTool();
