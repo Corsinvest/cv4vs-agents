@@ -163,7 +163,6 @@ public partial class ProfilesControl : UserControl
     {
         if (_loadingDetail || _selected == null) { return; }
         _selected.Name = NameBox.Text ?? "";
-        // Refresh the list item's Name display.
         ProfilesList.Items.Refresh();
         ValidateName();
         PersistProfiles();
@@ -177,10 +176,9 @@ public partial class ProfilesControl : UserControl
     }
 
     /// <summary>Name must be non-blank and unique (OrdinalIgnoreCase) among the
-    /// other profiles. Known limitation (phase 1): this only flags the problem
-    /// inline (red border/text) — it does not block Apply. UIElementDialogPage.OnApply
-    /// has no supported way to cancel the Apply/close, so a hard block would need a
-    /// bigger change (e.g. a custom modal dialog) left for a later phase.</summary>
+    /// other profiles. Only flags the problem inline (red border/text) — it does not block
+    /// Apply, because UIElementDialogPage.OnApply has no supported way to cancel the
+    /// Apply/close. AgentsProfilesPage.OnApply is what actually refuses to persist.</summary>
     private void ValidateName()
     {
         if (_selected == null)
@@ -227,8 +225,6 @@ public partial class ProfilesControl : UserControl
 
     private void OnEnvVarsLinkClick(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
     {
-        // Open the CLI's env-vars doc in the default browser so the user can look up
-        // which variables a profile can set.
         try { System.Diagnostics.Process.Start(e.Uri.AbsoluteUri); }
         catch (Exception) { /* no browser / blocked — ignore, not worth a dialog */ }
         e.Handled = true;

@@ -25,7 +25,7 @@ function upsert(list: UiEntry[], entry: UiEntry, key: (e: UiEntry) => string): U
  * mutating method here replaces the entry it touches AND rebuilds every object on the path from
  * the root down to it — the entries array, each ancestor's `children`, `children.items`. Branches
  * that did not change keep their identity, so Lit skips them. By construction, not by convention:
- * that is what the previous `_commit` left to each caller to remember, and got wrong.
+ * no caller has to remember to re-create the path itself.
  */
 export class Transcript {
     private _entries: UiEntry[] = [];

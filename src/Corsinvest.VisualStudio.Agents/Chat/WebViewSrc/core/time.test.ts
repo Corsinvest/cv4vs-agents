@@ -11,17 +11,17 @@ const HOUR = 3600_000;
 test('formatTimeAgo: il clock e iniettabile, non e Date.now cablato', () => {
     const t = 1_000_000_000_000;
 
-    // Lo stesso timestamp letto a due momenti diversi deve dare due stringhe diverse: e quello che
-    // rende il refresh su hover una questione di stato, non di scrittura nel DOM.
+    // The same timestamp read at two different moments must give two different strings: that is
+    // what makes the refresh on hover a matter of state, not of writing into the DOM.
     const subito = formatTimeAgo(t, t + MINUTE);
     const dopo = formatTimeAgo(t, t + 3 * HOUR);
 
     assert.notEqual(subito, dopo, 'un clock piu avanti deve dare un testo diverso');
 });
 
-// Il testo esatto dipende dal locale di sistema (Intl.RelativeTimeFormat): asserire su stringhe
-// inglesi renderebbe il test verde solo sulle macchine in inglese. Quello che conta e' che unita
-// diverse diano stringhe diverse, e che il numero sia quello giusto.
+// The exact text depends on the system locale (Intl.RelativeTimeFormat): asserting on English
+// strings would make the test green only on English machines. What matters is that different
+// units give different strings, and that the number is the right one.
 test('formatTimeAgo: sceglie l unita in base alla distanza', () => {
     const t = 1_000_000_000_000;
 
@@ -36,7 +36,7 @@ test('formatTimeAgo: sceglie l unita in base alla distanza', () => {
 });
 
 test('formatTimeAgo: senza clock esplicito usa adesso', () => {
-    // Il default deve restare Date.now(): i chiamanti che non passano il clock non cambiano.
+    // The default must stay Date.now(): callers that pass no clock are unaffected.
     const esplicito = formatTimeAgo(1_000_000_000_000, 1_000_000_000_000 + 2 * MINUTE);
     const implicito = formatTimeAgo(Date.now() - 2 * MINUTE);
 

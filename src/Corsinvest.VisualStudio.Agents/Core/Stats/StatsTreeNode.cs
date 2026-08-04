@@ -7,12 +7,12 @@ using System.Collections.Generic;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
-/// <summary>One node of the stats navigation tree (All → Profile → Project → Session). Every node
-/// is clickable: its <see cref="Selection"/> is what BuildResponse aggregates for that level.</summary>
 /// <summary>Overrides a node's icon when its scope alone isn't enough — the "Days"/"Sessions"
 /// grouping nodes both carry the Project scope but want distinct icons.</summary>
 internal enum StatsNodeKind { Default, DaysGroup, SessionsGroup }
 
+/// <summary>One node of the stats navigation tree (All → Profile → Project → Session). Every node
+/// is clickable: its <see cref="Selection"/> is what BuildResponse aggregates for that level.</summary>
 internal sealed class StatsTreeNode
 {
     public string Label { get; set; }

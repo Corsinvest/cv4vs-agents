@@ -41,7 +41,6 @@ internal sealed class CvHeatmap : StackPanel
         Children.Clear();
         if (cols == null || cols.Count == 0) { return; }
 
-        // Grid of week-columns.
         var grid = new StackPanel { Orientation = Orientation.Horizontal };
         foreach (var col in cols)
         {

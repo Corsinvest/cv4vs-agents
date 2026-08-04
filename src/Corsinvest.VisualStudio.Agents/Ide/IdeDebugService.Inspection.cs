@@ -19,7 +19,7 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 /// </summary>
 internal sealed partial class IdeDebugService
 {
-    // ---- Live inspection + stepping (require Break mode) ---------------------------
+    // Live inspection + stepping: every entry point here requires Break mode.
 
     private const string NotInBreak =
         "Debugger must be paused (break mode) for this. Poll getDebugState and wait for mode='break' " +
