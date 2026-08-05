@@ -12,7 +12,7 @@ import { displayPathUi } from '../paths';
 import { truncate } from '../helpers/format';
 import { ToolRenderer } from './base';
 import { state as appState } from '../../core/state';
-import { formatDuration, formatTokenCount } from '../helpers/format';
+import { formatDuration, formatTokens } from '../helpers/format';
 import type { AskQuestion } from '../../core/types';
 
 interface TodoItem {
@@ -224,26 +224,21 @@ export class AgentRenderer extends ToolRenderer {
     }
     override header(): TemplateResult {
         const desc = truncate(String(this.host.input.description ?? ''), 80);
-        // Elapsed time while the sub-agent runs (the dot handles the spinner). Counted from
-        // startedAt, not from usage.durationMs: that one only moves when the sub-agent reports a
-        // tool use, so on a long call the badge would sit still for ten seconds and read as stuck.
-        // The component drives the 1s repaint (see cv-tool-row) — a renderer is rebuilt per render
-        // and could not hold a timer.
+        // Elapsed time while the sub-agent runs (the dot handles the spinner). cv-elapsed owns the
+        // 1s tick — a renderer is rebuilt per render and could not hold a timer.
         const active = this._activeTask();
         // Running: our own clock. Finished: the CLI's totals, which are the authoritative figures
         // (they measure the run, not when the WebView noticed it) and survive into history. An
         // interrupted run reports neither, so it keeps no badge at all.
         const done = this.host.agentTotals;
         const badge = active
-            ? html`<span class="cv-agent-time"
-                  >${formatDuration(
-                      active.startedAt ? Date.now() - active.startedAt : active.usage.durationMs,
-                  )}</span
-              >`
-            : done.durationMs
-              ? html`<span class="cv-agent-time"
-                    >${formatDuration(done.durationMs)} · ${formatTokenCount(done.tokens)} ·
-                    ${done.toolUses} ${done.toolUses === 1 ? 'tool' : 'tools'}</span
+            ? html`<cv-elapsed .startedAt=${active.startedAt ?? 0}></cv-elapsed>`
+            : done
+              ? html`<span class="cv-agent-time cv-agent-totals"
+                    ><span class="v">${formatDuration(done.durationMs)}</span> ·
+                    <span class="v">${formatTokens(done.tokens)}</span> tok ·
+                    <span class="v">${done.toolUses}</span>
+                    ${done.toolUses === 1 ? 'tool' : 'tools'}</span
                 >`
               : nothing;
         return html`${this.nameSpan('Agent')}${this.detailSpan(desc)}${badge}`;

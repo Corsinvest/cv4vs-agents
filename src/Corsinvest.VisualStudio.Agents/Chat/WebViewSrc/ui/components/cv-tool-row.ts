@@ -10,13 +10,14 @@ import ArrowCollapseAll16Regular from '@fluentui/svg-icons/icons/arrow_collapse_
 import './cv-message';
 import './cv-thinking';
 import './cv-copy-btn';
-import type { ToolStatus, ToolUseData, UiEntry } from '../../core/types';
+// The Agent row's running clock, rendered by AgentRenderer.header() into this row's light DOM.
+import './cv-elapsed';
+import type { ToolStatus, ToolUseData, UiEntry, ToolResultExtrasDto } from '../../core/types';
 import { makeRenderer } from '../tool-renderers';
 import { BridgeToolHost, cleanResult } from '../tool-renderers/tool-host';
 import type { ToolRowState } from '../tool-renderers/types';
 import { state as appState } from '../../core/state';
 import { renderActionsRow } from '../helpers/actions-row';
-import { formatDuration } from '../helpers/format';
 
 // Re-export so existing consumers (e.g. cv-app) can keep importing from here.
 export type { ToolStatus, ToolUseData } from '../../core/types';
@@ -33,10 +34,14 @@ export class CvToolRow extends LitElement implements ToolRowState {
     @property() result = '';
     /** Full output line count (before preview clipping), 0 when empty; count-only renderers use it. */
     @property({ type: Number }) fullLineCount = 0;
-    /** Lines the edit landed on, from the CLI's own patch — what clicking the path jumps to.
-     *  0 when the tool isn't an edit, wrote a new file, or hasn't finished yet. */
-    @property({ type: Number }) editStartLine = 0;
-    @property({ type: Number }) editEndLine = 0;
+    /** Per-tool fields from the result: the edit's line range (what clicking the path jumps to),
+     *  what an Agent run cost. Null until the tool finishes, and for a tool that reports neither.
+     *  attribute:false — it is an object, which an attribute could not carry.
+     *
+     *  Lit dirty-checks by REFERENCE, so this only re-renders when a new object arrives. That holds
+     *  because the entry is rebuilt rather than edited (applyToolResult spreads, Transcript.update
+     *  replaces): mutating an extras in place would update nothing, silently. */
+    @property({ attribute: false }) extras: ToolResultExtrasDto | null = null;
     @property({ type: Number }) elapsedSec = 0;
     // Named childItems, not `children`: HTMLElement.children (the DOM child collection) is reserved.
     @property({ attribute: false }) childItems: UiEntry[] = [];
@@ -44,11 +49,6 @@ export class CvToolRow extends LitElement implements ToolRowState {
     @property({ type: Boolean }) hasMore = false;
     /** The sub-agent this row SPAWNED (Agent tool only) — the transcript to fetch on expand. */
     @property() agentId = '';
-    /** Totals for a FINISHED Agent run. 0 while it runs, for every other tool, and for an
-     *  interrupted run — the CLI reports none there. */
-    @property({ type: Number }) agentDurationMs = 0;
-    @property({ type: Number }) agentTokens = 0;
-    @property({ type: Number }) agentToolUses = 0;
     /** The transcript this row LIVES in, i.e. which agent-<id>.jsonl holds its untruncated
      *  text. Empty in the main session. A nested Agent row has both, and they differ. */
     @property() containerAgentId = '';
@@ -61,10 +61,6 @@ export class CvToolRow extends LitElement implements ToolRowState {
     private _previewRequested = false;
 
     private _unsubSubagentTasks?: () => void;
-    /** 1s repaint while a sub-agent this row launched is running, so the elapsed badge advances
-     *  between its progress messages — those only arrive on a tool use, which can be ten seconds
-     *  apart. Lives here and not in the renderer: a renderer is rebuilt on every render. */
-    private _tickTimer = 0;
 
     /** ToolRowState: the host reads/writes these. */
     get expanded(): boolean {
@@ -92,36 +88,6 @@ export class CvToolRow extends LitElement implements ToolRowState {
         super.disconnectedCallback();
         this._unsubSubagentTasks?.();
         this._unsubSubagentTasks = undefined;
-        clearInterval(this._tickTimer);
-        this._tickTimer = 0;
-    }
-
-    /** Start/stop the elapsed repaint with the sub-agent's own lifetime, so a finished row costs
-     *  nothing: subagent_ended drops the task from appState, which is what turns this off.
-     *
-     *  The tick writes the badge's text directly instead of calling requestUpdate: a re-render here
-     *  rebuilds the renderer and the whole row — body, IN/OUT, highlighted code, nested children —
-     *  and on a minute-long Agent that would be sixty full rebuilds for a number that ticks. Lit
-     *  owns the rest of the row and never touches this node between renders, so writing into it is
-     *  safe; the next real render puts the same value back through the template. */
-    private _syncTick(): void {
-        const id = this.data?.id;
-        const running = !!id && appState.subagentTasks.some((t) => t.toolUseId === id);
-        if (running && !this._tickTimer) {
-            this._tickTimer = window.setInterval(() => this._paintElapsed(), 1000);
-        } else if (!running && this._tickTimer) {
-            clearInterval(this._tickTimer);
-            this._tickTimer = 0;
-        }
-    }
-
-    private _paintElapsed(): void {
-        const task = appState.subagentTasks.find((t) => t.toolUseId === this.data?.id);
-        const el = this.querySelector('.cv-agent-time');
-        if (!task?.startedAt || !el) {
-            return;
-        }
-        el.textContent = formatDuration(Date.now() - task.startedAt);
     }
 
     override render() {
@@ -129,7 +95,6 @@ export class CvToolRow extends LitElement implements ToolRowState {
     }
 
     override updated(): void {
-        this._syncTick();
         // A history Agent row expanded with no children yet → lazily fetch its ≤3 preview, once.
         // Live rows already hold children in memory, so this never fires there. The guard stops it
         // re-firing on every render while the fetch is in flight; it resets when the row collapses.
@@ -251,12 +216,8 @@ export class CvToolRow extends LitElement implements ToolRowState {
                                     .elapsedSec=${c.elapsedSec}
                                     .childItems=${c.children?.items ?? []}
                                     .fullLineCount=${c.fullLineCount}
-                                    .editStartLine=${c.editStartLine}
-                                    .editEndLine=${c.editEndLine}
+                                    .extras=${c.extras ?? null}
                                     .agentId=${c.agentId ?? ''}
-                                    .agentDurationMs=${c.agentDurationMs ?? 0}
-                                    .agentTokens=${c.agentTokens ?? 0}
-                                    .agentToolUses=${c.agentToolUses ?? 0}
                                     .containerAgentId=${this.agentId || this.containerAgentId}
                                     .hasMore=${c.children?.hasMore ?? false}
                                     .showAll=${c.children?.showAll ?? false}

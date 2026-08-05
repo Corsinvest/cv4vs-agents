@@ -189,30 +189,52 @@ public class ToolPermissionCancelNotification
     public string ToolUseId { get; set; }
 }
 
+/// <summary>Lines an edit landed on, from the patch the CLI computed applying it — Edit/Write/
+/// MultiEdit. Sent back verbatim when the user clicks the path, so the editor never has to search
+/// the file for them. Absent for a brand-new file, which has no patch.</summary>
+public class EditLineRangeDto
+{
+    public int StartLine { get; set; }
+    public int EndLine { get; set; }
+}
+
+/// <summary>What an Agent run cost, from the totals the CLI writes on its tool_result. Absent while
+/// it runs, and for an INTERRUPTED run — there the CLI reports no figures at all, so the row shows
+/// none rather than a number that would understate what it spent.</summary>
+public class AgentRunTotalsDto
+{
+    public long DurationMs { get; set; }
+    public long Tokens { get; set; }
+    public int ToolUses { get; set; }
+}
+
+/// <summary>The fields only one tool family reads, grouped so adding another one touches this class
+/// and its renderer instead of widening the notification, the entry, the host and two call sites.
+/// Null when the tool reports none — which is most of them.
+///
+/// agentId and fullLineCount deliberately stay OUT: the first is routing (the transcript lookup and
+/// the sub-agent fetch use it, not the renderer) and arrives at launch rather than at the end; the
+/// second is computed for every tool_result and describes `result`, like isError.</summary>
+public class ToolResultExtrasDto
+{
+    public EditLineRangeDto EditRange { get; set; }
+    public AgentRunTotalsDto AgentTotals { get; set; }
+}
+
 /// <summary>A tool call's result (chat_tool_result). result is preview-clipped;
-/// fullLineCount is the untruncated non-empty line count for count-only renderers.</summary>
+/// fullLineCount is the untruncated non-empty line count for the count-only renderers.</summary>
 public class ToolResultNotification
 {
     public string ToolUseId { get; set; }
     public string Result { get; set; }
     public bool IsError { get; set; }
     public string ParentToolUseId { get; set; }
-    // Below: extras only one tool family reads. Absent (null/0) for every other tool.
     // The sub-agent this row spawned — Agent.
     public string AgentId { get; set; }
-    // Untruncated non-empty line count — the count-only renderers (Grep/Glob).
+    // Untruncated non-empty line count — the count-only renderers (Grep/Glob/WebSearch).
     public int FullLineCount { get; set; }
-    // Lines the edit landed on, from the patch the CLI computed applying it — Edit/Write/
-    // MultiEdit. Sent back verbatim when the user clicks the path, so the editor never has to
-    // search the file for them. 0 for a brand-new file, which has no patch.
-    public int EditStartLine { get; set; }
-    public int EditEndLine { get; set; }
-    // What the Agent run cost, from the totals the CLI writes on its tool_result. All 0 for every
-    // other tool, and for an INTERRUPTED agent — there the CLI reports no figures at all, so the
-    // row shows none rather than a number that would understate the run.
-    public long AgentDurationMs { get; set; }
-    public long AgentTokens { get; set; }
-    public int AgentToolUses { get; set; }
+    // Per-tool fields; null for a tool that reports none.
+    public ToolResultExtrasDto Extras { get; set; }
 }
 
 /// <summary>A rate-limit notice for the composer banner (chat_rate_limit). severity is
