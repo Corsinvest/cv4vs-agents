@@ -13,6 +13,42 @@ using System.Linq;
 namespace Corsinvest.VisualStudio.Agents.Chat;
 
 /// <summary>
+/// The per-tool fields the CLI writes on a tool_result, gathered in one place instead of one
+/// EmitUser parameter each — every tool that reports something of its own would otherwise widen
+/// that signature, and both callers would grow another extraction.
+///
+/// Built from the toolUseResult where there is one (live), or from the fields history lifted onto
+/// the message (replay): toolUseResult itself does not survive into the replay, so what the
+/// translator needs has to travel on the message.
+/// </summary>
+internal sealed class ToolResultExtras
+{
+    /// <summary>Lines an edit landed on. (0, 0) when the tool isn't an edit or wrote a new file.</summary>
+    public (int Start, int End) EditRange { get; set; }
+
+    /// <summary>What an Agent run cost. All zero while it runs, for every other tool, and for an
+    /// interrupted run — the CLI reports no totals there.</summary>
+    public (long DurationMs, long Tokens, int ToolUses) AgentTotals { get; set; }
+
+    /// <summary>Read them off a live toolUseResult. Null-safe: the object is a bare string on an
+    /// error result, and both helpers already guard that shape.</summary>
+    public static ToolResultExtras FromToolUseResult(JObject toolUseResult) => new()
+    {
+        EditRange = Core.Sessions.SessionManager.ToolUseResultEditRange(toolUseResult),
+        AgentTotals = Core.Sessions.SessionManager.ToolUseResultAgentTotals(toolUseResult),
+    };
+
+    /// <summary>Read them back off a replayed message, where history lifted them as scalars.</summary>
+    public static ToolResultExtras FromMessage(JObject msg) => new()
+    {
+        EditRange = (msg.Val("editStartLine", 0), msg.Val("editEndLine", 0)),
+        AgentTotals = (msg.Val("agentDurationMs", 0L),
+                       msg.Val("agentTokens", 0L),
+                       msg.Val("agentToolUses", 0)),
+    };
+}
+
+/// <summary>
 /// Converts assistant/user content blocks (as they arrive on the wire) into the
 /// simplified messages expected by the WebView UI.
 /// </summary>
@@ -95,7 +131,7 @@ internal static class ContentBlockTranslator
                                 string uuid = null,
                                 string agentId = null,
                                 long? timestamp = null,
-                                (int Start, int End) editRange = default)
+                                ToolResultExtras extras = null)
     {
         if (content == null) { return; }
         // agentId (the Agent tool's sub-agent id) is surfaced on the tool_result so
@@ -158,8 +194,11 @@ internal static class ContentBlockTranslator
                         // Full (untruncated) non-empty line count; count-only renderers
                         // (Grep/Glob) show this instead of counting the clipped preview.
                         FullLineCount = StringHelpers.NonEmptyLineCount(text),
-                        EditStartLine = editRange.Start,
-                        EditEndLine = editRange.End,
+                        EditStartLine = extras?.EditRange.Start ?? 0,
+                        EditEndLine = extras?.EditRange.End ?? 0,
+                        AgentDurationMs = extras?.AgentTotals.DurationMs ?? 0,
+                        AgentTokens = extras?.AgentTotals.Tokens ?? 0,
+                        AgentToolUses = extras?.AgentTotals.ToolUses ?? 0,
                     });
                 }
                 else if (type == "text")
