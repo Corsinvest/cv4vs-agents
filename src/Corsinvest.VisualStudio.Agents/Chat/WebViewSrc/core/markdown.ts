@@ -126,21 +126,54 @@ const fileLinkExtension = {
 
 marked.use({ gfm: true, breaks: true, renderer, extensions: [fileLinkExtension] });
 
+// marked + DOMPurify is expensive, and the callers are Lit render() bodies: a component re-renders
+// whenever ANY of its properties changes (a hover row appearing, a timer ticking, a sibling
+// expanding), while the text it renders usually hasn't. Caching the last N results makes those
+// re-renders free. Bounded because a long chat holds hundreds of settled messages and an unbounded
+// map would keep every version of every one of them alive.
+const MD_CACHE_MAX = 200;
+const _mdCache = new Map<string, string>();
+
+/** Drop the memoized renders. Called when the transcript they belonged to goes away (session
+ *  switch, /clear): the LRU would evict them eventually, but until then a new session's first
+ *  messages compete with a dead one's for the same 200 slots. */
+export function clearMarkdownCache(): void {
+    _mdCache.clear();
+}
+
 /**
  * Render markdown to sanitized HTML for `unsafeHTML` (DOMPurify has run).
  * On parse failure, falls back to escaped plaintext instead of a blank bubble.
+ * Memoized by input text — see MD_CACHE_MAX.
  */
 export function renderMarkdown(text: string | undefined | null): string {
-    const normalized = (text ?? '').replace(_LITERAL_TAG_RE, (m) => escapeHtml(m));
+    const key = text ?? '';
+    const cached = _mdCache.get(key);
+    if (cached !== undefined) {
+        // Re-insert so the most recently used entries are the last to be evicted.
+        _mdCache.delete(key);
+        _mdCache.set(key, cached);
+        return cached;
+    }
+    const normalized = key.replace(_LITERAL_TAG_RE, (m) => escapeHtml(m));
+    let out: string;
     try {
         const html = marked.parse(normalized, { async: false }) as string;
-        return DOMPurify.sanitize(html, {
+        out = DOMPurify.sanitize(html, {
             ADD_ATTR: ['target', 'frompre', 'data-file', 'data-line'],
             ADD_TAGS: ['cv-copy-btn'],
         });
     } catch (err) {
-        return `<pre>${escapeHtml(text ?? '')}</pre><div style="color:var(--danger);font-size:11px">⚠ markdown error: ${escapeHtml(String(err))}</div>`;
+        // Not cached: an error render is cheap to redo, and caching it would pin the failure for
+        // the rest of the session even if the cause was transient.
+        return `<pre>${escapeHtml(key)}</pre><div style="color:var(--danger);font-size:11px">⚠ markdown error: ${escapeHtml(String(err))}</div>`;
     }
+    _mdCache.set(key, out);
+    if (_mdCache.size > MD_CACHE_MAX) {
+        // Map iterates in insertion order, so the first key is the least recently used.
+        _mdCache.delete(_mdCache.keys().next().value as string);
+    }
+    return out;
 }
 
 /**
