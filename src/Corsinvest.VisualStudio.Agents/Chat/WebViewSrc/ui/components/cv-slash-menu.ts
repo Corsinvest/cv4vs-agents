@@ -47,9 +47,14 @@ export class CvSlashMenu extends LitElement {
             >
                 ${unsafeHTML(SlashForward16Regular)}
             </fluent-button>
-            <fluent-tooltip anchor="slash-trigger" positioning="above-start">
-                <span class="tip-name">Commands</span>
-                <span class="tip-action">Every slash command, in one list</span>
+            <!-- positioning=before, not the above-start the triggers on the right use: this one
+                 sits against the textarea, and anything opening above it lands on the placeholder.
+                 There is no room on the inline-start side either, so Fluent flips it to the other
+                 side — which is the point: beside the button rather than over the text.
+                 tip-desc, not tip-action: alone, the smaller action size reads as a footnote to
+                 something that isn't there. -->
+            <fluent-tooltip anchor="slash-trigger" positioning="before">
+                <span class="tip-desc">Every slash command, in one list</span>
             </fluent-tooltip>
         `;
     }
