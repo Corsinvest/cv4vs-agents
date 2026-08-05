@@ -207,6 +207,12 @@ public class ToolResultNotification
     // search the file for them. 0 for a brand-new file, which has no patch.
     public int EditStartLine { get; set; }
     public int EditEndLine { get; set; }
+    // What the Agent run cost, from the totals the CLI writes on its tool_result. All 0 for every
+    // other tool, and for an INTERRUPTED agent — there the CLI reports no figures at all, so the
+    // row shows none rather than a number that would understate the run.
+    public long AgentDurationMs { get; set; }
+    public long AgentTokens { get; set; }
+    public int AgentToolUses { get; set; }
 }
 
 /// <summary>A rate-limit notice for the composer banner (chat_rate_limit). severity is
