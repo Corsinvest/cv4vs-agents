@@ -12,7 +12,7 @@ import { displayPathUi } from '../paths';
 import { truncate } from '../helpers/format';
 import { ToolRenderer } from './base';
 import { state as appState } from '../../core/state';
-import { formatElapsed } from './tool-host';
+import { formatDuration, formatTokens } from '../helpers/format';
 import type { AskQuestion } from '../../core/types';
 
 interface TodoItem {
@@ -224,13 +224,23 @@ export class AgentRenderer extends ToolRenderer {
     }
     override header(): TemplateResult {
         const desc = truncate(String(this.host.input.description ?? ''), 80);
-        // Elapsed time while the sub-agent runs (the dot handles the spinner).
+        // Elapsed time while the sub-agent runs (the dot handles the spinner). cv-elapsed owns the
+        // 1s tick — a renderer is rebuilt per render and could not hold a timer.
         const active = this._activeTask();
+        // Running: our own clock. Finished: the CLI's totals, which are the authoritative figures
+        // (they measure the run, not when the WebView noticed it) and survive into history. An
+        // interrupted run reports neither, so it keeps no badge at all.
+        const done = this.host.agentTotals;
         const badge = active
-            ? html`<span class="cv-agent-time"
-                  >${formatElapsed(active.usage.durationMs / 1000)}</span
-              >`
-            : nothing;
+            ? html`<cv-elapsed .startedAt=${active.startedAt ?? 0}></cv-elapsed>`
+            : done
+              ? html`<span class="cv-agent-time cv-agent-totals"
+                    ><span class="v">${formatDuration(done.durationMs)}</span> ·
+                    <span class="v">${formatTokens(done.tokens)}</span> tok ·
+                    <span class="v">${done.toolUses}</span>
+                    ${done.toolUses === 1 ? 'tool' : 'tools'}</span
+                >`
+              : nothing;
         return html`${this.nameSpan('Agent')}${this.detailSpan(desc)}${badge}`;
     }
     // IN = the sub-agent prompt (like the VS Code extension).

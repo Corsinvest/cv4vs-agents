@@ -268,8 +268,14 @@ public partial class ChatPaneControl
             if (e.IsMeta) { return; }
             var previewLines = AgentsOptions.Chat.PreviewLines;
             var agentId = e.ToolUseResult?["agentId"]?.Value<string>();
-            var editRange = SessionManager.ToolUseResultEditRange(e.ToolUseResult);
-            ContentBlockTranslator.EmitUser(e.Content, previewLines, (t, d) => _bridge.Send(t, d), e.ParentToolUseId, e.Uuid, agentId, timestamp: e.Timestamp, editRange: editRange);
+            ContentBlockTranslator.EmitUser(e.Content,
+                                            previewLines,
+                                            (t, d) => _bridge.Send(t, d),
+                                            e.ParentToolUseId,
+                                            e.Uuid,
+                                            agentId,
+                                            timestamp: e.Timestamp,
+                                            extras: ToolResultExtras.FromToolUseResult(e.ToolUseResult));
         });
 
     private void OnResult(object sender, ResultEventArgs e)

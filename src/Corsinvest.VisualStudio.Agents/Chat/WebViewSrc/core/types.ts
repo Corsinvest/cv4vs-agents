@@ -6,6 +6,7 @@
 // pieces we touch, not every JSON shape the C# host can send.
 
 import type { SubagentUsageDto } from './generated/SubagentUsageDto';
+import type { ToolResultExtrasDto } from './generated/ToolResultExtrasDto';
 
 export type Theme = 'dark' | 'light';
 
@@ -90,6 +91,11 @@ export type { GetCompactSummaryResponse } from './generated/GetCompactSummaryRes
 /** A tool call's result (`chat_tool_result`).
  *  Generated from C# (Contracts.ToolResultNotification) by TypeGen — re-exported here. */
 export type { ToolResultNotification } from './generated/ToolResultNotification';
+/** Per-tool fields on a tool_result, grouped so adding another one touches the DTO and its
+ *  renderer instead of every layer in between. Each member is null when its tool didn't report. */
+export type { ToolResultExtrasDto } from './generated/ToolResultExtrasDto';
+export type { EditLineRangeDto } from './generated/EditLineRangeDto';
+export type { AgentRunTotalsDto } from './generated/AgentRunTotalsDto';
 
 /** Rate-limit notice (`chat_rate_limit`) + its severity union.
  *  Generated from C# by TypeGen — re-exported here. */
@@ -263,6 +269,10 @@ export interface SubagentTask {
      *  so it is derived from where the launching row sits in the entry tree; it settles once that
      *  row has arrived (the task can beat it by a few ms). */
     parentTaskId?: string;
+    /** When we saw the task start (epoch ms). `usage.durationMs` only advances when the sub-agent
+     *  reports a tool use — it can sit still for ten seconds on a long call — so the running badge
+     *  counts from here instead, and falls back to the reported figure once the task ends. */
+    startedAt?: number;
 }
 
 /** Status of a tool call: pending (spinner) | done (green) | error (red). */
@@ -396,12 +406,10 @@ export interface UiToolEntry {
     /** Non-empty line count of the FULL output (before preview truncation), 0 when empty.
      *  Count-only renderers (Grep/Glob) show this; the full text is re-read on click. */
     fullLineCount: number;
-    /** Lines the edit landed on, from the patch the CLI computed applying it. 0 while the tool
-     *  is still running, when it isn't an edit, or when it wrote a brand-new file — clicking the
-     *  path then just opens it. */
-    editStartLine: number;
-    editEndLine: number;
     elapsedSec: number;
+    /** Per-tool fields from the result: the edit's line range, what an Agent run cost. Absent until
+     *  the tool finishes, and for a tool that reports neither — which is most of them. */
+    extras?: ToolResultExtrasDto | null;
     /** Nested children (Agent tool today; any tool with children). Present only when the tool
      *  has children — undefined for a normal leaf tool. NOT the row open/closed state: that's
      *  the component's local `_expanded`, which every tool has whether or not it has children. */

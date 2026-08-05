@@ -50,9 +50,16 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<CompactedNotification>();
         AddInterface<StatusNotification>();
         AddInterface<CliExitedNotification>();
+        AddInterface<EditLineRangeDto>();
+        AddInterface<AgentRunTotalsDto>();
+        // Both members are null for a tool that reports neither — most of them.
+        AddInterface<ToolResultExtrasDto>()
+            .Member(x => nameof(x.EditRange)).Null()
+            .Member(x => nameof(x.AgentTotals)).Null();
         AddInterface<ToolResultNotification>()
             .Member(x => nameof(x.ParentToolUseId)).Null()
-            .Member(x => nameof(x.AgentId)).Null();
+            .Member(x => nameof(x.AgentId)).Null()
+            .Member(x => nameof(x.Extras)).Null();
         AddEnum<NoticeVariantDto>(asUnionType: true).StringInitializers();
         AddEnum<NoticePositionDto>(asUnionType: true).StringInitializers();
         AddEnum<EffortLevelDto>(asUnionType: true).StringInitializers();

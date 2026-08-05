@@ -59,7 +59,6 @@ internal static class HistoryReplay
             }
             else // user (and tool_result-carrying user lines)
             {
-                var editRange = (msg.Val("editStartLine", 0), msg.Val("editEndLine", 0));
                 ContentBlockTranslator.EmitUser(content,
                                                 previewLines,
                                                 Collect,
@@ -67,7 +66,7 @@ internal static class HistoryReplay
                                                 uuid,
                                                 agentId,
                                                 timestamp: tsMs,
-                                                editRange: editRange);
+                                                extras: ToolResultExtras.FromMessage(msg));
             }
         }
         return events;

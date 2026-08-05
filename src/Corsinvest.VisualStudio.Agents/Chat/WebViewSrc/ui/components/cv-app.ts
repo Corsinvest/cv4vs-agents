@@ -10,6 +10,7 @@ import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { fetchSubagent, fetchContextUsage, fetchCompactSummary } from '../../core/lazy';
 import { Transcript } from '../../core/transcript';
+import { clearMarkdownCache } from '../../core/markdown';
 import { buildGroups } from '../../core/exchanges';
 import './cv-notice-stack';
 import type { CvNoticeStack } from './cv-notice-stack';
@@ -17,7 +18,7 @@ import './cv-welcome';
 import './cv-prompt';
 import './cv-message';
 import './cv-copy-btn';
-import { renderActionsRow } from '../helpers/actions-row';
+import { renderActionsRow, type TurnMetrics } from '../helpers/actions-row';
 import './cv-thinking';
 // Dialogs are created on demand by core/dialog-host (which must not import ui/),
 // so register their custom elements here in the UI layer.
@@ -115,6 +116,11 @@ export class CvApp extends LitElement {
     /** Currently-streaming thinking block, keyed by parentToolUseId (same nesting rule
      *  as _streamingMsgs). Never persisted — cleared on session clear. */
     private _thinkingMsgs = new Map<string, number>();
+    /** What a finished turn cost, keyed by the id of its last text block — the entry the exchange's
+     *  actions row renders against. Two writers: `assistantText` files the token counts (which the
+     *  JSONL keeps, so they survive a replay), `exchangeEnded` adds cost and duration (which ride
+     *  `result` and are live-only). A replayed turn therefore shows its tokens and nothing else. */
+    private _turnMetrics = new Map<number, TurnMetrics>();
 
     /** Derived, never stored: recomputed only when the tree changes identity. Holding the groups
      *  as state gave them two writers, and that is how they and the entries drifted apart. */
@@ -226,6 +232,7 @@ export class CvApp extends LitElement {
                         appState.contextUsage = data.usage;
                     }
                     const streamingId = this._streamingMsgs.get(parentId);
+                    let entryId: number | undefined;
                     if (streamingId !== undefined) {
                         this._mutate(() =>
                             this._transcript.update<UiAssistantEntry>(streamingId, (e) => ({
@@ -237,13 +244,16 @@ export class CvApp extends LitElement {
                                 timestamp: data?.timestamp ?? Date.now(),
                             })),
                         );
+                        entryId = streamingId;
                         this._streamingMsgs.delete(parentId);
                     } else {
                         const entry = CvApp.buildAssistantEntry(data);
                         entry.timestamp = data?.timestamp ?? Date.now();
                         this._appendEntry(entry, parentId);
+                        entryId = entry.id;
                         queueMicrotask(() => this._scrollToBottom());
                     }
+                    this._seedTurnTokens(entryId, data);
                 },
             ),
         );
@@ -373,14 +383,30 @@ export class CvApp extends LitElement {
                             isError: true,
                         });
                     }
+                    // Cost/tokens/duration are not a transcript entry: they belong to the exchange,
+                    // not to the conversation, so they ride the hover actions row instead of taking
+                    // a permanent line under every answer. Keyed by the last entry id of the turn —
+                    // exchanges are derived on the fly and have no id of their own, but that entry
+                    // is the one the row renders against.
                     if (appState.ui.showCostAndDuration && data?.durationMs != null) {
-                        // Field is `costUsd` to match the host payload (not `totalCost`).
-                        const cost = data.costUsd ? `$${data.costUsd.toFixed(4)}` : '';
-                        const dur = `${(data.durationMs / 1000).toFixed(1)}s`;
-                        this._addText({
-                            role: 'result',
-                            text: [cost, dur].filter(Boolean).join(' · '),
-                        });
+                        // Same key the row reads: the turn's last text block, not the last entry —
+                        // a turn ending on a tool row would otherwise file the figures under an id
+                        // nothing renders against.
+                        const lastText = [...this._transcript.entries]
+                            .reverse()
+                            .find(
+                                (e) =>
+                                    e.kind === 'text' &&
+                                    (e.role === 'assistant' || e.role === 'slash-result'),
+                            );
+                        if (lastText) {
+                            this._turnMetrics.set(lastText.id, {
+                                costUsd: data.costUsd ?? 0,
+                                durationMs: data.durationMs,
+                                usage:
+                                    data.usage ?? this._turnMetrics.get(lastText.id)?.usage ?? null,
+                            });
+                        }
                     }
                     if (this._streamingMsgs.size > 0) {
                         const ids = [...this._streamingMsgs.values()];
@@ -403,6 +429,10 @@ export class CvApp extends LitElement {
                 this._mutate(() => this._transcript.clear());
                 this._streamingMsgs.clear();
                 this._thinkingMsgs.clear();
+                this._turnMetrics.clear();
+                // The rendered markdown belonged to the entries just dropped; keeping it would let
+                // a dead session's messages hold the cache slots the new one needs.
+                clearMarkdownCache();
                 // The transcript this turn belonged to is gone, so its `result` — the only thing
                 // that clears busy — would land on nothing. Without this the spinner outlives the
                 // session that started it, with no message under it to explain what it is waiting for.
@@ -421,16 +451,8 @@ export class CvApp extends LitElement {
 
         this._offs.push(
             bridge.onNotification<CompactedNotification>(Msg.toWebView.chat.compacted, (data) => {
-                // Header-only: one notification, no summary. The summary text is fetched
-                // lazily on first expand (compact-expand listener below) and cached.
-                this._addText<UiCompactEntry>({
-                    role: 'compact',
-                    text: '',
-                    uuid: data?.uuid ?? '',
-                    trigger: data?.trigger ?? 'auto',
-                    preTokens: data?.preTokens ?? 0,
-                    loaded: false,
-                });
+                this._appendEntry(CvApp.buildCompactEntry(data));
+                queueMicrotask(() => this._scrollToBottom());
             }),
         );
 
@@ -549,6 +571,10 @@ export class CvApp extends LitElement {
                 Msg.toWebView.chat.historyLoaded,
                 (data) => {
                     const events = data?.events ?? [];
+                    // Before the replay, not after: _applyHistoryPage refills this from the events
+                    // it is about to build, so clearing it afterwards would drop what it just wrote.
+                    // A history push REPLACES the tree, so the ids it was keyed on are gone.
+                    this._turnMetrics.clear();
                     const out = this._applyHistoryPage(data, events);
 
                     // Seed the gauge from the last assistant_text event carrying usage.
@@ -613,6 +639,7 @@ export class CvApp extends LitElement {
                         toolUseId: d.toolUseId ?? undefined,
                         recentTools: [],
                         usage: { totalTokens: 0, toolUses: 0, durationMs: 0 },
+                        startedAt: Date.now(),
                     });
                     this._subagentTasks = m;
                     this._publishSubagentTasks(m);
@@ -788,7 +815,9 @@ export class CvApp extends LitElement {
                 case Msg.toWebView.chat.assistantText: {
                     const d = ev.data as AssistantTextNotification;
                     if (d.text?.trim()) {
-                        place(CvApp.buildAssistantEntry(d), d.parentToolUseId);
+                        const entry = CvApp.buildAssistantEntry(d);
+                        place(entry, d.parentToolUseId);
+                        this._seedTurnTokens(entry.id, d);
                     }
                     break;
                 }
@@ -810,20 +839,7 @@ export class CvApp extends LitElement {
                     break;
                 }
                 case Msg.toWebView.chat.compacted: {
-                    // Header-only, same shape as the live notification — the summary is
-                    // fetched lazily on first expand (compact-expand listener), cached after.
-                    const d = ev.data as CompactedNotification;
-                    const compactEntry: UiCompactEntry = {
-                        kind: 'text',
-                        id: ++_entryIdSeq,
-                        role: 'compact',
-                        text: '',
-                        uuid: d?.uuid ?? '',
-                        trigger: d?.trigger ?? 'auto',
-                        preTokens: d?.preTokens ?? 0,
-                        loaded: false,
-                    };
-                    place(compactEntry);
+                    place(CvApp.buildCompactEntry(ev.data as CompactedNotification));
                     break;
                 }
                 default:
@@ -1177,6 +1193,21 @@ export class CvApp extends LitElement {
         };
     }
 
+    /** CompactedNotification → the compact separator. Header-only: the summary text is fetched
+     *  lazily on first expand (compact-expand listener) and cached via `loaded`. */
+    private static buildCompactEntry(d: CompactedNotification | null): UiCompactEntry {
+        return {
+            kind: 'text',
+            id: ++_entryIdSeq,
+            role: 'compact',
+            text: '',
+            uuid: d?.uuid ?? '',
+            trigger: d?.trigger ?? 'auto',
+            preTokens: d?.preTokens ?? 0,
+            loaded: false,
+        };
+    }
+
     /** ToolPermissionNotification → a pending tool row. An Agent row takes the id of the
      *  sub-agent it launched: task_started names both ids and lands just before this, whereas
      *  the result only carries agentId in history — live it is null, and without it the row has
@@ -1192,8 +1223,6 @@ export class CvApp extends LitElement {
             status: 'pending',
             result: '',
             fullLineCount: 0,
-            editStartLine: 0,
-            editEndLine: 0,
             elapsedSec: 0,
             agentId: spawned?.taskId,
         };
@@ -1206,9 +1235,10 @@ export class CvApp extends LitElement {
             status: d.isError ? 'error' : 'done',
             result: d.result ?? '',
             fullLineCount: d.fullLineCount ?? 0,
-            editStartLine: d.editStartLine ?? 0,
-            editEndLine: d.editEndLine ?? 0,
             ...(d.agentId ? { agentId: d.agentId } : {}),
+            // Only written when the tool reported something: an interrupted Agent sends none, and
+            // an empty object here would replace the running badge with a blank one.
+            ...(d.extras ? { extras: d.extras } : {}),
         };
     }
 
@@ -1423,6 +1453,7 @@ export class CvApp extends LitElement {
                     ?streaming=${!!e.streaming}
                     .tokens=${e.tokens ?? 0}
                     .durationMs=${e.durationMs ?? 0}
+                    .startedAt=${e.startedAt ?? 0}
                     ?redacted=${!!e.redacted}
                 ></cv-thinking>`
               : this.renderMessage(e);
@@ -1472,7 +1503,24 @@ export class CvApp extends LitElement {
         }
         const text = blocks.map((b) => b.text).join('\n\n');
         const ts = last.timestamp ?? 0;
-        return renderActionsRow(text, ts, 'Copy', '', /* speak */ true);
+        // Keyed on the last text block — the one entry both writers can name: `assistantText` has
+        // only the message it just closed, and `exchangeEnded` looks the same one up. Keying on the
+        // group's last entry instead would miss a turn that ends on a tool row.
+        const metrics = this._turnMetrics.get(last.id) ?? null;
+        return renderActionsRow(text, ts, 'Copy', '', /* speak */ true, metrics);
+    }
+
+    /** File a finished message's token counts against its entry, for the actions row to show.
+     *  Called from both paths that build an assistant entry — the live notification and the
+     *  history replay — because the JSONL keeps `usage` on the assistant line and a replayed
+     *  turn should still show its tokens. Cost and duration ride `result`, which replay has no
+     *  line for, so `exchangeEnded` fills those in later when the turn is live. Sub-agent
+     *  messages are skipped: their figures belong to the Agent row, not to the exchange. */
+    private _seedTurnTokens(entryId: number, d: AssistantTextNotification | null): void {
+        if (d?.parentToolUseId || !d?.usage || !appState.ui.showCostAndDuration) {
+            return;
+        }
+        this._turnMetrics.set(entryId, { costUsd: 0, durationMs: 0, usage: d.usage });
     }
 
     private renderMessage(e: Exclude<UiEntry, UiToolEntry | UiThinkingEntry>) {
@@ -1504,8 +1552,7 @@ export class CvApp extends LitElement {
             .elapsedSec=${e.elapsedSec}
             .childItems=${e.children?.items ?? []}
             .fullLineCount=${e.fullLineCount}
-            .editStartLine=${e.editStartLine}
-            .editEndLine=${e.editEndLine}
+            .extras=${e.extras ?? null}
             .agentId=${e.agentId ?? ''}
             .hasMore=${e.children?.hasMore ?? false}
             .showAll=${e.children?.showAll ?? false}
