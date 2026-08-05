@@ -66,10 +66,39 @@ internal sealed partial class IdeContextService
 
     //  Build (MCP buildSolution / buildProject)
 
-    /// <summary>Build the whole solution (projectName null) or a single project, synchronously,
-    /// then report success plus the Error List down to <paramref name="severity"/>. The DTE build is
-    /// blocking, so run it on a background-safe path: switch to the UI thread, kick the build, wait
-    /// via SolutionBuild.BuildState polling.</summary>
+    /// <summary>Wait for a build/clean kicked with WaitFor…=false, yielding the UI thread between
+    /// polls.
+    ///
+    /// The blocking overloads (WaitForBuildToFinish: true) are a synchronous COM call that never
+    /// pumps: called from the UI thread — which every DTE access has to be — they freeze the whole
+    /// IDE for the length of the build. Ctrl+Shift+B doesn't, which is what gives it away as a
+    /// defect rather than a constraint. The tool still can't return until the build ends (it owes
+    /// the caller LastBuildInfo plus the Error List); what changes is that the user no longer waits
+    /// with it.
+    ///
+    /// The await is what does the work: leaving the UI thread lets VS pump again, and
+    /// SwitchToMainThreadAsync takes it back for the next read of BuildState, which is itself a DTE
+    /// call. 200ms is short enough to not add a visible tail to a fast build and long enough to cost
+    /// nothing on a long one.</summary>
+    private static async Task WaitForBuildAsync(SolutionBuild sb)
+    {
+        // Poll at least once before testing: BuildState can still read vsBuildStateDone on the first
+        // look after kicking off, and exiting here would report the PREVIOUS build's LastBuildInfo
+        // as this one's result.
+        do
+        {
+            await Task.Delay(BuildPollMs);
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        }
+        while (sb.BuildState == vsBuildState.vsBuildStateInProgress);
+    }
+
+    private const int BuildPollMs = 200;
+
+    /// <summary>Build the whole solution (projectName null) or a single project, then report success
+    /// plus the Error List down to <paramref name="severity"/>. Kicks the build without waiting and
+    /// polls SolutionBuild.BuildState, so the IDE stays live while it runs — see
+    /// <see cref="WaitForBuildAsync"/>.</summary>
     public async Task<BuildResult> BuildAsync(string projectName, string severity = "error")
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -83,7 +112,7 @@ internal sealed partial class IdeContextService
         {
             if (string.IsNullOrEmpty(projectName))
             {
-                sb.Build(WaitForBuildToFinish: true);
+                sb.Build(WaitForBuildToFinish: false);
             }
             else
             {
@@ -95,8 +124,10 @@ internal sealed partial class IdeContextService
                 {
                     return new BuildResult { Ok = false, Message = $"Project not found: {projectName}" };
                 }
-                sb.BuildProject(config, proj.UniqueName, WaitForBuildToFinish: true);
+                sb.BuildProject(config, proj.UniqueName, WaitForBuildToFinish: false);
             }
+
+            await WaitForBuildAsync(sb);
 
             // LastBuildInfo = number of projects that FAILED (0 = success).
             var failed = sb.LastBuildInfo;
@@ -124,9 +155,9 @@ internal sealed partial class IdeContextService
         }
     }
 
-    /// <summary>Clean the solution (delete bin/obj outputs) and wait for it.
-    /// No error collection: unlike a build, a clean produces no diagnostics —
-    /// <c>LastBuildInfo</c> is the only outcome there is.</summary>
+    /// <summary>Clean the solution (delete bin/obj outputs) and wait for it, polling like
+    /// <see cref="BuildAsync"/> so the IDE stays live. No error collection: unlike a build, a clean
+    /// produces no diagnostics — <c>LastBuildInfo</c> is the only outcome there is.</summary>
     public async Task<BuildResult> CleanAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -138,7 +169,8 @@ internal sealed partial class IdeContextService
         }
         try
         {
-            sb.Clean(WaitForCleanToFinish: true);
+            sb.Clean(WaitForCleanToFinish: false);
+            await WaitForBuildAsync(sb);
             var failed = sb.LastBuildInfo;
             return new BuildResult
             {
