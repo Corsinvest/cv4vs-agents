@@ -52,8 +52,10 @@ export default tseslint.config(
     },
 
     // ui/ is the other side of that boundary: importing from core is exactly what it is meant to do.
+    // tests/ sits outside it altogether — it exercises both sides, so the direction rule doesn't
+    // apply: a test for a ui/ helper has to import that helper.
     {
-        files: ['ui/**/*.ts', 'index.ts'],
+        files: ['ui/**/*.ts', 'tests/**/*.ts', 'index.ts'],
         rules: { '@typescript-eslint/no-restricted-imports': 'off' },
     },
 );

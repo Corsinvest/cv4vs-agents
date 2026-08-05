@@ -4,7 +4,7 @@
  */
 import { LitElement, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import { formatAbsolute, formatTimeAgo } from '../../core/time';
+import { formatAbsolute, formatTimeAgo } from '../helpers/format';
 
 /**
  * The "x ago" stamp under a message, recomputed when the pointer arrives.

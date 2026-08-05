@@ -60,6 +60,13 @@ export class BridgeToolHost implements ToolHost {
     get agentId(): string {
         return this.row.agentId ?? '';
     }
+    get agentTotals(): { durationMs: number; tokens: number; toolUses: number } {
+        return {
+            durationMs: this.row.agentDurationMs ?? 0,
+            tokens: this.row.agentTokens ?? 0,
+            toolUses: this.row.agentToolUses ?? 0,
+        };
+    }
     get containerAgentId(): string {
         return this.row.containerAgentId ?? '';
     }
@@ -180,16 +187,6 @@ export function cleanResult(result: string, isError: boolean): string {
         r = persisted[1].replace(/\n\.\.\.\n$/, '\n');
     }
     return r.replace(ANSI_RE, '').replace(/\s+$/, '');
-}
-
-/** "12s" / "1m 5s" elapsed display. */
-export function formatElapsed(sec: number): string {
-    if (sec < 60) {
-        return `${Math.round(sec)}s`;
-    }
-    const m = Math.floor(sec / 60);
-    const s = Math.round(sec % 60);
-    return `${m}m ${s}s`;
 }
 
 /** Clip text to `previewLines`. `clip` forces clipping even when expanded. */
