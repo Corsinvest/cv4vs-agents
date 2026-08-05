@@ -480,7 +480,22 @@ internal sealed partial class ClaudeClient : IClaudeClient
         PermissionMode = mode;
     }
 
-    public Task InterruptAsync() => SendControlRequestAsync(ClientMessages.ControlSubtype.Interrupt, null);
+    /// <summary>Logs its own failure: the WebView frees itself the moment it asks (it can't wait on
+    /// a wedged CLI), so a failed interrupt is invisible from the UI — it reads as stopped while the
+    /// turn runs on. Callers fire and forget, and the 10s request timeout would fault this into
+    /// silence, so the log is the only place the divergence can surface.</summary>
+    public async Task InterruptAsync()
+    {
+        try
+        {
+            await SendControlRequestAsync(ClientMessages.ControlSubtype.Interrupt, null);
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("[client] interrupt", ex);
+            throw;
+        }
+    }
 
     /// <summary>Structured /usage data: session cost + claude.ai plan rate-limit
     /// windows. Experimental in the SDK (shape may change) — returned raw so the
@@ -516,12 +531,26 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     /// <summary>Enable/disable extended thinking at runtime. ON = budget 31999 + summarized display;
     /// OFF = budget 0. display is omitted when null so the CLI keeps the session mode.</summary>
-    public Task SetMaxThinkingTokensAsync(int maxThinkingTokens, string display)
-        => SendControlRequestAsync(
-            ClientMessages.ControlSubtype.SetMaxThinkingTokens,
-            display == null
-                ? (object)new { max_thinking_tokens = maxThinkingTokens }
-                : new { max_thinking_tokens = maxThinkingTokens, thinking_display = display });
+    /// <summary>Logs its own failure, like the other fire-and-forget hot-swaps: the caller drops the
+    /// Task, and unlike the model and permission selectors there is no echo back to roll the UI
+    /// onto what the CLI really holds — the toggle would simply keep showing a setting that never
+    /// took.</summary>
+    public async Task SetMaxThinkingTokensAsync(int maxThinkingTokens, string display)
+    {
+        try
+        {
+            await SendControlRequestAsync(
+                ClientMessages.ControlSubtype.SetMaxThinkingTokens,
+                display == null
+                    ? (object)new { max_thinking_tokens = maxThinkingTokens }
+                    : new { max_thinking_tokens = maxThinkingTokens, thinking_display = display });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("[client] set_max_thinking_tokens", ex);
+            throw;
+        }
+    }
 
     public async Task<JObject> GetSettingsAsync()
     {

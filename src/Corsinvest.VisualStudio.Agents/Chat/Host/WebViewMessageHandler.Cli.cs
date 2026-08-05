@@ -65,17 +65,10 @@ internal sealed partial class WebViewMessageHandler
 
     private void HandleStop(JObject data, int? id)
     {
-        // The WebView frees itself the moment it asks (it can't wait on a wedged CLI), so a failed
-        // interrupt is invisible from the UI: it reads as stopped while the turn runs on. Nothing
-        // else observes this Task — the 10s request timeout would fault it into silence — so the
-        // log is the only place the divergence can surface.
-        _ = client.InterruptAsync().ContinueWith(t =>
-        {
-            if (t.IsFaulted)
-            {
-                log.Warn($"!!! interrupt failed: {t.Exception?.GetBaseException().Message}");
-            }
-        });
+        // Fire and forget: the WebView frees itself the moment it asks, since it can't wait on a
+        // wedged CLI. InterruptAsync logs its own failure — there is nothing to roll back here,
+        // unlike the model and permission handlers below.
+        _ = client.InterruptAsync();
     }
 
     private void HandleSetPermissionMode(JObject data, int? id)
