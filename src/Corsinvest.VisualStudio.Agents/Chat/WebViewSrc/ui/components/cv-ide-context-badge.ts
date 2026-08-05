@@ -11,6 +11,7 @@ import type { IdeContextNotification, SetSendSelectionNotification } from '../..
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { iconUrl } from '../../core/icon-url';
+import { displayPathUi } from '../paths';
 import { iconStyles, tooltipStyles } from '../styles/shared';
 
 /**
@@ -168,16 +169,17 @@ export class CvIdeContextBadge extends LitElement {
                 <span class="name"><bdi>${ctx.fileName}</bdi></span>
                 ${lineInfo ? html`<span class="info">${lineInfo}</span>` : nothing}
             </fluent-button>
-            <!-- The chip truncates the name, so the tooltip is where it can be read in full. -->
-            <fluent-tooltip anchor="ide-badge" positioning="above-start">
-                <span class="tip-name">${ctx.fileName}${lineInfo}</span>
-                <span class="tip-action">
-                    ${
-                        this._enabled
-                            ? 'Goes with every message — click to stop'
-                            : 'Is not sent — click to include it'
-                    }
-                </span>
+            <!-- The path, not the bare name the chip already shows: it says WHICH file, through
+                 displayPathUi so it follows "Show relative paths" like the tool rows and falls back
+                 to the full path outside the workdir. tip-desc for the second line, as on the model
+                 tooltip — tip-action's smaller size is for a third one. -->
+            <fluent-tooltip anchor="ide-badge" positioning="before">
+                <span class="tip-name">${displayPathUi(ctx.filePath)}${lineInfo}</span>
+                <!-- On one line on purpose: tooltipStyles sets white-space: pre-line, so a line
+                     break here would render as blank space inside the tooltip. -->
+                <span class="tip-desc"
+                    >${this._enabled ? 'Goes with every message — click to stop' : 'Is not sent — click to include it'}</span
+                >
             </fluent-tooltip>
         `;
     }

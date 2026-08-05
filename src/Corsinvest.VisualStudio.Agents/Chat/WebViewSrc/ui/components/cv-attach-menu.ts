@@ -110,9 +110,12 @@ export class CvAttachMenu extends LitElement {
             <!-- Outside the menu: inside it the tooltip would be a menu child, and fluent-menu lays
                  out only its trigger and its list. Anchored to the same id the list uses — one
                  names the anchor, the other looks the element up, and they don't collide. -->
-            <fluent-tooltip anchor="attach-tip" positioning="above-start">
-                <span class="tip-name">Add</span>
-                <span class="tip-action">A file from disk, or a path from the workspace</span>
+            <!-- positioning=before, like the slash trigger next to it: opening above would land on
+                 the placeholder, and beside the button is the only direction with nothing under it.
+                 tip-desc, not tip-action: alone, the smaller action size reads as a footnote to
+                 something that isn't there. -->
+            <fluent-tooltip anchor="attach-tip" positioning="before">
+                <span class="tip-desc">A file from disk, or a path from the workspace</span>
             </fluent-tooltip>
         `;
     }
