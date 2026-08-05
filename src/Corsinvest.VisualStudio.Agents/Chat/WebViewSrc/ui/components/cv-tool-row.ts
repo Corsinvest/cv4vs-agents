@@ -16,6 +16,7 @@ import { BridgeToolHost, cleanResult } from '../tool-renderers/tool-host';
 import type { ToolRowState } from '../tool-renderers/types';
 import { state as appState } from '../../core/state';
 import { renderActionsRow } from '../helpers/actions-row';
+import { formatDuration } from '../helpers/format';
 
 // Re-export so existing consumers (e.g. cv-app) can keep importing from here.
 export type { ToolStatus, ToolUseData } from '../../core/types';
@@ -43,6 +44,11 @@ export class CvToolRow extends LitElement implements ToolRowState {
     @property({ type: Boolean }) hasMore = false;
     /** The sub-agent this row SPAWNED (Agent tool only) — the transcript to fetch on expand. */
     @property() agentId = '';
+    /** Totals for a FINISHED Agent run. 0 while it runs, for every other tool, and for an
+     *  interrupted run — the CLI reports none there. */
+    @property({ type: Number }) agentDurationMs = 0;
+    @property({ type: Number }) agentTokens = 0;
+    @property({ type: Number }) agentToolUses = 0;
     /** The transcript this row LIVES in, i.e. which agent-<id>.jsonl holds its untruncated
      *  text. Empty in the main session. A nested Agent row has both, and they differ. */
     @property() containerAgentId = '';
@@ -55,6 +61,10 @@ export class CvToolRow extends LitElement implements ToolRowState {
     private _previewRequested = false;
 
     private _unsubSubagentTasks?: () => void;
+    /** 1s repaint while a sub-agent this row launched is running, so the elapsed badge advances
+     *  between its progress messages — those only arrive on a tool use, which can be ten seconds
+     *  apart. Lives here and not in the renderer: a renderer is rebuilt on every render. */
+    private _tickTimer = 0;
 
     /** ToolRowState: the host reads/writes these. */
     get expanded(): boolean {
@@ -82,6 +92,36 @@ export class CvToolRow extends LitElement implements ToolRowState {
         super.disconnectedCallback();
         this._unsubSubagentTasks?.();
         this._unsubSubagentTasks = undefined;
+        clearInterval(this._tickTimer);
+        this._tickTimer = 0;
+    }
+
+    /** Start/stop the elapsed repaint with the sub-agent's own lifetime, so a finished row costs
+     *  nothing: subagent_ended drops the task from appState, which is what turns this off.
+     *
+     *  The tick writes the badge's text directly instead of calling requestUpdate: a re-render here
+     *  rebuilds the renderer and the whole row — body, IN/OUT, highlighted code, nested children —
+     *  and on a minute-long Agent that would be sixty full rebuilds for a number that ticks. Lit
+     *  owns the rest of the row and never touches this node between renders, so writing into it is
+     *  safe; the next real render puts the same value back through the template. */
+    private _syncTick(): void {
+        const id = this.data?.id;
+        const running = !!id && appState.subagentTasks.some((t) => t.toolUseId === id);
+        if (running && !this._tickTimer) {
+            this._tickTimer = window.setInterval(() => this._paintElapsed(), 1000);
+        } else if (!running && this._tickTimer) {
+            clearInterval(this._tickTimer);
+            this._tickTimer = 0;
+        }
+    }
+
+    private _paintElapsed(): void {
+        const task = appState.subagentTasks.find((t) => t.toolUseId === this.data?.id);
+        const el = this.querySelector('.cv-agent-time');
+        if (!task?.startedAt || !el) {
+            return;
+        }
+        el.textContent = formatDuration(Date.now() - task.startedAt);
     }
 
     override render() {
@@ -89,6 +129,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
     }
 
     override updated(): void {
+        this._syncTick();
         // A history Agent row expanded with no children yet → lazily fetch its ≤3 preview, once.
         // Live rows already hold children in memory, so this never fires there. The guard stops it
         // re-firing on every render while the fetch is in flight; it resets when the row collapses.
@@ -193,6 +234,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
                                   ?streaming=${!!c.streaming}
                                   .tokens=${c.tokens ?? 0}
                                   .durationMs=${c.durationMs ?? 0}
+                                  .startedAt=${c.startedAt ?? 0}
                                   ?redacted=${!!c.redacted}
                               ></cv-thinking>`
                             : c.kind === 'text'
@@ -212,6 +254,9 @@ export class CvToolRow extends LitElement implements ToolRowState {
                                     .editStartLine=${c.editStartLine}
                                     .editEndLine=${c.editEndLine}
                                     .agentId=${c.agentId ?? ''}
+                                    .agentDurationMs=${c.agentDurationMs ?? 0}
+                                    .agentTokens=${c.agentTokens ?? 0}
+                                    .agentToolUses=${c.agentToolUses ?? 0}
                                     .containerAgentId=${this.agentId || this.containerAgentId}
                                     .hasMore=${c.children?.hasMore ?? false}
                                     .showAll=${c.children?.showAll ?? false}

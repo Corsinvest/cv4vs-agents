@@ -26,6 +26,11 @@ export interface ToolRowState {
     readonly expanded: boolean;
     /** The sub-agent this row SPAWNED (Agent tool only) — the transcript to fetch on expand. */
     readonly agentId: string;
+    /** Totals the CLI reported for a FINISHED Agent run; all absent while it runs, for every other
+     *  tool, and for an interrupted run. */
+    readonly agentDurationMs?: number;
+    readonly agentTokens?: number;
+    readonly agentToolUses?: number;
     /** The transcript this row LIVES in — routes open-output to that agent-<id>.jsonl.
      *  Empty in the main session. */
     readonly containerAgentId: string;
@@ -48,6 +53,9 @@ export interface ToolHost extends ToolRowState {
     readonly name: string;
     readonly input: Record<string, unknown>;
     readonly toolUseId: string;
+    /** What a finished Agent run cost. All 0 while it runs, for every other tool, and for an
+     *  interrupted run — the CLI reports no totals there. */
+    readonly agentTotals: { durationMs: number; tokens: number; toolUses: number };
 
     /** Open a file in VS, optionally selecting a line range. */
     openFile(filePath: string, startLine?: number, endLine?: number): void;
