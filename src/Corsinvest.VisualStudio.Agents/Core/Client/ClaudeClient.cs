@@ -408,57 +408,117 @@ internal sealed partial class ClaudeClient : IClaudeClient
         return Task.CompletedTask;
     }
 
-    /// <summary>Starts a new empty session in the same working directory. Kills the current process and spawns a fresh one.</summary>
-    public Task NewSessionAsync()
+    /// <summary>Starts a new empty session in the same working directory. Kills the current process and spawns a fresh one.
+    /// Logs its own failure rather than leaving it to the caller: the pane starts this and drops the
+    /// Task, and by then the transcript is already cleared — a silent failure leaves an empty pane
+    /// with no process behind it, which reads as "still loading" instead of as an error.</summary>
+    public async Task NewSessionAsync()
     {
         SessionId = null;
         KillForRespawn();
-        return StartAsync(new ClientOptions
+        try
         {
-            WorkingDirectory = WorkingDirectory,
-            InitialPermissionMode = PermissionMode,
-            // Preserved across respawn like Env: losing it would make bypass unreachable
-            // for the rest of the pane's life, with nothing to explain why.
-            AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
-            Env = _env,
-        });
+            await StartAsync(new ClientOptions
+            {
+                WorkingDirectory = WorkingDirectory,
+                InitialPermissionMode = PermissionMode,
+                // Preserved across respawn like Env: losing it would make bypass unreachable
+                // for the rest of the pane's life, with nothing to explain why.
+                AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
+                Env = _env,
+            });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("[client] new_session", ex);
+            throw;
+        }
     }
 
     /// <summary>Resumes an existing session by id. Requires respawn. The
     /// caller passes the session's own mode (read from its JSONL) so the
     /// respawned CLI runs on the SAME mode shown in the selector — not
     /// whatever the client happened to hold. Null falls back to the current.
-    /// Model is not passed: the CLI's init re-emits the session's own model on --resume.</summary>
-    public Task ResumeSessionAsync(string sessionId, string permissionMode = null)
+    /// Model is not passed: the CLI's init re-emits the session's own model on --resume.
+    /// Logs its own failure, like NewSessionAsync — and here it matters more: the caller has already
+    /// pushed the history into the WebView, so a silent failure shows the right transcript over a
+    /// process that isn't there, and looks like it worked until the first prompt goes nowhere.</summary>
+    public async Task ResumeSessionAsync(string sessionId, string permissionMode = null)
     {
         KillForRespawn();
         PermissionMode = permissionMode ?? PermissionMode;
-        return StartAsync(new ClientOptions
+        try
         {
-            WorkingDirectory = WorkingDirectory,
-            ResumeSessionId = sessionId,
-            InitialPermissionMode = PermissionMode,
-            AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
-            Env = _env,
-        });
+            await StartAsync(new ClientOptions
+            {
+                WorkingDirectory = WorkingDirectory,
+                ResumeSessionId = sessionId,
+                InitialPermissionMode = PermissionMode,
+                AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
+                Env = _env,
+            });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException($"[client] resume_session {sessionId}", ex);
+            throw;
+        }
     }
 
     private void KillForRespawn() => _transport.DisposeIntentional();
 
     // Hot-swap operations — these must never respawn the process.
+
+    /// <summary>Logs its own failure like the rest, so no caller has to wonder whether this one
+    /// reports for itself. The property advances only after the ack, which is what lets the caller
+    /// echo the real value back and roll an optimistic selector onto it — that echo has to stay at
+    /// the call site, where the bridge is.</summary>
     public async Task SetModelAsync(string model)
     {
-        await SendControlRequestAsync(ClientMessages.ControlSubtype.SetModel, new { model });
+        try
+        {
+            await SendControlRequestAsync(ClientMessages.ControlSubtype.SetModel, new { model });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException($"[client] set_model {model ?? "(default)"}", ex);
+            throw;
+        }
         Model = model;
     }
 
+    /// <summary>Same as SetModelAsync — and the echo matters more here: a selector left reading
+    /// "Plan" while the CLI is still in bypass is the one lie that costs files.</summary>
     public async Task SetPermissionModeAsync(string mode)
     {
-        await SendControlRequestAsync(ClientMessages.ControlSubtype.SetPermissionMode, new { mode });
+        try
+        {
+            await SendControlRequestAsync(ClientMessages.ControlSubtype.SetPermissionMode, new { mode });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException($"[client] set_permission_mode {mode}", ex);
+            throw;
+        }
         PermissionMode = mode;
     }
 
-    public Task InterruptAsync() => SendControlRequestAsync(ClientMessages.ControlSubtype.Interrupt, null);
+    /// <summary>Logs its own failure: the WebView frees itself the moment it asks (it can't wait on
+    /// a wedged CLI), so a failed interrupt is invisible from the UI — it reads as stopped while the
+    /// turn runs on. Callers fire and forget, and the 10s request timeout would fault this into
+    /// silence, so the log is the only place the divergence can surface.</summary>
+    public async Task InterruptAsync()
+    {
+        try
+        {
+            await SendControlRequestAsync(ClientMessages.ControlSubtype.Interrupt, null);
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("[client] interrupt", ex);
+            throw;
+        }
+    }
 
     /// <summary>Structured /usage data: session cost + claude.ai plan rate-limit
     /// windows. Experimental in the SDK (shape may change) — returned raw so the
@@ -494,12 +554,26 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     /// <summary>Enable/disable extended thinking at runtime. ON = budget 31999 + summarized display;
     /// OFF = budget 0. display is omitted when null so the CLI keeps the session mode.</summary>
-    public Task SetMaxThinkingTokensAsync(int maxThinkingTokens, string display)
-        => SendControlRequestAsync(
-            ClientMessages.ControlSubtype.SetMaxThinkingTokens,
-            display == null
-                ? (object)new { max_thinking_tokens = maxThinkingTokens }
-                : new { max_thinking_tokens = maxThinkingTokens, thinking_display = display });
+    /// <summary>Logs its own failure, like the other fire-and-forget hot-swaps: the caller drops the
+    /// Task, and unlike the model and permission selectors there is no echo back to roll the UI
+    /// onto what the CLI really holds — the toggle would simply keep showing a setting that never
+    /// took.</summary>
+    public async Task SetMaxThinkingTokensAsync(int maxThinkingTokens, string display)
+    {
+        try
+        {
+            await SendControlRequestAsync(
+                ClientMessages.ControlSubtype.SetMaxThinkingTokens,
+                display == null
+                    ? (object)new { max_thinking_tokens = maxThinkingTokens }
+                    : new { max_thinking_tokens = maxThinkingTokens, thinking_display = display });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("[client] set_max_thinking_tokens", ex);
+            throw;
+        }
+    }
 
     public async Task<JObject> GetSettingsAsync()
     {

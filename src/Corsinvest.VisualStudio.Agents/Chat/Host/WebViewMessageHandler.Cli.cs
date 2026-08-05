@@ -65,17 +65,10 @@ internal sealed partial class WebViewMessageHandler
 
     private void HandleStop(JObject data, int? id)
     {
-        // The WebView frees itself the moment it asks (it can't wait on a wedged CLI), so a failed
-        // interrupt is invisible from the UI: it reads as stopped while the turn runs on. Nothing
-        // else observes this Task — the 10s request timeout would fault it into silence — so the
-        // log is the only place the divergence can surface.
-        _ = client.InterruptAsync().ContinueWith(t =>
-        {
-            if (t.IsFaulted)
-            {
-                log.Warn($"!!! interrupt failed: {t.Exception?.GetBaseException().Message}");
-            }
-        });
+        // Fire and forget: the WebView frees itself the moment it asks, since it can't wait on a
+        // wedged CLI. InterruptAsync logs its own failure — there is nothing to roll back here,
+        // unlike the model and permission handlers below.
+        _ = client.InterruptAsync();
     }
 
     private void HandleSetPermissionMode(JObject data, int? id)
@@ -84,17 +77,13 @@ internal sealed partial class WebViewMessageHandler
         // Hot-swap via set_permission_mode; every mode is supported so no respawn is
         // needed. The continuation runs off the UI thread, but bridge.Send marshals
         // CoreWebView2 access itself.
-        _ = client.SetPermissionModeAsync(newMode).ContinueWith(t =>
+        _ = client.SetPermissionModeAsync(newMode).ContinueWith(_ =>
         {
-            if (t.IsFaulted)
-            {
-                log.Warn($"!!! set_permission_mode failed: {t.Exception?.GetBaseException().Message}");
-            }
-            // Either way, tell the WebView what the mode REALLY is. The selector switched
-            // optimistically before asking, and the client only advances PermissionMode once
-            // the CLI has acked — so on failure this sends the old mode back and the UI rolls
-            // itself back. Without it the selector reads "Plan" while the CLI is still in
-            // bypass: the one lie that costs files.
+            // Failure or not — the client logs that itself — tell the WebView what the mode REALLY
+            // is. The selector switched optimistically before asking, and the client only advances
+            // PermissionMode once the CLI has acked, so on failure this sends the old mode back and
+            // the UI rolls itself back. Without it the selector reads "Plan" while the CLI is still
+            // in bypass: the one lie that costs files.
             bridge.Send(
                 BridgeMessages.ToWebView.Cli.PermissionModeChanged,
                 new Contracts.PermissionModeChangedNotification { Mode = client.PermissionMode });
@@ -104,12 +93,8 @@ internal sealed partial class WebViewMessageHandler
     private void HandleSetModel(JObject data, int? id)
     {
         var newModel = data.ToObject<Contracts.SetModelNotification>().Model;
-        _ = client.SetModelAsync(string.IsNullOrEmpty(newModel) ? null : newModel).ContinueWith(t =>
+        _ = client.SetModelAsync(string.IsNullOrEmpty(newModel) ? null : newModel).ContinueWith(_ =>
         {
-            if (t.IsFaulted)
-            {
-                log.Warn($"!!! set_model failed: {t.Exception?.GetBaseException().Message}");
-            }
             // Same rollback as the permission mode: the picker switched before asking, so echo
             // back what the client actually holds. Null means "Default", which the WebView
             // renders as such.
