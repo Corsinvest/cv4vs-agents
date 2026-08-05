@@ -43,7 +43,19 @@ internal sealed partial class SessionManager
     // The session folder / a session .jsonl path for this instance's workdir, honouring
     // this instance's config-dir. One place each so the path construction lives in a single spot.
     private string FolderFor() => LongPath(_paths.SessionFolder(_workingDirectory));
-    private string FileFor(string sessionId) => LongPath(Path.Combine(_paths.SessionFolder(_workingDirectory), sessionId + ".jsonl"));
+
+    /// <summary>Null for an id that isn't a plain token, so a traversal never reaches Path.Combine.
+    /// <para>The id can come straight off a WebView DTO (<c>p.SessionId ?? client.SessionId</c> in
+    /// the history/image/document handlers), so <c>..\..\</c> in it would resolve out of the session
+    /// folder and hand back whatever it landed on as transcript. LongPath makes that worse: past 260
+    /// characters it prefixes <c>\\?\</c>, which tells Win32 to skip its own path normalisation.</para>
+    /// <para>Here rather than in each reader: this is the single spot the path is built, so every
+    /// caller inherits it, including ones written later. All of them test File.Exists on the result,
+    /// and File.Exists(null) is false — a rejected id degrades to "no such session".</para></summary>
+    private string FileFor(string sessionId)
+        => IsSafePathToken(sessionId)
+            ? LongPath(Path.Combine(_paths.SessionFolder(_workingDirectory), sessionId + ".jsonl"))
+            : null;
 
     /// <summary>Past 260 characters .NET Framework refuses the path outright — DirectoryNotFoundException
     /// on a file that is plainly there — and the CLI happily writes session files that long: its own
