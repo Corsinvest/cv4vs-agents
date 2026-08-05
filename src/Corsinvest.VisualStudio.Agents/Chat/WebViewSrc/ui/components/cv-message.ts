@@ -16,6 +16,7 @@ import { fetchChatImage, openChatDocument } from '../../core/lazy';
 import { state as appState } from '../../core/state';
 import { iconUrl } from '../../core/icon-url';
 import { fileName } from '../../core/path';
+import { formatTokenCount } from '../helpers/format';
 import { displayPathUi } from '../paths';
 import { parseIdeContextTags } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
@@ -449,10 +450,7 @@ export class CvMessage extends LitElement {
             case 'compact': {
                 // Header is built from fields (no live/history divergence). The summary is
                 // fetched lazily on first expand (compact-expand event → cv-app → `loaded`).
-                const tk =
-                    this.preTokens > 0
-                        ? ` · ${Math.round(this.preTokens / 1000)}k tokens freed`
-                        : '';
+                const tk = this.preTokens > 0 ? ` · ${formatTokenCount(this.preTokens)} freed` : '';
                 const header = `Compacted chat${this.trigger ? ` · ${this.trigger}` : ''}${tk}`;
                 const body = !this.loaded
                     ? html`<div class="cv-compact-summary">Loading…</div>`

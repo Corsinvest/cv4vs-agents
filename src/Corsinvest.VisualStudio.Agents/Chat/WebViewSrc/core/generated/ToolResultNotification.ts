@@ -12,4 +12,7 @@ export interface ToolResultNotification {
     fullLineCount: number;
     editStartLine: number;
     editEndLine: number;
+    agentDurationMs: number;
+    agentTokens: number;
+    agentToolUses: number;
 }
