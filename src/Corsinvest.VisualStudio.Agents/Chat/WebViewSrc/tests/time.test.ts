@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatTimeAgo } from './time.ts';
+import { formatTimeAgo } from '../core/time.ts';
 
 const MINUTE = 60_000;
 const HOUR = 3600_000;
