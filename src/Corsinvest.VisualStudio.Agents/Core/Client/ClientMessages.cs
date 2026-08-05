@@ -46,6 +46,12 @@ internal static class ClientMessages
         public const string BackgroundTasksChanged = "background_tasks_changed";
         // Authoritative cumulative thinking-token estimate for the in-flight thinking block.
         public const string ThinkingTokens = "thinking_tokens";
+        // The model refused and the CLI fell back to another one. Carries
+        // `retracted_message_uuids`: messages already delivered to us that are no longer part of
+        // the conversation — the model never saw them, so leaving them on screen makes what the
+        // user reads diverge from what the model knows. Emitted AFTER the retraction, so it is an
+        // eviction order, not a warning.
+        public const string ModelRefusalFallback = "model_refusal_fallback";
         // A slash command's own output ("Current model: …", "Unknown command: …", "/x isn't available",
         // /config|/context usage). content = "<local-command-stdout>…</local-command-stdout>" (or -stderr).
         // The WebView renders it as a slash-result pill (parseLocalCommandOutput on the UserText text).

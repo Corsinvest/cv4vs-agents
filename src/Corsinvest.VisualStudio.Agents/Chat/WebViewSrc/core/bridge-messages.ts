@@ -94,6 +94,7 @@ export const Msg = {
             toolResult: 'chat_tool_result',
             exchangeEnded: 'chat_exchange_ended',
             compacted: 'chat_compacted',
+            evictMessages: 'chat_evict_messages',
             status: 'chat_status',
             imageData: 'chat_image_data',
             slashCommands: 'chat_slash_commands',

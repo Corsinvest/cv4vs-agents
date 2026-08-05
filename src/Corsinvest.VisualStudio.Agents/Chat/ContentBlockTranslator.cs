@@ -87,7 +87,8 @@ internal static class ContentBlockTranslator
                                      JObject usage = null,
                                      bool needsPermission = false,
                                      JArray permissionSuggestions = null,
-                                     long? timestamp = null)
+                                     long? timestamp = null,
+                                     string uuid = null)
     {
         // JToken for a uniform Emit* signature (HistoryReplay passes the raw content to both). The
         // assistant content is always a block array in practice; a bare string never occurs, so just
@@ -118,6 +119,8 @@ internal static class ContentBlockTranslator
                 {
                     Text = item.Val("text", ""),
                     ParentToolUseId = parentToolUseId,
+                    // Same uuid on every block of the message: it names the message, not the block.
+                    Uuid = uuid,
                     Usage = !firstEmitted ? usagePayload : null,
                     Timestamp = timestamp,
                 });

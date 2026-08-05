@@ -156,6 +156,10 @@ internal static class BridgeMessages
             public const string ToolResult = "chat_tool_result";
             public const string ExchangeEnded = "chat_exchange_ended";
             public const string Compacted = "chat_compacted";
+            /// <summary>Notification: drop these messages from the transcript — the CLI retracted
+            /// them (refusal fallback), so the model no longer has them. Idempotent: uuids that
+            /// name nothing on screen are a no-op.</summary>
+            public const string EvictMessages = "chat_evict_messages";
             public const string Status = "chat_status";
             public const string ImageData = "chat_image_data";
             public const string SlashCommands = "chat_slash_commands";

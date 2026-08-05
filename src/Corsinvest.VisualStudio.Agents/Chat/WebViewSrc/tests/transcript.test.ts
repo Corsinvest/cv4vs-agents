@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Transcript } from '../core/transcript.ts';
-import type { UiEntry, UiToolEntry, UiUserEntry } from '../core/types';
+import type { UiAssistantEntry, UiEntry, UiToolEntry, UiUserEntry } from '../core/types';
 
 function userEntry(id: number, text = 't'): UiUserEntry {
     return { kind: 'text', id, role: 'user', text };
@@ -273,4 +273,120 @@ test('appendChild annidato: l index risolve un figlio di figlio', () => {
         true,
         'update deve raggiungere un figlio di secondo livello',
     );
+});
+
+function assistantEntry(id: number, uuid?: string): UiAssistantEntry {
+    return { kind: 'text', id, role: 'assistant', text: 'a', uuid };
+}
+
+test('removeByUuid: toglie solo le entry nominate', () => {
+    const t = new Transcript();
+    t.append(assistantEntry(1, 'u1'));
+    t.append(assistantEntry(2, 'u2'));
+    t.append(assistantEntry(3, 'u3'));
+
+    assert.equal(t.removeByUuid(['u2']), 1);
+    assert.deepEqual(
+        t.entries.map((e) => e.id),
+        [1, 3],
+    );
+});
+
+test('removeByUuid: uuid sconosciuti sono un no-op, e ripeterlo non cambia nulla', () => {
+    const t = new Transcript();
+    t.append(assistantEntry(1, 'u1'));
+    const before = t.entries;
+
+    assert.equal(t.removeByUuid(['mai-visto']), 0, 'un uuid ignoto non rimuove niente');
+    assert.equal(t.entries, before, 'senza rimozioni l array non viene ricreato');
+
+    assert.equal(t.removeByUuid(['u1']), 1);
+    assert.equal(t.removeByUuid(['u1']), 0, 'la seconda volta non ha piu niente da togliere');
+});
+
+test('removeByUuid: una entry senza uuid non viene mai toccata', () => {
+    const t = new Transcript();
+    t.append(assistantEntry(1));
+    t.append(userEntry(2));
+
+    assert.equal(t.removeByUuid(['u1', 'u2']), 0);
+    assert.equal(t.entries.length, 2);
+});
+
+test('removeByUuid: rimuovere una entry non scolla le altre dall index', () => {
+    const t = new Transcript();
+    t.append(assistantEntry(1, 'u1'));
+    t.append(toolEntry(2, 'outer'));
+    t.appendChild('outer', userEntry(3), childKey);
+
+    assert.equal(t.removeByUuid(['u1']), 1);
+    // La rimozione ricostruisce l index: se lo facesse a meta, i figli della entry SOPRAVVISSUTA
+    // resterebbero indicizzati sul percorso vecchio e un evento per loro finirebbe altrove.
+    assert.equal(t.find(3)?.id, 3, 'il figlio di una entry rimasta deve ancora risolvere');
+    assert.equal(t.findTool('outer')?.id, 2);
+});
+
+test('removeByUuid: onRemoved riceve anche i figli della entry rimossa', () => {
+    const t = new Transcript();
+    const seen: number[][] = [];
+    t.onRemoved = (ids) => seen.push([...ids]);
+
+    t.append(assistantEntry(1, 'u1'));
+    t.append(toolEntry(2, 'outer'));
+    t.appendChild('outer', userEntry(3), childKey);
+
+    t.removeByUuid(['u1']);
+    assert.deepEqual(seen, [[1]], 'una entry senza figli riporta solo se stessa');
+
+    // Chi ha messo in mappa l id di una riga annidata resta appeso quanto chi ha messo il padre:
+    // l evento deve nominare l intero sottoalbero, non la sola radice.
+    seen.length = 0;
+    const t2 = new Transcript();
+    t2.onRemoved = (ids) => seen.push([...ids]);
+    t2.append({ ...toolEntry(10, 'root'), uuid: 'ur' } as unknown as UiEntry);
+    t2.appendChild('root', toolEntry(11, 'mid'), childKey);
+    t2.appendChild('mid', userEntry(12), childKey);
+
+    t2.removeByUuid(['ur']);
+    assert.deepEqual(seen, [[10, 11, 12]]);
+});
+
+test('removeByUuid: senza rimozioni onRemoved non scatta', () => {
+    const t = new Transcript();
+    let calls = 0;
+    t.onRemoved = () => calls++;
+    t.append(assistantEntry(1, 'u1'));
+
+    t.removeByUuid(['altro']);
+    assert.equal(calls, 0);
+});
+
+test('removeByUuid: raggiunge anche una entry annidata in un sub-agent', () => {
+    const t = new Transcript();
+    const removed: number[][] = [];
+    t.onRemoved = (ids) => removed.push([...ids]);
+
+    t.append(toolEntry(1, 'agent'));
+    t.appendChild('agent', assistantEntry(2, 'dentro'), childKey);
+    t.appendChild('agent', userEntry(3), childKey);
+
+    assert.equal(t.removeByUuid(['dentro']), 1);
+    assert.equal(t.find(2), null, 'la entry annidata deve sparire');
+    assert.equal(t.find(3)?.id, 3, 'i fratelli restano');
+    assert.equal(t.findTool('agent')?.id, 1, 'il parent resta');
+    assert.deepEqual(removed, [[2]]);
+});
+
+test('removeByUuid: un ramo senza rimozioni mantiene la sua identita', () => {
+    const t = new Transcript();
+    t.append(assistantEntry(1, 'u1'));
+    t.append(toolEntry(2, 'intatto'));
+    t.appendChild('intatto', userEntry(3), childKey);
+    const before = t.entries[1];
+
+    t.removeByUuid(['u1']);
+
+    // Se il prune ricreasse anche i rami non toccati, Lit rirenderizzerebbe l intero sottoalbero
+    // del sub-agent a ogni retraction.
+    assert.equal(t.entries[0], before, 'il ramo non toccato mantiene il riferimento');
 });
