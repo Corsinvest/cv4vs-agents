@@ -408,39 +408,61 @@ internal sealed partial class ClaudeClient : IClaudeClient
         return Task.CompletedTask;
     }
 
-    /// <summary>Starts a new empty session in the same working directory. Kills the current process and spawns a fresh one.</summary>
-    public Task NewSessionAsync()
+    /// <summary>Starts a new empty session in the same working directory. Kills the current process and spawns a fresh one.
+    /// Logs its own failure rather than leaving it to the caller: the pane starts this and drops the
+    /// Task, and by then the transcript is already cleared — a silent failure leaves an empty pane
+    /// with no process behind it, which reads as "still loading" instead of as an error.</summary>
+    public async Task NewSessionAsync()
     {
         SessionId = null;
         KillForRespawn();
-        return StartAsync(new ClientOptions
+        try
         {
-            WorkingDirectory = WorkingDirectory,
-            InitialPermissionMode = PermissionMode,
-            // Preserved across respawn like Env: losing it would make bypass unreachable
-            // for the rest of the pane's life, with nothing to explain why.
-            AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
-            Env = _env,
-        });
+            await StartAsync(new ClientOptions
+            {
+                WorkingDirectory = WorkingDirectory,
+                InitialPermissionMode = PermissionMode,
+                // Preserved across respawn like Env: losing it would make bypass unreachable
+                // for the rest of the pane's life, with nothing to explain why.
+                AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
+                Env = _env,
+            });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("[client] new_session", ex);
+            throw;
+        }
     }
 
     /// <summary>Resumes an existing session by id. Requires respawn. The
     /// caller passes the session's own mode (read from its JSONL) so the
     /// respawned CLI runs on the SAME mode shown in the selector — not
     /// whatever the client happened to hold. Null falls back to the current.
-    /// Model is not passed: the CLI's init re-emits the session's own model on --resume.</summary>
-    public Task ResumeSessionAsync(string sessionId, string permissionMode = null)
+    /// Model is not passed: the CLI's init re-emits the session's own model on --resume.
+    /// Logs its own failure, like NewSessionAsync — and here it matters more: the caller has already
+    /// pushed the history into the WebView, so a silent failure shows the right transcript over a
+    /// process that isn't there, and looks like it worked until the first prompt goes nowhere.</summary>
+    public async Task ResumeSessionAsync(string sessionId, string permissionMode = null)
     {
         KillForRespawn();
         PermissionMode = permissionMode ?? PermissionMode;
-        return StartAsync(new ClientOptions
+        try
         {
-            WorkingDirectory = WorkingDirectory,
-            ResumeSessionId = sessionId,
-            InitialPermissionMode = PermissionMode,
-            AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
-            Env = _env,
-        });
+            await StartAsync(new ClientOptions
+            {
+                WorkingDirectory = WorkingDirectory,
+                ResumeSessionId = sessionId,
+                InitialPermissionMode = PermissionMode,
+                AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
+                Env = _env,
+            });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException($"[client] resume_session {sessionId}", ex);
+            throw;
+        }
     }
 
     private void KillForRespawn() => _transport.DisposeIntentional();
