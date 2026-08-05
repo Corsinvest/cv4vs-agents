@@ -263,6 +263,10 @@ export interface SubagentTask {
      *  so it is derived from where the launching row sits in the entry tree; it settles once that
      *  row has arrived (the task can beat it by a few ms). */
     parentTaskId?: string;
+    /** When we saw the task start (epoch ms). `usage.durationMs` only advances when the sub-agent
+     *  reports a tool use — it can sit still for ten seconds on a long call — so the running badge
+     *  counts from here instead, and falls back to the reported figure once the task ends. */
+    startedAt?: number;
 }
 
 /** Status of a tool call: pending (spinner) | done (green) | error (red). */
@@ -402,6 +406,12 @@ export interface UiToolEntry {
     editStartLine: number;
     editEndLine: number;
     elapsedSec: number;
+    /** What the Agent run cost, from the totals on its tool_result — the figures the row shows once
+     *  it has finished. All 0 for every other tool, and for an interrupted agent: the CLI reports
+     *  none there, so the row shows none rather than a number that would understate the run. */
+    agentDurationMs?: number;
+    agentTokens?: number;
+    agentToolUses?: number;
     /** Nested children (Agent tool today; any tool with children). Present only when the tool
      *  has children — undefined for a normal leaf tool. NOT the row open/closed state: that's
      *  the component's local `_expanded`, which every tool has whether or not it has children. */
