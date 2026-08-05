@@ -131,11 +131,6 @@ public class AgentsChatPage : AgentsOptionsPage
     public bool AllowDangerouslySkipPermissions { get; set; } = false;
 
     [Category("Diff")]
-    [DisplayName("Preview context lines")]
-    [Description("Number of context lines shown around changes in the inline diff preview. The expand dialog always shows the full diff. Default: 10.")]
-    public int DiffContextLines { get; set; } = 10;
-
-    [Category("Diff")]
     [DisplayName("Ignore whitespace")]
     [Description("Ignore leading and trailing whitespace when computing diff.")]
     public bool DiffIgnoreWhitespace { get; set; } = false;

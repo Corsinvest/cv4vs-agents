@@ -3,8 +3,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Transcript } from './transcript.ts';
-import type { UiEntry, UiToolEntry, UiUserEntry } from './types';
+import { Transcript } from '../core/transcript.ts';
+import type { UiEntry, UiToolEntry, UiUserEntry } from '../core/types';
 
 function userEntry(id: number, text = 't'): UiUserEntry {
     return { kind: 'text', id, role: 'user', text };

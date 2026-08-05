@@ -7,8 +7,8 @@
         "allowImportingTsExtensions": true,
         "types": ["node"]
     },
-    // The base excludes *.test.ts so the app build ignores them; restate it here without that
+    // The base excludes tests so the app build ignores them; restate it here without that
     // entry, or extends would cancel the include below.
-    "include": ["core/**/*.test.ts", "ui/**/*.test.ts"],
+    "include": ["tests/**/*.test.ts"],
     "exclude": ["node_modules", "dist"]
 }

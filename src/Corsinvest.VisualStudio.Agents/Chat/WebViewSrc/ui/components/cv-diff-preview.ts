@@ -5,9 +5,26 @@
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { buildPatch } from '../../core/diff';
+import { clampPatch } from '../../core/patch-clamp';
 import { state as appState } from '../../core/state';
 import { renderDiff, SPLIT_THRESHOLD, type DiffFormat } from '../diff';
 import { observeSize } from '../resize';
+
+/** Unchanged lines kept around each change — what git and GitHub show. */
+const CONTEXT_LINES = 3;
+
+/** Rows the preview is tall enough to show. Measured: diff2html's compact row is ~20.6px. */
+const VISIBLE_ROWS = 12;
+
+/**
+ * Patch lines built at all — tied to what fits, because the box does not scroll vertically
+ * (see `_draw`: overflow-y is hidden, only the horizontal one is left to diff2html). A line
+ * past the visible ones is DOM nobody can reach; the full diff lives in the expand dialog.
+ *
+ * Not a context setting either: context is per hunk, so a file with scattered edits produces
+ * many hunks and a long patch whatever the context.
+ */
+const MAX_PATCH_LINES = VISIBLE_ROWS;
 
 /**
  * Inline diff preview for tool rows (Edit / Write / MultiEdit). Lit emits only
@@ -70,21 +87,24 @@ export class CvDiffPreview extends LitElement {
         if (!wrap) {
             return;
         }
-        const previewLines = appState.ui.diffContextLines;
-        this._patch = buildPatch(
-            this.oldString,
-            this.newString,
-            this.filePath,
-            previewLines,
-            appState.ui.diffIgnoreWhitespace,
+        // Clamp the patch, not just the height: the cap below hides rows diff2html has already
+        // built, so a large edit would sit in the DOM in full to show a dozen lines.
+        this._patch = clampPatch(
+            buildPatch(
+                this.oldString,
+                this.newString,
+                this.filePath,
+                CONTEXT_LINES,
+                appState.ui.diffIgnoreWhitespace,
+            ),
+            MAX_PATCH_LINES,
         );
         const fmt: DiffFormat =
             this.offsetWidth >= SPLIT_THRESHOLD ? 'side-by-side' : 'line-by-line';
         this._format = fmt;
-        // Height cap ~20px/row clips to the first N lines. Horizontal scroll is
-        // owned by diff2html per-pane (.d2h-file-side-diff / .d2h-file-diff);
-        // a wrap-level x-scroll would merge panes and break scroll-syncing.
-        wrap.style.maxHeight = `${previewLines * 20 + 8}px`;
+        // Horizontal scroll is owned by diff2html per-pane (.d2h-file-side-diff /
+        // .d2h-file-diff); a wrap-level x-scroll would merge panes and break scroll-syncing.
+        wrap.style.maxHeight = `${VISIBLE_ROWS * 20 + 8}px`;
         wrap.style.overflowY = 'hidden';
         wrap.style.overflowX = 'hidden';
         wrap.innerHTML = '';

@@ -220,31 +220,39 @@ public partial class ChatPaneControl : PaneControlBase
     /// the base's shared row). What a frozen or misbehaving chat comes down to is "which process is
     /// mine" — with several panes open that is otherwise a command-line hunt in Task Manager, so
     /// the renderer is the pane's own, resolved by frame, not the browser's whole list.</summary>
-    protected override IEnumerable<(string Label, string Value)> ExtraSessionInfo
+    protected override async Task<IEnumerable<(string Label, string Value)>> ExtraSessionInfoAsync()
     {
-        get
+        var renderer = _bridge == null ? null : await WithDeadline(_bridge.RendererProcessIdAsync(), "renderer PID");
+        return
+        [
+            ("WebView PID", _bridge?.BrowserProcessId?.ToString() ?? "(not started)"),
+            ("WebView renderer", renderer?.ToString() ?? "(unknown)"),
+        ];
+    }
+
+    /// <summary>The page's own diagnostic report — CLI state as the UI sees it, context usage, and
+    /// how heavy the transcript got in DOM nodes. None of it is reachable from here: it lives in
+    /// the WebView, so the page is asked for it already formatted (`window.cv.dump()` in
+    /// ui/debug.ts — renaming that helper silently empties this section).</summary>
+    protected override async Task<IEnumerable<string>> ExtraSessionSectionsAsync()
+    {
+        if (_bridge == null) { return []; }
+        var report = await WithDeadline(_bridge.EvalAsync("window.cv ? window.cv.dump() : null"), "diagnostic");
+        return string.IsNullOrWhiteSpace(report) ? [] : [report];
+    }
+
+    /// <summary>Await `call`, giving up after two seconds. Both info-dialog round-trips go through
+    /// the browser, which delivers on the UI thread: a renderer that is busy or gone would
+    /// otherwise leave the dialog waiting on a row that is only diagnostic.</summary>
+    private async Task<T> WithDeadline<T>(Task<T> call, string what)
+    {
+        var done = await Task.WhenAny(call, Task.Delay(2000)).ConfigureAwait(true);
+        if (done != call)
         {
-            yield return ("WebView PID", _bridge?.BrowserProcessId?.ToString() ?? "(not started)");
-            // Blocking on the UI thread, with a deadline. The round-trip is in-process and
-            // normally instant, but the answer comes back through the browser — which needs this
-            // same thread to deliver it. A renderer that is busy or gone therefore hangs the IDE
-            // on a row that is only diagnostic. Two seconds, then "(unknown)": nobody opens this
-            // dialog for the renderer PID badly enough to freeze Visual Studio over it.
-            var renderer = _bridge == null
-                ? null
-                : ThreadHelper.JoinableTaskFactory.Run(async () =>
-                {
-                    var call = _bridge.RendererProcessIdAsync();
-                    var done = await Task.WhenAny(call, Task.Delay(2000)).ConfigureAwait(true);
-                    if (done != call)
-                    {
-                        _log.Warn("[chat] renderer PID timed out — WebView not answering");
-                        return null;
-                    }
-                    return await call.ConfigureAwait(true);
-                });
-            yield return ("WebView renderer", renderer?.ToString() ?? "(unknown)");
+            _log.Warn($"[chat] {what} timed out — WebView not answering");
+            return default;
         }
+        return await call.ConfigureAwait(true);
     }
 
     /// <summary>Chat-only extras for the toolbar's "More" menu — the WebView DevTools and the
