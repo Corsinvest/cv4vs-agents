@@ -4,10 +4,12 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Core.Client;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -113,18 +115,33 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     /// dialog's row is built once here rather than duplicated per kind.</summary>
     protected abstract int CliProcessId { get; }
 
-    /// <summary>Extra info rows for <see cref="ShowSessionInfo"/>, appended after the shared ones
-    /// and after the CLI PID. Chat adds the WebView2 processes; the CLI pane adds none — its
+    /// <summary>Extra info rows for <see cref="ShowSessionInfoAsync"/>, appended after the shared
+    /// ones and after the CLI PID. Chat adds the WebView2 processes; the CLI pane adds none — its
     /// process is the shared row. Kept as label/value pairs rather than formatted lines so the
     /// base owns the column alignment — a longer label added here must not leave the whole dialog
-    /// ragged.</summary>
-    protected virtual IEnumerable<(string Label, string Value)> ExtraSessionInfo => [];
+    /// ragged.
+    /// <para>Async for the same reason as <see cref="ExtraSessionSectionsAsync"/>: the chat's rows
+    /// come from WebView2, which answers on the UI thread.</para></summary>
+    protected virtual Task<IEnumerable<(string Label, string Value)>> ExtraSessionInfoAsync()
+        => Task.FromResult<IEnumerable<(string Label, string Value)>>([]);
+
+    /// <summary>Free-form sections appended below the aligned rows, each already formatted.
+    /// Separate from <see cref="ExtraSessionInfo"/> because these are not label/value: the chat's
+    /// WebView report is a block of its own with its own inner layout, and forcing it through the
+    /// column alignment above would only mangle it.
+    /// <para>Async because a pane may have to ask something that answers on the UI thread — see
+    /// the chat's, which asks its WebView. Awaited before the dialog opens, never blocked on.</para></summary>
+    protected virtual Task<IEnumerable<string>> ExtraSessionSectionsAsync()
+        => Task.FromResult<IEnumerable<string>>([]);
 
     /// <summary>Read-only session info (id, session file, workdir, CLI) for debug and bug reports.
     /// Built from <see cref="Entry"/>, which both pane kinds keep current — so the terminal gets the
     /// same dialog as the chat, with no duplicated code — plus whatever
-    /// <see cref="ExtraSessionInfo"/> adds for the kind.</summary>
-    public void ShowSessionInfo()
+    /// <see cref="ExtraSessionInfo"/> adds for the kind.
+    /// <para>Async all the way to the dialog: what the chat pane contributes comes back from the
+    /// WebView, which delivers on this very thread. Blocking on it here — even with a deadline —
+    /// deadlocks until that deadline and yields "(unknown)" rather than the answer.</para></summary>
+    public async Task ShowSessionInfoAsync()
     {
         try
         {
@@ -147,13 +164,22 @@ public abstract class PaneControlBase : UserControl, IPaneControl
                 ("CLI path", ClaudeInstall.ResolveExecutable() ?? "(not found)"),
                 ("CLI version", ClaudeInstall.Version() ?? "(unknown)"),
                 ("CLI PID", CliProcessId > 0 ? CliProcessId.ToString() : "(not running)"),
-                .. ExtraSessionInfo,
+                .. await ExtraSessionInfoAsync(),
             ];
 
             // Widest label decides the column, so an added row can't misalign the others.
             var width = rows.Max(r => r.Label.Length) + 2;
             var info = string.Join("\n", rows.Select(r => (r.Label + ":").PadRight(width) + r.Value));
 
+            var sections = (await ExtraSessionSectionsAsync())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList();
+            if (sections.Count > 0)
+            {
+                info += "\n\n" + string.Join("\n\n", sections);
+            }
+
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             new DevInfoDialog(info).ShowDialog();
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Pane.ShowSessionInfo", ex); }

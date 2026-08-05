@@ -7,6 +7,7 @@ using Corsinvest.VisualStudio.Agents.Core.Sessions;
 using Corsinvest.VisualStudio.Agents.Helpers;
 using Corsinvest.VisualStudio.Agents.Options;
 using Microsoft.VisualStudio.Imaging;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.Linq;
 using System.Windows;
@@ -276,7 +277,11 @@ public partial class PaneToolbar : UserControl
         OpenContextMenu(BtnMore);
     }
 
-    private void OnMenu_Info(object sender, RoutedEventArgs e) => _pane.ShowSessionInfo();
+    // The dialog opens itself once the pane has gathered its rows — some of which come back from
+    // a WebView that answers on this thread, so the handler starts the work and returns rather
+    // than waiting on it. Failures are logged by ShowSessionInfoAsync's own catch.
+    private void OnMenu_Info(object sender, RoutedEventArgs e)
+        => _ = ThreadHelper.JoinableTaskFactory.RunAsync(() => _pane.ShowSessionInfoAsync());
 
     private void OnMenu_SessionsFolder(object sender, RoutedEventArgs e)
     {

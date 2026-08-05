@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 
@@ -77,8 +78,10 @@ public interface IPaneControl
     IEnumerable<ButtonAction> MoreMenuActions { get; }
 
     /// <summary>Show this pane's session info (id, session file, workdir, CLI) for debug and bug
-    /// reports. Same dialog for both kinds — the base builds it from the pane's Entry.</summary>
-    void ShowSessionInfo();
+    /// reports. Same dialog for both kinds — the base builds it from the pane's Entry.
+    /// <para>Async because the chat's rows come back from its WebView, which answers on the UI
+    /// thread: gathering them has to yield it, not hold it.</para></summary>
+    Task ShowSessionInfoAsync();
 
     /// <summary>Real teardown when the pane's frame closes for good: drop the
     /// registry entry and release resources (CLI: kill ConPTY; Chat: dispose
