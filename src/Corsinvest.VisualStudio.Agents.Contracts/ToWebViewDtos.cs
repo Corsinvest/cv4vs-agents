@@ -500,7 +500,6 @@ public class VsOptionsDto
     public bool UseCtrlEnterToSend { get; set; }
     public bool CompactOutputAskAnswers { get; set; }
     public bool AllowDangerouslySkipPermissions { get; set; }
-    public int DiffContextLines { get; set; }
     public bool DiffIgnoreWhitespace { get; set; }
     public bool ShowOpenDiffInVsButton { get; set; }
     public string[] AllowedUploadExtensions { get; set; }

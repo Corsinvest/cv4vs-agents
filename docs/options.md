@@ -33,7 +33,6 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 | Use Ctrl+Enter to send | bool | `false` | On: Ctrl+Enter sends, Enter = newline. Off: Enter sends, Shift+Enter = newline. |
 | Initial permission mode | `Default` / `AcceptEdits` / `Plan` | `Default` | Mode every new chat starts in (changeable per-session from the toolbar). `Default` = ask before edits. |
 | Allow dangerously skip permissions | bool | `false` | Enables the toolbar's "Bypass permissions" (never asks — even for dangerous commands). |
-| Diff — preview context lines | int | `10` | Context lines around changes in the inline diff (the expand dialog always shows the full diff). |
 | Diff — ignore whitespace | bool | `false` | Ignore leading/trailing whitespace when computing the diff. |
 | Diff — show "Open diff in Visual Studio" button | bool | `true` | Show the VS-icon button on Edit/Write rows that opens the change in VS's native diff viewer. |
 | Respect `.gitignore` | bool | `true` | Also hide `.gitignore`-matched files/folders from the `@` picker (re-read on change, cached otherwise). |
