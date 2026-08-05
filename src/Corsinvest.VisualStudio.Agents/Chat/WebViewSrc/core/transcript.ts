@@ -32,6 +32,27 @@ export class Transcript {
     /** id → path, so find/update are O(1) instead of walking the tree on every event. */
     private _index = new Map<number, EntryPath>();
 
+    /**
+     * Called with the ids that just left the tree, subtrees included.
+     *
+     * Entries used to be add-only, so anything keyed on an id outside this class stayed valid for
+     * as long as the session did. Retraction broke that: an id can now disappear mid-session, and a
+     * key left behind means either events written into an entry that is gone or a Map that never
+     * shrinks. Rather than expect every caller to remember the cleanup, the removal announces
+     * itself — this class still knows nothing about who listens or what they keyed.
+     */
+    onRemoved?: (ids: readonly number[]) => void;
+
+    /**
+     * Called when every id in the tree stops being valid at once — a session switch or a history
+     * page swapped in.
+     *
+     * Separate from onRemoved rather than passing the whole id list: the listener only ever wants
+     * to drop everything, so walking the tree to hand it an array it would immediately ignore buys
+     * nothing. Two callbacks, two meanings — some ids died, or all of them did.
+     */
+    onCleared?: () => void;
+
     get entries(): readonly UiEntry[] {
         return this._entries;
     }
@@ -49,6 +70,76 @@ export class Transcript {
     clear(): void {
         this._entries = [];
         this._index.clear();
+        this.onCleared?.();
+    }
+
+    /**
+     * Drop the top-level entries whose `uuid` is in `uuids`, returning how many went. Used when the
+     * CLI retracts messages it had already delivered (refusal fallback): they are no longer part of
+     * the conversation, and leaving them on screen makes what the user reads diverge from what the
+     * model knows.
+     *
+     * Matching is uuid equality and nothing else, so it is safe to apply blind: a uuid naming
+     * nothing removes nothing, and calling it twice with the same list is the same as calling it
+     * once. That is the contract the CLI relies on — the per-message `supersedes` and the
+     * end-of-turn `retracted_message_uuids` overlap on purpose.
+     *
+     * At every depth, not just the top: a uuid names a MESSAGE, not a position, and a sub-agent's
+     * reply is as retracted as a main-thread one. Two entries sharing a uuid are the same message
+     * written twice (measured: the .jsonl does that on ~0.1% of assistant lines, identical on every
+     * other field), so taking both is right rather than over-eager.
+     */
+    removeByUuid(uuids: readonly string[]): number {
+        if (uuids.length === 0) {
+            return 0;
+        }
+        const drop = new Set(uuids);
+        const doomed: UiEntry[] = [];
+        const prune = (list: readonly UiEntry[]): UiEntry[] | null => {
+            let changed = false;
+            const kept: UiEntry[] = [];
+            for (const e of list) {
+                if ('uuid' in e && typeof e.uuid === 'string' && drop.has(e.uuid)) {
+                    doomed.push(e);
+                    changed = true;
+                    continue;
+                }
+                // Rebuild the parent only when a descendant actually went, so an untouched branch
+                // keeps its identity and Lit skips it.
+                if (e.kind === 'tool' && e.children) {
+                    const kids = prune(e.children.items);
+                    if (kids) {
+                        kept.push({ ...e, children: { ...e.children, items: kids } });
+                        changed = true;
+                        continue;
+                    }
+                }
+                kept.push(e);
+            }
+            return changed ? kept : null;
+        };
+        const next = prune(this._entries);
+        if (!next || doomed.length === 0) {
+            return 0;
+        }
+        this._entries = next;
+        // Rebuild rather than unset the removed ids: a dropped entry takes its whole subtree with
+        // it, and those children are indexed too.
+        this._reindex();
+        // Report the subtrees, not just the roots: whoever keyed something on a nested row is as
+        // stranded as whoever keyed it on the message that contained it.
+        const gone: number[] = [];
+        const collect = (list: readonly UiEntry[]): void => {
+            for (const e of list) {
+                gone.push(e.id);
+                if (e.kind === 'tool' && e.children?.items.length) {
+                    collect(e.children.items);
+                }
+            }
+        };
+        collect(doomed);
+        this.onRemoved?.(gone);
+        return doomed.length;
     }
 
     /**
@@ -134,6 +225,11 @@ export class Transcript {
     /** Swap the whole transcript (a history page load). The index is rebuilt from scratch: one
      *  that outlives its entries would resolve an id to a path that leads nowhere. */
     replaceAll(entries: UiEntry[]): void {
+        // Deliberately does NOT fire onCleared, unlike clear(). The caller builds the replacement
+        // entries before handing them over, and building them is what refills the id-keyed maps for
+        // the replayed turns — an invalidation at this point would wipe what the replay had just
+        // written. The history listener drops the old ids before it starts replaying, which is the
+        // only moment where "these ids are dead" and "these ids are being written" don't overlap.
         this._entries = entries;
         this._reindex();
     }

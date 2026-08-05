@@ -54,6 +54,12 @@ public sealed class AssistantMessageEventArgs
     public JToken Content { get; set; }
     public JObject Usage { get; set; }
     public string Uuid { get; set; }
+    /// <summary>Uuids of messages this one REPLACES (refusal-fallback supersede): they were already
+    /// delivered to us and are no longer part of the conversation. Same job as the end-of-turn
+    /// `retracted_message_uuids`, arriving early and per-message; the two are idempotent with each
+    /// other, so acting on both is safe. Null when the message replaces nothing, which is nearly
+    /// always.</summary>
+    public string[] Supersedes { get; set; }
     /// <summary>Message time (epoch ms) parsed from the wire `timestamp`; null when absent.</summary>
     public long? Timestamp { get; set; }
     /// <summary>When non-null, this assistant message was emitted by a sub-agent

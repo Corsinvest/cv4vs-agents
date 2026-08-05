@@ -488,10 +488,29 @@ public class AssistantTextNotification
 {
     public string Text { get; set; }
     public string ParentToolUseId { get; set; }
+    // The message's wire uuid, so an entry can be addressed after the fact. Every block of one
+    // assistant message carries the same one — the CLI derives per-block uuids for its own
+    // retraction lists, but what reaches us here is the message's. Always present: the CLI writes
+    // it unconditionally on both assistant lanes and SDKAssistantMessage.uuid is non-optional.
+    // The permission banner's synthetic message is the one caller that passes none, and it only
+    // ever emits tool_use blocks — never the text block this rides on.
+    public string Uuid { get; set; }
     public ContextUsageDto Usage { get; set; }
     // Message time (epoch ms) from the .jsonl record / live event; null when absent. The WebView
     // shows it as "x ago" with an absolute date/time tooltip.
     public long? Timestamp { get; set; }
+}
+
+/// <summary>Messages the CLI retracted (chat_evict_messages): they were delivered to us but are no
+/// longer part of the conversation, so the model does not have them. Leaving them on screen is what
+/// makes the transcript diverge from the model's context — the user reads a partial answer and
+/// reasons about it, while the model never saw it.
+///
+/// Matching is by uuid equality and nothing else, which is what makes it safe to apply blind: a
+/// uuid naming nothing on screen removes nothing.</summary>
+public class EvictMessagesNotification
+{
+    public string[] Uuids { get; set; }
 }
 
 /// <summary>Spinner-verb override config (nested in the init ui payload). mode is the

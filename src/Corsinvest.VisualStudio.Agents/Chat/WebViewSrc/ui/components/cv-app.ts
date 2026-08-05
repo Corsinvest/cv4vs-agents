@@ -47,6 +47,7 @@ import type {
     SubagentProgressNotification,
     SubagentEndedNotification,
     CompactedNotification,
+    EvictMessagesNotification,
     StatusNotification,
     ToolResultNotification,
     ModelChangedNotification,
@@ -138,12 +139,49 @@ export class CvApp extends LitElement {
         this._rev++;
     }
 
+    /**
+     * Forget ids the transcript has dropped — wired to its onRemoved, so a removal cannot land
+     * without this running.
+     *
+     * Three maps here are keyed on entry ids, and none of them belongs in Transcript: they track
+     * what is still streaming and what a turn cost, none of which is about the shape of the tree.
+     * What they do share is that an id leaving the tree strands them — deltas written into an entry
+     * that is gone, or a Map that never shrinks. The clears at session switch and history push
+     * cover the wholesale case; this is the piecemeal one.
+     */
+    private _dropRemovedIds(ids: readonly number[]): void {
+        const gone = new Set(ids);
+        for (const [parentId, id] of [...this._streamingMsgs]) {
+            if (gone.has(id)) {
+                this._streamingMsgs.delete(parentId);
+            }
+        }
+        for (const [parentId, id] of [...this._thinkingMsgs]) {
+            if (gone.has(id)) {
+                this._thinkingMsgs.delete(parentId);
+            }
+        }
+        for (const id of gone) {
+            this._turnMetrics.delete(id);
+        }
+    }
+
+    /** Same three maps, for when the whole tree goes (transcript's onCleared). */
+    private _dropAllIds(): void {
+        this._streamingMsgs.clear();
+        this._thinkingMsgs.clear();
+        this._turnMetrics.clear();
+    }
+
     override createRenderRoot() {
         return this;
     }
 
     override connectedCallback(): void {
         super.connectedCallback();
+        // Wired here rather than at the field: the initializer runs before `this` is usable.
+        this._transcript.onRemoved = (ids) => this._dropRemovedIds(ids);
+        this._transcript.onCleared = () => this._dropAllIds();
         this._offs.push(appState.on('isBusy', (v) => (this._isBusy = v)));
         this._offs.push(appState.on('status', (v) => (this._status = v)));
         this._offs.push(appState.on('pendingPermission', (v) => (this._awaitingUser = v != null)));
@@ -242,6 +280,9 @@ export class CvApp extends LitElement {
                                 // The final assistant notification carries the message time;
                                 // live fallback = now.
                                 timestamp: data?.timestamp ?? Date.now(),
+                                // Only this final notification names the message — the deltas that
+                                // built the entry carry no uuid, so it lands here or nowhere.
+                                uuid: data?.uuid ?? e.uuid,
                             })),
                         );
                         entryId = streamingId;
@@ -426,10 +467,8 @@ export class CvApp extends LitElement {
                 // Abort in-flight requests for the old session so their Promises reject
                 // instead of resolving against the new session (or hanging until timeout).
                 bridge.rejectAllPending('session changed');
+                // clear() fires onCleared, which drops everything keyed on the old entry ids.
                 this._mutate(() => this._transcript.clear());
-                this._streamingMsgs.clear();
-                this._thinkingMsgs.clear();
-                this._turnMetrics.clear();
                 // The rendered markdown belonged to the entries just dropped; keeping it would let
                 // a dead session's messages hold the cache slots the new one needs.
                 clearMarkdownCache();
@@ -454,6 +493,22 @@ export class CvApp extends LitElement {
                 this._appendEntry(CvApp.buildCompactEntry(data));
                 queueMicrotask(() => this._scrollToBottom());
             }),
+        );
+
+        this._offs.push(
+            bridge.onNotification<EvictMessagesNotification>(
+                Msg.toWebView.chat.evictMessages,
+                (data) => {
+                    // The CLI retracted these: they reached us, but the model does not have them.
+                    // Leaving them up is what makes the transcript diverge from the model's context.
+                    const uuids = data?.uuids ?? [];
+                    if (uuids.length === 0) {
+                        return;
+                    }
+                    // The maps keyed on entry ids are cleaned by the transcript's onRemoved.
+                    this._mutate(() => this._transcript.removeByUuid(uuids));
+                },
+            ),
         );
 
         this._offs.push(
@@ -571,10 +626,11 @@ export class CvApp extends LitElement {
                 Msg.toWebView.chat.historyLoaded,
                 (data) => {
                     const events = data?.events ?? [];
-                    // Before the replay, not after: _applyHistoryPage refills this from the events
-                    // it is about to build, so clearing it afterwards would drop what it just wrote.
-                    // A history push REPLACES the tree, so the ids it was keyed on are gone.
-                    this._turnMetrics.clear();
+                    // Before the replay, not after: a history push replaces the tree, so the ids
+                    // these were keyed on are gone — but building the replacement is what refills
+                    // them for the replayed turns, and clearing afterwards would drop that. This is
+                    // why replaceAll leaves onCleared alone and the drop happens here instead.
+                    this._dropAllIds();
                     const out = this._applyHistoryPage(data, events);
 
                     // Seed the gauge from the last assistant_text event carrying usage.
@@ -605,10 +661,6 @@ export class CvApp extends LitElement {
 
                     appState.loadingOlder = false;
                     this._mutate(() => this._transcript.replaceAll(out));
-                    // Both, like chat_cleared: the entries these named are not in the tree any
-                    // more, so a delta arriving for one would update nothing and look dropped.
-                    this._streamingMsgs.clear();
-                    this._thinkingMsgs.clear();
                     // Land at the bottom. Re-jump for several frames because async-rendered
                     // children (markdown, diff2html, lazy images) keep growing scrollHeight.
                     void this.updateComplete.then(() => {
@@ -1190,6 +1242,7 @@ export class CvApp extends LitElement {
             role: 'assistant',
             text: d.text ?? '',
             timestamp: d.timestamp ?? undefined,
+            uuid: d.uuid ?? undefined,
         };
     }
 
