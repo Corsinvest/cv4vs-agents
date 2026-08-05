@@ -15,6 +15,7 @@ import type {
     ExternalUrlNotification,
     DiffDialogNotification,
     ToolOutputNotification,
+    AgentRunTotalsDto,
 } from '../../core/types';
 
 // eslint-disable-next-line no-control-regex
@@ -52,13 +53,16 @@ export class BridgeToolHost implements ToolHost {
         return this.row.fullLineCount ?? 0;
     }
     get editStartLine(): number {
-        return this.row.editStartLine ?? 0;
+        return this.row.extras?.editRange?.startLine ?? 0;
     }
     get editEndLine(): number {
-        return this.row.editEndLine ?? 0;
+        return this.row.extras?.editRange?.endLine ?? 0;
     }
     get agentId(): string {
         return this.row.agentId ?? '';
+    }
+    get agentTotals(): AgentRunTotalsDto | null {
+        return this.row.extras?.agentTotals ?? null;
     }
     get containerAgentId(): string {
         return this.row.containerAgentId ?? '';
@@ -107,7 +111,7 @@ export class BridgeToolHost implements ToolHost {
         // The lines come from the patch the CLI computed applying the edit, carried on the tool
         // result — no searching the file for text that may well have changed since. 0 while the
         // tool is still running, or when it created a new file: then it just opens.
-        this.openFile(filePath, this.row.editStartLine, this.row.editEndLine);
+        this.openFile(filePath, this.editStartLine, this.editEndLine);
     }
 
     openUrl(url: string): void {
@@ -180,16 +184,6 @@ export function cleanResult(result: string, isError: boolean): string {
         r = persisted[1].replace(/\n\.\.\.\n$/, '\n');
     }
     return r.replace(ANSI_RE, '').replace(/\s+$/, '');
-}
-
-/** "12s" / "1m 5s" elapsed display. */
-export function formatElapsed(sec: number): string {
-    if (sec < 60) {
-        return `${Math.round(sec)}s`;
-    }
-    const m = Math.floor(sec / 60);
-    const s = Math.round(sec % 60);
-    return `${m}m ${s}s`;
 }
 
 /** Clip text to `previewLines`. `clip` forces clipping even when expanded. */

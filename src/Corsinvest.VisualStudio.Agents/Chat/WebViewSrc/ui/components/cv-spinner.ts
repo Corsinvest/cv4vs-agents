@@ -2,10 +2,10 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { SpinnerVerbsConfigDto } from '../../core/types';
-import { state as appState } from '../../core/state';
+import { formatDurationSec } from '../helpers/format';
 
 // Verbs the spinner cycles; replace/extend via setVerbsConfig at runtime.
 const DEFAULT_VERBS: readonly string[] = [
@@ -87,6 +87,7 @@ const FRAMES: readonly string[] = [...STAR_GROW, ...[...STAR_GROW].reverse()];
 const FRAME_INTERVAL_MS = 120;
 const VERB_MIN_MS = 2000;
 const VERB_MAX_MS = 5000;
+const ELAPSED_INTERVAL_MS = 1000;
 
 let _activeVerbs: readonly string[] = DEFAULT_VERBS;
 
@@ -143,10 +144,10 @@ export class CvSpinner extends LitElement {
             opacity: 0.8;
             min-width: 120px;
         }
-        .dbg {
-            font-size: 11px;
-            opacity: 0.5;
-            font-family: monospace;
+        .elapsed {
+            font-size: 12px;
+            opacity: 0.6;
+            font-variant-numeric: tabular-nums;
         }
     `;
 
@@ -161,9 +162,12 @@ export class CvSpinner extends LitElement {
 
     @state() private _frame = FRAMES[0];
     @state() private _verb = pickRandomVerb();
+    @state() private _elapsedSec = 0;
 
     private _frameTimer = 0;
     private _verbTimer = 0;
+    private _elapsedTimer = 0;
+    private _startedAt = 0;
 
     override connectedCallback(): void {
         super.connectedCallback();
@@ -173,12 +177,20 @@ export class CvSpinner extends LitElement {
             this._frame = FRAMES[i];
         }, FRAME_INTERVAL_MS);
         this._scheduleNextVerb();
+        // performance.now(): monotonic, so a system-clock change mid-turn can't make the
+        // counter jump or go backwards. The element is created when the turn starts and
+        // destroyed when it ends, so mount time IS the turn start and needs no reset.
+        this._startedAt = performance.now();
+        this._elapsedTimer = window.setInterval(() => {
+            this._elapsedSec = Math.floor((performance.now() - this._startedAt) / 1000);
+        }, ELAPSED_INTERVAL_MS);
     }
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         clearInterval(this._frameTimer);
         clearTimeout(this._verbTimer);
+        clearInterval(this._elapsedTimer);
     }
 
     private _scheduleNextVerb(): void {
@@ -190,17 +202,17 @@ export class CvSpinner extends LitElement {
     }
 
     override render() {
-        // In DEBUG (developer under VS) append the raw CLI work status, to see what the CLI emits
-        // (e.g. "requesting" during thinking) — never shown in Release.
-        const dbg =
-            appState.inDev && this.status
-                ? html`<span class="dbg">status = ${this.status}</span>`
-                : '';
+        // Hidden for the first second: a turn that ends instantly would flash a "0s" that
+        // reads as an error rather than as timing.
+        const elapsed =
+            this._elapsedSec > 0
+                ? html`<span class="elapsed">${formatDurationSec(this._elapsedSec)}</span>`
+                : nothing;
         return html`
             <div class="wrap">
                 <span class="icon">${this._frame}</span>
                 <span class="text">${CvSpinner.STATUS_LABELS[this.status] || this._verb}…</span>
-                ${dbg}
+                ${elapsed}
             </div>
         `;
     }

@@ -19,8 +19,6 @@ function toolEntry(id: number, toolUseId: string): UiToolEntry {
         status: 'pending',
         result: '',
         fullLineCount: 0,
-        editStartLine: 0,
-        editEndLine: 0,
         elapsedSec: 0,
     };
 }

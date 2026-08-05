@@ -10,6 +10,7 @@ import './ui/styles';
 // Components — order doesn't matter for registration.
 import './ui/components/cv-spinner';
 import './ui/components/cv-time-ago';
+import './ui/components/cv-elapsed';
 import './ui/components/cv-model-list';
 import './ui/components/cv-permission-list';
 import './ui/components/cv-permission-selector';

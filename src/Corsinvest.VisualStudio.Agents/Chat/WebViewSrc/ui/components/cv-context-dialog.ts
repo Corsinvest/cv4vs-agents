@@ -9,7 +9,7 @@ import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import ChevronRight16Regular from '@fluentui/svg-icons/icons/chevron_right_16_regular.svg';
 import { dialogStyles, iconStyles } from '../styles/shared';
 import { fetchContextUsage } from '../../core/lazy';
-import { formatTokens } from '../../core/ai-models';
+import { formatTokens } from '../helpers/format';
 import { CvDialogBase } from './cv-dialog-base';
 import { displayPathUi } from '../paths';
 import { bridge } from '../../core/bridge';

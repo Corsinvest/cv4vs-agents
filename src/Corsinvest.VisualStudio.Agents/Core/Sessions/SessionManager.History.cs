@@ -344,6 +344,16 @@ internal sealed partial class SessionManager
                         msg["editStartLine"] = editRange.Start;
                         msg["editEndLine"] = editRange.End;
                     }
+                    // Same lift again, for what an Agent run cost. Only a completed run has these:
+                    // an interrupted one leaves toolUseResult a bare string, so nothing is lifted
+                    // and the row shows no figures — the same as live.
+                    var agentTotals = ToolUseResultAgentTotals(obj["toolUseResult"] as JObject);
+                    if (agentTotals.DurationMs > 0)
+                    {
+                        msg["agentDurationMs"] = agentTotals.DurationMs;
+                        msg["agentTokens"] = agentTotals.Tokens;
+                        msg["agentToolUses"] = agentTotals.ToolUses;
+                    }
                     messagesNewestFirst.Add(msg);
                 }
 
