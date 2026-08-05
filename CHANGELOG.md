@@ -6,6 +6,146 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-05
+
+The chat pane stops fighting Visual Studio for the screen, the `@` menu finds a file wherever it
+sits, and the MCP tools tell the agent what a build is actually complaining about.
+
+### Added
+
+- **The `@` menu searches the whole tree.** It used to look one directory deep until three
+  characters were typed and four levels after that, matching on the file name alone — so a file that
+  exists could not be found, and the only way down to it was picking folder after folder. It now
+  walks the whole workspace with no depth limit and filters on the path, so `ctrl` finds
+  `ChatPaneControl.cs` and `src/foo` works as one filter. Folders come from the files that matched,
+  so the two lists cannot disagree and empty ones stay out. Git's global excludes file joins the
+  workspace `.gitignore`, which is where a personal rule like `**/.claude/settings.local.json`
+  lives.
+
+- **Every log line says which pane it came from.** With several chats open the Output window is a
+  single stream and two sessions interleave; per-session lines now carry `[chat#N]`/`[cli#N]` before
+  the area tag, which is what makes diagnosing anything multi-instance possible at all.
+
+- **`document_read_buffer`**: an MCP tool that reads what is in the editor, unsaved edits included.
+  "Look at what I'm writing" had no answer — the `Read` tool sees the file on disk, and the autosave
+  hook writes the user's buffer whether they wanted that or not.
+
+- **`build_clean`**: rebuilding from scratch was the one build step the agent could not reach.
+
+- **The build tools report warnings.** They used to keep only errors, so in this repository — where
+  the gate is a green build and there is no test project — the whole quality signal was being thrown
+  away. `severity` is a floor, like a log level; errors stay the default because a solution carries
+  a hundred pre-existing warnings, and the message now names how many were left out and how to ask
+  for them.
+
+- **`ide_get_diagnostics` filters by severity and caps its result**, instead of carrying every
+  warning back to read three errors.
+
+- **The chat can report what the page weighs** — DOM nodes broken down by what a row contains,
+  plus the CLI state the UI believes it has, context usage and history paging. Appended to the
+  pane's Info dialog, so collecting it takes no DevTools.
+
+- **Dialog title bars follow the VS theme.** A dark VS on a light Windows used to draw a white bar
+  around themed content, the title bar being Windows' rather than WPF's.
+
+- **Each renderer says which pane it belongs to** in the browser's task manager, instead of three
+  identical rows named after the same `index.html`.
+
+### Fixed
+
+- **The chat pane no longer draws over Visual Studio.** WebView2 hosts its browser in a child window
+  that always paints above WPF content, so VS's floating tool windows and notification bars were
+  overlapped by the pane everywhere except where the WebView was. It renders inside the WPF tree
+  now, which also brings back the mouse events the old hosting could not deliver — and with them the
+  attention notice clearing when you click into a finished pane. `Home` and `End` move the caret
+  again rather than jumping to the start or end of the document, the pane no longer flashes white
+  while opening, double-click selects the word instead of the paragraph, and the browser's task
+  manager opens with a window frame.
+
+- **Arrow keys walk a wrapped draft before reaching the history.** A long paragraph with no newline
+  in it counted as one line, so a single `ArrowUp` replaced the draft with the previous prompt.
+  Recalling an entry now parks the caret on the edge line the arrow came from, matching VS Code and
+  zsh.
+
+- **The first history a pane shows had absolute paths**, and stayed that way while every history
+  loaded afterwards was correct: those rows shorten their paths against the working directory, which
+  did not arrive until the CLI had answered, seconds later.
+
+- **A solution reload no longer blinks the panes off and on.** VS models a reload as close-then-open
+  and nothing in its API says which of the two a close will turn out to be, so the hide now waits
+  long enough for the answer to arrive.
+
+- **Sessions in a very long project path could not be read at all.** Past 200 characters the CLI
+  truncates its folder name, so we looked under the full name and reported a project with no
+  sessions; past 260 characters .NET Framework then refuses the file itself, as "cannot find part of
+  the path" for a file plainly sitting there. Both handled, and the catch that hid this now names
+  the file and the exception.
+
+- **The statistics cache stops failing on long paths**, its folders being named after the project
+  rather than the CLI's directory — the data folders no project claims are removed on the way, and a
+  folder that is also a project is one row rather than two.
+
+- **The daily-tokens chart dates are readable again** — they came out as "2/", "6/", "1/", each
+  label cut to fit a cell one bar wide.
+
+- **Dismissing the rate-limit notice keeps it dismissed.** The CLI re-sends it every turn with the
+  same key, and the ✕ never told anyone it had been clicked.
+
+- **A write to the CLI can no longer be lost to a respawn**, which used to leave the caller waiting
+  for a timeout rather than failing at once.
+
+- **The lightbox stops clipping the image against its right edge**, and follows the pane when it is
+  widened.
+
+- **The composer is ready to type when a chat opens** — on first open and on a new session, where
+  the caret used to be nowhere until you clicked — and no longer jumps when it regains focus.
+
+- **`ide_get_project_structure` no longer returns a file twice**, nor a lowercased drive letter that
+  disagreed with every other path in the same response. The solution walks are guarded against a
+  cyclic `.sln`, which would otherwise take `devenv.exe` down with the user's unsaved work.
+
+- **The formatting tools stay inside the open solution.** `document_format`,
+  `document_organize_imports` and `document_run_cleanup` validated nothing but that the path
+  existed, then rewrote it — a wrong path that happens to exist was enough to reformat a file in
+  another repository.
+
+- **The autosave hook waits for the save.** It answered "go ahead" while the write was still queued,
+  so Claude could read a stale file — or, on an edit, rewrite one under a buffer VS still held. A
+  failure now says so instead of vanishing into a log that is off by default.
+
+- **A session id that is not a plain token is refused before it reaches a path**, closing a
+  traversal that could return an arbitrary file to the chat as transcript.
+
+- **The Info dialog reports the renderer process.** It asked the WebView on the thread the answer
+  needed in order to arrive, so it printed "(unknown)" every single time.
+
+- **The composer's left-hand tooltips no longer open onto the placeholder** you are about to type
+  over.
+
+- **The diff dialog's title row lines up**, with its mode icons drawn at the size of every other
+  icon in the chat.
+
+### Changed
+
+- **The inline diff preview builds only the lines it can show.** A large edit mounted hundreds of
+  rows to display twelve, none of the rest reachable — the heaviest row in a day-long chat went from
+  1468 nodes to 229. Drops the "Diff - preview context lines" option, which fed two unrelated things
+  at once and whose default of 10 was the reason patches were long in the first place; the preview
+  now shows 3 lines of context, which is what git and GitHub show.
+
+- **`ide_execute_code` is gone.** It reported the snippet as submitted but only ever opened the C#
+  Interactive pane, so an agent would build on state that never changed. `debug_evaluate` already
+  covers "run this, give me the value", typed and inside the real program.
+
+- **The MCP documentation leads with the fact that a live IDE is on the other end** — that it has
+  compiled this code and holds the semantic model — rather than with which tool beats which shell
+  command. Seeing a name in a list of fifty is not the same as thinking of it, and what an agent
+  brings by default are a terminal's habits.
+
+- **Comments across the codebase justify a choice by the CLI's wire contract**, the behaviour wanted
+  or the constraint that forced it, instead of by how another editor's extension does it. No
+  rationale was dropped — where the attribution *was* the rationale, it is replaced by the real one.
+
 ## [1.1.2] - 2026-08-01
 
 The chat could still stop rendering. 1.1.1 said that was fixed; it was not, and this is the actual
