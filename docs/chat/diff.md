@@ -6,9 +6,10 @@ edit — with the full editor.
 
 ## Inline diff
 
-Each Edit/Write tool row renders a diff: added/removed lines with configurable context
-(**Options → Chat → Diff context lines**) and an optional **Ignore whitespace**. Expand it to a
-full-screen viewer with four view modes:
+Each Edit/Write tool row renders a preview of the diff: the added/removed lines with a few lines of
+context around them, and an optional **Ignore whitespace** (**Options → Chat → Diff**). A large
+change is cut short here — expand it for a full-screen viewer with the whole diff and four view
+modes:
 
 - **Split** — side-by-side.
 - **Unified** — one column, changes interleaved.
