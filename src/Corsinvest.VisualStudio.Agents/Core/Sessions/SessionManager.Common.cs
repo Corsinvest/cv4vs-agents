@@ -82,6 +82,19 @@ internal sealed partial class SessionManager
     internal static string ToolUseResultField(JObject line, string field)
         => (line?["toolUseResult"] as JObject)?[field]?.Value<string>();
 
+    /// <summary>What an Agent run cost, from the totals the CLI writes on its tool_result. Takes
+    /// the toolUseResult object itself, like <see cref="ToolUseResultEditRange"/> — live holds one,
+    /// history reads it off the line.
+    /// All zero when the run has no totals, which is the normal shape for an INTERRUPTED agent:
+    /// there toolUseResult is a bare string ("User rejected tool use", "Error: [Request interrupted
+    /// by user…]") and the CLI reports no figures at all, so the row shows none.</summary>
+    internal static (long DurationMs, long Tokens, int ToolUses) ToolUseResultAgentTotals(JObject toolUseResult)
+        => toolUseResult == null
+            ? default
+            : (toolUseResult.Val("totalDurationMs", 0L),
+               toolUseResult.Val("totalTokens", 0L),
+               toolUseResult.Val("totalToolUseCount", 0));
+
     /// <summary>Lines the CLI computed when it applied an edit, from the first hunk of
     /// structuredPatch. Takes the toolUseResult object itself — live already holds one, history
     /// reads it off the line. (0, 0) when there is no patch (a Write on a new file has none) or
