@@ -20,10 +20,10 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import ErrorCircle16Regular from '@fluentui/svg-icons/icons/error_circle_16_regular.svg';
 import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
 import VisualStudioIcon from '../icons/visualStudio.svg';
-import { truncate } from '../helpers/format';
+import { truncate, formatDurationSec } from '../helpers/format';
 import '../components/cv-copy-btn';
 import '../components/cv-diff-preview';
-import { cleanResult, previewText, formatElapsed } from './tool-host';
+import { cleanResult, previewText } from './tool-host';
 import { state as appState } from '../../core/state';
 import { renderMarkdown } from '../../core/markdown';
 import { highlightCode } from '../../core/lang';
@@ -195,7 +195,7 @@ export abstract class ToolRenderer {
                     ${
                         elapsed > 0
                             ? html`<span class="cv-tool-row-progress"
-                                  >${formatElapsed(elapsed)}</span
+                                  >${formatDurationSec(elapsed)}</span
                               >`
                             : nothing
                     }

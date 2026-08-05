@@ -10,7 +10,7 @@ import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import { dialogStyles, iconStyles } from '../styles/shared';
 import './cv-segmented';
 import { fetchStats } from '../../core/lazy';
-import { formatTokens } from '../../core/ai-models';
+import { formatTokens } from '../helpers/format';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import type { StatsResponse, StatsScopeDto, StatsRangeDto } from '../../core/types';

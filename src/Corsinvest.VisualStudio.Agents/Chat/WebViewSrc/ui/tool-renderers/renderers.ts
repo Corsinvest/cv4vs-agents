@@ -12,7 +12,7 @@ import { displayPathUi } from '../paths';
 import { truncate } from '../helpers/format';
 import { ToolRenderer } from './base';
 import { state as appState } from '../../core/state';
-import { formatElapsed } from './tool-host';
+import { formatDuration, formatTokenCount } from '../helpers/format';
 import type { AskQuestion } from '../../core/types';
 
 interface TodoItem {
@@ -224,13 +224,28 @@ export class AgentRenderer extends ToolRenderer {
     }
     override header(): TemplateResult {
         const desc = truncate(String(this.host.input.description ?? ''), 80);
-        // Elapsed time while the sub-agent runs (the dot handles the spinner).
+        // Elapsed time while the sub-agent runs (the dot handles the spinner). Counted from
+        // startedAt, not from usage.durationMs: that one only moves when the sub-agent reports a
+        // tool use, so on a long call the badge would sit still for ten seconds and read as stuck.
+        // The component drives the 1s repaint (see cv-tool-row) — a renderer is rebuilt per render
+        // and could not hold a timer.
         const active = this._activeTask();
+        // Running: our own clock. Finished: the CLI's totals, which are the authoritative figures
+        // (they measure the run, not when the WebView noticed it) and survive into history. An
+        // interrupted run reports neither, so it keeps no badge at all.
+        const done = this.host.agentTotals;
         const badge = active
             ? html`<span class="cv-agent-time"
-                  >${formatElapsed(active.usage.durationMs / 1000)}</span
+                  >${formatDuration(
+                      active.startedAt ? Date.now() - active.startedAt : active.usage.durationMs,
+                  )}</span
               >`
-            : nothing;
+            : done.durationMs
+              ? html`<span class="cv-agent-time"
+                    >${formatDuration(done.durationMs)} · ${formatTokenCount(done.tokens)} ·
+                    ${done.toolUses} ${done.toolUses === 1 ? 'tool' : 'tools'}</span
+                >`
+              : nothing;
         return html`${this.nameSpan('Agent')}${this.detailSpan(desc)}${badge}`;
     }
     // IN = the sub-agent prompt (like the VS Code extension).

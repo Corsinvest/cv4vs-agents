@@ -18,10 +18,10 @@ import { Msg } from '../../core/bridge-messages';
 import {
     consumedTokens,
     contextPercent,
-    formatTokens,
     autoCompactWindow,
     remainingPercent,
 } from '../../core/ai-models';
+import { formatTokens } from '../helpers/format';
 import type { ContextUsageDto, SendPromptNotification } from '../../core/types';
 import { openUsageDialog, openContextDialog, openStatsDialog } from '../../core/dialog-host';
 

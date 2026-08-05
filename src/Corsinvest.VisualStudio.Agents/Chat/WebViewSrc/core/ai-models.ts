@@ -2,10 +2,11 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-// Token accounting + model-label helpers. Model metadata (the catalogue, effort
+// Context-window arithmetic + model-label helpers. Model metadata (the catalogue, effort
 // levels, context window) is NOT stored here — it comes from the CLI at runtime
 // via `chat_models` and the result's modelUsage (see state.models /
-// state.contextWindow). No static model table.
+// state.contextWindow). No static model table. How a token count is WRITTEN is display, not
+// arithmetic: that lives in ui/helpers/format.
 
 import type { ContextUsageDto } from './types';
 import { state as appState } from './state';
@@ -139,16 +140,4 @@ export function remainingPercent(u: ContextUsageDto): number {
     }
     const usedPct = (consumedTokens(u) / window) * 100;
     return Math.min(100, Math.max(0, 100 - usedPct));
-}
-
-/** Compact token formatter for tooltips: 12 → "12", 1500 → "1.5k",
- *  357000 → "357k", 1_200_000 → "1.2M". */
-export function formatTokens(n: number): string {
-    if (n >= 1_000_000) {
-        return (n / 1_000_000).toFixed(1) + 'M';
-    }
-    if (n >= 1_000) {
-        return (n / 1_000).toFixed(0) + 'k';
-    }
-    return String(n);
 }

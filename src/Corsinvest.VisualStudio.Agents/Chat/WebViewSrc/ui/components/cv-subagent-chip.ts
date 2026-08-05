@@ -7,7 +7,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Bot16Regular from '@fluentui/svg-icons/icons/bot_16_regular.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
-import { formatTokens } from '../../core/ai-models';
+import { formatTokenCount, formatDuration } from '../helpers/format';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { iconStyles, statusDotStyles } from '../styles/shared';
@@ -196,10 +196,6 @@ export class CvSubagentChip extends LitElement {
         return d.replace(/^running\s+/i, '') || 'sub-agent';
     }
 
-    private _fmt(ms: number): string {
-        const s = Math.round(ms / 1000);
-        return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
-    }
     private _stop(taskId: string) {
         bridge.sendNotification<SubagentCancelNotification>(Msg.fromWebView.chat.subagentCancel, {
             taskId,
@@ -273,10 +269,10 @@ export class CvSubagentChip extends LitElement {
                                         >${t.recentTools[t.recentTools.length - 1] ?? '—'}</span
                                     >
                                     ${t.usage.toolUses} ${t.usage.toolUses === 1 ? 'tool' : 'tools'}
-                                    · ${formatTokens(t.usage.totalTokens)} tok
+                                    · ${formatTokenCount(t.usage.totalTokens)}
                                 </div>
                             </div>
-                            <span class="time">${this._fmt(t.usage.durationMs)}</span>
+                            <span class="time">${formatDuration(t.usage.durationMs)}</span>
                             <fluent-button
                                 class="stop"
                                 appearance="transparent"
