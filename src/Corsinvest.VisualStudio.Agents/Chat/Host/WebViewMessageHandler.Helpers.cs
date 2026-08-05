@@ -135,7 +135,13 @@ internal sealed partial class WebViewMessageHandler
             frame?.Show();
             return frame != null;
         }
-        catch { return false; }
+        catch (Exception ex)
+        {
+            // The other half of a file-link click, next to FindFileByNameUnderRoot: the path was
+            // resolved and the open still failed. All the user sees is a link that does nothing.
+            OutputWindowLogger.Global.LogException($"WebView.TryOpenInVs({filePath})", ex);
+            return false;
+        }
     }
     private static string SanitizeFileName(string name)
     {
@@ -326,11 +332,20 @@ internal sealed partial class WebViewMessageHandler
                         stack.Push(sub);
                     }
                 }
+                // Per-directory and deliberately silent: a folder we can't read is the normal shape
+                // of a walk over a whole tree, and logging one line per skipped directory would
+                // bury the entries that mean something.
                 catch (System.UnauthorizedAccessException) { }
                 catch (System.IO.IOException) { }
             }
         }
-        catch (System.Exception) { }
+        catch (System.Exception ex)
+        {
+            // The outer one is a different matter: it catches whatever the walk itself failed on,
+            // and the caller only sees a file-link that doesn't open. Without this there is nothing
+            // to read afterwards.
+            OutputWindowLogger.Global.LogException($"WebView.FindFileByNameUnderRoot({name})", ex);
+        }
         return null;
     }
 }
