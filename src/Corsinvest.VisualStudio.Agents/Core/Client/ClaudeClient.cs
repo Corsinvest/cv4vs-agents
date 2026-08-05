@@ -468,15 +468,38 @@ internal sealed partial class ClaudeClient : IClaudeClient
     private void KillForRespawn() => _transport.DisposeIntentional();
 
     // Hot-swap operations — these must never respawn the process.
+
+    /// <summary>Logs its own failure like the rest, so no caller has to wonder whether this one
+    /// reports for itself. The property advances only after the ack, which is what lets the caller
+    /// echo the real value back and roll an optimistic selector onto it — that echo has to stay at
+    /// the call site, where the bridge is.</summary>
     public async Task SetModelAsync(string model)
     {
-        await SendControlRequestAsync(ClientMessages.ControlSubtype.SetModel, new { model });
+        try
+        {
+            await SendControlRequestAsync(ClientMessages.ControlSubtype.SetModel, new { model });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException($"[client] set_model {model ?? "(default)"}", ex);
+            throw;
+        }
         Model = model;
     }
 
+    /// <summary>Same as SetModelAsync — and the echo matters more here: a selector left reading
+    /// "Plan" while the CLI is still in bypass is the one lie that costs files.</summary>
     public async Task SetPermissionModeAsync(string mode)
     {
-        await SendControlRequestAsync(ClientMessages.ControlSubtype.SetPermissionMode, new { mode });
+        try
+        {
+            await SendControlRequestAsync(ClientMessages.ControlSubtype.SetPermissionMode, new { mode });
+        }
+        catch (Exception ex)
+        {
+            _log.LogException($"[client] set_permission_mode {mode}", ex);
+            throw;
+        }
         PermissionMode = mode;
     }
 
