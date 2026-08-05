@@ -83,6 +83,7 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.ParentToolUseId)).Null()
             .Member(x => nameof(x.Usage)).Null();
         AddInterface<ExchangeEndedNotification>().Member(x => nameof(x.Usage)).Null();
+        AddInterface<EvictMessagesNotification>();
         AddInterface<IdeContextNotification>();
         AddInterface<CliErrorNotification>();
         AddInterface<UserImageDto>()

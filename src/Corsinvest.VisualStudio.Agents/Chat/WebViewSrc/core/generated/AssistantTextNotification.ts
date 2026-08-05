@@ -8,6 +8,7 @@ import { ContextUsageDto } from './ContextUsageDto';
 export interface AssistantTextNotification {
     text: string;
     parentToolUseId: string | null;
+    uuid: string;
     usage: ContextUsageDto | null;
     timestamp?: number;
 }

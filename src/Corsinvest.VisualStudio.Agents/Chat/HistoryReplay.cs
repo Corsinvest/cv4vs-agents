@@ -55,7 +55,12 @@ internal static class HistoryReplay
             var tsMs = msg.ValTimestampMs("timestamp");
             if (role == "assistant")
             {
-                ContentBlockTranslator.EmitAssistant(content, Collect, parentToolUseId, msg["usage"] as JObject, timestamp: tsMs);
+                ContentBlockTranslator.EmitAssistant(content,
+                                                     Collect,
+                                                     parentToolUseId,
+                                                     msg["usage"] as JObject,
+                                                     timestamp: tsMs,
+                                                     uuid: uuid);
             }
             else // user (and tool_result-carrying user lines)
             {
