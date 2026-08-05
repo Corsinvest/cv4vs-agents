@@ -3,8 +3,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildGroups } from './exchanges.ts';
-import type { UiAssistantEntry, UiUserEntry } from './types';
+import { buildGroups } from '../core/exchanges.ts';
+import type { UiAssistantEntry, UiUserEntry } from '../core/types';
 
 const user = (id: number): UiUserEntry => ({ kind: 'text', id, role: 'user', text: `u${id}` });
 const bot = (id: number): UiAssistantEntry => ({

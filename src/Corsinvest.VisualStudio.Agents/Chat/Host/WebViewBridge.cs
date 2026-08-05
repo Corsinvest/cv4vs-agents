@@ -264,6 +264,34 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         catch (Exception ex) { log.LogException("WebViewBridge.SetDocumentTitle", ex); }
     }
 
+    /// <summary>Evaluate `script` in the page and return its value, or null when the WebView is
+    /// gone or the script threw. ExecuteScriptAsync hands back the result JSON-encoded, so a
+    /// string comes out quoted and escaped — this unwraps it.
+    /// <para>Deliberately NOT a bridge message: the bridge only carries WebView→host requests, and
+    /// the host→WebView direction with a reply would mean correlation and timeouts built for a
+    /// single diagnostic caller. The cost is that the script is a string, so what it names in the
+    /// page is not checked by anything — keep such callers to diagnostics, where a rename that
+    /// slips through degrades a dialog instead of breaking a feature.</para></summary>
+    public async Task<string> EvalAsync(string script)
+    {
+        if (_disposed) { return null; }
+        try
+        {
+            var core = webView.CoreWebView2;
+            if (core == null) { return null; }
+            var json = await core.ExecuteScriptAsync(script);
+            // "null" is what the page returns for undefined too — both mean "nothing to show".
+            return string.IsNullOrEmpty(json) || json == "null"
+                ? null
+                : JsonConvert.DeserializeObject<string>(json);
+        }
+        catch (Exception ex)
+        {
+            log.LogException("WebViewBridge.Eval", ex);
+            return null;
+        }
+    }
+
     /// <summary>Give the WebView2 control the native (WPF) focus, so the keyboard actually reaches
     /// the page. Without this a JS `element.focus()` only shows a blinking caret while keystrokes
     /// still go to VS — the WebView host must own the focus first. Call before posting
