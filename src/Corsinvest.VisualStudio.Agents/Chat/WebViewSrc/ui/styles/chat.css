@@ -675,6 +675,23 @@ cv-message:focus-within .cv-msg-actions {
 .cv-children:focus-within .cv-children-actions {
     opacity: 1;
 }
+/* Turn cost/tokens/duration, pushed to the far end of the actions row: what you can DO with the
+ * answer stays on the left where the pointer already is, what the turn COST reads on the right. */
+/* The $ ↑ ↓ tok s markers: dimmed and light, they only say which number is which. Foreground3 (the
+ * timestamp's grey) was losing the arrow glyphs entirely at this size. */
+.cv-turn-metrics {
+    margin-left: auto;
+    padding-right: 4px;
+    font-size: 0.82em;
+    color: var(--colorNeutralForeground3);
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+}
+/* The figures themselves: brighter and heavier than their markers, so the row reads by value. */
+.cv-turn-metrics .v {
+    color: var(--colorNeutralForeground2);
+    font-weight: 600;
+}
 /* Relative "x ago" timestamp next to the copy button (both the user and response rows). */
 .cv-ts {
     font-size: 0.82em;
