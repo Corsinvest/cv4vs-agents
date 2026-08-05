@@ -316,6 +316,11 @@ internal sealed partial class ClaudeClient
             Content = m["content"],
             Usage = m["usage"] as JObject,
             Uuid = obj.Val("uuid"),
+            // Wrapper-level like uuid, not inside `message`.
+            Supersedes = (obj["supersedes"] as JArray)?
+                .Select(t => t?.ToString())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .ToArray(),
             Timestamp = obj.ValTimestampMs("timestamp"),
             ParentToolUseId = obj.Val("parent_tool_use_id"),
         });

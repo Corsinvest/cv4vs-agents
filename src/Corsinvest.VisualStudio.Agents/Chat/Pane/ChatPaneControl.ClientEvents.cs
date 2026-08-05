@@ -257,7 +257,20 @@ public partial class ChatPaneControl
             // Do NOT push the reply's `model` to the selector: sub-agents run on a different
             // model and would flip the selection. The selector reflects only the user's explicit
             // choice (set_model) plus init/history.
-            ContentBlockTranslator.EmitAssistant(e.Content, (t, d) => _bridge.Send(t, d), e.ParentToolUseId, e.Usage, timestamp: e.Timestamp);
+            // Evict BEFORE emitting: this message replaces those, so dropping them first keeps the
+            // replacement from appearing under the text it supersedes.
+            if (e.Supersedes is { Length: > 0 })
+            {
+                _log.Debug(() => $"[chat] assistant supersedes {e.Supersedes.Length} message(s)");
+                _bridge.Send(BridgeMessages.ToWebView.Chat.EvictMessages,
+                             new Contracts.EvictMessagesNotification { Uuids = e.Supersedes });
+            }
+            ContentBlockTranslator.EmitAssistant(e.Content,
+                                                 (t, d) => _bridge.Send(t, d),
+                                                 e.ParentToolUseId,
+                                                 e.Usage,
+                                                 timestamp: e.Timestamp,
+                                                 uuid: e.Uuid);
         });
 
     private void OnUserMessage(object sender, UserMessageEventArgs e)
@@ -549,6 +562,25 @@ public partial class ChatPaneControl
                     EstimatedTokens = obj.Val("estimated_tokens", -1),
                     ParentToolUseId = obj.Val("parent_tool_use_id"),
                 });
+            }
+            else if (subtype == ClientMessages.SystemSubtype.ModelRefusalFallback)
+            {
+                // The refused partial was already delivered to us and is now retracted: drop it,
+                // else the user goes on reading (and replying to) text the model never saw. Warn,
+                // not Debug: text disappears from the chat under the user's eyes, so "the chat lost
+                // a piece" needs an answer that is there without turning the log level up first.
+                var uuids = (obj["retracted_message_uuids"] as JArray)?
+                    .Select(t => t?.ToString())
+                    .Where(s => !string.IsNullOrEmpty(s))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray() ?? [];
+                _log.Warn($"[chat] model_refusal_fallback {obj.Val("original_model")} → " +
+                          $"{obj.Val("fallback_model")}, retracting {uuids.Length} message(s)");
+                if (uuids.Length > 0)
+                {
+                    _bridge.Send(BridgeMessages.ToWebView.Chat.EvictMessages,
+                                 new Contracts.EvictMessagesNotification { Uuids = uuids });
+                }
             }
             else if (subtype == ClientMessages.SystemSubtype.BackgroundTasksChanged)
             {

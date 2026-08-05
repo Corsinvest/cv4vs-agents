@@ -80,6 +80,7 @@ export type { SubagentUsageDto } from './generated/SubagentUsageDto';
 /** Context compaction (`chat_compacted`, header-only: uuid/trigger/preTokens) and CLI process
  *  exit (`cli_exited`). Generated from C# by TypeGen — re-exported here. */
 export type { CompactedNotification } from './generated/CompactedNotification';
+export type { EvictMessagesNotification } from './generated/EvictMessagesNotification';
 export type { StatusNotification } from './generated/StatusNotification';
 export type { CliExitedNotification } from './generated/CliExitedNotification';
 
@@ -330,6 +331,9 @@ export interface UiUserEntry extends UiEntryBase {
 export interface UiAssistantEntry extends UiEntryBase {
     role: 'assistant';
     streaming?: boolean;
+    /** The message's wire uuid — what lets an entry be addressed after it has been rendered.
+     *  Absent on a synthetic message (the permission banner's) and on older .jsonl lines. */
+    uuid?: string;
 }
 
 /** A thinking block: the model's reasoning, live-only (never persisted). `streaming` true while
