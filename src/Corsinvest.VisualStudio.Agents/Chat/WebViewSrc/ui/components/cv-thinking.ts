@@ -80,6 +80,13 @@ export class CvThinking extends LitElement {
                 white-space: nowrap;
                 font-variant-numeric: tabular-nums;
             }
+            /* The separator belongs to the CSS, not the text: summary is a flex row with a gap, so a
+               "· " written into the span would put the gap on one side and the literal space on the
+               other, and the dot reads as detached from what follows it. */
+            .tokens::before {
+                content: '·';
+                margin-right: 6px;
+            }
             .chevron {
                 /* Full opacity so it stays visible against the dimmed (0.8) italic summary.
                    Down when collapsed, up when open — same single-chevron toggle as the tool
@@ -142,7 +149,7 @@ export class CvThinking extends LitElement {
         // every other count in the chat, tilde included: the CLI sends this one as
         // `estimated_tokens`, so it is not the measured figure the response row shows.
         const tokens = this.tokens
-            ? html`<span class="tokens">· ${formatTokenCount(this.tokens, true)}</span>`
+            ? html`<span class="tokens">${formatTokenCount(this.tokens, true)}</span>`
             : nothing;
         return html`
             <details>

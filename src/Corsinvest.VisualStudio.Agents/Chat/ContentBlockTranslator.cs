@@ -38,7 +38,9 @@ internal sealed class ToolResultExtras
         AgentTotals = Core.Sessions.SessionManager.ToolUseResultAgentTotals(toolUseResult),
     };
 
-    /// <summary>Read them back off a replayed message, where history lifted them as scalars.</summary>
+    /// <summary>Read them back off a replayed message, where history lifted them as scalars. The
+    /// lift stays flat on purpose: that JObject goes into the history page and is read back with
+    /// Val(), so nesting there would mean serializing a sub-object inside another document.</summary>
     public static ToolResultExtras FromMessage(JObject msg) => new()
     {
         EditRange = (msg.Val("editStartLine", 0), msg.Val("editEndLine", 0)),
@@ -46,6 +48,29 @@ internal sealed class ToolResultExtras
                        msg.Val("agentTokens", 0L),
                        msg.Val("agentToolUses", 0)),
     };
+
+    /// <summary>The wire shape: each group present only when the tool reported it, and the whole
+    /// object null when it reported neither — so the WebView tests for presence, never for a zero
+    /// that could also mean "ran for 0ms".</summary>
+    public Contracts.ToolResultExtrasDto ToDto()
+    {
+        var edit = EditRange.Start > 0
+            ? new Contracts.EditLineRangeDto { StartLine = EditRange.Start, EndLine = EditRange.End }
+            : null;
+
+        var totals = AgentTotals.DurationMs > 0
+            ? new Contracts.AgentRunTotalsDto
+            {
+                DurationMs = AgentTotals.DurationMs,
+                Tokens = AgentTotals.Tokens,
+                ToolUses = AgentTotals.ToolUses,
+            }
+            : null;
+
+        return edit == null && totals == null
+            ? null
+            : new Contracts.ToolResultExtrasDto { EditRange = edit, AgentTotals = totals };
+    }
 }
 
 /// <summary>
@@ -191,14 +216,10 @@ internal static class ContentBlockTranslator
                         IsError = item.Val("is_error", false),
                         ParentToolUseId = parentToolUseId,
                         AgentId = agentId,
-                        // Full (untruncated) non-empty line count; count-only renderers
-                        // (Grep/Glob) show this instead of counting the clipped preview.
+                        // Full (untruncated) non-empty line count; the count-only renderers
+                        // (Grep/Glob/WebSearch) show this instead of counting the clipped preview.
                         FullLineCount = StringHelpers.NonEmptyLineCount(text),
-                        EditStartLine = extras?.EditRange.Start ?? 0,
-                        EditEndLine = extras?.EditRange.End ?? 0,
-                        AgentDurationMs = extras?.AgentTotals.DurationMs ?? 0,
-                        AgentTokens = extras?.AgentTotals.Tokens ?? 0,
-                        AgentToolUses = extras?.AgentTotals.ToolUses ?? 0,
+                        Extras = extras?.ToDto(),
                     });
                 }
                 else if (type == "text")

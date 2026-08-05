@@ -820,3 +820,14 @@ cv-message:focus-within .cv-msg-actions {
 
 /* Elapsed time on a running Agent row (the dot handles the spinner). */
 .cv-agent-time { margin-left: 4px; font-size: 11px; opacity: 0.7; }
+/* A finished Agent's totals reveal on hover, unlike the running clock next to them: several
+ * sub-agents in a row put near-identical figures one under the other, and read as a wall of
+ * numbers you can't skip past. The running badge stays — it is the only sign the row is alive. */
+.cv-agent-totals {
+    opacity: 0;
+    transition: opacity 0.15s;
+    font-variant-numeric: tabular-nums;
+}
+.cv-tool-wrap:hover .cv-agent-totals { opacity: 0.7; }
+/* The figures brighter and heavier than the units, as in the turn metrics under a response. */
+.cv-agent-totals .v { color: var(--colorNeutralForeground2); font-weight: 600; }

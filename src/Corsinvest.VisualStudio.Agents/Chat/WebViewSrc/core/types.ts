@@ -6,6 +6,7 @@
 // pieces we touch, not every JSON shape the C# host can send.
 
 import type { SubagentUsageDto } from './generated/SubagentUsageDto';
+import type { ToolResultExtrasDto } from './generated/ToolResultExtrasDto';
 
 export type Theme = 'dark' | 'light';
 
@@ -90,6 +91,11 @@ export type { GetCompactSummaryResponse } from './generated/GetCompactSummaryRes
 /** A tool call's result (`chat_tool_result`).
  *  Generated from C# (Contracts.ToolResultNotification) by TypeGen — re-exported here. */
 export type { ToolResultNotification } from './generated/ToolResultNotification';
+/** Per-tool fields on a tool_result, grouped so adding another one touches the DTO and its
+ *  renderer instead of every layer in between. Each member is null when its tool didn't report. */
+export type { ToolResultExtrasDto } from './generated/ToolResultExtrasDto';
+export type { EditLineRangeDto } from './generated/EditLineRangeDto';
+export type { AgentRunTotalsDto } from './generated/AgentRunTotalsDto';
 
 /** Rate-limit notice (`chat_rate_limit`) + its severity union.
  *  Generated from C# by TypeGen — re-exported here. */
@@ -400,18 +406,10 @@ export interface UiToolEntry {
     /** Non-empty line count of the FULL output (before preview truncation), 0 when empty.
      *  Count-only renderers (Grep/Glob) show this; the full text is re-read on click. */
     fullLineCount: number;
-    /** Lines the edit landed on, from the patch the CLI computed applying it. 0 while the tool
-     *  is still running, when it isn't an edit, or when it wrote a brand-new file — clicking the
-     *  path then just opens it. */
-    editStartLine: number;
-    editEndLine: number;
     elapsedSec: number;
-    /** What the Agent run cost, from the totals on its tool_result — the figures the row shows once
-     *  it has finished. All 0 for every other tool, and for an interrupted agent: the CLI reports
-     *  none there, so the row shows none rather than a number that would understate the run. */
-    agentDurationMs?: number;
-    agentTokens?: number;
-    agentToolUses?: number;
+    /** Per-tool fields from the result: the edit's line range, what an Agent run cost. Absent until
+     *  the tool finishes, and for a tool that reports neither — which is most of them. */
+    extras?: ToolResultExtrasDto | null;
     /** Nested children (Agent tool today; any tool with children). Present only when the tool
      *  has children — undefined for a normal leaf tool. NOT the row open/closed state: that's
      *  the component's local `_expanded`, which every tool has whether or not it has children. */

@@ -3,6 +3,8 @@
  * Any changes made to this file can be lost when this file is regenerated.
  */
 
+import { ToolResultExtrasDto } from './ToolResultExtrasDto';
+
 export interface ToolResultNotification {
     toolUseId: string;
     result: string;
@@ -10,9 +12,5 @@ export interface ToolResultNotification {
     parentToolUseId: string | null;
     agentId: string | null;
     fullLineCount: number;
-    editStartLine: number;
-    editEndLine: number;
-    agentDurationMs: number;
-    agentTokens: number;
-    agentToolUses: number;
+    extras: ToolResultExtrasDto | null;
 }

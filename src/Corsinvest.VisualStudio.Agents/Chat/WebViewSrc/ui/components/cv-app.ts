@@ -1223,8 +1223,6 @@ export class CvApp extends LitElement {
             status: 'pending',
             result: '',
             fullLineCount: 0,
-            editStartLine: 0,
-            editEndLine: 0,
             elapsedSec: 0,
             agentId: spawned?.taskId,
         };
@@ -1237,18 +1235,10 @@ export class CvApp extends LitElement {
             status: d.isError ? 'error' : 'done',
             result: d.result ?? '',
             fullLineCount: d.fullLineCount ?? 0,
-            editStartLine: d.editStartLine ?? 0,
-            editEndLine: d.editEndLine ?? 0,
             ...(d.agentId ? { agentId: d.agentId } : {}),
-            // Only a completed Agent reports these; an interrupted one sends 0s, and writing them
-            // would replace the running badge with an empty one.
-            ...(d.agentDurationMs
-                ? {
-                      agentDurationMs: d.agentDurationMs,
-                      agentTokens: d.agentTokens ?? 0,
-                      agentToolUses: d.agentToolUses ?? 0,
-                  }
-                : {}),
+            // Only written when the tool reported something: an interrupted Agent sends none, and
+            // an empty object here would replace the running badge with a blank one.
+            ...(d.extras ? { extras: d.extras } : {}),
         };
     }
 
@@ -1562,12 +1552,8 @@ export class CvApp extends LitElement {
             .elapsedSec=${e.elapsedSec}
             .childItems=${e.children?.items ?? []}
             .fullLineCount=${e.fullLineCount}
-            .editStartLine=${e.editStartLine}
-            .editEndLine=${e.editEndLine}
+            .extras=${e.extras ?? null}
             .agentId=${e.agentId ?? ''}
-            .agentDurationMs=${e.agentDurationMs ?? 0}
-            .agentTokens=${e.agentTokens ?? 0}
-            .agentToolUses=${e.agentToolUses ?? 0}
             .hasMore=${e.children?.hasMore ?? false}
             .showAll=${e.children?.showAll ?? false}
         ></cv-tool-row>`;

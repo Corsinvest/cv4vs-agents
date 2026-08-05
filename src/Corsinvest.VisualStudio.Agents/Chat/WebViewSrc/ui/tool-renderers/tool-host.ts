@@ -15,6 +15,7 @@ import type {
     ExternalUrlNotification,
     DiffDialogNotification,
     ToolOutputNotification,
+    AgentRunTotalsDto,
 } from '../../core/types';
 
 // eslint-disable-next-line no-control-regex
@@ -52,20 +53,16 @@ export class BridgeToolHost implements ToolHost {
         return this.row.fullLineCount ?? 0;
     }
     get editStartLine(): number {
-        return this.row.editStartLine ?? 0;
+        return this.row.extras?.editRange?.startLine ?? 0;
     }
     get editEndLine(): number {
-        return this.row.editEndLine ?? 0;
+        return this.row.extras?.editRange?.endLine ?? 0;
     }
     get agentId(): string {
         return this.row.agentId ?? '';
     }
-    get agentTotals(): { durationMs: number; tokens: number; toolUses: number } {
-        return {
-            durationMs: this.row.agentDurationMs ?? 0,
-            tokens: this.row.agentTokens ?? 0,
-            toolUses: this.row.agentToolUses ?? 0,
-        };
+    get agentTotals(): AgentRunTotalsDto | null {
+        return this.row.extras?.agentTotals ?? null;
     }
     get containerAgentId(): string {
         return this.row.containerAgentId ?? '';
@@ -114,7 +111,7 @@ export class BridgeToolHost implements ToolHost {
         // The lines come from the patch the CLI computed applying the edit, carried on the tool
         // result — no searching the file for text that may well have changed since. 0 while the
         // tool is still running, or when it created a new file: then it just opens.
-        this.openFile(filePath, this.row.editStartLine, this.row.editEndLine);
+        this.openFile(filePath, this.editStartLine, this.editEndLine);
     }
 
     openUrl(url: string): void {

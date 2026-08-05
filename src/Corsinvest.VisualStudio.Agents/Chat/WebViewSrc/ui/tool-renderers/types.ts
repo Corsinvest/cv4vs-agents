@@ -9,7 +9,12 @@
 // No renderer imports bridge/state — only CvToolRow does.
 
 import type { TemplateResult, nothing } from 'lit';
-import type { ToolStatus, ToolUseData } from '../../core/types';
+import type {
+    ToolStatus,
+    ToolUseData,
+    ToolResultExtrasDto,
+    AgentRunTotalsDto,
+} from '../../core/types';
 
 /** The slice of CvToolRow's state the host reads/writes. The component
  *  satisfies this; BridgeToolHost wraps it and adds the bridge actions. */
@@ -18,19 +23,13 @@ export interface ToolRowState {
     readonly status: ToolStatus;
     readonly result: string;
     readonly fullLineCount: number;
-    /** Lines the edit landed on, straight from the CLI's patch. 0 when the tool isn't an edit,
-     *  wrote a new file, or hasn't finished yet. */
-    readonly editStartLine: number;
-    readonly editEndLine: number;
+    /** Per-tool fields from the result (edit line range, Agent totals). Absent until the tool
+     *  finishes, and for a tool that reports neither. */
+    readonly extras?: ToolResultExtrasDto | null;
     readonly elapsedSec: number;
     readonly expanded: boolean;
     /** The sub-agent this row SPAWNED (Agent tool only) — the transcript to fetch on expand. */
     readonly agentId: string;
-    /** Totals the CLI reported for a FINISHED Agent run; all absent while it runs, for every other
-     *  tool, and for an interrupted run. */
-    readonly agentDurationMs?: number;
-    readonly agentTokens?: number;
-    readonly agentToolUses?: number;
     /** The transcript this row LIVES in — routes open-output to that agent-<id>.jsonl.
      *  Empty in the main session. */
     readonly containerAgentId: string;
@@ -53,9 +52,9 @@ export interface ToolHost extends ToolRowState {
     readonly name: string;
     readonly input: Record<string, unknown>;
     readonly toolUseId: string;
-    /** What a finished Agent run cost. All 0 while it runs, for every other tool, and for an
+    /** What a finished Agent run cost, or null: while it runs, for every other tool, and for an
      *  interrupted run — the CLI reports no totals there. */
-    readonly agentTotals: { durationMs: number; tokens: number; toolUses: number };
+    readonly agentTotals: AgentRunTotalsDto | null;
 
     /** Open a file in VS, optionally selecting a line range. */
     openFile(filePath: string, startLine?: number, endLine?: number): void;
