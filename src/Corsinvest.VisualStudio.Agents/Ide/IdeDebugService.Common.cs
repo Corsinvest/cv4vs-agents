@@ -5,6 +5,7 @@
 
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
+using System;
 
 namespace Corsinvest.VisualStudio.Agents.Ide;
 
@@ -36,7 +37,15 @@ internal sealed partial class IdeDebugService
             var line = doc?.Selection is TextSelection sel ? sel.ActivePoint.Line : 0;
             return (file, line);
         }
-        catch { return (null, 0); }
+        catch (Exception ex)
+        {
+            // Not a per-item probe: this is where the debugger stopped, and it feeds StepAsync and
+            // GetCallStackAsync. Degrading to (null, 0) reads as "no location" — the same answer a
+            // session with no active document gives — so without this the COM failure behind it
+            // would leave nothing to read.
+            OutputWindowLogger.Global.LogException("IdeDebugService.CurrentLocation", ex);
+            return (null, 0);
+        }
     }
 
     private static string SafeModule(StackFrame sf)
