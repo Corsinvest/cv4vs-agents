@@ -11,7 +11,6 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | Restore panes on solution open | bool | `false` | Reopen the panes (with their sessions) that were open for a solution when it is reopened. |
-| Select lines when opening file | bool | `true` | When opening a file from a tool row, select the relevant lines in the editor. |
 | Default new session | `Chat` / `CLI` | `Chat` | Which kind the "New" button creates by default (the dropdown still lets you pick the other). |
 | Claude executable path | file path | *(empty)* | Override auto-detection with a specific `claude.exe` (browse with `…`). Empty = auto-detect via PATH / native installer / npm. Must be the real `.exe` — `.cmd`/`.bat`/`.ps1` shims can't be launched. |
 
@@ -21,12 +20,13 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 |---|---|---|---|
 | Show cost and duration | bool | `false` | Show cost (USD) and duration after each response. |
 | Show relative paths in tool rows | bool | `true` | File paths relative to the working directory (full path if outside it). |
+| Select lines when opening file | bool | `true` | When opening a file from a tool row, select the relevant lines in the editor. |
 | Preview lines | int | `3` | Lines shown in preview areas (tool output, user messages). `0` = no preview. |
 | Chat font size | int (px) | `13` | Font size of the chat message text. |
 | Show WebView developer entries | bool | `false` | Add "WebView DevTools" and "WebView task manager" to the chat toolbar's "More" (…) menu — the browser console/DOM/network on the chat itself, and the browser's processes with their memory and CPU. Pre-release builds always offer both. |
 | Autosave before Claude reads/writes | bool | `true` | Save a dirty file before Claude reads/writes it, so it sees your in-editor edits, not the stale on-disk version. |
 | Send post-edit diagnostics to Claude (experimental) | bool | `false` | Feed back the new errors/warnings an edit introduced. Experimental — unreliable because VS only analyses files open in an editor (see IDE integration). |
-| Allowed upload file extensions | string[] | ~120 defaults | Extensions accepted on upload/drop. Images → images, `.pdf` → document, rest → text; anything else rejected. Editable list. |
+| Allowed upload file extensions | string[] | 93 defaults | Extensions accepted on upload/drop. Images → images, `.pdf` → document, rest → text; anything else rejected. Editable list. |
 | Sticky user messages | bool | `true` | Pin the current exchange's user message at the top while the reply/tool rows scroll below. |
 | Show tool errors inline | bool | `false` | Show the tool error inline below the diff/output; off = alert icon only (click to open in VS). |
 | Compact Ask answers | bool | `true` | After an `AskUserQuestion`, show only the chosen option per question (compact); off = all options with the pick highlighted. |
@@ -43,7 +43,7 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| Log level | `None`…`Trace` | `None` | Output-window verbosity. `None` = silent; `Trace` = include bridge traffic. |
+| Log level | `None`…`Trace` | `None` | Output-window verbosity. `None` = silent; `Trace` = include bridge traffic. Lines are prefixed with the originating pane (`[chat#2]`, `[cli#1]`) so several open panes can be told apart in the single Output pane. |
 | Enable performance logging | bool | `false` | Performance-span logging in the Output window (C#) and browser console (JS). Requires a VS restart. |
 
 ## Profiles

@@ -6,6 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **A turn tells you what it cost and how long it took.** The spinner counts the seconds while the
+  turn runs and while it is thinking, and the cost lands on the hover-actions row when it finishes.
+  An Agent row does the same for its own run — elapsed while it works, cost when it is done — in
+  history too, where the numbers come back off the `.jsonl`. Sub-agent and thinking badges now read
+  the value they are given instead of parsing their own label.
+
+- **A message the CLI retracts leaves the chat.** When the model refuses, the CLI falls back to
+  another one and withdraws the partial answer the first had already sent; we kept showing it. The
+  user would read that text and reply to it while the model had no memory of writing it, so the
+  transcript and the model's context quietly disagreed from there on. Both signals the CLI sends are
+  honoured (`supersedes` on the replacing message, `retracted_message_uuids` at the end of the turn),
+  at any depth — a sub-agent's reply is as retracted as a main-thread one.
+
+- **The model selector follows a refusal fallback.** The same swap is persistent for the rest of the
+  session, so the selector kept naming a model that was no longer answering, and the next model
+  change would have sent the old id back.
+
+### Fixed
+
+- **A build through the MCP tools no longer freezes the IDE.** It ran the build on the UI thread and
+  then waited for it there, so Visual Studio was unusable until it finished — while the same build
+  started from the IDE leaves it responsive.
+
+- **Not every line on stderr is a failed session.** Anything `claude.exe` wrote to stderr became the
+  red error banner: no step in the chain ever decided it was an error. An untrusted workspace, or one
+  of Node's own deprecation warnings, would raise three banners over a chat that was working fine.
+  A line now reaches the chat only if the process actually died — the CLI's own verdict on how bad it
+  was, rather than us matching its wording release by release. Nothing is lost: every line was
+  already logged.
+
+- **An API failure looks like a failure.** Nothing on the wire says "error" when the API refuses a
+  turn — the CLI fabricates an assistant message whose text *is* the error and sends it like any
+  reply, so the chat drew it as one, grey dot included. The frame does carry which failure it was,
+  and it is now read and shown as such.
+
+- **Opening a tool's input opens something the editor can read.** The temporary file it was written
+  to had a name Visual Studio would not open.
+
+- **Every client operation reports its own failure.** A session respawn, an interrupt, a model or
+  permission-mode change, a thinking-budget change: each could fail with nothing written anywhere,
+  leaving a pane that looked fine and did nothing. Each now logs its own failure, at the point where
+  it knows what went wrong.
+
+- **Three catches on user-facing paths stopped swallowing.** A file that would not open and a
+  debugger operation that failed both returned quietly, so "nothing happened" was all you got.
+
+### Changed
+
+- **Markdown is rendered once per message**, not on every re-render — the transcript stops re-parsing
+  text that has not changed.
+
+
 ## [1.2.0] - 2026-08-05
 
 The chat pane stops fighting Visual Studio for the screen, the `@` menu finds a file wherever it

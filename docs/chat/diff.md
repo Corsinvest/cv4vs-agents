@@ -16,6 +16,20 @@ modes:
 - **Patch** — the raw unified-diff text.
 - **Auto** — split or unified depending on the available width.
 
+## Opening the file at the change
+
+Clicking the path on an Edit row opens the file in Visual Studio with the **changed lines already
+selected** — not the whole hunk: the context lines a patch carries either side are left out, so the
+selection is what the agent actually wrote.
+
+The range comes from the `structuredPatch` the CLI produces when it applies the edit, and travels
+with the tool result. Nothing is searched for in the file, so it still lands correctly after the
+edit has been applied — the usual case — and after later edits have moved the lines. A `Write`
+creating a new file has no patch and simply opens it, as does a tool still running; a `MultiEdit`
+selects the first change.
+
+Turn it off with **Select lines when opening file** (**Options → Chat**) to just open the file.
+
 ## Open in Visual Studio
 
 The **Open in Visual Studio** button (on by default — **Options → Chat**) hands the change to VS's
