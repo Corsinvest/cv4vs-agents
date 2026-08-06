@@ -143,6 +143,27 @@ export class Transcript {
     }
 
     /**
+     * Move the top-level entry with `uuid` to the end.
+     *
+     * A message typed during a turn is echoed at once but only sent when that turn ends, so its
+     * bubble sits above a reply it did not prompt — and `buildGroups` opens an exchange on every
+     * user message, so that reply is grouped under the wrong question. Moving it on dispatch also
+     * matches the order the .jsonl records, so the live view and a reopened session agree.
+     *
+     * Top level only: a user message is never nested under a tool row.
+     */
+    moveToEnd(uuid: string): boolean {
+        const i = this._entries.findIndex((e) => 'uuid' in e && e.uuid === uuid);
+        if (i < 0 || i === this._entries.length - 1) {
+            return false;
+        }
+        const moved = this._entries[i];
+        this._entries = [...this._entries.slice(0, i), ...this._entries.slice(i + 1), moved];
+        this._reindex();
+        return true;
+    }
+
+    /**
      * Replace the entry with `id` by `fn(entry)`, rebuilding every object on the path down to it.
      *
      * Returns false when the id is no longer in the tree — an async callback (a sub-agent fetch, a

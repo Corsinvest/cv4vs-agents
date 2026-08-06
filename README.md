@@ -240,6 +240,10 @@ See [Options → Profiles](docs/options.md#profiles).
 
 - **Multi-line prompt** with Send/Stop, Enter-to-send (or Ctrl+Enter, configurable),
   Shift+Enter for a newline.
+- **Write while it is still answering** — the message is held until the turn ends, then sent. Its
+  bubble appears straight away, greyed out so it does not read as already sent, and drops into place
+  below the reply it was waiting on, so each answer stays under the question that prompted it.
+  Stopping the turn discards what is still waiting, since the model was never given it.
 - **Slash-command palette** — a lightning button opens a unified palette; typing `/` filters. It
   lists the CLI's slash/skill commands plus built-in actions (Attach, Mention, Clear, Switch model,
   Settings, Manage plugins, Open Claude in Terminal, Help, Report a problem).

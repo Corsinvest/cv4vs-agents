@@ -8,6 +8,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **A message written during a turn says so, and lands where it was sent.** Typing while Claude is
+  still answering has always held the message back until the turn ended, but its bubble went in at
+  once and looked exactly like a sent one — then stayed above a reply it had not prompted. Since an
+  exchange begins at each user message, that reply was also filed under the wrong question, and a
+  reopened session showed a different order from the live one, because the `.jsonl` records what was
+  actually sent. The bubble is now greyed out while it waits and drops below the running reply when
+  it goes, which is the order the session file already had. Stopping the turn takes those bubbles
+  away rather than leaving them looking sent — the model was never given them. The "N messages
+  queued" bar above the composer is gone with this: it counted what the bubbles now show, and its
+  Clear discarded the whole queue, which was never the thing anyone wanted to do.
+
 - **A turn tells you what it cost and how long it took.** The spinner counts the seconds while the
   turn runs and while it is thinking, and the cost lands on the hover-actions row when it finishes.
   An Agent row does the same for its own run — elapsed while it works, cost when it is done — in
@@ -53,6 +64,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - **Three catches on user-facing paths stopped swallowing.** A file that would not open and a
   debugger operation that failed both returned quietly, so "nothing happened" was all you got.
+
+- **A selection no longer claims a line it never reached.** Dragging to the *start* of a line leaves
+  the end offset on a line holding none of the selected characters, and it was reported anyway — so
+  selecting lines 5 to 8's first column told Claude the selection spanned 5-8, one line more than
+  was highlighted. The text was always right; only the line numbers Claude was asked to reason about
+  were off.
 
 ### Changed
 
