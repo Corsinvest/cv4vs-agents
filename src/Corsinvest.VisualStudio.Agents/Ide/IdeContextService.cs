@@ -219,6 +219,16 @@ internal sealed partial class IdeContextService : IDisposable
             var isEmpty = sel.IsEmpty;
             var startLine = snapshot.GetLineFromPosition(sel.Start.Position.Position);
             var endLine = snapshot.GetLineFromPosition(sel.End.Position.Position);
+            // Dragging to the START of a line leaves the end offset on a line the selection holds no
+            // character of — reporting it would hand Claude one line more than was selected. Step
+            // back to the line that actually ends the selection. Guarded on a real multi-line
+            // selection so a bare caret at column 0 is left alone.
+            if (!isEmpty
+                && endLine.LineNumber > startLine.LineNumber
+                && sel.End.Position.Position == endLine.Start.Position)
+            {
+                endLine = snapshot.GetLineFromLineNumber(endLine.LineNumber - 1);
+            }
             var ctx = new EditorContext
             {
                 FilePath = filePath,
@@ -229,7 +239,9 @@ internal sealed partial class IdeContextService : IDisposable
                 StartLine = startLine.LineNumber + 1,
                 EndLine = endLine.LineNumber + 1,
                 StartColumn = sel.Start.Position.Position - startLine.Start.Position,
-                EndColumn = sel.End.Position.Position - endLine.Start.Position,
+                // Clamped to the line's end: when the line above was stepped back to, the original
+                // offset sits past it and the bare subtraction would overshoot.
+                EndColumn = Math.Max(0, Math.Min(sel.End.Position.Position, endLine.End.Position) - endLine.Start.Position),
                 SelectedText = isEmpty
                     ? string.Empty
                     : snapshot.GetText(sel.Start.Position.Position, sel.End.Position.Position - sel.Start.Position.Position),
