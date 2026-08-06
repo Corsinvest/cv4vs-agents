@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -43,17 +43,36 @@ internal sealed partial class WebViewMessageHandler
     }
     // The static helpers below log through OutputWindowLogger, not the pane logger: a primary
     // constructor parameter isn't in scope in a static member (CS9105).
-    private static string FindToolInput(string workingDirectory, string sessionId, string toolUseId, ClaudePaths paths, string toolName = "", string agentId = null)
+
+    /// <summary>The transcript holding a tool call: the session file, or the sub-agent's own when
+    /// agentId names one. Null when anything is missing or unsafe — sessionId and agentId compose a
+    /// path and come from the WebView, so they are checked for traversal here, once, instead of at
+    /// each lookup.</summary>
+    private static string TranscriptPathFor(string workingDirectory, string sessionId, string toolUseId,
+                                            ClaudePaths paths, string agentId)
     {
         if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(toolUseId)) { return null; }
-        // sessionId/agentId compose a file path and come from the WebView — reject traversal.
         if (!SessionManager.IsSafePathToken(sessionId)) { return null; }
         if (!string.IsNullOrEmpty(agentId) && !SessionManager.IsSafePathToken(agentId)) { return null; }
         var folder = paths.SessionFolder(workingDirectory);
         var path = string.IsNullOrEmpty(agentId)
             ? Path.Combine(folder, sessionId + ".jsonl")
             : Path.Combine(folder, sessionId, "subagents", $"agent-{agentId}.jsonl");
-        if (!File.Exists(path)) { return null; }
+        return File.Exists(path) ? path : null;
+    }
+
+    /// <summary>What a tool was called with: the text to show, and the file it names when it names
+    /// one. Both come off the same `input` object, so reading it twice would mean scanning the
+    /// JSONL twice. FilePath is null for the tools that write no file — Bash, Grep, most MCP.</summary>
+    private static (string Content, string FilePath) FindToolInput(string workingDirectory,
+                                                                   string sessionId,
+                                                                   string toolUseId,
+                                                                   ClaudePaths paths,
+                                                                   string toolName = "",
+                                                                   string agentId = null)
+    {
+        var path = TranscriptPathFor(workingDirectory, sessionId, toolUseId, paths, agentId);
+        if (path == null) { return default; }
         try
         {
             foreach (var line in File.ReadLines(path, System.Text.Encoding.UTF8))
@@ -68,7 +87,9 @@ internal sealed partial class WebViewMessageHandler
                     {
                         if (item.Val("type", "") == "tool_use" && item.Val("id") == toolUseId)
                         {
-                            return item["input"] is not JObject input ? null : ProjectInput(toolName, input);
+                            return item["input"] is not JObject input
+                                ? default
+                                : (ProjectInput(toolName, input), input.Val("file_path"));
                         }
                     }
                 }
@@ -76,19 +97,15 @@ internal sealed partial class WebViewMessageHandler
             }
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("FindToolInput/Result", ex); }
-        return null;
+        return default;
     }
+    /// <summary>What the tool answered. Unlike the IN side this is always text meant for the model,
+    /// never a file: a Write reports "File created successfully at: …", a Read returns the content
+    /// with line numbers prefixed. That is why the temp it opens into stays .txt.</summary>
     private static string FindToolResult(string workingDirectory, string sessionId, string toolUseId, ClaudePaths paths, string agentId = null)
     {
-        if (string.IsNullOrEmpty(sessionId) || string.IsNullOrEmpty(toolUseId)) { return null; }
-        // sessionId/agentId compose a file path and come from the WebView — reject traversal.
-        if (!SessionManager.IsSafePathToken(sessionId)) { return null; }
-        if (!string.IsNullOrEmpty(agentId) && !SessionManager.IsSafePathToken(agentId)) { return null; }
-        var folder = paths.SessionFolder(workingDirectory);
-        var path = string.IsNullOrEmpty(agentId)
-            ? Path.Combine(folder, sessionId + ".jsonl")
-            : Path.Combine(folder, sessionId, "subagents", $"agent-{agentId}.jsonl");
-        if (!File.Exists(path)) { return null; }
+        var path = TranscriptPathFor(workingDirectory, sessionId, toolUseId, paths, agentId);
+        if (path == null) { return null; }
         try
         {
             foreach (var line in File.ReadLines(path, System.Text.Encoding.UTF8))
@@ -148,6 +165,51 @@ internal sealed partial class WebViewMessageHandler
         var invalid = Path.GetInvalidFileNameChars();
         var safe = string.Concat(name.Select(c => invalid.Contains(c) ? '_' : c)).Trim('_');
         return safe.Length > 40 ? safe.Substring(0, 40) : safe;
+    }
+
+    /// <summary>Name for the temp file a tool's IN/OUT is opened from — readable in the tab, and
+    /// carrying an extension the editor can colour.
+    ///
+    /// The temp is the right thing to open here and not a stand-in for the real file: clicking the
+    /// row's TITLE already goes to the file. Clicking the content asks a different question — what
+    /// was written in THAT turn — and the file on disk answers it wrongly three turns later, while
+    /// a temp cannot change under you.</summary>
+    private static string TempFileName(string toolName, string which, string filePath, string toolUseId)
+    {
+        // Last few chars of the tool_use_id: enough to keep two temps apart — two writes to
+        // same-named files in different folders, or the same command run twice — without turning
+        // the tab into a guid nobody can read back to a row.
+        var id = SanitizeFileName(toolUseId ?? "");
+        if (id.Length > 6) { id = id.Substring(id.Length - 6); }
+        var side = which == "in" ? "in" : "out";
+
+        // A tool that names a file gets that file's name and extension: "Modello_in_a3f21.cs" reads
+        // back to the row at a glance and the editor colours it. The whole title used to go through
+        // SanitizeFileName instead, which turned a path into "claude_[Write] C__Users_daniele_cors".
+        if (which == "in" && !string.IsNullOrEmpty(filePath))
+        {
+            var name = SanitizeFileName(Path.GetFileNameWithoutExtension(filePath));
+            var ext = Path.GetExtension(filePath);
+            if (!string.IsNullOrEmpty(name))
+            {
+                return $"{name}_{side}_{id}{(string.IsNullOrEmpty(ext) ? ".txt" : ext)}";
+            }
+        }
+
+        // A shell tool's IN is the command — script, so give it the script's extension, with
+        // PowerShell told apart from Bash: .ps1 is what VS colours, and calling it .sh on Windows
+        // highlights it as the wrong language. Its OUT is stdout, which is text and nothing else,
+        // so it stays .txt like every other result.
+        var fallbackExt = which == "in"
+            ? toolName switch
+            {
+                "PowerShell" => ".ps1",
+                "Bash" => ".sh",
+                _ => ".txt",
+            }
+            : ".txt";
+        var who = SanitizeFileName(string.IsNullOrEmpty(toolName) ? AppConstants.AppId : toolName);
+        return $"{who}_{side}_{id}{fallbackExt}";
     }
 
     /// <summary>Write a chat document / composer attachment to a temp file and open it.

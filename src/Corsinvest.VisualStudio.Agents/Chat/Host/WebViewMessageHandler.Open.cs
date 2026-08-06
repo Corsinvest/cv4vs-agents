@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -8,6 +8,7 @@ using Corsinvest.VisualStudio.Agents.Helpers;
 using Corsinvest.VisualStudio.Agents.Options;
 using Microsoft.VisualStudio.Shell;
 using Newtonsoft.Json.Linq;
+using System;
 using System.IO;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Host;
@@ -45,43 +46,60 @@ internal sealed partial class WebViewMessageHandler
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             var p = data.ToObject<Contracts.ToolOutputNotification>();
             var toolUseId = p.ToolUseId ?? "";
-            var title = p.Title ?? "Tool Output";
             var which = p.Which ?? "out";
             var agentId = p.AgentId;
             var toolName = p.ToolName ?? "";
             if (string.IsNullOrEmpty(toolUseId)) { return; }
-            // Read full content from the JSONL — the WebView only holds
-            // preview-capped text, so this gives the untruncated output.
-            // agentId routes lookup to the sub-agent transcript when present.
-            // But the Agent ROW itself carries an agentId (for fetching its
-            // children) while its OWN result lives in the main transcript — so
-            // fall back to the main file when the sub-agent file has no match.
+            // Read full content from the JSONL — the WebView only holds preview-capped text, so
+            // this gives the untruncated output. The fallback below is for the Agent ROW: it
+            // carries an agentId (it needs one to fetch its children) while its OWN result lives
+            // in the main transcript, so the sub-agent file has no match for it.
             var paths = PaneClaudePaths;
-            var content = which == "in"
-                            ? FindToolInput(client.WorkingDirectory, client.SessionId, toolUseId, paths, toolName, agentId)
-                            : FindToolResult(client.WorkingDirectory, client.SessionId, toolUseId, paths, agentId);
-            if (string.IsNullOrEmpty(content) && !string.IsNullOrEmpty(agentId))
+            string content = null;
+            // Only the IN side names a file. OUT for a Write is "File created successfully at: …",
+            // which is not the file and must not lend the temp its extension.
+            string filePath = null;
+            // The sub-agent transcript first when there is one, then the main file. Same call, and
+            // the agentId is what picks the file it reads.
+            foreach (var lookIn in string.IsNullOrEmpty(agentId) ? [null] : new[] { agentId, null })
             {
-                content = which == "in"
-                            ? FindToolInput(client.WorkingDirectory, client.SessionId, toolUseId, paths, toolName)
-                            : FindToolResult(client.WorkingDirectory, client.SessionId, toolUseId, paths);
+                if (which == "in")
+                {
+                    (content, filePath) = FindToolInput(client.WorkingDirectory, client.SessionId, toolUseId, paths, toolName, lookIn);
+                }
+                else
+                {
+                    content = FindToolResult(client.WorkingDirectory, client.SessionId, toolUseId, paths, lookIn);
+                }
+                if (!string.IsNullOrEmpty(content)) { break; }
             }
+
             if (string.IsNullOrEmpty(content))
             {
                 log.Debug(() => $"[open-output] no content found for tool_use_id={toolUseId}");
                 return;
             }
+
             // Strip the CLI's <tool_use_error> wrapper (protocol detail).
             // Same regex as the WebView's `_cleanResult`.
-            var m = System.Text.RegularExpressions.Regex.Match(
-                content,
-                @"<tool_use_error>([\s\S]*?)</tool_use_error>",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var m = System.Text.RegularExpressions.Regex.Match(content,
+                                                              @"<tool_use_error>([\s\S]*?)</tool_use_error>",
+                                                              System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             if (m.Success) { content = m.Groups[1].Value.Trim(); }
-            var ext = title.StartsWith("[Bash]") || title.StartsWith("[PowerShell]") ? ".sh" : ".txt";
-            var suffix = which == "in" ? "_in" : "_out";
-            var tmpPath = Path.Combine(Path.GetTempPath(), $"claude_{SanitizeFileName(title)}{suffix}{ext}");
+            var tmpPath = Path.Combine(Path.GetTempPath(), TempFileName(toolName, which, filePath, toolUseId));
+            // Clear the flag before rewriting: a previous open left the file read-only, and
+            // WriteAllText would throw on it.
+            try
+            {
+                if (File.Exists(tmpPath)) { File.SetAttributes(tmpPath, FileAttributes.Normal); }
+            }
+            catch (Exception ex) { log.Warn($"[open-output] could not clear read-only on {tmpPath}: {ex.Message}"); }
             File.WriteAllText(tmpPath, content, System.Text.Encoding.UTF8);
+            // Read-only on purpose: this is a copy of what the tool wrote at that turn, and now that
+            // it carries the real extension it looks even more like the source file. Editing it
+            // would change nothing on disk, which is worth making obvious rather than discovering.
+            try { File.SetAttributes(tmpPath, FileAttributes.ReadOnly); }
+            catch (Exception ex) { log.Warn($"[open-output] could not mark {tmpPath} read-only: {ex.Message}"); }
             VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, tmpPath,
                 Microsoft.VisualStudio.VSConstants.LOGVIEWID.TextView_guid, out _, out _, out var frame);
             frame?.Show();
