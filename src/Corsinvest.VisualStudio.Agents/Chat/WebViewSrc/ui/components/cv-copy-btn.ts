@@ -7,7 +7,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Copy16Regular from '@fluentui/svg-icons/icons/copy_16_regular.svg';
 import Checkmark16Regular from '@fluentui/svg-icons/icons/checkmark_16_regular.svg';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, iconButtonStyles } from '../styles/shared';
 
 /**
  * Reusable copy-to-clipboard icon button (wraps `<fluent-button>`, shows a
@@ -24,37 +24,10 @@ import { iconStyles } from '../styles/shared';
 export class CvCopyBtn extends LitElement {
     static override styles = [
         iconStyles,
+        iconButtonStyles,
         css`
             :host {
                 display: contents;
-            }
-            /* Small icon-action button: compact, theme-aware, keyboard-focusable. A bare <button>
-               (not fluent-button) so it can be this small without violating the fluent-pure rule —
-               the shared icon-action standard. Callers still position it via ::part(button). */
-            .icon-btn {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                padding: 3px;
-                border: 0;
-                border-radius: var(--borderRadiusSmall);
-                background: transparent;
-                color: inherit;
-                cursor: pointer;
-                opacity: 0.75;
-            }
-            .icon-btn:hover {
-                background: color-mix(in srgb, var(--colorNeutralForeground1) 10%, transparent);
-                opacity: 1;
-            }
-            .icon-btn:focus-visible {
-                outline: 1px solid var(--colorStrokeFocus2, currentColor);
-                outline-offset: 1px;
-            }
-            .icon-btn svg {
-                width: 14px;
-                height: 14px;
-                display: block;
             }
             /* Copied state: tint the checkmark green for a clearer "done" signal. */
             .icon-btn.copied svg {

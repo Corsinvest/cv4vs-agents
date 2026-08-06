@@ -7,7 +7,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Speaker216Regular from '@fluentui/svg-icons/icons/speaker_2_16_regular.svg';
 import Pause16Regular from '@fluentui/svg-icons/icons/pause_16_regular.svg';
-import { iconStyles } from '../styles/shared';
+import { iconStyles, iconButtonStyles } from '../styles/shared';
 import { renderMarkdown } from '../../core/markdown';
 
 // Web Speech synthesis is a single global engine — only one utterance plays at a time. Track which
@@ -47,34 +47,10 @@ function toSpeech(md: string): string {
 export class CvSpeakBtn extends LitElement {
     static override styles = [
         iconStyles,
+        iconButtonStyles,
         css`
             :host {
                 display: contents;
-            }
-            .icon-btn {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                padding: 3px;
-                border: 0;
-                border-radius: var(--borderRadiusSmall);
-                background: transparent;
-                color: inherit;
-                cursor: pointer;
-                opacity: 0.75;
-            }
-            .icon-btn:hover {
-                background: color-mix(in srgb, var(--colorNeutralForeground1) 10%, transparent);
-                opacity: 1;
-            }
-            .icon-btn:focus-visible {
-                outline: 1px solid var(--colorStrokeFocus2, currentColor);
-                outline-offset: 1px;
-            }
-            .icon-btn svg {
-                width: 14px;
-                height: 14px;
-                display: block;
             }
             /* Speaking: a tinted pause icon — click to pause (the speaker icon returns; click resumes). */
             .icon-btn.speaking svg {
