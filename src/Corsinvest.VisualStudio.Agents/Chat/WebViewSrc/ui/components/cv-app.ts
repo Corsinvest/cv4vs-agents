@@ -813,6 +813,8 @@ export class CvApp extends LitElement {
         this.removeEventListener('subagent-toggle', this._onChildrenToggle as EventListener);
         this.removeEventListener('compact-expand', this._onCompactExpand as EventListener);
         this.removeEventListener('model-switched', this._onModelSwitched as EventListener);
+        this.removeEventListener('queued-sent', this._onQueuedSent as EventListener);
+        this.removeEventListener('queued-dropped', this._onQueuedDropped as EventListener);
         for (const off of this._offs) {
             off();
         }

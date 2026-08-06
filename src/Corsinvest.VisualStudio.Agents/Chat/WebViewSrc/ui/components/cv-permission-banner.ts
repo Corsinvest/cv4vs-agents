@@ -12,6 +12,7 @@ import { iconStyles } from '../styles/shared';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { state as appState } from '../../core/state';
+import { PermissionQueue } from '../../core/permission-queue';
 import type {
     ToolResultNotification,
     ToolPermissionNotification,
@@ -381,6 +382,17 @@ export class CvPermissionBanner extends LitElement {
 
     @state() private _pending: ToolPermission | null = null;
 
+    /**
+     * Which request is up and which are waiting. Answered one at a time rather than stacked: each
+     * carries its own choices, its own editable command and its own scope cycle, and two of those
+     * on screen together would ask the user to track which buttons belong to which tool.
+     *
+     * Not `@state`: Lit dirty-checks by reference and this object is mutated in place. `_pending`
+     * is the rendered projection of `_queue.current`, and it IS state — every path that changes
+     * the queue assigns it, which is what triggers the render.
+     */
+    private _queue = new PermissionQueue<ToolPermission>();
+
     // Editable command text for tools that carry a `command` (Bash/PowerShell):
     // shown in a textarea, sent back as updatedInput on allow. null = not editing.
     @state() private _editedCommand: string | null = null;
@@ -454,20 +466,18 @@ export class CvPermissionBanner extends LitElement {
                         permissionSuggestions:
                             dto.permissionSuggestions as unknown as PermissionSuggestion[],
                     };
-                    // AskUserQuestion is interactive: the user answers it directly.
-                    if (data.name === 'AskUserQuestion') {
-                        this._startQuestions(data);
-                        return;
-                    }
-                    this._pending = data;
-                    appState.pendingPermission = { id: data.id, name: data.name };
+                    // AskUserQuestion is interactive — the user answers it directly rather than
+                    // allowing a tool — but it queues like everything else: it is still a
+                    // can_use_tool the CLI is waiting on, and letting it jump the queue would
+                    // strand whatever was on screen.
+                    this._enqueue(data);
                 },
             ),
         );
         this._offs.push(
             bridge.onNotification<ToolResultNotification>(Msg.toWebView.chat.toolResult, (data) => {
-                if (this._pending && data?.toolUseId === this._pending.id) {
-                    this._dismiss();
+                if (data?.toolUseId) {
+                    this._drop(data.toolUseId);
                 }
             }),
         );
@@ -476,13 +486,19 @@ export class CvPermissionBanner extends LitElement {
             bridge.onNotification<ToolPermissionCancelNotification>(
                 Msg.toWebView.chat.toolPermissionCancel,
                 (data) => {
-                    if (this._pending && data?.toolUseId === this._pending.id) {
-                        this._dismiss();
+                    if (data?.toolUseId) {
+                        this._drop(data.toolUseId);
                     }
                 },
             ),
         );
-        this._offs.push(bridge.onNotification(Msg.toWebView.chat.cleared, () => this._dismiss()));
+        // Session gone: everything waiting belonged to it, and none of it can be answered now.
+        this._offs.push(bridge.onNotification(Msg.toWebView.chat.cleared, () => this._clearAll()));
+        // The CLI died. Nothing on screen can be answered any more — there is no process left to
+        // send the answer to — and a banner asking about a tool that will never run is worse than
+        // no banner: the user clicks Yes and nothing happens. The failure itself is reported by
+        // cv-app's notice; this only takes down what can no longer be acted on.
+        this._offs.push(bridge.onNotification(Msg.toWebView.cli.exited, () => this._clearAll()));
         // Keyboard shortcuts while a prompt is open: Esc cancels, 1/2/3 pick a
         // choice, Enter confirms the default. Disabled while typing in the
         // "tell Claude what to do instead" field.
@@ -631,38 +647,64 @@ export class CvPermissionBanner extends LitElement {
         return this._activeInShadow()?.id === 'permission-command';
     }
 
-    private _dismiss(): void {
-        this._pending = null;
-        appState.pendingPermission = null;
-        this._editedCommand = null;
-        this._qIndex = 0;
-        this._picked = new Map();
-        this._other = new Map();
-        this._scopeIdx = 0;
-        this._scopeActive = false;
-        this._focusedOnOpen = false;
-        // Return focus to the composer: clearing pendingPermission re-shows the prompt,
-        // but only on the next render, so defer the focus a frame (like dialog-focus).
-        requestAnimationFrame(() =>
-            (
-                document.querySelector('cv-prompt') as { focusInput?: () => void } | null
-            )?.focusInput?.(),
-        );
+    /** Take a request: on screen if nothing is up, behind the others if something is. */
+    private _enqueue(req: ToolPermission): void {
+        if (this._queue.push(req)) {
+            this._show(req);
+        }
     }
 
-    private _startQuestions(data: ToolPermission): void {
-        const qs = data.input?.questions ?? [];
+    /** Put a request on screen, or clear the banner when given null. The per-request state belongs
+     *  to whichever is being answered, so it starts clean whether this is the first or the fifth. */
+    private _show(req: ToolPermission | null): void {
+        this._pending = req;
+        appState.pendingPermission = req ? { id: req.id, name: req.name } : null;
+        this._editedCommand = null;
+        this._qIndex = 0;
+        // An AskUserQuestion needs a slot per question up front; every other tool has none.
         const picked = new Map<string, Set<string>>();
-        for (const q of qs) {
+        for (const q of req?.input?.questions ?? []) {
             picked.set(q.question, new Set());
         }
         this._picked = picked;
         this._other = new Map();
-        this._qIndex = 0;
-        this._pending = data;
-        // Mark a pending interaction so the input box hides while the user
-        // answers (no diff/preview fields needed for questions).
-        appState.pendingPermission = { id: data.id, name: data.name };
+        this._scopeIdx = 0;
+        this._scopeActive = false;
+        this._focusedOnOpen = false;
+        // Nothing left to answer: hand the caret back to the composer. Clearing pendingPermission
+        // re-shows the prompt, but only on the next render, so defer a frame (like dialog-focus).
+        // Not done when another request took over — updated() focuses that one's first choice.
+        if (!req) {
+            requestAnimationFrame(() =>
+                (
+                    document.querySelector('cv-prompt') as { focusInput?: () => void } | null
+                )?.focusInput?.(),
+            );
+        }
+    }
+
+    /** Drop `toolUseId` wherever it is — on screen or still waiting. A queued one has to go too:
+     *  the CLI cancels a superseded request by id, and a tool_result can arrive for one nobody
+     *  answered. Left in, it would surface later asking about a tool that has already run. */
+    private _drop(toolUseId: string): void {
+        const before = this._queue.current;
+        const now = this._queue.drop(toolUseId);
+        if (now !== before) {
+            this._show(now);
+        }
+    }
+
+    /** The current request is answered or gone: show whoever was waiting, or close. Handing over
+     *  rather than closing is the point — the CLI is still holding those requests open. */
+    private _dismiss(): void {
+        this._show(this._queue.next());
+    }
+
+    /** Take down everything, current and waiting, without answering any of it. For the cases where
+     *  there is nothing left to answer TO: the session was swapped out, or the CLI died. */
+    private _clearAll(): void {
+        this._queue.clear();
+        this._show(null);
     }
 
     private _questions(): AskQuestion[] {
