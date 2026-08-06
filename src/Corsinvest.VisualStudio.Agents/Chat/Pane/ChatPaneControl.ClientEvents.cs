@@ -257,6 +257,14 @@ public partial class ChatPaneControl
             // Do NOT push the reply's `model` to the selector: sub-agents run on a different
             // model and would flip the selection. The selector reflects only the user's explicit
             // choice (set_model) plus init/history.
+            // Logged and nothing else for now: this frame is a failure wearing an answer's clothes
+            // (the CLI puts the error in the TEXT of a synthetic assistant), and the double
+            // rendering that follows is its own change. Warn, not Debug: the turn did not happen,
+            // and "why did it answer with an error message" deserves a line at the default level.
+            if (!string.IsNullOrEmpty(e.Error))
+            {
+                _log.Warn($"[chat] assistant frame reports an API failure: {e.Error}");
+            }
             // Evict BEFORE emitting: this message replaces those, so dropping them first keeps the
             // replacement from appearing under the text it supersedes.
             if (e.Supersedes is { Length: > 0 })
@@ -270,7 +278,8 @@ public partial class ChatPaneControl
                                                  e.ParentToolUseId,
                                                  e.Usage,
                                                  timestamp: e.Timestamp,
-                                                 uuid: e.Uuid);
+                                                 uuid: e.Uuid,
+                                                 error: e.Error);
         });
 
     private void OnUserMessage(object sender, UserMessageEventArgs e)

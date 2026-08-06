@@ -334,6 +334,11 @@ export interface UiAssistantEntry extends UiEntryBase {
     /** The message's wire uuid — what lets an entry be addressed after it has been rendered.
      *  Absent on a synthetic message (the permission banner's) and on older .jsonl lines. */
     uuid?: string;
+    /** Why the API call failed, when it did (`overloaded`, `rate_limit`, …). An API failure reaches
+     *  us as an assistant message whose text IS the error, so this is what tells the two apart —
+     *  without it the turn renders as an answer, grey dot and all. Absent on a normal message, and
+     *  on history: the .jsonl keeps no such field. */
+    error?: string;
 }
 
 /** A thinking block: the model's reasoning, live-only (never persisted). `streaming` true while
