@@ -390,3 +390,42 @@ test('removeByUuid: un ramo senza rimozioni mantiene la sua identita', () => {
     // del sub-agent a ogni retraction.
     assert.equal(t.entries[0], before, 'il ramo non toccato mantiene il riferimento');
 });
+
+test('moveToEnd: la bolla accodata scende in fondo', () => {
+    const t = new Transcript();
+    t.append({ ...userEntry(1), uuid: 'chiesto' });
+    t.append({ ...userEntry(2, 'in coda'), uuid: 'in-coda' });
+    t.append(assistantEntry(3, 'risposta'));
+
+    assert.equal(t.moveToEnd('in-coda'), true);
+
+    // Senza lo spostamento buildGroups aprirebbe l exchange su 2 e la risposta a 1 finirebbe
+    // sotto la domanda sbagliata.
+    assert.deepEqual(
+        t.entries.map((e) => e.id),
+        [1, 3, 2],
+    );
+});
+
+test('moveToEnd: index coerente dopo lo spostamento', () => {
+    const t = new Transcript();
+    t.append({ ...userEntry(1), uuid: 'a' });
+    t.append(toolEntry(2, 'agent'));
+    t.appendChild('agent', userEntry(3), childKey);
+
+    t.moveToEnd('a');
+
+    assert.equal(t.find(1)?.id, 1, 'la entry spostata resta raggiungibile');
+    assert.equal(t.find(3)?.id, 3, 'i figli scalati di posizione restano indicizzati');
+});
+
+test('moveToEnd: uuid assente o gia in fondo non tocca nulla', () => {
+    const t = new Transcript();
+    t.append({ ...userEntry(1), uuid: 'a' });
+    t.append({ ...userEntry(2), uuid: 'b' });
+    const before = t.entries;
+
+    assert.equal(t.moveToEnd('mai-visto'), false);
+    assert.equal(t.moveToEnd('b'), false, 'gia ultima');
+    assert.equal(t.entries, before, 'nessun nuovo array, Lit non rirenderizza');
+});

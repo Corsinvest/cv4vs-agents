@@ -98,6 +98,17 @@
     margin-bottom: 10px;
     position: relative;
 }
+/* A message typed while a turn was running: the bubble is there because the user wrote it, but
+ * the CLI has not been given it yet. Faded rather than badged — in a column of full-strength
+ * bubbles a pale one reads at a glance, and the bubble already carries copy/fork actions on hover
+ * without another icon competing. The transition is what makes the hand-off legible: the bubble
+ * fills in as it drops into place. */
+cv-message[queued] {
+    opacity: 0.55;
+}
+cv-message {
+    transition: opacity 0.15s ease-in;
+}
 /* Pin only when the exchange's first message is a REAL user bubble. A history page can
  * start on a synthetic role:user line (tool_result / meta-injection) that renders as a
  * tool/other; the [role="user"] guard keeps that leading group from pinning wrongly. */

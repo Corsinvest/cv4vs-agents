@@ -52,6 +52,11 @@ interface AppState {
     initialized: boolean;
     // Active sub-agents, mirrored from cv-app's Map for cross-component access.
     subagentTasks: SubagentTask[];
+    // Uuids of messages typed while a turn was running: echoed as bubbles at once, but not handed
+    // to the CLI until that turn ends. Mirrored from cv-prompt's queue, which keeps the payloads
+    // themselves (text + attachments) since it is the one that sends them — cv-app needs only the
+    // uuids, to fade a bubble that is on screen without having been sent.
+    queuedUuids: string[];
 
     // History paging (scroll-up fetches older pages on demand):
     // - currentSessionId tags pages so out-of-order replies for a replaced session are dropped.
@@ -170,6 +175,7 @@ const _impl = new StoreImpl<AppState>({
     pendingPermission: null,
     initialized: false,
     subagentTasks: [],
+    queuedUuids: [],
 
     currentSessionId: null,
     oldestLoadedOffset: -1,

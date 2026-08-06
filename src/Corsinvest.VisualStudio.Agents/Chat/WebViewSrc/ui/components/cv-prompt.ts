@@ -283,18 +283,6 @@ export class CvPrompt extends LitElement implements CommandHost {
                 border-bottom: 1px solid var(--colorNeutralStroke2);
                 position: relative;
             }
-            /* Same band as #attachments: what is staged above the box the user is typing in. */
-            #queued {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 8px;
-                padding: 0 2px 6px;
-                margin-bottom: 6px;
-                border-bottom: 1px solid var(--colorNeutralStroke2);
-                color: var(--colorNeutralForeground3);
-                font-size: 11px;
-            }
         `,
     ];
 
@@ -958,7 +946,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._echoUserMessage(payload);
         if (this._isBusy) {
             // Already running → enqueue. Drained when isBusy flips to false.
-            this._queue = [...this._queue, payload];
+            this._setQueue([...this._queue, payload]);
         } else {
             this._dispatch(payload);
         }
@@ -1103,13 +1091,65 @@ export class CvPrompt extends LitElement implements CommandHost {
         bridge.sendNotification<SendPromptNotification>(Msg.fromWebView.cli.sendPrompt, payload);
     }
 
+    /**
+     * Tell the transcript that a bubble entered the queue, or just left it. Only the queued path
+     * says anything: a message sent straight away is already both in the right place and really
+     * sent, so there is no state for it to leave.
+     *
+     * cv-app owns the transcript, so it does the fading and the move; this component knows the
+     * moments, not the tree.
+     */
+    /**
+     * Drop everything still queued and take its bubbles with it. They were echoed on submit but
+     * never reached the CLI, so leaving them would show the model messages it has never been told
+     * about — the same divergence a retraction causes, only from our side.
+     */
+    /**
+     * Replace the queue and mirror its uuids into the shared state — how cv-app knows which
+     * bubbles are on screen without having been sent.
+     *
+     * Every write goes through here, so the two cannot drift. The payloads stay with the component
+     * that sends them (text and attachments are of no use to anyone else); only the uuids, which
+     * another component does need, are published.
+     */
+    private _setQueue(queue: typeof this._queue): void {
+        this._queue = queue;
+        appState.queuedUuids = queue.map((q) => q.uuid);
+    }
+
+    /**
+     * Drop what is still queued and take its bubbles with it — on Stop, and when the session is
+     * swapped out from under it. They were echoed on submit but never reached the CLI, so leaving
+     * them on screen would show the model messages it has never been told about: the same
+     * divergence a retraction causes, from our own side.
+     */
+    dropQueue(): void {
+        if (this._queue.length === 0) {
+            return;
+        }
+        const uuids = this._queue.map((q) => q.uuid);
+        this._setQueue([]);
+        this.dispatchEvent(
+            new CustomEvent('queued-dropped', { detail: { uuids }, bubbles: true, composed: true }),
+        );
+    }
+
     private _flushQueue(): void {
         if (this._isBusy || this._queue.length === 0) {
             return;
         }
         const [next, ...rest] = this._queue;
-        this._queue = rest;
+        this._setQueue(rest);
         this._dispatch(next);
+        // The state above unfades the bubble; this says WHICH one left, so cv-app can move it below
+        // the reply it had been sitting above.
+        this.dispatchEvent(
+            new CustomEvent('queued-sent', {
+                detail: { uuid: next.uuid },
+                bubbles: true,
+                composed: true,
+            }),
+        );
     }
 
     private _addAttachment(att: Attachment): void {
@@ -1165,7 +1205,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         // A builtin that resets the session is also the way out of a stuck one, so it must not
         // queue behind the very turn it is meant to clear — the CLI takes these mid-turn.
         if (this._isBusy && !RESET_COMMANDS.has(text.trim().split(/\s+/, 1)[0])) {
-            this._queue = [...this._queue, payload];
+            this._setQueue([...this._queue, payload]);
         } else {
             this._dispatch(payload);
         }
@@ -1311,7 +1351,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         bridge.sendNotification(Msg.fromWebView.cli.stop, {});
         // Queued prompts were meant to follow the turn being stopped; flushing them after an
         // interrupt would send messages the user never confirmed at a CLI they just halted.
-        this._queue = [];
+        this.dropQueue();
         // Optimistic reset: free the UI now in case the CLI is wedged and
         // never sends `result`.
         appState.isBusy = false;
@@ -1444,30 +1484,6 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._ta?.focus({ preventScroll: true });
     };
 
-    /** Messages typed while a turn was running, waiting for it to end. The bubble for each is
-     *  already in the transcript (the echo goes in on submit), so without this row a queued
-     *  message is indistinguishable from a sent one — the whole reason it looked like the chat
-     *  had swallowed them. */
-    private _renderQueue() {
-        const n = this._queue.length;
-        if (n === 0) {
-            return nothing;
-        }
-        return html`
-            <div id="queued" title=${this._queue.map((q) => q.text).join('\n\n')}>
-                <span>${n === 1 ? '1 message queued' : `${n} messages queued`}</span>
-                <fluent-button
-                    appearance="transparent"
-                    size="small"
-                    @click=${(): void => {
-                        this._queue = [];
-                    }}
-                    >Clear</fluent-button
-                >
-            </div>
-        `;
-    }
-
     private _renderChips() {
         if (this._attachments.length === 0) {
             return nothing;
@@ -1509,7 +1525,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 @drop=${this._onDrop}
             >
                 <cv-notice-stack @notice-dismissed=${this._onNoticeDismissed}></cv-notice-stack>
-                ${this._renderQueue()} ${this._renderChips()}
+                ${this._renderChips()}
                 <textarea
                     id="input"
                     placeholder=${
