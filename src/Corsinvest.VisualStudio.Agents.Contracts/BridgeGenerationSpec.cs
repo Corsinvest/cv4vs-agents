@@ -81,6 +81,8 @@ public class BridgeGenerationSpec : GenerationSpec
         // the result carried none — so it's genuinely nullable on the wire.
         AddInterface<AssistantTextNotification>()
             .Member(x => nameof(x.ParentToolUseId)).Null()
+            // Absent on every message that isn't an API failure, which is nearly all of them.
+            .Member(x => nameof(x.Error)).Null()
             .Member(x => nameof(x.Usage)).Null();
         AddInterface<ExchangeEndedNotification>().Member(x => nameof(x.Usage)).Null();
         AddInterface<EvictMessagesNotification>();

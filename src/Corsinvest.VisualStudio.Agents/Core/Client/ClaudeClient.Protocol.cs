@@ -317,6 +317,7 @@ internal sealed partial class ClaudeClient
             Usage = m["usage"] as JObject,
             Uuid = obj.Val("uuid"),
             // Wrapper-level like uuid, not inside `message`.
+            Error = obj.Val("error"),
             Supersedes = (obj["supersedes"] as JArray)?
                 .Select(t => t?.ToString())
                 .Where(s => !string.IsNullOrEmpty(s))

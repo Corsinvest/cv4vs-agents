@@ -495,6 +495,11 @@ public class AssistantTextNotification
     // The permission banner's synthetic message is the one caller that passes none, and it only
     // ever emits tool_use blocks — never the text block this rides on.
     public string Uuid { get; set; }
+    // Why the API call failed, when it did — a closed enum from the CLI (overloaded, rate_limit,
+    // authentication_failed, …). An API failure arrives as an assistant message whose TEXT is the
+    // error, so without this the chat renders it as an ordinary answer, grey dot included. Null on
+    // every normal message: the CLI omits the field rather than sending an empty one.
+    public string Error { get; set; }
     public ContextUsageDto Usage { get; set; }
     // Message time (epoch ms) from the .jsonl record / live event; null when absent. The WebView
     // shows it as "x ago" with an absolute date/time tooltip.
