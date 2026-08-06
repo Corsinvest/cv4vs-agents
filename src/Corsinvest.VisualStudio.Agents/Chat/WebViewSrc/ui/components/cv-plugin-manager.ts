@@ -385,8 +385,11 @@ export class CvPluginManager extends CvDialogBase {
             this._installed = plugins.installed ?? [];
             this._available = plugins.available ?? [];
             this._marketplaces = markets.marketplaces ?? [];
-        } catch {
-            /* leave lists as-is; the op message area shows errors */
+        } catch (e) {
+            // _onOpResult never runs for this path (connectedCallback, not an op), so without
+            // filling the banner here a failed fetch reads exactly like "you have no plugins".
+            this._opError = true;
+            this._opMessage = `Could not load plugins: ${e instanceof Error ? e.message : String(e)}`;
         } finally {
             this._busy = false;
         }
