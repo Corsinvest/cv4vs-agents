@@ -62,7 +62,6 @@ public class GetSuggestionsRequest
 public class ToolOutputNotification
 {
     public string ToolUseId { get; set; }
-    public string Title { get; set; }
     public string Which { get; set; }
     public string AgentId { get; set; }
     public string ToolName { get; set; }

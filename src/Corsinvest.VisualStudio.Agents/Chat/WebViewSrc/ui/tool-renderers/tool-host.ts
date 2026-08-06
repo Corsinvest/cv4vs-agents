@@ -134,19 +134,8 @@ export class BridgeToolHost implements ToolHost {
     /** Open IN/OUT in a temp file in VS. The host holds only the preview-capped
      *  text; the app fetches the full content by toolUseId. */
     openOutput(which: 'in' | 'out'): void {
-        const inp = this.input;
-        const detail =
-            String(inp.file_path ?? '') ||
-            String(inp.command ?? '') ||
-            String(inp.script ?? '') ||
-            String(inp.code ?? '') ||
-            String(inp.pattern ?? '') ||
-            String(inp.query ?? '') ||
-            String(inp.url ?? '') ||
-            this.name;
         bridge.sendNotification<ToolOutputNotification>(Msg.fromWebView.open.toolOutput, {
             toolUseId: this.toolUseId,
-            title: `[${this.name || 'Tool'}] ${detail.slice(0, 60)}`,
             which,
             agentId: this.containerAgentId,
             // Lets the host project the IN to the tool's main field (Agent→prompt,
@@ -158,7 +147,6 @@ export class BridgeToolHost implements ToolHost {
     openError(): void {
         bridge.sendNotification<ToolOutputNotification>(Msg.fromWebView.open.toolOutput, {
             toolUseId: this.toolUseId,
-            title: `[${this.name || 'Tool'}] error`,
             which: 'out',
             agentId: this.containerAgentId,
         });
