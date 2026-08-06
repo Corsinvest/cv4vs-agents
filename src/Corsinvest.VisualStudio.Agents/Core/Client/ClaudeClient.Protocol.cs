@@ -128,8 +128,7 @@ internal sealed partial class ClaudeClient
             case ClientMessages.Type.ControlResponse: HandleControlResponse(obj); break;
             case ClientMessages.Type.ControlRequest: HandleIncomingControlRequest(obj); break;
             case ClientMessages.Type.ControlCancelRequest: HandleCancelRequest(obj); break;
-            case ClientMessages.Type.System when obj.Val("subtype", "") == ClientMessages.SystemSubtype.Init: HandleInit(obj); break;
-            case ClientMessages.Type.System: SystemMessageReceived?.Invoke(this, obj); break;
+            case ClientMessages.Type.System: HandleSystem(obj); break;
             case ClientMessages.Type.Assistant: HandleAssistant(obj); break;
             case ClientMessages.Type.User: HandleUser(obj); break;
             case ClientMessages.Type.Result: HandleResult(obj); break;
@@ -304,6 +303,38 @@ internal sealed partial class ClaudeClient
             PermissionMode = PermissionMode,
             FastModeState = obj.Val("fast_mode_state", "off"),
         });
+    }
+
+    /// <summary>Every `system` message, sorted by subtype in one place. `init` is the client's own
+    /// business and stops here; everything else is read for the state this class owns and then
+    /// passed on — a pane shouldn't have to remember to tell the client what the client's own
+    /// model is.</summary>
+    private void HandleSystem(JObject obj)
+    {
+        switch (obj.Val("subtype", ""))
+        {
+            case ClientMessages.SystemSubtype.Init:
+                HandleInit(obj);
+                return;
+
+            // The model refused on safety grounds and the CLI switched to another one — and the
+            // swap is persistent for the session, not a one-turn detour (sdk.d.ts:3989). `Model`
+            // follows the CLI everywhere else (it only advances once `set_model` is acked, and
+            // init reads it back), so it follows here too: leaving it behind would show the old
+            // model in the selector for the rest of the session, and send the old one on the next
+            // set_model.
+            case ClientMessages.SystemSubtype.ModelRefusalFallback:
+                {
+                    var fallback = obj.Val("fallback_model");
+                    if (!string.IsNullOrEmpty(fallback) && fallback != Model)
+                    {
+                        _log.Warn($"[client] model_refusal_fallback: {Model} → {fallback}");
+                        Model = fallback;
+                    }
+                    break;
+                }
+        }
+        SystemMessageReceived?.Invoke(this, obj);
     }
 
     private void HandleAssistant(JObject obj)

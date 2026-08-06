@@ -590,6 +590,13 @@ public partial class ChatPaneControl
                     _bridge.Send(BridgeMessages.ToWebView.Chat.EvictMessages,
                                  new Contracts.EvictMessagesNotification { Uuids = uuids });
                 }
+                // The selector still shows the model the user picked, while the CLI is answering
+                // with another one — the same kind of lie as a permission mode that reads "Plan"
+                // over a session running in bypass. The client has already followed the switch
+                // (HandleSystem), so this is the same echo the model picker does after an ack:
+                // same message, same listener, nothing new on the wire.
+                _bridge.Send(BridgeMessages.ToWebView.Cli.ModelChanged,
+                             new Contracts.ModelChangedNotification { Model = _client?.Model });
             }
             else if (subtype == ClientMessages.SystemSubtype.BackgroundTasksChanged)
             {
