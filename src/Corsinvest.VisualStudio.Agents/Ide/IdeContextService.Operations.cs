@@ -79,21 +79,32 @@ internal sealed partial class IdeContextService
     /// The await is what does the work: leaving the UI thread lets VS pump again, and
     /// SwitchToMainThreadAsync takes it back for the next read of BuildState, which is itself a DTE
     /// call. 200ms is short enough to not add a visible tail to a fast build and long enough to cost
-    /// nothing on a long one.</summary>
-    private static async Task WaitForBuildAsync(SolutionBuild sb)
+    /// nothing on a long one.
+    ///
+    /// Returns false if BuildState never left vsBuildStateInProgress within the cap. Without one a
+    /// wedged build (MSBuild zombie, a target that never closes) leaves the MCP call pending
+    /// forever, and the caller has no way to tell that from a build that is merely slow.</summary>
+    private static async Task<bool> WaitForBuildAsync(SolutionBuild sb)
     {
         // Poll at least once before testing: BuildState can still read vsBuildStateDone on the first
         // look after kicking off, and exiting here would report the PREVIOUS build's LastBuildInfo
         // as this one's result.
-        do
+        for (var i = 0; i < BuildPollMaxTries; i++)
         {
             await Task.Delay(BuildPollMs);
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (sb.BuildState != vsBuildState.vsBuildStateInProgress) { return true; }
         }
-        while (sb.BuildState == vsBuildState.vsBuildStateInProgress);
+        return false;
     }
 
     private const int BuildPollMs = 200;
+    // 30 minutes: past any real build, short enough that a wedged one still answers.
+    private const int BuildPollMaxTries = 30 * 60 * 1000 / BuildPollMs;
+
+    private static string BuildTimedOutMessage(string verb) =>
+        $"{verb} still in progress after {BuildPollMaxTries * BuildPollMs / 60000} minutes — " +
+        "check the Output window; the IDE was left building.";
 
     /// <summary>Build the whole solution (projectName null) or a single project, then report success
     /// plus the Error List down to <paramref name="severity"/>. Kicks the build without waiting and
@@ -127,7 +138,10 @@ internal sealed partial class IdeContextService
                 sb.BuildProject(config, proj.UniqueName, WaitForBuildToFinish: false);
             }
 
-            await WaitForBuildAsync(sb);
+            if (!await WaitForBuildAsync(sb))
+            {
+                return new BuildResult { Ok = false, Message = BuildTimedOutMessage("Build") };
+            }
 
             // LastBuildInfo = number of projects that FAILED (0 = success).
             var failed = sb.LastBuildInfo;
@@ -170,7 +184,10 @@ internal sealed partial class IdeContextService
         try
         {
             sb.Clean(WaitForCleanToFinish: false);
-            await WaitForBuildAsync(sb);
+            if (!await WaitForBuildAsync(sb))
+            {
+                return new BuildResult { Ok = false, Message = BuildTimedOutMessage("Clean") };
+            }
             var failed = sb.LastBuildInfo;
             return new BuildResult
             {
@@ -449,8 +466,8 @@ internal sealed partial class IdeContextService
 
     //  Open editors (MCP getOpenEditors)
 
-    /// <summary>List of files currently open in editor tabs (text only).
-    /// Order matches VS's tab order. Each entry includes active/dirty.</summary>
+    /// <summary>List of files currently open in editor tabs (text only), sorted by path.
+    /// Each entry includes active/dirty.</summary>
     public async Task<IReadOnlyList<OpenEditor>> GetOpenEditorsAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -487,6 +504,8 @@ internal sealed partial class IdeContextService
                 Language = lang ?? string.Empty,
             });
         }
+        // GetDocumentWindowEnum gives no ordering guarantee, so sort like every other list tool.
+        list.Sort((a, b) => string.Compare(a.FilePath, b.FilePath, StringComparison.OrdinalIgnoreCase));
         return list;
     }
 
