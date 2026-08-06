@@ -123,6 +123,10 @@ export class CvApp extends LitElement {
      *  `result` and are live-only). A replayed turn therefore shows its tokens and nothing else. */
     private _turnMetrics = new Map<number, TurnMetrics>();
 
+    /** Uuids of bubbles echoed on submit but not yet handed to the CLI, mirrored from cv-prompt's
+     *  queue (which keeps the payloads). A Set because renderMessage asks per bubble. */
+    @state() private _queuedUuids = new Set(appState.queuedUuids);
+
     /** Derived, never stored: recomputed only when the tree changes identity. Holding the groups
      *  as state gave them two writers, and that is how they and the entries drifted apart. */
     private get _exchanges(): UiEntry[][] {
@@ -183,6 +187,7 @@ export class CvApp extends LitElement {
         this._transcript.onRemoved = (ids) => this._dropRemovedIds(ids);
         this._transcript.onCleared = () => this._dropAllIds();
         this._offs.push(appState.on('isBusy', (v) => (this._isBusy = v)));
+        this._offs.push(appState.on('queuedUuids', (v) => (this._queuedUuids = new Set(v))));
         this._offs.push(appState.on('status', (v) => (this._status = v)));
         this._offs.push(appState.on('pendingPermission', (v) => (this._awaitingUser = v != null)));
         // Global Esc-to-stop: interrupt generation regardless of focus, so stopping
@@ -198,6 +203,11 @@ export class CvApp extends LitElement {
         // User picked a model from the menu (cv-prompt) — the "Switched to X" notice
         // fires ONLY here, never for the ui_init seed or a runtime cli_model_changed.
         this.addEventListener('model-switched', this._onModelSwitched as EventListener);
+        // A queued message reached the CLI: its bubble moves down to where it was really sent (the
+        // fading comes from appState.queuedUuids, which needs no event).
+        this.addEventListener('queued-sent', this._onQueuedSent as EventListener);
+        // Stop / Clear: what never went is taken off screen rather than left looking sent.
+        this.addEventListener('queued-dropped', this._onQueuedDropped as EventListener);
 
         // Session/system notices: this stack keeps the `top` ones (a per-turn notice is picked up by
         // cv-prompt's own stack listening on the same channel).
@@ -478,6 +488,9 @@ export class CvApp extends LitElement {
                 // that clears busy — would land on nothing. Without this the spinner outlives the
                 // session that started it, with no message under it to explain what it is waiting for.
                 appState.isBusy = false;
+                // Anything queued was written for the session that just went; the isBusy above is
+                // what would otherwise flush it into the new one.
+                this.querySelector('cv-prompt')?.dropQueue();
                 appState.currentSessionId = null;
                 appState.oldestLoadedOffset = -1;
                 appState.hasMoreHistory = false;
@@ -1174,6 +1187,30 @@ export class CvApp extends LitElement {
         this._addText({ role: 'status', text: `Switched to ${modelLabel(value)}` });
     };
 
+    /**
+     * A queued message went to the CLI: move its bubble below the reply it had been sitting above,
+     * so that reply keeps the question which actually prompted it. The fading is already handled —
+     * the uuid left `appState.queuedUuids` — so only the position is left.
+     *
+     * No scroll: the user may well be reading further up, often the very reason they queued
+     * something, and the jump button already covers going back down.
+     */
+    private _onQueuedSent = (e: CustomEvent<{ uuid: string }>): void => {
+        const uuid = e.detail?.uuid;
+        if (uuid) {
+            this._mutate(() => this._transcript.moveToEnd(uuid));
+        }
+    };
+
+    /** Stop or Clear: these never reached the CLI, so the model has no idea they exist. Leaving
+     *  them on screen is the same divergence a retraction causes, from our own side. */
+    private _onQueuedDropped = (e: CustomEvent<{ uuids: string[] }>): void => {
+        const uuids = e.detail?.uuids ?? [];
+        if (uuids.length > 0) {
+            this._mutate(() => this._transcript.removeByUuid(uuids));
+        }
+    };
+
     /** Stable identity of a sub-agent child: toolUseId for tools, uuid for text. */
     private static _childKey(e: UiEntry): string {
         if (e.kind === 'tool') {
@@ -1588,6 +1625,7 @@ export class CvApp extends LitElement {
             .summary=${e.role === 'compact' ? (e.summary ?? '') : ''}
             ?loaded=${e.role === 'compact' ? !!e.loaded : false}
             .uuid=${e.role === 'compact' || e.role === 'user' ? (e.uuid ?? '') : ''}
+            ?queued=${e.role === 'user' && !!e.uuid && this._queuedUuids.has(e.uuid)}
             .images=${e.role === 'user' ? (e.images ?? []) : []}
             .files=${e.role === 'user' ? (e.files ?? []) : []}
             ?streaming=${e.role === 'assistant' ? !!e.streaming : false}

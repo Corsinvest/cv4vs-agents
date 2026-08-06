@@ -41,6 +41,9 @@ export class CvMessage extends LitElement {
     // reflect: the sticky-user CSS keys off [role="user"] to pin only real user bubbles,
     // never a leading assistant/tool group that a history page split off from its user.
     @property({ reflect: true }) role: MessageRole = 'assistant';
+    // Typed during a turn and still waiting for it to end: reflected so chat.css can fade the
+    // bubble, since an unsent message that looks sent is the whole reason this exists.
+    @property({ type: Boolean, reflect: true }) queued = false;
     @property() text = '';
     // role:'compact' only — header fields (trigger/tokens) + the lazily-fetched summary,
     // shown in the expandable <details> body. `loaded` gates the fetch (cached after).
