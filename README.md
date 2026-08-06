@@ -92,7 +92,7 @@ own.
 
 - **[Two panes](#two-panes-one-extension)** — a rich WebView2 chat and a real terminal (ConPTY),
   both multi-instance and dockable side by side, each on its own session.
-- **[50 MCP tools](docs/mcp-tools.md)** — Visual Studio's own navigation, references, rename,
+- **[51 MCP tools](docs/mcp-tools.md)** — Visual Studio's own navigation, references, rename,
   diagnostics, build and the **live debugger** (breakpoints, stepping, locals, evaluate) handed to
   the agent. Not text search over source: the IDE's semantic, running view of your program.
 - **[Review changes in VS's own diff](docs/chat/diff.md)** — every Edit/Write shows as an inline diff,
@@ -138,7 +138,7 @@ own.
 - **[Restore panes on solution open](docs/options.md#general)** *(opt-in)* — reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
-- **[Tune it to your taste](docs/options.md)** — 24 options across General, Chat and Debug: what
+- **[Tune it to your taste](docs/options.md)** — 25 options across General, Chat and Debug: what
   the chat shows, how diffs render, which keys send, the starting permission mode, autosave,
   upload and `@`-picker filters, log verbosity.
 - **[It tells you when it needs you](#pane-attention-notifications)** — with several panes working
@@ -146,7 +146,9 @@ own.
   Visual Studio. Clicking it takes you to that pane, focus already on the question.
 - **[Nothing hidden](docs/options.md#debug)** — set the log level to `Trace` and the Output window
   shows every wire: the NDJSON traffic to and from `claude.exe`, the chat bridge, and each MCP tool
-  call. Silent by default; invaluable when something misbehaves or you're filing a bug.
+  call. Every line is tagged with the pane it came from (`[chat#2]`, `[cli#1]`), so several open panes
+  stay readable in the one Output window. Silent by default; invaluable when something misbehaves or
+  you're filing a bug.
 - **Lazy and fast** — nothing is read, built or started until you look at it: services, the MCP
   server and the panes themselves start on first use, and the transcript is paged in as you scroll.
 
@@ -241,8 +243,9 @@ See [Options → Profiles](docs/options.md#profiles).
 - **Slash-command palette** — a lightning button opens a unified palette; typing `/` filters. It
   lists the CLI's slash/skill commands plus built-in actions (Attach, Mention, Clear, Switch model,
   Settings, Manage plugins, Open Claude in Terminal, Help, Report a problem).
-- **`@` mentions** — inline file-suggestion popover referencing project files (respects
-  `.gitignore` / ignore patterns).
+- **`@` mentions** — inline file picker over the **whole** project tree: no depth limit, and the
+  filter matches the *path*, not just the file name, so `ui/comp` narrows before you type a name.
+  Honours `.gitignore`, your own ignore patterns, and git's `core.excludesFile`.
 - **Attachments** — upload files/images from the computer, or paste image data straight into the
   composer; removable attachment chips. Images are sent as images, PDFs as documents, the rest as text.
 - **Prompt history** — recall previous prompts with ↑/↓ (shell-style).
@@ -254,8 +257,10 @@ See [Options → Profiles](docs/options.md#profiles).
 
 ### Conversation
 
-- **Tool rows** — collapsible tool call/result rows; click a file to open it in VS (optionally
-  selecting the referenced lines); inline tool errors (toggleable).
+- **Tool rows** — collapsible tool call/result rows; click a file to open it in VS; inline tool
+  errors (toggleable). On an Edit the selection lands on the lines that changed — taken from the
+  patch the CLI itself computed, so it is right even after the edit has been applied and the file
+  touched again (**Select lines when opening file**).
 - **[Inline diffs](docs/chat/diff.md)** — Edit/Write rows show a diff (configurable context lines /
   ignore-whitespace), expandable to a full-screen viewer with four view modes — **split**
   (side-by-side), **unified**, **patch**, and **auto**, which switches between split and unified by
@@ -267,6 +272,11 @@ See [Options → Profiles](docs/options.md#profiles).
 - **Everything is copyable** — a copy button on every message, tool row and code block, so any part
   of the conversation can be lifted out as plain text.
 - **Image lightbox** and a **welcome screen** for empty chats.
+- **Cost and elapsed time, per turn** — the spinner counts the seconds while the turn runs (and
+  while it is thinking); when it lands, the hover-actions row carries what the turn cost. Agent rows
+  do the same for their own run. Enable with **Show cost and duration**.
+- **Back to the latest message** — scrolling up puts a button in the corner that returns you to the
+  bottom of the transcript.
 - **Lazy history** — the transcript is read from the `.jsonl` on demand: the newest page (batch of
   50) first, older pages only as you scroll up, and heavy blocks (images, sub-agent transcripts, full
   diffs) fetched only when opened. Nothing is held in memory up front — long sessions open fast and
@@ -305,6 +315,10 @@ telemetry. See [Context, usage & statistics](docs/chat/context-and-usage.md).
   immediately. It stays fast by reading files in parallel with head+tail 64 KB windows, never
   loading whole files.
 - **Fork** — fork a conversation into a new session from any user message.
+- **Session info** — from the pane's … menu: the session's title, id and `.jsonl` path, the working
+  directory and profile, and which `claude.exe` is running it — path, version and PID. Chat panes add
+  what the page currently weighs. The first thing to open when something is running against the wrong
+  session, the wrong folder, or the wrong CLI.
 - **AI-generated titles**, session picker, and a **New** split button (default Chat or CLI,
   configurable).
 - **Restore panes on solution open** (opt-in) — reopens the panes you had open for a solution,
@@ -386,7 +400,7 @@ among them — are saved as plain JSON under `%LOCALAPPDATA%`. See
 
 ## MCP tools (the IDE, exposed to Claude)
 
-An in-process MCP server hands the agent Visual Studio's own view of your code — **50 tools** across
+An in-process MCP server hands the agent Visual Studio's own view of your code — **51 tools** across
 navigation, editing, build, the live debugger and IDE state — with nothing to configure. They are
 language-agnostic by design: wired through Roslyn language services or language-agnostic VS/DTE
 APIs, never a C#/VB-only path. There is no list of supported languages — whatever your Visual
@@ -416,7 +430,7 @@ Studio is a different host, so several things are done differently — or don't 
 - **Two distinct panes (Chat + CLI), multi-instance.** Open several chats and terminals side by
   side, each on its own session, docking as tabs. The Chat pane (WebView2 + SDK-MCP) and the CLI
   pane (ConPTY + `--ide` WebSocket) are deliberately separate startup paths.
-- **Our own MCP tool suite for Visual Studio.** The 50 tools above wrap VS's navigation, build and
+- **Our own MCP tool suite for Visual Studio.** The 51 tools above wrap VS's navigation, build and
   **debugger** (start/step/breakpoints/inspect/hot-reload) and Error List — capabilities specific to
   the VS host, built language-agnostic via Roslyn reflection and DTE, not tied to C#/VB only.
 - **Sub-agents you can see and control.** Their tool calls are grouped under the Agent row that
