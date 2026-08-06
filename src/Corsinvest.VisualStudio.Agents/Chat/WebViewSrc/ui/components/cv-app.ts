@@ -283,6 +283,8 @@ export class CvApp extends LitElement {
                                 // Only this final notification names the message — the deltas that
                                 // built the entry carry no uuid, so it lands here or nowhere.
                                 uuid: data?.uuid ?? e.uuid,
+                                // Same: an API failure is only known once the frame arrives.
+                                error: data?.error ?? e.error,
                             })),
                         );
                         entryId = streamingId;
@@ -1243,6 +1245,7 @@ export class CvApp extends LitElement {
             text: d.text ?? '',
             timestamp: d.timestamp ?? undefined,
             uuid: d.uuid ?? undefined,
+            error: d.error ?? undefined,
         };
     }
 
@@ -1588,7 +1591,7 @@ export class CvApp extends LitElement {
             .images=${e.role === 'user' ? (e.images ?? []) : []}
             .files=${e.role === 'user' ? (e.files ?? []) : []}
             ?streaming=${e.role === 'assistant' ? !!e.streaming : false}
-            ?isError=${e.role === 'slash-result' ? e.isError : false}
+            ?isError=${e.role === 'slash-result' ? e.isError : e.role === 'assistant' && !!e.error}
             .timestamp=${
                 e.role === 'user' || e.role === 'assistant' || e.role === 'slash-result'
                     ? (e.timestamp ?? 0)
