@@ -415,7 +415,14 @@ export class CvMessage extends LitElement {
             }
 
             case 'assistant': {
-                const dotClass = this.streaming ? 'spinning' : 'dot-gray';
+                // Red when the API refused the turn. The frame looks like any other answer — the
+                // CLI puts the error in the TEXT of a synthetic assistant — so the grey dot would
+                // read as "answered fine". Same class the tool rows use for a failed tool.
+                const dotClass = this.streaming
+                    ? 'spinning'
+                    : this.isError
+                      ? 'dot-error'
+                      : 'dot-gray';
                 return html`
                     <div class="cv-message assistant">
                         <span class="cv-tool-row-dot ${dotClass}"></span>

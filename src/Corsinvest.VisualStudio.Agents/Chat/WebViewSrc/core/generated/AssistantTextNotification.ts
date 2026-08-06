@@ -9,6 +9,7 @@ export interface AssistantTextNotification {
     text: string;
     parentToolUseId: string | null;
     uuid: string;
+    error: string | null;
     usage: ContextUsageDto | null;
     timestamp?: number;
 }
