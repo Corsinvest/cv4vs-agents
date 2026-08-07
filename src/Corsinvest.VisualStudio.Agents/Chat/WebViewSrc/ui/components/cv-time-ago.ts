@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html } from 'lit';
+import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { formatAbsolute, formatTimeAgo } from '../helpers/format';
 
@@ -19,28 +19,30 @@ import { formatAbsolute, formatTimeAgo } from '../helpers/format';
  * The previous version wrote `textContent` onto the span holding the `${...}` binding, which
  * destroyed that ChildPart's markers — after which every later render of the whole chat threw
  * `Cannot set properties of null (setting 'data')` and the pane stopped updating entirely.
- *
- * Light DOM: `.cv-ts` is styled by the chat's global stylesheet, and the hover-reveal `opacity`
- * lives on the parent row.
  */
 @customElement('cv-time-ago')
 export class CvTimeAgo extends LitElement {
+    // On :host, not the span: font-size and color inherit, so they reach the text either way, and
+    // the hover-reveal opacity on the row above applies to the whole subtree, shadow included.
+    static override styles = css`
+        :host {
+            font-size: 0.82em;
+            color: var(--colorNeutralForeground3);
+            cursor: default;
+        }
+    `;
+
     /** Epoch ms of the message. 0 renders nothing. */
     @property({ type: Number }) ms = 0;
 
     /** The clock the stamp was last computed against. Bumping it is what re-renders the text. */
     @state() private _now = Date.now();
 
-    override createRenderRoot() {
-        return this;
-    }
-
     override render() {
         if (!this.ms) {
             return html``;
         }
         return html`<span
-            class="cv-ts"
             title=${formatAbsolute(this.ms)}
             @mouseenter=${() => {
                 this._now = Date.now();
