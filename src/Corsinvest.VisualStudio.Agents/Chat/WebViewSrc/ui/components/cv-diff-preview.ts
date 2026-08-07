@@ -43,6 +43,7 @@ export class CvDiffPreview extends LitElement {
     private _format: DiffFormat | null = null;
     private _unobserve?: () => void;
 
+    // Light DOM, same reason as cv-diff-dialog: diff2html markup needs the global CSS.
     override createRenderRoot() {
         return this;
     }

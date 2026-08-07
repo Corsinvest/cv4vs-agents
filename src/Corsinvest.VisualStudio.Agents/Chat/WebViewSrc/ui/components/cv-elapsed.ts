@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html } from 'lit';
+import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { formatDuration } from '../helpers/format';
 
@@ -22,12 +22,19 @@ import { formatDuration } from '../helpers/format';
  * Owning the timer here is also what makes re-rendering cheap enough to be an option at all:
  * `requestUpdate` on the tool row would rebuild the whole row — body, IN/OUT, highlighted code,
  * nested children — sixty times a minute for a number. Here it re-renders one span.
- *
- * Light DOM: the badge is styled by the chat's global stylesheet, which cannot reach into a shadow
- * root.
  */
 @customElement('cv-elapsed')
 export class CvElapsed extends LitElement {
+    // On :host: the margin separates the badge from its sibling in the row, so it belongs to the
+    // element as a whole rather than to the span inside it.
+    static override styles = css`
+        :host {
+            margin-left: 4px;
+            font-size: 11px;
+            opacity: 0.7;
+        }
+    `;
+
     /** Epoch ms the sub-agent started. 0 renders nothing and keeps the timer off.
      *
      *  There is deliberately no fallback to the task's own `usage.durationMs`: that is the total the
@@ -40,10 +47,6 @@ export class CvElapsed extends LitElement {
     @state() private _now = Date.now();
 
     private _timer = 0;
-
-    override createRenderRoot() {
-        return this;
-    }
 
     override connectedCallback() {
         super.connectedCallback();
@@ -80,9 +83,7 @@ export class CvElapsed extends LitElement {
         if (this.startedAt <= 0) {
             return html``;
         }
-        return html`<span class="cv-agent-time"
-            >${formatDuration(this._now - this.startedAt)}</span
-        >`;
+        return html`<span>${formatDuration(this._now - this.startedAt)}</span>`;
     }
 }
 
