@@ -120,6 +120,7 @@ export const Msg = {
             setComposer: 'ui_set_composer',
             escape: 'ui_escape',
             hostKey: 'ui_host_key',
+            filesDropped: 'ui_files_dropped',
         },
         plugins: {
             listResult: 'plugins_list_result',

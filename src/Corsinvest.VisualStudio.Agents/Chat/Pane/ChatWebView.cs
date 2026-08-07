@@ -29,6 +29,34 @@ internal sealed class ChatWebView : WebView2CompositionControl
     /// <summary>Raised for a claimed key, in the shape the page expects.</summary>
     internal event Action<HostKeyNotification> HostKeyPressed;
 
+    internal event Action<string[]> HostFilesDropped;
+
+    // public, not internal: XAML instantiates this by x:Name and needs a public default ctor.
+    public ChatWebView()
+    {
+        AllowDrop = true;
+    }
+
+    // Preview, and Handled either way, or the drop tunnels on to VS and opens the file in an editor.
+    // Handing it to the browser instead is not an option: the .NET wrapper exposes only DragLeave of
+    // ICoreWebView2CompositionController3.
+    protected override void OnPreviewDragOver(System.Windows.DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop)
+            ? System.Windows.DragDropEffects.Copy
+            : System.Windows.DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    protected override void OnPreviewDrop(System.Windows.DragEventArgs e)
+    {
+        if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is string[] paths && paths.Length > 0)
+        {
+            HostFilesDropped?.Invoke(paths);
+        }
+        e.Handled = true;
+    }
+
     // Only keys verified as dropped. A key that already reaches the browser must stay out: claiming
     // it sets Handled and would take it away from the page, breaking what works today (arrows,
     // PageUp/PageDown and Ctrl+Left/Right all arrive fine). Esc and Ctrl+F are out for another

@@ -15,6 +15,7 @@ import { setExtraLinkableExtensions } from '../core/file-links';
 import type {
     CliStateNotification,
     HostKeyNotification,
+    FilesDroppedNotification,
     InitPayloadNotification,
     ModelsNotification,
     PermissionMode,
@@ -149,6 +150,21 @@ function wireBridgeHandlers(): void {
     bridge.onNotification<HostKeyNotification>(Msg.toWebView.ui.hostKey, (data) => {
         if (data?.key) {
             applyHostKey(data);
+        }
+    });
+
+    // Rebuilt as File objects so the composer attaches them through its own path — allow-list and
+    // rejection notice stay in one place.
+    bridge.onNotification<FilesDroppedNotification>(Msg.toWebView.ui.filesDropped, (data) => {
+        const files = (data?.files ?? []).map((f) => {
+            const bin = atob(f.base64);
+            const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+            return new File([bytes], f.name, { type: f.mediaType });
+        });
+        if (files.length > 0) {
+            const input = document.querySelector('cv-prompt') as
+                import('./components/cv-prompt').CvPrompt | null;
+            void input?.addDroppedFiles(files);
         }
     });
 

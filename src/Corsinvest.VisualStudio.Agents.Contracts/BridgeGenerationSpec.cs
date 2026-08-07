@@ -68,6 +68,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<ModelChangedNotification>();
         AddInterface<PermissionModeChangedNotification>();
         AddInterface<SetComposerNotification>();
+        AddInterface<FilesDroppedNotification>();
+        AddInterface<DroppedFile>();
         AddInterface<PromptHistoryNotification>();
         AddInterface<SlashCommandsNotification>();
         AddInterface<AssistantTextDeltaNotification>().Member(x => nameof(x.ParentToolUseId)).Null();
@@ -195,6 +197,7 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<SetModelNotification>();
         AddInterface<ForkNotification>().Member(x => nameof(x.SessionId)).Optional();
         AddInterface<ExternalUrlNotification>();
+        AddInterface<OpenOptionsNotification>().Member(x => nameof(x.Page)).Optional();
 
         // Plugin-manager requests. Scope is omitted by the WebView (host defaults to "user").
         AddInterface<PluginInstallNotification>().Member(x => nameof(x.Scope)).Optional();

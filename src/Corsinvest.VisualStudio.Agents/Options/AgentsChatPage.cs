@@ -83,11 +83,12 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Files")]
     [DisplayName("Allowed upload file extensions")]
-    [Description("Extensions accepted when uploading/dropping files into the chat. Images (.png/.jpg/.gif/.webp) are sent as images, .pdf as a PDF document, everything else as text. Anything not listed is rejected with a notice. One entry per line, with or without the leading dot. Click `…` to edit.")]
+    [Description("Extensions accepted when uploading/dropping files into the chat. Images (.png/.jpg/.gif/.webp) are sent as images, .pdf as a PDF document, everything else as text — video files are listed so they can be attached, but Claude cannot watch them and only sees the file name. Anything not listed is rejected with a notice. One entry per line, with or without the leading dot. Click `…` to edit.")]
     [Editor("System.Windows.Forms.Design.StringArrayEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", typeof(UITypeEditor))]
     public string[] AllowedUploadFileExtensions { get; set; } =
     [
         ".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf",
+        ".mp4", ".mov", ".webm", ".mkv", ".avi", ".m4v", ".wmv",
         ".html", ".htm", ".xhtml", ".xml", ".svg", ".css", ".scss", ".sass", ".less",
         ".vue", ".svelte", ".astro", ".razor", ".cshtml", ".xaml",
         ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts",

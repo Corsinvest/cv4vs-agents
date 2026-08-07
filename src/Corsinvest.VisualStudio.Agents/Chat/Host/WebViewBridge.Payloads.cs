@@ -95,22 +95,15 @@ internal sealed partial class WebViewBridge
         {
             foreach (var att in attachments)
             {
-                // The webview always sends base64; we decide the block shape by
-                // extension here (single source of truth). Images → image block;
-                // .pdf → pdf document; everything else → text document (decoded).
+                // The webview sends base64 plus the browser's media type, and only extensions the
+                // user allowed get this far — so the type alone picks the block: image, text
+                // (decoded back to characters), or a document carrying its own media type.
                 var name = att.Val("name", "");
                 var base64 = att.Val("base64", "");
-                var ext = Path.GetExtension(name).ToLowerInvariant();
+                var mediaType = att.Val("mediaType", "");
 
-                if (ext is ".png" or ".jpg" or ".jpeg" or ".gif" or ".webp")
+                if (mediaType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                 {
-                    var mediaType = ext switch
-                    {
-                        ".jpg" or ".jpeg" => "image/jpeg",
-                        ".gif" => "image/gif",
-                        ".webp" => "image/webp",
-                        _ => "image/png",
-                    };
                     blocks.Add(new JObject
                     {
                         ["type"] = "image",
@@ -122,24 +115,9 @@ internal sealed partial class WebViewBridge
                         }
                     });
                 }
-                else if (ext == ".pdf")
+                else if (mediaType.StartsWith("text/", StringComparison.OrdinalIgnoreCase))
                 {
-                    blocks.Add(new JObject
-                    {
-                        ["type"] = "document",
-                        ["source"] = new JObject
-                        {
-                            ["type"] = "base64",
-                            ["media_type"] = "application/pdf",
-                            ["data"] = base64
-                        },
-                        ["title"] = name
-                    });
-                }
-                else
-                {
-                    // Text-like file: the CLI expects a plain text block, so decode the
-                    // base64 back to UTF-8 rather than attaching it as binary data.
+                    // Text arrives base64 like everything else; the CLI wants the characters.
                     string textData;
                     try
                     {
@@ -158,8 +136,22 @@ internal sealed partial class WebViewBridge
                         ["source"] = new JObject
                         {
                             ["type"] = "text",
-                            ["media_type"] = "text/plain",
+                            ["media_type"] = mediaType,
                             ["data"] = textData
+                        },
+                        ["title"] = name
+                    });
+                }
+                else
+                {
+                    blocks.Add(new JObject
+                    {
+                        ["type"] = "document",
+                        ["source"] = new JObject
+                        {
+                            ["type"] = "base64",
+                            ["media_type"] = mediaType,
+                            ["data"] = base64
                         },
                         ["title"] = name
                     });

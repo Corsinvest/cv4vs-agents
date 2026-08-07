@@ -319,6 +319,7 @@ public partial class ChatPaneControl : PaneControlBase
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         WebView.HostKeyPressed += OnHostKeyPressed;
+        WebView.HostFilesDropped += OnHostFilesDropped;
         // Clicking into the chat is the user answering the attention notice, so take it down.
         // Composition rendering is what makes this possible: the control lives in the WPF tree,
         // so mouse events reach us. The HwndHost version had to be told from JS instead.
@@ -335,6 +336,37 @@ public partial class ChatPaneControl : PaneControlBase
     /// bridge is up — there is nothing focused to act on yet.</summary>
     private void OnHostKeyPressed(Contracts.HostKeyNotification key)
         => _bridge?.Send(BridgeMessages.ToWebView.Ui.HostKey, key);
+
+    /// <summary>WPF hands over paths, so the bytes are read here; the page then applies the upload
+    /// allow-list, which is why the host has no copy of it.</summary>
+    private void OnHostFilesDropped(string[] paths)
+    {
+        if (_bridge == null) { return; }
+        var files = new List<Contracts.DroppedFile>();
+        foreach (var path in paths)
+        {
+            try
+            {
+                // A dropped folder: skip it rather than fail the whole drop.
+                if (!System.IO.File.Exists(path)) { continue; }
+                files.Add(new Contracts.DroppedFile
+                {
+                    Name = System.IO.Path.GetFileName(path),
+                    Base64 = Convert.ToBase64String(System.IO.File.ReadAllBytes(path)),
+                    MediaType = Helpers.MimeTypes.Of(path),
+                });
+            }
+            catch (Exception ex)
+            {
+                _log.Warn($"[chat] dropped file '{path}' could not be read — {ex.Message}");
+            }
+        }
+        if (files.Count > 0)
+        {
+            _bridge.Send(BridgeMessages.ToWebView.Ui.FilesDropped,
+                         new Contracts.FilesDroppedNotification { Files = files.ToArray() });
+        }
+    }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
         => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
@@ -378,6 +410,7 @@ public partial class ChatPaneControl : PaneControlBase
         VSColorTheme.ThemeChanged -= OnVsThemeChanged;
         AgentsOptions.Applied -= OnOptionsApplied;
         WebView.HostKeyPressed -= OnHostKeyPressed;
+        WebView.HostFilesDropped -= OnHostFilesDropped;
         WebView.PreviewMouseDown -= OnWebViewClicked;
         IdeContextService.Instance.ContextChanged -= OnEditorContextChanged;
         // EnsureClient hooked this on the IdeContextService singleton; without the unhook the

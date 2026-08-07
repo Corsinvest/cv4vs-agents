@@ -155,7 +155,7 @@ export class CvNoticeStack extends LitElement {
      *  leaves the row up — the host clears it when the condition resolves. */
     private _runAction(n: Notice): void {
         if (n.actionMessage) {
-            bridge.sendNotification(n.actionMessage, {});
+            bridge.sendNotification(n.actionMessage, n.actionPayload ?? {});
         }
     }
 
@@ -207,7 +207,6 @@ export class CvNoticeStack extends LitElement {
                                 n.actionLabel && n.actionMessage
                                     ? html`<fluent-button
                                           slot="actions"
-                                          appearance="transparent"
                                           size="small"
                                           @click=${() => this._runAction(n)}
                                           >${n.actionLabel}</fluent-button
