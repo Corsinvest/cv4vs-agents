@@ -673,12 +673,6 @@ cv-message:focus-within .cv-msg-actions {
     color: var(--colorNeutralForeground2);
     font-weight: 600;
 }
-/* Relative "x ago" timestamp next to the copy button (both the user and response rows). */
-.cv-ts {
-    font-size: 0.82em;
-    color: var(--colorNeutralForeground3);
-    cursor: default;
-}
 /* Status messages — a whole assistant turn that is ONLY italic text (e.g.
  * "*Thinking…*"): small and greyed. The `:has` must match a message whose
  * entire body is a single italic paragraph, NOT any message that merely
@@ -800,6 +794,8 @@ cv-message:focus-within .cv-msg-actions {
 }
 
 /* Elapsed time on a running Agent row (the dot handles the spinner). */
+/* The finished Agent's totals, which take the running clock's place in the row — cv-elapsed carries
+ * the same three properties on its own :host. */
 .cv-agent-time { margin-left: 4px; font-size: 11px; opacity: 0.7; }
 /* A finished Agent's totals reveal on hover, unlike the running clock next to them: several
  * sub-agents in a row put near-identical figures one under the other, and read as a wall of
