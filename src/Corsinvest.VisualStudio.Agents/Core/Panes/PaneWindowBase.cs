@@ -164,6 +164,78 @@ public abstract class PaneWindowBase : ToolWindowPane
         {
             AssignPaneId(n);
         }
+
+        HookFrameShow();
+    }
+
+    /// <summary>Focus the input when the frame is shown. Clicking a docked pane's TAB goes through
+    /// neither path that already focuses — ActivatePane (InfoBar, toast, the toolbar's pane list)
+    /// and the toolbar buttons — so focus landed on the first focusable child, the More button, and
+    /// Space opened a menu instead of typing.
+    ///
+    /// VSFPROPID_ViewHelper is the frame's single notify slot: read what is already there and
+    /// forward to it, so this doesn't silently displace another listener.</summary>
+    private void HookFrameShow()
+    {
+        if (Frame is not IVsWindowFrame frame) { return; }
+        try
+        {
+            frame.GetProperty((int)__VSFPROPID.VSFPROPID_ViewHelper, out var existing);
+            frame.SetProperty((int)__VSFPROPID.VSFPROPID_ViewHelper,
+                              new FrameShowListener(this, existing as IVsWindowFrameNotify3));
+        }
+        catch (System.Exception ex)
+        {
+            // Focus-on-tab-click is a convenience: losing it must not stop the pane from opening.
+            OutputWindowLogger.Global.LogException("[panes] HookFrameShow", ex);
+        }
+    }
+
+    /// <summary>Frame notify that focuses this pane's input when it is shown. Chains to whatever
+    /// listener held the slot before, since a frame has only one.</summary>
+    private sealed class FrameShowListener(PaneWindowBase owner, IVsWindowFrameNotify3 next) : IVsWindowFrameNotify3
+    {
+        public int OnShow(int fShow)
+        {
+            if (fShow is (int)__FRAMESHOW.FRAMESHOW_WinShown or (int)__FRAMESHOW.FRAMESHOW_TabActivated)
+            {
+                // Deferred like ActivatePane's: OnShow runs mid-activation, so focusing inline is
+                // overwritten by the shell a moment later. The IsActiveFrame gate is evaluated in
+                // the same continuation — asking during OnShow can still name the previous frame.
+                owner.FocusInputIfActive();
+            }
+            return next?.OnShow(fShow) ?? VSConstants.S_OK;
+        }
+
+        public int OnClose(ref uint pgrfSaveOptions)
+            => next == null ? VSConstants.S_OK : next.OnClose(ref pgrfSaveOptions);
+
+        public int OnMove(int x, int y, int w, int h) => next?.OnMove(x, y, w, h) ?? VSConstants.S_OK;
+        public int OnSize(int x, int y, int w, int h) => next?.OnSize(x, y, w, h) ?? VSConstants.S_OK;
+        public int OnDockableChange(int fDockable, int x, int y, int w, int h)
+            => next?.OnDockableChange(fDockable, x, y, w, h) ?? VSConstants.S_OK;
+    }
+
+    /// <summary>Focus the input, but only if this pane is the one the user is actually looking at.
+    /// OnShow also fires when a pane merely becomes visible (a dock group opening, another tab
+    /// closing); focusing then would pull the caret out of whatever the user was typing in.</summary>
+    private void FocusInputIfActive()
+    {
+        _ = Application.Current?.Dispatcher.BeginInvoke(
+            new System.Action(() =>
+            {
+                ThreadHelper.ThrowIfNotOnUIThread();
+                try
+                {
+                    if (IsActiveFrame()) { PaneControl.FocusInput(); }
+                }
+                catch (System.ObjectDisposedException) { }
+                catch (System.Runtime.InteropServices.COMException ex)
+                {
+                    OutputWindowLogger.Global.LogException("[panes] FocusInputIfActive", ex);
+                }
+            }),
+            System.Windows.Threading.DispatcherPriority.Background);
     }
 
     /// <summary>Bring THIS pane to the front and focus its input. Keyed off the
@@ -180,16 +252,50 @@ public abstract class PaneWindowBase : ToolWindowPane
             {
                 ErrorHandler.ThrowOnFailure(frame.Show());
             }
-            PaneControl.FocusInput();
         }
         catch (System.ObjectDisposedException)
         {
             OutputWindowLogger.Global.Warn("[panes] ActivatePane skipped: the pane was already closed");
+            return;
         }
         catch (System.Runtime.InteropServices.COMException ex)
         {
             OutputWindowLogger.Global.LogException("[panes] ActivatePane", ex);
+            return;
         }
+
+        FocusInputWhenShellSettles();
+    }
+
+    /// <summary>Focus the pane's input once the shell has finished activating the frame.
+    ///
+    /// The delay is the whole point. Focusing inline works on a pane that is already visible —
+    /// Show() does no real work there — which is why this defect only ever showed on a HIDDEN pane:
+    /// there the activation is real, and VS gives focus to the frame's first focusable child (the
+    /// toolbar's More button) when it completes, overwriting ours. Yielding to Background puts our
+    /// focus last. The same applies to any other caller that focuses around an activation.
+    ///
+    /// Application.Current.Dispatcher, not this.Dispatcher: ToolWindowPane isn't a
+    /// DispatcherObject. Same UI thread either way.</summary>
+    private void FocusInputWhenShellSettles()
+    {
+        _ = Application.Current?.Dispatcher.BeginInvoke(
+            new System.Action(() =>
+            {
+                try
+                {
+                    PaneControl.FocusInput();
+                }
+                catch (System.ObjectDisposedException)
+                {
+                    OutputWindowLogger.Global.Warn("[panes] focus skipped: the pane was closed meanwhile");
+                }
+                catch (System.Runtime.InteropServices.COMException ex)
+                {
+                    OutputWindowLogger.Global.LogException("[panes] FocusInputWhenShellSettles", ex);
+                }
+            }),
+            System.Windows.Threading.DispatcherPriority.Background);
     }
 
     /// <summary>Wire a freshly-created instance entry to this pane: set the
