@@ -9,6 +9,7 @@ import BranchFork16Regular from '@fluentui/svg-icons/icons/branch_fork_16_regula
 import './cv-copy-btn';
 import './cv-attach-chip';
 import { renderMarkdown, renderMarkdownStreaming } from '../../core/markdown';
+import { stableMarkdownSplit } from '../../core/markdown-split';
 import { escapeHtml } from '../../core/html';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
@@ -78,6 +79,41 @@ export class CvMessage extends LitElement {
     private _streamText = '';
     private _streamAt = 0;
     private _streamTimer?: ReturnType<typeof setTimeout>;
+    // Markdown before the last blank line: settled, so it is rendered once and kept. Only the tail
+    // after it is re-rendered per pass, which is what stops the cost growing with the answer.
+    private _stableHtml = '';
+    private _stableUpTo = 0;
+    // The exact text the stable HTML was built from: if the incoming text stops starting with it,
+    // this is not the same message growing and the prefix has to go.
+    private _stablePrefix = '';
+
+    /**
+     * Render the growing text without re-parsing what is already settled.
+     *
+     * Markdown before the last blank line cannot be changed by what comes after, so it is parsed
+     * once and appended to `_stableHtml`; each pass then only parses the tail. Without this the
+     * cost climbs with the answer — measured 2.5ms per pass over the first third of a 22k-char
+     * reply against 8.2ms over the last.
+     *
+     * The stable prefix is dropped whenever the text stops extending what we saw (a re-render from
+     * history, or the text being replaced), so a stale prefix can never survive into a new message.
+     */
+    private _renderIncremental(): string {
+        if (!this.text.startsWith(this._stablePrefix)) {
+            this._stableHtml = '';
+            this._stableUpTo = 0;
+            this._stablePrefix = '';
+        }
+        const cut = stableMarkdownSplit(this.text);
+        if (cut > this._stableUpTo) {
+            this._stableHtml += renderMarkdown(this.text.slice(this._stableUpTo, cut));
+            this._stableUpTo = cut;
+            this._stablePrefix = this.text.slice(0, cut);
+        }
+        return this._stableUpTo === 0
+            ? renderMarkdownStreaming(this.text)
+            : this._stableHtml + renderMarkdownStreaming(this.text.slice(this._stableUpTo));
+    }
 
     /** Throttled streaming markdown: returns cached HTML unless enough time has
      *  passed (or the text shrank/reset), scheduling a trailing refresh so the
@@ -88,7 +124,7 @@ export class CvMessage extends LitElement {
         }
         const due = now - this._streamAt >= CvMessage.STREAM_MD_MS;
         if (due || this._streamHtml === '') {
-            this._streamHtml = renderMarkdownStreaming(this.text);
+            this._streamHtml = this._renderIncremental();
             this._streamText = this.text;
             this._streamAt = now;
             if (this._streamTimer) {
