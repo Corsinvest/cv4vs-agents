@@ -191,3 +191,12 @@ public class ExternalUrlNotification
 {
     public string Url { get; set; }
 }
+
+/// <summary>Open the extension's Options (open_options).</summary>
+public class OpenOptionsNotification
+{
+    /// <summary>Which page: "general" (the default when absent), "chat", "debug" or "profiles".
+    /// A notice that names a setting can then open the page that setting lives on, instead of
+    /// spelling out the path to it.</summary>
+    public string Page { get; set; }
+}

@@ -313,6 +313,7 @@
     <Compile Include="Helpers\StringHelpers.cs" />
     <Compile Include="Helpers\ShellHelpers.cs" />
     <Compile Include="Helpers\VsReflection.cs" />
+    <Compile Include="Helpers\MimeTypes.cs" />
     <Compile Include="Helpers\Win32Focus.cs" />
     <Compile Include="Helpers\WindowChrome.cs" />
     <Compile Include="Chat\VsThemeReader.cs" />

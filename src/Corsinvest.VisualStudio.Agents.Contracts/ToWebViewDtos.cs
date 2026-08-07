@@ -408,6 +408,23 @@ public class HostKeyNotification
     public bool Alt { get; set; }
 }
 
+/// <summary>Files dropped on the pane, already read (ui_files_dropped). Same root cause as
+/// <see cref="HostKeyNotification"/>: with no window of its own the browser never sees the drop, so
+/// WPF claims it before Visual Studio opens the file in an editor.</summary>
+public class FilesDroppedNotification
+{
+    public DroppedFile[] Files { get; set; } = [];
+}
+
+public class DroppedFile
+{
+    public string Name { get; set; } = "";
+    public string Base64 { get; set; } = "";
+    /// <summary>Carried because a File built in script has no type of its own, and both the chip
+    /// and the CLI block shape are chosen from it.</summary>
+    public string MediaType { get; set; } = "";
+}
+
 /// <summary>The ↑/↓ prompt history for a session (chat_prompt_history). The WebView
 /// keeps prompts; sessionId gates stale updates (only apply if it matches).</summary>
 public class PromptHistoryNotification
