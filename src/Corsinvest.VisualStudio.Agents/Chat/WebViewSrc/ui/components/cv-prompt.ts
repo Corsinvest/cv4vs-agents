@@ -1324,24 +1324,18 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
     };
 
+    /** kind, not an image/ mime: a pasted PDF then meets the same allow-list as drop and the
+     *  picker, which either takes it or says why — instead of vanishing. */
     private _onPaste = (e: ClipboardEvent): void => {
-        const items = e.clipboardData?.items;
-        if (!items) {
-            return;
+        const files = Array.from(e.clipboardData?.items ?? [])
+            .filter((i) => i.kind === 'file')
+            .map((i) => i.getAsFile())
+            .filter((f): f is File => f !== null);
+        if (files.length === 0) {
+            return; // plain text: leave the paste to the browser
         }
-        let consumed = false;
-        for (const item of items) {
-            if (item.type.startsWith('image/')) {
-                consumed = true;
-                const file = item.getAsFile();
-                if (file) {
-                    void this._readFiles([file]);
-                }
-            }
-        }
-        if (consumed) {
-            e.preventDefault();
-        }
+        e.preventDefault();
+        void this._readFiles(files);
     };
 
     /** Stop the turn: interrupt the CLI, drop anything queued behind it, free the UI.
