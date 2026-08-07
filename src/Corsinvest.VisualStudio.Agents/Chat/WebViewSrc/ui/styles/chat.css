@@ -299,7 +299,7 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
 }
 /* "Open diff in Visual Studio" icon: tinted purple to echo the slash-cmd band
  * ("special action" colour). The SVG is a solid fill (reads well at 14px), so tint
- * the fill; clear the generic .icon-btn `fill: currentColor` on this one. */
+ * the fill; clear the generic `fill: currentColor` on this one. */
 .cv-tool-actions-vs svg,
 .cv-tool-actions-vs svg path {
     fill: var(--colorPaletteBerryBorderActive);
@@ -378,7 +378,7 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.
     opacity: 1;
 }
 /* Tool header actions (error / open-diff / sub-agent copy+expand), in flow on the row rather than
- * an absolute overlay. Buttons are .icon-btn (shared 14px style); the tints below colour them. */
+ * an absolute overlay. Buttons are .trigger fluent-buttons; the tints below colour them. */
 .cv-tool-actions {
     display: inline-flex;
     align-items: center;
@@ -630,41 +630,11 @@ cv-message:hover .cv-msg-actions,
 cv-message:focus-within .cv-msg-actions {
     opacity: 1;
 }
-/* Small icon-action button — the shared light-DOM twin of cv-copy-btn's .icon-btn (Shadow-scoped).
- * Used across the chat light DOM: message rows (Fork) and tool header actions (error/open-diff/
- * expand/copy). Compact (14px glyph), theme-aware, keyboard-focusable — a bare <button>, not a
- * fluent-button (fluent-pure rule + it can't get this small). */
-.icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+/* Light-DOM twin of iconTriggerStyles (shared.ts), for the chat's own fluent-buttons: message rows
+ * (Fork) and tool header actions (chevron/error/open-diff/expand). */
+.trigger {
     padding: 3px;
-    border: 0;
-    border-radius: var(--borderRadiusSmall);
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    opacity: 0.75;
-}
-/* NOT --colorSubtleBackgroundHover: in the light theme that token is #f5f5f5, three points of
- * luminance off the #ffffff behind it — the hover is there and invisible. Mixing the foreground
- * inverts with the theme by construction. Kept in step with iconButtonStyles (shared.ts). */
-.icon-btn:hover {
-    background: color-mix(in srgb, var(--colorNeutralForeground1) 10%, transparent);
-    opacity: 1;
-}
-.icon-btn:active {
-    background: color-mix(in srgb, var(--colorNeutralForeground1) 16%, transparent);
-}
-.icon-btn:focus-visible {
-    outline: 1px solid var(--colorStrokeFocus2, currentColor);
-    outline-offset: 1px;
-}
-.icon-btn svg {
-    width: 14px;
-    height: 14px;
-    display: block;
-    fill: currentColor;
+    min-width: 0;
 }
 /* The response row (inline: copy + timestamp) lives at the end of the exchange (a whole answer),
  * so it reveals on hovering anywhere in the exchange, not a single bubble. */

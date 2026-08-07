@@ -2,11 +2,11 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, css } from 'lit';
+import { LitElement, html } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import SlashForward16Regular from '@fluentui/svg-icons/icons/slash_forward_16_regular.svg';
-import { iconStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, iconTriggerStyles, tooltipStyles } from '../styles/shared';
 
 /**
  * Slash button in the input toolbar. Opens the unified command palette
@@ -16,19 +16,7 @@ import { iconStyles, tooltipStyles } from '../styles/shared';
  */
 @customElement('cv-slash-menu')
 export class CvSlashMenu extends LitElement {
-    static override styles = [
-        iconStyles,
-        tooltipStyles,
-        css`
-            /* Fluent's own button, cut to the row's density: even size="small" is padded for a
-               control standing alone. No accent colour — see cv-attach-menu: in this row colour
-               means state, and this button has none. */
-            .trigger {
-                padding: 3px;
-                min-width: 0;
-            }
-        `,
-    ];
+    static override styles = [iconStyles, iconTriggerStyles, tooltipStyles];
 
     private _onClick = (): void => {
         this.dispatchEvent(new CustomEvent('open-commands', { bubbles: true, composed: true }));
@@ -47,12 +35,8 @@ export class CvSlashMenu extends LitElement {
             >
                 ${unsafeHTML(SlashForward16Regular)}
             </fluent-button>
-            <!-- positioning=before, not the above-start the triggers on the right use: this one
-                 sits against the textarea, and anything opening above it lands on the placeholder.
-                 There is no room on the inline-start side either, so Fluent flips it to the other
-                 side — which is the point: beside the button rather than over the text.
-                 tip-desc, not tip-action: alone, the smaller action size reads as a footnote to
-                 something that isn't there. -->
+            <!-- positioning=before, not above-start: this trigger sits against the textarea, and
+                 anything opening above it lands on the placeholder. -->
             <fluent-tooltip anchor="slash-trigger" positioning="before">
                 <span class="tip-desc">Every slash command, in one list</span>
             </fluent-tooltip>
