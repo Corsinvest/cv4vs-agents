@@ -147,13 +147,7 @@ export class CvDiffDialog extends CvDialogBase {
             <fluent-dialog type="modal" aria-label="Diff viewer" @toggle=${this._onDialogToggle}>
                 <fluent-dialog-body>
                     <span slot="title" class="cv-diff-dialog-title" title=${fullPath}>
-                        <img
-                            class="cv-diff-dialog-icon"
-                            src=${iconUrl(name)}
-                            width="16"
-                            height="16"
-                            alt=""
-                        />
+                        <img src=${iconUrl(name)} width="16" height="16" alt="" />
                         <span class="cv-diff-dialog-name">${name}</span>
                     </span>
 
