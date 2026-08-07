@@ -3,13 +3,14 @@
   <!--
     Single source of truth for the product version.
 
-    Bump it here and nowhere else. Two places must agree with it and neither is generated:
-      - src/Corsinvest.VisualStudio.Agents/Properties/AssemblyInfo.cs (legacy project, hand-written)
-      - src/Corsinvest.VisualStudio.Agents/source.extension.vsixmanifest (<Identity Version>)
-    The Release build checks both and fails if they drifted — see Directory.Build.targets.
+    Bump it here and nowhere else — everything downstream is generated:
+      - the assembly version attributes, by GenerateVersionAssemblyInfo
+      - <Identity Version> in source.extension.vsixmanifest, which holds the token
+        |%CurrentProject%;GetVsixVersion| and is resolved at build time
+    Both targets live in Directory.Build.targets.
 
-    The Marketplace rejects an upload whose version was already published, so a mismatch caught
-    at build time is the cheap version of that failure.
+    Worth keeping that way: the Marketplace rejects an upload whose version was already
+    published, and it only says so after you have built and tagged.
   -->
   <PropertyGroup>
     <!--
