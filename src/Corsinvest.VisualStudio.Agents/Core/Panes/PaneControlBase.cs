@@ -103,6 +103,8 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     {
         if (string.Equals(_sessionTitle, value, StringComparison.Ordinal)) { return; }
         _sessionTitle = value;
+        // The menus that list panes hold entries, never the control.
+        Entry.SessionTitle = value;
         SessionTitleChanged?.Invoke(this, EventArgs.Empty);
     }
 
