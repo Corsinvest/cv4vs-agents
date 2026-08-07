@@ -798,7 +798,6 @@ export class CvStatsDialog extends CvDialogBase {
                             })}
                         </div>
                     </div>
-                    <div class="chart-xaxis-pad"></div>
                     <div class="chart-xaxis">
                         ${keys.map((k, ki) => html`<span class="chart-xtick">${ki % xStep === 0 ? formatDay(k) : ''}</span>`)}
                     </div>

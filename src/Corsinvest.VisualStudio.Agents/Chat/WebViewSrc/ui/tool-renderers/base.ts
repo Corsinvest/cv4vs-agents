@@ -387,7 +387,7 @@ export abstract class ToolRenderer {
                                   style="cursor:pointer"
                                   @click=${() => this.host.openOutput('out')}
                               >
-                                  <span class="cv-tool-body-label cv-tool-body-label-out"
+                                  <span class="cv-tool-body-label"
                                       >${this.host.status === 'error' ? 'ERR' : 'OUT'}</span
                                   >
                                   <div class="cv-tool-body-cell">
