@@ -331,7 +331,7 @@ export class CvApp extends LitElement {
                         const atBottom = this._isNearBottom();
                         this._mutate(() => this._transcript.appendText(streamingId, delta));
                         if (atBottom) {
-                            queueMicrotask(() => this._scrollToBottom('instant'));
+                            queueMicrotask(() => this._scrollToBottomNow());
                         }
                     }
                 },
@@ -676,18 +676,9 @@ export class CvApp extends LitElement {
 
                     appState.loadingOlder = false;
                     this._mutate(() => this._transcript.replaceAll(out));
-                    // Land at the bottom. Re-jump for several frames because async-rendered
-                    // children (markdown, diff2html, lazy images) keep growing scrollHeight.
-                    void this.updateComplete.then(() => {
-                        let frames = 0;
-                        const tick = (): void => {
-                            this._scrollToBottom('instant');
-                            if (++frames < 10) {
-                                requestAnimationFrame(tick);
-                            }
-                        };
-                        requestAnimationFrame(tick);
-                    });
+                    // Land at the bottom, sustained for a few frames: a whole page of transcript
+                    // just went in, and images (the one thing rendered async) settle after it.
+                    this._scrollToBottom('instant', 6);
                 },
             ),
         );
@@ -1519,23 +1510,51 @@ export class CvApp extends LitElement {
         });
     }
 
-    private _scrollToBottom(behavior: ScrollBehavior = 'smooth'): void {
-        // Wait for Lit to flush the DOM before measuring scrollHeight — scrolling
-        // in a microtask (pre-render) lands short, leaving the last lines cut off.
-        // A second pass after a frame absorbs async layout (markdown, images,
-        // highlight) that keeps growing scrollHeight just after the first paint.
-        const jump = (b: ScrollBehavior) => {
-            const el = this._messagesEl;
-            if (el) {
-                el.scrollTo({ top: el.scrollHeight, behavior: b });
-            }
-        };
+    /** One jump, once Lit has flushed. For the streaming path, which lands here on every delta:
+     *  the transcript grows by a few lines at a time and there is nothing to chase, so the
+     *  catch-up passes below would triple the work for the same result. */
+    private _scrollToBottomNow(): void {
+        void this.updateComplete.then(() => this._jumpToBottom('instant'));
+    }
+
+    private _jumpToBottom(behavior: ScrollBehavior): void {
+        const el = this._messagesEl;
+        if (el) {
+            el.scrollTo({ top: el.scrollHeight, behavior });
+        }
+    }
+
+    /**
+     * Land at the bottom after content the browser is still sizing.
+     *
+     * Wait for Lit to flush the DOM before measuring scrollHeight — scrolling in a microtask
+     * (pre-render) lands short, leaving the last lines cut off. The two catch-up passes absorb
+     * what keeps growing after the first paint: that is images (cv-message awaits fetchChatImage),
+     * NOT markdown or diff2html — both are synchronous and already final when Lit is done.
+     *
+     * `sustainFrames` keeps re-landing for that many frames, for callers that just swapped in a
+     * whole page of transcript. Loading it in the caller instead multiplied these three passes by
+     * the frame count.
+     */
+    private _scrollToBottom(behavior: ScrollBehavior = 'smooth', sustainFrames = 0): void {
         void this.updateComplete.then(() => {
             // First pass honours the requested behaviour; the catch-up passes are
             // instant so they don't fight the smooth animation.
-            jump(behavior);
-            requestAnimationFrame(() => jump('instant'));
-            setTimeout(() => jump('instant'), 120);
+            this._jumpToBottom(behavior);
+            requestAnimationFrame(() => this._jumpToBottom('instant'));
+            setTimeout(() => this._jumpToBottom('instant'), 120);
+
+            let left = sustainFrames;
+            const tick = (): void => {
+                if (left-- <= 0) {
+                    return;
+                }
+                this._jumpToBottom('instant');
+                requestAnimationFrame(tick);
+            };
+            if (left > 0) {
+                requestAnimationFrame(tick);
+            }
         });
     }
 
