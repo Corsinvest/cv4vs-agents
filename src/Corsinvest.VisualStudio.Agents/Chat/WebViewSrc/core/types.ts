@@ -216,6 +216,7 @@ export type { SetPermissionModeNotification } from './generated/SetPermissionMod
 export type { SetModelNotification } from './generated/SetModelNotification';
 export type { ForkNotification } from './generated/ForkNotification';
 export type { ExternalUrlNotification } from './generated/ExternalUrlNotification';
+export type { OpenOptionsNotification } from './generated/OpenOptionsNotification';
 
 /** Global signal that a permission prompt is active (cv-prompt reads its
  *  presence to disable sending). The banner itself holds the full request
@@ -457,6 +458,8 @@ export interface Notice {
     /** Optional action button: label + the fromWebView bridge message its click sends. */
     actionLabel?: string;
     actionMessage?: string;
+    /** Payload for that message, when it takes one (which Options page to open). */
+    actionPayload?: Record<string, unknown>;
     /** Stays until the host clears it (a dead CLI process) — never auto-dismissed. */
     sticky?: boolean;
 }

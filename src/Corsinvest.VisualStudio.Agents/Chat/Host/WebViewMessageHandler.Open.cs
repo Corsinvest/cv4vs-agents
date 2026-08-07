@@ -125,7 +125,14 @@ internal sealed partial class WebViewMessageHandler
 
     private void HandleOptions(JObject data, int? id)
     {
-        AgentsPackage.Instance?.ShowOptionPage(typeof(AgentsGeneralPage));
+        var page = data.ToObject<Contracts.OpenOptionsNotification>().Page ?? "";
+        AgentsPackage.Instance?.ShowOptionPage(page.ToLowerInvariant() switch
+        {
+            "chat" => typeof(AgentsChatPage),
+            "debug" => typeof(AgentsDebugPage),
+            "profiles" => typeof(AgentsProfilesPage),
+            _ => typeof(AgentsGeneralPage),
+        });
     }
 
     private void HandleCliTerminal(JObject data, int? id)

@@ -27,6 +27,7 @@ import type {
     SetPermissionModeNotification,
     SetModelNotification,
     ExternalUrlNotification,
+    OpenOptionsNotification,
     PermissionMode,
 } from '../../core/types';
 import { GetSuggestionsReq } from '../../core/request-types';
@@ -67,19 +68,14 @@ function isAllowedUpload(file: File): boolean {
     return !!ext && (appState.ui.allowedUploadExtensions ?? []).includes(ext);
 }
 
-/** Wording for files whose extension isn't in the upload allowlist. Tells the
- *  user the extension can be added in Options — but only text/image/PDF files
- *  are usable (Claude can't read arbitrary binaries). */
+/** Wording for files whose extension isn't in the upload allowlist. The Options path it used to
+ *  spell out is now the action button's job. */
 function unsupportedMessage(names: string[]): string {
     const list = names.join(', ');
     return (
         `<strong>Unsupported file types:</strong> ${list}. ` +
-        'Supported types: images (PNG, JPG, GIF, WebP), text files, and PDFs. ' +
-        'If this is a text, image or PDF file, add its extension under ' +
-        '<em>Options → Claude Code → Chat → Allowed upload file extensions</em>. ' +
-        'Binary files (archives, executables, Office documents) cannot be read — ' +
-        'reference them instead by absolute path in your prompt (using @ for paths ' +
-        'inside your working directory).'
+        'Add the extension to allow it, or reference the file by absolute path in your prompt ' +
+        '(@ for paths inside your working directory).'
     );
 }
 
@@ -1178,6 +1174,9 @@ export class CvPrompt extends LitElement implements CommandHost {
                 severity: 'error',
                 message: unsupportedMessage(rejected),
                 key: 'upload-rejected',
+                actionLabel: 'Open settings',
+                actionMessage: Msg.fromWebView.open.options,
+                actionPayload: { page: 'chat' },
             });
         }
     }
@@ -1266,7 +1265,7 @@ export class CvPrompt extends LitElement implements CommandHost {
 
     /** Open the extension's Tools → Options page. */
     openOptions(): void {
-        bridge.sendNotification(Msg.fromWebView.open.options, {});
+        bridge.sendNotification<OpenOptionsNotification>(Msg.fromWebView.open.options, {});
     }
 
     /** Open a fresh interactive CLI pane (host runs PaneLauncher.OpenNew(Cli)). */
