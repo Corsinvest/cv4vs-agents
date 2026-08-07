@@ -7,30 +7,27 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Copy16Regular from '@fluentui/svg-icons/icons/copy_16_regular.svg';
 import Checkmark16Regular from '@fluentui/svg-icons/icons/checkmark_16_regular.svg';
-import { iconStyles, iconButtonStyles } from '../styles/shared';
+import { iconStyles, iconTriggerStyles } from '../styles/shared';
 
 /**
- * Reusable copy-to-clipboard icon button (wraps `<fluent-button>`, shows a
- * checkmark for ~1.2s after click). Text comes from `text`, lazily from a
- * sibling `<pre>` (`frompre`) / previous element (`fromprev`), or `getBlob`
- * for binary payloads written as a `ClipboardItem` (pasteable as a real image).
+ * Reusable copy-to-clipboard icon button (a `<fluent-button>`, shows a checkmark
+ * for ~1.2s after click). Text comes from `text`, lazily from a sibling `<pre>`
+ * (`frompre`) / previous element (`fromprev`), or `getBlob` for binary payloads
+ * written as a `ClipboardItem` (pasteable as a real image).
  *
- * Shadow DOM + static styles. The host is `display:contents` (no layout box —
- * the inner button participates in the parent flex/grid). Callers that need to
- * position the button (absolute hover-reveal over a <pre>/patch) reach it via
+ * Callers that position it (the hover-reveal over a <pre>/patch) reach the button via
  * `::part(button)` — the shadow boundary blocks plain descendant selectors.
  */
 @customElement('cv-copy-btn')
 export class CvCopyBtn extends LitElement {
     static override styles = [
         iconStyles,
-        iconButtonStyles,
+        iconTriggerStyles,
         css`
             :host {
                 display: contents;
             }
-            /* Copied state: tint the checkmark green for a clearer "done" signal. */
-            .icon-btn.copied svg {
+            .trigger.copied svg {
                 color: var(--colorPaletteGreenForeground1);
                 fill: var(--colorPaletteGreenForeground1);
             }
@@ -77,14 +74,18 @@ export class CvCopyBtn extends LitElement {
 
     override render() {
         return html`
-            <button
+            <fluent-button
                 part="button"
-                class="icon-btn ${this._copied ? 'copied' : ''}"
+                class="trigger ${this._copied ? 'copied' : ''}"
+                appearance="subtle"
+                shape="rounded"
+                size="small"
+                icon-only
                 title=${this._copied ? 'Copied' : this.title}
                 @click=${this._onClick}
             >
                 ${unsafeHTML(this._copied ? Checkmark16Regular : Copy16Regular)}
-            </button>
+            </fluent-button>
         `;
     }
 }

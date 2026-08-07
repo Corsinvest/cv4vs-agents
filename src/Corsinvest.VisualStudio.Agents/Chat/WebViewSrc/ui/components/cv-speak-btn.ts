@@ -7,7 +7,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Speaker216Regular from '@fluentui/svg-icons/icons/speaker_2_16_regular.svg';
 import Pause16Regular from '@fluentui/svg-icons/icons/pause_16_regular.svg';
-import { iconStyles, iconButtonStyles } from '../styles/shared';
+import { iconStyles, iconTriggerStyles } from '../styles/shared';
 import { renderMarkdown } from '../../core/markdown';
 
 // Web Speech synthesis is a single global engine — only one utterance plays at a time. Track which
@@ -47,13 +47,12 @@ function toSpeech(md: string): string {
 export class CvSpeakBtn extends LitElement {
     static override styles = [
         iconStyles,
-        iconButtonStyles,
+        iconTriggerStyles,
         css`
             :host {
                 display: contents;
             }
-            /* Speaking: a tinted pause icon — click to pause (the speaker icon returns; click resumes). */
-            .icon-btn.speaking svg {
+            .trigger.speaking svg {
                 color: var(--colorBrandForeground1);
                 fill: var(--colorBrandForeground1);
             }
@@ -123,14 +122,18 @@ export class CvSpeakBtn extends LitElement {
         }
         const speaking = this._state === 'speaking';
         return html`
-            <button
+            <fluent-button
                 part="button"
-                class="icon-btn ${speaking ? 'speaking' : ''}"
+                class="trigger ${speaking ? 'speaking' : ''}"
+                appearance="subtle"
+                shape="rounded"
+                size="small"
+                icon-only
                 title=${speaking ? 'Pause' : this._state === 'paused' ? 'Resume' : this.title}
                 @click=${this._onClick}
             >
                 ${unsafeHTML(speaking ? Pause16Regular : Speaker216Regular)}
-            </button>
+            </fluent-button>
         `;
     }
 }

@@ -10,17 +10,22 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Add16Regular from '@fluentui/svg-icons/icons/add_16_regular.svg';
 import ArrowUpload16Regular from '@fluentui/svg-icons/icons/arrow_upload_16_regular.svg';
 import DocumentText16Regular from '@fluentui/svg-icons/icons/document_text_16_regular.svg';
-import { iconStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, iconTriggerStyles, tooltipStyles } from '../styles/shared';
 
 /**
  * Attach-actions button in the input toolbar, built on `<fluent-menu>`.
  * No "Add active file": cv-ide-context-badge covers it and the host
  * auto-injects the file path / selection into every prompt. Shadow DOM.
+ *
+ * No accent colour on the trigger: in this row colour means state (the gauge's bands, the mic
+ * while recording, send when there is something to send), and a permanently green plus says
+ * nothing while competing with the ones that do.
  */
 @customElement('cv-attach-menu')
 export class CvAttachMenu extends LitElement {
     static override styles = [
         iconStyles,
+        iconTriggerStyles,
         tooltipStyles,
         css`
             :host {
@@ -48,14 +53,6 @@ export class CvAttachMenu extends LitElement {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-            }
-            /* Fluent's own button, cut to the row's density: even size="small" is padded for a
-               control standing alone. No accent colour — in this row colour means state (the
-               gauge's bands, the mic while recording, send when there is something to send), and
-               a permanently green plus says nothing while competing with the ones that do. */
-            .trigger {
-                padding: 3px;
-                min-width: 0;
             }
             /* Wraps the glyph so it can be the tooltip's anchor while the button stays the menu's.
                A real box (not display:contents) — an anchor has to be laid out to be anchored to. */

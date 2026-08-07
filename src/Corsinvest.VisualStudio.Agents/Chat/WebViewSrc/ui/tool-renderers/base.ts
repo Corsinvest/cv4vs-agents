@@ -202,10 +202,14 @@ export abstract class ToolRenderer {
                     ${this.renderHeaderActions()}
                     ${
                         opts.chevron
-                            ? html`<button
-                                  class="icon-btn cv-tool-row-chev ${opts.open ? 'expanded' : ''} ${
+                            ? html`<fluent-button
+                                  class="trigger cv-tool-row-chev ${opts.open ? 'expanded' : ''} ${
                                       opts.chevronAlwaysShown ? 'always-shown' : ''
                                   }"
+                                  appearance="subtle"
+                                  shape="rounded"
+                                  size="small"
+                                  icon-only
                                   title=${opts.open ? 'Collapse' : 'Expand'}
                                   @click=${(e: Event) => {
                                       e.stopPropagation();
@@ -213,7 +217,7 @@ export abstract class ToolRenderer {
                                   }}
                               >
                                   ${unsafeHTML(ChevronDown16Regular)}
-                              </button>`
+                              </fluent-button>`
                             : nothing
                     }
                 </div>
@@ -461,8 +465,12 @@ export abstract class ToolRenderer {
     /** The "show error details in VS" icon button. */
     protected errorButton(): TemplateResult {
         return html`<div class="cv-tool-actions">
-            <button
-                class="icon-btn cv-tool-actions-error"
+            <fluent-button
+                class="trigger cv-tool-actions-error"
+                appearance="subtle"
+                shape="rounded"
+                size="small"
+                icon-only
                 title="Show error details"
                 @click=${(e: Event) => {
                     e.stopPropagation();
@@ -470,7 +478,7 @@ export abstract class ToolRenderer {
                 }}
             >
                 ${unsafeHTML(ErrorCircle16Regular)}
-            </button>
+            </fluent-button>
         </div>`;
     }
 
@@ -483,8 +491,12 @@ export abstract class ToolRenderer {
         return html`<div class="cv-tool-actions">
             ${
                 this.host.status === 'error'
-                    ? html`<button
-                          class="icon-btn cv-tool-actions-error"
+                    ? html`<fluent-button
+                          class="trigger cv-tool-actions-error"
+                          appearance="subtle"
+                          shape="rounded"
+                          size="small"
+                          icon-only
                           title="Show error details"
                           @click=${(e: Event) => {
                               e.stopPropagation();
@@ -492,13 +504,17 @@ export abstract class ToolRenderer {
                           }}
                       >
                           ${unsafeHTML(ErrorCircle16Regular)}
-                      </button>`
+                      </fluent-button>`
                     : nothing
             }
             ${
                 appState.ui.showOpenDiffInVsButton
-                    ? html`<button
-                          class="icon-btn cv-tool-actions-vs"
+                    ? html`<fluent-button
+                          class="trigger cv-tool-actions-vs"
+                          appearance="subtle"
+                          shape="rounded"
+                          size="small"
+                          icon-only
                           title="Open diff in Visual Studio"
                           @click=${(e: Event) => {
                               e.stopPropagation();
@@ -506,7 +522,7 @@ export abstract class ToolRenderer {
                           }}
                       >
                           ${unsafeHTML(VisualStudioIcon)}
-                      </button>`
+                      </fluent-button>`
                     : nothing
             }
         </div>`;
