@@ -69,6 +69,21 @@ public sealed class PaneEntry
     /// <summary>Id of the session currently attached (null = fresh). Drives the History picker's ✓.</summary>
     public string ActiveSessionId { get; internal set; }
 
+    /// <summary>Display title of that session (custom &gt; ai &gt; last prompt). Null until one is
+    /// known, and always null for a CLI pane.</summary>
+    public string SessionTitle { get; internal set; }
+
+    /// <summary>"Chat 3 (Default) — Fix the drag and drop", for the two menus that list open panes.
+    /// The number stays: two panes can sit on the same session, and it is what the docked tab
+    /// shows.</summary>
+    public string MenuLabel(int maxTitleChars = 48)
+    {
+        var title = SessionTitle?.Trim();
+        if (string.IsNullOrEmpty(title)) { return Title; }
+        if (title.Length > maxTitleChars) { title = title.Substring(0, maxTitleChars - 1) + "…"; }
+        return $"{Title} — {title}";
+    }
+
     /// <summary>Invoked by the toolbar ✕ to close this pane. Set by the window on register.</summary>
     internal Action CloseAction { get; set; }
 

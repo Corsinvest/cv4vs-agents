@@ -145,7 +145,8 @@ public partial class PaneToolbar : UserControl
             var captured = entry;
             var item = new MenuItem
             {
-                Header = entry.Title,
+                // Doubled underscores stay visible: WPF reads a single one as the access key.
+                Header = entry.MenuLabel().Replace("_", "__"),
                 Icon = new CrispImage
                 {
                     Width = 16,

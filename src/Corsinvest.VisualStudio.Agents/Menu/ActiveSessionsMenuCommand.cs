@@ -68,7 +68,7 @@ internal sealed class ActiveSessionsMenuCommand : OleMenuCommand
         {
             cmd.Enabled = true;
             cmd.Visible = true;
-            cmd.Text = items[index].Title;
+            cmd.Text = items[index].MenuLabel();
         }
         else
         {
