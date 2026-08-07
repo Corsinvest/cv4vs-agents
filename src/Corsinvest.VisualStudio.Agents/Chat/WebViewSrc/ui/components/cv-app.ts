@@ -1690,7 +1690,7 @@ export class CvApp extends LitElement {
                 }
                 ${this._exchanges.map((group) => this.renderExchange(group))}
                 ${
-                    this._isBusy && this._streamingMsgs.size === 0 && !this._awaitingUser
+                    this._isBusy && !this._awaitingUser
                         ? html`<cv-spinner .status=${this._status}></cv-spinner>`
                         : nothing
                 }
