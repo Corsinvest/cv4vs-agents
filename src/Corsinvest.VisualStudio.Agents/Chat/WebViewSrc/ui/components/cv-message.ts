@@ -211,7 +211,7 @@ export class CvMessage extends LitElement {
     /**
      * Bottom hover actions row (user messages): Copy + Fork (only with a uuid, i.e. replayed from
      * JSONL history — live messages have none) + "x ago" timestamp. Inline — cv-copy-btn is the
-     * shared icon button; Fork is a bare .icon-btn (styled in chat.css). Expand is NOT here: long
+     * shared icon button; Fork is a plain .trigger (styled in chat.css). Expand is NOT here: long
      * messages get an always-visible "Show more" button on the fade instead (see the user render).
      */
     private _renderActions() {
@@ -221,13 +221,17 @@ export class CvMessage extends LitElement {
             <cv-copy-btn .text=${copyText} title="Copy message"></cv-copy-btn>
             ${
                 showFork
-                    ? html`<button
-                          class="icon-btn"
+                    ? html`<fluent-button
+                          class="trigger"
+                          appearance="subtle"
+                          shape="rounded"
+                          size="small"
+                          icon-only
                           title="Fork conversation from here"
                           @click=${this._onFork}
                       >
                           ${unsafeHTML(BranchFork16Regular)}
-                      </button>`
+                      </fluent-button>`
                     : nothing
             }
             ${

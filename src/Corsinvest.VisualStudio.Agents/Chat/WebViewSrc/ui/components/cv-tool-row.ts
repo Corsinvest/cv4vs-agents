@@ -156,13 +156,17 @@ export class CvToolRow extends LitElement implements ToolRowState {
             return nothing;
         }
         return html`
-            <button
-                class="icon-btn"
+            <fluent-button
+                class="trigger"
+                appearance="subtle"
+                shape="rounded"
+                size="small"
+                icon-only
                 title=${this.showAll ? 'Reduce' : 'Show all'}
                 @click=${this._onToggleShowAll}
             >
                 ${unsafeHTML(this.showAll ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular)}
-            </button>
+            </fluent-button>
         `;
     }
 

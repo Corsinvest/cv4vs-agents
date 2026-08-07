@@ -6,7 +6,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Mic16Regular from '@fluentui/svg-icons/icons/mic_16_regular.svg';
-import { iconStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, iconTriggerStyles, tooltipStyles } from '../styles/shared';
 
 /**
  * Mic button using Web Speech API. Fires a `transcript` CustomEvent with
@@ -18,14 +18,9 @@ import { iconStyles, tooltipStyles } from '../styles/shared';
 export class CvMicButton extends LitElement {
     static override styles = [
         iconStyles,
+        iconTriggerStyles,
         tooltipStyles,
         css`
-            /* Fluent's own button, cut to the row's density: even size="small" is padded for a
-               control standing alone. */
-            .trigger {
-                padding: 3px;
-                min-width: 0;
-            }
             /* While recording: red button that pulses, reads as "stop". The colour is set on the
                host, over the subtle appearance — this state is the one thing Fluent has no
                variant for. */
