@@ -141,6 +141,9 @@ export type { SetComposerNotification } from './generated/SetComposerNotificatio
 /** A key the host claimed for us (`ui_host_key`). Generated from C# by TypeGen. */
 export type { HostKeyNotification } from './generated/HostKeyNotification';
 
+/** Files the host claimed and read for us (`ui_files_dropped`). Generated from C# by TypeGen. */
+export type { FilesDroppedNotification } from './generated/FilesDroppedNotification';
+
 /** Prompt history, slash-command catalogue, streamed text delta, tool-progress tick,
  *  CLI-started notice. Generated from C# by TypeGen — re-exported here. */
 export type { PromptHistoryNotification } from './generated/PromptHistoryNotification';

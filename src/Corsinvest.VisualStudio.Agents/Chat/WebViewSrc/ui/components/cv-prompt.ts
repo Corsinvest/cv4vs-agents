@@ -1182,6 +1182,11 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
     }
 
+    /** Public because the drop is caught in WPF, not here (ui_files_dropped). */
+    async addDroppedFiles(files: File[]): Promise<void> {
+        await this._readFiles(files);
+    }
+
     private _onPickFile = (): void => {
         this._filePicker?.click();
     };

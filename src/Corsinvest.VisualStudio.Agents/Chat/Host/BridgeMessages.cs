@@ -207,6 +207,8 @@ internal static class BridgeMessages
             /// <summary>A key the composition control dropped, claimed by the pane and forwarded
             /// for the page to act on. See <c>HostKeyNotification</c>.</summary>
             public const string HostKey = "ui_host_key";
+            /// <summary>See <c>FilesDroppedNotification</c>.</summary>
+            public const string FilesDropped = "ui_files_dropped";
         }
 
         /// <summary>Plugin-manager results + the global "plugins changed" broadcast.</summary>
