@@ -101,12 +101,16 @@ export const tooltipStyles = css`
     fluent-tooltip {
         padding: 6px 8px;
         max-width: 320px;
+        box-sizing: border-box;
         /* Lets a plain string with newlines break where it says to, so a tooltip with two or three
            lines doesn't need an element per line. */
         white-space: pre-line;
     }
     .tip-name {
         font-weight: var(--fontWeightSemibold);
+        /* A file path has no spaces to break at, so without this one long path sets the tooltip's
+           width and max-width can only clip it. */
+        overflow-wrap: anywhere;
     }
     .tip-desc {
         color: var(--colorNeutralForeground2);

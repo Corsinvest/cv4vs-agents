@@ -173,7 +173,7 @@ export class CvIdeContextBadge extends LitElement {
                  displayPathUi so it follows "Show relative paths" like the tool rows and falls back
                  to the full path outside the workdir. tip-desc for the second line, as on the model
                  tooltip — tip-action's smaller size is for a third one. -->
-            <fluent-tooltip anchor="ide-badge" positioning="before">
+            <fluent-tooltip anchor="ide-badge" positioning="after">
                 <span class="tip-name">${displayPathUi(ctx.filePath)}${lineInfo}</span>
                 <!-- On one line on purpose: tooltipStyles sets white-space: pre-line, so a line
                      break here would render as blank space inside the tooltip. -->
