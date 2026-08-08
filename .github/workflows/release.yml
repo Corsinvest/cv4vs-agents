@@ -36,9 +36,9 @@ jobs:
       - name: Install TypeGen
         run: dotnet tool install -g dotnet-typegen
 
-      # Version in Directory.Build.props is the single source of truth (VsixVersion is derived from
-      # it), and a Release build already fails if the manifest or AssemblyInfo disagree. The tag is
-      # the one thing nothing checks -- and the Marketplace rejects an upload whose version was
+      # Version in Directory.Build.props is the single source of truth: VsixVersion derives from it,
+      # and both the manifest and AssemblyInfo are generated, so nothing can disagree. The tag is
+      # the one thing outside that chain -- and the Marketplace rejects an upload whose version was
       # already published, so a mismatch found here is the cheap version of that failure.
       - name: Extract and validate version
         id: version

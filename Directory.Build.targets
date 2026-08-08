@@ -41,29 +41,15 @@
   </Target>
 
   <!--
-    The manifest still repeats the version, and nothing can generate it: <Identity Version> is read
-    by the VSIX build itself. Check it rather than trust it — the Marketplace rejects an upload
-    whose version was already published, and it only says so after you have built and tagged.
+    Feeds the manifest its version instead of repeating it. source.extension.vsixmanifest says
+      <Identity Version="|%CurrentProject%;GetVsixVersion|" …>
+    and DetokenizeVsixManifestFile (Microsoft.VsSDK.targets) calls this target while writing the
+    resolved manifest to obj\ — the file under src\ keeps the token and is never rewritten, so a
+    build leaves the working tree clean.
 
-    Release only: noise while iterating in Debug.
+    VsixVersion, not Version: an Identity version is digits only, so a preview suffix must never
+    reach it.
   -->
-  <Target Name="VerifyManifestVersion"
-          BeforeTargets="Build"
-          Condition="'$(Configuration)' == 'Release' AND '$(MSBuildProjectName)' == 'Corsinvest.VisualStudio.Agents'">
-
-    <PropertyGroup>
-      <_ManifestPath>$(MSBuildProjectDirectory)\source.extension.vsixmanifest</_ManifestPath>
-      <!-- Matching a literal substring is unreliable: the manifest carries several Version="..."
-           attributes for the VS installation targets, so only the one on <Identity> counts. -->
-      <_ManifestVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText($(_ManifestPath))), 'Identity[^&gt;]*?Version="([^"]+)"').Groups[1].Value)</_ManifestVersion>
-    </PropertyGroup>
-
-    <!-- The numeric version: a VSIX Identity Version is digits only, so a preview suffix never
-         reaches it. -->
-    <Error Condition="'$(_ManifestVersion)' != '$(VsixVersion)'"
-           Text="Version mismatch: Directory.Build.props derives $(VsixVersion) from Version $(Version), source.extension.vsixmanifest says '$(_ManifestVersion)'. Make them agree before shipping." />
-
-    <Message Importance="high" Text="Version check: $(Version) — manifest carries $(VsixVersion)." />
-  </Target>
+  <Target Name="GetVsixVersion" Outputs="$(VsixVersion)" />
 
 </Project>
