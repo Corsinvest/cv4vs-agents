@@ -209,6 +209,12 @@ external terminal, no other editor — the Chat and CLI panes in the screenshots
 writing the next version. Which is also the toughest test there is: every rough edge turns up in the
 day's work, not in a bug report.
 
+**On 10 August 2026 it debugged itself.** Claude hit a bug, set a breakpoint through the extension's
+own MCP tools — in the very Visual Studio instance hosting the pane it was typing into — stepped
+through the live process, read the locals, found it, fixed it. The debugger was inspecting the
+program that was running the debugger. It worked, which was somehow the surprising part. I mostly
+watched. Almost as good as me 😏
+
 — *Daniele Corsini (Frank Lupo)*
 
 ---
