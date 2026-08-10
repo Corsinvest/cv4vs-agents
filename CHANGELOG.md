@@ -8,6 +8,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Four new debug tools, and the ones around them answer better.** `debug_expand` opens a value
+  into its members, so seeing inside an object is one call instead of an evaluate per field — around
+  eighteen of them for a class with sixteen properties, and only after reading the source to learn
+  what to ask for. `debug_select_frame` points the inspection tools at another frame of the call
+  stack, which is what makes a caller's variables reachable at all: stopped on a throw inside a
+  method that was called, they were simply out of scope with no way to say so. `debug_run_to_line`
+  is Run to Cursor, and `debug_set_next_statement` moves the instruction pointer without running
+  what lies between — the one debug tool with side effects, and it says so. `debug_get_locals` also
+  returns the method's **parameters**, which were missing entirely, and can walk the members in the
+  same call.
+
+- **Files can be dropped on the chat, and pasted whatever they are.** Dragging one onto the pane
+  handed it to Visual Studio, which opened it in an editor — the composer never saw it. Pasting
+  anything that was not an image did nothing at all, silently, including the `.txt` and `.pdf` the
+  allow-list accepts. What reaches the CLI is now chosen by the file's media type rather than by its
+  extension, which is how a video came through as 1.4 MB of replacement characters. Video
+  extensions are attachable too: the model cannot watch them, but a refused attachment that says
+  nothing is worse than one that arrives named.
+
+- **The open panes are named by their session.** Both menus that list them showed "Chat 3
+  (Default)" — a number and a profile, identical for every chat on the same profile. The View menu
+  was the odder of the two: its whole reason for existing is that the docked tab caption is stuck at
+  "Chat 1", and it showed the same number the tab does.
+
 - **A message written during a turn says so, and lands where it was sent.** Typing while Claude is
   still answering has always held the message back until the turn ended, but its bubble went in at
   once and looked exactly like a sent one — then stayed above a reply it had not prompted. Since an
@@ -37,6 +61,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   change would have sent the old id back.
 
 ### Fixed
+
+- **Breaking on a thrown exception has never worked.** `debug_set_exception_breakpoint` answered
+  "Exception settings not available (no solution loaded?)" for every call, with any solution open,
+  and the guess in that message sent whoever read it looking in the wrong place. It reached the
+  setting by name on an object that does not carry it under that name, so nothing was ever
+  configured. Two of its own error branches were unreachable for a second reason, and a mistyped
+  exception came back as a generic failure instead of saying what was wrong.
+
+- **Starting, stopping and restarting the debugger reported the state they were leaving.** All three
+  return before the transition, so the mode read straight after was the previous one — `debug_start`
+  could answer "design" for a session it had just started, and the next call would say "already
+  debugging" about a mode it had reported as stopped. They report no mode now, which is the honest
+  answer, and point at the tool that knows.
+
+- **A permission request no longer disappears behind the next one.** The banner held a single
+  request and assigned straight into it, so a second `can_use_tool` overwrote the first: it vanished
+  from the screen while the CLI was still waiting for an answer that could no longer be given, and
+  that tool hung until the turn was interrupted. Not an edge case — a turn firing parallel tools, or
+  several sub-agents, does it routinely.
+
+- **A tool's chip no longer lies about what was sent.** An attachment whose base64 failed to decode
+  went to the CLI as an empty document block: the chip sat on the message, Claude answered as if no
+  file were there, and nothing anywhere explained it.
+
+- **The token count on a turn counts what the turn cost.** It read `input_tokens` alone, which is
+  what is left once prompt caching takes the rest — a turn that pushed a 540k-token video into the
+  context reported `↑ 2`, and so did every other turn of that session. Content entering the context
+  for the first time is counted now; context replayed from earlier turns still is not, or every turn
+  would report the same five-figure number.
+
+- **A session title is one line.** With no custom or generated title it falls back to the last
+  prompt — a whole message, newlines and all — and the path feeding the pane menus never cut it. In
+  a menu those newlines break the row instead of wrapping, and everything after the first line
+  disappears without saying so.
+
+- **The IDE-context tooltip stays inside the pane.** It opened towards the left edge, where there is
+  no room: with a deep path it ran past the edge and covered the textarea and the toolbar buttons,
+  and the start of the path — the part that says where the file lives — was the first thing to go.
+
+- **Two IDE tools answer predictably.** `editor_get_open_files` returned whatever order the shell
+  enumerator happened to give, while claiming to match VS's tab order: two consecutive calls could
+  differ with no tab having moved.
+
+- **Coming back to a pane lands the caret in the composer.** Focus went to the toolbar instead, so
+  the first thing typed after switching panes went nowhere. The pane was being focused while the
+  shell was still activating the frame, and the shell then moved it — a hidden pane does that
+  activation for real, which is why an already-visible one appeared to work.
+
+- **The spinner stays up for the whole turn.** It disappeared as soon as the first text arrived and
+  came back between blocks, so a turn that was still working looked finished. It now goes when the
+  turn does, or when a permission is waiting for an answer.
 
 - **A build through the MCP tools no longer freezes the IDE.** It ran the build on the UI thread and
   then waited for it there, so Visual Studio was unusable until it finished — while the same build
@@ -73,8 +148,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Streaming markdown stops re-parsing what has already settled.** Each delta re-rendered the whole
+  message, so the cost grew with its length: a 22k-character answer spent 697 ms of parsing to add
+  180 characters. Everything up to the last blank line outside a code fence is parsed once and kept.
+
+- **The icon buttons are Fluent's, not ours.** Nine of them were bare `<button>`s carrying ninety
+  lines of hand-written CSS in two copies — one for Shadow DOM, one for the light DOM — that had to
+  be kept in step by eye, and no longer were: Copy and Fork sit next to each other and had drifted
+  to different colours. Hover, focus and disabled come from Fluent now, and both copies are gone.
+
+- **The message that refuses a file opens the setting it names.** It recited a four-level Options
+  path to walk by hand, and claimed binary files cannot be read — which stopped being true when
+  attachments started travelling as documents with their own media type. Shorter, with a button.
+
 - **Markdown is rendered once per message**, not on every re-render — the transcript stops re-parsing
   text that has not changed.
+
+- **The transcript scrolls once per streaming delta**, not three times plus a timer.
 
 
 ## [1.2.0] - 2026-08-05
