@@ -71,11 +71,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   configured. Two of its own error branches were unreachable for a second reason, and a mistyped
   exception came back as a generic failure instead of saying what was wrong.
 
-- **Starting, stopping and restarting the debugger reported the state they were leaving.** All three
-  return before the transition, so the mode read straight after was the previous one — `debug_start`
-  could answer "design" for a session it had just started, and the next call would say "already
-  debugging" about a mode it had reported as stopped. They report no mode now, which is the honest
-  answer, and point at the tool that knows.
+- **Half the debug tools reported the state they were leaving.** Start, stop, restart, break and
+  continue all return before the transition they ask for, so the mode read straight after was the
+  previous one — `debug_start` could answer "design" for a session it had just started, and the next
+  call would say "already debugging" about a mode it had reported as stopped. They report no mode
+  now, which is the honest answer, and point at the tool that knows.
+
+- **`debug_step` returned the line it started from.** The same cause, and the worst of them: the
+  position came back before the step had landed, so the answer was identical to the input. Measured
+  on a step out of a method with a second of work left, it named the line inside that method while
+  the program went on to the caller — wrong file, wrong method. It waits for the step to land now,
+  and after ten seconds answers without a position rather than with a stale one.
+
+- **The paused position came from the editor's caret, not the debugger.** Which reads as the same
+  place nearly always — except `debug_run_to_line` and `debug_set_next_statement` move the caret
+  themselves, so after either of those the reported position was the one they had just set: a break
+  on line 19 was reported as line 17, a comment. A breakpoint knows its own line, and that is what
+  answers when one is what stopped us.
 
 - **A permission request no longer disappears behind the next one.** The banner held a single
   request and assigned straight into it, so a second `can_use_tool` overwrote the first: it vanished
