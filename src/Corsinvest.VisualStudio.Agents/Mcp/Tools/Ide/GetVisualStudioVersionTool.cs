@@ -15,7 +15,8 @@ internal sealed class GetVisualStudioVersionTool : McpTool<NoArgs>
     public override string Name => "ide_get_version";
     public override string Description =>
         "Get the running Visual Studio version: name (e.g. \"Visual Studio 2026\"), " +
-        "marketing year, and raw DTE version (e.g. \"18.0\").";
+        "marketing year, and raw DTE version (e.g. \"18.0\"). For what the installation can " +
+        "actually do, the edition matters more than the version — see ide_get_edition.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

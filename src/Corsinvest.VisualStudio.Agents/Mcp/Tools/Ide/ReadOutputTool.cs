@@ -26,7 +26,10 @@ internal sealed class ReadOutputTool : McpTool<ReadOutputArgs>
         "Read text from a Visual Studio Output window pane (e.g. 'Build', 'Debug', or the " +
         "running program's output). Omit 'pane' to list the available pane names first. " +
         "'tailLines' caps how many lines are returned from the end (default 200). Useful to " +
-        "see build/debug output or the debuggee's console writes that don't go through the shell.";
+        "see build/debug output or the debuggee's console writes that don't go through the " +
+        "shell — including what a frozen thread stopped printing, which is how debug_freeze_thread " +
+        "is checked. ide_clear_output first to read only what happens next, ide_activate_output to " +
+        "put a pane in front of the user.";
 
     protected override async Task<object> InvokeAsync(ReadOutputArgs args)
     {

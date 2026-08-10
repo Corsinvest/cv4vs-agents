@@ -25,7 +25,10 @@ internal sealed class BuildSolutionTool : McpTool<BuildSolutionArgs>
     public override string Description =>
         "Build the entire solution and return whether it succeeded plus what the Error List holds " +
         "(file, line, description, severity). Blocks until the build ends. Reports errors only " +
-        "unless severity says otherwise; the message says how many items were left out.";
+        "unless severity says otherwise; the message says how many items were left out. Prefer " +
+        "this to a dotnet build in the shell: it goes through the open IDE, so there is no path to " +
+        "resolve and no clash with a debug session. build_project builds one project instead, and " +
+        "ide_read_output has the raw log when the Error List is not enough.";
 
     protected override async Task<object> InvokeAsync(BuildSolutionArgs args)
     {

@@ -27,7 +27,9 @@ internal sealed class SearchWorkspaceSymbolsTool : McpTool<SearchWorkspaceSymbol
         "Find a symbol by name across the entire solution (the 'Navigate To' search). " +
         "Returns up to 50 hits, each with name, kind, file and 1-based line, ordered by file " +
         "then line. Use it to locate a class/method without knowing its file. Returns " +
-        "supported=false for languages without NavigateTo support — fall back to Grep then.";
+        "supported=false for languages without NavigateTo support — fall back to Grep then. " +
+        "This is the way in when the file is unknown: from a hit, nav_go_to_definition, " +
+        "nav_find_references and nav_get_document_symbols all take the file and line it returns.";
 
     protected override async Task<object> InvokeAsync(SearchWorkspaceSymbolsArgs args)
     {
