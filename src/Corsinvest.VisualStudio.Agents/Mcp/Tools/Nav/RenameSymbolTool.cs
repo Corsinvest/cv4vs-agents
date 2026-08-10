@@ -41,7 +41,9 @@ internal sealed class RenameSymbolTool : McpTool<RenameSymbolArgs>
         "changes directly. Atomic — if the rename would cause unresolved conflicts nothing " +
         "is applied. The file must belong to a project in the open solution. Returns " +
         "supported=false for languages this isn't available for; applied=false (with a " +
-        "reason) when the symbol can't be renamed or the new name is invalid.";
+        "reason) when the symbol can't be renamed or the new name is invalid. It writes to every " +
+        "file it touches, so ask before running it — nav_find_references shows the same set " +
+        "without changing anything.";
 
     protected override async Task<object> InvokeAsync(RenameSymbolArgs args)
     {

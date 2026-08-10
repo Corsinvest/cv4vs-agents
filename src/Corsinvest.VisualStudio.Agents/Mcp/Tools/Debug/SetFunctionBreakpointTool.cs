@@ -27,7 +27,9 @@ internal sealed class SetFunctionBreakpointTool : McpTool<SetFunctionBreakpointA
         "Add a breakpoint that triggers when a function is entered, identified by name " +
         "(e.g. \"MyClass.Calculate\") instead of a file and line. Optionally pass a condition. " +
         "Works whether or not a debug session is running. Use when you know the method but not " +
-        "the exact line, or to avoid opening the file.";
+        "the exact line, or to avoid opening the file. debug_set_breakpoint takes a file and " +
+        "line instead, debug_list_breakpoints shows what is set, and debug_start begins the " +
+        "session that will hit it.";
 
     protected override async Task<object> InvokeAsync(SetFunctionBreakpointArgs args)
     {

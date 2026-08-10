@@ -15,8 +15,10 @@ internal sealed class GetWorkspaceFoldersTool : McpTool<NoArgs>
 {
     public override string Name => "ide_get_workspace_folders";
     public override string Description =>
-        "Get the workspace folders currently open in the IDE. " +
-        "Returns the solution folder for Visual Studio.";
+        "Get the workspace folders currently open in the IDE — the solution folder, for Visual " +
+        "Studio. Empty when no solution is loaded, which is also why the tools needing one " +
+        "(build_*, nav_*, document_format) would fail; ide_get_project_structure lists what is " +
+        "inside it.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

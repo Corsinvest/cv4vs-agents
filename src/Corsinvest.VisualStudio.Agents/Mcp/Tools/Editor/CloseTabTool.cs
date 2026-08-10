@@ -22,7 +22,11 @@ internal sealed class CloseTabArgs
 internal sealed class CloseTabTool : McpTool<CloseTabArgs>
 {
     public override string Name => "editor_close_tab";
-    public override string Description => "Close a tab in the IDE by its caption.";
+    public override string Description =>
+        "Close a diff tab this server opened, by the tabName that editor_open_diff was given. It " +
+        "does NOT close arbitrary editor tabs: only frames in our own diff registry are touched, " +
+        "so the user's documents are safe from it — and closing something they opened is not on " +
+        "offer. Finding no such tab is not an error. Use editor_close_all_diffs to clear them all.";
 
     protected override async Task<object> InvokeAsync(CloseTabArgs args)
     {
