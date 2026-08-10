@@ -128,6 +128,57 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>Run until execution reaches <paramref name="filePath"/>:<paramref name="line"/>,
+    /// like "Run to Cursor". There is no API for it: a breakpoint is added, execution resumed, and
+    /// the breakpoint removed again — in a finally, because the program can stop somewhere else
+    /// first (another breakpoint, a throw) and a leftover one would haunt the rest of the session.
+    /// <para>Non-blocking like Go(): poll getDebugState to see where it stopped, which may not be
+    /// the requested line.</para></summary>
+    public async Task<DebugResult> RunToLineAsync(string filePath, int line)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        Breakpoint temp = null;
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
+            if (string.IsNullOrEmpty(filePath) || line < 1)
+            {
+                return new DebugResult { Ok = false, Reason = "filePath and a 1-based line are required." };
+            }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new DebugResult { Ok = false, Reason = NotInBreak };
+            }
+
+            // Count before/after: Breakpoints.Add returns the collection it added to, not the
+            // breakpoint, so the new one is identified by being the one that wasn't there.
+            var before = dbg.Breakpoints.Count;
+            dbg.Breakpoints.Add(
+                Function: "", File: filePath, Line: line, Column: 1,
+                Condition: "", ConditionType: dbgBreakpointConditionType.dbgBreakpointConditionTypeWhenTrue,
+                Language: "", Data: "", DataCount: 1, Address: "", HitCount: 0,
+                HitCountType: dbgHitCountType.dbgHitCountTypeNone);
+            if (dbg.Breakpoints.Count > before) { temp = dbg.Breakpoints.Item(dbg.Breakpoints.Count); }
+
+            dbg.Go(false);
+            return new DebugResult { Ok = true, Reason = $"Running to {System.IO.Path.GetFileName(filePath)}:{line} — poll getDebugState; it may stop earlier." };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.RunToLineAsync", ex);
+            return new DebugResult { Ok = false, Reason = "Failed to run to that line." };
+        }
+        finally
+        {
+            // Go() is non-blocking, so this runs while the program is on its way there — VS keeps a
+            // deleted breakpoint armed for the run it was told to make, which is what "run to
+            // cursor" needs, and nothing is left behind if it stops somewhere else instead.
+            try { temp?.Delete(); }
+            catch (Exception ex) { OutputWindowLogger.Global.Warn($"[debug] run-to-line temp breakpoint not removed: {ex.Message}"); }
+        }
+    }
+
     /// <summary>Add a breakpoint at <paramref name="filePath"/>:<paramref name="line"/>, with an
     /// optional condition (true-expression). Works in any mode. Returns Ok even if VS can't bind
     /// it yet (it binds when the code loads), as long as the request was accepted.</summary>

@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 53 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 54 tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -65,7 +65,7 @@ returns `supported=false` instead of pretending it worked.
 | `build_set_startup_project` | Set the solution's startup project — the one debug_start (F5) launches. Pass the project name; returns ok plus the resolved startup project, or ok=false with the list of available projects if the name doesn't match. |
 | `build_solution` | Build the entire solution and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until the build ends. Reports errors only unless severity says otherwise; the message says how many items were left out. |
 
-## Debug (22)
+## Debug (23)
 
 | Tool | What it does |
 |---|---|
@@ -83,6 +83,7 @@ returns `supported=false` instead of pretending it worked.
 | `debug_list_processes` | List local processes the debugger can attach to (pid + name). Optionally filter by a name substring. Use this to find the process to pass to debug_attach. |
 | `debug_remove_breakpoint` | Remove the breakpoint(s) at a file and 1-based line. Use debug_clear_breakpoints to remove all. |
 | `debug_restart` | Restart the current debug session (stop, then start again — like Debug > Restart). If not debugging, just starts. |
+| `debug_run_to_line` | Resume the paused program and stop again when it reaches this line — the Run to Cursor command. Saves stepping through a loop or a long method one statement at a time. Non-blocking: poll debug_get_state, and check where it actually stopped, because anything on the way there — another breakpoint, a thrown exception — pauses it first. If the line is never reached the program simply runs on. Leaves no breakpoint behind either way. Only valid in break mode. |
 | `debug_select_frame` | Choose which call-stack frame debug_get_locals, debug_evaluate and debug_expand read, by the index debug_get_callstack reports (0 = where execution is paused). Locals belong to a frame: stopped inside a method that was called, the caller's variables are out of scope until you select its frame — that is what "not in scope in the current frame" means. Same as double-clicking a line in the Call Stack window. The selection lasts until the program runs again. Only valid in break mode. |
 | `debug_set_breakpoint` | Add a breakpoint at a file and 1-based line. Optionally pass a condition (an expression that must be true for the breakpoint to trigger). Works whether or not a debug session is running. Combine with debug_start + debug_get_state to pause execution at this point. |
 | `debug_set_exception_breakpoint` | Configure the debugger to break when a specific exception type is thrown (first-chance), even if it's caught — useful to find where an exception originates. Pass the fully-qualified type (e.g. 'System.NullReferenceException'). breakWhenThrown=false turns it off. Works in any mode; needs a solution loaded. After it breaks, debug_get_state reports the exception type/message. |
