@@ -191,7 +191,7 @@ internal sealed partial class SessionManager
         if (info != null)
         {
             info.LastPrompt ??= lastUserText;
-            info.Title = StringHelpers.Truncate(info.CustomTitle ?? info.AiTitle ?? info.LastPrompt, 60);
+            info.Title = StringHelpers.ToSingleLine(info.CustomTitle ?? info.AiTitle ?? info.LastPrompt, MaxTitleLength);
             info.MessageCount = messagesNewestFirst.Count;
         }
 
