@@ -75,13 +75,11 @@ public sealed class PaneEntry
 
     /// <summary>"Chat 3 (Default) — Fix the drag and drop", for the two menus that list open panes.
     /// The number stays: two panes can sit on the same session, and it is what the docked tab
-    /// shows.</summary>
-    public string MenuLabel(int maxTitleChars = 48)
+    /// shows. The title arrives single-line and already cut (SessionManager.MaxTitleLength).</summary>
+    public string MenuLabel()
     {
         var title = SessionTitle?.Trim();
-        if (string.IsNullOrEmpty(title)) { return Title; }
-        if (title.Length > maxTitleChars) { title = title.Substring(0, maxTitleChars - 1) + "…"; }
-        return $"{Title} — {title}";
+        return string.IsNullOrEmpty(title) ? Title : $"{Title} — {title}";
     }
 
     /// <summary>Invoked by the toolbar ✕ to close this pane. Set by the window on register.</summary>

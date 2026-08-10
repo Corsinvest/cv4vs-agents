@@ -106,7 +106,7 @@ internal sealed partial class SessionManager
 
             var rawTitle = info.CustomTitle ?? info.AiTitle ?? info.LastPrompt;
             if (rawTitle == null) { return null; }
-            info.Title = StringHelpers.Truncate(rawTitle, 60);
+            info.Title = StringHelpers.ToSingleLine(rawTitle, MaxTitleLength);
             return info;
         }
         catch (Exception ex) { _log.Warn($"[sessions] skipped {Path.GetFileName(path)}: {ex.GetType().Name}: {ex.Message}"); return null; }
@@ -304,6 +304,10 @@ internal sealed partial class SessionManager
         return existing?.CustomTitle != null || existing?.AiTitle != null;
     }
 
+    /// <summary>Longest a session title is ever shown at. It falls back to the last prompt when
+    /// nothing better exists, and a prompt is a whole message — one pasted here ran to 40 lines.</summary>
+    public const int MaxTitleLength = 60;
+
     /// <summary>Resolve the display title for one session (same priority and head+tail
     /// scan the session list uses): custom > ai > last-prompt. Null when none / missing.
     /// Used by the pane toolbar to show + refresh the current session's title.</summary>
@@ -312,7 +316,7 @@ internal sealed partial class SessionManager
         var path = FileFor(sessionId);
         if (!File.Exists(path)) { return null; }
         var info = ScanMetadata(path);
-        return info?.CustomTitle ?? info?.AiTitle ?? info?.LastPrompt;
+        return StringHelpers.ToSingleLine(info?.CustomTitle ?? info?.AiTitle ?? info?.LastPrompt, MaxTitleLength);
     }
 
     // Writes the AI title unless a title already exists (custom = user rename, or a

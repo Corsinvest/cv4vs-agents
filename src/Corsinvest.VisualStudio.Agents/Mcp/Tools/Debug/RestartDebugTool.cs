@@ -14,7 +14,8 @@ internal sealed class RestartDebugTool : McpTool<NoArgs>
     public override string Name => "debug_restart";
     public override string Description =>
         "Restart the current debug session (stop, then start again — like Debug > Restart). " +
-        "If not debugging, just starts.";
+        "If not debugging, just starts. Non-blocking, so mode comes back null rather than a guess: " +
+        "poll debug_get_state for where it lands.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

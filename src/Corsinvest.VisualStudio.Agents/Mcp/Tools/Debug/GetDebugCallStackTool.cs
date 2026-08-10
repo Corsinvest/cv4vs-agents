@@ -14,9 +14,13 @@ internal sealed class GetDebugCallStackTool : McpTool<NoArgs>
 {
     public override string Name => "debug_get_callstack";
     public override string Description =>
-        "Get the call stack of the current thread while paused (break mode): each frame's " +
-        "function, module, and (for the top frame) file/line. Only valid in break mode — if " +
-        "the program is still running, poll debug_get_state until mode='break'.";
+        "Get the call stack of the selected thread while paused (break mode): each frame's index, " +
+        "function and module. Index 0 is where execution is paused; isCurrent marks the frame the " +
+        "inspection tools are reading, which debug_select_frame moves — and file/line come with " +
+        "that one, since the editor follows the selection rather than the top of the stack. This " +
+        "is one thread's stack: debug_list_threads shows the others, debug_select_thread switches. " +
+        "Only valid in break mode — if the program is still running, poll debug_get_state until " +
+        "mode='break'.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
@@ -27,10 +31,12 @@ internal sealed class GetDebugCallStackTool : McpTool<NoArgs>
             ok = true,
             frames = r.Frames.Select(f => new
             {
+                index = f.Index,
                 function = f.Function,
                 module = f.Module,
                 file = f.File,
                 line = f.Line,
+                isCurrent = f.IsCurrent,
             }).ToArray(),
         };
     }

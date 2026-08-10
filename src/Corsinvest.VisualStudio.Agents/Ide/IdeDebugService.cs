@@ -93,7 +93,10 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = "Already debugging." };
             }
             dbg.Go(false); // false = don't block waiting for break/end
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+            // No Mode: Go() returns before the transition, so CurrentMode here is still the state we
+            // just left — reporting it said "design" for a session that had started. getDebugState
+            // is the one that knows, and the caller has to poll it anyway.
+            return new DebugResult { Ok = true, Reason = "Debugging started — poll getDebugState for the mode." };
         }
         catch (Exception ex)
         {
@@ -115,12 +118,130 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = true, Mode = "design", Reason = "Not debugging." };
             }
             dbg.Stop(false);
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+            // Same as Go(): non-blocking, so CurrentMode has not caught up yet.
+            return new DebugResult { Ok = true, Reason = "Stop requested — poll getDebugState to see it land." };
         }
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("IdeDebugService.StopAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to stop debugging." };
+        }
+    }
+
+    /// <summary>Move the instruction pointer to <paramref name="filePath"/>:<paramref name="line"/>
+    /// WITHOUT running what lies between — "Set Next Statement".
+    /// <para>There is no API taking a path: the command works off the caret, so the file is opened,
+    /// activated and the caret moved first. Stays in break mode, so nothing has to be awaited
+    /// afterwards.</para>
+    /// <para>The one debug tool that can leave the program inconsistent — skipping an assignment
+    /// leaves the variable at whatever it was, and jumping backwards re-runs side effects.</para>
+    /// <para>The file is checked against where execution is paused, because the command does NOT:
+    /// it takes a caret position and resolves the line as an offset in the method it is already in.
+    /// Asked to jump into another file it moves the pointer to that line NUMBER in the current
+    /// method — a different statement entirely, and a stack whose frame and instruction pointer
+    /// disagree. Verified: VS accepts it without a word.</para></summary>
+    public async Task<DebugResult> SetNextStatementAsync(string filePath, int line)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dte = GetDte();
+            var dbg = dte?.Debugger;
+            if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
+            if (string.IsNullOrEmpty(filePath) || line < 1)
+            {
+                return new DebugResult { Ok = false, Reason = "filePath and a 1-based line are required." };
+            }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new DebugResult { Ok = false, Reason = NotInBreak };
+            }
+
+            var (pausedFile, _) = CurrentLocation();
+            if (!string.IsNullOrEmpty(pausedFile)
+                && !string.Equals(System.IO.Path.GetFullPath(filePath), System.IO.Path.GetFullPath(pausedFile), StringComparison.OrdinalIgnoreCase))
+            {
+                return new DebugResult
+                {
+                    Ok = false,
+                    Reason = $"The jump must stay in the file execution is paused in ({System.IO.Path.GetFileName(pausedFile)}); "
+                             + $"{System.IO.Path.GetFileName(filePath)} is a different one. Set Next Statement cannot leave the current method.",
+                };
+            }
+
+            var window = dte.ItemOperations.OpenFile(filePath, Constants.vsViewKindCode);
+            window?.Activate();
+            if (window?.Document?.Selection is not TextSelection sel)
+            {
+                return new DebugResult { Ok = false, Reason = $"Could not open {System.IO.Path.GetFileName(filePath)} in the editor." };
+            }
+            sel.MoveToLineAndOffset(line, 1, false);
+
+            // Throws when VS judges the jump impossible — out of the current frame, into or out of
+            // a handler. The message is the debugger's own, and more specific than anything we
+            // could say about why this particular jump was refused.
+            try { dte.ExecuteCommand("Debug.SetNextStatement", ""); }
+            catch (Exception ex) { return new DebugResult { Ok = false, Reason = $"Visual Studio refused the jump: {ex.Message.Trim()}" }; }
+
+            // The line asked for, not CurrentLocation(): we are still stopped on whatever breakpoint
+            // got us here, so that would report where the jump came FROM. It is also the one place
+            // that already knows the answer — the jump either landed on the requested line or threw.
+            return new DebugResult
+            {
+                Ok = true,
+                Mode = ModeToString(dbg.CurrentMode),
+                Reason = $"Next statement is now {System.IO.Path.GetFileName(filePath)}:{line}. The skipped code did not run.",
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.SetNextStatementAsync", ex);
+            return new DebugResult { Ok = false, Reason = "Failed to set the next statement." };
+        }
+    }
+
+    /// <summary>Run until execution reaches <paramref name="filePath"/>:<paramref name="line"/>,
+    /// like "Run to Cursor".
+    /// <para>Through VS's own command, off the caret, the way SetNextStatement works. The obvious
+    /// build — add a breakpoint, Go(), delete it — does not: Go() is non-blocking, so the delete
+    /// runs while the program is still on its way and disarms the breakpoint before it is ever hit.
+    /// Measured: execution sailed past the line, twice out of twice.</para>
+    /// <para>Non-blocking like Go(): poll getDebugState to see where it stopped, which may not be
+    /// the requested line — anything on the way there pauses it first.</para></summary>
+    public async Task<DebugResult> RunToLineAsync(string filePath, int line)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dte = GetDte();
+            var dbg = dte?.Debugger;
+            if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
+            if (string.IsNullOrEmpty(filePath) || line < 1)
+            {
+                return new DebugResult { Ok = false, Reason = "filePath and a 1-based line are required." };
+            }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new DebugResult { Ok = false, Reason = NotInBreak };
+            }
+
+            var window = dte.ItemOperations.OpenFile(filePath, Constants.vsViewKindCode);
+            window?.Activate();
+            if (window?.Document?.Selection is not TextSelection sel)
+            {
+                return new DebugResult { Ok = false, Reason = $"Could not open {System.IO.Path.GetFileName(filePath)} in the editor." };
+            }
+            sel.MoveToLineAndOffset(line, 1, false);
+
+            try { dte.ExecuteCommand("Debug.RunToCursor", ""); }
+            catch (Exception ex) { return new DebugResult { Ok = false, Reason = $"Visual Studio refused it: {ex.Message.Trim()}" }; }
+
+            return new DebugResult { Ok = true, Reason = $"Running to {System.IO.Path.GetFileName(filePath)}:{line} — poll getDebugState; it may stop earlier." };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.RunToLineAsync", ex);
+            return new DebugResult { Ok = false, Reason = "Failed to run to that line." };
         }
     }
 
@@ -317,7 +438,9 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = "Can only break while running." };
             }
             dbg.Break(false); // false = don't block until the break completes
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+            // No Mode, same as start/stop/restart: the call returns before the transition, so
+            // CurrentMode here still says "run" for a program that is about to be paused.
+            return new DebugResult { Ok = true, Reason = "Break requested — poll getDebugState for where it stopped." };
         }
         catch (Exception ex)
         {
@@ -424,11 +547,12 @@ internal sealed partial class IdeDebugService
             {
                 // Nothing to restart — just start.
                 dbg.Go(false);
-                return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = "Was not debugging; started." };
+                return new DebugResult { Ok = true, Reason = "Was not debugging; started — poll getDebugState for the mode." };
             }
-            // Debug.Restart command handles stop+start cleanly across project types.
+            // Debug.Restart command handles stop+start cleanly across project types. Like Go()/Stop()
+            // it returns before the mode changes, so there is no state worth reporting here.
             dte.ExecuteCommand("Debug.Restart", "");
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+            return new DebugResult { Ok = true, Reason = "Restart requested — poll getDebugState for the mode." };
         }
         catch (Exception ex)
         {
@@ -496,8 +620,8 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Configure break-when-thrown for an exception type (e.g. "System.NullReferenceException").
-    /// Works in any mode. Group defaults to the CLR exceptions group when not given. Uses the
-    /// EnvDTE90 Debugger3.ExceptionGroups API via late binding so we don't hard-reference EnvDTE90.</summary>
+    /// Works in any mode. Group defaults to the CLR exceptions group when not given. Goes through
+    /// EnvDTE90's Debugger3.ExceptionGroups, which the VS SDK metapackage already brings in.</summary>
     public async Task<DebugResult> SetExceptionBreakAsync(string exceptionName, bool breakWhenThrown, string group)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -510,29 +634,29 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = false, Reason = "exceptionName is required." };
             }
 
-            // dbg.ExceptionGroups (Debugger3) — reach via late binding to avoid an EnvDTE90 ref.
-            var groups = dbg.GetType().GetProperty("ExceptionGroups")?.GetValue(dbg);
+            // Cast, not reflection: DTE.Debugger hands back an RCW typed on the base interface, so
+            // GetProperty("ExceptionGroups") — a Debugger3 member — found nothing and every call
+            // failed as "not available", whatever the solution. Debugger3 is a GUID'd COM interface,
+            // so it answers to QueryInterface and not to a lookup by name.
+            var groups = (dbg as EnvDTE90.Debugger3)?.ExceptionGroups;
             if (groups == null)
             {
                 OutputWindowLogger.Global.Debug(() => "[debug] Debugger3.ExceptionGroups unavailable — exception-break config skipped");
-                return new DebugResult { Ok = false, Reason = "Exception settings not available (no solution loaded?)." };
+                return new DebugResult { Ok = false, Reason = "Exception settings not available on this debugger." };
             }
 
             var groupName = string.IsNullOrWhiteSpace(group) ? "Common Language Runtime Exceptions" : group;
-            var exGroup = VsReflection.Invoke(groups, "Item", [typeof(object)], [groupName]);
-            if (exGroup == null)
-            {
-                return new DebugResult { Ok = false, Reason = $"Exception group '{groupName}' not found." };
-            }
+            EnvDTE90.ExceptionSettings exGroup;
+            // Item() on these COM collections throws on a missing key rather than returning null,
+            // so the lookups are guarded here instead of null-checked.
+            try { exGroup = groups.Item(groupName); }
+            catch (Exception) { return new DebugResult { Ok = false, Reason = $"Exception group '{groupName}' not found." }; }
 
-            // group.Item(exceptionName) → the ExceptionSetting; then group.SetBreakWhenThrown(flag, setting).
-            var exItem = VsReflection.Invoke(exGroup, "Item", [typeof(object)], [exceptionName]);
-            if (exItem == null)
-            {
-                return new DebugResult { Ok = false, Reason = $"Exception '{exceptionName}' not found in group '{groupName}'." };
-            }
+            EnvDTE90.ExceptionSetting exItem;
+            try { exItem = exGroup.Item(exceptionName); }
+            catch (Exception) { return new DebugResult { Ok = false, Reason = $"Exception '{exceptionName}' not found in group '{groupName}'. Pass the fully-qualified type name." }; }
 
-            VsReflection.Invoke(exGroup, "SetBreakWhenThrown", (object)breakWhenThrown, exItem);
+            exGroup.SetBreakWhenThrown(breakWhenThrown, exItem);
             return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = $"Break-when-thrown {(breakWhenThrown ? "on" : "off")} for {exceptionName}." };
         }
         catch (Exception ex)
