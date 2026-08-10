@@ -235,6 +235,7 @@ internal sealed partial class McpServerHost
         yield return new Tools.GetDebugLocalsTool();
         yield return new Tools.EvaluateExpressionTool();
         yield return new Tools.ExpandExpressionTool();
+        yield return new Tools.SelectFrameTool();
         yield return new Tools.ReadOutputTool();
         yield return new Tools.ClearOutputTool();
         yield return new Tools.ActivateOutputTool();

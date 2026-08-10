@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Ide;
@@ -96,12 +97,19 @@ internal sealed partial class IdeDebugService
             var thread = dbg.CurrentThread;
             if (thread != null)
             {
+                // Compared by COM identity, not by name: two frames of a recursive call share a
+                // function name, and each COM call can hand back a different wrapper for the same
+                // object — so ReferenceEquals would answer false on the frame that IS selected.
+                var current = dbg.CurrentStackFrame;
+                var i = 0;
                 foreach (StackFrame sf in thread.StackFrames)
                 {
                     frames.Add(new StackFrameInfo
                     {
+                        Index = i++,
                         Function = sf.FunctionName,
                         Module = SafeModule(sf),
+                        IsCurrent = IsSameComObject(sf, current),
                         // EnvDTE StackFrame has no file/line; those come from the active doc for the
                         // top frame only. Leave 0 for deeper frames (function name is the key info).
                     });
@@ -158,6 +166,56 @@ internal sealed partial class IdeDebugService
         {
             OutputWindowLogger.Global.LogException("IdeDebugService.GetLocalsAsync", ex);
             return new LocalsResult { Ok = false, Reason = "Failed to get locals." };
+        }
+    }
+
+    /// <summary>Point the inspection tools at another frame of the current call stack (only while
+    /// paused). Locals belong to a frame, so stopped inside a callee the caller's variables are out
+    /// of scope until this moves the selection — the debugger's own Call Stack window does the same
+    /// on a double click.</summary>
+    public async Task<SelectFrameResult> SelectFrameAsync(int index)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new SelectFrameResult { Ok = false, Reason = "Debugger not available." }; }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new SelectFrameResult { Ok = false, InBreak = false, Reason = NotInBreak };
+            }
+
+            var thread = dbg.CurrentThread;
+            if (thread == null) { return new SelectFrameResult { Ok = false, InBreak = true, Reason = "No current thread." }; }
+
+            var frames = thread.StackFrames;
+            var count = frames?.Count ?? 0;
+            if (index < 0 || index >= count)
+            {
+                return new SelectFrameResult
+                {
+                    Ok = false,
+                    InBreak = true,
+                    Reason = $"Frame {index} is out of range — the stack has {count} ({(count > 0 ? $"0..{count - 1}" : "none")}).",
+                };
+            }
+
+            // StackFrames is 1-based, unlike the index the call stack is reported with.
+            var target = frames.Item(index + 1);
+            dbg.CurrentStackFrame = target;
+            return new SelectFrameResult
+            {
+                Ok = true,
+                InBreak = true,
+                Index = index,
+                Function = target.FunctionName,
+                FrameCount = count,
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.SelectFrameAsync", ex);
+            return new SelectFrameResult { Ok = false, Reason = "Failed to select the frame." };
         }
     }
 
@@ -248,6 +306,28 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>Whether two RCWs wrap the same COM object, by comparing their IUnknown. (.NET
+    /// Framework has no Marshal.AreComObjectsEqual, and each call can hand back a fresh wrapper,
+    /// so ReferenceEquals says false for the very object it was asked about.)</summary>
+    private static bool IsSameComObject(object a, object b)
+    {
+        if (a == null || b == null) { return false; }
+        var pa = IntPtr.Zero;
+        var pb = IntPtr.Zero;
+        try
+        {
+            pa = Marshal.GetIUnknownForObject(a);
+            pb = Marshal.GetIUnknownForObject(b);
+            return pa == pb;
+        }
+        catch (Exception) { return false; }
+        finally
+        {
+            if (pa != IntPtr.Zero) { Marshal.Release(pa); }
+            if (pb != IntPtr.Zero) { Marshal.Release(pb); }
+        }
+    }
+
     /// <summary>Why an expression didn't resolve. Naming the frame separates the three ways this
     /// fails — a wrong name, a variable not declared yet, and one that is alive a frame up — which
     /// otherwise read the same, and the third is the common case when stopped inside a callee.</summary>
@@ -256,7 +336,8 @@ internal sealed partial class IdeDebugService
         var frame = dbg.CurrentStackFrame?.FunctionName;
         return string.IsNullOrEmpty(frame)
             ? "Expression not valid in the current scope."
-            : $"Not in scope in the current frame ({frame}) — it may be a local of a calling frame; see debug_get_callstack.";
+            : $"Not in scope in the current frame ({frame}) — it may be a local of a calling frame: "
+              + "debug_get_callstack lists them, debug_select_frame switches.";
     }
 
     /// <summary>One level of members, recursing while <paramref name="depth"/> is left. Sorted by

@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 52 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 53 tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -65,7 +65,7 @@ returns `supported=false` instead of pretending it worked.
 | `build_set_startup_project` | Set the solution's startup project — the one debug_start (F5) launches. Pass the project name; returns ok plus the resolved startup project, or ok=false with the list of available projects if the name doesn't match. |
 | `build_solution` | Build the entire solution and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until the build ends. Reports errors only unless severity says otherwise; the message says how many items were left out. |
 
-## Debug (21)
+## Debug (22)
 
 | Tool | What it does |
 |---|---|
@@ -76,13 +76,14 @@ returns `supported=false` instead of pretending it worked.
 | `debug_continue` | Resume execution from a paused (break) state (like F5 while paused). The program runs until the next breakpoint or it exits. Only valid in break mode. |
 | `debug_evaluate` | Evaluate an expression in the current stack frame while paused (break mode), like the Watch window: pass something like 'order.Items.Count'. Returns the value and type. Note: evaluating can call property getters/methods in the program, so it may have side-effects — prefer reading fields/properties. You can also assign (e.g. 'x = 5') to change a variable's value while paused. Only valid in break mode. |
 | `debug_expand` | Expand an expression into its members while paused (break mode), so an object comes back as a tree instead of just a type name: pass 'order', 'order.Customer', 'this', or '$exception' when stopped on a throw (that one carries InnerException and the stack). This is what debug_get_locals points at when it reports hasMembers=true — one call instead of a debug_evaluate per field. hasMembers on a returned node means there is more below it: expand that path to see it. truncated=true means a level had more members than maxMembers and what came back is a prefix. Note: reading a property runs its getter in the program, so this can have side-effects. Only valid in break mode. |
-| `debug_get_callstack` | Get the call stack of the current thread while paused (break mode): each frame's function, module, and (for the top frame) file/line. Only valid in break mode — if the program is still running, poll debug_get_state until mode='break'. |
+| `debug_get_callstack` | Get the call stack of the current thread while paused (break mode): each frame's index, function, module, and (for the top frame) file/line. Index 0 is where execution is paused; isCurrent marks the frame the inspection tools are reading, which debug_select_frame moves. Only valid in break mode — if the program is still running, poll debug_get_state until mode='break'. |
 | `debug_get_locals` | List the local variables in the current stack frame while paused (break mode): each with name, type, and value. Objects/collections aren't expanded — hasMembers=true means you can see inside with debug_expand("name"), which walks the members for you. Only valid in break mode. |
 | `debug_get_state` | Get the current debug state: mode is 'design' (not debugging), 'run' (running), or 'break' (paused on a breakpoint/exception). In 'break' mode also returns the current file and 1-based line where execution is paused, and — if paused ON AN EXCEPTION — its type and message. Poll this after debug_start to know when the program has hit a breakpoint or thrown. |
 | `debug_list_breakpoints` | List all breakpoints in the solution: each with its file+line (or function name), condition (if any), and whether it's enabled. |
 | `debug_list_processes` | List local processes the debugger can attach to (pid + name). Optionally filter by a name substring. Use this to find the process to pass to debug_attach. |
 | `debug_remove_breakpoint` | Remove the breakpoint(s) at a file and 1-based line. Use debug_clear_breakpoints to remove all. |
 | `debug_restart` | Restart the current debug session (stop, then start again — like Debug > Restart). If not debugging, just starts. |
+| `debug_select_frame` | Choose which call-stack frame debug_get_locals, debug_evaluate and debug_expand read, by the index debug_get_callstack reports (0 = where execution is paused). Locals belong to a frame: stopped inside a method that was called, the caller's variables are out of scope until you select its frame — that is what "not in scope in the current frame" means. Same as double-clicking a line in the Call Stack window. The selection lasts until the program runs again. Only valid in break mode. |
 | `debug_set_breakpoint` | Add a breakpoint at a file and 1-based line. Optionally pass a condition (an expression that must be true for the breakpoint to trigger). Works whether or not a debug session is running. Combine with debug_start + debug_get_state to pause execution at this point. |
 | `debug_set_exception_breakpoint` | Configure the debugger to break when a specific exception type is thrown (first-chance), even if it's caught — useful to find where an exception originates. Pass the fully-qualified type (e.g. 'System.NullReferenceException'). breakWhenThrown=false turns it off. Works in any mode; needs a solution loaded. After it breaks, debug_get_state reports the exception type/message. |
 | `debug_set_function_breakpoint` | Add a breakpoint that triggers when a function is entered, identified by name (e.g. "MyClass.Calculate") instead of a file and line. Optionally pass a condition. Works whether or not a debug session is running. Use when you know the method but not the exact line, or to avoid opening the file. |

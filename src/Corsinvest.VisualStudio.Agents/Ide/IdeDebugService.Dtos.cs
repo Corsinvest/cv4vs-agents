@@ -90,10 +90,16 @@ internal sealed partial class IdeDebugService
 
     public sealed class StackFrameInfo
     {
+        /// <summary>0 = where execution is paused, counting outwards to the caller. What
+        /// debug_select_frame takes.</summary>
+        public int Index { get; set; }
         public string Function { get; set; }
         public string Module { get; set; }
         public string File { get; set; }
         public int Line { get; set; }    // 1-based; 0 when unknown
+        /// <summary>The frame the other inspection tools read. Index 0 until something selects
+        /// another one.</summary>
+        public bool IsCurrent { get; set; }
     }
 
     public sealed class CallStackResult
@@ -112,6 +118,16 @@ internal sealed partial class IdeDebugService
         public string Value { get; set; }
         public string Type { get; set; }
         public bool IsValid { get; set; }
+        public string Reason { get; set; }
+    }
+
+    public sealed class SelectFrameResult
+    {
+        public bool Ok { get; set; }
+        public bool InBreak { get; set; }
+        public int Index { get; set; }
+        public string Function { get; set; }
+        public int FrameCount { get; set; }
         public string Reason { get; set; }
     }
 

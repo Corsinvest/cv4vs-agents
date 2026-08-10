@@ -188,6 +188,7 @@
     <Compile Include="Mcp\Tools\Debug\GetDebugLocalsTool.cs" />
     <Compile Include="Mcp\Tools\Debug\EvaluateExpressionTool.cs" />
     <Compile Include="Mcp\Tools\Debug\ExpandExpressionTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\SelectFrameTool.cs" />
     <Compile Include="Mcp\Tools\Ide\ReadOutputTool.cs" />
     <Compile Include="Mcp\Tools\Ide\ClearOutputTool.cs" />
     <Compile Include="Mcp\Tools\Ide\ActivateOutputTool.cs" />
