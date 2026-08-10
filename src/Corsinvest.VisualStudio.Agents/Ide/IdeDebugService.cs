@@ -93,7 +93,10 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = "Already debugging." };
             }
             dbg.Go(false); // false = don't block waiting for break/end
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+            // No Mode: Go() returns before the transition, so CurrentMode here is still the state we
+            // just left — reporting it said "design" for a session that had started. getDebugState
+            // is the one that knows, and the caller has to poll it anyway.
+            return new DebugResult { Ok = true, Reason = "Debugging started — poll getDebugState for the mode." };
         }
         catch (Exception ex)
         {
@@ -115,7 +118,8 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = true, Mode = "design", Reason = "Not debugging." };
             }
             dbg.Stop(false);
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+            // Same as Go(): non-blocking, so CurrentMode has not caught up yet.
+            return new DebugResult { Ok = true, Reason = "Stop requested — poll getDebugState to see it land." };
         }
         catch (Exception ex)
         {
@@ -424,11 +428,12 @@ internal sealed partial class IdeDebugService
             {
                 // Nothing to restart — just start.
                 dbg.Go(false);
-                return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = "Was not debugging; started." };
+                return new DebugResult { Ok = true, Reason = "Was not debugging; started — poll getDebugState for the mode." };
             }
-            // Debug.Restart command handles stop+start cleanly across project types.
+            // Debug.Restart command handles stop+start cleanly across project types. Like Go()/Stop()
+            // it returns before the mode changes, so there is no state worth reporting here.
             dte.ExecuteCommand("Debug.Restart", "");
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+            return new DebugResult { Ok = true, Reason = "Restart requested — poll getDebugState for the mode." };
         }
         catch (Exception ex)
         {
@@ -496,8 +501,8 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Configure break-when-thrown for an exception type (e.g. "System.NullReferenceException").
-    /// Works in any mode. Group defaults to the CLR exceptions group when not given. Uses the
-    /// EnvDTE90 Debugger3.ExceptionGroups API via late binding so we don't hard-reference EnvDTE90.</summary>
+    /// Works in any mode. Group defaults to the CLR exceptions group when not given. Goes through
+    /// EnvDTE90's Debugger3.ExceptionGroups, which the VS SDK metapackage already brings in.</summary>
     public async Task<DebugResult> SetExceptionBreakAsync(string exceptionName, bool breakWhenThrown, string group)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -510,29 +515,29 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = false, Reason = "exceptionName is required." };
             }
 
-            // dbg.ExceptionGroups (Debugger3) — reach via late binding to avoid an EnvDTE90 ref.
-            var groups = dbg.GetType().GetProperty("ExceptionGroups")?.GetValue(dbg);
+            // Cast, not reflection: DTE.Debugger hands back an RCW typed on the base interface, so
+            // GetProperty("ExceptionGroups") — a Debugger3 member — found nothing and every call
+            // failed as "not available", whatever the solution. Debugger3 is a GUID'd COM interface,
+            // so it answers to QueryInterface and not to a lookup by name.
+            var groups = (dbg as EnvDTE90.Debugger3)?.ExceptionGroups;
             if (groups == null)
             {
                 OutputWindowLogger.Global.Debug(() => "[debug] Debugger3.ExceptionGroups unavailable — exception-break config skipped");
-                return new DebugResult { Ok = false, Reason = "Exception settings not available (no solution loaded?)." };
+                return new DebugResult { Ok = false, Reason = "Exception settings not available on this debugger." };
             }
 
             var groupName = string.IsNullOrWhiteSpace(group) ? "Common Language Runtime Exceptions" : group;
-            var exGroup = VsReflection.Invoke(groups, "Item", [typeof(object)], [groupName]);
-            if (exGroup == null)
-            {
-                return new DebugResult { Ok = false, Reason = $"Exception group '{groupName}' not found." };
-            }
+            EnvDTE90.ExceptionSettings exGroup;
+            // Item() on these COM collections throws on a missing key rather than returning null,
+            // so the lookups are guarded here instead of null-checked.
+            try { exGroup = groups.Item(groupName); }
+            catch (Exception) { return new DebugResult { Ok = false, Reason = $"Exception group '{groupName}' not found." }; }
 
-            // group.Item(exceptionName) → the ExceptionSetting; then group.SetBreakWhenThrown(flag, setting).
-            var exItem = VsReflection.Invoke(exGroup, "Item", [typeof(object)], [exceptionName]);
-            if (exItem == null)
-            {
-                return new DebugResult { Ok = false, Reason = $"Exception '{exceptionName}' not found in group '{groupName}'." };
-            }
+            EnvDTE90.ExceptionSetting exItem;
+            try { exItem = exGroup.Item(exceptionName); }
+            catch (Exception) { return new DebugResult { Ok = false, Reason = $"Exception '{exceptionName}' not found in group '{groupName}'. Pass the fully-qualified type name." }; }
 
-            VsReflection.Invoke(exGroup, "SetBreakWhenThrown", (object)breakWhenThrown, exItem);
+            exGroup.SetBreakWhenThrown(breakWhenThrown, exItem);
             return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = $"Break-when-thrown {(breakWhenThrown ? "on" : "off")} for {exceptionName}." };
         }
         catch (Exception ex)
