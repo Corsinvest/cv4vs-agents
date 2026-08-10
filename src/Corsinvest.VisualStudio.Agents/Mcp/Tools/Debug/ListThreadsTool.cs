@@ -16,12 +16,12 @@ internal sealed class ListThreadsTool : McpTool<NoArgs>
     public override string Name => "debug_list_threads";
     public override string Description =>
         "List the threads of the program being debugged while paused (break mode): each with its " +
-        "id, name, location and whether it is frozen. isCurrent marks the one debug_get_callstack " +
-        "and the inspection tools read — everything else in this domain looks at a single thread, " +
+        "id, name, location and whether it is frozen. The one the inspection tools read comes " +
+        "FIRST and carries isCurrent — everything else in this domain looks at a single thread, " +
         "and this is what shows the others exist. Most threads carry no name of their own, the " +
-        "main one included (it is set in code and rarely is), so name falls back to where the " +
-        "thread is — which is what identifies it in practice. Pass an id to debug_select_thread to " +
-        "look at one, or to debug_freeze_thread to hold it still. Only valid in break mode.";
+        "main one included (it is set in code and rarely is), and come back as '(unnamed)': the " +
+        "location is what identifies them. Pass an id to debug_select_thread to look at one, or to " +
+        "debug_freeze_thread to hold it still. Only valid in break mode.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

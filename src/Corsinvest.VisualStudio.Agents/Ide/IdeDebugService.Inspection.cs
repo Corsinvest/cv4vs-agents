@@ -231,16 +231,23 @@ internal sealed partial class IdeDebugService
                 {
                     Id = t.ID,
                     // Most threads have no Name: it is set in code and hardly anyone does, the main
-                    // thread included. Falling back to the location keeps every row identifiable —
-                    // "which one is Main" was otherwise answerable only by reading two fields.
-                    Name = !string.IsNullOrEmpty(name) ? name : (location ?? "(unnamed)"),
+                    // thread included. Said plainly rather than filled with the location, which
+                    // only printed the same string in both columns.
+                    Name = name ?? "(unnamed)",
                     Location = location ?? "(no managed frames)",
                     IsAlive = t.IsAlive,
                     IsFrozen = t.IsFrozen,
                     IsCurrent = currentId != 0 && t.ID == currentId,
                 });
             }
-            return new ThreadsResult { Ok = true, InBreak = true, Threads = [.. threads.OrderBy(t => t.Id)] };
+            // Current first: in a dozen rows that read alike, a boolean at the end of one of them
+            // has to be hunted for. Position says it before the field does.
+            return new ThreadsResult
+            {
+                Ok = true,
+                InBreak = true,
+                Threads = [.. threads.OrderByDescending(t => t.IsCurrent).ThenBy(t => t.Id)],
+            };
         }
         catch (Exception ex)
         {
