@@ -38,7 +38,10 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = NotInBreak };
             }
             dbg.Go(false);
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+            // No Mode: Go() returns before the transition, so this reads the state being left. It
+            // happened to be right — "run" either way — which is why it outlived the same fix on
+            // start/stop/restart/break.
+            return new DebugResult { Ok = true, Reason = "Resumed — poll getDebugState for where it stops next." };
         }
         catch (Exception ex)
         {
@@ -222,11 +225,16 @@ internal sealed partial class IdeDebugService
             var threads = new List<ThreadInfo>();
             foreach (EnvDTE.Thread t in program.Threads)
             {
+                var name = SafeName(t);
+                var location = SafeLocation(t);
                 threads.Add(new ThreadInfo
                 {
                     Id = t.ID,
-                    Name = t.Name,
-                    Location = SafeLocation(t),
+                    // Most threads have no Name: it is set in code and hardly anyone does, the main
+                    // thread included. Falling back to the location keeps every row identifiable —
+                    // "which one is Main" was otherwise answerable only by reading two fields.
+                    Name = !string.IsNullOrEmpty(name) ? name : (location ?? "(unnamed)"),
+                    Location = location ?? "(no managed frames)",
                     IsAlive = t.IsAlive,
                     IsFrozen = t.IsFrozen,
                     IsCurrent = currentId != 0 && t.ID == currentId,
@@ -306,7 +314,15 @@ internal sealed partial class IdeDebugService
     /// no reason to lose the rest of the list.</summary>
     private static string SafeLocation(EnvDTE.Thread t)
     {
-        try { return t.Location; }
+        try { return string.IsNullOrWhiteSpace(t.Location) ? null : t.Location; }
+        catch (Exception) { return null; }
+    }
+
+    /// <summary>A thread's name, or null. Same guard as the location: a thread the debugger cannot
+    /// fully see throws rather than answering.</summary>
+    private static string SafeName(EnvDTE.Thread t)
+    {
+        try { return string.IsNullOrWhiteSpace(t.Name) ? null : t.Name; }
         catch (Exception) { return null; }
     }
 

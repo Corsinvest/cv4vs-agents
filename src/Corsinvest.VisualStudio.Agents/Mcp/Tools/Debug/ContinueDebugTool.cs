@@ -15,7 +15,8 @@ internal sealed class ContinueDebugTool : McpTool<NoArgs>
     public override string Name => "debug_continue";
     public override string Description =>
         "Resume execution from a paused (break) state (like F5 while paused). The program runs " +
-        "until the next breakpoint or it exits. Only valid in break mode.";
+        "until the next breakpoint or it exits. Non-blocking, so mode comes back null rather than " +
+        "a guess: poll debug_get_state to see where it stops next. Only valid in break mode.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

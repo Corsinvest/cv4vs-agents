@@ -15,8 +15,9 @@ internal sealed class BreakDebugTool : McpTool<NoArgs>
     public override string Name => "debug_break";
     public override string Description =>
         "Pause the running program immediately (Debug > Break All), without waiting for a " +
-        "breakpoint. Only valid while running. After this the debugger is in 'break' mode, so " +
-        "you can inspect the call stack and variables.";
+        "breakpoint, so the call stack and variables can be inspected. Non-blocking, so mode comes " +
+        "back null rather than a guess: poll debug_get_state to see it reach 'break' and learn " +
+        "where it stopped. Only valid while running.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

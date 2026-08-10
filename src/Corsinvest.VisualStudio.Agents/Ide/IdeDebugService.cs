@@ -438,7 +438,9 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = "Can only break while running." };
             }
             dbg.Break(false); // false = don't block until the break completes
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+            // No Mode, same as start/stop/restart: the call returns before the transition, so
+            // CurrentMode here still says "run" for a program that is about to be paused.
+            return new DebugResult { Ok = true, Reason = "Break requested — poll getDebugState for where it stopped." };
         }
         catch (Exception ex)
         {
