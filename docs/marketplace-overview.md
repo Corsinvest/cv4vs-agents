@@ -1,9 +1,9 @@
 <!--
-  The Overview shown on the Visual Studio Marketplace listing, kept here so edits go through git
-  like everything else. It is not part of the VSIX: paste it into the Overview field on the
-  publishing portal, which is also where it is edited. Only <Description> in
-  source.extension.vsixmanifest ships inside the package -- that is the short blurb search results
-  use.
+  The Overview shown on the Visual Studio Marketplace listing. It is not part of the VSIX:
+  vs-publish.json points at this path, so a stable tag uploads it along with the package -- this
+  file *is* what the Marketplace shows, and editing it on the portal is undone by the next release.
+  Only <Description> in source.extension.vsixmanifest ships inside the package -- that is the short
+  blurb search results use.
 
   Images must be absolute raw.githubusercontent.com URLs; relative paths do not resolve there.
 -->
@@ -66,7 +66,7 @@ by feature detection rather than by pinning a version.
 
 ## Two panes, one session
 
-![The chat pane and the CLI pane side by side](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat.png)
+<img src="https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat.png" alt="The chat pane docked in Visual Studio" width="420">&nbsp;&nbsp;<img src="https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/cli.png" alt="The CLI pane running the same session" width="420">
 
 **Chat** — streaming replies, thinking blocks, collapsible tool output, inline diffs, clickable file
 references (`ClientEvents.cs:208` opens the file at that line), image attachments, and a composer with
@@ -112,11 +112,28 @@ All aggregated locally. No telemetry.
 
 ---
 
+## Sub-agents and plugins
+
+![The sub-agent panel](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat/subagents-panel.png)
+
+When Claude fans out to sub-agents, the chat usually just sits there on a spinner. Here they get
+their own panel: how many are alive, what each one is doing right now, how long it has been at it,
+and a **Stop** button next to every one of them. Their tool calls stay grouped under the agent that
+made them.
+
+A **plugin manager** covers the rest of the CLI's ecosystem — Installed, Available and Marketplaces
+tabs: install, enable or disable, add a marketplace, without leaving the IDE.
+
+---
+
 ## Profiles
 
+![Options → Profiles](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/options-profiles.png)
+
 Each pane can run against a different configuration: working directory, model, permission mode and
-environment. That includes Anthropic-compatible endpoints, so one pane can use a different provider
-without touching your global settings.
+environment. That includes any **Anthropic-compatible endpoint** — native Claude, GLM/z.ai, or your
+own host — so one pane can run on a different provider while another stays on your usual account,
+and your global settings are never touched. The IDE tools work the same either way.
 
 ---
 
@@ -133,6 +150,8 @@ The things people keep asking for, and where they are:
 | Crash dumps, profiling, VS diagnostic tools | not yet — [open an issue](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feature_request.yml) if you need it |
 | Works with a Max subscription | it drives your own `claude.exe`, so whatever you are signed in with |
 | **Visual Studio 2022** | supported, not just 2026 |
+
+![A diff opened in Visual Studio's own diff viewer](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat/vs-diff.png)
 
 ---
 
