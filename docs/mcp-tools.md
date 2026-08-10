@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 54 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 55 tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -65,7 +65,7 @@ returns `supported=false` instead of pretending it worked.
 | `build_set_startup_project` | Set the solution's startup project — the one debug_start (F5) launches. Pass the project name; returns ok plus the resolved startup project, or ok=false with the list of available projects if the name doesn't match. |
 | `build_solution` | Build the entire solution and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until the build ends. Reports errors only unless severity says otherwise; the message says how many items were left out. |
 
-## Debug (23)
+## Debug (24)
 
 | Tool | What it does |
 |---|---|
@@ -88,6 +88,7 @@ returns `supported=false` instead of pretending it worked.
 | `debug_set_breakpoint` | Add a breakpoint at a file and 1-based line. Optionally pass a condition (an expression that must be true for the breakpoint to trigger). Works whether or not a debug session is running. Combine with debug_start + debug_get_state to pause execution at this point. |
 | `debug_set_exception_breakpoint` | Configure the debugger to break when a specific exception type is thrown (first-chance), even if it's caught — useful to find where an exception originates. Pass the fully-qualified type (e.g. 'System.NullReferenceException'). breakWhenThrown=false turns it off. Works in any mode; needs a solution loaded. After it breaks, debug_get_state reports the exception type/message. |
 | `debug_set_function_breakpoint` | Add a breakpoint that triggers when a function is entered, identified by name (e.g. "MyClass.Calculate") instead of a file and line. Optionally pass a condition. Works whether or not a debug session is running. Use when you know the method but not the exact line, or to avoid opening the file. |
+| `debug_set_next_statement` | Move the instruction pointer to this line WITHOUT running the code in between — the Set Next Statement command. Skips a call that would fail, or jumps back to retry a block after fixing a value with debug_evaluate. Stays within the paused method: the jump cannot leave the frame, and Visual Studio refuses the ones it knows are impossible. SIDE-EFFECTFUL, unlike the rest of the debug tools: the skipped statements never run, so anything they would have assigned keeps its old value, and jumping backwards runs side effects a second time. Prefer asking before using it on someone else's session. Stays in break mode. Only valid in break mode. |
 | `debug_start` | Start debugging the solution's startup project (equivalent to F5). Non-blocking: returns once launched; the program then runs until it hits a breakpoint or exits. Poll debug_get_state to detect when it pauses (mode='break'). No-op if already debugging. |
 | `debug_start_no_debugger` | Start the program WITHOUT the debugger (equivalent to Ctrl+F5). Optionally pass a project name to set it as startup first. Use debug_start instead when you need breakpoints. Returns ok or ok=false with a reason. |
 | `debug_step` | Step the paused program by one statement. Direction: 'over' (run the line without entering called methods — default), 'into' (step into the call), 'out' (run to the end of the current method). Returns the new file/line. Only valid in break mode. |
@@ -143,6 +144,7 @@ debug session, and it returns structured errors.
 
 ## Debugging
 Do not call `mcp__vs__debug_start` / `debug_stop` without asking: they take over the IDE.
+`mcp__vs__debug_set_next_statement` skips code rather than running it, so ask before that one too.
 After editing during a session, `mcp__vs__debug_apply_hot_reload` applies the change without
 a restart.
 ```

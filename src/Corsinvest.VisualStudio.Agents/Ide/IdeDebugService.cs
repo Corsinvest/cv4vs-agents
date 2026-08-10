@@ -128,6 +128,63 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>Move the instruction pointer to <paramref name="filePath"/>:<paramref name="line"/>
+    /// WITHOUT running what lies between — "Set Next Statement".
+    /// <para>There is no API taking a path: the command works off the caret, so the file is opened,
+    /// activated and the caret moved first. Stays in break mode, so nothing has to be awaited
+    /// afterwards.</para>
+    /// <para>The one debug tool that can leave the program inconsistent — skipping an assignment
+    /// leaves the variable at whatever it was, and jumping backwards re-runs side effects. VS
+    /// refuses the jumps it knows are impossible (out of the frame, across a handler) and lets the
+    /// rest through.</para></summary>
+    public async Task<DebugResult> SetNextStatementAsync(string filePath, int line)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dte = GetDte();
+            var dbg = dte?.Debugger;
+            if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
+            if (string.IsNullOrEmpty(filePath) || line < 1)
+            {
+                return new DebugResult { Ok = false, Reason = "filePath and a 1-based line are required." };
+            }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new DebugResult { Ok = false, Reason = NotInBreak };
+            }
+
+            var window = dte.ItemOperations.OpenFile(filePath, Constants.vsViewKindCode);
+            window?.Activate();
+            if (window?.Document?.Selection is not TextSelection sel)
+            {
+                return new DebugResult { Ok = false, Reason = $"Could not open {System.IO.Path.GetFileName(filePath)} in the editor." };
+            }
+            sel.MoveToLineAndOffset(line, 1, false);
+
+            // Throws when VS judges the jump impossible — out of the current frame, into or out of
+            // a handler. The message is the debugger's own, and more specific than anything we
+            // could say about why this particular jump was refused.
+            try { dte.ExecuteCommand("Debug.SetNextStatement", ""); }
+            catch (Exception ex) { return new DebugResult { Ok = false, Reason = $"Visual Studio refused the jump: {ex.Message.Trim()}" }; }
+
+            var (file, atLine) = CurrentLocation();
+            return new DebugResult
+            {
+                Ok = true,
+                Mode = ModeToString(dbg.CurrentMode),
+                Reason = atLine > 0
+                    ? $"Next statement is now {System.IO.Path.GetFileName(file)}:{atLine}. The skipped code did not run."
+                    : "Next statement moved. The skipped code did not run.",
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.SetNextStatementAsync", ex);
+            return new DebugResult { Ok = false, Reason = "Failed to set the next statement." };
+        }
+    }
+
     /// <summary>Run until execution reaches <paramref name="filePath"/>:<paramref name="line"/>,
     /// like "Run to Cursor". There is no API for it: a breakpoint is added, execution resumed, and
     /// the breakpoint removed again — in a finally, because the program can stop somewhere else
