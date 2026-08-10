@@ -26,8 +26,9 @@ internal sealed class SelectFrameTool : McpTool<SelectFrameArgs>
         "the index debug_get_callstack reports (0 = where execution is paused). Locals belong to a " +
         "frame: stopped inside a method that was called, the caller's variables are out of scope " +
         "until you select its frame — that is what \"not in scope in the current frame\" means. " +
-        "Same as double-clicking a line in the Call Stack window. The selection lasts until the " +
-        "program runs again. Only valid in break mode.";
+        "Same as double-clicking a line in the Call Stack window. Frames belong to a thread, so " +
+        "this moves within the selected one — debug_select_thread first if the frame you want is " +
+        "on another. The selection lasts until the program runs again. Only valid in break mode.";
 
     protected override async Task<object> InvokeAsync(SelectFrameArgs args)
     {

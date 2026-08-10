@@ -126,6 +126,42 @@ internal sealed partial class IdeDebugService
         public string Reason { get; set; }
     }
 
+    public sealed class ThreadInfo
+    {
+        /// <summary>OS thread id — what debug_select_thread and debug_freeze_thread take.</summary>
+        public int Id { get; set; }
+        public string Name { get; set; }
+        /// <summary>Where the thread is, as the Threads window shows it — usually the top frame's
+        /// function.</summary>
+        public string Location { get; set; }
+        public bool IsAlive { get; set; }
+        /// <summary>Frozen threads do not run when the program resumes, and stay that way until
+        /// something thaws them.</summary>
+        public bool IsFrozen { get; set; }
+        /// <summary>The thread the call stack and the inspection tools read.</summary>
+        public bool IsCurrent { get; set; }
+    }
+
+    public sealed class ThreadsResult
+    {
+        public bool Ok { get; set; }
+        public bool InBreak { get; set; }
+        public ThreadInfo[] Threads { get; set; } = [];
+        public string Reason { get; set; }
+    }
+
+    /// <summary>What acting on one thread reports back — the thread it found, and its state after.
+    /// </summary>
+    public sealed class ThreadActionResult
+    {
+        public bool Ok { get; set; }
+        public bool InBreak { get; set; }
+        public int ThreadId { get; set; }
+        public string Name { get; set; }
+        public bool IsFrozen { get; set; }
+        public string Reason { get; set; }
+    }
+
     public sealed class SelectFrameResult
     {
         public bool Ok { get; set; }

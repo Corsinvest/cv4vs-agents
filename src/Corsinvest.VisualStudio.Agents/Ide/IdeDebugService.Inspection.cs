@@ -199,6 +199,117 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>The threads of the program being debugged (only while paused). Everything else here
+    /// reads one thread — the current one — and until this there was no way to learn that the others
+    /// existed, let alone name them.</summary>
+    public async Task<ThreadsResult> GetThreadsAsync()
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new ThreadsResult { Ok = false, Reason = "Debugger not available." }; }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new ThreadsResult { Ok = false, InBreak = false, Reason = NotInBreak };
+            }
+
+            // Threads hang off the program, not off the debugger: Debugger.CurrentProgram.Threads.
+            var program = dbg.CurrentProgram;
+            if (program == null) { return new ThreadsResult { Ok = false, InBreak = true, Reason = "No program is being debugged." }; }
+
+            var currentId = SafeThreadId(dbg.CurrentThread);
+            var threads = new List<ThreadInfo>();
+            foreach (EnvDTE.Thread t in program.Threads)
+            {
+                threads.Add(new ThreadInfo
+                {
+                    Id = t.ID,
+                    Name = t.Name,
+                    Location = SafeLocation(t),
+                    IsAlive = t.IsAlive,
+                    IsFrozen = t.IsFrozen,
+                    IsCurrent = currentId != 0 && t.ID == currentId,
+                });
+            }
+            return new ThreadsResult { Ok = true, InBreak = true, Threads = [.. threads.OrderBy(t => t.Id)] };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.GetThreadsAsync", ex);
+            return new ThreadsResult { Ok = false, Reason = "Failed to list the threads." };
+        }
+    }
+
+    /// <summary>Make <paramref name="threadId"/> the thread the call stack and the inspection tools
+    /// read. The frame selection resets with it — frames belong to a thread.</summary>
+    public async Task<ThreadActionResult> SelectThreadAsync(int threadId)
+        => await WithThreadAsync(threadId, (dbg, t) =>
+        {
+            dbg.CurrentThread = t;
+            return new ThreadActionResult { Ok = true, InBreak = true, ThreadId = t.ID, Name = t.Name, IsFrozen = t.IsFrozen };
+        });
+
+    /// <summary>Freeze or thaw one thread. A frozen thread does not run when the program resumes,
+    /// which is how a race is pinned down: freeze the others, step the one being watched.</summary>
+    public async Task<ThreadActionResult> FreezeThreadAsync(int threadId, bool freeze)
+        => await WithThreadAsync(threadId, (dbg, t) =>
+        {
+            if (freeze) { t.Freeze(); } else { t.Thaw(); }
+            return new ThreadActionResult { Ok = true, InBreak = true, ThreadId = t.ID, Name = t.Name, IsFrozen = t.IsFrozen };
+        });
+
+    /// <summary>Find a thread by id and act on it. Shared because the two callers differ only in
+    /// what they do once they have it, and the four ways of not having it are the same.</summary>
+    private async Task<ThreadActionResult> WithThreadAsync(int threadId, Func<Debugger, EnvDTE.Thread, ThreadActionResult> action)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new ThreadActionResult { Ok = false, Reason = "Debugger not available." }; }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new ThreadActionResult { Ok = false, InBreak = false, Reason = NotInBreak };
+            }
+            var program = dbg.CurrentProgram;
+            if (program == null) { return new ThreadActionResult { Ok = false, InBreak = true, Reason = "No program is being debugged." }; }
+
+            foreach (EnvDTE.Thread t in program.Threads)
+            {
+                if (t.ID == threadId) { return action(dbg, t); }
+            }
+            var ids = string.Join(", ", program.Threads.Cast<EnvDTE.Thread>().Select(t => t.ID));
+            return new ThreadActionResult
+            {
+                Ok = false,
+                InBreak = true,
+                Reason = $"No thread {threadId} — the program has {ids}. debug_list_threads shows them with their locations.",
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.WithThreadAsync", ex);
+            return new ThreadActionResult { Ok = false, Reason = "Failed to reach that thread." };
+        }
+    }
+
+    /// <summary>A thread's id, or 0 when it can't be read — CurrentThread is null between some
+    /// transitions, and asking a dead thread for its id throws.</summary>
+    private static int SafeThreadId(EnvDTE.Thread t)
+    {
+        try { return t?.ID ?? 0; }
+        catch (Exception) { return 0; }
+    }
+
+    /// <summary>Where a thread is. Reading it can throw on a thread with no managed frames, which is
+    /// no reason to lose the rest of the list.</summary>
+    private static string SafeLocation(EnvDTE.Thread t)
+    {
+        try { return t.Location; }
+        catch (Exception) { return null; }
+    }
+
     /// <summary>Point the inspection tools at another frame of the current call stack (only while
     /// paused). Locals belong to a frame, so stopped inside a callee the caller's variables are out
     /// of scope until this moves the selection — the debugger's own Call Stack window does the same

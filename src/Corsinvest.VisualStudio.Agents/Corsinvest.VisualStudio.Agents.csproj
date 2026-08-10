@@ -191,6 +191,8 @@
     <Compile Include="Mcp\Tools\Debug\SelectFrameTool.cs" />
     <Compile Include="Mcp\Tools\Debug\RunToLineTool.cs" />
     <Compile Include="Mcp\Tools\Debug\SetNextStatementTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\ListThreadsTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\SelectThreadTool.cs" />
     <Compile Include="Mcp\Tools\Ide\ReadOutputTool.cs" />
     <Compile Include="Mcp\Tools\Ide\ClearOutputTool.cs" />
     <Compile Include="Mcp\Tools\Ide\ActivateOutputTool.cs" />
