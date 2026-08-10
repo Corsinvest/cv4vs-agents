@@ -50,7 +50,17 @@ internal sealed partial class IdeDebugService
         }
     }
 
-    /// <summary>Step over/into/out (only while paused). Returns the new location.</summary>
+    /// <summary>How long to wait for a step to land before answering without a position. Long
+    /// enough for a step over a slow call, short enough that a step which will not finish — into a
+    /// blocking read, say — does not hold the caller.</summary>
+    private static readonly TimeSpan StepSettleTimeout = TimeSpan.FromSeconds(10);
+
+    /// <summary>Step over/into/out (only while paused), waiting for it to land so the location is
+    /// where it arrived.
+    /// <para>The wait is the whole point. StepOver(false) and friends return immediately, and
+    /// reading the position straight after gave the one it STARTED from, every time — the mode came
+    /// back "run" for the same reason. Measured on a step out of a method with a second of work
+    /// left: it answered Seed.cs:64 while the program went on to Program.cs:19.</para></summary>
     public async Task<StepResult> StepAsync(string direction)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -71,7 +81,18 @@ internal sealed partial class IdeDebugService
                 default: dbg.StepOver(false); break;
             }
 
-            // After stepping, VS is usually back in break at the new statement.
+            var landed = await WaitForBreakAsync(StepSettleTimeout);
+            if (!landed)
+            {
+                // Still running: the step is over something that has not finished, or the program
+                // went on to another breakpoint. No position rather than the old one.
+                return new StepResult
+                {
+                    Ok = true,
+                    Reason = "Step still running after 10s — poll getDebugState for where it stops.",
+                };
+            }
+
             var (file, line) = CurrentLocation();
             return new StepResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), File = file, Line = line };
         }
@@ -80,6 +101,25 @@ internal sealed partial class IdeDebugService
             OutputWindowLogger.Global.LogException("IdeDebugService.StepAsync", ex);
             return new StepResult { Ok = false, Reason = "Failed to step." };
         }
+    }
+
+    /// <summary>Wait for the debugger to be back in break, or give up. Yields the UI thread between
+    /// looks — the transition is processed there, so holding it would stop the very thing being
+    /// waited for. Returns false on timeout.</summary>
+    private static async Task<bool> WaitForBreakAsync(TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(30);
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            var dbg = GetDebugger();
+            if (dbg == null) { return false; }
+            if (dbg.CurrentMode == dbgDebugMode.dbgBreakMode) { return true; }
+            // Design mode: the program ended while stepping — nothing left to land on.
+            if (dbg.CurrentMode == dbgDebugMode.dbgDesignMode) { return false; }
+        }
+        return false;
     }
 
     /// <summary>Call stack of the current thread (only while paused).</summary>
