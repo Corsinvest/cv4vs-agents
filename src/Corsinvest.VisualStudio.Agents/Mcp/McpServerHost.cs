@@ -240,6 +240,7 @@ internal sealed partial class McpServerHost
         yield return new Tools.SetNextStatementTool();
         yield return new Tools.ListThreadsTool();
         yield return new Tools.SelectThreadTool();
+        yield return new Tools.FreezeThreadTool();
         yield return new Tools.ReadOutputTool();
         yield return new Tools.ClearOutputTool();
         yield return new Tools.ActivateOutputTool();
