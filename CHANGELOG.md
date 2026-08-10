@@ -64,6 +64,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **Go-to-definition stopped at the edge of the solution.** Ask `nav_go_to_definition` where
+  `DialogWindow` or `string` is defined and the answer was "No definition found" — which is not
+  merely incomplete, it is wrong: the definition exists, it just isn't a file on disk. The service
+  behind it only covers code with source in the solution, and returns nothing at all for anything
+  else, so a model reading that answer concludes the symbol does not exist and stops looking. The
+  comment in our code said those results were being skipped; there were never any to skip. VS's own
+  F12 has a second half we did not have — it resolves the symbol, asks Roslyn to write the
+  declaration out, and navigates to the file that comes back. That now happens here too, taking
+  about two seconds the first time an assembly is decompiled and nothing on later hits. A definition
+  found this way says which kind it is: `decompiled`, rebuilt from IL with the names of locals lost,
+  or `source`, the real thing fetched through SourceLink — the difference decides how much of what
+  you are reading can be trusted. The files are generated, and the tool says so, because nothing
+  should try to edit them.
+
 - **Searching the solution for a symbol has never worked.** `nav_search_workspace_symbols` answered
   `supported=false` on every call, in every language, and the reason it gave — that this Visual
   Studio has no NavigateTo — was wrong: the service was there and handed out on request. It was

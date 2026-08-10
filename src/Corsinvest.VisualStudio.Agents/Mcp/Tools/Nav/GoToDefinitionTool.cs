@@ -33,7 +33,11 @@ internal sealed class GoToDefinitionTool : McpTool<GoToDefinitionArgs>
     public override string Description =>
         "Find where a symbol is defined (semantic, not text search): give the file, the " +
         "1-based line where the symbol is used, and the symbol name. Returns the defining " +
-        "file/line. The file must belong to a project in the open solution. Returns " +
+        "file/line. Reaches definitions in referenced assemblies too: with no source on disk, " +
+        "the declaration is generated under %TEMP% and the hit carries source='decompiled' " +
+        "(rebuilt from IL — locals renamed) or source='source' (the real thing, via SourceLink). " +
+        "Those files are generated and read-only: read them, never edit them. " +
+        "The file must belong to a project in the open solution. Returns " +
         "supported=false for languages this isn't available for, or transiently while the " +
         "solution is still loading — safe to retry shortly before falling back to grep. " +
         "nav_find_references goes the other way, from a definition to its callers, and " +
@@ -59,6 +63,7 @@ internal sealed class GoToDefinitionTool : McpTool<GoToDefinitionArgs>
                 line = l.Line,
                 column = l.Column,
                 preview = l.Preview,
+                source = l.Source,
             }).ToArray(),
         };
     }

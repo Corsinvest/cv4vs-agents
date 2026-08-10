@@ -49,6 +49,11 @@ internal sealed partial class IdeNavigationService
         public int Line { get; set; }       // 1-based
         public int Column { get; set; }     // 1-based
         public string Preview { get; set; } // the source line's text, trimmed
+
+        /// <summary>Null for a file of the solution. Set when the definition lives in a referenced
+        /// assembly and had to be generated: "decompiled" (rebuilt from IL — locals renamed,
+        /// syntax re-emitted) or "source" (the real thing, via SourceLink).</summary>
+        public string Source { get; set; }
     }
 
     // Shared reflection handles, resolved once (feature-detection). Null ⇒ unsupported.
