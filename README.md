@@ -209,6 +209,12 @@ external terminal, no other editor — the Chat and CLI panes in the screenshots
 writing the next version. Which is also the toughest test there is: every rough edge turns up in the
 day's work, not in a bug report.
 
+**On 10 August 2026 it debugged itself.** Claude hit a bug, set a breakpoint through the extension's
+own MCP tools — in the very Visual Studio instance hosting the pane it was typing into — stepped
+through the live process, read the locals, found it, fixed it. The debugger was inspecting the
+program that was running the debugger. It worked, which was somehow the surprising part. I mostly
+watched. Almost as good as me 😏
+
 — *Daniele Corsini (Frank Lupo)*
 
 ---
@@ -404,7 +410,7 @@ among them — are saved as plain JSON under `%LOCALAPPDATA%`. See
 
 ## MCP tools (the IDE, exposed to Claude)
 
-An in-process MCP server hands the agent Visual Studio's own view of your code — **51 tools** across
+An in-process MCP server hands the agent Visual Studio's own view of your code — **58 tools** across
 navigation, editing, build, the live debugger and IDE state — with nothing to configure. They are
 language-agnostic by design: wired through Roslyn language services or language-agnostic VS/DTE
 APIs, never a C#/VB-only path. There is no list of supported languages — whatever your Visual
@@ -434,7 +440,7 @@ Studio is a different host, so several things are done differently — or don't 
 - **Two distinct panes (Chat + CLI), multi-instance.** Open several chats and terminals side by
   side, each on its own session, docking as tabs. The Chat pane (WebView2 + SDK-MCP) and the CLI
   pane (ConPTY + `--ide` WebSocket) are deliberately separate startup paths.
-- **Our own MCP tool suite for Visual Studio.** The 51 tools above wrap VS's navigation, build and
+- **Our own MCP tool suite for Visual Studio.** The 58 tools above wrap VS's navigation, build and
   **debugger** (start/step/breakpoints/inspect/hot-reload) and Error List — capabilities specific to
   the VS host, built language-agnostic via Roslyn reflection and DTE, not tied to C#/VB only.
 - **Sub-agents you can see and control.** Their tool calls are grouped under the Agent row that

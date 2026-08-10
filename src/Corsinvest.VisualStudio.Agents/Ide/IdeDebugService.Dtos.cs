@@ -71,7 +71,15 @@ internal sealed partial class IdeDebugService
         public string Name { get; set; }
         public string Type { get; set; }
         public string Value { get; set; }
+        /// <summary>True when the value has members. Kept on expanded nodes too: at the depth limit
+        /// it is what says "there is more below — expand this path".</summary>
         public bool HasMembers { get; set; }
+        /// <summary>Filled by ExpandAsync only, and null (not empty) where nothing was walked —
+        /// either a leaf or the depth limit.</summary>
+        public LocalInfo[] Members { get; set; }
+        /// <summary>True for a parameter the caller passed, false for a variable the method
+        /// declared. Only set by GetLocalsAsync — an expanded member is neither.</summary>
+        public bool IsArgument { get; set; }
     }
 
     public sealed class LocalsResult
@@ -80,15 +88,23 @@ internal sealed partial class IdeDebugService
         public bool InBreak { get; set; }   // false ⇒ not paused; the model should poll getDebugState
         public string FunctionName { get; set; }
         public LocalInfo[] Locals { get; set; } = [];
+        /// <summary>Set when a walked level hit the member cap — only possible with depth &gt; 0.</summary>
+        public bool Truncated { get; set; }
         public string Reason { get; set; }
     }
 
     public sealed class StackFrameInfo
     {
+        /// <summary>0 = where execution is paused, counting outwards to the caller. What
+        /// debug_select_frame takes.</summary>
+        public int Index { get; set; }
         public string Function { get; set; }
         public string Module { get; set; }
         public string File { get; set; }
         public int Line { get; set; }    // 1-based; 0 when unknown
+        /// <summary>The frame the other inspection tools read. Index 0 until something selects
+        /// another one.</summary>
+        public bool IsCurrent { get; set; }
     }
 
     public sealed class CallStackResult
@@ -107,6 +123,66 @@ internal sealed partial class IdeDebugService
         public string Value { get; set; }
         public string Type { get; set; }
         public bool IsValid { get; set; }
+        public string Reason { get; set; }
+    }
+
+    public sealed class ThreadInfo
+    {
+        /// <summary>OS thread id — what debug_select_thread and debug_freeze_thread take.</summary>
+        public int Id { get; set; }
+        public string Name { get; set; }
+        /// <summary>Where the thread is, as the Threads window shows it — usually the top frame's
+        /// function.</summary>
+        public string Location { get; set; }
+        public bool IsAlive { get; set; }
+        /// <summary>Frozen threads do not run when the program resumes, and stay that way until
+        /// something thaws them.</summary>
+        public bool IsFrozen { get; set; }
+        /// <summary>The thread the call stack and the inspection tools read.</summary>
+        public bool IsCurrent { get; set; }
+    }
+
+    public sealed class ThreadsResult
+    {
+        public bool Ok { get; set; }
+        public bool InBreak { get; set; }
+        public ThreadInfo[] Threads { get; set; } = [];
+        public string Reason { get; set; }
+    }
+
+    /// <summary>What acting on one thread reports back — the thread it found, and its state after.
+    /// </summary>
+    public sealed class ThreadActionResult
+    {
+        public bool Ok { get; set; }
+        public bool InBreak { get; set; }
+        public int ThreadId { get; set; }
+        public string Name { get; set; }
+        public bool IsFrozen { get; set; }
+        public string Reason { get; set; }
+    }
+
+    public sealed class SelectFrameResult
+    {
+        public bool Ok { get; set; }
+        public bool InBreak { get; set; }
+        public int Index { get; set; }
+        public string Function { get; set; }
+        public int FrameCount { get; set; }
+        public string Reason { get; set; }
+    }
+
+    public sealed class ExpandResult
+    {
+        public bool Ok { get; set; }
+        public bool InBreak { get; set; }
+        public string Expression { get; set; }
+        public string Value { get; set; }
+        public string Type { get; set; }
+        public LocalInfo[] Members { get; set; } = [];
+        /// <summary>True when some level hit the member cap, so what came back is a prefix of what
+        /// is there. Without it a truncated collection reads as a complete one.</summary>
+        public bool Truncated { get; set; }
         public string Reason { get; set; }
     }
 

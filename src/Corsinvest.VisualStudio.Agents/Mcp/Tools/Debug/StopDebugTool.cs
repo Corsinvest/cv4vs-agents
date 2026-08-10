@@ -13,7 +13,9 @@ internal sealed class StopDebugTool : McpTool<NoArgs>
 {
     public override string Name => "debug_stop";
     public override string Description =>
-        "Stop the current debug session (equivalent to Shift+F5). No-op if not debugging.";
+        "Stop the current debug session (equivalent to Shift+F5). No-op if not debugging. " +
+        "Non-blocking, so mode comes back null rather than a guess: poll debug_get_state to see " +
+        "the session reach 'design'.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
