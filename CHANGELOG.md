@@ -64,6 +64,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **Searching the solution for a symbol has never worked.** `nav_search_workspace_symbols` answered
+  `supported=false` on every call, in every language, and the reason it gave — that this Visual
+  Studio has no NavigateTo — was wrong: the service was there and handed out on request. It was
+  looked up under `SearchProjectAsync`, a name Roslyn dropped for `SearchProjectsAsync`, so the
+  probe stopped one letter short. Two more faults were waiting behind it. The kinds of symbol to
+  match were passed as an empty set, which reads as "no kind at all" rather than "any", and returned
+  nothing without failing; they now come from the service's own `KindsProvided`, so each language
+  offers what it actually has. And the results arrive as a private type that implements its
+  interface explicitly — nothing is visible on the type itself, so every field read came back null
+  and four found symbols mapped to zero. A hit now also carries the declaration line, which was
+  being computed and discarded, so choosing between twenty of them no longer means opening files.
+
 - **Breaking on a thrown exception has never worked.** `debug_set_exception_breakpoint` answered
   "Exception settings not available (no solution loaded?)" for every call, with any solution open,
   and the guess in that message sent whoever read it looking in the wrong place. It reached the
