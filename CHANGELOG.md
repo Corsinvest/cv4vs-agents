@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-10
+
+The debugger is reachable: the agent can look inside an object, move up the call stack, and say
+which thread it is talking about. Navigation stops lying — searching the solution for a symbol
+never worked at all, and go-to-definition gave up at the edge of your own code. Files can be
+dragged onto the chat, and every tool now says what to reach for around it.
+
 ### Added
 
 - **Seven new debug tools, and the ones around them answer better.** `debug_expand` opens a value
