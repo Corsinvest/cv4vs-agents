@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- **Four new debug tools, and the ones around them answer better.** `debug_expand` opens a value
+- **Seven new debug tools, and the ones around them answer better.** `debug_expand` opens a value
   into its members, so seeing inside an object is one call instead of an evaluate per field — around
   eighteen of them for a class with sixteen properties, and only after reading the source to learn
   what to ask for. `debug_select_frame` points the inspection tools at another frame of the call
@@ -17,7 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   is Run to Cursor, and `debug_set_next_statement` moves the instruction pointer without running
   what lies between — the one debug tool with side effects, and it says so. `debug_get_locals` also
   returns the method's **parameters**, which were missing entirely, and can walk the members in the
-  same call.
+  same call. And because all of that reads one thread, `debug_list_threads` and
+  `debug_select_thread` say which — on multi-threaded code the rest of the program had no id to be
+  named by — while `debug_freeze_thread` holds one still, which is how a race is pinned down.
 
 - **Files can be dropped on the chat, and pasted whatever they are.** Dragging one onto the pane
   handed it to Visual Studio, which opened it in an editor — the composer never saw it. Pasting
