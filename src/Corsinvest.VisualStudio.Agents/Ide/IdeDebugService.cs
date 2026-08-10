@@ -134,9 +134,12 @@ internal sealed partial class IdeDebugService
     /// activated and the caret moved first. Stays in break mode, so nothing has to be awaited
     /// afterwards.</para>
     /// <para>The one debug tool that can leave the program inconsistent — skipping an assignment
-    /// leaves the variable at whatever it was, and jumping backwards re-runs side effects. VS
-    /// refuses the jumps it knows are impossible (out of the frame, across a handler) and lets the
-    /// rest through.</para></summary>
+    /// leaves the variable at whatever it was, and jumping backwards re-runs side effects.</para>
+    /// <para>The file is checked against where execution is paused, because the command does NOT:
+    /// it takes a caret position and resolves the line as an offset in the method it is already in.
+    /// Asked to jump into another file it moves the pointer to that line NUMBER in the current
+    /// method — a different statement entirely, and a stack whose frame and instruction pointer
+    /// disagree. Verified: VS accepts it without a word.</para></summary>
     public async Task<DebugResult> SetNextStatementAsync(string filePath, int line)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -152,6 +155,18 @@ internal sealed partial class IdeDebugService
             if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
             {
                 return new DebugResult { Ok = false, Reason = NotInBreak };
+            }
+
+            var (pausedFile, _) = CurrentLocation();
+            if (!string.IsNullOrEmpty(pausedFile)
+                && !string.Equals(System.IO.Path.GetFullPath(filePath), System.IO.Path.GetFullPath(pausedFile), StringComparison.OrdinalIgnoreCase))
+            {
+                return new DebugResult
+                {
+                    Ok = false,
+                    Reason = $"The jump must stay in the file execution is paused in ({System.IO.Path.GetFileName(pausedFile)}); "
+                             + $"{System.IO.Path.GetFileName(filePath)} is a different one. Set Next Statement cannot leave the current method.",
+                };
             }
 
             var window = dte.ItemOperations.OpenFile(filePath, Constants.vsViewKindCode);
@@ -186,18 +201,20 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Run until execution reaches <paramref name="filePath"/>:<paramref name="line"/>,
-    /// like "Run to Cursor". There is no API for it: a breakpoint is added, execution resumed, and
-    /// the breakpoint removed again — in a finally, because the program can stop somewhere else
-    /// first (another breakpoint, a throw) and a leftover one would haunt the rest of the session.
+    /// like "Run to Cursor".
+    /// <para>Through VS's own command, off the caret, the way SetNextStatement works. The obvious
+    /// build — add a breakpoint, Go(), delete it — does not: Go() is non-blocking, so the delete
+    /// runs while the program is still on its way and disarms the breakpoint before it is ever hit.
+    /// Measured: execution sailed past the line, twice out of twice.</para>
     /// <para>Non-blocking like Go(): poll getDebugState to see where it stopped, which may not be
-    /// the requested line.</para></summary>
+    /// the requested line — anything on the way there pauses it first.</para></summary>
     public async Task<DebugResult> RunToLineAsync(string filePath, int line)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        Breakpoint temp = null;
         try
         {
-            var dbg = GetDebugger();
+            var dte = GetDte();
+            var dbg = dte?.Debugger;
             if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
             if (string.IsNullOrEmpty(filePath) || line < 1)
             {
@@ -208,31 +225,23 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = false, Reason = NotInBreak };
             }
 
-            // Count before/after: Breakpoints.Add returns the collection it added to, not the
-            // breakpoint, so the new one is identified by being the one that wasn't there.
-            var before = dbg.Breakpoints.Count;
-            dbg.Breakpoints.Add(
-                Function: "", File: filePath, Line: line, Column: 1,
-                Condition: "", ConditionType: dbgBreakpointConditionType.dbgBreakpointConditionTypeWhenTrue,
-                Language: "", Data: "", DataCount: 1, Address: "", HitCount: 0,
-                HitCountType: dbgHitCountType.dbgHitCountTypeNone);
-            if (dbg.Breakpoints.Count > before) { temp = dbg.Breakpoints.Item(dbg.Breakpoints.Count); }
+            var window = dte.ItemOperations.OpenFile(filePath, Constants.vsViewKindCode);
+            window?.Activate();
+            if (window?.Document?.Selection is not TextSelection sel)
+            {
+                return new DebugResult { Ok = false, Reason = $"Could not open {System.IO.Path.GetFileName(filePath)} in the editor." };
+            }
+            sel.MoveToLineAndOffset(line, 1, false);
 
-            dbg.Go(false);
+            try { dte.ExecuteCommand("Debug.RunToCursor", ""); }
+            catch (Exception ex) { return new DebugResult { Ok = false, Reason = $"Visual Studio refused it: {ex.Message.Trim()}" }; }
+
             return new DebugResult { Ok = true, Reason = $"Running to {System.IO.Path.GetFileName(filePath)}:{line} — poll getDebugState; it may stop earlier." };
         }
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("IdeDebugService.RunToLineAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to run to that line." };
-        }
-        finally
-        {
-            // Go() is non-blocking, so this runs while the program is on its way there — VS keeps a
-            // deleted breakpoint armed for the run it was told to make, which is what "run to
-            // cursor" needs, and nothing is left behind if it stops somewhere else instead.
-            try { temp?.Delete(); }
-            catch (Exception ex) { OutputWindowLogger.Global.Warn($"[debug] run-to-line temp breakpoint not removed: {ex.Message}"); }
         }
     }
 

@@ -27,10 +27,10 @@ internal sealed class RunToLineTool : McpTool<RunToLineArgs>
     public override string Description =>
         "Resume the paused program and stop again when it reaches this line — the Run to Cursor " +
         "command. Saves stepping through a loop or a long method one statement at a time. " +
-        "Non-blocking: poll debug_get_state, and check where it actually stopped, because " +
-        "anything on the way there — another breakpoint, a thrown exception — pauses it first. " +
-        "If the line is never reached the program simply runs on. Leaves no breakpoint behind " +
-        "either way. Only valid in break mode.";
+        "Non-blocking: poll debug_get_state, and check WHERE it stopped, because anything on the " +
+        "way there — another breakpoint, a thrown exception — pauses it first, and if the line is " +
+        "never reached the program just runs on to the end. Adds no breakpoint of its own. Only " +
+        "valid in break mode.";
 
     protected override async Task<object> InvokeAsync(RunToLineArgs args)
     {

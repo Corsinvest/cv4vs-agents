@@ -12,11 +12,14 @@ namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 internal sealed class GetDebugLocalsArgs
 {
-    [Description("Levels of members to walk, 0-3. Default 0 — names, types and values only. " +
-        "1 saves a debug_expand per object when you want to see inside all of them.")]
+    [Description("Levels of members to walk, 0-3. Default 0 — names, types and values only, which " +
+        "is what you want unless every object in scope is worth opening. 1 saves a debug_expand " +
+        "per object, but it walks ALL of them: with a collection in scope, lower maxMembers first " +
+        "or expand the one you care about instead.")]
     public int? Depth { get; set; }
 
-    [Description("Members kept at each walked level, 1-200. Default 50. Ignored at depth 0.")]
+    [Description("Members kept at each walked level, 1-200. Default 50 — low for one object, a lot " +
+        "when every local is walked at once. Ignored at depth 0.")]
     public int? MaxMembers { get; set; }
 }
 

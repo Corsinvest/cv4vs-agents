@@ -8,7 +8,6 @@ using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Ide;
@@ -95,32 +94,36 @@ internal sealed partial class IdeDebugService
 
             var frames = new List<StackFrameInfo>();
             var thread = dbg.CurrentThread;
+            var currentIndex = -1;
             if (thread != null)
             {
-                // Compared by COM identity, not by name: two frames of a recursive call share a
-                // function name, and each COM call can hand back a different wrapper for the same
-                // object — so ReferenceEquals would answer false on the frame that IS selected.
+                // Found by walking the collection rather than comparing objects: COM hands back a
+                // fresh wrapper per call, and even IUnknown came back different for the frame that
+                // WAS selected, so every frame read as "not current". StackFrames is 1-based.
                 var current = dbg.CurrentStackFrame;
                 var i = 0;
                 foreach (StackFrame sf in thread.StackFrames)
                 {
+                    if (currentIndex < 0 && current != null && SameFrame(sf, current)) { currentIndex = i; }
                     frames.Add(new StackFrameInfo
                     {
                         Index = i++,
                         Function = sf.FunctionName,
                         Module = SafeModule(sf),
-                        IsCurrent = IsSameComObject(sf, current),
-                        // EnvDTE StackFrame has no file/line; those come from the active doc for the
-                        // top frame only. Leave 0 for deeper frames (function name is the key info).
+                        // EnvDTE StackFrame has no file/line; those come from the active doc, which
+                        // follows the SELECTED frame — so they go on that one, below.
                     });
                 }
             }
-            // Top frame: enrich with the current file/line VS shows.
-            if (frames.Count > 0)
+            if (currentIndex < 0 && frames.Count > 0) { currentIndex = 0; }
+            if (currentIndex >= 0)
             {
+                frames[currentIndex].IsCurrent = true;
+                // The editor shows where the selected frame is, not where execution is paused —
+                // putting this on frame 0 after a select_frame gave it the caller's line.
                 var (file, line) = CurrentLocation();
-                frames[0].File = file;
-                frames[0].Line = line;
+                frames[currentIndex].File = file;
+                frames[currentIndex].Line = line;
             }
             return new CallStackResult { Ok = true, InBreak = true, Frames = [.. frames] };
         }
@@ -333,26 +336,19 @@ internal sealed partial class IdeDebugService
         }
     }
 
-    /// <summary>Whether two RCWs wrap the same COM object, by comparing their IUnknown. (.NET
-    /// Framework has no Marshal.AreComObjectsEqual, and each call can hand back a fresh wrapper,
-    /// so ReferenceEquals says false for the very object it was asked about.)</summary>
-    private static bool IsSameComObject(object a, object b)
+    /// <summary>Whether two StackFrame wrappers stand for the same frame. Object identity does not
+    /// answer this — not ReferenceEquals, and not IUnknown either, which came back different for
+    /// the frame that was selected. So it compares what a frame is made of: the function, the
+    /// module, and the return type that separates two overloads of the same name.</summary>
+    private static bool SameFrame(StackFrame a, StackFrame b)
     {
-        if (a == null || b == null) { return false; }
-        var pa = IntPtr.Zero;
-        var pb = IntPtr.Zero;
         try
         {
-            pa = Marshal.GetIUnknownForObject(a);
-            pb = Marshal.GetIUnknownForObject(b);
-            return pa == pb;
+            return string.Equals(a.FunctionName, b.FunctionName, StringComparison.Ordinal)
+                && string.Equals(SafeModule(a), SafeModule(b), StringComparison.OrdinalIgnoreCase)
+                && string.Equals(a.ReturnType, b.ReturnType, StringComparison.Ordinal);
         }
         catch (Exception) { return false; }
-        finally
-        {
-            if (pa != IntPtr.Zero) { Marshal.Release(pa); }
-            if (pb != IntPtr.Zero) { Marshal.Release(pb); }
-        }
     }
 
     /// <summary>Why an expression didn't resolve. Naming the frame separates the three ways this
