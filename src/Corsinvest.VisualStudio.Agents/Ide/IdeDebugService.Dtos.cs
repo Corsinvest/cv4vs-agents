@@ -77,6 +77,9 @@ internal sealed partial class IdeDebugService
         /// <summary>Filled by ExpandAsync only, and null (not empty) where nothing was walked —
         /// either a leaf or the depth limit.</summary>
         public LocalInfo[] Members { get; set; }
+        /// <summary>True for a parameter the caller passed, false for a variable the method
+        /// declared. Only set by GetLocalsAsync — an expanded member is neither.</summary>
+        public bool IsArgument { get; set; }
     }
 
     public sealed class LocalsResult
@@ -85,6 +88,8 @@ internal sealed partial class IdeDebugService
         public bool InBreak { get; set; }   // false ⇒ not paused; the model should poll getDebugState
         public string FunctionName { get; set; }
         public LocalInfo[] Locals { get; set; } = [];
+        /// <summary>Set when a walked level hit the member cap — only possible with depth &gt; 0.</summary>
+        public bool Truncated { get; set; }
         public string Reason { get; set; }
     }
 

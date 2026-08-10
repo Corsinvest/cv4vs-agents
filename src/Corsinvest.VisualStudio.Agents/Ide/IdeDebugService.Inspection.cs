@@ -131,9 +131,11 @@ internal sealed partial class IdeDebugService
         }
     }
 
-    /// <summary>Local variables of the current frame (only while paused). Members aren't expanded;
-    /// drill in with evaluateExpression("name.member").</summary>
-    public async Task<LocalsResult> GetLocalsAsync()
+    /// <summary>The parameters and locals of the selected frame (only while paused).
+    /// <para><paramref name="depth"/> 0 keeps the flat list this always returned; above that the
+    /// members are walked as debug_expand does, so "the locals, one level down" is one call rather
+    /// than a get_locals followed by an expand per object.</para></summary>
+    public async Task<LocalsResult> GetLocalsAsync(int depth, int maxMembers)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
@@ -149,18 +151,43 @@ internal sealed partial class IdeDebugService
             if (frame == null) { return new LocalsResult { Ok = false, InBreak = true, Reason = "No current stack frame." }; }
 
             var locals = new List<LocalInfo>();
-            foreach (Expression e in frame.Locals)
+            var truncated = false;
+            // Arguments are a separate collection on the frame, and were missing entirely: stopped
+            // in a method, its parameters are usually the first thing worth reading.
+            Collect(frame.Arguments, isArgument: true);
+            Collect(frame.Locals, isArgument: false);
+
+            void Collect(Expressions source, bool isArgument)
             {
-                locals.Add(new LocalInfo
+                if (source == null) { return; }
+                foreach (Expression e in source)
                 {
-                    Name = e.Name,
-                    Type = e.Type,
-                    Value = e.Value,
-                    HasMembers = e.DataMembers?.Count > 0,
-                });
+                    var hasMembers = e.DataMembers?.Count > 0;
+                    locals.Add(new LocalInfo
+                    {
+                        Name = e.Name,
+                        Type = e.Type,
+                        Value = e.Value,
+                        HasMembers = hasMembers,
+                        IsArgument = isArgument,
+                        Members = hasMembers && depth > 0 ? WalkMembers(e, depth, maxMembers, ref truncated) : null,
+                    });
+                }
             }
-            var ordered = locals.OrderBy(l => l.Name, StringComparer.Ordinal).ToArray();
-            return new LocalsResult { Ok = true, InBreak = true, FunctionName = frame.FunctionName, Locals = ordered };
+
+            // Arguments first, then locals, each by name: the parameters are what the caller passed
+            // in, so they read as the frame's header rather than as more variables.
+            var ordered = locals.OrderByDescending(l => l.IsArgument)
+                                .ThenBy(l => l.Name, StringComparer.Ordinal)
+                                .ToArray();
+            return new LocalsResult
+            {
+                Ok = true,
+                InBreak = true,
+                FunctionName = frame.FunctionName,
+                Locals = ordered,
+                Truncated = truncated,
+            };
         }
         catch (Exception ex)
         {
