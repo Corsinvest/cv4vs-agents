@@ -71,7 +71,12 @@ internal sealed partial class IdeDebugService
         public string Name { get; set; }
         public string Type { get; set; }
         public string Value { get; set; }
+        /// <summary>True when the value has members. Kept on expanded nodes too: at the depth limit
+        /// it is what says "there is more below — expand this path".</summary>
         public bool HasMembers { get; set; }
+        /// <summary>Filled by ExpandAsync only, and null (not empty) where nothing was walked —
+        /// either a leaf or the depth limit.</summary>
+        public LocalInfo[] Members { get; set; }
     }
 
     public sealed class LocalsResult
@@ -107,6 +112,20 @@ internal sealed partial class IdeDebugService
         public string Value { get; set; }
         public string Type { get; set; }
         public bool IsValid { get; set; }
+        public string Reason { get; set; }
+    }
+
+    public sealed class ExpandResult
+    {
+        public bool Ok { get; set; }
+        public bool InBreak { get; set; }
+        public string Expression { get; set; }
+        public string Value { get; set; }
+        public string Type { get; set; }
+        public LocalInfo[] Members { get; set; } = [];
+        /// <summary>True when some level hit the member cap, so what came back is a prefix of what
+        /// is there. Without it a truncated collection reads as a complete one.</summary>
+        public bool Truncated { get; set; }
         public string Reason { get; set; }
     }
 

@@ -16,7 +16,8 @@ internal sealed class GetDebugLocalsTool : McpTool<NoArgs>
     public override string Description =>
         "List the local variables in the current stack frame while paused (break mode): each " +
         "with name, type, and value. Objects/collections aren't expanded — hasMembers=true means " +
-        "you can drill in with debug_evaluate(\"name.member\"). Only valid in break mode.";
+        "you can see inside with debug_expand(\"name\"), which walks the members for you. Only " +
+        "valid in break mode.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

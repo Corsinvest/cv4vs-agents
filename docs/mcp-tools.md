@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 51 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 52 tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -65,7 +65,7 @@ returns `supported=false` instead of pretending it worked.
 | `build_set_startup_project` | Set the solution's startup project — the one debug_start (F5) launches. Pass the project name; returns ok plus the resolved startup project, or ok=false with the list of available projects if the name doesn't match. |
 | `build_solution` | Build the entire solution and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until the build ends. Reports errors only unless severity says otherwise; the message says how many items were left out. |
 
-## Debug (20)
+## Debug (21)
 
 | Tool | What it does |
 |---|---|
@@ -75,8 +75,9 @@ returns `supported=false` instead of pretending it worked.
 | `debug_clear_breakpoints` | Remove all breakpoints in the solution. |
 | `debug_continue` | Resume execution from a paused (break) state (like F5 while paused). The program runs until the next breakpoint or it exits. Only valid in break mode. |
 | `debug_evaluate` | Evaluate an expression in the current stack frame while paused (break mode), like the Watch window: pass something like 'order.Items.Count'. Returns the value and type. Note: evaluating can call property getters/methods in the program, so it may have side-effects — prefer reading fields/properties. You can also assign (e.g. 'x = 5') to change a variable's value while paused. Only valid in break mode. |
+| `debug_expand` | Expand an expression into its members while paused (break mode), so an object comes back as a tree instead of just a type name: pass 'order', 'order.Customer', 'this', or '$exception' when stopped on a throw (that one carries InnerException and the stack). This is what debug_get_locals points at when it reports hasMembers=true — one call instead of a debug_evaluate per field. hasMembers on a returned node means there is more below it: expand that path to see it. truncated=true means a level had more members than maxMembers and what came back is a prefix. Note: reading a property runs its getter in the program, so this can have side-effects. Only valid in break mode. |
 | `debug_get_callstack` | Get the call stack of the current thread while paused (break mode): each frame's function, module, and (for the top frame) file/line. Only valid in break mode — if the program is still running, poll debug_get_state until mode='break'. |
-| `debug_get_locals` | List the local variables in the current stack frame while paused (break mode): each with name, type, and value. Objects/collections aren't expanded — hasMembers=true means you can drill in with debug_evaluate("name.member"). Only valid in break mode. |
+| `debug_get_locals` | List the local variables in the current stack frame while paused (break mode): each with name, type, and value. Objects/collections aren't expanded — hasMembers=true means you can see inside with debug_expand("name"), which walks the members for you. Only valid in break mode. |
 | `debug_get_state` | Get the current debug state: mode is 'design' (not debugging), 'run' (running), or 'break' (paused on a breakpoint/exception). In 'break' mode also returns the current file and 1-based line where execution is paused, and — if paused ON AN EXCEPTION — its type and message. Poll this after debug_start to know when the program has hit a breakpoint or thrown. |
 | `debug_list_breakpoints` | List all breakpoints in the solution: each with its file+line (or function name), condition (if any), and whether it's enabled. |
 | `debug_list_processes` | List local processes the debugger can attach to (pid + name). Optionally filter by a name substring. Use this to find the process to pass to debug_attach. |

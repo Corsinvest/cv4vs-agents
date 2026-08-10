@@ -188,7 +188,7 @@ internal sealed partial class IdeDebugService
                 Value = ex.Value,
                 Type = ex.Type,
                 IsValid = ex.IsValidValue,
-                Reason = ex.IsValidValue ? null : "Expression not valid in the current scope.",
+                Reason = ex.IsValidValue ? null : NotInScopeReason(dbg),
             };
         }
         catch (Exception exc)
@@ -196,5 +196,93 @@ internal sealed partial class IdeDebugService
             OutputWindowLogger.Global.LogException("IdeDebugService.EvaluateAsync", exc);
             return new EvalResult { Ok = false, Reason = "Failed to evaluate." };
         }
+    }
+
+    /// <summary>Evaluate an expression and walk its members, so an object comes back as a tree
+    /// instead of a type name. Same evaluation as <see cref="EvaluateAsync"/> — and the same
+    /// caveat: reading a property runs its getter in the debuggee.</summary>
+    public async Task<ExpandResult> ExpandAsync(string expression, int depth, int maxMembers)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new ExpandResult { Ok = false, Reason = "Debugger not available." }; }
+            if (string.IsNullOrWhiteSpace(expression))
+            {
+                return new ExpandResult { Ok = false, Reason = "expression is required." };
+            }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new ExpandResult { Ok = false, InBreak = false, Reason = NotInBreak };
+            }
+
+            var root = dbg.GetExpression(expression, true, -1);
+            if (!root.IsValidValue)
+            {
+                return new ExpandResult
+                {
+                    Ok = false,
+                    InBreak = true,
+                    Expression = expression,
+                    Reason = NotInScopeReason(dbg),
+                };
+            }
+
+            var truncated = false;
+            return new ExpandResult
+            {
+                Ok = true,
+                InBreak = true,
+                Expression = expression,
+                Value = root.Value,
+                Type = root.Type,
+                Members = WalkMembers(root, depth, maxMembers, ref truncated),
+                Truncated = truncated,
+            };
+        }
+        catch (Exception exc)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.ExpandAsync", exc);
+            return new ExpandResult { Ok = false, Reason = "Failed to expand." };
+        }
+    }
+
+    /// <summary>Why an expression didn't resolve. Naming the frame separates the three ways this
+    /// fails — a wrong name, a variable not declared yet, and one that is alive a frame up — which
+    /// otherwise read the same, and the third is the common case when stopped inside a callee.</summary>
+    private static string NotInScopeReason(Debugger dbg)
+    {
+        var frame = dbg.CurrentStackFrame?.FunctionName;
+        return string.IsNullOrEmpty(frame)
+            ? "Expression not valid in the current scope."
+            : $"Not in scope in the current frame ({frame}) — it may be a local of a calling frame; see debug_get_callstack.";
+    }
+
+    /// <summary>One level of members, recursing while <paramref name="depth"/> is left. Sorted by
+    /// name like the locals list, so two reads of the same object line up.</summary>
+    private static LocalInfo[] WalkMembers(Expression parent, int depth, int maxMembers, ref bool truncated)
+    {
+        if (depth <= 0) { return null; }
+
+        var members = parent.DataMembers;
+        if (members == null || members.Count == 0) { return null; }
+        if (members.Count > maxMembers) { truncated = true; }
+
+        var taken = new List<LocalInfo>();
+        foreach (Expression m in members)
+        {
+            if (taken.Count >= maxMembers) { break; }
+            var hasMembers = m.DataMembers?.Count > 0;
+            taken.Add(new LocalInfo
+            {
+                Name = m.Name,
+                Type = m.Type,
+                Value = m.Value,
+                HasMembers = hasMembers,
+                Members = hasMembers ? WalkMembers(m, depth - 1, maxMembers, ref truncated) : null,
+            });
+        }
+        return [.. taken.OrderBy(l => l.Name, StringComparer.Ordinal)];
     }
 }
