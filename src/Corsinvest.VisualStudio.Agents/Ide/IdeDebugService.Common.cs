@@ -34,8 +34,10 @@ internal sealed partial class IdeDebugService
     /// selection), so after either of those the "position" was the one we had just put there.
     /// Measured: a break on line 19 reported as line 17, a comment.</para>
     /// <para>Everything else — a step, a thrown exception, Break All — has no such record, and
-    /// falls back to the active document. That is the case where VS moves the caret itself, so it
-    /// is the one where the caret is right.</para></summary>
+    /// falls back to the active document. That is fine, and measured: VS brings the caret to the
+    /// suspension point itself, so a Break All with the editor left on another file at line 60 still
+    /// reported the executing file's line. EnvDTE has nothing better to offer anyway — no
+    /// StackFrame2, and Debugger3 adds no file/line.</para></summary>
     private static (string file, int line) CurrentLocation()
     {
         var fromBreakpoint = BreakpointLocation();
