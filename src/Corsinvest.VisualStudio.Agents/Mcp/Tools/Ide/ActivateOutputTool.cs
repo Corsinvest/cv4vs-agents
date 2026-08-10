@@ -24,7 +24,9 @@ internal sealed class ActivateOutputTool : McpTool<ActivateOutputArgs>
         "Bring a Visual Studio Output window pane (by name) to the foreground so the user sees " +
         "it. Use at a debug checkpoint to show the relevant build/debug output before asking " +
         "the user to confirm. The pane name is required. Returns ok; ok=false with " +
-        "availablePanes when the pane isn't found.";
+        "availablePanes when the pane isn't found — ide_read_output with no pane lists them. " +
+        "This shows a pane to the user; reading it is ide_read_output's job and needs no " +
+        "activation.";
 
     protected override async Task<object> InvokeAsync(ActivateOutputArgs args)
     {

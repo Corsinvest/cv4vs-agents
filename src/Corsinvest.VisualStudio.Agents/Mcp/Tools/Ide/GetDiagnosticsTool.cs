@@ -31,7 +31,10 @@ internal sealed class GetDiagnosticsTool : McpTool<GetDiagnosticsArgs>
         "Pass uri (file://...) to limit to one file; omit it to get all. " +
         "Pass severity ('Error'/'Warning'/'Info') and/or maxResults to avoid pulling in " +
         "hundreds of warnings when you only care about the errors. " +
-        "Returns an array of files, each with its diagnostics ([] when there are none).";
+        "Returns an array of files, each with its diagnostics ([] when there are none). " +
+        "Visual Studio only analyses files that are open in an editor, so this can be empty for a " +
+        "file nothing has looked at — build_solution reports what the compiler found, whether the " +
+        "file is open or not.";
     public override bool AlwaysLoad => true;
 
     protected override async Task<object> InvokeAsync(GetDiagnosticsArgs args)

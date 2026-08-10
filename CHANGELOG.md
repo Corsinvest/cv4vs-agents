@@ -162,6 +162,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **Every MCP tool now says what to reach for around it.** Twenty-eight of the fifty-eight named no
+  other tool, so an agent needing two of them in order had to guess it or find it by failing. Three
+  were not merely thin but wrong, which is what the pass turned up: `editor_close_tab` claimed to
+  close any tab by its caption when it only closes a diff the extension itself opened — the user's
+  documents were never within its reach, which is a guarantee worth stating — and
+  `ide_get_diagnostics` never mentioned that Visual Studio only analyses files open in an editor, so
+  it can come back empty for a file nothing has looked at while a build reports plenty.
+
 - **Streaming markdown stops re-parsing what has already settled.** Each delta re-rendered the whole
   message, so the cost grew with its length: a 22k-character answer spent 697 ms of parsing to add
   180 characters. Everything up to the last blank line outside a code fence is parsed once and kept.

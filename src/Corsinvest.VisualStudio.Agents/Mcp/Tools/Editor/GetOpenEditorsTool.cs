@@ -14,8 +14,9 @@ internal sealed class GetOpenEditorsTool : McpTool<NoArgs>
 {
     public override string Name => "editor_get_open_files";
     public override string Description =>
-        "List files currently open in the IDE's editor tabs, with " +
-        "active/dirty flags and language id.";
+        "List the files currently open in the IDE's editor tabs, with active/dirty flags and " +
+        "language id, sorted by path. dirty means the buffer differs from disk — read that one " +
+        "with document_read_buffer rather than from the file, and document_save writes it out.";
     public override bool AlwaysLoad => true;
 
     protected override async Task<object> InvokeAsync(NoArgs args)

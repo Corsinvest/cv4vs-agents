@@ -14,7 +14,9 @@ internal sealed class CloseAllDiffTabsTool : McpTool<NoArgs>
 {
     public override string Name => "editor_close_all_diffs";
     public override string Description =>
-        "Close all diff/compare windows currently open in the IDE.";
+        "Close every diff window this server opened, and only those: a window of the user's own " +
+        "is left alone even if its caption says Diff. Returns how many were closed. Use it to tidy " +
+        "up after a series of editor_open_diff calls; editor_close_tab closes one by name.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

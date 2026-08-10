@@ -15,8 +15,11 @@ internal sealed class GetCurrentSelectionTool : McpTool<NoArgs>
 {
     public override string Name => "editor_get_selection";
     public override string Description =>
-        "Get the current text selection in the active editor. " +
-        "Returns the selected text and its range, or null if no editor is active.";
+        "Get the current text selection in the active editor: the selected text and its range, or " +
+        "null when no editor has focus — which includes right after the user clicks elsewhere, " +
+        "since the selection belongs to the focused window. Calling this also remembers the answer " +
+        "for editor_get_latest_selection; reach for that one instead when the user may have moved " +
+        "on since selecting.";
     public override bool AlwaysLoad => true;
 
     protected override async Task<object> InvokeAsync(NoArgs args)

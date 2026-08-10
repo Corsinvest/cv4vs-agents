@@ -15,7 +15,9 @@ internal sealed class GetVisualStudioEditionTool : McpTool<NoArgs>
     public override string Name => "ide_get_edition";
     public override string Description =>
         "Get the Visual Studio edition (e.g. \"Enterprise\", \"Professional\", " +
-        "\"Community\").";
+        "\"Community\"). The edition and the installed workloads decide what the tools can do at " +
+        "all — a supported=false from a nav_* or debug_* tool is usually this rather than a bug. " +
+        "ide_get_version gives the version alongside it.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

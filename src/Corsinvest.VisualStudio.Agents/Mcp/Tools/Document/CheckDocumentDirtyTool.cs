@@ -23,7 +23,9 @@ internal sealed class CheckDocumentDirtyTool : McpTool<CheckDocumentDirtyArgs>
     public override string Name => "document_check_dirty";
     public override string Description =>
         "Check whether an open file has unsaved changes. Returns isOpen=false " +
-        "when the file isn't open in any editor; otherwise isDirty true/false.";
+        "when the file isn't open in any editor; otherwise isDirty true/false. When it is " +
+        "dirty the Read tool gives the version on disk and document_read_buffer the one on " +
+        "screen — they differ, and document_save makes them agree.";
 
     protected override async Task<object> InvokeAsync(CheckDocumentDirtyArgs args)
     {

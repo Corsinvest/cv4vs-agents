@@ -44,7 +44,9 @@ internal sealed class OpenDiffTool : McpTool<OpenDiffArgs>
 {
     public override string Name => "editor_open_diff";
     public override string Description =>
-        "Open a side-by-side diff between an existing file and proposed new content.";
+        "Open a side-by-side diff between an existing file and proposed new content, so the user " +
+        "can see an edit before it happens. The tabName given here is what editor_close_tab takes " +
+        "to close it again, and editor_close_all_diffs clears every one this server opened.";
 
     protected override async Task<object> InvokeAsync(OpenDiffArgs args)
     {

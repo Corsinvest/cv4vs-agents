@@ -31,7 +31,9 @@ internal sealed class OpenFileTool : McpTool<OpenFileArgs>
     public override string Name => "editor_open_file";
     public override string Description =>
         "Open a file in the editor. Optionally select whole lines with startLine/endLine " +
-        "(1-based). Set activate to focus the tab.";
+        "(1-based). Set activate to focus the tab. This is for showing the user something — " +
+        "reading a file needs no editor: use the Read tool, or document_read_buffer when the file " +
+        "is open and may hold unsaved changes.";
 
     protected override async Task<object> InvokeAsync(OpenFileArgs args)
     {

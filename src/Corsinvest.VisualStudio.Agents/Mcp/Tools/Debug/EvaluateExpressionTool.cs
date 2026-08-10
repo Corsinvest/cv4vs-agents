@@ -25,7 +25,10 @@ internal sealed class EvaluateExpressionTool : McpTool<EvaluateExpressionArgs>
         "Watch window: pass something like 'order.Items.Count'. Returns the value and type. " +
         "Note: evaluating can call property getters/methods in the program, so it may have " +
         "side-effects — prefer reading fields/properties. You can also assign (e.g. 'x = 5') to " +
-        "change a variable's value while paused. Only valid in break mode.";
+        "change a variable's value while paused, which is how you fix a value and retry a block " +
+        "with debug_set_next_statement. To see inside an object rather than read one field, " +
+        "debug_expand walks its members in a single call. Reads the frame debug_select_frame " +
+        "chose. Only valid in break mode.";
 
     protected override async Task<object> InvokeAsync(EvaluateExpressionArgs args)
     {

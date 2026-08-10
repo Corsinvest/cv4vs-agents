@@ -15,7 +15,9 @@ internal sealed class GetProjectStructureTool : McpTool<NoArgs>
     public override string Name => "ide_get_project_structure";
     public override string Description =>
         "Get the solution structure: each project with its name, path, and the " +
-        "files it contains. Recurses solution folders. Useful to learn the layout.";
+        "files it contains. Recurses solution folders. Useful to learn the layout, and to get " +
+        "the project names build_project and build_set_startup_project want — both take a name, " +
+        "not a path.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

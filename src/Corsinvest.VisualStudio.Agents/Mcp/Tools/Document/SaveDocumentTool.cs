@@ -23,7 +23,10 @@ internal sealed class SaveDocumentTool : McpTool<SaveDocumentArgs>
     public override string Name => "document_save";
     public override string Description =>
         "Save an open file if it has unsaved changes. Returns saved=true if a " +
-        "save happened, false if the file wasn't open or was already saved.";
+        "save happened, false if the file wasn't open or was already saved — the two are not " +
+        "told apart here, document_check_dirty separates them beforehand. Needed after " +
+        "document_format or document_organize_imports, which change the buffer and leave it " +
+        "unsaved.";
 
     protected override async Task<object> InvokeAsync(SaveDocumentArgs args)
     {
