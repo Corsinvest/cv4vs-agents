@@ -183,14 +183,14 @@ internal sealed partial class IdeDebugService
             try { dte.ExecuteCommand("Debug.SetNextStatement", ""); }
             catch (Exception ex) { return new DebugResult { Ok = false, Reason = $"Visual Studio refused the jump: {ex.Message.Trim()}" }; }
 
-            var (file, atLine) = CurrentLocation();
+            // The line asked for, not CurrentLocation(): we are still stopped on whatever breakpoint
+            // got us here, so that would report where the jump came FROM. It is also the one place
+            // that already knows the answer — the jump either landed on the requested line or threw.
             return new DebugResult
             {
                 Ok = true,
                 Mode = ModeToString(dbg.CurrentMode),
-                Reason = atLine > 0
-                    ? $"Next statement is now {System.IO.Path.GetFileName(file)}:{atLine}. The skipped code did not run."
-                    : "Next statement moved. The skipped code did not run.",
+                Reason = $"Next statement is now {System.IO.Path.GetFileName(filePath)}:{line}. The skipped code did not run.",
             };
         }
         catch (Exception ex)
