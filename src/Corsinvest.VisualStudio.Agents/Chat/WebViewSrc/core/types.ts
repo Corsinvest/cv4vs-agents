@@ -462,6 +462,9 @@ export interface Notice {
     actionPayload?: Record<string, unknown>;
     /** Stays until the host clears it (a dead CLI process) — never auto-dismissed. */
     sticky?: boolean;
+    /** Hide the ✕. For a notice that mirrors live state rather than reporting an event: dismissing
+     *  it would leave the state on with nothing on screen saying so. Implies `sticky`. */
+    pinned?: boolean;
 }
 
 /** Payload of `notice-dismissed`, raised only when the user clicks a notice's ✕. */
