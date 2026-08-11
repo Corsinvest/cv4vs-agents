@@ -77,10 +77,10 @@ public partial class ChatPaneControl
     // as long as the process and every respawn resets it.
     private bool _remoteControlOn;
 
-    /// <summary>Publishes Remote Control state to the WebView banner. Reachable from
-    /// WebViewMessageHandler (the WebView→CLI direction lives there), same as the other
-    /// pane operations the handler drives.</summary>
-    internal void SendRemoteControl(string status, string url = null, string detail = null)
+    /// <summary>Publishes Remote Control state to the WebView banner and updates
+    /// <see cref="_remoteControlOn"/>, which gates the respawn reset (OnCliStateReceived)
+    /// and the bridge_state failure handler (OnBridgeStateChanged).</summary>
+    private void SendRemoteControl(string status, string url = null, string detail = null)
     {
         _remoteControlOn = status == "connected";
         _bridge.Send(BridgeMessages.ToWebView.Chat.RemoteControl, new Contracts.RemoteControlNotification
