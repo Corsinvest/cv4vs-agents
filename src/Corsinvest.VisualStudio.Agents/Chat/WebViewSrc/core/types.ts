@@ -387,6 +387,13 @@ export interface UiSimpleTextEntry extends UiEntryBase {
     role: 'error' | 'result' | 'status';
 }
 
+/** The Remote Control session link and its QR code, posted into the transcript when the bridge
+ *  comes up — like the CLI, which prints the URL in the conversation. A role of its own because
+ *  the QR is an inline SVG, which the markdown pipeline strips. `text` carries the URL. */
+export interface UiRemoteControlEntry extends UiEntryBase {
+    role: 'remote-control';
+}
+
 /** One AskUserQuestion entry, narrowed from the opaque tool input (the CLI's
  *  AskUserQuestion tool has no generated DTO — it rides inside
  *  ToolPermissionNotification.input). The permission banner writes/reads it and the
@@ -442,6 +449,7 @@ export type UiEntry =
     | UiCompactEntry
     | UiSlashResultEntry
     | UiSimpleTextEntry
+    | UiRemoteControlEntry
     | UiToolEntry;
 
 /** Payload for the full-screen image viewer (cv-lightbox), passed via openLightbox(). */

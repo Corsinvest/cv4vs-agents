@@ -21,6 +21,7 @@
         "@fluentui/svg-icons": "^1.1.331",
         "@fluentui/web-components": "3.0.2",
         "@microsoft/fast-element": "^3.0.0",
+        "@paulmillr/qr": "^0.3.0",
         "diff": "^9.0.0",
         "diff2html": "^3.4.55",
         "dompurify": "^3.4.12",
