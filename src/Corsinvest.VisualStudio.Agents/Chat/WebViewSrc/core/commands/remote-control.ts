@@ -11,7 +11,7 @@ export class RemoteControlCommand extends ChatCommand {
     readonly label = 'Remote Control';
     readonly description = 'Continue this session from your phone or claude.ai/code';
     readonly section: CommandSection = 'context';
-    readonly order = 40;
+    readonly order = 45;
     readonly icon = PhoneDesktop16Regular;
     readonly trailing: CommandTrailing = 'toggle';
     override readonly aliases = ['remote', 'rc', 'phone'];
