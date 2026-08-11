@@ -41,7 +41,7 @@ internal sealed class EditorPromptsMenuCommand : OleMenuCommand
     /// which is how VS discovers how many entries to render.</summary>
     public override bool DynamicItemMatch(int cmdId)
     {
-        if (cmdId < _baseId || cmdId >= _baseId + EditorPrompts.Items.Count) { return false; }
+        if (cmdId < _baseId || cmdId >= _baseId + EditorPromptStore.Items.Count) { return false; }
         MatchedCommandId = cmdId;
         return true;
     }
@@ -49,7 +49,7 @@ internal sealed class EditorPromptsMenuCommand : OleMenuCommand
     private static void OnBeforeQueryStatus(object sender, EventArgs e)
     {
         var cmd = (EditorPromptsMenuCommand)sender;
-        var items = EditorPrompts.Items;
+        var items = EditorPromptStore.Items;
         var index = GetIndex(cmd);
 
         if (index < items.Count)
@@ -74,7 +74,7 @@ internal sealed class EditorPromptsMenuCommand : OleMenuCommand
     private static void OnInvoke(object sender, EventArgs e)
     {
         var cmd = (EditorPromptsMenuCommand)sender;
-        var items = EditorPrompts.Items;
+        var items = EditorPromptStore.Items;
         var index = GetIndex(cmd);
         cmd.MatchedCommandId = 0;
         if (index < 0 || index >= items.Count) { return; }
