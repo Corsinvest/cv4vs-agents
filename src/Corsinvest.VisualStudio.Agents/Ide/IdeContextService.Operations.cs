@@ -101,10 +101,13 @@ internal sealed partial class IdeContextService
     private const int BuildPollMs = 200;
     // 30 minutes: past any real build, short enough that a wedged one still answers.
     private const int BuildPollMaxTries = 30 * 60 * 1000 / BuildPollMs;
+    // 15 seconds: a cancel stops at the first target boundary, so it either lands quickly or the
+    // build is wedged — waiting the full build cap would only delay saying so.
+    private const int CancelPollMaxTries = 15 * 1000 / BuildPollMs;
 
     private static string BuildTimedOutMessage(string verb) =>
         $"{verb} still in progress after {BuildPollMaxTries * BuildPollMs / 60000} minutes — " +
-        "check the Output window; the IDE was left building.";
+        "check the Output window; the IDE was left building; build_cancel stops it.";
 
     /// <summary>Build the whole solution (projectName null) or a single project, then report success
     /// plus the Error List down to <paramref name="severity"/>. Kicks the build without waiting and
@@ -200,6 +203,64 @@ internal sealed partial class IdeContextService
         {
             OutputWindowLogger.Global.LogException("Ide.CleanAsync", ex);
             return new BuildResult { Ok = false, Message = $"Clean error: {ex.Message}" };
+        }
+    }
+
+    /// <summary>Ask the running build to stop and wait for it to actually stop.
+    ///
+    /// <c>SolutionBuild.Cancel</c> only requests the stop: MSBuild finishes the targets already in
+    /// flight before the state leaves <c>vsBuildStateInProgress</c>, so returning right after the
+    /// call would report a stop that hasn't happened. Polling here is what lets the caller learn
+    /// whether the IDE is free again — otherwise the next build stacks on top of one still running.
+    ///
+    /// The wait is capped far below <see cref="BuildPollMaxTries"/>: a cancel that hasn't taken
+    /// within seconds is a wedged build, and reporting that is more useful than blocking on it.</summary>
+    public async Task<BuildResult> CancelBuildAsync()
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        var sb = dte?.Solution?.SolutionBuild;
+        if (sb == null)
+        {
+            return new BuildResult { Ok = false, Message = "No solution open." };
+        }
+        try
+        {
+            // Not an error: the caller asked for a stop and there is nothing running, which is the
+            // state they wanted. Saying so plainly stops the model from retrying.
+            if (sb.BuildState != vsBuildState.vsBuildStateInProgress)
+            {
+                return new BuildResult { Ok = true, Message = "No build is running." };
+            }
+            sb.Cancel();
+            for (var i = 0; i < CancelPollMaxTries; i++)
+            {
+                await Task.Delay(BuildPollMs);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (sb.BuildState != vsBuildState.vsBuildStateInProgress)
+                {
+                    // LastBuildInfo counts projects that did not build. After a cancel that count is
+                    // whatever the build had reached, not a verdict on the code — so it is reported
+                    // for information and never turned into Ok=false.
+                    return new BuildResult
+                    {
+                        Ok = true,
+                        FailedProjects = sb.LastBuildInfo,
+                        Message = "Build cancelled.",
+                    };
+                }
+            }
+            return new BuildResult
+            {
+                Ok = false,
+                Message = $"Cancel requested but the build was still running {CancelPollMaxTries * BuildPollMs / 1000}s later — " +
+                          "check the Output window; the IDE was left building.",
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.CancelBuildAsync", ex);
+            return new BuildResult { Ok = false, Message = $"Cancel error: {ex.Message}" };
         }
     }
 
