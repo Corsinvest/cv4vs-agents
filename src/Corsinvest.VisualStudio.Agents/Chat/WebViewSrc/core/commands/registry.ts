@@ -10,6 +10,7 @@ import {
     ClearCommand,
     NewConversationCommand,
     ResumeConversationCommand,
+    RemoteControlCommand,
     SwitchModelCommand,
     SwitchPermissionModeCommand,
     GeneralConfigCommand,
@@ -27,7 +28,6 @@ import {
     EffortCommand,
     SwitchModelsOnFlagCommand,
 } from './model-controls';
-import { RemoteControlCommand } from './remote-control';
 import { SlashCommand } from './slash';
 
 /**
@@ -42,13 +42,13 @@ export const STATIC_COMMANDS: readonly ChatCommand[] = [
     new ClearCommand(),
     new NewConversationCommand(),
     new ResumeConversationCommand(),
+    new RemoteControlCommand(),
     new SwitchModelCommand(),
     new SwitchPermissionModeCommand(),
     new EffortCommand(),
     new ThinkingCommand(),
     new FastModeCommand(),
     new SwitchModelsOnFlagCommand(),
-    new RemoteControlCommand(),
     new UsageCommand(),
     new ContextCommand(),
     new StatsCommand(),

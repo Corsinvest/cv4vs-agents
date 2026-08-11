@@ -10,6 +10,7 @@ import Attach16Regular from '@fluentui/svg-icons/icons/attach_16_regular.svg';
 import Mention16Regular from '@fluentui/svg-icons/icons/mention_16_regular.svg';
 import Broom16Regular from '@fluentui/svg-icons/icons/broom_16_regular.svg';
 import History16Regular from '@fluentui/svg-icons/icons/history_16_regular.svg';
+import PhoneDesktop16Regular from '@fluentui/svg-icons/icons/phone_desktop_16_regular.svg';
 import ChatAdd16Regular from '@fluentui/svg-icons/icons/chat_add_16_regular.svg';
 import Brain16Regular from '@fluentui/svg-icons/icons/brain_16_regular.svg';
 import Shield16Regular from '@fluentui/svg-icons/icons/shield_16_regular.svg';
@@ -93,6 +94,29 @@ export class ResumeConversationCommand extends ChatCommand {
     override readonly aliases = ['resume', 'history', 'sessions', 'continue'];
     override run(host: CommandHost): void {
         host.openSessionHistory();
+    }
+}
+
+export class RemoteControlCommand extends ChatCommand {
+    readonly id = 'remote-control';
+    readonly label = 'Remote Control';
+    readonly description = 'Continue this session from your phone or claude.ai/code';
+    readonly section: CommandSection = 'context';
+    readonly order = 45;
+    readonly icon = PhoneDesktop16Regular;
+    readonly trailing: CommandTrailing = 'toggle';
+    override readonly aliases = ['remote', 'rc', 'phone'];
+    readonly keepMenuOpen = true;
+    get checked(): boolean {
+        return appState.remoteControl.status === 'connected';
+    }
+    /** Off while the bridge is coming up: the answer is a round-trip away and a second click
+     *  would fight the first. */
+    override isEnabled(): boolean {
+        return appState.remoteControl.status !== 'connecting';
+    }
+    override run(host: CommandHost): void {
+        host.setRemoteControl(!this.checked);
     }
 }
 

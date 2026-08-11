@@ -70,7 +70,6 @@ import { GetHistoryReq } from '../../core/request-types';
 import { modelLabel } from '../../core/ai-models';
 import { turnErrorLabel, turnErrorDetail, isUserAbort } from '../../core/turn-errors';
 import { parseLocalCommandOutput } from '../../core/slash-commands';
-import { remoteControlErrorText } from '../../core/commands/remote-control';
 import { escapeHtml } from '../../core/html';
 
 let _entryIdSeq = 0;
@@ -1672,7 +1671,11 @@ export class CvApp extends LitElement {
             this._systemNotices?.push({
                 key: REMOTE_CONTROL_ERROR_KEY,
                 severity: 'error',
-                message: remoteControlErrorText(n.detail ?? undefined),
+                // The CLI writes its own reasons ("/login", "disabled by your organization's
+                // policy") and they read fine behind a prefix.
+                message: n.detail
+                    ? `Remote Control error: ${n.detail}`
+                    : 'Remote Control failed to start.',
             });
         }
     }
