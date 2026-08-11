@@ -45,6 +45,7 @@ import './cv-subagent-chip';
 import './cv-queue-row';
 import './cv-effort-selector';
 import './cv-thinking-toggle';
+import './cv-remote-chip';
 import './cv-model-list';
 import './cv-model-selector';
 import './cv-permission-list';
@@ -1322,6 +1323,10 @@ export class CvPrompt extends LitElement implements CommandHost {
         });
     }
 
+    setRemoteControl(enabled: boolean): void {
+        bridge.sendNotification(Msg.fromWebView.cli.setRemoteControl, { enabled });
+    }
+
     private _onFilePickerChange = (e: Event): void => {
         const input = e.target as HTMLInputElement;
         if (input.files) {
@@ -1602,6 +1607,10 @@ export class CvPrompt extends LitElement implements CommandHost {
                         <cv-attach-menu></cv-attach-menu>
                         <cv-slash-menu></cv-slash-menu>
                         <cv-subagent-chip .tasks=${this._subagentTasks}></cv-subagent-chip>
+                        <!-- Before the file chip, not after: that one is the only item here that
+                             resizes (it absorbs the row's spare width), so anything past it moves
+                             on every editor change. -->
+                        <cv-remote-chip></cv-remote-chip>
                         <cv-ide-context-badge></cv-ide-context-badge>
                     </div>
                     <div

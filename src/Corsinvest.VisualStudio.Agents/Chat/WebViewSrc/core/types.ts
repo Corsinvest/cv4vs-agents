@@ -105,6 +105,10 @@ export type { NoticeNotification } from './generated/NoticeNotification';
 export type { NoticeVariantDto } from './generated/NoticeVariantDto';
 export type { NoticePositionDto } from './generated/NoticePositionDto';
 
+/** Remote Control connection status (`chat_remote_control`).
+ *  Generated from C# by TypeGen — re-exported here. */
+export type { RemoteControlNotification } from './generated/RemoteControlNotification';
+
 /** Active model / permission mode changed (`cli_model_changed` / `cli_permission_mode_changed`).
  *  Generated from C# by TypeGen — re-exported here. */
 export type { ModelChangedNotification } from './generated/ModelChangedNotification';
@@ -383,6 +387,13 @@ export interface UiSimpleTextEntry extends UiEntryBase {
     role: 'error' | 'result' | 'status';
 }
 
+/** The Remote Control session link and its QR code, posted into the transcript when the bridge
+ *  comes up — like the CLI, which prints the URL in the conversation. A role of its own because
+ *  the QR is an inline SVG, which the markdown pipeline strips. `text` carries the URL. */
+export interface UiRemoteControlEntry extends UiEntryBase {
+    role: 'remote-control';
+}
+
 /** One AskUserQuestion entry, narrowed from the opaque tool input (the CLI's
  *  AskUserQuestion tool has no generated DTO — it rides inside
  *  ToolPermissionNotification.input). The permission banner writes/reads it and the
@@ -438,6 +449,7 @@ export type UiEntry =
     | UiCompactEntry
     | UiSlashResultEntry
     | UiSimpleTextEntry
+    | UiRemoteControlEntry
     | UiToolEntry;
 
 /** Payload for the full-screen image viewer (cv-lightbox), passed via openLightbox(). */
@@ -462,6 +474,12 @@ export interface Notice {
     actionPayload?: Record<string, unknown>;
     /** Stays until the host clears it (a dead CLI process) — never auto-dismissed. */
     sticky?: boolean;
+    /** Hide the ✕. For a notice that mirrors live state rather than reporting an event: dismissing
+     *  it would leave the state on with nothing on screen saying so. Implies `sticky`. */
+    pinned?: boolean;
+    /** Raw SVG replacing the severity icon, for a row whose subject is recognisable at a glance
+     *  (a phone for Remote Control). The severity still sets the colour. */
+    icon?: string;
 }
 
 /** Payload of `notice-dismissed`, raised only when the user clicks a notice's ✕. */

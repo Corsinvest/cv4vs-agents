@@ -114,6 +114,10 @@ own.
   CLI's own session store, so a conversation started in the VS Code extension or in a terminal shows
   up here, and vice versa. Resume, fork and rename all work on those shared files, so you can switch
   editor mid-project without losing context.
+- **[Remote Control](docs/chat/remote-control.md)** — `/remote-control` hands a running session to
+  `claude.ai/code` or the Claude mobile app: the session stays on your machine, web and mobile are
+  just a window onto it. The link is posted into the conversation with a QR code to scan from your
+  phone, and a toolbar indicator says it's on for as long as it is.
 - **[It knows what you're looking at](#ide-integration)** — the file open in the editor (and your
   selection) rides along with the prompt, shown as a chip you can click to jump back to it. One
   toggle turns the sharing off when you'd rather it didn't.
@@ -217,6 +221,12 @@ own MCP tools — in the very Visual Studio instance hosting the pane it was typ
 through the live process, read the locals, found it, fixed it. The debugger was inspecting the
 program that was running the debugger. It worked, which was somehow the surprising part. I mostly
 watched. Almost as good as me 😏
+
+**On 11 August 2026 it left the desk.** The CLI had Remote Control, VS Code had it, Visual Studio
+didn't — so a session started here stayed where it started, and this is where I work. Now it
+doesn't: I scanned the QR and kept the session going from my phone while setting up the
+[Fiera di Santa Maria](https://www.fieradisantamaria.it) in Calcinatello, the village fair I help
+run every summer. The projects keep moving. I don't have to be at the keyboard for all of it.
 
 — *Daniele Corsini (Frank Lupo)*
 

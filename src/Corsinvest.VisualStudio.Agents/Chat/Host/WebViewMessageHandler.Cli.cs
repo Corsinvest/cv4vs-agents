@@ -4,7 +4,10 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Core.Client;
+using Corsinvest.VisualStudio.Agents.Helpers;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 
@@ -103,4 +106,38 @@ internal sealed partial class WebViewMessageHandler
                 new Contracts.ModelChangedNotification { Model = client.Model });
         });
     }
+
+    private async Task HandleSetRemoteControlAsync(JObject data, int? id)
+    {
+        var on = data.Val("enabled", false);
+        // Before the call: enabling takes a round-trip and the switch would sit still meanwhile.
+        SendRemoteControl(on ? "connecting" : "disconnected");
+        try
+        {
+            var url = await client.SetRemoteControlAsync(on);
+            SendRemoteControl(on ? "connected" : "disconnected", url);
+        }
+        // The CLI's own refusals ("/login", "disabled by your organization's policy") read fine and
+        // pass through below. These two don't: they name the control subtype and transport details.
+        catch (TimeoutException)
+        {
+            SendRemoteControl("error", detail: "Remote Control did not answer in time.");
+        }
+        catch (Exception) when (!client.IsRunning)
+        {
+            SendRemoteControl("error", detail: "The Claude CLI isn't running.");
+        }
+        catch (Exception ex)
+        {
+            SendRemoteControl("error", detail: ex.Message);
+        }
+    }
+
+    private void SendRemoteControl(string status, string url = null, string detail = null)
+        => bridge.Send(BridgeMessages.ToWebView.Chat.RemoteControl, new Contracts.RemoteControlNotification
+        {
+            Status = status,
+            Url = url,
+            Detail = detail,
+        });
 }

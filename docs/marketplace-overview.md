@@ -126,6 +126,20 @@ tabs: install, enable or disable, add a marketplace, without leaving the IDE.
 
 ---
 
+## Leave the desk, keep the session
+
+![The Remote Control card and its toolbar indicator](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat/remote-control.png)
+
+`/remote-control` opens a running session to **claude.ai/code and the Claude mobile app**. Claude
+keeps running here, on your machine, with your solution and your IDE tools — the phone is a window
+onto it, not a copy.
+
+The session link lands in the conversation with a **QR code**: scan it and the turn you started at
+your desk carries on in your hand. A toolbar indicator says it is on for as long as it is, and
+turns it off from the same place.
+
+---
+
 ## Profiles
 
 ![Options → Profiles](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/options-profiles.png)
