@@ -73,9 +73,7 @@ public partial class ChatPaneControl
         c.BridgeStateChanged -= OnBridgeStateChanged;
     }
 
-    /// <summary>Publishes Remote Control state to the WebView banner. The CLI never reports that
-    /// state back — not in initialize, not after --resume — so the banner lives exactly as long as
-    /// the process and every respawn resets it.</summary>
+    /// <summary>Publishes Remote Control state to the WebView banner.</summary>
     private void SendRemoteControl(string status, string url = null, string detail = null)
         => _bridge.Send(BridgeMessages.ToWebView.Chat.RemoteControl, new Contracts.RemoteControlNotification
         {
@@ -728,10 +726,9 @@ public partial class ChatPaneControl
     private void OnBridgeStateChanged(object sender, BridgeStateEventArgs e)
         => Dispatcher.Invoke(() =>
         {
-            // `reconnecting` is not a failure — the bridge is retrying. A `failed` for a banner
-            // already down costs one redundant notification, which the WebView ignores.
+            // `reconnecting` is not a failure — the bridge is retrying.
             if (e.State != "failed") { return; }
-            // The normal way a bridge stops: same outcome, nothing to report.
+            // The normal way a bridge stops: same outcome, nothing to report as an error.
             var normal = string.Equals(e.Detail, "session ended", StringComparison.OrdinalIgnoreCase);
             SendRemoteControl("disconnected", detail: normal ? null : e.Detail);
         });

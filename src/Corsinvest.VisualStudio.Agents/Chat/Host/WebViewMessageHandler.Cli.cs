@@ -110,17 +110,15 @@ internal sealed partial class WebViewMessageHandler
     private async Task HandleSetRemoteControlAsync(JObject data, int? id)
     {
         var on = data.Val("enabled", false);
-        // Before the call, not after: enabling takes a round-trip and the switch
-        // would sit still meanwhile.
+        // Before the call: enabling takes a round-trip and the switch would sit still meanwhile.
         SendRemoteControl(on ? "connecting" : "disconnected");
         try
         {
             var url = await client.SetRemoteControlAsync(on);
             SendRemoteControl(on ? "connected" : "disconnected", url);
         }
-        // The CLI's own refusals ("/login", "disabled by your organization's policy") are written
-        // to be read, so they pass through. These two are not: one names the control subtype and a
-        // timeout in seconds, the other is a transport detail.
+        // The CLI's own refusals ("/login", "disabled by your organization's policy") read fine and
+        // pass through below. These two don't: they name the control subtype and transport details.
         catch (TimeoutException)
         {
             SendRemoteControl("error", detail: "Remote Control did not answer in time.");

@@ -43,8 +43,8 @@ interface AppState {
     switchModelsOnFlag: boolean;
     /** An org policy (CLI settings) forbids the bypass mode → the selector must not offer it. */
     bypassPermissionsDisabled: boolean;
-    /** Remote Control: mirrors what the host tells us. Ours only in the sense that the host owns
-     *  it — the CLI never reports it, so it resets on every respawn. */
+    /** Remote Control: mirrors what the host tells us — the CLI never reports it back, so it
+     *  resets on every respawn. */
     remoteControl: {
         status: 'disconnected' | 'connecting' | 'connected' | 'error';
         url?: string;

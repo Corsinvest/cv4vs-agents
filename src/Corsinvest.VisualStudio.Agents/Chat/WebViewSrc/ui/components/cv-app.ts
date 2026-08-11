@@ -76,7 +76,6 @@ let _entryIdSeq = 0;
 
 /** Notice key for the "CLI process exited" row, so a restart clears exactly that one. */
 const CLI_EXITED_KEY = 'cli-exited';
-/** Notice keys for the Remote Control state/error banners — see _onRemoteControl. */
 const REMOTE_CONTROL_KEY = 'remote-control';
 const REMOTE_CONTROL_ERROR_KEY = 'remote-control-error';
 
@@ -1649,8 +1648,6 @@ export class CvApp extends LitElement {
         this._turnMetrics.set(entryId, { costUsd: 0, durationMs: 0, usage: d.usage });
     }
 
-    // The state notice mirrors the connection and dies with it, so it carries no ✕; the error one is
-    // a message the user closes when they've read it.
     private _onRemoteControl(n: RemoteControlNotification): void {
         appState.remoteControl = {
             status: n.status as 'disconnected' | 'connecting' | 'connected' | 'error',
@@ -1671,8 +1668,6 @@ export class CvApp extends LitElement {
             this._systemNotices?.push({
                 key: REMOTE_CONTROL_ERROR_KEY,
                 severity: 'error',
-                // The CLI writes its own reasons ("/login", "disabled by your organization's
-                // policy") and they read fine behind a prefix.
                 message: n.detail
                     ? `Remote Control error: ${n.detail}`
                     : 'Remote Control failed to start.',

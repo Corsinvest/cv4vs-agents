@@ -110,8 +110,7 @@ export class RemoteControlCommand extends ChatCommand {
     get checked(): boolean {
         return appState.remoteControl.status === 'connected';
     }
-    /** Off while the bridge is coming up: the answer is a round-trip away and a second click
-     *  would fight the first. */
+    /** Off while the bridge is coming up: a second click would fight the first. */
     override isEnabled(): boolean {
         return appState.remoteControl.status !== 'connecting';
     }

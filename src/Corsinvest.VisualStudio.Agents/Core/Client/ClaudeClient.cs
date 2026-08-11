@@ -66,8 +66,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public event EventHandler<ToolPermissionCancelledEventArgs> ToolPermissionCancelled;
     public event EventHandler<HookCallbackEventArgs> HookCallbackRequested;
     public event EventHandler<RateLimitEventArgs> RateLimitReceived;
-    /// <summary>Remote Control bridge changed state. Only `failed` is actionable, and only while
-    /// we believe we are connected — see the pane's handler.</summary>
+    /// <summary>Remote Control bridge changed state. Only `failed` is actionable.</summary>
     public event EventHandler<BridgeStateEventArgs> BridgeStateChanged;
     public event EventHandler<AssistantTextDeltaEventArgs> AssistantTextDelta;
     public event EventHandler<AssistantThinkingDeltaEventArgs> AssistantThinkingDelta;
@@ -506,15 +505,10 @@ internal sealed partial class ClaudeClient : IClaudeClient
         PermissionMode = mode;
     }
 
-    /// <summary>Turn Remote Control on or off on the live session — no second process: the CLI
-    /// exposes the session it is already running.
-    ///
-    /// Returns the claude.ai URL when enabling, null when disabling. A `success` that carries no
-    /// session_url is treated as a failure: the CLI answers exactly that when the payload field is
-    /// misspelled, and a silent no-op would leave the UI claiming a connection that isn't there.
-    ///
-    /// Failures to enable arrive as the control-response error, already readable ("/login",
-    /// "disabled by your organization's policy") — the caller surfaces the message as-is.</summary>
+    /// <summary>Turn Remote Control on or off on the live session. Returns the claude.ai URL when
+    /// enabling, null when disabling. A `success` carrying no session_url is treated as a failure:
+    /// the CLI answers exactly that when the payload field is misspelled, and a silent no-op would
+    /// leave the UI claiming a connection that isn't there.</summary>
     public async Task<string> SetRemoteControlAsync(bool enabled)
     {
         try
