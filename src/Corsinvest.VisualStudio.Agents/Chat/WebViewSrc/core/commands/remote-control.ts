@@ -32,21 +32,8 @@ export class RemoteControlCommand extends ChatCommand {
     }
 }
 
-/** The CLI's `detail` is written for a terminal: "/login" alone means nothing to someone who has
- *  never used it. Wrap the ones we know, fall through to the raw text for the rest — a technical
- *  string beats nothing. */
+/** The CLI writes its own reasons — "/login", "disabled by your organization's policy",
+ *  "connection to server lost" — and they read fine behind a prefix. */
 export function remoteControlErrorText(detail?: string): string {
-    switch (detail) {
-        case '/login':
-            return 'Remote Control needs a claude.ai login — run /login in a terminal.';
-        case "disabled by your organization's policy":
-            return "Remote Control is disabled by your organization's policy.";
-        case 'run `claude update` to upgrade':
-            return 'Your Claude CLI is too old for Remote Control — run claude update.';
-        case 'connection to server lost':
-        case 'reconnection failed':
-            return 'Remote Control lost its connection.';
-        default:
-            return detail || 'Remote Control failed to start.';
-    }
+    return detail ? `Remote Control error: ${detail}` : 'Remote Control failed to start.';
 }

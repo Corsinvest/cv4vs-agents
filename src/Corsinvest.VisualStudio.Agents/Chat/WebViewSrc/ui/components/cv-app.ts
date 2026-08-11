@@ -1663,7 +1663,7 @@ export class CvApp extends LitElement {
                 key: REMOTE_CONTROL_KEY,
                 pinned: true,
                 severity: 'info',
-                message: `Remote Control is active — continue at <a href="${escapeHtml(n.url)}">claude.ai/code</a>. It ends when this pane closes.`,
+                message: `Remote Control is active — continue at <a href="${escapeHtml(n.url)}">claude.ai/code</a>. It ends when this session restarts.`,
             });
         } else {
             this._systemNotices?.dismissByKey(REMOTE_CONTROL_KEY);

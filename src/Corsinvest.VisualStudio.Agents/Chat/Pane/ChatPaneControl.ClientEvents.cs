@@ -73,23 +73,16 @@ public partial class ChatPaneControl
         c.BridgeStateChanged -= OnBridgeStateChanged;
     }
 
-    // The CLI never reports this — not in initialize, not after --resume — so it lives exactly
-    // as long as the process and every respawn resets it.
-    private bool _remoteControlOn;
-
-    /// <summary>Publishes Remote Control state to the WebView banner and updates
-    /// <see cref="_remoteControlOn"/>, which gates the respawn reset (OnCliStateReceived)
-    /// and the bridge_state failure handler (OnBridgeStateChanged).</summary>
+    /// <summary>Publishes Remote Control state to the WebView banner. The CLI never reports that
+    /// state back — not in initialize, not after --resume — so the banner lives exactly as long as
+    /// the process and every respawn resets it.</summary>
     private void SendRemoteControl(string status, string url = null, string detail = null)
-    {
-        _remoteControlOn = status == "connected";
-        _bridge.Send(BridgeMessages.ToWebView.Chat.RemoteControl, new Contracts.RemoteControlNotification
+        => _bridge.Send(BridgeMessages.ToWebView.Chat.RemoteControl, new Contracts.RemoteControlNotification
         {
             Status = status,
             Url = url,
             Detail = detail,
         });
-    }
 
     /// <summary>PreToolUse/PostToolUse hooks (Edit/Write/[Multi]Edit/Read): autosave (save the target
     /// file if it's open dirty, so Claude sees live edits) plus post-edit diagnostics (baseline on
@@ -735,9 +728,9 @@ public partial class ChatPaneControl
     private void OnBridgeStateChanged(object sender, BridgeStateEventArgs e)
         => Dispatcher.Invoke(() =>
         {
-            // `reconnecting` is not a failure, and a late `failed` must not clear a banner we already
-            // took down.
-            if (!_remoteControlOn || e.State != "failed") { return; }
+            // `reconnecting` is not a failure — the bridge is retrying. A `failed` for a banner
+            // already down costs one redundant notification, which the WebView ignores.
+            if (e.State != "failed") { return; }
             // The normal way a bridge stops: same outcome, nothing to report.
             var normal = string.Equals(e.Detail, "session ended", StringComparison.OrdinalIgnoreCase);
             SendRemoteControl("disconnected", detail: normal ? null : e.Detail);

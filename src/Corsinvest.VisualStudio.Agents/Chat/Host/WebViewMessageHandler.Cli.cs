@@ -118,6 +118,17 @@ internal sealed partial class WebViewMessageHandler
             var url = await client.SetRemoteControlAsync(on);
             SendRemoteControl(on ? "connected" : "disconnected", url);
         }
+        // The CLI's own refusals ("/login", "disabled by your organization's policy") are written
+        // to be read, so they pass through. These two are not: one names the control subtype and a
+        // timeout in seconds, the other is a transport detail.
+        catch (TimeoutException)
+        {
+            SendRemoteControl("error", detail: "Remote Control did not answer in time.");
+        }
+        catch (Exception) when (!client.IsRunning)
+        {
+            SendRemoteControl("error", detail: "The Claude CLI isn't running.");
+        }
         catch (Exception ex)
         {
             SendRemoteControl("error", detail: ex.Message);
