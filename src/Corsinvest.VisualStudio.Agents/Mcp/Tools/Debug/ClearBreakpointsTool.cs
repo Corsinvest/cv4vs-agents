@@ -17,6 +17,9 @@ internal sealed class ClearBreakpointsTool : McpTool<NoArgs>
         "themselves, so prefer debug_remove_breakpoint when you only mean to undo your own. " +
         "debug_list_breakpoints shows what is there first. Works in any mode.";
 
+    public override bool Destructive => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.ClearBreakpointsAsync();

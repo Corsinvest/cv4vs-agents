@@ -43,6 +43,9 @@ internal sealed class GoToDefinitionTool : McpTool<GoToDefinitionArgs>
         "nav_find_references goes the other way, from a definition to its callers, and " +
         "nav_go_to_implementation past an interface to what implements it.";
 
+    public override bool ReadOnly => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(GoToDefinitionArgs args)
     {
         var r = await IdeNavigationService.Instance.GetDefinitionAsync(

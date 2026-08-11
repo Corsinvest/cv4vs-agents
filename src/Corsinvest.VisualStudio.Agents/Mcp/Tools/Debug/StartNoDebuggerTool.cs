@@ -24,6 +24,8 @@ internal sealed class StartNoDebuggerTool : McpTool<StartNoDebuggerArgs>
         "project name to set it as startup first. Use debug_start instead when you need " +
         "breakpoints. Returns ok or ok=false with a reason.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(StartNoDebuggerArgs args)
     {
         var r = await IdeDebugService.Instance.StartWithoutDebuggingAsync(args.ProjectName);

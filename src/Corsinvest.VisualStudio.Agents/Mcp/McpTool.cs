@@ -25,6 +25,12 @@ internal abstract class McpTool<TArgs> : IMcpTool where TArgs : class, new()
     public abstract string Description { get; }
     public virtual object InputSchema => SchemaBuilder.For<TArgs>();
     public virtual bool AlwaysLoad => false;
+    // All three default to false because that is the safe direction: MCP reads an absent hint as
+    // "may write", so a forgotten read-only tool costs a prompt, while a forgotten writing tool
+    // would be waved through. See IMcpTool for what each one means.
+    public virtual bool ReadOnly => false;
+    public virtual bool Destructive => false;
+    public virtual bool Idempotent => false;
 
     private static readonly JsonSerializer _serializer = JsonSerializer.Create(new JsonSerializerSettings
     {

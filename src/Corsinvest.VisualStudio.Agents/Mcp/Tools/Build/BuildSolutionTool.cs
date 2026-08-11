@@ -30,6 +30,8 @@ internal sealed class BuildSolutionTool : McpTool<BuildSolutionArgs>
         "resolve and no clash with a debug session. build_project builds one project instead, and " +
         "ide_read_output has the raw log when the Error List is not enough.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(BuildSolutionArgs args)
     {
         // An absent severity has to become the default here: passing null through would only reach

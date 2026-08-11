@@ -102,31 +102,33 @@ internal sealed class JsonRpcDispatcher
         var list = new List<object>(_tools.Count);
         foreach (var t in _tools.Values)
         {
+            // Built key by key rather than as an anonymous type: each optional field would
+            // otherwise need its own variant of the whole literal, and the variants multiply
+            // (two optional fields already mean four near-identical copies to keep in sync).
+            var entry = new JObject
+            {
+                ["name"] = t.Name,
+                ["description"] = t.Description,
+                ["inputSchema"] = JToken.FromObject(t.InputSchema),
+            };
+
             // _meta.anthropic/alwaysLoad opts the tool out of the CLI's tool-search deferral
             // (otherwise it's hidden until discovered via ToolSearch, costing a round-trip).
             // Set only on tools likely invoked every turn.
             if (t.AlwaysLoad)
             {
-                list.Add(new
-                {
-                    name = t.Name,
-                    description = t.Description,
-                    inputSchema = t.InputSchema,
-                    _meta = new Dictionary<string, object>
-                    {
-                        ["anthropic/alwaysLoad"] = true,
-                    },
-                });
+                entry["_meta"] = new JObject { ["anthropic/alwaysLoad"] = true };
             }
-            else
-            {
-                list.Add(new
-                {
-                    name = t.Name,
-                    description = t.Description,
-                    inputSchema = t.InputSchema,
-                });
-            }
+
+            // Standard MCP annotations, emitted only where true: an absent hint already means
+            // false, so a tool that declares none is byte-identical to what we sent before.
+            var annotations = new JObject();
+            if (t.ReadOnly) { annotations["readOnlyHint"] = true; }
+            if (t.Destructive) { annotations["destructiveHint"] = true; }
+            if (t.Idempotent) { annotations["idempotentHint"] = true; }
+            if (annotations.HasValues) { entry["annotations"] = annotations; }
+
+            list.Add(entry);
         }
         return new { tools = list };
     }

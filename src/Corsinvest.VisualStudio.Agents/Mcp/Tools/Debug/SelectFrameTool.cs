@@ -30,6 +30,8 @@ internal sealed class SelectFrameTool : McpTool<SelectFrameArgs>
         "this moves within the selected one — debug_select_thread first if the frame you want is " +
         "on another. The selection lasts until the program runs again. Only valid in break mode.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(SelectFrameArgs args)
     {
         var r = await IdeDebugService.Instance.SelectFrameAsync(args.Index);

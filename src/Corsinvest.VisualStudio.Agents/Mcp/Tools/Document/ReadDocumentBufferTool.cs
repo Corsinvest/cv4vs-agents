@@ -30,6 +30,9 @@ internal sealed class ReadDocumentBufferTool : McpTool<ReadDocumentBufferArgs>
         "instead for the version on disk, or when the file isn't open in the IDE. " +
         "Returns isDirty so you can tell whether what you read differs from disk.";
 
+    public override bool ReadOnly => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(ReadDocumentBufferArgs args)
     {
         var r = await IdeContextService.Instance.ReadDocumentBufferAsync(args.FilePath, args.MaxLines);

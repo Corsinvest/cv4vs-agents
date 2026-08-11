@@ -17,6 +17,9 @@ internal sealed class StopDebugTool : McpTool<NoArgs>
         "Non-blocking, so mode comes back null rather than a guess: poll debug_get_state to see " +
         "the session reach 'design'.";
 
+    public override bool Destructive => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.StopAsync();

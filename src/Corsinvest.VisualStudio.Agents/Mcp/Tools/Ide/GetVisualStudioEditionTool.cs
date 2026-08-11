@@ -19,6 +19,9 @@ internal sealed class GetVisualStudioEditionTool : McpTool<NoArgs>
         "all — a supported=false from a nav_* or debug_* tool is usually this rather than a bug. " +
         "ide_get_version gives the version alongside it.";
 
+    public override bool ReadOnly => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var (_, _, _, edition) = await IdeContextService.Instance.GetIdeInfoAsync();
