@@ -92,7 +92,7 @@ own.
 
 - **[Two panes](#two-panes-one-extension)** — a rich WebView2 chat and a real terminal (ConPTY),
   both multi-instance and dockable side by side, each on its own session.
-- **[51 MCP tools](docs/mcp-tools.md)** — Visual Studio's own navigation, references, rename,
+- **[50+ MCP tools](docs/mcp-tools.md)** — Visual Studio's own navigation, references, rename,
   diagnostics, build and the **live debugger** (breakpoints, stepping, locals, evaluate) handed to
   the agent. Not text search over source: the IDE's semantic, running view of your program.
 - **[Review changes in VS's own diff](docs/chat/diff.md)** — every Edit/Write shows as an inline diff,
@@ -107,6 +107,9 @@ own.
 - **Read a response aloud** — a speaker button on each answer reads it out with the system voice
   (Web Speech, no extra install); click to pause, click to resume. The markdown is spoken as plain
   prose — no "asterisk asterisk", no code blocks recited.
+- **[Keep writing while it answers](docs/queued-messages.md)** — the next message waits for the turn
+  to end instead of for you. A row above the composer lists what is still queued, in the order it
+  will go out, and takes one back out — without stopping the turn to do it.
 - **The same sessions as VS Code and the terminal** — no separate database: it reads and writes the
   CLI's own session store, so a conversation started in the VS Code extension or in a terminal shows
   up here, and vice versa. Resume, fork and rename all work on those shared files, so you can switch
@@ -248,8 +251,9 @@ See [Options → Profiles](docs/options.md#profiles).
   Shift+Enter for a newline.
 - **Write while it is still answering** — the message is held until the turn ends, then sent. Its
   bubble appears straight away, greyed out so it does not read as already sent, and drops into place
-  below the reply it was waiting on, so each answer stays under the question that prompted it.
-  Stopping the turn discards what is still waiting, since the model was never given it.
+  below the reply it was waiting on, so each answer stays under the question that prompted it. A row
+  above the composer lists what is still waiting and takes one back out, without stopping the turn
+  to do it — see [Messages waiting to be sent](docs/queued-messages.md).
 - **Slash-command palette** — a lightning button opens a unified palette; typing `/` filters. It
   lists the CLI's slash/skill commands plus built-in actions (Attach, Mention, Clear, Switch model,
   Settings, Manage plugins, Open Claude in Terminal, Help, Report a problem).
@@ -410,7 +414,7 @@ among them — are saved as plain JSON under `%LOCALAPPDATA%`. See
 
 ## MCP tools (the IDE, exposed to Claude)
 
-An in-process MCP server hands the agent Visual Studio's own view of your code — **58 tools** across
+An in-process MCP server hands the agent Visual Studio's own view of your code — **50+ tools** across
 navigation, editing, build, the live debugger and IDE state — with nothing to configure. They are
 language-agnostic by design: wired through Roslyn language services or language-agnostic VS/DTE
 APIs, never a C#/VB-only path. There is no list of supported languages — whatever your Visual
@@ -440,7 +444,7 @@ Studio is a different host, so several things are done differently — or don't 
 - **Two distinct panes (Chat + CLI), multi-instance.** Open several chats and terminals side by
   side, each on its own session, docking as tabs. The Chat pane (WebView2 + SDK-MCP) and the CLI
   pane (ConPTY + `--ide` WebSocket) are deliberately separate startup paths.
-- **Our own MCP tool suite for Visual Studio.** The 58 tools above wrap VS's navigation, build and
+- **Our own MCP tool suite for Visual Studio.** The tools above wrap VS's navigation, build and
   **debugger** (start/step/breakpoints/inspect/hot-reload) and Error List — capabilities specific to
   the VS host, built language-agnostic via Roslyn reflection and DTE, not tied to C#/VB only.
 - **Sub-agents you can see and control.** Their tool calls are grouped under the Agent row that

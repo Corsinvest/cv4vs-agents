@@ -42,6 +42,7 @@ import './cv-attach-chip';
 import './cv-context-gauge';
 import './cv-ide-context-badge';
 import './cv-subagent-chip';
+import './cv-queue-row';
 import './cv-effort-selector';
 import './cv-thinking-toggle';
 import './cv-model-list';
@@ -1130,6 +1131,27 @@ export class CvPrompt extends LitElement implements CommandHost {
         );
     }
 
+    /** One queued message, taken out from the row above the composer. Same event as dropQueue with
+     *  a list of one, so the transcript side stays the single path it already is. */
+    private _onDropQueued = (e: CustomEvent<{ uuid: string }>): void => {
+        const { uuid } = e.detail;
+        if (!this._queue.some((q) => q.uuid === uuid)) {
+            return;
+        }
+        this._setQueue(this._queue.filter((q) => q.uuid !== uuid));
+        this.dispatchEvent(
+            new CustomEvent('queued-dropped', {
+                detail: { uuids: [uuid] },
+                bubbles: true,
+                composed: true,
+            }),
+        );
+    };
+
+    private _onClearQueue = (): void => {
+        this.dropQueue();
+    };
+
     private _flushQueue(): void {
         if (this._isBusy || this._queue.length === 0) {
             return;
@@ -1524,6 +1546,11 @@ export class CvPrompt extends LitElement implements CommandHost {
             >
                 <cv-notice-stack @notice-dismissed=${this._onNoticeDismissed}></cv-notice-stack>
                 ${this._renderChips()}
+                <cv-queue-row
+                    .messages=${this._queue}
+                    @drop-queued=${this._onDropQueued}
+                    @clear-queue=${this._onClearQueue}
+                ></cv-queue-row>
                 <textarea
                     id="input"
                     placeholder=${
