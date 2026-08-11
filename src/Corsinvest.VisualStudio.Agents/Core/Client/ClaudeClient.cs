@@ -503,6 +503,36 @@ internal sealed partial class ClaudeClient : IClaudeClient
         PermissionMode = mode;
     }
 
+    /// <summary>Turn Remote Control on or off on the live session — no second process: the CLI
+    /// exposes the session it is already running.
+    ///
+    /// Returns the claude.ai URL when enabling, null when disabling. A `success` that carries no
+    /// session_url is treated as a failure: the CLI answers exactly that when the payload field is
+    /// misspelled, and a silent no-op would leave the UI claiming a connection that isn't there.
+    ///
+    /// Failures to enable arrive as the control-response error, already readable ("/login",
+    /// "disabled by your organization's policy") — the caller surfaces the message as-is.</summary>
+    public async Task<string> SetRemoteControlAsync(bool enabled)
+    {
+        try
+        {
+            var resp = await SendControlRequestAsync(
+                ClientMessages.ControlSubtype.RemoteControl, new { enabled });
+            if (!enabled) { return null; }
+            var url = resp.Val("session_url");
+            if (string.IsNullOrEmpty(url))
+            {
+                throw new InvalidOperationException("The CLI accepted the request but returned no session URL.");
+            }
+            return url;
+        }
+        catch (Exception ex)
+        {
+            _log.LogException($"[client] remote_control enabled={enabled}", ex);
+            throw;
+        }
+    }
+
     /// <summary>Logs its own failure: the WebView frees itself the moment it asks (it can't wait on
     /// a wedged CLI), so a failed interrupt is invisible from the UI — it reads as stopped while the
     /// turn runs on. Callers fire and forget, and the 10s request timeout would fault this into
