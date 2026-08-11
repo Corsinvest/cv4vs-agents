@@ -7,6 +7,7 @@ using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -208,10 +209,15 @@ internal sealed partial class IdeContextService
 
     /// <summary>Ask the running build to stop and wait for it to actually stop.
     ///
-    /// <c>SolutionBuild.Cancel</c> only requests the stop: MSBuild finishes the targets already in
-    /// flight before the state leaves <c>vsBuildStateInProgress</c>, so returning right after the
-    /// call would report a stop that hasn't happened. Polling here is what lets the caller learn
-    /// whether the IDE is free again — otherwise the next build stacks on top of one still running.
+    /// The cancel goes through <c>IVsSolutionBuildManager</c>: <c>EnvDTE.SolutionBuild</c> can start,
+    /// clean and query a build but has no way to stop one — there is no <c>Cancel</c> anywhere in
+    /// EnvDTE, not on <c>SolutionBuild2</c> either. State is still read from <c>SolutionBuild</c>,
+    /// which is what the rest of this file polls.
+    ///
+    /// Cancelling only requests the stop: MSBuild finishes the targets already in flight before the
+    /// state leaves <c>vsBuildStateInProgress</c>, so returning right after the call would report a
+    /// stop that hasn't happened. Polling here is what lets the caller learn whether the IDE is free
+    /// again — otherwise the next build stacks on top of one still running.
     ///
     /// The wait is capped far below <see cref="BuildPollMaxTries"/>: a cancel that hasn't taken
     /// within seconds is a wedged build, and reporting that is more useful than blocking on it.</summary>
@@ -232,7 +238,20 @@ internal sealed partial class IdeContextService
             {
                 return new BuildResult { Ok = true, Message = "No build is running." };
             }
-            sb.Cancel();
+            if (Package.GetGlobalService(typeof(SVsSolutionBuildManager)) is not IVsSolutionBuildManager bm)
+            {
+                return new BuildResult { Ok = false, Message = "Build manager not available." };
+            }
+            var hr = bm.CanCancelUpdateSolutionConfiguration(out var canCancel);
+            if (ErrorHandler.Succeeded(hr) && canCancel == 0)
+            {
+                return new BuildResult
+                {
+                    Ok = false,
+                    Message = "This build cannot be cancelled — check the Output window; the IDE was left building.",
+                };
+            }
+            ErrorHandler.ThrowOnFailure(bm.CancelUpdateSolutionConfiguration());
             for (var i = 0; i < CancelPollMaxTries; i++)
             {
                 await Task.Delay(BuildPollMs);
