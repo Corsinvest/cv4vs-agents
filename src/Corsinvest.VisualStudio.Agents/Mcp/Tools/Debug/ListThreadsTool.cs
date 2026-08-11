@@ -24,8 +24,8 @@ internal sealed class ListThreadsTool : McpTool<NoArgs>
         "debug_freeze_thread to hold it still. Only valid in break mode.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.GetThreadsAsync();

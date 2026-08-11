@@ -19,8 +19,8 @@ internal sealed class GetVisualStudioVersionTool : McpTool<NoArgs>
         "actually do, the edition matters more than the version — see ide_get_edition.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var (name, year, version, _) = await IdeContextService.Instance.GetIdeInfoAsync();

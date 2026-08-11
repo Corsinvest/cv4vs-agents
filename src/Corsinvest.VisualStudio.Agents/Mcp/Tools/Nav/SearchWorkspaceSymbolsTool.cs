@@ -34,8 +34,8 @@ internal sealed class SearchWorkspaceSymbolsTool : McpTool<SearchWorkspaceSymbol
         "nav_get_document_symbols all take the file and line it returns.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(SearchWorkspaceSymbolsArgs args)
     {
         var r = await IdeNavigationService.Instance.SearchWorkspaceAsync(args.Query, CancellationToken.None);

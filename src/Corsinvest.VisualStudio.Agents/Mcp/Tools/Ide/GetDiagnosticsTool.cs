@@ -36,8 +36,8 @@ internal sealed class GetDiagnosticsTool : McpTool<GetDiagnosticsArgs>
         "file nothing has looked at — build_solution reports what the compiler found, whether the " +
         "file is open or not.";
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     public override bool AlwaysLoad => true;
 
     protected override async Task<object> InvokeAsync(GetDiagnosticsArgs args)

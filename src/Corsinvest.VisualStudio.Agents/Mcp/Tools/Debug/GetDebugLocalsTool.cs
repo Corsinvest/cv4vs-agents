@@ -38,8 +38,8 @@ internal sealed class GetDebugLocalsTool : McpTool<GetDebugLocalsArgs>
         "mode.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(GetDebugLocalsArgs args)
     {
         var depth = Clamp(args.Depth ?? 0, 0, 3);

@@ -21,8 +21,8 @@ internal sealed class GetWorkspaceFoldersTool : McpTool<NoArgs>
         "inside it.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var folders = await IdeContextService.Instance.GetWorkspaceFoldersAsync();

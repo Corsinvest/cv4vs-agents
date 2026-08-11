@@ -18,8 +18,8 @@ internal sealed class StopDebugTool : McpTool<NoArgs>
         "the session reach 'design'.";
 
     public override bool Destructive => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.StopAsync();

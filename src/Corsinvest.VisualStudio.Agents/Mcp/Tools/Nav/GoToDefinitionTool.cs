@@ -44,8 +44,8 @@ internal sealed class GoToDefinitionTool : McpTool<GoToDefinitionArgs>
         "nav_go_to_implementation past an interface to what implements it.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(GoToDefinitionArgs args)
     {
         var r = await IdeNavigationService.Instance.GetDefinitionAsync(

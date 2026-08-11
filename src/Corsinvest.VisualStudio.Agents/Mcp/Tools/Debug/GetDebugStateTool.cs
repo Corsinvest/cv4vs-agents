@@ -21,8 +21,8 @@ internal sealed class GetDebugStateTool : McpTool<NoArgs>
         "breakpoint or thrown.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var s = await IdeDebugService.Instance.GetStateAsync();

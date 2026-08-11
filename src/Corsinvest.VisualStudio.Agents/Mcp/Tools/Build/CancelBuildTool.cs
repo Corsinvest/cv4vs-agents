@@ -22,8 +22,8 @@ internal sealed class CancelBuildTool : McpTool<NoArgs>
         "next one.";
 
     public override bool Destructive => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeContextService.Instance.CancelBuildAsync();

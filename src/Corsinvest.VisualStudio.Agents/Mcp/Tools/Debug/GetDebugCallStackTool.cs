@@ -23,8 +23,8 @@ internal sealed class GetDebugCallStackTool : McpTool<NoArgs>
         "mode='break'.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.GetCallStackAsync();

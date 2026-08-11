@@ -32,8 +32,8 @@ internal sealed class ReadOutputTool : McpTool<ReadOutputArgs>
         "put a pane in front of the user.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(ReadOutputArgs args)
     {
         var r = await IdeOutputService.Instance.ReadAsync(args.Pane, args.TailLines);

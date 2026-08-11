@@ -34,8 +34,8 @@ internal sealed class GetDocumentSymbolsTool : McpTool<GetDocumentSymbolsArgs>
         "This is one file; nav_search_workspace_symbols finds a name across the whole solution.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(GetDocumentSymbolsArgs args)
     {
         var r = await IdeNavigationService.Instance.GetDocumentSymbolsAsync(

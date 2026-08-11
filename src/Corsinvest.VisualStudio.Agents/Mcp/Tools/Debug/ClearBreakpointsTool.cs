@@ -18,8 +18,8 @@ internal sealed class ClearBreakpointsTool : McpTool<NoArgs>
         "debug_list_breakpoints shows what is there first. Works in any mode.";
 
     public override bool Destructive => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.ClearBreakpointsAsync();

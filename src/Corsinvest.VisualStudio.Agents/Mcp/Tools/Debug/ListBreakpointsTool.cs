@@ -21,8 +21,8 @@ internal sealed class ListBreakpointsTool : McpTool<NoArgs>
         "breakpoint left from earlier is the usual reason.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.ListBreakpointsAsync();

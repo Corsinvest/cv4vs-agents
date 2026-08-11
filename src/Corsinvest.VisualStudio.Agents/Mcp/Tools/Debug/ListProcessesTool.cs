@@ -25,8 +25,8 @@ internal sealed class ListProcessesTool : McpTool<ListProcessesArgs>
         "name substring. Use this to find the process to pass to debug_attach.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(ListProcessesArgs args)
     {
         var r = await IdeDebugService.Instance.ListProcessesAsync(args.NameFilter);

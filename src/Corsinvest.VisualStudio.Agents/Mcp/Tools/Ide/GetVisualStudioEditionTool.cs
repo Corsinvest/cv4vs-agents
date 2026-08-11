@@ -20,8 +20,8 @@ internal sealed class GetVisualStudioEditionTool : McpTool<NoArgs>
         "ide_get_version gives the version alongside it.";
 
     public override bool ReadOnly => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var (_, _, _, edition) = await IdeContextService.Instance.GetIdeInfoAsync();

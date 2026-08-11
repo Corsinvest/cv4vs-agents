@@ -27,8 +27,8 @@ internal sealed class ClearOutputTool : McpTool<ClearOutputArgs>
         "pane isn't found.";
 
     public override bool Destructive => true;
-
     public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(ClearOutputArgs args)
     {
         var r = await IdeOutputService.Instance.ClearAsync(args.Pane);
