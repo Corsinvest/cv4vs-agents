@@ -1322,6 +1322,11 @@ export class CvPrompt extends LitElement implements CommandHost {
         });
     }
 
+    /** Ask the host to start/stop Remote Control (Remote Control toggle). */
+    setRemoteControl(enabled: boolean): void {
+        bridge.sendNotification(Msg.fromWebView.cli.setRemoteControl, { enabled });
+    }
+
     private _onFilePickerChange = (e: Event): void => {
         const input = e.target as HTMLInputElement;
         if (input.files) {

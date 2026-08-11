@@ -64,16 +64,22 @@ import type {
     HistoryLoadedNotification,
     NoticeNotification,
     CliExitedNotification,
+    RemoteControlNotification,
 } from '../../core/types';
 import { GetHistoryReq } from '../../core/request-types';
 import { modelLabel } from '../../core/ai-models';
 import { turnErrorLabel, turnErrorDetail, isUserAbort } from '../../core/turn-errors';
 import { parseLocalCommandOutput } from '../../core/slash-commands';
+import { remoteControlErrorText } from '../../core/commands/remote-control';
+import { escapeHtml } from '../../core/html';
 
 let _entryIdSeq = 0;
 
 /** Notice key for the "CLI process exited" row, so a restart clears exactly that one. */
 const CLI_EXITED_KEY = 'cli-exited';
+/** Notice keys for the Remote Control state/error banners — see _onRemoteControl. */
+const REMOTE_CONTROL_KEY = 'remote-control';
+const REMOTE_CONTROL_ERROR_KEY = 'remote-control-error';
 
 /**
  * Root component. Owns the chat entry list and wires the bridge messages
@@ -253,6 +259,13 @@ export class CvApp extends LitElement {
             bridge.onNotification(Msg.toWebView.cli.started, () => {
                 this._systemNotices?.dismissByKey(CLI_EXITED_KEY);
             }),
+        );
+
+        this._offs.push(
+            bridge.onNotification<RemoteControlNotification>(
+                Msg.toWebView.chat.remoteControl,
+                (d) => this._onRemoteControl(d),
+            ),
         );
 
         this._offs.push(
@@ -1635,6 +1648,33 @@ export class CvApp extends LitElement {
             return;
         }
         this._turnMetrics.set(entryId, { costUsd: 0, durationMs: 0, usage: d.usage });
+    }
+
+    // The state notice mirrors the connection and dies with it, so it carries no ✕; the error one is
+    // a message the user closes when they've read it.
+    private _onRemoteControl(n: RemoteControlNotification): void {
+        appState.remoteControl = {
+            status: n.status as 'disconnected' | 'connecting' | 'connected' | 'error',
+            url: n.url ?? undefined,
+            detail: n.detail ?? undefined,
+        };
+        if (n.status === 'connected' && n.url) {
+            this._systemNotices?.push({
+                key: REMOTE_CONTROL_KEY,
+                pinned: true,
+                severity: 'info',
+                message: `Remote Control is active — continue at <a href="${escapeHtml(n.url)}">claude.ai/code</a>. It ends when this pane closes.`,
+            });
+        } else {
+            this._systemNotices?.dismissByKey(REMOTE_CONTROL_KEY);
+        }
+        if (n.status === 'error' || (n.status === 'disconnected' && n.detail)) {
+            this._systemNotices?.push({
+                key: REMOTE_CONTROL_ERROR_KEY,
+                severity: 'error',
+                message: remoteControlErrorText(n.detail ?? undefined),
+            });
+        }
     }
 
     private renderMessage(e: Exclude<UiEntry, UiToolEntry | UiThinkingEntry>) {

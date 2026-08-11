@@ -27,6 +27,7 @@ import {
     EffortCommand,
     SwitchModelsOnFlagCommand,
 } from './model-controls';
+import { RemoteControlCommand } from './remote-control';
 import { SlashCommand } from './slash';
 
 /**
@@ -47,6 +48,7 @@ export const STATIC_COMMANDS: readonly ChatCommand[] = [
     new ThinkingCommand(),
     new FastModeCommand(),
     new SwitchModelsOnFlagCommand(),
+    new RemoteControlCommand(),
     new UsageCommand(),
     new ContextCommand(),
     new StatsCommand(),

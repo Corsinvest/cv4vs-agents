@@ -105,6 +105,10 @@ export type { NoticeNotification } from './generated/NoticeNotification';
 export type { NoticeVariantDto } from './generated/NoticeVariantDto';
 export type { NoticePositionDto } from './generated/NoticePositionDto';
 
+/** Remote Control connection status (`chat_remote_control`).
+ *  Generated from C# by TypeGen — re-exported here. */
+export type { RemoteControlNotification } from './generated/RemoteControlNotification';
+
 /** Active model / permission mode changed (`cli_model_changed` / `cli_permission_mode_changed`).
  *  Generated from C# by TypeGen — re-exported here. */
 export type { ModelChangedNotification } from './generated/ModelChangedNotification';
