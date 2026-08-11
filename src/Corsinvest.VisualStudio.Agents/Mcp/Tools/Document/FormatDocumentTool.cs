@@ -30,6 +30,8 @@ internal sealed class FormatDocumentTool : McpTool<FormatDocumentArgs>
         "It changes the buffer without saving — document_save writes it out. " +
         "document_run_cleanup does this plus the user's own cleanup fixers.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(FormatDocumentArgs args)
     {
         var ok = await IdeContextService.Instance.FormatDocumentAsync(args.FilePath);

@@ -26,6 +26,8 @@ internal sealed class SelectThreadTool : McpTool<SelectThreadArgs>
         "new thread's stack — frames belong to a thread — so debug_select_frame after this, not " +
         "before. Only valid in break mode.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(SelectThreadArgs args)
     {
         var r = await IdeDebugService.Instance.SelectThreadAsync(args.ThreadId);

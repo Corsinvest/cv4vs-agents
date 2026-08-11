@@ -28,6 +28,8 @@ internal sealed class SaveDocumentTool : McpTool<SaveDocumentArgs>
         "document_format or document_organize_imports, which change the buffer and leave it " +
         "unsaved.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(SaveDocumentArgs args)
     {
         var saved = await IdeContextService.Instance.SaveDocumentAsync(args.FilePath);

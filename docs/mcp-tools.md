@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 58 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 50+ tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -18,6 +18,19 @@ behind the file: `nav_find_references` returns what *your* VS would return on th
 a language with a full language service, thinner for one without. `debug_*` needs the workload that
 debugs that project type. Where a capability genuinely isn't there, the tool feature-detects and
 returns `supported=false` instead of pretending it worked.
+
+**Each tool says what it costs you.** Every tool carries the standard MCP annotations —
+`readOnlyHint` when it changes nothing, `destructiveHint` when it can destroy or interrupt
+something you'd miss, `idempotentHint` when running it twice is the same as running it once. The
+CLI uses them to decide what needs your approval, so reading a symbol's references doesn't cost the
+same prompt as stopping a debug session. They are hints, not enforcement: the client still decides.
+
+The reading tools (`nav_*` except rename, every `ide_get_*` and `debug_get_*`/`debug_list_*`) are
+read-only. Destructive covers what you'd want to be asked about: `debug_stop`, `build_clean`,
+`build_cancel`, `nav_rename_symbol`, `document_run_cleanup`, and the breakpoint-removing pair. The
+stepping tools carry nothing — they move the program forward, which is neither safe to repeat nor
+destructive. `debug_evaluate` is deliberately not read-only: evaluating can call property getters,
+and it accepts assignments.
 
 **Naming.** `domain_verb[_object]`, snake_case, domain first — `nav_go_to_definition`,
 `debug_get_locals`. A domain exists once it has three or more tools; the rest live under `ide`.
@@ -56,10 +69,11 @@ returns `supported=false` instead of pretending it worked.
 | `document_run_cleanup` | Run the IDE's Code Cleanup on a file (Ctrl+K, Ctrl+E): formatting plus the fixers of the user's default cleanup profile. Richer than document_format, but the extra fixers are language-dependent (C#/VB get the most). The file must live inside the open solution's folder; success=false otherwise. |
 | `document_save` | Save an open file if it has unsaved changes. Returns saved=true if a save happened, false if the file wasn't open or was already saved — the two are not told apart here, document_check_dirty separates them beforehand. Needed after document_format or document_organize_imports, which change the buffer and leave it unsaved. |
 
-## Build (4)
+## Build (5)
 
 | Tool | What it does |
 |---|---|
+| `build_cancel` | Stop the build currently running in the IDE and wait for it to actually stop. Reports ok=true once the IDE is free again — including when nothing was running, since that is the state you asked for; ok=false means the build is still going and the message says why. Use it when build_solution or build_clean reported a timeout (the build was left running), or when a build started outside the chat is in the way. A cancelled build leaves partial outputs, so run build_clean before trusting the next one. |
 | `build_clean` | Clean the entire solution: delete the build outputs (bin/obj) of every project. Blocks until the clean ends. Use it when a build result looks stale, then call build_solution to rebuild — cleaning on its own produces no diagnostics. |
 | `build_project` | Build a single project (by name) in the active configuration and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until done. Reports errors only unless severity says otherwise; the message says how many items were left out. The name is a project name, not a path — ide_get_project_structure lists them. build_solution builds everything instead. |
 | `build_set_startup_project` | Set the solution's startup project — the one debug_start (F5) launches. Pass the project name; returns ok plus the resolved startup project, or ok=false with the list of available projects if the name doesn't match. |
@@ -92,7 +106,7 @@ returns `supported=false` instead of pretending it worked.
 | `debug_set_exception_breakpoint` | Configure the debugger to break when a specific exception type is thrown (first-chance), even if it's caught — useful to find where an exception originates. Pass the fully-qualified type (e.g. 'System.NullReferenceException'). breakWhenThrown=false turns it off. Works in any mode; needs a solution loaded. After it breaks, debug_get_state reports the exception type/message. |
 | `debug_set_function_breakpoint` | Add a breakpoint that triggers when a function is entered, identified by name (e.g. "MyClass.Calculate") instead of a file and line. Optionally pass a condition. Works whether or not a debug session is running. Use when you know the method but not the exact line, or to avoid opening the file. debug_set_breakpoint takes a file and line instead, debug_list_breakpoints shows what is set, and debug_start begins the session that will hit it. |
 | `debug_set_next_statement` | Move the instruction pointer to this line WITHOUT running the code in between — the Set Next Statement command. Skips a call that would fail, or jumps back to retry a block after fixing a value with debug_evaluate. The line must be in the file execution is paused in: the jump cannot leave the method, and asking for another file is refused here because Visual Studio would not — it reads the number as a line of the CURRENT method and moves there instead. SIDE-EFFECTFUL, unlike the rest of the debug tools: the skipped statements never run, so anything they would have assigned keeps its old value, and jumping backwards runs side effects a second time. Nothing checks that the jump makes sense — prefer asking first. Stays in break mode, and only valid in break mode. |
-| `debug_start` | Start debugging the solution's startup project (equivalent to F5). Non-blocking: returns once launched; the program then runs until it hits a breakpoint or exits. Poll debug_get_state to detect when it pauses (mode='break'). No-op if already debugging. |
+| `debug_start` | The debug entry point: the usual cycle is debug_set_breakpoint → debug_start → poll debug_get_state until mode='break' → debug_get_callstack / debug_get_locals → debug_step. Inspection only works in break mode, and reads the frame debug_select_frame chose on the thread debug_select_thread chose. Start debugging the solution's startup project (equivalent to F5). Non-blocking: returns once launched; the program then runs until it hits a breakpoint or exits. Poll debug_get_state to detect when it pauses (mode='break'). No-op if already debugging. |
 | `debug_start_no_debugger` | Start the program WITHOUT the debugger (equivalent to Ctrl+F5). Optionally pass a project name to set it as startup first. Use debug_start instead when you need breakpoints. Returns ok or ok=false with a reason. |
 | `debug_step` | Step the paused program by one statement. Direction: 'over' (run the line without entering called methods — default), 'into' (step into the call), 'out' (run to the end of the current method). Waits for the step to land and returns the file/line it reached, so a step over a slow call answers when it is done rather than straight away. If it has not landed within ten seconds — stepping over something that blocks, or the program ran on to a breakpoint — it comes back without a position and says to poll debug_get_state. Only valid in break mode. |
 | `debug_stop` | Stop the current debug session (equivalent to Shift+F5). No-op if not debugging. Non-blocking, so mode comes back null rather than a guess: poll debug_get_state to see the session reach 'design'. |

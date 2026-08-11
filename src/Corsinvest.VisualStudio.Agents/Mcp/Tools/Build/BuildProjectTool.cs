@@ -32,6 +32,8 @@ internal sealed class BuildProjectTool : McpTool<BuildProjectArgs>
         "many items were left out. The name is a project name, not a path — " +
         "ide_get_project_structure lists them. build_solution builds everything instead.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(BuildProjectArgs args)
     {
         var r = await IdeContextService.Instance.BuildAsync(args.ProjectName, args.Severity ?? "error");

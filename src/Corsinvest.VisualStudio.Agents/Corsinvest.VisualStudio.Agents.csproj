@@ -162,6 +162,7 @@
     <Compile Include="Mcp\Tools\Build\BuildSolutionTool.cs" />
     <Compile Include="Mcp\Tools\Build\BuildProjectTool.cs" />
     <Compile Include="Mcp\Tools\Build\CleanSolutionTool.cs" />
+    <Compile Include="Mcp\Tools\Build\CancelBuildTool.cs" />
     <Compile Include="Mcp\Tools\Build\SetStartupProjectTool.cs" />
     <Compile Include="Mcp\Tools\Ide\GetProjectStructureTool.cs" />
     <Compile Include="Mcp\Tools\Nav\GoToDefinitionTool.cs" />

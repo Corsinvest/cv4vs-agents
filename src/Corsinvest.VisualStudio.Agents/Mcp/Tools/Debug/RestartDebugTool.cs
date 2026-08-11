@@ -17,6 +17,8 @@ internal sealed class RestartDebugTool : McpTool<NoArgs>
         "If not debugging, just starts. Non-blocking, so mode comes back null rather than a guess: " +
         "poll debug_get_state for where it lands.";
 
+    public override bool Destructive => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.RestartAsync();

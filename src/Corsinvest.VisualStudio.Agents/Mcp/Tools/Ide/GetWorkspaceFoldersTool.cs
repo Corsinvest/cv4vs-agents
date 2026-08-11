@@ -20,6 +20,9 @@ internal sealed class GetWorkspaceFoldersTool : McpTool<NoArgs>
         "(build_*, nav_*, document_format) would fail; ide_get_project_structure lists what is " +
         "inside it.";
 
+    public override bool ReadOnly => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var folders = await IdeContextService.Instance.GetWorkspaceFoldersAsync();

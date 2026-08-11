@@ -33,6 +33,8 @@ internal sealed class SetExceptionBreakTool : McpTool<SetExceptionBreakArgs>
         "it off. Works in any mode; needs a solution loaded. After it breaks, debug_get_state " +
         "reports the exception type/message.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(SetExceptionBreakArgs args)
     {
         var r = await IdeDebugService.Instance.SetExceptionBreakAsync(args.ExceptionName, args.BreakWhenThrown, args.Group);

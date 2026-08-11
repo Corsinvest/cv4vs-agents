@@ -35,6 +35,8 @@ internal sealed class OpenFileTool : McpTool<OpenFileArgs>
         "reading a file needs no editor: use the Read tool, or document_read_buffer when the file " +
         "is open and may hold unsaved changes.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(OpenFileArgs args)
     {
         var ok = await IdeContextService.Instance.OpenFileAsync(

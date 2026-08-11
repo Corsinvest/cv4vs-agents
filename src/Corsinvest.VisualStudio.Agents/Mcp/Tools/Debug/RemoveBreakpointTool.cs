@@ -25,6 +25,9 @@ internal sealed class RemoveBreakpointTool : McpTool<RemoveBreakpointArgs>
     public override string Description =>
         "Remove the breakpoint(s) at a file and 1-based line. Use debug_clear_breakpoints to remove all.";
 
+    public override bool Destructive => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(RemoveBreakpointArgs args)
     {
         var r = await IdeDebugService.Instance.RemoveBreakpointAsync(args.FilePath, args.Line);

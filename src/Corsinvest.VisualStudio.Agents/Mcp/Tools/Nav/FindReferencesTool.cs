@@ -39,6 +39,9 @@ internal sealed class FindReferencesTool : McpTool<FindReferencesArgs>
         "open solution. Returns supported=false for languages this isn't available for, or " +
         "transiently while the solution is still loading — retry shortly before using grep.";
 
+    public override bool ReadOnly => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(FindReferencesArgs args)
     {
         var r = await IdeNavigationService.Instance.GetReferencesAsync(

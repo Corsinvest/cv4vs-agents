@@ -20,6 +20,9 @@ internal sealed class GetCurrentSelectionTool : McpTool<NoArgs>
         "since the selection belongs to the focused window. Calling this also remembers the answer " +
         "for editor_get_latest_selection; reach for that one instead when the user may have moved " +
         "on since selecting.";
+    public override bool ReadOnly => true;
+    public override bool Idempotent => true;
+
     public override bool AlwaysLoad => true;
 
     protected override async Task<object> InvokeAsync(NoArgs args)

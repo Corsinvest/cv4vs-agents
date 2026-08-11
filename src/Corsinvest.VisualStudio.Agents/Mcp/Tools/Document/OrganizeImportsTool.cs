@@ -28,6 +28,8 @@ internal sealed class OrganizeImportsTool : McpTool<OrganizeImportsArgs>
         "The file must live inside the open solution's folder; success=false otherwise. " +
         "Leaves the buffer unsaved, like document_format — document_save writes it out.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(OrganizeImportsArgs args)
     {
         var ok = await IdeContextService.Instance.OrganizeImportsAsync(args.FilePath);

@@ -33,6 +33,9 @@ internal sealed class SearchWorkspaceSymbolsTool : McpTool<SearchWorkspaceSymbol
         "the file is unknown: from a hit, nav_go_to_definition, nav_find_references and " +
         "nav_get_document_symbols all take the file and line it returns.";
 
+    public override bool ReadOnly => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(SearchWorkspaceSymbolsArgs args)
     {
         var r = await IdeNavigationService.Instance.SearchWorkspaceAsync(args.Query, CancellationToken.None);

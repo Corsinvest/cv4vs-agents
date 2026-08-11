@@ -20,6 +20,9 @@ internal sealed class GetDebugStateTool : McpTool<NoArgs>
         "type and message. Poll this after debug_start to know when the program has hit a " +
         "breakpoint or thrown.";
 
+    public override bool ReadOnly => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var s = await IdeDebugService.Instance.GetStateAsync();

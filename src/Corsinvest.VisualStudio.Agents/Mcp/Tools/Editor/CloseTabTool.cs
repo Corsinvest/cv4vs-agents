@@ -28,6 +28,8 @@ internal sealed class CloseTabTool : McpTool<CloseTabArgs>
         "so the user's documents are safe from it — and closing something they opened is not on " +
         "offer. Finding no such tab is not an error. Use editor_close_all_diffs to clear them all.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(CloseTabArgs args)
     {
         await IdeContextService.Instance.CloseTabAsync(args.TabName);

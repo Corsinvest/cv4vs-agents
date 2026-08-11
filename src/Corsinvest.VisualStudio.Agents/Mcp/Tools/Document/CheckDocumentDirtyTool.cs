@@ -27,6 +27,9 @@ internal sealed class CheckDocumentDirtyTool : McpTool<CheckDocumentDirtyArgs>
         "dirty the Read tool gives the version on disk and document_read_buffer the one on " +
         "screen — they differ, and document_save makes them agree.";
 
+    public override bool ReadOnly => true;
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(CheckDocumentDirtyArgs args)
     {
         var dirty = await IdeContextService.Instance.IsDocumentDirtyAsync(args.FilePath);
