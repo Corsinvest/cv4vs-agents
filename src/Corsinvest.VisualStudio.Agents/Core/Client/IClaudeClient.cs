@@ -53,6 +53,10 @@ public interface IClaudeClient : IDisposable
     // Hot-swap operations — these must never respawn the process.
     Task SetModelAsync(string model);
     Task SetPermissionModeAsync(string mode);
+    /// <summary>Turn Remote Control on or off on the live session. Returns the claude.ai
+    /// session URL when enabling, null when disabling; throws with the CLI's own readable
+    /// message when it refuses.</summary>
+    Task<string> SetRemoteControlAsync(bool enabled);
     Task InterruptAsync();
     Task<JObject> GetUsageAsync();
     Task<JObject> GetContextUsageAsync();
@@ -110,6 +114,8 @@ public interface IClaudeClient : IDisposable
     event EventHandler<ToolPermissionCancelledEventArgs> ToolPermissionCancelled;
     event EventHandler<HookCallbackEventArgs> HookCallbackRequested;
     event EventHandler<RateLimitEventArgs> RateLimitReceived;
+    /// <summary>`system/bridge_state` — Remote Control connection state changes on the live session.</summary>
+    event EventHandler<BridgeStateEventArgs> BridgeStateChanged;
     event EventHandler<AssistantTextDeltaEventArgs> AssistantTextDelta;
     event EventHandler<AssistantThinkingDeltaEventArgs> AssistantThinkingDelta;
     event EventHandler<ToolProgressEventArgs> ToolProgressReceived;

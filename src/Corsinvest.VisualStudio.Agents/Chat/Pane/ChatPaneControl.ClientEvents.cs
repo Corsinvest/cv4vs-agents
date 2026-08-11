@@ -47,6 +47,7 @@ public partial class ChatPaneControl
         c.ProcessExited += OnProcessExited;
         c.HookCallbackRequested += OnHookCallback;
         c.RateLimitReceived += OnRateLimit;
+        c.BridgeStateChanged += OnBridgeStateChanged;
     }
 
     private void DetachClientEvents(IClaudeClient c)
@@ -69,6 +70,25 @@ public partial class ChatPaneControl
         c.ProcessExited -= OnProcessExited;
         c.HookCallbackRequested -= OnHookCallback;
         c.RateLimitReceived -= OnRateLimit;
+        c.BridgeStateChanged -= OnBridgeStateChanged;
+    }
+
+    // The CLI never reports this — not in initialize, not after --resume — so it lives exactly
+    // as long as the process and every respawn resets it.
+    private bool _remoteControlOn;
+
+    /// <summary>Publishes Remote Control state to the WebView banner. Reachable from
+    /// WebViewMessageHandler (the WebView→CLI direction lives there), same as the other
+    /// pane operations the handler drives.</summary>
+    internal void SendRemoteControl(string status, string url = null, string detail = null)
+    {
+        _remoteControlOn = status == "connected";
+        _bridge.Send(BridgeMessages.ToWebView.Chat.RemoteControl, new Contracts.RemoteControlNotification
+        {
+            Status = status,
+            Url = url,
+            Detail = detail,
+        });
     }
 
     /// <summary>PreToolUse/PostToolUse hooks (Edit/Write/[Multi]Edit/Read): autosave (save the target
@@ -172,6 +192,9 @@ public partial class ChatPaneControl
     private void OnCliStateReceived(object sender, CliStateReceivedEventArgs e)
         => Dispatcher.Invoke(() =>
         {
+            // The new process may or may not have re-attached the remote session, and won't say
+            // which: reset rather than show a URL that may be dead.
+            SendRemoteControl("disconnected");
             _bridge.Send(BridgeMessages.ToWebView.Cli.State, new Contracts.CliStateNotification
             {
                 CliState = new Contracts.CliStateDto
@@ -708,6 +731,17 @@ public partial class ChatPaneControl
         var hours = mins / 60;
         return hours < 24 ? $"in {(int)hours}h" : $"in {(int)(hours / 24)}d";
     }
+
+    private void OnBridgeStateChanged(object sender, BridgeStateEventArgs e)
+        => Dispatcher.Invoke(() =>
+        {
+            // `reconnecting` is not a failure, and a late `failed` must not clear a banner we already
+            // took down.
+            if (!_remoteControlOn || e.State != "failed") { return; }
+            // The normal way a bridge stops: same outcome, nothing to report.
+            var normal = string.Equals(e.Detail, "session ended", StringComparison.OrdinalIgnoreCase);
+            SendRemoteControl("disconnected", detail: normal ? null : e.Detail);
+        });
 
     // When the CLI emits its init message with a (possibly new) session_id,
     // align the toolbar title with it (a resumed/forked session already has one;
