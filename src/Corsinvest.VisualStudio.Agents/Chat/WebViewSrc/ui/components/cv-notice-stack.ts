@@ -201,7 +201,7 @@ export class CvNoticeStack extends LitElement {
                              the height — too much in a narrow tool window. -->
                         <fluent-message-bar intent=${n.severity}>
                             <span slot="icon" class="ico ${n.severity}"
-                                >${unsafeHTML(ICONS[n.severity])}</span
+                                >${unsafeHTML(n.icon ?? ICONS[n.severity])}</span
                             >
                             <span class="msg">${unsafeHTML(n.message)}</span>
                             ${

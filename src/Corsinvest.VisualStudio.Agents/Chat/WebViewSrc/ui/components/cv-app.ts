@@ -6,6 +6,7 @@ import { LitElement, html, nothing } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
+import { REMOTE_CONTROL_ICON } from '../../core/commands/builtin-commands';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { fetchSubagent, fetchContextUsage, fetchCompactSummary } from '../../core/lazy';
@@ -1659,7 +1660,13 @@ export class CvApp extends LitElement {
                 key: REMOTE_CONTROL_KEY,
                 pinned: true,
                 severity: 'info',
-                message: `Remote Control is active — continue at <a href="${escapeHtml(n.url)}">claude.ai/code</a>. It ends when this session restarts.`,
+                icon: REMOTE_CONTROL_ICON,
+                message: `Remote Control is active — continue at <fluent-link href="${escapeHtml(n.url)}" target="_blank" rel="noopener noreferrer">claude.ai/code</fluent-link>. It ends when this session restarts.`,
+                // The row carries no ✕ (it mirrors live state), so this is the only way to stop
+                // Remote Control from where the user is already looking.
+                actionLabel: 'Turn off',
+                actionMessage: Msg.fromWebView.cli.setRemoteControl,
+                actionPayload: { enabled: false },
             });
         } else {
             this._systemNotices?.dismissByKey(REMOTE_CONTROL_KEY);
@@ -1672,6 +1679,10 @@ export class CvApp extends LitElement {
                     ? `Remote Control error: ${n.detail}`
                     : 'Remote Control failed to start.',
             });
+        } else {
+            // A retry that gets past `connecting` answers the previous error, which is sticky
+            // and would otherwise sit under the active banner.
+            this._systemNotices?.dismissByKey(REMOTE_CONTROL_ERROR_KEY);
         }
     }
 

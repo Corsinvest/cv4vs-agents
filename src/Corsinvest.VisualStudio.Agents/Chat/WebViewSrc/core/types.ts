@@ -469,6 +469,9 @@ export interface Notice {
     /** Hide the ✕. For a notice that mirrors live state rather than reporting an event: dismissing
      *  it would leave the state on with nothing on screen saying so. Implies `sticky`. */
     pinned?: boolean;
+    /** Raw SVG replacing the severity icon, for a row whose subject is recognisable at a glance
+     *  (a phone for Remote Control). The severity still sets the colour. */
+    icon?: string;
 }
 
 /** Payload of `notice-dismissed`, raised only when the user clicks a notice's ✕. */

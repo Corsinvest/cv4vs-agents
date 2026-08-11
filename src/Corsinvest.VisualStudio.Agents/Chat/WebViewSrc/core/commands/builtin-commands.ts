@@ -97,13 +97,16 @@ export class ResumeConversationCommand extends ChatCommand {
     }
 }
 
+/** Shared with the status banner in cv-app, so Remote Control looks the same in both places. */
+export const REMOTE_CONTROL_ICON = PhoneDesktop16Regular;
+
 export class RemoteControlCommand extends ChatCommand {
     readonly id = 'remote-control';
     readonly label = 'Remote Control';
     readonly description = 'Continue this session from your phone or claude.ai/code';
     readonly section: CommandSection = 'context';
     readonly order = 45;
-    readonly icon = PhoneDesktop16Regular;
+    readonly icon = REMOTE_CONTROL_ICON;
     readonly trailing: CommandTrailing = 'toggle';
     override readonly aliases = ['remote', 'rc', 'phone'];
     readonly keepMenuOpen = true;
