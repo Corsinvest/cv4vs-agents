@@ -280,6 +280,8 @@
     <Compile Include="Menu\ActiveSessionsMenuCommand.cs" />
     <Compile Include="Menu\ProfilesMenuCommand.cs" />
     <Compile Include="Menu\GlobalMenuCommands.cs" />
+    <Compile Include="Editor\EditorPrompt.cs" />
+    <Compile Include="Editor\EditorPromptsMenuCommand.cs" />
     <Compile Include="Core\Panes\PaneLauncher.cs" />
     <Compile Include="AgentsPackage.cs" />
     <Compile Include="Core\Sessions\SessionInfo.cs" />

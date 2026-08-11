@@ -338,6 +338,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         OutputWindowLogger.EnsurePaneOnUIThread();
         await ProfilesMenuCommand.InitializeAsync(this);
         await ActiveSessionsMenuCommand.InitializeAsync(this);
+        await Editor.EditorPromptsMenuCommand.InitializeAsync(this);
         await GlobalMenuCommands.InitializeAsync(this);
         // Lazy MCP lifecycle: server runs only while >=1 session is open,
         // driven by PaneRegistry's 0->1 / ->0 transitions.
