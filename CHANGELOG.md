@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Take one message back out of the queue.** Writing while a turn runs queues the message, and
+  until now regretting one meant Stop — which clears the queue but interrupts the answer with it,
+  rarely what you wanted. A row above the composer now holds what is still waiting: with one
+  message it shows its text and a bin, with more a count that opens the list, each entry with a bin
+  of its own and numbered in the order it will go out. That order is the one thing the greyed-out
+  bubbles never showed, and by the time a turn has been running they have usually scrolled out of
+  view anyway. The row is there only while something is queued, so it costs no space the rest of
+  the time, and the bin keeps its place in both forms so it can be hit without looking. Nothing
+  reaches the model either way: a queued message was never given to the CLI.
+
 ## [1.3.0] - 2026-08-10
 
 The debugger is reachable: the agent can look inside an object, move up the call stack, and say
