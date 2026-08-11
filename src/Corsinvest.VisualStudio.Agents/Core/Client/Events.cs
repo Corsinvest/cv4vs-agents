@@ -221,4 +221,7 @@ public sealed class BridgeStateEventArgs
 {
     public string State { get; set; }
     public string Detail { get; set; }
+    /// <summary>Which bridge is speaking. Absent on `ready` — the event precedes the response
+    /// that carries the epoch.</summary>
+    public int? BridgeEpoch { get; set; }
 }

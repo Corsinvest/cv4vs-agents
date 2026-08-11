@@ -44,6 +44,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public string SessionId { get; private set; }
     public string Model { get; private set; }
     public string PermissionMode { get; private set; } = Client.PermissionMode.Default;
+    public int? BridgeEpoch { get; private set; }
     public AccountInfo Account { get; private set; }
     public bool IsRunning => _transport.IsRunning;
 
@@ -173,6 +174,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
         try { _transport.Dispose(); } catch { }
         _transport = new NdjsonTransport(_log);
         AttachTransportEvents();
+        // A new process has no bridge: the CLI reports nothing about Remote Control after
+        // --resume, so nothing else would clear this.
+        BridgeEpoch = null;
 
         // Launch-only args. --include-partial-messages enables stream_event + tool_progress.
         // NOTE: no --ide here. In stream-json mode the CLI's --ide auto-connect is
@@ -515,6 +519,12 @@ internal sealed partial class ClaudeClient : IClaudeClient
         {
             var resp = await SendControlRequestAsync(
                 ClientMessages.ControlSubtype.RemoteControl, new { enabled });
+            // Whole payload: we map session_url only, and bridge_epoch is the one field that
+            // could tell a reconnect from a fresh bridge — see the bridge_state log.
+            _log.Debug(() => $"[client] remote_control enabled={enabled} → {resp.ToIndentedString()}");
+            // Identifies the bridge this call created, so a late `failed` from an earlier one
+            // can be told apart. Cleared on disable: no bridge, nothing to match.
+            BridgeEpoch = enabled ? (int?)resp["bridge_epoch"] : null;
             if (!enabled) { return null; }
             var url = resp.Val("session_url");
             if (string.IsNullOrEmpty(url))

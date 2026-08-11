@@ -57,6 +57,9 @@ public interface IClaudeClient : IDisposable
     /// session URL when enabling, null when disabling; throws with the CLI's own readable
     /// message when it refuses.</summary>
     Task<string> SetRemoteControlAsync(bool enabled);
+    /// <summary>Epoch of the Remote Control bridge currently enabled, null when there is none.
+    /// Tells a `bridge_state` from the live bridge apart from one a replaced bridge sent late.</summary>
+    int? BridgeEpoch { get; }
     Task InterruptAsync();
     Task<JObject> GetUsageAsync();
     Task<JObject> GetContextUsageAsync();

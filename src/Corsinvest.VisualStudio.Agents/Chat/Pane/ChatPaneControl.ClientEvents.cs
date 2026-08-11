@@ -728,9 +728,11 @@ public partial class ChatPaneControl
         {
             // `reconnecting` is not a failure — the bridge is retrying.
             if (e.State != "failed") { return; }
-            // The normal way a bridge stops: same outcome, nothing to report as an error.
-            var normal = string.Equals(e.Detail, "session ended", StringComparison.OrdinalIgnoreCase);
-            SendRemoteControl("disconnected", detail: normal ? null : e.Detail);
+            // A `failed` from a bridge we already replaced (turned off, then on again) must not
+            // take down the live one. An event without an epoch is accepted, as VS Code does:
+            // `ready` arrives before the response that carries it.
+            if (e.BridgeEpoch is int epoch && epoch != _client?.BridgeEpoch) { return; }
+            SendRemoteControl("disconnected", detail: e.Detail);
         });
 
     // When the CLI emits its init message with a (possibly new) session_id,

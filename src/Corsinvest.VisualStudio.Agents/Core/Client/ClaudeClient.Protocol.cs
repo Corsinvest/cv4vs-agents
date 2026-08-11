@@ -335,10 +335,15 @@ internal sealed partial class ClaudeClient
                 }
 
             case ClientMessages.SystemSubtype.BridgeState:
+                // Whole payload: the state values and the reconnect sequence are read from the
+                // CLI's source, never observed on the wire, and the event may carry fields we
+                // don't map yet.
+                _log.Debug(() => $"[client] bridge_state {obj.ToIndentedString()}");
                 BridgeStateChanged?.Invoke(this, new BridgeStateEventArgs
                 {
                     State = obj.Val("state"),
                     Detail = obj.Val("detail"),
+                    BridgeEpoch = (int?)obj["bridge_epoch"],
                 });
                 break;
         }
