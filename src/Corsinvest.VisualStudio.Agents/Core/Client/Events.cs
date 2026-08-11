@@ -213,3 +213,12 @@ public sealed class ProcessExitedEventArgs
     public int ExitCode { get; set; }
     public bool Intentional { get; set; }
 }
+
+/// <summary>`system/bridge_state` — Remote Control. <see cref="State"/> is one of
+/// ready|connected|reconnecting|failed; <see cref="Detail"/> is the CLI's own readable cause
+/// ("/login", "session ended", "connection to server lost") and is absent on ready/connected.</summary>
+public sealed class BridgeStateEventArgs
+{
+    public string State { get; set; }
+    public string Detail { get; set; }
+}

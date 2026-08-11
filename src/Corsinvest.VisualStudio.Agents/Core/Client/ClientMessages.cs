@@ -37,6 +37,8 @@ internal static class ClientMessages
         // Transient work status: {status:"compacting"} at start, {status:null} at end. Drives the
         // spinner's "Compacting…" label. Other status values are possible; only compacting is used.
         public const string Status = "status";
+        // The only signal that the Remote Control bridge dropped after it was enabled.
+        public const string BridgeState = "bridge_state";
         public const string CommandsChanged = "commands_changed";
         public const string TaskStarted = "task_started";
         public const string TaskProgress = "task_progress";

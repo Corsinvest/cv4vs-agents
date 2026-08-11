@@ -333,6 +333,14 @@ internal sealed partial class ClaudeClient
                     }
                     break;
                 }
+
+            case ClientMessages.SystemSubtype.BridgeState:
+                BridgeStateChanged?.Invoke(this, new BridgeStateEventArgs
+                {
+                    State = obj.Val("state"),
+                    Detail = obj.Val("detail"),
+                });
+                break;
         }
         SystemMessageReceived?.Invoke(this, obj);
     }

@@ -66,6 +66,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public event EventHandler<ToolPermissionCancelledEventArgs> ToolPermissionCancelled;
     public event EventHandler<HookCallbackEventArgs> HookCallbackRequested;
     public event EventHandler<RateLimitEventArgs> RateLimitReceived;
+    /// <summary>Remote Control bridge changed state. Only `failed` is actionable, and only while
+    /// we believe we are connected — see the pane's handler.</summary>
+    public event EventHandler<BridgeStateEventArgs> BridgeStateChanged;
     public event EventHandler<AssistantTextDeltaEventArgs> AssistantTextDelta;
     public event EventHandler<AssistantThinkingDeltaEventArgs> AssistantThinkingDelta;
     public event EventHandler<ToolProgressEventArgs> ToolProgressReceived;
