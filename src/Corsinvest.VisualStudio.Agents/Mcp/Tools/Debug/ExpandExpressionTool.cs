@@ -45,6 +45,9 @@ internal sealed class ExpandExpressionTool : McpTool<ExpandExpressionArgs>
         "maxMembers and what came back is a prefix. Note: reading a property runs its getter in " +
         "the program, so this can have side-effects. Only valid in break mode.";
 
+    public override bool ReadOnly => true;
+
+    public override bool Idempotent => true;
     protected override async Task<object> InvokeAsync(ExpandExpressionArgs args)
     {
         // Clamped rather than rejected: a depth of 9 is a request for the whole object graph, and

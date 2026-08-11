@@ -32,6 +32,8 @@ internal sealed class RunCleanupTool : McpTool<RunCleanupArgs>
         "are language-dependent (C#/VB get the most). " +
         "The file must live inside the open solution's folder; success=false otherwise.";
 
+    public override bool Destructive => true;
+
     protected override async Task<object> InvokeAsync(RunCleanupArgs args)
     {
         var ok = await IdeContextService.Instance.RunCleanupAsync(args.FilePath);

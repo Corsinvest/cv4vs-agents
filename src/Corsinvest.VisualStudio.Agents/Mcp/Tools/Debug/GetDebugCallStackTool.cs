@@ -22,6 +22,9 @@ internal sealed class GetDebugCallStackTool : McpTool<NoArgs>
         "Only valid in break mode — if the program is still running, poll debug_get_state until " +
         "mode='break'.";
 
+    public override bool ReadOnly => true;
+
+    public override bool Idempotent => true;
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.GetCallStackAsync();

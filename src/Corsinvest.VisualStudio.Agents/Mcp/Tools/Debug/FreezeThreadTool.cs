@@ -30,6 +30,8 @@ internal sealed class FreezeThreadTool : McpTool<FreezeThreadArgs>
         "investigation is over, and debug_list_threads shows isFrozen if you lose track. Freezing " +
         "everything leaves nothing to run. Only valid in break mode.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(FreezeThreadArgs args)
     {
         var r = await IdeDebugService.Instance.FreezeThreadAsync(args.ThreadId, args.Freeze ?? true);

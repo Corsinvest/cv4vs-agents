@@ -19,6 +19,9 @@ internal sealed class GetLatestSelectionTool : McpTool<NoArgs>
         "remembered by editor_get_selection, so it stays null until that has been called at least " +
         "once in this session; a fresh session sees nothing here even if text is selected on " +
         "screen.";
+    public override bool ReadOnly => true;
+
+    public override bool Idempotent => true;
     public override bool AlwaysLoad => true;
 
     protected override Task<object> InvokeAsync(NoArgs args)

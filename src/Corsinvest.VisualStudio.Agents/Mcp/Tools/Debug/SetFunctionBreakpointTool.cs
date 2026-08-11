@@ -31,6 +31,8 @@ internal sealed class SetFunctionBreakpointTool : McpTool<SetFunctionBreakpointA
         "line instead, debug_list_breakpoints shows what is set, and debug_start begins the " +
         "session that will hit it.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(SetFunctionBreakpointArgs args)
     {
         var r = await IdeDebugService.Instance.SetFunctionBreakpointAsync(args.FunctionName, args.Condition);

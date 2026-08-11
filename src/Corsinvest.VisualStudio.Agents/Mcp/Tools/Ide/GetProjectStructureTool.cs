@@ -19,6 +19,9 @@ internal sealed class GetProjectStructureTool : McpTool<NoArgs>
         "the project names build_project and build_set_startup_project want — both take a name, " +
         "not a path.";
 
+    public override bool ReadOnly => true;
+
+    public override bool Idempotent => true;
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var s = await IdeContextService.Instance.GetProjectStructureAsync();

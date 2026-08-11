@@ -45,6 +45,8 @@ internal sealed class RenameSymbolTool : McpTool<RenameSymbolArgs>
         "file it touches, so ask before running it — nav_find_references shows the same set " +
         "without changing anything.";
 
+    public override bool Destructive => true;
+
     protected override async Task<object> InvokeAsync(RenameSymbolArgs args)
     {
         var r = await IdeNavigationService.Instance.RenameSymbolAsync(

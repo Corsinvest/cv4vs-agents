@@ -31,6 +31,8 @@ internal sealed class SetBreakpointTool : McpTool<SetBreakpointArgs>
         "that must be true for the breakpoint to trigger). Works whether or not a debug session " +
         "is running. Combine with debug_start + debug_get_state to pause execution at this point.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(SetBreakpointArgs args)
     {
         var r = await IdeDebugService.Instance.SetBreakpointAsync(args.FilePath, args.Line, args.Condition);

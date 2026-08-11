@@ -19,6 +19,19 @@ a language with a full language service, thinner for one without. `debug_*` need
 debugs that project type. Where a capability genuinely isn't there, the tool feature-detects and
 returns `supported=false` instead of pretending it worked.
 
+**Each tool says what it costs you.** Every tool carries the standard MCP annotations —
+`readOnlyHint` when it changes nothing, `destructiveHint` when it can destroy or interrupt
+something you'd miss, `idempotentHint` when running it twice is the same as running it once. The
+CLI uses them to decide what needs your approval, so reading a symbol's references doesn't cost the
+same prompt as stopping a debug session. They are hints, not enforcement: the client still decides.
+
+The reading tools (`nav_*` except rename, every `ide_get_*` and `debug_get_*`/`debug_list_*`) are
+read-only. Destructive covers what you'd want to be asked about: `debug_stop`, `build_clean`,
+`build_cancel`, `nav_rename_symbol`, `document_run_cleanup`, and the breakpoint-removing pair. The
+stepping tools carry nothing — they move the program forward, which is neither safe to repeat nor
+destructive. `debug_evaluate` is deliberately not read-only: evaluating can call property getters,
+and it accepts assignments.
+
 **Naming.** `domain_verb[_object]`, snake_case, domain first — `nav_go_to_definition`,
 `debug_get_locals`. A domain exists once it has three or more tools; the rest live under `ide`.
 

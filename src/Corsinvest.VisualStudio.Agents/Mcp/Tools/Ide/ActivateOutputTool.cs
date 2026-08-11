@@ -28,6 +28,8 @@ internal sealed class ActivateOutputTool : McpTool<ActivateOutputArgs>
         "This shows a pane to the user; reading it is ide_read_output's job and needs no " +
         "activation.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(ActivateOutputArgs args)
     {
         var r = await IdeOutputService.Instance.ActivateAsync(args.Pane);

@@ -18,6 +18,9 @@ internal sealed class CleanSolutionTool : McpTool<NoArgs>
         "Blocks until the clean ends. Use it when a build result looks stale, then call " +
         "build_solution to rebuild — cleaning on its own produces no diagnostics.";
 
+    public override bool Destructive => true;
+
+    public override bool Idempotent => true;
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeContextService.Instance.CleanAsync();

@@ -18,6 +18,8 @@ internal sealed class StartDebugTool : McpTool<NoArgs>
         "returns once launched; the program then runs until it hits a breakpoint or exits. " +
         "Poll debug_get_state to detect when it pauses (mode='break'). No-op if already debugging.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.StartAsync();

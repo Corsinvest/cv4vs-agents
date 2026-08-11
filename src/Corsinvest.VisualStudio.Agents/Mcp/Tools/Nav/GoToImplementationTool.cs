@@ -38,6 +38,9 @@ internal sealed class GoToImplementationTool : McpTool<GoToImplementationArgs>
         "belong to a project in the open solution. Returns supported=false for languages this isn't " +
         "available for, or transiently while the solution is still loading.";
 
+    public override bool ReadOnly => true;
+
+    public override bool Idempotent => true;
     protected override async Task<object> InvokeAsync(GoToImplementationArgs args)
     {
         var r = await IdeNavigationService.Instance.GetImplementationsAsync(

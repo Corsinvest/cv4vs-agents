@@ -19,6 +19,8 @@ internal sealed class BreakDebugTool : McpTool<NoArgs>
         "back null rather than a guess: poll debug_get_state to see it reach 'break' and learn " +
         "where it stopped. Only valid while running.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.BreakAsync();

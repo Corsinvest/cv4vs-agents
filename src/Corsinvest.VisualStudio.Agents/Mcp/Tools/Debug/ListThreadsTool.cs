@@ -23,6 +23,9 @@ internal sealed class ListThreadsTool : McpTool<NoArgs>
         "location is what identifies them. Pass an id to debug_select_thread to look at one, or to " +
         "debug_freeze_thread to hold it still. Only valid in break mode.";
 
+    public override bool ReadOnly => true;
+
+    public override bool Idempotent => true;
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeDebugService.Instance.GetThreadsAsync();

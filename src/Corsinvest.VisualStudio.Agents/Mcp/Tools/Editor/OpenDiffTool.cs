@@ -48,6 +48,8 @@ internal sealed class OpenDiffTool : McpTool<OpenDiffArgs>
         "can see an edit before it happens. The tabName given here is what editor_close_tab takes " +
         "to close it again, and editor_close_all_diffs clears every one this server opened.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(OpenDiffArgs args)
     {
         var result = await IdeContextService.Instance.OpenDiffAsync(

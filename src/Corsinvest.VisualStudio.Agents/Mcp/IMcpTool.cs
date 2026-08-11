@@ -38,6 +38,26 @@ internal interface IMcpTool
     /// Use sparingly: ~50 tokens of context per turn. Default false.</summary>
     bool AlwaysLoad { get; }
 
+    /// <summary>MCP <c>readOnlyHint</c>: the tool changes nothing — no file written, no IDE state
+    /// touched, no process affected — so a client may run it without asking. The three hints are
+    /// independent axes, not levels: a tool can be read-only AND idempotent, or destructive AND
+    /// idempotent.
+    ///
+    /// Getting it wrong is asymmetric, which is why every default is false: an unmarked read-only
+    /// tool merely costs the user a permission prompt, while an unmarked-as-writing tool that
+    /// actually writes would be auto-approved. When in doubt, leave it false.</summary>
+    bool ReadOnly { get; }
+
+    /// <summary>MCP <c>destructiveHint</c>: the tool can destroy or interrupt something the user
+    /// would miss — a debug session, build outputs, a symbol's name across the solution. Only
+    /// meaningful when <see cref="ReadOnly"/> is false. Default false.</summary>
+    bool Destructive { get; }
+
+    /// <summary>MCP <c>idempotentHint</c>: calling it again with the same arguments changes nothing
+    /// beyond the first call, so a client may retry after a timeout without asking again. Default
+    /// false.</summary>
+    bool Idempotent { get; }
+
     /// <summary>Execute the tool and return the result payload as a POCO /
     /// anonymous type. The dispatcher serializes it into the standard MCP
     /// <c>content</c> envelope — UNLESS it is a <see cref="RawMcpContent"/>,

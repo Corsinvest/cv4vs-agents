@@ -27,6 +27,8 @@ internal sealed class SetStartupProjectTool : McpTool<SetStartupProjectArgs>
         "project name; returns ok plus the resolved startup project, or ok=false with " +
         "the list of available projects if the name doesn't match.";
 
+    public override bool Idempotent => true;
+
     protected override async Task<object> InvokeAsync(SetStartupProjectArgs args)
     {
         var r = await IdeContextService.Instance.SetStartupProjectAsync(args.ProjectName);
