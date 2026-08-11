@@ -6,6 +6,7 @@ import { LitElement, html, nothing } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
+import './cv-remote-card';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { fetchSubagent, fetchContextUsage, fetchCompactSummary } from '../../core/lazy';
@@ -43,6 +44,7 @@ import type {
     UiThinkingEntry,
     UiCompactEntry,
     UiSlashResultEntry,
+    UiRemoteControlEntry,
     SubagentStartedNotification,
     SubagentProgressNotification,
     SubagentEndedNotification,
@@ -64,6 +66,7 @@ import type {
     HistoryLoadedNotification,
     NoticeNotification,
     CliExitedNotification,
+    RemoteControlNotification,
 } from '../../core/types';
 import { GetHistoryReq } from '../../core/request-types';
 import { modelLabel } from '../../core/ai-models';
@@ -74,6 +77,7 @@ let _entryIdSeq = 0;
 
 /** Notice key for the "CLI process exited" row, so a restart clears exactly that one. */
 const CLI_EXITED_KEY = 'cli-exited';
+const REMOTE_CONTROL_ERROR_KEY = 'remote-control-error';
 
 /**
  * Root component. Owns the chat entry list and wires the bridge messages
@@ -208,6 +212,9 @@ export class CvApp extends LitElement {
         this.addEventListener('queued-sent', this._onQueuedSent as EventListener);
         // Stop / Clear: what never went is taken off screen rather than left looking sent.
         this.addEventListener('queued-dropped', this._onQueuedDropped as EventListener);
+        // The toolbar chip asking for the session link back, once its notice has been dismissed
+        // or the user simply wants it again.
+        this.addEventListener('show-remote-link', this._onShowRemoteLink);
 
         // Session/system notices: this stack keeps the `top` ones (a per-turn notice is picked up by
         // cv-prompt's own stack listening on the same channel).
@@ -253,6 +260,13 @@ export class CvApp extends LitElement {
             bridge.onNotification(Msg.toWebView.cli.started, () => {
                 this._systemNotices?.dismissByKey(CLI_EXITED_KEY);
             }),
+        );
+
+        this._offs.push(
+            bridge.onNotification<RemoteControlNotification>(
+                Msg.toWebView.chat.remoteControl,
+                (d) => this._onRemoteControl(d),
+            ),
         );
 
         this._offs.push(
@@ -1570,7 +1584,9 @@ export class CvApp extends LitElement {
                     .startedAt=${e.startedAt ?? 0}
                     ?redacted=${!!e.redacted}
                 ></cv-thinking>`
-              : this.renderMessage(e);
+              : e.role === 'remote-control'
+                ? html`<cv-remote-card .url=${e.text}></cv-remote-card>`
+                : this.renderMessage(e);
     }
 
     // An exchange = the leading user message(s) then the response (assistant blocks + tool rows).
@@ -1636,6 +1652,44 @@ export class CvApp extends LitElement {
         }
         this._turnMetrics.set(entryId, { costUsd: 0, durationMs: 0, usage: d.usage });
     }
+
+    private _onRemoteControl(n: RemoteControlNotification): void {
+        appState.remoteControl = {
+            status: n.status as 'disconnected' | 'connecting' | 'connected' | 'error',
+            url: n.url ?? undefined,
+            detail: n.detail ?? undefined,
+        };
+        if (n.status === 'connected' && n.url) {
+            this._postRemoteControlCard(n.url);
+        }
+        if (n.status === 'error' || (n.status === 'disconnected' && n.detail)) {
+            this._systemNotices?.push({
+                key: REMOTE_CONTROL_ERROR_KEY,
+                severity: 'error',
+                message: n.detail
+                    ? `Remote Control error: ${n.detail}`
+                    : 'Remote Control failed to start.',
+            });
+        } else {
+            // A retry that gets past `connecting` answers the previous error, which is sticky
+            // and would otherwise sit under the active banner.
+            this._systemNotices?.dismissByKey(REMOTE_CONTROL_ERROR_KEY);
+        }
+    }
+
+    /** The session link and its QR, in the transcript — on connect, and again whenever the toolbar
+     *  chip asks. Posting a second card rather than moving the first: the old one belongs to where
+     *  the conversation was when it was asked for. */
+    private _postRemoteControlCard(url: string): void {
+        this._addText<UiRemoteControlEntry>({ role: 'remote-control', text: url });
+    }
+
+    private _onShowRemoteLink = (): void => {
+        const { status, url } = appState.remoteControl;
+        if (status === 'connected' && url) {
+            this._postRemoteControlCard(url);
+        }
+    };
 
     private renderMessage(e: Exclude<UiEntry, UiToolEntry | UiThinkingEntry>) {
         return html`<cv-message

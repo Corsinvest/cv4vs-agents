@@ -72,6 +72,9 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<DroppedFile>();
         AddInterface<PromptHistoryNotification>();
         AddInterface<SlashCommandsNotification>();
+        AddInterface<RemoteControlNotification>()
+            .Member(x => nameof(x.Url)).Null()
+            .Member(x => nameof(x.Detail)).Null();
         AddInterface<AssistantTextDeltaNotification>().Member(x => nameof(x.ParentToolUseId)).Null();
         AddInterface<ThinkingDeltaNotification>().Member(x => nameof(x.ParentToolUseId)).Null();
         AddInterface<ThinkingEndedNotification>().Member(x => nameof(x.ParentToolUseId)).Null();

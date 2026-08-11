@@ -61,6 +61,7 @@ export interface CommandHost {
     /** Hot-swap the runtime thinking budget (Thinking toggle). display is
      *  null to disable. */
     setMaxThinkingTokens(maxThinkingTokens: number, display: string | null): void;
+    setRemoteControl(enabled: boolean): void;
 }
 
 /**

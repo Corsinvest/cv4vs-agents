@@ -37,6 +37,7 @@ internal static class BridgeMessages
             public const string SendPrompt = "send_cli_prompt";
             public const string Stop = "stop_cli";
             public const string SetModel = "set_cli_model";
+            public const string SetRemoteControl = "set_remote_control";
             public const string SetPermissionMode = "set_cli_permission_mode";
             public const string RespondPermission = "respond_cli_permission";
             /// <summary>Eye toggle: flips the session's SendSelection option,
@@ -173,6 +174,8 @@ internal static class BridgeMessages
             /// <summary>A CLI advisory (system/informational) shown as a session notice at the top of
             /// the chat — e.g. "session model X isn't recognized by this version".</summary>
             public const string Notice = "chat_notice";
+            /// <summary>Remote Control state + session URL for the top banner.</summary>
+            public const string RemoteControl = "chat_remote_control";
             public const string Models = "chat_models";
             /// <summary>Response to get_subagent: full sub-agent transcript (all blocks).</summary>
             public const string SubagentLoaded = "subagent_loaded";

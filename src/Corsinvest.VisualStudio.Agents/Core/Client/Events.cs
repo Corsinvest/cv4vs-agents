@@ -213,3 +213,15 @@ public sealed class ProcessExitedEventArgs
     public int ExitCode { get; set; }
     public bool Intentional { get; set; }
 }
+
+/// <summary>`system/bridge_state` — Remote Control. <see cref="State"/> is one of
+/// ready|connected|reconnecting|failed; <see cref="Detail"/> is the CLI's own readable cause
+/// and is absent on ready/connected.</summary>
+public sealed class BridgeStateEventArgs
+{
+    public string State { get; set; }
+    public string Detail { get; set; }
+    /// <summary>Which bridge is speaking. Absent on `ready` — the event precedes the response
+    /// that carries the epoch.</summary>
+    public int? BridgeEpoch { get; set; }
+}

@@ -37,6 +37,8 @@ internal static class ClientMessages
         // Transient work status: {status:"compacting"} at start, {status:null} at end. Drives the
         // spinner's "Compacting…" label. Other status values are possible; only compacting is used.
         public const string Status = "status";
+        // The only signal that the Remote Control bridge dropped after it was enabled.
+        public const string BridgeState = "bridge_state";
         public const string CommandsChanged = "commands_changed";
         public const string TaskStarted = "task_started";
         public const string TaskProgress = "task_progress";
@@ -87,6 +89,8 @@ internal static class ClientMessages
         public const string GenerateSessionTitle = "generate_session_title";
         public const string RenameSession = "rename_session";
         public const string ListModels = "list_models";
+        // Payload field is `enabled`; `enable` is accepted but answers success with no body.
+        public const string RemoteControl = "remote_control";
 
         // Inbound (the CLI sends these to us)
         public const string CanUseTool = "can_use_tool";

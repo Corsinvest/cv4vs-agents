@@ -439,6 +439,16 @@ public class SlashCommandsNotification
     public SlashCommandDto[] Commands { get; set; }
 }
 
+/// <summary>Remote Control state for the banner. <c>Status</c> is disconnected|connecting|connected|error.
+/// <c>Url</c> carries the claude.ai session link and is set only on connected; <c>Detail</c> carries
+/// the CLI's own message and is set only on error.</summary>
+public class RemoteControlNotification
+{
+    public string Status { get; set; }
+    public string Url { get; set; }
+    public string Detail { get; set; }
+}
+
 /// <summary>A streamed assistant-text token (chat_assistant_text_delta). parentToolUseId
 /// routes the delta into a sub-agent's streaming bubble ("" for the main turn).</summary>
 public class AssistantTextDeltaNotification

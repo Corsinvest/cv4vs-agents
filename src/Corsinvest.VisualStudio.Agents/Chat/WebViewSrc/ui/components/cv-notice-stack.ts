@@ -111,7 +111,8 @@ export class CvNoticeStack extends LitElement {
             }
         }
         this._queue = next;
-        const stays = n.sticky ?? (n.severity === 'warning' || n.severity === 'error');
+        const stays =
+            n.pinned || (n.sticky ?? (n.severity === 'warning' || n.severity === 'error'));
         if (!stays) {
             this._timers.set(
                 id,
@@ -200,7 +201,7 @@ export class CvNoticeStack extends LitElement {
                              the height — too much in a narrow tool window. -->
                         <fluent-message-bar intent=${n.severity}>
                             <span slot="icon" class="ico ${n.severity}"
-                                >${unsafeHTML(ICONS[n.severity])}</span
+                                >${unsafeHTML(n.icon ?? ICONS[n.severity])}</span
                             >
                             <span class="msg">${unsafeHTML(n.message)}</span>
                             ${
@@ -213,15 +214,19 @@ export class CvNoticeStack extends LitElement {
                                       >`
                                     : nothing
                             }
-                            <fluent-button
-                                slot="dismiss"
-                                appearance="transparent"
-                                icon-only
-                                title="Dismiss"
-                                @click=${() => this._dismissByUser(n)}
-                            >
-                                ${unsafeHTML(Dismiss16Regular)}
-                            </fluent-button>
+                            ${
+                                n.pinned
+                                    ? nothing
+                                    : html`<fluent-button
+                                          slot="dismiss"
+                                          appearance="transparent"
+                                          icon-only
+                                          title="Dismiss"
+                                          @click=${() => this._dismissByUser(n)}
+                                      >
+                                          ${unsafeHTML(Dismiss16Regular)}
+                                      </fluent-button>`
+                            }
                         </fluent-message-bar>
                     `,
                 )}

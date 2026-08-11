@@ -47,6 +47,7 @@ public partial class ChatPaneControl
         c.ProcessExited += OnProcessExited;
         c.HookCallbackRequested += OnHookCallback;
         c.RateLimitReceived += OnRateLimit;
+        c.BridgeStateChanged += OnBridgeStateChanged;
     }
 
     private void DetachClientEvents(IClaudeClient c)
@@ -69,7 +70,17 @@ public partial class ChatPaneControl
         c.ProcessExited -= OnProcessExited;
         c.HookCallbackRequested -= OnHookCallback;
         c.RateLimitReceived -= OnRateLimit;
+        c.BridgeStateChanged -= OnBridgeStateChanged;
     }
+
+    /// <summary>Publishes Remote Control state to the WebView banner.</summary>
+    private void SendRemoteControl(string status, string url = null, string detail = null)
+        => _bridge.Send(BridgeMessages.ToWebView.Chat.RemoteControl, new Contracts.RemoteControlNotification
+        {
+            Status = status,
+            Url = url,
+            Detail = detail,
+        });
 
     /// <summary>PreToolUse/PostToolUse hooks (Edit/Write/[Multi]Edit/Read): autosave (save the target
     /// file if it's open dirty, so Claude sees live edits) plus post-edit diagnostics (baseline on
@@ -172,6 +183,9 @@ public partial class ChatPaneControl
     private void OnCliStateReceived(object sender, CliStateReceivedEventArgs e)
         => Dispatcher.Invoke(() =>
         {
+            // The new process may or may not have re-attached the remote session, and won't say
+            // which: reset rather than show a URL that may be dead.
+            SendRemoteControl("disconnected");
             _bridge.Send(BridgeMessages.ToWebView.Cli.State, new Contracts.CliStateNotification
             {
                 CliState = new Contracts.CliStateDto
@@ -708,6 +722,18 @@ public partial class ChatPaneControl
         var hours = mins / 60;
         return hours < 24 ? $"in {(int)hours}h" : $"in {(int)(hours / 24)}d";
     }
+
+    private void OnBridgeStateChanged(object sender, BridgeStateEventArgs e)
+        => Dispatcher.Invoke(() =>
+        {
+            // `reconnecting` is not a failure — the bridge is retrying.
+            if (e.State != "failed") { return; }
+            // A `failed` from a bridge we already replaced (turned off, then on again) must not
+            // take down the live one. An event without an epoch is accepted, as VS Code does:
+            // `ready` arrives before the response that carries it.
+            if (e.BridgeEpoch is int epoch && epoch != _client?.BridgeEpoch) { return; }
+            SendRemoteControl("disconnected", detail: e.Detail);
+        });
 
     // When the CLI emits its init message with a (possibly new) session_id,
     // align the toolbar title with it (a resumed/forked session already has one;
