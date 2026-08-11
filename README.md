@@ -114,6 +114,10 @@ own.
   CLI's own session store, so a conversation started in the VS Code extension or in a terminal shows
   up here, and vice versa. Resume, fork and rename all work on those shared files, so you can switch
   editor mid-project without losing context.
+- **[Remote Control](docs/chat/remote-control.md)** — `/remote-control` hands a running session to
+  `claude.ai/code` or the Claude mobile app: the session stays on your machine, web and mobile are
+  just a window onto it. A banner with the session link shows while it's connected and clears itself
+  when the bridge drops, on either end.
 - **[It knows what you're looking at](#ide-integration)** — the file open in the editor (and your
   selection) rides along with the prompt, shown as a chip you can click to jump back to it. One
   toggle turns the sharing off when you'd rather it didn't.
