@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Contracts;
+using Corsinvest.VisualStudio.Agents.Core.Profiles;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,9 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using Corsinvest.VisualStudio.Agents.Contracts;
-using Corsinvest.VisualStudio.Agents.Core.Profiles;
-using Microsoft.VisualStudio.Shell;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 

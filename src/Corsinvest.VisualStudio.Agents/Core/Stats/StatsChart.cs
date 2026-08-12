@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Corsinvest.VisualStudio.Agents.Contracts;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 

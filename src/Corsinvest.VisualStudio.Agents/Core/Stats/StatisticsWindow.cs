@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.Runtime.InteropServices;
-using Microsoft.VisualStudio.Shell;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
