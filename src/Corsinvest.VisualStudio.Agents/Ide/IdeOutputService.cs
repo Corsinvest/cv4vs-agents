@@ -108,6 +108,39 @@ internal sealed class IdeOutputService
         return match;
     }
 
+    /// <summary>Get the pane's TextDocument, the only way EnvDTE offers to read its text.
+    ///
+    /// A pane that has never been shown answers E_FAIL here: it is listed, and it holds the text
+    /// the build wrote, but the document behind it is realised together with the window. Activating
+    /// the pane realises it, so the failure is retried once that way rather than reported — the
+    /// alternative is a caller that cannot tell "no output" from "output you haven't looked at".
+    /// Activating brings the Output window forward, which is why it is done only on that branch.
+    ///
+    /// Returns null when even the retry fails. Must be called on the UI thread.</summary>
+    private static TextDocument GetTextDocument(OutputWindowPane pane)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            return pane.TextDocument;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Debug(() => $"[ide] pane '{pane.Name}' has no TextDocument yet ({ex.Message}); activating and retrying");
+        }
+
+        try
+        {
+            pane.Activate();
+            return pane.TextDocument;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[ide] pane '{pane.Name}' still unreadable after activating: {ex.Message}");
+            return null;
+        }
+    }
+
     /// <summary>Read a pane by name (case-insensitive). With no name, returns the list of
     /// available pane names instead of content. tailLines caps the returned lines.</summary>
     public async Task<OutputResult> ReadAsync(string paneName, int tailLines)
@@ -132,7 +165,18 @@ internal sealed class IdeOutputService
             }
 
             // The pane text is reachable through its TextDocument: select all, read the text.
-            var td = pane.TextDocument;
+            var td = GetTextDocument(pane);
+            if (td == null)
+            {
+                return new OutputResult
+                {
+                    Ok = false,
+                    Pane = pane.Name,
+                    AvailablePanes = panes,
+                    Reason = $"The '{pane.Name}' pane exists but its text could not be read.",
+                };
+            }
+
             var sel = td.Selection;
             sel.StartOfDocument(false);
             sel.EndOfDocument(true); // extend selection to the end
