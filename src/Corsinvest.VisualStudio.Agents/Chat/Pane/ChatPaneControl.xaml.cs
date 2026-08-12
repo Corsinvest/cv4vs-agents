@@ -1,4 +1,4 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
@@ -389,6 +389,7 @@ public partial class ChatPaneControl : PaneControlBase
             SendTheme();
             // Re-push the caption: RegisterInstance runs before VS wires IVsWindowFrame, so the earlier set can no-op.
             RepushCaption();
+            Entry.SetComposerAction = text => SetComposerText(text, withIdeContext: true);
 
             AgentsOptions.Applied += OnOptionsApplied;
             VSColorTheme.ThemeChanged += OnVsThemeChanged;
@@ -554,13 +555,30 @@ public partial class ChatPaneControl : PaneControlBase
             Env = Entry.Profile.Env,
         });
 
-        // Forked pane: drop the forked-at message into the composer for editing/resend.
-        // (Transcript + title were already seeded above by ApplyResumedSession.)
-        if (restoreState && !string.IsNullOrEmpty(_startupPrompt))
+        // A fork's forked-at message, or a prompt from the editor context menu. Not gated on
+        // restoreState: the context menu opens a fresh pane, with a prompt but no session — which
+        // is also what tells the two apart, a fork always brings the session it forked.
+        if (!string.IsNullOrEmpty(_startupPrompt))
         {
-            _bridge.Send(BridgeMessages.ToWebView.Ui.SetComposer, new Contracts.SetComposerNotification { Text = _startupPrompt });
+            SetComposerText(_startupPrompt, withIdeContext: !restoreState);
         }
     }
+
+    /// <summary>Writes text into the composer. <paramref name="withIdeContext"/> also re-opens the
+    /// IDE-context eye: a prompt picked from the editor context menu is about the file it came
+    /// from, and with the eye shut the CLI is never told which file that is.</summary>
+    private void SetComposerText(string text, bool withIdeContext = false)
+        => Dispatcher.Invoke(() =>
+        {
+            if (withIdeContext && Entry != null && !Entry.Options.SendSelection)
+            {
+                Entry.Options.SendSelection = true;
+                Ide.IdeContextService.Instance.ForceEmitCurrentContext();
+            }
+            _bridge?.Send(
+                BridgeMessages.ToWebView.Ui.SetComposer,
+                new Contracts.SetComposerNotification { Text = text, EnableIdeContext = withIdeContext });
+        });
 
     /// <summary>Creates the single ClaudeClient instance on demand (once per tool window lifetime).</summary>
     private void EnsureClient()

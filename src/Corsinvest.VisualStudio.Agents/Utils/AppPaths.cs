@@ -21,6 +21,10 @@ internal static class AppPaths
     /// so the menu/launch can read profiles without materializing the Options page first.</summary>
     public static readonly string ProfilesFile = Path.Combine(DataFolder, "profiles.json");
 
+    /// <summary>The editor context menu's prompts, next to the profiles and for the same reason:
+    /// the menu is queried constantly by VS, long before any Options page exists.</summary>
+    public static readonly string EditorPromptsFile = Path.Combine(DataFolder, "editor-prompts.json");
+
     /// <summary>
     /// Cache folder for file-type icons rasterised from VS KnownMonikers. The
     /// WebView serves these via the `cv4vs-icons.local` virtual host, generated

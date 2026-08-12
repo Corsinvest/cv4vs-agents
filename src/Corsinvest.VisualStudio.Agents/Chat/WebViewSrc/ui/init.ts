@@ -141,6 +141,10 @@ function wireBridgeHandlers(): void {
 
     // Forked pane: pre-fill the composer with the forked-at message text.
     bridge.onNotification<SetComposerNotification>(Msg.toWebView.ui.setComposer, (data) => {
+        // The host re-opened the eye; mirror it so the badge shows what the CLI is being sent.
+        if (data?.enableIdeContext) {
+            state.ideContextEnabled = true;
+        }
         const input = document.querySelector('cv-prompt') as
             import('./components/cv-prompt').CvPrompt | null;
         input?.setComposerText(data?.text ?? '');

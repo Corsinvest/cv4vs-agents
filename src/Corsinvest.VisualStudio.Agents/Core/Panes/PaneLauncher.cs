@@ -187,6 +187,12 @@ internal static class PaneLauncher
                             cliPane.LoadSession(resumeSessionId);
                         }
                     }
+                    else if (pane is ChatPaneWindow freshChat && !string.IsNullOrEmpty(initialPrompt))
+                    {
+                        // A prompt with no session to start from — the editor context menu. Both
+                        // branches above need one, so without this the prompt would be dropped.
+                        freshChat.SetStartupSession(null, initialPrompt);
+                    }
                     if (pane.Frame is IVsWindowFrame frame) { ErrorHandler.ThrowOnFailure(frame.Show()); }
 
                     // Focus a fresh CLI terminal so the user can type immediately (FocusInput is on

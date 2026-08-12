@@ -97,6 +97,10 @@ public sealed class PaneEntry
     /// VS routes Esc through IOleCommandTarget, so it never reaches the popup on its own.</summary>
     internal Func<bool> DismissHistoryAction { get; set; }
 
+    /// <summary>Writes text into this pane's composer, for the editor context menu. Chat panes
+    /// only — the CLI pane has no composer of ours to fill.</summary>
+    internal Action<string> SetComposerAction { get; set; }
+
     /// <summary>The single-source display title, used by BOTH the pane caption and the toolbar's
     /// open-panes list: e.g. "Chat 3 (Claude)". Computed once in the ctor (all inputs immutable).
     /// Profile.Name is always non-empty — ProfileStore.Load(forEdit:false) filters out blank-named profiles,

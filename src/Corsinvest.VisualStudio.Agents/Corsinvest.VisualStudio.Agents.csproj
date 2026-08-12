@@ -280,6 +280,9 @@
     <Compile Include="Menu\ActiveSessionsMenuCommand.cs" />
     <Compile Include="Menu\ProfilesMenuCommand.cs" />
     <Compile Include="Menu\GlobalMenuCommands.cs" />
+    <Compile Include="Editor\EditorPrompt.cs" />
+    <Compile Include="Editor\EditorPromptStore.cs" />
+    <Compile Include="Editor\EditorPromptsMenuCommand.cs" />
     <Compile Include="Core\Panes\PaneLauncher.cs" />
     <Compile Include="AgentsPackage.cs" />
     <Compile Include="Core\Sessions\SessionInfo.cs" />
@@ -314,6 +317,12 @@
     </Compile>
     <Compile Include="Options\ProfilesControl.xaml.cs">
       <DependentUpon>ProfilesControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Options\AgentsEditorPromptsPage.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Options\EditorPromptsControl.xaml.cs">
+      <DependentUpon>EditorPromptsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Chat\IconCacheService.cs" />
     <Compile Include="Helpers\OutputWindowLogger.cs" />
@@ -383,6 +392,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Options\ProfilesControl.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Options\EditorPromptsControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

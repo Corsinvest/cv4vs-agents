@@ -58,6 +58,17 @@
         </Strings>
       </Menu>
 
+      <!-- Editor context menu: the prompts, one submenu deep so right-clicking code doesn't grow
+           five entries. Same shape as Copilot's "Copilot actions" submenu. -->
+      <Menu guid="guidAgentsCommandSet" id="EditorPromptsSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="EditorContextGroup"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>cv4vs Agents</ButtonText>
+        </Strings>
+      </Menu>
+
       <!-- Help &amp; Feedback: docs first (it answers without bothering anyone), contact after. -->
       <Menu guid="guidAgentsCommandSet" id="HelpSubMenu" priority="0x0100" type="Menu">
         <Parent guid="guidAgentsCommandSet" id="HelpGroup"/>
@@ -107,6 +118,17 @@
       <Group guid="guidAgentsCommandSet" id="DeveloperGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="DeveloperSubMenu"/>
       </Group>
+      <!-- Anchors our submenu in the code window's context menu. The only thing this extension
+           puts inside the editor: everything else hangs off the View menu.
+           Low priority so it lands at the top, where Copilot puts its own actions — the point of
+           the entry is to be reached without hunting through twenty items. -->
+      <Group guid="guidAgentsCommandSet" id="EditorContextGroup" priority="0x0050">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN"/>
+      </Group>
+      <!-- The dynamic prompt entries inside it. -->
+      <Group guid="guidAgentsCommandSet" id="EditorPromptsGroup" priority="0x0100">
+        <Parent guid="guidAgentsCommandSet" id="EditorPromptsSubMenu"/>
+      </Group>
       <Group guid="guidAgentsCommandSet" id="HelpDocsGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="HelpSubMenu"/>
       </Group>
@@ -144,6 +166,18 @@
         <CommandFlag>TextChanges</CommandFlag>
         <Strings>
           <ButtonText>Session</ButtonText>
+        </Strings>
+      </Button>
+
+      <!-- Dynamic range inside the editor submenu: one item per configured prompt, seeded by
+           DynamicItemStart. No <Icon>, for the same reason as the two ranges above. -->
+      <Button guid="guidAgentsCommandSet" id="EditorPromptCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="EditorPromptsGroup"/>
+        <CommandFlag>DynamicItemStart</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <CommandFlag>TextChanges</CommandFlag>
+        <Strings>
+          <ButtonText>Prompt</ButtonText>
         </Strings>
       </Button>
 
@@ -243,6 +277,9 @@
       <IDSymbol name="ActiveSessionsAnchorGroup" value="0x104A" />
       <IDSymbol name="DeveloperSubMenu" value="0x1075" />
       <IDSymbol name="DeveloperGroup" value="0x1076" />
+      <IDSymbol name="EditorContextGroup" value="0x1077" />
+      <IDSymbol name="EditorPromptsSubMenu" value="0x1078" />
+      <IDSymbol name="EditorPromptsGroup" value="0x1079" />
       <IDSymbol name="HelpDocsGroup" value="0x1080" />
       <IDSymbol name="HelpContactGroup" value="0x1090" />
       <!-- Must match PackageIds.cs — a mismatch is silent: the entry just never appears. -->
@@ -262,6 +299,8 @@
       <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
            number of open panes and must not run into the fixed ids above. -->
       <IDSymbol name="ActiveSessionCommandId" value="0x0300" />
+      <!-- Seed of the editor-prompt range. Its own 0x04xx block: the panes range above grows too. -->
+      <IDSymbol name="EditorPromptCommandId" value="0x0400" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{c3d4e5f6-a7b8-9012-defa-bc1234567890}">
       <IDSymbol name="bmpPic1" value="1" />

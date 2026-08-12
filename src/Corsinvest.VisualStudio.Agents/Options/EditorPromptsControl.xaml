@@ -1,0 +1,51 @@
+<UserControl x:Class="Corsinvest.VisualStudio.Agents.Options.EditorPromptsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog">
+  <Grid Margin="8">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,6"
+               Text="Prompts offered when you right-click code, under &quot;cv4vs Agents&quot;. Picking one writes it into a chat pane's composer — the file and selection are sent with it, so the prompt is the instruction alone. Rows appear in the menu in this order." />
+
+    <!-- One grid, not the master/detail the profiles page needs: three fields per row fit in it. -->
+    <DataGrid Grid.Row="1" x:Name="PromptsGrid"
+              AutoGenerateColumns="False"
+              CanUserAddRows="False"
+              CanUserDeleteRows="True"
+              HeadersVisibility="Column">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Title" Width="160"
+                            Binding="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
+        <DataGridTextColumn Header="Prompt" Width="*"
+                            Binding="{Binding Prompt, UpdateSourceTrigger=PropertyChanged}" />
+        <DataGridCheckBoxColumn Header="Needs selection" Width="Auto"
+                                Binding="{Binding RequiresSelection, UpdateSourceTrigger=PropertyChanged}" />
+      </DataGrid.Columns>
+    </DataGrid>
+
+    <DockPanel Grid.Row="2" Margin="0,6,0,0" LastChildFill="False">
+      <Button x:Name="AddPrompt" DockPanel.Dock="Left" Padding="6,2" Click="OnAddClick" ToolTip="Add prompt">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Add}" />
+      </Button>
+      <Button x:Name="RemovePrompt" DockPanel.Dock="Left" Padding="6,2" Margin="6,0,0,0" Click="OnRemoveClick" ToolTip="Delete selected prompt">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.DeleteListItem}" />
+      </Button>
+      <Button x:Name="RestoreDefaults" DockPanel.Dock="Left" Padding="6,2" Margin="12,0,0,0" Click="OnRestoreDefaultsClick" ToolTip="Replace the list with the prompts the extension ships with">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
+      </Button>
+
+      <Button x:Name="MoveDown" DockPanel.Dock="Right" Padding="6,2" Click="OnMoveDownClick" ToolTip="Move down">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.MoveDown}" />
+      </Button>
+      <Button x:Name="MoveUp" DockPanel.Dock="Right" Padding="6,2" Margin="0,0,6,0" Click="OnMoveUpClick" ToolTip="Move up">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.MoveUp}" />
+      </Button>
+    </DockPanel>
+  </Grid>
+</UserControl>

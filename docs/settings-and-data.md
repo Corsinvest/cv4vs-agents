@@ -17,6 +17,7 @@ Uninstalling the extension leaves both trees behind — see [Removing everything
 | What | Where |
 |---|---|
 | Environment profiles | `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\profiles.json` |
+| Editor context-menu prompts | `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\editor-prompts.json` |
 | Open panes per solution | `…\cv4vs-agents\data\projects\<project-hash>\workspace.json` |
 | Usage stats cache | `…\<project-hash>\<config-id>\stats-cache.json` |
 
@@ -29,8 +30,9 @@ The Options pages (**Tools → Options → cv4vs Agents**) are VS `DialogPage`s,
 to point at: Visual Studio persists them in its own settings store, per VS instance. They apply on
 **OK/Apply**, never on a keystroke, and they don't travel with the solution or a copied folder.
 
-The **Profiles** page is the exception: it edits `profiles.json` (below) instead, so the
-launcher menu can read profiles without first materialising the Options page.
+**Profiles** and **Editor prompts** are the exceptions: they edit `profiles.json` and
+`editor-prompts.json` (below) instead, so the launcher menu and the editor context menu can be
+built without first materialising the Options page.
 
 ## Our data folder
 
@@ -38,6 +40,7 @@ Root: `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\`
 
 ```
 profiles.json                       environment profiles (name, enabled, env vars)
+editor-prompts.json                 editor context-menu prompts (title, prompt, needs-selection)
 WebView2/                           WebView2 user-data (chat UI cache/storage)
 icons/                              file-type icons rasterised from VS KnownMonikers
 data/projects/<project-hash>/

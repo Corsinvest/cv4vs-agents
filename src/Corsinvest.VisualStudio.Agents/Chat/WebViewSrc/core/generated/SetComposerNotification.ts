@@ -5,4 +5,5 @@
 
 export interface SetComposerNotification {
     text: string;
+    enableIdeContext: boolean;
 }

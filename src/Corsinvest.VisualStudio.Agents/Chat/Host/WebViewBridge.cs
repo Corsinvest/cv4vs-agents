@@ -301,6 +301,16 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
     public void FocusWebView()
     {
         if (_disposed) { return; }
+        if (webView.IsKeyboardFocused)
+        {
+            // Already ours as far as WPF is concerned, which on a pane that has just opened is the
+            // problem: rendering through Windows.UI.Composition, this control hands the focus to
+            // its WebView2 controller from OnGotFocus — and WPF doesn't raise that for a control
+            // that already has it. Focused while the controller was still being created, the
+            // browser side never heard: document.hasFocus() stays false and the keys go elsewhere.
+            // Dropping the focus and taking it back raises the event with the controller in place.
+            System.Windows.Input.Keyboard.ClearFocus();
+        }
         webView.Focus();
     }
 
