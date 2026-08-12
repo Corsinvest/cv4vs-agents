@@ -395,8 +395,8 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             _hidePanesTimer = null;
             Mcp.McpServerHost.Instance.Stop();
             AgentsOptions.Applied -= ProfilesMenuCommand.InvalidateCache;
-            // Unadvise the selection sink (MS pattern: at package dispose). Dispose was never
-            // called anywhere, so the IVsMonitorSelection cookie leaked for the process lifetime.
+            // Unadvise the selection sink (MS pattern: at package dispose) — without it the
+            // IVsMonitorSelection cookie leaks for the process lifetime.
             Ide.IdeContextService.Instance.Dispose();
         }
         base.Dispose(disposing);

@@ -36,9 +36,6 @@ export function relPath(
         : pathBare;
 }
 
-/**
- * Basename of a path (last segment after the final `/` or `\`).
- */
 export function fileName(path: string | undefined | null): string {
     return normPath(path).split('/').pop() ?? '';
 }

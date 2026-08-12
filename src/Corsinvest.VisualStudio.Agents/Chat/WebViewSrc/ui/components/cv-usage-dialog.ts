@@ -172,7 +172,6 @@ export class CvUsageDialog extends CvDialogBase {
         `;
     }
 
-    /** One attribution group (Skills / Subagents / Plugins / MCP servers). */
     private _attribution(
         title: string,
         items: UsageAttributionDto[] | null | undefined,

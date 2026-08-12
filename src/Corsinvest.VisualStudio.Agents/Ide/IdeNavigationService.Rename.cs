@@ -110,7 +110,6 @@ internal sealed partial class IdeNavigationService
             if (service == null) { return new RenameResult { Supported = false, Reason = "This language has no rename service." }; }
 
             // 1) GetRenameInfoAsync(document, position, ct) → IInlineRenameInfo.
-            // Cached MethodInfo (resolved in the probe), so invoke it directly.
             var infoTask = (Task)_getRenameInfoAsync.Invoke(service, [document, offset, ct]);
             await infoTask.ConfigureAwait(false);
             var info = VsReflection.GetProp(infoTask, "Result");

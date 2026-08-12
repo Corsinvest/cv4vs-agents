@@ -384,7 +384,6 @@ export class CvContextDialog extends CvDialogBase {
         `;
     }
 
-    /** A sub-row inside an expanded section (indented label + tokens). */
     private _subRow(label: string, tokens: number): TemplateResult {
         return html`
             <div class="subrow">

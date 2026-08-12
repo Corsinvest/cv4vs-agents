@@ -590,11 +590,11 @@ internal sealed partial class ClaudeClient : IClaudeClient
         => SendControlRequestAsync(ClientMessages.ControlSubtype.ApplyFlagSettings, new { settings });
 
     /// <summary>Enable/disable extended thinking at runtime. ON = budget 31999 + summarized display;
-    /// OFF = budget 0. display is omitted when null so the CLI keeps the session mode.</summary>
-    /// <summary>Logs its own failure, like the other fire-and-forget hot-swaps: the caller drops the
+    /// OFF = budget 0. display is omitted when null so the CLI keeps the session mode.
+    /// <para>Logs its own failure, like the other fire-and-forget hot-swaps: the caller drops the
     /// Task, and unlike the model and permission selectors there is no echo back to roll the UI
     /// onto what the CLI really holds — the toggle would simply keep showing a setting that never
-    /// took.</summary>
+    /// took.</para></summary>
     public async Task SetMaxThinkingTokensAsync(int maxThinkingTokens, string display)
     {
         try

@@ -14,7 +14,7 @@ import { Msg } from './bridge-messages';
 import type { RequestType } from './request-types';
 
 // Reject a request whose response never arrives, so _pending can't leak and the caller
-// gets an error instead of an eternal spinner. Matches every production JSON-RPC client.
+// gets an error instead of an eternal spinner.
 const REQUEST_TIMEOUT_MS = 30_000;
 
 // chrome.webview is injected by WebView2 at runtime — not in lib.dom.

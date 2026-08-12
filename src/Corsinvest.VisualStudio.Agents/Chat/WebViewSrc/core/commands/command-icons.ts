@@ -42,7 +42,6 @@ const COMMAND_ICONS: Readonly<Record<string, string>> = {
     loop: ArrowRepeatAll16Regular,
 };
 
-/** SVG for a CLI slash command by its bare name (e.g. "compact"), or undefined if unmapped. */
 export function iconForCommandName(name: string): string | undefined {
     return COMMAND_ICONS[name];
 }

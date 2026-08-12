@@ -15,8 +15,8 @@ namespace Corsinvest.VisualStudio.Agents.Menu;
 
 /// <summary>
 /// The entries under View → cv4vs Agents that don't belong to any pane: settings, the data
-/// folder, the output log, docs and feedback, About. They used to live in a pane's toolbar menu,
-/// which meant opening a pane before you could reach them.
+/// folder, the output log, docs and feedback, About. On the View menu rather than a pane's
+/// toolbar, so reaching them doesn't require opening a pane first.
 /// </summary>
 internal static class GlobalMenuCommands
 {

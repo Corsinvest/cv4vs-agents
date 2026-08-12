@@ -602,9 +602,9 @@ internal static class StatsService
             {
                 var key = RelativeKey(projectDir, file.FullName);
                 cache.TryGetValue(key, out var cached);
-                // The cwd RefreshFile also reports is no longer wanted here: the project's path is
-                // what named the folder this cache sits in, so it is known before indexing starts
-                // and recorded once, in project.json, instead of once per profile.
+                // The cwd RefreshFile also reports is discarded here: the project's path is what
+                // named the folder this cache sits in, so it is known before indexing starts and
+                // recorded once, in project.json, instead of once per profile.
                 var (entry, _) = RefreshFile(file, cached);
                 if (entry != null) { updated[key] = entry; }
             });

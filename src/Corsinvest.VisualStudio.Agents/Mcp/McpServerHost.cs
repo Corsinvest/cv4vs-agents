@@ -87,7 +87,6 @@ internal sealed partial class McpServerHost
         {
             CleanupOrphanLockFiles(ProfileIdeFolders());
 
-            // Port 0 → OS picks a free ephemeral port.
             var port = AllocateFreePort();
             _listener = new HttpListener();
             _listener.Prefixes.Add($"http://127.0.0.1:{port}/");

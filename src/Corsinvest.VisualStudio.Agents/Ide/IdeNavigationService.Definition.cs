@@ -142,7 +142,6 @@ internal sealed partial class IdeNavigationService
             if (service == null) { return new NavResult { Supported = false, Reason = "This language has no navigation service." }; }
 
             // GetNavigableItemsAsync(document, position, ct) → Task<ImmutableArray<INavigableItem>>.
-            // The MethodInfo is cached (resolved in EnsureDefProbed), so invoke it directly.
             var task = (Task)_getNavigableItemsAsync.Invoke(service, [document, offset, ct]);
             await task.ConfigureAwait(false);
             var items = (IEnumerable)VsReflection.GetProp(task, "Result");

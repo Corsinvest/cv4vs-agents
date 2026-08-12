@@ -93,9 +93,8 @@ public partial class ChatPaneControl : PaneControlBase
     }
 
     /// <summary>Resume a past session in THIS pane: clear the transcript,
-    /// load its history into the WebView, then resume the client. (Was the old
-    /// Session.Load bridge handler — the toolbar's History dropdown now calls
-    /// this directly.) Permission mode / model reach the selector via the gate's
+    /// load its history into the WebView, then resume the client. Called directly by the
+    /// toolbar's History dropdown. Permission mode / model reach the selector via the gate's
     /// ui_init, re-armed by the respawn's fresh system/init.</summary>
     public override void LoadSession(string sessionId)
     {

@@ -37,11 +37,8 @@ export interface CommandHost {
     sendPrompt(text: string, echo?: boolean): void;
     /** Insert text at the caret in the prompt box (e.g. "@" or "/name "). */
     insertAtCaret(text: string): void;
-    /** Open the upload-from-computer file picker. */
     pickFile(): void;
-    /** Open the model selector popover. */
     openModelPicker(): void;
-    /** Open the permission-mode picker. */
     openPermissionPicker(): void;
     /** Open a URL in the system browser (help docs, issue tracker). */
     openExternalUrl(url: string): void;
@@ -53,7 +50,6 @@ export interface CommandHost {
     openSessionHistory(): void;
     /** Open a fresh chat pane (same as the toolbar "+" for Chat). */
     openChatPane(): void;
-    /** Open the Manage Plugins dialog. */
     openPluginManager(): void;
     /** Merge keys into the CLI flag-settings layer (effortLevel,
      *  alwaysThinkingEnabled, fastMode) for the Model menu controls. */
@@ -95,7 +91,6 @@ export abstract class ChatCommand {
     readonly description?: string;
     readonly aliases: readonly string[] = [];
     readonly icon?: string;
-    /** Inline control on the right of the row (toggle/slider/value). */
     readonly trailing?: CommandTrailing;
     /** On state for `trailing: 'toggle'` commands (drives the switch). */
     get checked(): boolean {

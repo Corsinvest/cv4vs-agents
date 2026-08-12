@@ -206,7 +206,7 @@ public partial class PaneToolbar : UserControl
             StaysOpen = false,
             AllowsTransparency = true,
             Focusable = true,
-            // 1px border so the popup detaches from the pane underneath (was SessionPickerPopup's job).
+            // 1px border so the popup detaches from the pane underneath.
             Child = new Border
             {
                 Width = 480,
