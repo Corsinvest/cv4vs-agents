@@ -38,4 +38,8 @@ internal static class PackageIds
     // Seeds the dynamic open-panes range, which grows with the number of open panes — its own
     // 0x0300 block, clear of the fixed ids above.
     public const int ActiveSessionCommandId = 0x0300;
+
+    // Seeds the editor context menu's prompt range, which grows with the configured prompts —
+    // 0x0400, clear of the panes range that grows under it.
+    public const int EditorPromptCommandId = 0x0400;
 }

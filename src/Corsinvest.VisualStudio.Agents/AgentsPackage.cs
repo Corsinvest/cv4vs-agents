@@ -47,6 +47,7 @@ namespace Corsinvest.VisualStudio.Agents;
 [ProvideOptionPage(typeof(AgentsChatPage), AppConstants.AppName, "Chat", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsDebugPage), AppConstants.AppName, "Debug", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsProfilesPage), AppConstants.AppName, "Profiles", 0, 0, true)]
+[ProvideOptionPage(typeof(AgentsEditorPromptsPage), AppConstants.AppName, "Editor prompts", 0, 0, true)]
 // Statistics: a dashboard over StatsService, with no file behind it — a tool window, not a
 // document. Single-instance, and NOT Transient: unlike the chat/CLI panes it holds no session and
 // no working directory, so there is nothing to go stale when a solution closes.
@@ -338,6 +339,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         OutputWindowLogger.EnsurePaneOnUIThread();
         await ProfilesMenuCommand.InitializeAsync(this);
         await ActiveSessionsMenuCommand.InitializeAsync(this);
+        await Editor.EditorPromptsMenuCommand.InitializeAsync(this);
         await GlobalMenuCommands.InitializeAsync(this);
         // Lazy MCP lifecycle: server runs only while >=1 session is open,
         // driven by PaneRegistry's 0->1 / ->0 transitions.

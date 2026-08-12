@@ -390,6 +390,11 @@ public class GetCompactSummaryResponse
 public class SetComposerNotification
 {
     public string Text { get; set; }
+
+    /// <summary>Turn the IDE-context eye back on with the text: a prompt picked from the editor
+    /// context menu is about the file it was picked in, and asking about this code outranks the
+    /// session's standing preference.</summary>
+    public bool EnableIdeContext { get; set; }
 }
 
 /// <summary>A keystroke the host claimed on the WebView's behalf (ui_host_key).
