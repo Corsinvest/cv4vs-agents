@@ -73,7 +73,7 @@ internal static class ClientMessages
         public const string SetPermissionMode = "set_permission_mode";
         public const string SetMaxThinkingTokens = "set_max_thinking_tokens";
         public const string Interrupt = "interrupt";
-        public const string GetUsage= "get_usage";
+        public const string GetUsage = "get_usage";
         public const string GetContextUsage = "get_context_usage";
         public const string RewindFiles = "rewind_files";
         public const string CancelAsyncMessage = "cancel_async_message";

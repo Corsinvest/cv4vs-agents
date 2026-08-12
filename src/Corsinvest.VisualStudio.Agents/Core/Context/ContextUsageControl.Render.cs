@@ -1,8 +1,13 @@
-﻿/*
+/*
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Contracts;
+using Corsinvest.VisualStudio.Agents.Core.Controls;
+using Corsinvest.VisualStudio.Agents.Core.Stats;
+using Microsoft.VisualStudio.PlatformUI;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,11 +15,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Shapes;
-using Corsinvest.VisualStudio.Agents.Contracts;
-using Corsinvest.VisualStudio.Agents.Core.Controls;
-using Corsinvest.VisualStudio.Agents.Core.Stats;
-using Microsoft.VisualStudio.PlatformUI;
-using Microsoft.VisualStudio.Shell;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Context;
 
@@ -166,7 +166,10 @@ public partial class ContextUsageControl
         var name = new StackPanel { Orientation = Orientation.Horizontal };
         name.Children.Add(new Rectangle
         {
-            Width = 10, Height = 10, RadiusX = 2, RadiusY = 2,
+            Width = 10,
+            Height = 10,
+            RadiusX = 2,
+            RadiusY = 2,
             Fill = CvContextPalette.BrushFor(c.Name),
             Margin = new Thickness(0, 0, 8, 0),
             VerticalAlignment = VerticalAlignment.Center,
