@@ -10,8 +10,10 @@ using Corsinvest.VisualStudio.Agents.Helpers;
 using Corsinvest.VisualStudio.Agents.Menu;
 using Corsinvest.VisualStudio.Agents.Options;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Workspace.VSIntegration.Contracts;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -58,7 +60,7 @@ namespace Corsinvest.VisualStudio.Agents;
 [ProvideToolWindow(typeof(Core.Usage.UsageWindow), Style = VsDockStyle.MDI)]
 [ProvideToolWindow(typeof(Core.Context.ContextWindow), Style = VsDockStyle.MDI)]
 [Guid(PackageGuids.AgentsPackageString)]
-public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolutionLoadEvents, IVsDebuggerEvents
+public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolutionEvents7, IVsSolutionLoadEvents, IVsDebuggerEvents
 {
     private uint _solutionEventsCookie;
     private IVsSolution _solution;
@@ -87,37 +89,53 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     // close the panes linger for this long, which reads as part of the solution tearing down.
     private const int HidePanesDelayMs = 1_000;
 
+    // Assembly names the Open Folder workspace API ships under — see the AssemblyResolve
+    // handler below and RefreshCurrentSolutionFolder's use of IVsFolderWorkspaceService.
+    private static readonly string[] OpenFolderApiAssemblies =
+    [
+        "Microsoft.VisualStudio.Workspace",
+        "Microsoft.VisualStudio.Workspace.VSIntegration.Contracts",
+    ];
+
     static AgentsPackage() =>
-        // Microsoft.Terminal.Wpf ships with VS but isn't on any VSIX probing
-        // path, so resolve it from VS's own Terminal folder.
+        // Microsoft.Terminal.Wpf and the Open Folder workspace API both ship with VS but
+        // aren't on any VSIX probing path, so resolve them from VS's own install layout.
         AppDomain.CurrentDomain.AssemblyResolve += (_, args) =>
         {
-            var name = new AssemblyName(args.Name);
-            if (!string.Equals(name.Name, "Microsoft.Terminal.Wpf", StringComparison.OrdinalIgnoreCase))
-            {
-                return null;
-            }
-
+            var name = new AssemblyName(args.Name).Name;
             var devEnvDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName);
             if (devEnvDir == null) { return null; }
 
-            // Stable VS layout: Common7\IDE\CommonExtensions\Microsoft\Terminal\
-            var basePath = Path.Combine(devEnvDir, "CommonExtensions", "Microsoft", "Terminal");
-            var dllPath = Path.Combine(basePath, "Microsoft.Terminal.Wpf.dll");
-            // Some Insider/Canary builds nest it one folder deeper.
-            if (!File.Exists(dllPath))
+            if (string.Equals(name, "Microsoft.Terminal.Wpf", StringComparison.OrdinalIgnoreCase))
             {
-                dllPath = Path.Combine(basePath, "Terminal.Wpf", "Microsoft.Terminal.Wpf.dll");
+                // Stable VS layout: Common7\IDE\CommonExtensions\Microsoft\Terminal\
+                var basePath = Path.Combine(devEnvDir, "CommonExtensions", "Microsoft", "Terminal");
+                var dllPath = Path.Combine(basePath, "Microsoft.Terminal.Wpf.dll");
+                // Some Insider/Canary builds nest it one folder deeper.
+                if (!File.Exists(dllPath))
+                {
+                    dllPath = Path.Combine(basePath, "Terminal.Wpf", "Microsoft.Terminal.Wpf.dll");
+                }
+                return File.Exists(dllPath) ? Assembly.LoadFrom(dllPath) : null;
             }
-            return !File.Exists(dllPath) ? null : Assembly.LoadFrom(dllPath);
+
+            if (OpenFolderApiAssemblies.Contains(name, StringComparer.OrdinalIgnoreCase))
+            {
+                // Stable VS layout: Common7\IDE\CommonExtensions\Microsoft\OpenFolder\
+                var dllPath = Path.Combine(devEnvDir, "CommonExtensions", "Microsoft", "OpenFolder", name + ".dll");
+                return File.Exists(dllPath) ? Assembly.LoadFrom(dllPath) : null;
+            }
+
+            return null;
         };
 
     private static AgentsPackage _instance;
 
     public static AgentsPackage Instance => _instance;
 
-    /// <summary>Folder of the open solution (null if none), cached for synchronous reads.
-    /// Keeps VS's original casing — normalize via IdeContextService for lock-file / cwd matching.</summary>
+    /// <summary>Folder of the open solution — or, in VS's "Open Folder" mode, the open folder
+    /// itself — cached for synchronous reads. Null if neither is open. Keeps VS's original
+    /// casing — normalize via IdeContextService for lock-file / cwd matching.</summary>
     public string CurrentSolutionFolder { get; private set; }
 
     /// <summary>Ensure the given <c>settings.json</c> has <c>"diffTool": "auto"</c> so Claude uses
@@ -310,13 +328,17 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         return VSConstants.S_OK;
     }
 
-    /// <summary>Re-read the solution folder from <see cref="IVsSolution"/> into <see cref="CurrentSolutionFolder"/>; call on every solution-state change.</summary>
+    /// <summary>Re-read the solution folder from <see cref="IVsSolution"/> into <see cref="CurrentSolutionFolder"/>; call on every solution-state change.
+    /// In VS's "Open Folder" mode <see cref="IVsSolution.GetSolutionInfo"/> reports no directory —
+    /// there is no .sln backing it — even though a solution-equivalent IS open, so that case falls
+    /// through to <see cref="CurrentFolderWorkspaceLocation"/>.</summary>
     private void RefreshCurrentSolutionFolder()
     {
         try
         {
             if (_solution == null) { CurrentSolutionFolder = null; return; }
             _solution.GetSolutionInfo(out var dir, out _, out _);
+            if (string.IsNullOrEmpty(dir)) { dir = CurrentFolderWorkspaceLocation(); }
             CurrentSolutionFolder = string.IsNullOrEmpty(dir)
                 ? null
                 : dir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -327,6 +349,14 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             CurrentSolutionFolder = null;
         }
     }
+
+    /// <summary>The open folder's root, when VS has one open directly (no .sln) instead of a
+    /// solution — null otherwise. <see cref="IVsFolderWorkspaceService"/> is MEF-exported, not a
+    /// COM service, hence going through <see cref="IComponentModel"/> rather than GetService.</summary>
+    private static string CurrentFolderWorkspaceLocation()
+        => (Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel)
+            ?.GetService<IVsFolderWorkspaceService>()
+            ?.CurrentWorkspace?.Location;
 
     protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
     {
@@ -363,14 +393,18 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         _debugger = await GetServiceAsync(typeof(SVsShellDebugger)) as IVsDebugger;
         _debugger?.AdviseDebuggerEvents(this, out _debuggerEventsCookie);
 
-        // Prime from current state: VS may already have a solution open before
-        // our package activates, so we'd miss OnAfterOpenSolution.
-        if (_solution?.GetProperty((int)__VSPROPID.VSPROPID_IsSolutionOpen, out var isOpenObj) == VSConstants.S_OK
-            && isOpenObj is bool isOpen && isOpen)
+        // Prime from current state: VS may already have a solution — or, in Open Folder mode, a
+        // folder — open before our package activates, so we'd miss OnAfterOpenSolution/
+        // OnAfterOpenFolder. VSPROPID_IsSolutionOpen is documented as tracking a .sln file
+        // specifically, so it's not trusted alone for folder mode — check the folder-workspace
+        // API directly too rather than assume either way.
+        var isSolutionOpen = _solution?.GetProperty((int)__VSPROPID.VSPROPID_IsSolutionOpen, out var isOpenObj) == VSConstants.S_OK
+            && isOpenObj is bool isOpen && isOpen;
+        if (isSolutionOpen || CurrentFolderWorkspaceLocation() != null)
         {
             RefreshCurrentSolutionFolder();
-            // Solution was already open when we activated → OnAfterOpenSolution won't fire for it,
-            // so run the pane restore here too. This is the common F5/reopen path.
+            // Solution/folder was already open when we activated → the matching OnAfter* event
+            // won't fire for it, so run the pane restore here too. This is the common F5/reopen path.
             RestorePanesDeferred();
         }
     }
@@ -510,4 +544,38 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         _closingSolutionFolder = CurrentSolutionFolder;
         return VSConstants.S_OK;
     }
+
+    //  IVsSolutionEvents7 — VS's "Open Folder" mode has no .sln, so it isn't modeled as a
+    //  classic solution open/close; this is the separate notification path VS uses for it
+    //  instead. Rides the same _solutionEventsCookie as IVsSolutionEvents (VS QueryInterfaces
+    //  the advised sink for it), so no extra Advise call is needed.
+    //
+    //  Deliberately narrower than the IVsSolutionEvents handlers above: only
+    //  CurrentSolutionFolder and the MCP lock file are kept in sync here. The pane-lifecycle
+    //  machinery (reload-watch, hide/show, per-folder save/restore) stays solution-only for now
+    //  — folder close/open has no confirmed close-then-reopen "reload" quirk to work around,
+    //  and guessing at that timer state machine risks panes closing unexpectedly or lingering.
+
+    void IVsSolutionEvents7.OnAfterOpenFolder(string folderPath)
+    {
+        CurrentSolutionFolder = string.IsNullOrEmpty(folderPath)
+            ? null
+            : folderPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        OutputWindowLogger.Global.Info($"[folder] opened: {CurrentSolutionFolder ?? "(none)"}");
+        _ = Mcp.McpServerHost.Instance.RewriteLockFileAsync();
+    }
+
+    void IVsSolutionEvents7.OnQueryCloseFolder(string folderPath, ref int pfCancel) => pfCancel = 0;
+
+    void IVsSolutionEvents7.OnBeforeCloseFolder(string folderPath) { }
+
+    void IVsSolutionEvents7.OnAfterCloseFolder(string folderPath)
+    {
+        CurrentSolutionFolder = null;
+        OutputWindowLogger.Global.Info("[folder] closed");
+        _ = Mcp.McpServerHost.Instance.RewriteLockFileAsync();
+    }
+
+    // Obsolete since VS 2022 per the SDK docs; no replacement notification needed here.
+    void IVsSolutionEvents7.OnAfterLoadAllDeferredProjects() { }
 }
