@@ -210,6 +210,8 @@ internal sealed partial class McpServerHost
         yield return new Tools.CleanSolutionTool();
         yield return new Tools.CancelBuildTool();
         yield return new Tools.SetStartupProjectTool();
+        yield return new Tools.SetConfigurationTool();
+        yield return new Tools.GetConfigurationTool();
         yield return new Tools.GetProjectStructureTool();
         yield return new Tools.GoToDefinitionTool();
         yield return new Tools.FindReferencesTool();

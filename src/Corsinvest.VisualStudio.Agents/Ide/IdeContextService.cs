@@ -684,6 +684,10 @@ internal sealed class BuildResult
     public int FailedProjects { get; set; }
     public string Message { get; set; }
 
+    /// <summary>Solution configuration the build ran under ("Debug|Any CPU"), so the caller can
+    /// tell which one it got — it is the IDE's active one, which the caller did not choose.</summary>
+    public string Configuration { get; set; }
+
     /// <summary>Errors, plus warnings and info when the caller asked for them — one list, each
     /// entry saying what it is, the way ide_get_diagnostics reports the same Error List.</summary>
     public List<BuildError> Errors { get; set; } = [];
