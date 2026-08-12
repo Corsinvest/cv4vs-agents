@@ -8,6 +8,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { REMOTE_CONTROL_ICON } from '../../core/commands/builtin-commands';
 import { qrSvg } from '../helpers/qr';
 import { iconStyles } from '../styles/shared';
+import './cv-copy-btn';
 
 /**
  * The Remote Control session link, posted into the transcript when the bridge comes up — the
@@ -73,6 +74,18 @@ export class CvRemoteCard extends LitElement {
             .url {
                 overflow-wrap: anywhere;
             }
+            /* Copying beats selecting a wrapped URL by hand — the link is how you send the
+               session to someone else, which is the one thing the QR cannot do. Aligned to the
+               first line so the button stays put as the URL wraps. */
+            .link-row {
+                display: flex;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            /* cv-copy-btn is display:contents, so the flex item is the button inside its shadow. */
+            .link-row cv-copy-btn::part(button) {
+                flex-shrink: 0;
+            }
         `,
     ];
 
@@ -91,13 +104,16 @@ export class CvRemoteCard extends LitElement {
                         <span>Remote Control is active</span>
                     </div>
                     <div class="hint">Scan to continue in the Claude app, or open the link.</div>
-                    <fluent-link
-                        class="url"
-                        href=${this.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >${this.url}</fluent-link
-                    >
+                    <div class="link-row">
+                        <fluent-link
+                            class="url"
+                            href=${this.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            >${this.url}</fluent-link
+                        >
+                        <cv-copy-btn .text=${this.url} title="Copy link"></cv-copy-btn>
+                    </div>
                     <div class="hint">It ends when this session restarts.</div>
                 </div>
             </div>

@@ -109,7 +109,6 @@ export class RemoteControlCommand extends ChatCommand {
     readonly icon = REMOTE_CONTROL_ICON;
     readonly trailing: CommandTrailing = 'toggle';
     override readonly aliases = ['remote', 'rc', 'phone'];
-    readonly keepMenuOpen = true;
     get checked(): boolean {
         return appState.remoteControl.status === 'connected';
     }
