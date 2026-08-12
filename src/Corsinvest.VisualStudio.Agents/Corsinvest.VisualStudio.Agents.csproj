@@ -164,6 +164,8 @@
     <Compile Include="Mcp\Tools\Build\CleanSolutionTool.cs" />
     <Compile Include="Mcp\Tools\Build\CancelBuildTool.cs" />
     <Compile Include="Mcp\Tools\Build\SetStartupProjectTool.cs" />
+    <Compile Include="Mcp\Tools\Build\SetConfigurationTool.cs" />
+    <Compile Include="Mcp\Tools\Build\GetConfigurationTool.cs" />
     <Compile Include="Mcp\Tools\Ide\GetProjectStructureTool.cs" />
     <Compile Include="Mcp\Tools\Nav\GoToDefinitionTool.cs" />
     <Compile Include="Mcp\Tools\Nav\FindReferencesTool.cs" />

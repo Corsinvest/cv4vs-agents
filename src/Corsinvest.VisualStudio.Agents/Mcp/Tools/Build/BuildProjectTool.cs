@@ -29,7 +29,8 @@ internal sealed class BuildProjectTool : McpTool<BuildProjectArgs>
         "Build a single project (by name) in the active configuration and return whether it " +
         "succeeded plus what the Error List holds (file, line, description, severity). Blocks " +
         "until done. Reports errors only unless severity says otherwise; the message says how " +
-        "many items were left out. The name is a project name, not a path — " +
+        "many items were left out, and 'configuration' says which one it built — " +
+        "build_set_configuration changes it. The name is a project name, not a path — " +
         "ide_get_project_structure lists them. build_solution builds everything instead.";
 
     public override bool Idempotent => true;
@@ -41,6 +42,7 @@ internal sealed class BuildProjectTool : McpTool<BuildProjectArgs>
         {
             ok = r.Ok,
             failedProjects = r.FailedProjects,
+            configuration = r.Configuration,
             message = r.Message,
             errors = r.Errors
         };
