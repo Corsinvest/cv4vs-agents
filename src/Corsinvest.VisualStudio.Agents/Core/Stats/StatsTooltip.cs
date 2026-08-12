@@ -48,7 +48,10 @@ internal static class StatsTooltip
 
             var dot = new Rectangle
             {
-                Width = 9, Height = 9, RadiusX = 2, RadiusY = 2,
+                Width = 9,
+                Height = 9,
+                RadiusX = 2,
+                RadiusY = 2,
                 Margin = new Thickness(0, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Center,
                 Fill = FrozenBrush(StatsPalette.ColorAt(seg.ColorIndex)),

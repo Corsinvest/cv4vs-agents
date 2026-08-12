@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-using System.Windows.Media;
 using Corsinvest.VisualStudio.Agents.Contracts;
+using System.Windows.Media;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 

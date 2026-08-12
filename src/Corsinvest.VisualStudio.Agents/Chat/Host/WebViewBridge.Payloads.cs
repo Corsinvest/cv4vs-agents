@@ -7,7 +7,6 @@ using Corsinvest.VisualStudio.Agents.Helpers;
 using Corsinvest.VisualStudio.Agents.Options;
 using Newtonsoft.Json.Linq;
 using System;
-using System.IO;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 

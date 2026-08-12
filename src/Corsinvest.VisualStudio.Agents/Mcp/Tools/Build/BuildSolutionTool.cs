@@ -4,7 +4,6 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Ide;
-using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;

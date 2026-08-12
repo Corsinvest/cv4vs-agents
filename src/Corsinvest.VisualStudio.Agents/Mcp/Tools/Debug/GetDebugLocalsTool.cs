@@ -4,7 +4,6 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Ide;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
