@@ -4,7 +4,9 @@
  */
 
 using EnvDTE;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,9 +36,54 @@ internal sealed class IdeOutputService
 
     private static OutputWindow GetOutputWindow()
     {
+        ThreadHelper.ThrowIfNotOnUIThread();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
-        var win = dte?.Windows?.Item(Constants.vsWindowKindOutput);
+        var win = dte?.Windows?.Item(EnvDTE.Constants.vsWindowKindOutput);
         return win?.Object as OutputWindow;
+    }
+
+    /// <summary>The built-in panes, by the English name a caller would ask for. VS localises the
+    /// displayed names — on an Italian IDE the Build pane is called "Compilazione" — so matching
+    /// the name alone never finds them outside an English install. The GUIDs don't change.</summary>
+    private static readonly Dictionary<string, Guid> WellKnownPanes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Build"] = VSConstants.OutputWindowPaneGuid.BuildOutputPane_guid,
+        ["Debug"] = VSConstants.OutputWindowPaneGuid.DebugPane_guid,
+        ["General"] = VSConstants.OutputWindowPaneGuid.GeneralPane_guid,
+        ["Build Order"] = VSConstants.OutputWindowPaneGuid.SortedBuildOutputPane_guid,
+    };
+
+    /// <summary>Resolve a built-in pane through IVsOutputWindow, which keys on the GUID rather
+    /// than the localised name and creates the pane when the Output window has never been opened
+    /// (VS builds them lazily). Returns null for panes with no stable GUID — those are found by
+    /// name. Must be called on the UI thread.</summary>
+    private static OutputWindowPane FindWellKnownPane(OutputWindow ow, string paneName)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (!WellKnownPanes.TryGetValue(paneName, out var guid)) { return null; }
+
+        var vsOut = Package.GetGlobalService(typeof(SVsOutputWindow)) as IVsOutputWindow;
+        if (vsOut == null) { return null; }
+
+        // GetPane fails when the pane doesn't exist yet; CreatePane materialises it without
+        // bringing the window to the front, then GetPane succeeds.
+        if (vsOut.GetPane(ref guid, out var vsPane) != VSConstants.S_OK || vsPane == null)
+        {
+            if (vsOut.CreatePane(ref guid, paneName, 1, 0) != VSConstants.S_OK) { return null; }
+            if (vsOut.GetPane(ref guid, out vsPane) != VSConstants.S_OK || vsPane == null) { return null; }
+        }
+
+        // IVsOutputWindowPane has no text accessor; re-find the same pane through the DTE
+        // collection, which does. Creating it above is what makes it appear there.
+        string localisedName = null;
+        vsPane.GetName(ref localisedName);
+        if (string.IsNullOrEmpty(localisedName)) { return null; }
+
+        foreach (OutputWindowPane p in ow.OutputWindowPanes)
+        {
+            if (string.Equals(p.Name, localisedName, StringComparison.Ordinal)) { return p; }
+        }
+        return null;
     }
 
     /// <summary>Locate a pane by name (case-insensitive) and collect the sorted list of all
@@ -45,8 +92,12 @@ internal sealed class IdeOutputService
     private static OutputWindowPane FindPane(OutputWindow ow, string paneName, out string[] allPaneNames)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
+
+        // By GUID first: the built-in panes carry a localised name, so asking for "Build" only
+        // ever matches on an English IDE. This also creates the pane when it doesn't exist yet.
+        var match = string.IsNullOrWhiteSpace(paneName) ? null : FindWellKnownPane(ow, paneName);
+
         var panes = new List<string>();
-        OutputWindowPane match = null;
         foreach (OutputWindowPane p in ow.OutputWindowPanes)
         {
             panes.Add(p.Name);
@@ -55,6 +106,39 @@ internal sealed class IdeOutputService
         panes.Sort(StringComparer.OrdinalIgnoreCase);
         allPaneNames = [.. panes];
         return match;
+    }
+
+    /// <summary>Get the pane's TextDocument, the only way EnvDTE offers to read its text.
+    ///
+    /// A pane that has never been shown answers E_FAIL here: it is listed, and it holds the text
+    /// the build wrote, but the document behind it is realised together with the window. Activating
+    /// the pane realises it, so the failure is retried once that way rather than reported — the
+    /// alternative is a caller that cannot tell "no output" from "output you haven't looked at".
+    /// Activating brings the Output window forward, which is why it is done only on that branch.
+    ///
+    /// Returns null when even the retry fails. Must be called on the UI thread.</summary>
+    private static TextDocument GetTextDocument(OutputWindowPane pane)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            return pane.TextDocument;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Debug(() => $"[ide] pane '{pane.Name}' has no TextDocument yet ({ex.Message}); activating and retrying");
+        }
+
+        try
+        {
+            pane.Activate();
+            return pane.TextDocument;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[ide] pane '{pane.Name}' still unreadable after activating: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>Read a pane by name (case-insensitive). With no name, returns the list of
@@ -81,7 +165,18 @@ internal sealed class IdeOutputService
             }
 
             // The pane text is reachable through its TextDocument: select all, read the text.
-            var td = pane.TextDocument;
+            var td = GetTextDocument(pane);
+            if (td == null)
+            {
+                return new OutputResult
+                {
+                    Ok = false,
+                    Pane = pane.Name,
+                    AvailablePanes = panes,
+                    Reason = $"The '{pane.Name}' pane exists but its text could not be read.",
+                };
+            }
+
             var sel = td.Selection;
             sel.StartOfDocument(false);
             sel.EndOfDocument(true); // extend selection to the end
