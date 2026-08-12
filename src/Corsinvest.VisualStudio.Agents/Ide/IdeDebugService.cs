@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-using Corsinvest.VisualStudio.Agents.Helpers;
 using EnvDTE;
 using Microsoft.VisualStudio.Shell;
 using System;

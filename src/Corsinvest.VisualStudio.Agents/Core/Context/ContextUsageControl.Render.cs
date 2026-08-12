@@ -166,7 +166,10 @@ public partial class ContextUsageControl
         var name = new StackPanel { Orientation = Orientation.Horizontal };
         name.Children.Add(new Rectangle
         {
-            Width = 10, Height = 10, RadiusX = 2, RadiusY = 2,
+            Width = 10,
+            Height = 10,
+            RadiusX = 2,
+            RadiusY = 2,
             Fill = CvContextPalette.BrushFor(c.Name),
             Margin = new Thickness(0, 0, 8, 0),
             VerticalAlignment = VerticalAlignment.Center,
