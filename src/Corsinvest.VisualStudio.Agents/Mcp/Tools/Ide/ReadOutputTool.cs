@@ -10,7 +10,8 @@ namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 internal sealed class ReadOutputArgs
 {
-    [Description("Output pane name, e.g. 'Build', 'Debug'. Omit to list the available panes.")]
+    [Description("Output pane name. The built-in ones — 'Build', 'Debug', 'General', 'Build Order' " +
+        "— work under those English names on any IDE language. Omit to list the available panes.")]
     public string Pane { get; set; }
 
     [Description("Max number of lines to return from the end of the pane (default 200).")]
@@ -24,7 +25,9 @@ internal sealed class ReadOutputTool : McpTool<ReadOutputArgs>
     public override string Name => "ide_read_output";
     public override string Description =>
         "Read text from a Visual Studio Output window pane (e.g. 'Build', 'Debug', or the " +
-        "running program's output). Omit 'pane' to list the available pane names first. " +
+        "running program's output). Omit 'pane' to list the available pane names first — note " +
+        "those come back in the IDE's language ('Compilazione' for Build on an Italian VS), but " +
+        "the built-in panes are also reachable under their English names. " +
         "'tailLines' caps how many lines are returned from the end (default 200). Useful to " +
         "see build/debug output or the debuggee's console writes that don't go through the " +
         "shell — including what a frozen thread stopped printing, which is how debug_freeze_thread " +

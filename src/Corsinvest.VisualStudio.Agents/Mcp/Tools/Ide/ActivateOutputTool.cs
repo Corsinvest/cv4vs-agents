@@ -11,7 +11,9 @@ namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 internal sealed class ActivateOutputArgs
 {
-    [Required, Description("Output pane name to bring to the foreground, e.g. 'Build', 'Debug'.")]
+    [Required, Description("Output pane name to bring to the foreground. The built-in ones — " +
+        "'Build', 'Debug', 'General', 'Build Order' — work under those English names on any " +
+        "IDE language.")]
     public string Pane { get; set; }
 }
 
