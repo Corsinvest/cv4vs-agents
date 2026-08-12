@@ -52,7 +52,7 @@ internal static class ThumbnailGenerator
                 // OnLoad: decode fully within EndInit so the stream can be disposed right after.
                 source.CacheOption = BitmapCacheOption.OnLoad;
                 source.CreateOptions = BitmapCreateOptions.None;
-                source.DecodePixelWidth = DecodeWidth; // downsample at decode time
+                source.DecodePixelWidth = DecodeWidth;
                 source.StreamSource = ms;
                 source.EndInit();
             }

@@ -1413,8 +1413,6 @@ export class CvApp extends LitElement {
         appState.subagentTasks = [...ordered, ...linked.filter((t) => !seen.has(t.taskId))];
     }
 
-    /** True when scrolled at/near the bottom. Gates stream auto-follow so
-     *  the user isn't yanked down while reading scrolled-up content. */
     /** Coalesce to one measurement per frame: a scroll fires far more often than it repaints, and
      *  reading scrollHeight on each event is a forced layout for a value that can't have changed
      *  twice in a frame. */
@@ -1446,6 +1444,8 @@ export class CvApp extends LitElement {
         }
     }
 
+    /** True when scrolled at/near the bottom. Gates stream auto-follow so
+     *  the user isn't yanked down while reading scrolled-up content. */
     private _isNearBottom(threshold = 80): boolean {
         const el = this._messagesEl;
         if (!el) {

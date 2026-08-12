@@ -1090,19 +1090,6 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     /**
-     * Tell the transcript that a bubble entered the queue, or just left it. Only the queued path
-     * says anything: a message sent straight away is already both in the right place and really
-     * sent, so there is no state for it to leave.
-     *
-     * cv-app owns the transcript, so it does the fading and the move; this component knows the
-     * moments, not the tree.
-     */
-    /**
-     * Drop everything still queued and take its bubbles with it. They were echoed on submit but
-     * never reached the CLI, so leaving them would show the model messages it has never been told
-     * about — the same divergence a retraction causes, only from our side.
-     */
-    /**
      * Replace the queue and mirror its uuids into the shared state — how cv-app knows which
      * bubbles are on screen without having been sent.
      *

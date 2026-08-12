@@ -165,7 +165,6 @@ internal sealed partial class IdeDiffViewer
         void IVsInfoBarUIEvents.OnActionItemClicked(IVsInfoBarUIElement infoBarUIElement, IVsInfoBarActionItem actionItem)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            // ActionContext is the token we passed (_accept/_reject).
             if (ReferenceEquals(actionItem.ActionContext, _accept)) { _onAccept?.Invoke(); }
             else if (ReferenceEquals(actionItem.ActionContext, _reject)) { _onReject?.Invoke(); }
             try { infoBarUIElement.Close(); } catch { /* best effort */ }

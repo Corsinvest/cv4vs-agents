@@ -20,7 +20,6 @@ using System.Windows;
 [assembly: AssemblyCopyright("© Corsinvest Srl 2026")]
 [assembly: ComVisible(false)]
 
-// No version attributes here. This is a legacy csproj, which does not generate an AssemblyInfo, so
-// they used to be written by hand and kept in step with Directory.Build.props by a build check.
-// GenerateVersionAssemblyInfo (Directory.Build.targets) emits them into obj\ instead, from Version
-// — one place to edit, nothing left to drift.
+// No version attributes here. This is a legacy csproj, which does not generate an AssemblyInfo,
+// so GenerateVersionAssemblyInfo (Directory.Build.targets) emits them into obj\ from Version —
+// one place to edit, and nothing here to drift out of step with Directory.Build.props.
