@@ -184,8 +184,8 @@ internal sealed partial class WebViewMessageHandler
         var side = which == "in" ? "in" : "out";
 
         // A tool that names a file gets that file's name and extension: "Modello_in_a3f21.cs" reads
-        // back to the row at a glance and the editor colours it. The whole title used to go through
-        // SanitizeFileName instead, which turned a path into "claude_[Write] C__Users_daniele_cors".
+        // back to the row at a glance and the editor colours it. Sanitizing the whole title instead
+        // would mangle a path into something like "claude_[Write] C__Users_daniele_cors".
         if (which == "in" && !string.IsNullOrEmpty(filePath))
         {
             var name = SanitizeFileName(Path.GetFileNameWithoutExtension(filePath));

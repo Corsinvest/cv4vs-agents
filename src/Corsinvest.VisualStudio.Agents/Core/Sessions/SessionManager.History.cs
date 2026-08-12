@@ -316,8 +316,8 @@ internal sealed partial class SessionManager
                 // against rendering an empty user bubble for them.
                 if (messagesNewestFirst != null)
                 {
-                    // Heavy blocks (image/document strip, tool_result truncate) are now
-                    // handled by EmitUser during HistoryReplay — the messages travel raw.
+                    // Heavy blocks (image/document strip, tool_result truncate) are handled by
+                    // EmitUser during HistoryReplay — the messages travel raw from here.
                     // Lift the line's top-level uuid onto the message (internal replay tag,
                     // read by HistoryReplay; the message object has no native uuid).
                     var uuid = obj.Val("uuid");

@@ -62,7 +62,6 @@ export class CvToolRow extends LitElement implements ToolRowState {
 
     private _unsubSubagentTasks?: () => void;
 
-    /** ToolRowState: the host reads/writes these. */
     get expanded(): boolean {
         return this._expanded;
     }

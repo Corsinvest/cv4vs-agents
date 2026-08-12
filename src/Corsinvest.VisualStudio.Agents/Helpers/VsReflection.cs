@@ -15,10 +15,9 @@ namespace Corsinvest.VisualStudio.Agents.Helpers;
 /// Late-binding helpers for VS/Roslyn types that are loaded in-process but not referenced at
 /// compile time (referencing them would pin Roslyn/VB-only assemblies — see the "multi-language"
 /// rule — or not bind at all with a partial assembly-qualified name). Centralizes the reflection
-/// idioms that were duplicated across the Ide/ services. Behavior matches the previous inline code:
-/// a missing member throws (same NullReference/exception as before); the typed overloads use a
-/// hard <c>(T)</c> cast. Callers that tolerated a missing member with <c>?.</c> keep null-checking
-/// the returned <see cref="object"/>.
+/// idioms duplicated across the Ide/ services. A missing member throws; the typed overloads use a
+/// hard <c>(T)</c> cast. Callers that tolerate a missing member must null-check the returned
+/// <see cref="object"/>.
 /// </summary>
 internal static class VsReflection
 {
@@ -51,13 +50,12 @@ internal static class VsReflection
     public static object GetProp(object obj, string name)
         => obj.GetType().GetProperty(name).GetValue(obj);
 
-    /// <summary>Typed property read with a hard (T) cast (matches the old inline casts).</summary>
+    /// <summary>Typed property read with a hard (T) cast.</summary>
     public static T GetProp<T>(object obj, string name) => (T)GetProp(obj, name);
 
-    /// <summary>Property read that tolerates a MISSING property, returning null (matches the
-    /// old <c>obj.GetType().GetProperty(name)?.GetValue(obj)</c> call-sites, incl. the
-    /// <c>GetProp(a) ?? GetProp(b)</c> "try alternate name" fallbacks). Note: a present property
-    /// whose value is null also yields null — same as before.</summary>
+    /// <summary>Property read that tolerates a MISSING property, returning null — used by the
+    /// <c>GetProp(a) ?? GetProp(b)</c> "try alternate name" fallbacks. Note: a present property
+    /// whose value is null also yields null, so the two cases are indistinguishable.</summary>
     public static object GetPropOrNull(object obj, string name)
         => obj?.GetType().GetProperty(name)?.GetValue(obj);
 
@@ -91,7 +89,7 @@ internal static class VsReflection
     }
 
     /// <summary>Field read, including non-public fields (e.g. BufferedFindUsagesContext._state).
-    /// Returns null if the field doesn't exist (matches the current <c>?.GetValue</c> call-sites).</summary>
+    /// Returns null if the field doesn't exist.</summary>
     public static object GetField(object obj, string name,
         BindingFlags flags = BindingFlags.Public | BindingFlags.Instance)
         => obj.GetType().GetField(name, flags)?.GetValue(obj);

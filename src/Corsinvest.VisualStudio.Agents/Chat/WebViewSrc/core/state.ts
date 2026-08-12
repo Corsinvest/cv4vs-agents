@@ -34,8 +34,7 @@ interface AppState {
     ultracodeEnabled: boolean;
     /** Extended thinking on/off (Model menu toggle). */
     thinkingEnabled: boolean;
-    /** Host built in DEBUG (developer running under VS). Gates dev-only diagnostics (e.g. raw status
-     *  on the spinner). From the init payload; false in Release. */
+    /** Host built in DEBUG (developer running under VS); false in Release. */
     inDev: boolean;
     /** Fast mode on/off (Model menu toggle). */
     fastMode: boolean;
@@ -115,12 +114,11 @@ class StoreImpl<T extends object> {
         this._data = { ...initial };
     }
 
-    /** Used by the Proxy `get` trap. */
     _read<K extends keyof T>(key: K): T[K] {
         return this._data[key];
     }
 
-    /** Used by the Proxy `set` trap. Skips work and skips notify on no-op. */
+    /** Skips work and skips notify on no-op. */
     _write<K extends keyof T>(key: K, value: T[K]): void {
         if (this._data[key] === value) {
             return;

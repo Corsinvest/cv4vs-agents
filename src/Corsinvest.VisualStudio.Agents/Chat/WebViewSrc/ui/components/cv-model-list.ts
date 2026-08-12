@@ -54,7 +54,6 @@ export class CvModelList extends LitElement {
     }
 
     override willUpdate(changed: Map<string, unknown>): void {
-        // On open, resync from app state and put the cursor on the active model.
         if (changed.has('open') && this.open) {
             this._current = appState.currentModel;
             this._models = displayModels(appState.models);
