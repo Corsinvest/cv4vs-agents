@@ -164,6 +164,7 @@ internal sealed partial class IdeContextService
                 FailedProjects = failed,
                 Errors = errors,
                 Message = message,
+                Configuration = ActiveConfigurationName(sb),
             };
         }
         catch (Exception ex)
@@ -360,6 +361,116 @@ internal sealed partial class IdeContextService
         }
         dte.Solution.SolutionBuild.StartupProjects = match.UniqueName;
         return (true, match.Name, null);
+    }
+
+    /// <summary>Switch the active solution configuration (Debug, Release, …), the one an
+    /// argument-less build compiles. Accepts either the bare name ("Release") or the name with its
+    /// platform ("Release|Any CPU"); the bare form matches the first platform offered for it.
+    ///
+    /// This changes the IDE for the user, not just for the call: the toolbar dropdown moves and
+    /// stays moved, and their next manual build follows it. That is why it is a tool of its own
+    /// rather than an argument on build_solution — a build that quietly flipped the configuration
+    /// and left it there would be a side effect nobody asked for.</summary>
+    public async Task<(bool Ok, string Configuration, string Reason)> SetConfigurationAsync(string configuration)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        var sb = dte?.Solution?.SolutionBuild;
+        if (sb == null) { return (false, null, "No solution open."); }
+
+        try
+        {
+            var names = CollectConfigurations(sb, configuration, out var match);
+            if (match == null)
+            {
+                return (false, null, "Configuration not found. Available: " + string.Join(", ", names));
+            }
+
+            match.Activate();
+            return (true, ActiveConfigurationName(sb), null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.SetConfigurationAsync", ex);
+            return (false, null, $"Could not switch configuration: {ex.Message}");
+        }
+    }
+
+    /// <summary>Report the active solution configuration and the ones that can be asked for.
+    /// Reading this through a build would mean compiling the solution to learn a setting, and
+    /// finding out what exists at all would mean sending a wrong name and reading the error.</summary>
+    public async Task<(bool Ok, string Configuration, string[] Available, string Reason)> GetConfigurationAsync()
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        var sb = dte?.Solution?.SolutionBuild;
+        if (sb == null) { return (false, null, [], "No solution open."); }
+
+        try
+        {
+            var names = CollectConfigurations(sb, null, out _);
+            return (true, ActiveConfigurationName(sb), [.. names], null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.GetConfigurationAsync", ex);
+            return (false, null, [], $"Could not read the configuration: {ex.Message}");
+        }
+    }
+
+    /// <summary>The solution's configurations as sorted "name|platform" strings, and — when
+    /// <paramref name="wanted"/> is given — the one matching it, by full form or by bare name.
+    ///
+    /// The set is not a tidying-up: SolutionConfigurations repeats a configuration once per
+    /// project that defines it, so a three-project solution offers "Debug|Any CPU" three times.
+    /// Must be called on the UI thread.</summary>
+    private static SortedSet<string> CollectConfigurations(SolutionBuild sb, string wanted, out SolutionConfiguration match)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var names = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        match = null;
+        foreach (SolutionConfiguration c in sb.SolutionConfigurations)
+        {
+            // A configuration is (name, platform); SolutionContexts carries the platform, so the
+            // display form is built here rather than read off a single property.
+            var platform = PlatformOf(c);
+            var full = string.IsNullOrEmpty(platform) ? c.Name : $"{c.Name}|{platform}";
+            names.Add(full);
+            if (match == null && !string.IsNullOrEmpty(wanted)
+                && (string.Equals(full, wanted, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(c.Name, wanted, StringComparison.OrdinalIgnoreCase)))
+            {
+                match = c;
+            }
+        }
+        return names;
+    }
+
+    /// <summary>The platform of a solution configuration, read from its first project context —
+    /// SolutionConfiguration exposes no platform of its own. Empty when it has no projects.</summary>
+    private static string PlatformOf(SolutionConfiguration c)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            foreach (SolutionContext sc in c.SolutionContexts) { return sc.PlatformName ?? ""; }
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[ide] could not read the platform of configuration '{c.Name}': {ex.Message}");
+        }
+        return "";
+    }
+
+    /// <summary>Active solution configuration as "name|platform", for reporting what a build
+    /// actually compiled. Null when there is no solution or the IDE won't say.</summary>
+    private static string ActiveConfigurationName(SolutionBuild sb)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var active = sb?.ActiveConfiguration;
+        if (active == null) { return null; }
+        var platform = PlatformOf(active);
+        return string.IsNullOrEmpty(platform) ? active.Name : $"{active.Name}|{platform}";
     }
 
     // Walks the same solution-folder graph as CollectProject, so it carries the same cycle guard.
