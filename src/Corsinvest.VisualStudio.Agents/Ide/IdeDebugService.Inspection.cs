@@ -112,6 +112,15 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>The thread debug_select_thread moved to, or 0. While it matches the current thread,
+    /// the call stack reports no file or line: the only position the IDE can name is the stopping
+    /// thread's, and putting it on a worker's frame reads as fact rather than as the guess it is.
+    ///
+    /// Held as an id rather than a flag so a later break clears itself — VS picks the thread when
+    /// it stops, and the moment the current thread is no longer the one that was asked for, the
+    /// position is trustworthy again.</summary>
+    private static int _callerSelectedThreadId;
+
     /// <summary>Wait for the debugger to be back in break, or give up. Yields the UI thread between
     /// looks — the transition is processed there, so holding it would stop the very thing being
     /// waited for. Returns false on timeout.</summary>
@@ -230,11 +239,22 @@ internal sealed partial class IdeDebugService
             if (currentIndex >= 0)
             {
                 frames[currentIndex].IsCurrent = true;
-                // The editor shows where the selected frame is, not where execution is paused —
-                // putting this on frame 0 after a select_frame gave it the caller's line.
-                var (file, line) = CurrentLocation();
-                frames[currentIndex].File = file;
-                frames[currentIndex].Line = line;
+                // Only for the thread the break happened on. CurrentLocation answers with the
+                // breakpoint that was hit, and that breakpoint belongs to one thread: asked while
+                // looking at a worker, it named the main thread's line as if it were the worker's.
+                // Every other thread is somewhere the IDE cannot name — EnvDTE's StackFrame carries
+                // no file or line of its own — so it gets none rather than someone else's.
+                // Only for the thread the debugger stopped on. CurrentLocation answers with the
+                // breakpoint that was hit or the editor's caret, and both belong to that one
+                // thread: asked after a debug_select_thread onto a worker, it named the main
+                // thread's line as if it were the worker's. Other threads get no position —
+                // EnvDTE's StackFrame carries none of its own, and none beats someone else's.
+                if (thread.ID != _callerSelectedThreadId)
+                {
+                    var (file, line) = CurrentLocation();
+                    frames[currentIndex].File = file;
+                    frames[currentIndex].Line = line;
+                }
             }
             return new CallStackResult { Ok = true, InBreak = true, Frames = [.. frames] };
         }
@@ -378,6 +398,9 @@ internal sealed partial class IdeDebugService
         => await WithThreadAsync(threadId, (dbg, t) =>
         {
             dbg.CurrentThread = t;
+            // From here the current thread is the caller's choice, not the one the break landed on,
+            // so the call stack stops claiming the stopping thread's position for it.
+            _callerSelectedThreadId = t.ID;
             return new ThreadActionResult { Ok = true, InBreak = true, ThreadId = t.ID, Name = t.Name, IsFrozen = t.IsFrozen };
         });
 
