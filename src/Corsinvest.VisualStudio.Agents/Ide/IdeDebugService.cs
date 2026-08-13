@@ -769,8 +769,23 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = false, Mode = "design", Reason = "Hot Reload needs a running debug session (start/attach first)." };
             }
 
-            // Debug.ApplyCodeChanges = the Hot Reload command. ExecuteCommand throws if the
-            // command is disabled (e.g. nothing to apply, or unsupported edit pending).
+            // Ask whether the command is available before running it. VS greys it out when there
+            // is nothing pending, and running it anyway answered "Applied code changes." over a
+            // no-op — worse, on edits Hot Reload cannot take it opens a MODAL dialog
+            // ("Modifiche non supportate": Edit / Rebuild / Stop). ExecuteCommand does not return
+            // until that is answered, and it runs on the UI thread, so every other MCP tool waits
+            // with it. A ten-minute hang blamed on another tool turned out to be this.
+            if (!IsCommandAvailable(dte, "Debug.ApplyCodeChanges"))
+            {
+                return new DebugResult
+                {
+                    Ok = false,
+                    Mode = ModeToString(dbg.CurrentMode),
+                    Reason = "Nothing to apply — Hot Reload is unavailable right now. Either no edit is " +
+                             "pending, or the pending one needs a rebuild (debug_restart) rather than a reload.",
+                };
+            }
+
             dte.ExecuteCommand("Debug.ApplyCodeChanges", "");
             return new DebugResult
             {
@@ -783,6 +798,22 @@ internal sealed partial class IdeDebugService
         {
             OutputWindowLogger.Global.LogException("IdeDebugService.ApplyHotReloadAsync", ex);
             return new DebugResult { Ok = false, Reason = "Hot Reload failed or not available (no changes, or a rude edit needing restart)." };
+        }
+    }
+
+    /// <summary>Whether a VS command is enabled right now — the same greyed-out state the menu
+    /// shows. Asked before ExecuteCommand on anything that can open a modal: the command being
+    /// unavailable is an answer, where running it and waiting is a hang.
+    /// <para>Unknown command names throw rather than answering false, so a rename in a future VS
+    /// reads as "not available" instead of taking the tool down.</para></summary>
+    private static bool IsCommandAvailable(DTE dte, string commandName)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try { return dte?.Commands?.Item(commandName, -1)?.IsAvailable ?? false; }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[debug] could not read the state of '{commandName}': {ex.Message}");
+            return false;
         }
     }
 
