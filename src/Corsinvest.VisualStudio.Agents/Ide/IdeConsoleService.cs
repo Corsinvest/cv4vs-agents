@@ -209,8 +209,14 @@ internal sealed class IdeConsoleService
             {
                 var err = Marshal.GetLastWin32Error();
                 OutputWindowLogger.Global.Warn($"[ide] AttachConsole({pid}) failed with Win32 error {err}");
-                return Fail(pid, $"Process {pid} has no console to attach to (Win32 error {err}). " +
-                                 "Only a console application has one — a GUI or web project does not.");
+                // AttachConsole answers the same way whether the process is gone or merely has no
+                // console, so the two are told apart here — "not a console app" about a pid that
+                // never existed sends the caller looking at the wrong thing.
+                return Fail(pid, ProcessExists(pid)
+                    ? $"Process {pid} has no console to attach to (Win32 error {err}). Only a console " +
+                      "application has one — a GUI or web project does not."
+                    : $"No process with PID {pid} is running (Win32 error {err}). Omit processId to use " +
+                      "the first debugged process, or debug_list_processes for the live ones.");
             }
             try
             {
@@ -235,6 +241,21 @@ internal sealed class IdeConsoleService
 
     private static ConsoleResult Fail(int pid, string reason)
         => new() { Ok = false, ProcessId = pid, Reason = reason };
+
+    /// <summary>Whether a process with that id is running at all — GetProcessById throws when it
+    /// is not, which is the only cheap way to ask.</summary>
+    private static bool ProcessExists(int pid)
+    {
+        try
+        {
+            using var p = System.Diagnostics.Process.GetProcessById(pid);
+            return !p.HasExited;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
     private const ushort VkReturn = 0x0D;
 

@@ -501,15 +501,18 @@ internal sealed partial class IdeContextService
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
         if (dte?.Solution == null) { return (false, null, "No solution open."); }
-        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
-        {
-            return (false, null, $"File not found on disk: {filePath}. Write the file first, then add it.");
-        }
 
+        // Both arguments are checked before either is reported, so two wrong ones cost one call
+        // rather than two: fixing the file only to be told the project is wrong as well is a
+        // round-trip the caller should not have to pay for.
         var proj = FindProjectDeep(dte, projectName, out var available);
-        if (proj == null)
+        var missingFile = string.IsNullOrEmpty(filePath) || !File.Exists(filePath);
+        if (proj == null || missingFile)
         {
-            return (false, null, $"Project not found: {projectName}. Available: {string.Join(", ", available)}");
+            var problems = new List<string>();
+            if (proj == null) { problems.Add($"no project named '{projectName}' (available: {string.Join(", ", available)})"); }
+            if (missingFile) { problems.Add($"no file at '{filePath}' — write it first, then add it"); }
+            return (false, proj?.Name, string.Join("; ", problems));
         }
 
         try

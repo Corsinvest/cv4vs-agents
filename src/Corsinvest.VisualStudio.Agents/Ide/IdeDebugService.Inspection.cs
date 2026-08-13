@@ -22,8 +22,8 @@ internal sealed partial class IdeDebugService
     // Live inspection + stepping: every entry point here requires Break mode.
 
     private const string NotInBreak =
-        "Debugger must be paused (break mode) for this. Poll getDebugState and wait for mode='break' " +
-        "(set a breakpoint then start/continue, or call debugBreak).";
+        "Debugger must be paused (break mode) for this. Poll debug_get_state and wait for mode='break' " +
+        "(set a breakpoint then start/continue, or call debug_break).";
 
     /// <summary>Resume execution from a break (like F5 while paused).</summary>
     public async Task<DebugResult> ContinueAsync()
@@ -41,7 +41,7 @@ internal sealed partial class IdeDebugService
             // No Mode: Go() returns before the transition, so this reads the state being left. It
             // happened to be right — "run" either way — which is why it outlived the same fix on
             // start/stop/restart/break.
-            return new DebugResult { Ok = true, Reason = "Resumed — poll getDebugState for where it stops next." };
+            return new DebugResult { Ok = true, Reason = "Resumed — poll debug_get_state for where it stops next." };
         }
         catch (Exception ex)
         {
@@ -89,7 +89,7 @@ internal sealed partial class IdeDebugService
                 return new StepResult
                 {
                     Ok = true,
-                    Reason = "Step still running after 10s — poll getDebugState for where it stops.",
+                    Reason = "Step still running after 10s — poll debug_get_state for where it stops.",
                 };
             }
 

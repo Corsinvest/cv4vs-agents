@@ -95,7 +95,7 @@ internal sealed partial class IdeDebugService
             // No Mode: Go() returns before the transition, so CurrentMode here is still the state we
             // just left — reporting it said "design" for a session that had started. getDebugState
             // is the one that knows, and the caller has to poll it anyway.
-            return new DebugResult { Ok = true, Reason = "Debugging started — poll getDebugState for the mode." };
+            return new DebugResult { Ok = true, Reason = "Debugging started — poll debug_get_state for the mode." };
         }
         catch (Exception ex)
         {
@@ -118,7 +118,7 @@ internal sealed partial class IdeDebugService
             }
             dbg.Stop(false);
             // Same as Go(): non-blocking, so CurrentMode has not caught up yet.
-            return new DebugResult { Ok = true, Reason = "Stop requested — poll getDebugState to see it land." };
+            return new DebugResult { Ok = true, Reason = "Stop requested — poll debug_get_state to see it land." };
         }
         catch (Exception ex)
         {
@@ -205,7 +205,7 @@ internal sealed partial class IdeDebugService
     /// build — add a breakpoint, Go(), delete it — does not: Go() is non-blocking, so the delete
     /// runs while the program is still on its way and disarms the breakpoint before it is ever hit.
     /// Measured: execution sailed past the line, twice out of twice.</para>
-    /// <para>Non-blocking like Go(): poll getDebugState to see where it stopped, which may not be
+    /// <para>Non-blocking like Go(): poll debug_get_state to see where it stopped, which may not be
     /// the requested line — anything on the way there pauses it first.</para></summary>
     public async Task<DebugResult> RunToLineAsync(string filePath, int line)
     {
@@ -235,7 +235,7 @@ internal sealed partial class IdeDebugService
             try { dte.ExecuteCommand("Debug.RunToCursor", ""); }
             catch (Exception ex) { return new DebugResult { Ok = false, Reason = $"Visual Studio refused it: {ex.Message.Trim()}" }; }
 
-            return new DebugResult { Ok = true, Reason = $"Running to {System.IO.Path.GetFileName(filePath)}:{line} — poll getDebugState; it may stop earlier." };
+            return new DebugResult { Ok = true, Reason = $"Running to {System.IO.Path.GetFileName(filePath)}:{line} — poll debug_get_state; it may stop earlier." };
         }
         catch (Exception ex)
         {
@@ -464,7 +464,7 @@ internal sealed partial class IdeDebugService
             dbg.Break(false); // false = don't block until the break completes
             // No Mode, same as start/stop/restart: the call returns before the transition, so
             // CurrentMode here still says "run" for a program that is about to be paused.
-            return new DebugResult { Ok = true, Reason = "Break requested — poll getDebugState for where it stopped." };
+            return new DebugResult { Ok = true, Reason = "Break requested — poll debug_get_state for where it stopped." };
         }
         catch (Exception ex)
         {
@@ -571,12 +571,12 @@ internal sealed partial class IdeDebugService
             {
                 // Nothing to restart — just start.
                 dbg.Go(false);
-                return new DebugResult { Ok = true, Reason = "Was not debugging; started — poll getDebugState for the mode." };
+                return new DebugResult { Ok = true, Reason = "Was not debugging; started — poll debug_get_state for the mode." };
             }
             // Debug.Restart command handles stop+start cleanly across project types. Like Go()/Stop()
             // it returns before the mode changes, so there is no state worth reporting here.
             dte.ExecuteCommand("Debug.Restart", "");
-            return new DebugResult { Ok = true, Reason = "Restart requested — poll getDebugState for the mode." };
+            return new DebugResult { Ok = true, Reason = "Restart requested — poll debug_get_state for the mode." };
         }
         catch (Exception ex)
         {

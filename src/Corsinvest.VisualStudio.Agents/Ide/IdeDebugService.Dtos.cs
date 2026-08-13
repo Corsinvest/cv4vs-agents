@@ -85,7 +85,7 @@ internal sealed partial class IdeDebugService
     public sealed class LocalsResult
     {
         public bool Ok { get; set; }
-        public bool InBreak { get; set; }   // false ⇒ not paused; the model should poll getDebugState
+        public bool InBreak { get; set; }   // false ⇒ not paused; the model should poll debug_get_state
         public string FunctionName { get; set; }
         public LocalInfo[] Locals { get; set; } = [];
         /// <summary>Set when a walked level hit the member cap — only possible with depth &gt; 0.</summary>
