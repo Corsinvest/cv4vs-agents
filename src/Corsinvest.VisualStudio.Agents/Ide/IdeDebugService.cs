@@ -95,7 +95,7 @@ internal sealed partial class IdeDebugService
             // No Mode: Go() returns before the transition, so CurrentMode here is still the state we
             // just left — reporting it said "design" for a session that had started. getDebugState
             // is the one that knows, and the caller has to poll it anyway.
-            return new DebugResult { Ok = true, Reason = "Debugging started — poll debug_get_state for the mode." };
+            return new DebugResult { Ok = true, Mode = PendingMode, Reason = "Debugging started — poll debug_get_state for the mode." };
         }
         catch (Exception ex)
         {
@@ -118,7 +118,7 @@ internal sealed partial class IdeDebugService
             }
             dbg.Stop(false);
             // Same as Go(): non-blocking, so CurrentMode has not caught up yet.
-            return new DebugResult { Ok = true, Reason = "Stop requested — poll debug_get_state to see it land." };
+            return new DebugResult { Ok = true, Mode = PendingMode, Reason = "Stop requested — poll debug_get_state to see it land." };
         }
         catch (Exception ex)
         {
@@ -615,6 +615,7 @@ internal sealed partial class IdeDebugService
                 : new DebugResult
                 {
                     Ok = true,
+                    Mode = PendingMode,
                     Reason = $"Detached from {detached} process(es); they keep running. " +
                              "Poll debug_get_state for the mode — the transition is not immediate.",
                 };

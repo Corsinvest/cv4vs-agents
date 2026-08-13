@@ -19,6 +19,11 @@ internal sealed partial class IdeDebugService
     private static DTE GetDte() => Package.GetGlobalService(typeof(DTE)) as DTE;
     private static Debugger GetDebugger() => GetDte()?.Debugger;
 
+    /// <summary>Reported instead of a real mode by the transitions that do not block — start, stop
+    /// and detach all return before VS has moved. A null mode there reads as "something went
+    /// wrong"; this says the transition is in flight and debug_get_state has the answer.</summary>
+    private const string PendingMode = "pending";
+
     private static string ModeToString(dbgDebugMode mode) => mode switch
     {
         dbgDebugMode.dbgDesignMode => "design",

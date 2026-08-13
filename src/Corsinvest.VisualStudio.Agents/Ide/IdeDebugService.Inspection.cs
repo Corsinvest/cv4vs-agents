@@ -73,12 +73,21 @@ internal sealed partial class IdeDebugService
                 return new StepResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = NotInBreak };
             }
 
+            // An unknown direction is refused rather than treated as "over". The schema declares
+            // the three values, but nothing enforces it on the way in — and stepping over a line
+            // when the caller asked to step into it is a wrong answer disguised as a right one.
             switch ((direction ?? "over").ToLowerInvariant())
             {
                 case "into": dbg.StepInto(false); break;
                 case "out": dbg.StepOut(false); break;
-                case "over":
-                default: dbg.StepOver(false); break;
+                case "over": dbg.StepOver(false); break;
+                default:
+                    return new StepResult
+                    {
+                        Ok = false,
+                        Mode = ModeToString(dbg.CurrentMode),
+                        Reason = $"Unknown direction '{direction}'. Use 'over', 'into' or 'out'. Nothing was stepped.",
+                    };
             }
 
             var landed = await WaitForBreakAsync(StepSettleTimeout);
@@ -264,6 +273,14 @@ internal sealed partial class IdeDebugService
                 if (source == null) { return; }
                 foreach (Expression e in source)
                 {
+                    // Top-level statements report `args` in BOTH collections, so it arrived twice —
+                    // once flagged as an argument, once not, which reads as a bug in the tool.
+                    // Arguments are collected first and win: knowing a name is a parameter says
+                    // more than knowing it is in scope.
+                    if (!isArgument && locals.Exists(l => string.Equals(l.Name, e.Name, StringComparison.Ordinal)))
+                    {
+                        continue;
+                    }
                     var hasMembers = e.DataMembers?.Count > 0;
                     locals.Add(new LocalInfo
                     {
