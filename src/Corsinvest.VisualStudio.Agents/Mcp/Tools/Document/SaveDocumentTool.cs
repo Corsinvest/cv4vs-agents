@@ -25,8 +25,8 @@ internal sealed class SaveDocumentTool : McpTool<SaveDocumentArgs>
         "Save an open file if it has unsaved changes. Returns saved=true if a " +
         "save happened, false if the file wasn't open or was already saved — the two are not " +
         "told apart here, document_check_dirty separates them beforehand. Needed after " +
-        "document_format or document_organize_imports, which change the buffer and leave it " +
-        "unsaved.";
+        "document_format, document_organize_imports, document_run_cleanup or nav_rename_symbol, " +
+        "which change buffers and leave them unsaved.";
 
     public override bool Idempotent => true;
 
