@@ -35,6 +35,9 @@ internal sealed partial class IdeNavigationService
         public bool Applied { get; set; }
         public string NewName { get; set; }
         public RenameChange[] ChangedFiles { get; set; } = [];
+        /// <summary>Occurrences rewritten across every file — the sum of ChangedFiles' counts,
+        /// added so a rename that reached forty files does not have to be added up by hand.</summary>
+        public int TotalOccurrences { get; set; }
         /// <summary>Where the rename couldn't be applied cleanly (unresolved conflicts).
         /// Populated only when Applied is false because of conflicts.</summary>
         public NavLocation[] Conflicts { get; set; } = [];
@@ -155,6 +158,16 @@ internal sealed partial class IdeNavigationService
                 changes.Add(new RenameChange { FilePath = path, Count = replacements.Count });
             }
 
+            // DocumentIds comes off a parallel collect, so the order it arrives in is whatever the
+            // scheduler settled on: two identical renames answered with the same files listed
+            // differently. Sorted by path so the result can be compared with the previous one.
+            changes.Sort((a, b) => string.Compare(a.FilePath, b.FilePath, StringComparison.OrdinalIgnoreCase));
+            conflicts.Sort((a, b) =>
+            {
+                var byPath = string.Compare(a.FilePath, b.FilePath, StringComparison.OrdinalIgnoreCase);
+                return byPath != 0 ? byPath : a.Line.CompareTo(b.Line);
+            });
+
             if (conflicts.Count > 0)
             {
                 return new RenameResult
@@ -182,7 +195,14 @@ internal sealed partial class IdeNavigationService
                 [newSolution.GetType()], [newSolution]);
             return !applied
                 ? new RenameResult { Supported = true, Applied = false, Reason = "Workspace rejected the changes (files modified meanwhile?)." }
-                : new RenameResult { Supported = true, Applied = true, NewName = newName, ChangedFiles = [.. changes] };
+                : new RenameResult
+                {
+                    Supported = true,
+                    Applied = true,
+                    NewName = newName,
+                    ChangedFiles = [.. changes],
+                    TotalOccurrences = changes.Sum(c => c.Count),
+                };
         }
         catch (Exception ex)
         {

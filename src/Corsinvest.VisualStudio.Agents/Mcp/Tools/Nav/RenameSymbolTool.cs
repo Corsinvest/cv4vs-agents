@@ -47,8 +47,9 @@ internal sealed class RenameSymbolTool : McpTool<RenameSymbolArgs>
         "Ctrl+Z for it: undoing means renaming back. A build, a git diff or a shell command sees " +
         "the new name straight away. " +
         "It reaches further than the file you name — a solution-wide rename touched four files " +
-        "in a two-project solution — so check changedFiles in the result for what actually " +
-        "changed rather than assuming. " +
+        "in a two-project solution — so read changedFiles (path plus how many occurrences each, " +
+        "sorted by path) and totalOccurrences for what actually changed, rather than assuming it " +
+        "was the one file. " +
         "The file must belong to a project in the open solution. Returns supported=false for " +
         "languages this isn't available for; applied=false (with a reason) when the symbol can't " +
         "be renamed or the new name is invalid. It changes every file it touches, so ask before " +
@@ -71,6 +72,7 @@ internal sealed class RenameSymbolTool : McpTool<RenameSymbolArgs>
             applied = r.Applied,
             reason = r.Reason,
             newName = r.NewName,
+            totalOccurrences = r.TotalOccurrences,
             changedFiles = r.ChangedFiles.Select(c => new { filePath = c.FilePath, count = c.Count }).ToArray(),
             conflicts = r.Conflicts.Select(c => new { filePath = c.FilePath, line = c.Line }).ToArray(),
         };
