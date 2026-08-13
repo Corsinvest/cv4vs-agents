@@ -134,10 +134,14 @@ internal sealed partial class IdeContextService
                 // BuildProject needs the active solution-configuration name and the
                 // project's unique name; match by file name or unique name.
                 var config = sb.ActiveConfiguration?.Name;
-                var proj = FindProject(dte, projectName);
+                var proj = FindProjectDeep(dte, projectName, out var available);
                 if (proj == null)
                 {
-                    return new BuildResult { Ok = false, Message = $"Project not found: {projectName}" };
+                    return new BuildResult
+                    {
+                        Ok = false,
+                        Message = $"Project not found: {projectName}. Available: {string.Join(", ", available)}",
+                    };
                 }
                 sb.BuildProject(config, proj.UniqueName, WaitForBuildToFinish: false);
             }
@@ -282,20 +286,6 @@ internal sealed partial class IdeContextService
             OutputWindowLogger.Global.LogException("Ide.CancelBuildAsync", ex);
             return new BuildResult { Ok = false, Message = $"Cancel error: {ex.Message}" };
         }
-    }
-
-    private static Project FindProject(DTE dte, string name)
-    {
-        foreach (Project p in dte.Solution.Projects)
-        {
-            if (string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(Path.GetFileNameWithoutExtension(p.UniqueName), name, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.UniqueName, name, StringComparison.OrdinalIgnoreCase))
-            {
-                return p;
-            }
-        }
-        return null;
     }
 
     /// <summary>Read the Error List after a build, down to <paramref name="severity"/>: "error"
@@ -446,6 +436,184 @@ internal sealed partial class IdeContextService
         return names;
     }
 
+    /// <summary>Add an existing project file to the solution — Solution Explorer's "Add →
+    /// Existing Project". The project file must already exist; this does not scaffold one.</summary>
+    public async Task<(bool Ok, string Project, string Reason)> AddProjectToSolutionAsync(string projectPath)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        if (dte?.Solution == null) { return (false, null, "No solution open."); }
+        if (string.IsNullOrEmpty(projectPath) || !File.Exists(projectPath))
+        {
+            return (false, null, $"Project file not found on disk: {projectPath}");
+        }
+
+        try
+        {
+            var added = dte.Solution.AddFromFile(projectPath, false);
+            dte.Solution.SaveAs(dte.Solution.FullName);
+            return (true, added?.Name, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.AddProjectToSolutionAsync", ex);
+            return (false, null, $"Could not add the project: {ex.Message}");
+        }
+    }
+
+    /// <summary>Remove a project from the solution, leaving its files on disk — the project stops
+    /// being built, it is not deleted.</summary>
+    public async Task<(bool Ok, string Project, string Reason)> RemoveProjectFromSolutionAsync(string projectName)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        if (dte?.Solution == null) { return (false, null, "No solution open."); }
+
+        var proj = FindProjectDeep(dte, projectName, out var available);
+        if (proj == null)
+        {
+            return (false, null, $"Project not found: {projectName}. Available: {string.Join(", ", available)}");
+        }
+
+        try
+        {
+            var name = proj.Name;
+            dte.Solution.Remove(proj);
+            dte.Solution.SaveAs(dte.Solution.FullName);
+            return (true, name, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.RemoveProjectFromSolutionAsync", ex);
+            return (false, proj.Name, $"Could not remove the project: {ex.Message}");
+        }
+    }
+
+    /// <summary>Add an existing file on disk to a project, the way Solution Explorer's "Add →
+    /// Existing Item" does. Only for projects that list their files: an SDK-style project globs
+    /// them in already, and is reported as such rather than being handed a duplicate item.
+    ///
+    /// The file must exist — this includes, it does not create. Writing the file and telling the
+    /// project about it are separate steps, and merging them would give two ways to write a
+    /// file.</summary>
+    public async Task<(bool Ok, string Project, string Reason)> AddFileToProjectAsync(string projectName, string filePath)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        if (dte?.Solution == null) { return (false, null, "No solution open."); }
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+        {
+            return (false, null, $"File not found on disk: {filePath}. Write the file first, then add it.");
+        }
+
+        var proj = FindProjectDeep(dte, projectName, out var available);
+        if (proj == null)
+        {
+            return (false, null, $"Project not found: {projectName}. Available: {string.Join(", ", available)}");
+        }
+
+        try
+        {
+            if (proj.ProjectItems == null)
+            {
+                return (false, proj.Name, $"'{proj.Name}' has no item list to add to — its project type manages files itself.");
+            }
+            if (IsFileInProject(proj, filePath))
+            {
+                return (true, proj.Name, "Already in the project — nothing to do.");
+            }
+            proj.ProjectItems.AddFromFile(filePath);
+            proj.Save();
+            return (true, proj.Name, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.AddFileToProjectAsync", ex);
+            return (false, proj.Name, $"Could not add the file: {ex.Message}");
+        }
+    }
+
+    /// <summary>Remove a file from a project without deleting it from disk — <c>ProjectItem.Remove</c>,
+    /// not <c>Delete</c>. Taking a file out of the build and destroying it are different intents, and
+    /// only the first is reversible.</summary>
+    public async Task<(bool Ok, string Project, string Reason)> RemoveFileFromProjectAsync(string projectName, string filePath)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        if (dte?.Solution == null) { return (false, null, "No solution open."); }
+
+        var proj = FindProjectDeep(dte, projectName, out var available);
+        if (proj == null)
+        {
+            return (false, null, $"Project not found: {projectName}. Available: {string.Join(", ", available)}");
+        }
+
+        try
+        {
+            var item = FindProjectItem(proj.ProjectItems, filePath);
+            if (item == null)
+            {
+                return (false, proj.Name, $"'{filePath}' is not an item of '{proj.Name}'.");
+            }
+            item.Remove();
+            proj.Save();
+            return (true, proj.Name, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.RemoveFileFromProjectAsync", ex);
+            return (false, proj.Name, $"Could not remove the file: {ex.Message}");
+        }
+    }
+
+    /// <summary>Find a project by name, descending into solution folders, and collect the names of
+    /// all real projects for the not-found message. Must be called on the UI thread.</summary>
+    private static Project FindProjectDeep(DTE dte, string name, out List<string> available)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        available = [];
+        Project match = null;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Project p in dte.Solution.Projects)
+        {
+            CollectStartupCandidate(p, name, available, seen, 0, ref match);
+        }
+        available.Sort(StringComparer.OrdinalIgnoreCase);
+        return match;
+    }
+
+    /// <summary>Whether the project already lists this file, by full path. Must be called on the
+    /// UI thread.</summary>
+    private static bool IsFileInProject(Project proj, string filePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        return FindProjectItem(proj.ProjectItems, filePath) != null;
+    }
+
+    /// <summary>Locate a ProjectItem by file path, recursing into folders. Compares the item's own
+    /// FileNames(1) rather than its name, so a file added under a different display name is still
+    /// found. Must be called on the UI thread.</summary>
+    private static ProjectItem FindProjectItem(ProjectItems items, string filePath, int depth = 0)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (items == null || depth > MaxProjectDepth) { return null; }
+        foreach (ProjectItem item in items)
+        {
+            try
+            {
+                for (short i = 1; i <= item.FileCount; i++)
+                {
+                    if (string.Equals(item.FileNames[i], filePath, StringComparison.OrdinalIgnoreCase)) { return item; }
+                }
+            }
+            catch { /* an item that won't report its files can't be the one we want */ }
+
+            var nested = FindProjectItem(item.ProjectItems, filePath, depth + 1);
+            if (nested != null) { return nested; }
+        }
+        return null;
+    }
+
     /// <summary>The platform of a solution configuration, read from its first project context —
     /// SolutionConfiguration exposes no platform of its own. Empty when it has no projects.</summary>
     private static string PlatformOf(SolutionConfiguration c)
@@ -492,7 +660,30 @@ internal sealed partial class IdeContextService
             return;
         }
         names.Add(p.Name);
-        if (string.Equals(p.Name, target, StringComparison.OrdinalIgnoreCase)) { match = p; }
+        // Three spellings, because a caller has three plausible ones to hand: the display name, the
+        // solution-relative UniqueName, and the project file's own name — which differs from the
+        // display name whenever the .csproj was renamed in the solution but not on disk.
+        if (match == null && NameMatchesProject(p, target)) { match = p; }
+    }
+
+    /// <summary>Whether a project answers to <paramref name="name"/> — by display name, by
+    /// UniqueName, or by its project file name without the extension.</summary>
+    private static bool NameMatchesProject(Project p, string name)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (string.IsNullOrEmpty(name)) { return false; }
+        if (string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)) { return true; }
+        try
+        {
+            return string.Equals(p.UniqueName, name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Path.GetFileNameWithoutExtension(p.UniqueName), name, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            // An unloaded project throws on UniqueName; the display name above already had its say.
+            OutputWindowLogger.Global.Warn($"[ide] could not read UniqueName of project '{p.Name}': {ex.Message}");
+            return false;
+        }
     }
 
     //  Project structure (MCP getProjectStructure)
@@ -621,10 +812,11 @@ internal sealed partial class IdeContextService
     public async Task<IReadOnlyList<string>> GetWorkspaceFoldersAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
-        var solutionPath = dte?.Solution?.FullName;
-        if (string.IsNullOrEmpty(solutionPath)) { return []; }
-        var folder = Path.GetDirectoryName(solutionPath);
+        // The package already holds the resolved folder and keeps it current through the solution
+        // events — reading DTE.Solution.FullName here would mean re-deriving it, and getting it
+        // wrong wherever that property isn't a .sln path (Open Folder mode hands back the folder
+        // itself, so taking its directory yields the PARENT).
+        var folder = AgentsPackage.Instance?.CurrentSolutionFolder;
         return string.IsNullOrEmpty(folder)
                 ? Array.Empty<string>()
                 : [PathHelpers.LowercaseDrive(folder)];
@@ -702,6 +894,10 @@ internal sealed partial class IdeContextService
 
     //  Diagnostics (MCP getDiagnostics)
 
+    /// <summary>Bucket for Error List entries that name no file. Deliberately not a file: URI, so
+    /// nothing downstream mistakes it for a path it could open.</summary>
+    private const string SolutionLevelUri = "vs-solution:diagnostics";
+
     /// <summary>Read the IDE's Error List in the LSP shape the Claude CLI
     /// expects (DiagnosticFile[] — see <c>parseDiagnosticResult</c>
     /// in the CLI source). Optional URI filter restricts to one file;
@@ -723,8 +919,18 @@ internal sealed partial class IdeContextService
             ErrorItem item;
             try { item = errors.Item(i); } catch { continue; }
             if (item == null) { continue; }
+            // No file name: a project- or solution-level entry (an unresolved reference, a project
+            // that would not load a file). Dropping those lost 14 of 232 items on this solution,
+            // and they are the ones a caller cannot find any other way — file-level diagnostics at
+            // least surface again when that file is opened. They group under a marker URI rather
+            // than an empty one, which the CLI's parseDiagnosticResult would treat as a real path.
             var file = item.FileName ?? string.Empty;
-            if (string.IsNullOrEmpty(file)) { continue; }
+            var fileless = string.IsNullOrEmpty(file);
+            if (fileless)
+            {
+                if (!string.IsNullOrEmpty(fileUriFilter)) { continue; }
+                file = SolutionLevelUri;
+            }
             var severity = SeverityToLsp(item.ErrorLevel);
             if (!string.IsNullOrEmpty(severityFilter)
                 && !severity.Equals(severityFilter, StringComparison.OrdinalIgnoreCase))
@@ -756,7 +962,7 @@ internal sealed partial class IdeContextService
         var result = new List<DiagnosticFile>(byFile.Count);
         foreach (var kv in byFile)
         {
-            var uri = PathHelpers.ToFileUri(kv.Key);
+            var uri = kv.Key == SolutionLevelUri ? SolutionLevelUri : PathHelpers.ToFileUri(kv.Key);
             if (!string.IsNullOrEmpty(fileUriFilter) && !PathHelpers.UrisEquivalent(fileUriFilter, uri)) { continue; }
             result.Add(new DiagnosticFile { Uri = uri, Diagnostics = kv.Value });
         }
