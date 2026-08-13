@@ -55,7 +55,7 @@ fifth is high.
 | `nav_get_document_symbols` | List a file's symbols as a tree — each with its name, kind (Class/Method/Property/…) and 1-based line, ordered top-to-bottom — the editor's navigation outline. Useful to locate members in a large file without reading it all. The file must belong to a project in the open solution. Returns supported=false for languages this isn't available for, or transiently while the solution is still loading — retry shortly. This is one file; nav_search_workspace_symbols finds a name across the whole solution. |
 | `nav_go_to_definition` | Find where a symbol is defined (semantic, not text search): give the file, the 1-based line where the symbol is used, and the symbol name. Returns the defining file/line. Reaches definitions in referenced assemblies too: with no source on disk, the declaration is generated under %TEMP% and the hit carries source='decompiled' (rebuilt from IL — locals renamed) or source='source' (the real thing, via SourceLink). Those files are generated and read-only: read them, never edit them. The file must belong to a project in the open solution. Returns supported=false for languages this isn't available for, or transiently while the solution is still loading — safe to retry shortly before falling back to grep. nav_find_references goes the other way, from a definition to its callers, and nav_go_to_implementation past an interface to what implements it. |
 | `nav_go_to_implementation` | Find the implementations of a symbol (semantic): for an interface or an interface member, the concrete classes/members that implement it; for a virtual/abstract member, the overrides. Give the file, the 1-based line where the symbol appears, and the symbol name. Use this — not nav_find_references — to see the actual code behind an interface. The file must belong to a project in the open solution. Returns supported=false for languages this isn't available for, or transiently while the solution is still loading. |
-| `nav_rename_symbol` | Rename a symbol everywhere it's used across the solution (semantic, not text replace): give the file, the 1-based line where the symbol appears, its current name, and the new name. Updates the definition and every reference. Atomic — if the rename would cause unresolved conflicts nothing is applied. Opens and focuses the file you name — the IDE will not apply the change to a file that is not open in a live editor — so expect a tab and the editor's place to move. That file's edit lands in the buffer rather than on disk: it stays dirty, and Ctrl+Z undoes the rename while it is. Do not count on that lasting — with autosave on (the default) reading it back with the Read tool writes it out first, so the undo is gone and a build sees the new name. document_read_buffer looks without saving. Other files the rename reaches are written straight to disk if they are not already open, with no dirty buffer and no undo — open them first if that matters. The file must belong to a project in the open solution. Returns supported=false for languages this isn't available for; applied=false (with a reason) when the symbol can't be renamed or the new name is invalid. It changes every file it touches, so ask before running it — nav_find_references shows the same set without changing anything. |
+| `nav_rename_symbol` | Rename a symbol everywhere it's used across the solution (semantic, not text replace): give the file, the 1-based line where the symbol appears, its current name, and the new name. Updates the definition and every reference. Atomic — if the rename would cause unresolved conflicts nothing is applied. Writes every file it touches to disk immediately — files already open in the editor get a dirty buffer instead, but nothing is held back waiting for document_save. There is no Ctrl+Z for it: undoing means renaming back. A build, a git diff or a shell command sees the new name straight away. It reaches further than the file you name — a solution-wide rename touched four files in a two-project solution — so check changedFiles in the result for what actually changed rather than assuming. The file must belong to a project in the open solution. Returns supported=false for languages this isn't available for; applied=false (with a reason) when the symbol can't be renamed or the new name is invalid. It changes every file it touches, so ask before running it — nav_find_references shows the same set without changing anything. |
 | `nav_search_workspace_symbols` | Find a symbol by name across the entire solution (the 'Navigate To' search). Matches declarations, not text, so a hit is a real class/method/field and comes with its kind, its container and the declaration line itself. Returns up to 50 hits, each with name, kind, file, 1-based line, container_name and preview, ordered by file then line. Returns supported=false where no project provides NavigateTo — fall back to Grep then, which searches text and will also match usages and comments. This is the way in when the file is unknown: from a hit, nav_go_to_definition, nav_find_references and nav_get_document_symbols all take the file and line it returns. |
 
 ## Editor
@@ -79,37 +79,28 @@ fifth is high.
 | `document_organize_imports` | Organize and remove unused using/import directives in a file via the IDE's Edit.RemoveAndSort command. The file must live inside the open solution's folder; success=false otherwise. Opens the file in the editor if it isn't already, and leaves that buffer unsaved like document_format — including that reading it back with the Read tool saves it first when autosave is on; document_read_buffer looks without writing. |
 | `document_read_buffer` | Read an open document's editor buffer, including changes the user hasn't saved. Omit filePath to read the document they are currently looking at. Use the Read tool instead for the version on disk, or when the file isn't open in the IDE. Returns isDirty so you can tell whether what you read differs from disk. |
 | `document_run_cleanup` | Run the IDE's Code Cleanup on a file (Ctrl+K, Ctrl+E): formatting plus the fixers of the user's default cleanup profile. Richer than document_format, but the extra fixers are language-dependent (C#/VB get the most). The file must live inside the open solution's folder; success=false otherwise. Opens the file in the editor if it isn't already, and leaves that buffer unsaved — though reading it back with the Read tool saves it first when autosave is on; document_read_buffer looks without writing. Some installations refuse the command outright: success=false then carries the IDE's own message, and document_format is the part of it that always works. |
-| `document_save` | Save an open file if it has unsaved changes. Returns saved=true if a save happened, false if the file wasn't open or was already saved — the two are not told apart here, document_check_dirty separates them beforehand. Needed after document_format, document_organize_imports, document_run_cleanup or nav_rename_symbol, which change buffers and leave them unsaved. |
+| `document_save` | Save an open file if it has unsaved changes. Returns saved=true if a save happened, false if the file wasn't open or was already saved — the two are not told apart here, document_check_dirty separates them beforehand. Needed after document_format, document_organize_imports or document_run_cleanup, which change buffers and leave them unsaved. nav_rename_symbol does not need it — it writes to disk itself. |
 
-### The four tools that edit open a tab
+### Where an edit lands: the buffer or the file
 
-`document_format`, `document_organize_imports`, `document_run_cleanup` and `nav_rename_symbol` all
-open the file they are given, and all leave it dirty. The tab is not incidental: the IDE's
-formatter and cleanup act on a live document rather than on a path, and the Roslyn workspace behind
-the rename writes a change to a *closed* document straight to disk — no dirty buffer, and nothing
-for Ctrl+Z. Opening first is what makes "nothing is written until `document_save`" true at all
-rather than true of whichever files happened to be on screen.
+`document_format`, `document_organize_imports` and `document_run_cleanup` open the file they are
+given and leave it dirty. The tab is not incidental — the IDE's formatter and cleanup act on a live
+document rather than on a path — so the edit sits in the editor, invisible to a build, a `git diff`
+or a shell command until `document_save`. `document_read_buffer` is what sees it meanwhile.
 
-The rename is the one that reaches past its own file, and only that first file is opened for it:
-the others are found by reading the solution, and opening a document *after* that read invalidates
-everything computed from it — the workspace then refuses the change outright. So a cross-file
-rename leaves the other files written directly, undirty and outside the undo history. Open them
-first when that matters; `nav_find_references` lists them without changing anything.
-
-Until it is saved the edit is invisible to anything reading the filesystem — a build, a `git diff`,
-a shell command. `document_read_buffer` is what sees it meanwhile.
-
-**Autosave cuts this short, by design.** With Options → Chat → Autosave on (the default) a
+**Autosave cuts that short, by design.** With Options → Chat → Autosave on (the default) a
 `PreToolUse` hook saves a dirty file before Claude's own `Read`, `Edit` or `Write` touches it, so
 the agent never reads a stale copy of something the user is looking at. The cost is that reading
-back what one of these four just changed *writes it out first*: the buffer goes clean, the undo
-history stops covering the change, and the next build sees it. `document_read_buffer` is the way to
-look without triggering that — it is an MCP tool, and the hook only matches Claude's file tools.
+back what one of those three just changed *writes it out first*: the buffer goes clean and the next
+build sees it. `document_read_buffer` avoids that — it is an MCP tool, and the hook only matches
+Claude's file tools.
 
-So "nothing is written until `document_save`" holds for the edit itself, not for whatever you do
-next. Treat these four as changes that are *about* to reach disk rather than as ones being held
-back, and if the point was to show the user something reversible, say so before reading the file
-again.
+`nav_rename_symbol` is the exception: it writes to disk. Files that happen to be open go dirty
+instead, but nothing waits for `document_save`, and there is no Ctrl+Z — undoing means renaming
+back. Opening every touched file first was tried and dropped: it does buy dirty buffers, but at a
+focused tab per file (four on a small solution-wide rename), and the undo is lost anyway the moment
+anything reads one of them back. One predictable outcome beats two that depend on which tabs the
+user left open.
 
 ## Build
 

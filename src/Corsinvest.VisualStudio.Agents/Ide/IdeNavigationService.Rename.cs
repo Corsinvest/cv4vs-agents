@@ -99,15 +99,6 @@ internal sealed partial class IdeNavigationService
 
         try
         {
-            // Open the starting file FIRST, before anything reads the solution. Opening moves
-            // CurrentSolution on, and every object below — the document, the rename info, the
-            // location set — is bound to the solution it was made from: an open half way through
-            // leaves them all pointing at the previous one, and TryApplyChanges then refuses the
-            // whole thing. Two earlier attempts moved the open between the compute steps and got
-            // "workspace rejected the changes" both times; the position that works is before them.
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
-            OpenFileForEdit(filePath);
-
             var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
             var document = ResolveDocument(filePath);
             if (document == null) { return new RenameResult { Supported = false, Reason = "No language document for this file (language not supported)." }; }
@@ -178,6 +169,13 @@ internal sealed partial class IdeNavigationService
             // 4) Apply the new Solution to the workspace (writes the edits).
             // TryApplyChanges must run on the VS UI thread; the rest of the compute is fine on a
             // background thread, so we switch only for the apply.
+            //
+            // Files that are not open take the change straight to disk — no dirty buffer, no
+            // Ctrl+Z. That is the accepted behaviour, not an oversight. Opening them first was
+            // tried: it does give dirty buffers, but it costs a focused tab per touched file (four
+            // on a small solution-wide rename), and the undo it buys is lost anyway the moment
+            // anything reads one of those files back, because autosave flushes it. Better one
+            // predictable outcome than two that depend on which tabs the user left open.
             var newSolution = VsReflection.GetProp(repl, "NewSolution");
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
             var applied = (bool)VsReflection.Invoke(_workspace, "TryApplyChanges",
@@ -193,42 +191,4 @@ internal sealed partial class IdeNavigationService
         }
     }
 
-    /// <summary>Open the file the rename starts from, so TryApplyChanges edits a buffer rather than
-    /// the file.
-    /// <para>The workspace applies a change to a CLOSED document by writing it straight to disk —
-    /// no dirty buffer, and nothing for Ctrl+Z to undo. Measured: a rename of a symbol in a file
-    /// nobody had open reported applied=true with the file already rewritten, while the tool
-    /// promised the edit was pending until document_save. Renaming what is open behaved as
-    /// described, which is why it went unnoticed: the same command did two different things
-    /// depending on which tabs happened to be there.</para>
-    /// <para>Opening first makes it one thing. Failing to open is not worth abandoning a rename
-    /// that has not been computed yet — the file takes the old behaviour and is written directly,
-    /// which is what happened to every file before this. Files the rename reaches BEYOND this one
-    /// are not opened: their ids are only known once the solution has been read, and opening then
-    /// is what the ordering above exists to avoid. A cross-file rename still writes those to
-    /// disk.</para>
-    /// <para>The file is activated, which is visible and not wanted. A document that is open but
-    /// never activated is not synchronised into the RDT and TryApplyChanges refuses the solution
-    /// over it — dotnet/roslyn#25425, closed as not planned, so the workaround stays ours.</para>
-    /// <para>By path rather than by DocumentId: this runs before the solution has been read, so
-    /// there is no document to have an id yet, and that is the whole point of the ordering.</para></summary>
-    private static void OpenFileForEdit(string filePath)
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        try
-        {
-            var path = PathHelpers.FromFileUri(filePath);
-            if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path)) { return; }
-
-            VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, path,
-                Microsoft.VisualStudio.VSConstants.LOGVIEWID.TextView_guid, out _, out _, out var frame);
-            frame?.Show();
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.Warn(
-                $"[nav] rename: could not open '{filePath}' before computing the rename — " +
-                $"the change may be written straight to disk. {ex.Message}");
-        }
-    }
 }
