@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Ide;
+using System;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
@@ -44,6 +45,23 @@ internal sealed class ReadOutputTool : McpTool<ReadOutputArgs>
         if (string.IsNullOrWhiteSpace(args.Pane))
         {
             return new { ok = true, availablePanes = r.AvailablePanes };
+        }
+        // 'pane' is the IDE's own name for it, which on a non-English install is not the name that
+        // was asked for — 'Build' comes back as 'Compilazione'. Saying which name was requested
+        // turns that from a mismatch worth double-checking into an answered question. Omitted
+        // rather than sent as null when the two agree: a null reads as "there is an answer here
+        // and it is nothing", which is not what an unremarkable name means.
+        if (!string.Equals(r.Pane, args.Pane, StringComparison.OrdinalIgnoreCase))
+        {
+            return new
+            {
+                ok = true,
+                pane = r.Pane,
+                requestedPane = args.Pane,
+                content = r.Content,
+                totalLines = r.TotalLines,
+                truncated = r.Truncated,
+            };
         }
         return new
         {

@@ -15,7 +15,9 @@ internal sealed class ListBreakpointsTool : McpTool<NoArgs>
     public override string Name => "debug_list_breakpoints";
     public override string Description =>
         "List all breakpoints in the solution: each with its file+line (or function name), " +
-        "condition (if any), and whether it's enabled. Set them with debug_set_breakpoint or " +
+        "condition and hit-count rule (if any), how many times it has been hit this session, and " +
+        "whether it's enabled. currentHits separates 'never reached' from 'reached, and the " +
+        "condition said no'. Set them with debug_set_breakpoint or " +
         "debug_set_function_breakpoint, remove one with debug_remove_breakpoint or all with " +
         "debug_clear_breakpoints. Worth a look when a run stops somewhere unexpected — a " +
         "breakpoint left from earlier is the usual reason.";
@@ -37,6 +39,9 @@ internal sealed class ListBreakpointsTool : McpTool<NoArgs>
                 function = b.Function,
                 condition = b.Condition,
                 enabled = b.Enabled,
+                hitCount = b.HitCount,
+                hitCountType = b.HitCountType,
+                currentHits = b.CurrentHits,
             }).ToArray(),
         };
     }

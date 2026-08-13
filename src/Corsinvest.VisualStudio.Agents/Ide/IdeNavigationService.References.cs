@@ -32,6 +32,46 @@ internal sealed partial class IdeNavigationService
     /// supply to FindReferencesAsync is an OptionsProvider&lt;ClassificationOptions&gt; — we
     /// fulfil it with a tiny RealProxy returning ClassificationOptions.Default. All internal,
     /// all feature-detected.</summary>
+    /// <summary>Lay the four values we have into the parameter list the method actually declares,
+    /// matching on type rather than counting positions, and leaving anything else at its default.
+    /// The list has gained and lost parameters between VS versions; matching by type survives that,
+    /// where a fixed array of five silently stopped working the day one of them moved.</summary>
+    private static object[] BuildFindUsagesArgs(
+        MethodInfo method, object context, object document, int offset, object optionsProvider, CancellationToken ct)
+    {
+        var parameters = method.GetParameters();
+        var args = new object[parameters.Length];
+        for (var i = 0; i < parameters.Length; i++)
+        {
+            var t = parameters[i].ParameterType;
+            args[i] =
+                t == typeof(int) ? offset
+                : t == typeof(CancellationToken) ? ct
+                : t.IsInstanceOfType(context) ? context
+                : t.IsInstanceOfType(document) ? document
+                : t.IsInstanceOfType(optionsProvider) ? optionsProvider
+                : parameters[i].HasDefaultValue ? parameters[i].DefaultValue
+                : t.IsValueType ? Activator.CreateInstance(t)
+                : null;
+        }
+        return args;
+    }
+
+    /// <summary>One of IFindUsagesService's two entry points, by name.
+    ///
+    /// Deliberately not pinned to an arity. It used to require exactly five parameters, and when
+    /// one of the two grew a sixth the tool reported "not available in this Visual Studio" — which
+    /// reads as an edition limit and sent everyone looking in the wrong place, while its sibling
+    /// went on working from the same interface. If the shape ever changes for real, the invoke
+    /// below fails with a message naming the mismatch, which is a better account than a probe that
+    /// quietly answers no. Overloads are ordered so the widest wins: extra parameters are the ones
+    /// that get added.</summary>
+    private MethodInfo FindUsagesMethod(string name)
+        => _findUsagesServiceType.GetMethods()
+            .Where(m => m.Name == name)
+            .OrderByDescending(m => m.GetParameters().Length)
+            .FirstOrDefault();
+
     private bool EnsureRefsProbed()
     {
         if (_refsProbed) { return _refsAvailable; }
@@ -44,14 +84,12 @@ internal sealed partial class IdeNavigationService
             if (_findUsagesServiceType == null) { return ProbeFailed(step); }
 
             step = "FindReferencesAsync";
-            _findReferencesAsync = _findUsagesServiceType.GetMethods()
-                .FirstOrDefault(m => m.Name == "FindReferencesAsync" && m.GetParameters().Length == 5);
+            _findReferencesAsync = FindUsagesMethod("FindReferencesAsync");
             if (_findReferencesAsync == null) { return ProbeFailed(step); }
 
             // Sibling method, same shape — powers goToImplementation. Optional: if a future VS
             // drops it we just disable implementations, references still work.
-            _findImplementationsAsync = _findUsagesServiceType.GetMethods()
-                .FirstOrDefault(m => m.Name == "FindImplementationsAsync" && m.GetParameters().Length == 5);
+            _findImplementationsAsync = FindUsagesMethod("FindImplementationsAsync");
 
             step = "BufferedFindUsagesContext";
             _bufferedContextType = VsReflection.FindType("Microsoft.CodeAnalysis.FindUsages.BufferedFindUsagesContext");
@@ -82,24 +120,39 @@ internal sealed partial class IdeNavigationService
     /// 1-based <paramref name="line"/> of <paramref name="filePath"/>. Multi-language; never
     /// throws (degrades to Supported=false). The file must be in the open solution.</summary>
     public Task<NavResult> GetReferencesAsync(string filePath, int line, string symbolName, CancellationToken ct)
-        => RunFindUsagesAsync(_findReferencesAsync, "references", filePath, line, symbolName, ct);
+        => RunFindUsagesAsync(() => _findReferencesAsync, "references", filePath, line, symbolName, ct);
 
     /// <summary>Find all implementations of the symbol on that line — concrete classes/members that
     /// implement an interface, or override a virtual/abstract member (Go To Implementation).
     /// Different from references (callers) and definition (declaration). Multi-language; never
     /// throws. Uses the sibling FindImplementationsAsync of the same IFindUsagesService.</summary>
     public Task<NavResult> GetImplementationsAsync(string filePath, int line, string symbolName, CancellationToken ct)
-        => RunFindUsagesAsync(_findImplementationsAsync, "implementations", filePath, line, symbolName, ct);
+        => RunFindUsagesAsync(() => _findImplementationsAsync, "implementations", filePath, line, symbolName, ct);
 
     /// <summary>Shared driver for the two IFindUsagesService entry points (FindReferencesAsync /
     /// FindImplementationsAsync): both stream SourceReferenceItems into the buffered context, which
-    /// we then read back. <paramref name="kind"/> only flavours the messages.</summary>
+    /// we then read back. <paramref name="kind"/> only flavours the messages.
+    /// <para>The method arrives as a function, not as a MethodInfo, because the field it comes from
+    /// is filled by the probe below. Passed directly it was read at the call site — before the probe
+    /// had run — so the very first find-references of a session saw null and answered "the internal
+    /// API has moved", then worked ever after. A one-off failure that read like a version problem
+    /// and cleared itself on retry, which is the worst way for it to look.</para></summary>
     private async Task<NavResult> RunFindUsagesAsync(
-        MethodInfo findMethod, string kind, string filePath, int line, string symbolName, CancellationToken ct)
+        Func<MethodInfo> getFindMethod, string kind, string filePath, int line, string symbolName, CancellationToken ct)
     {
-        if (!EnsureRefsProbed() || findMethod == null)
+        // Probe first: it is what fills the field getFindMethod reads.
+        var probed = EnsureRefsProbed();
+        var findMethod = getFindMethod();
+        if (!probed || findMethod == null)
         {
-            return new NavResult { Supported = false, Reason = $"Find-{kind} not available in this Visual Studio." };
+            // Not an edition limit, whatever it reads like: this is Roslyn's own service, and it
+            // ships with every edition. Saying where it broke beats implying the IDE cannot do it.
+            return new NavResult
+            {
+                Supported = false,
+                Reason = $"Find-{kind} could not be wired up to this Visual Studio's language service — " +
+                         "the internal API it goes through has moved. Grep finds the same text meanwhile.",
+            };
         }
 
         try
@@ -117,7 +170,12 @@ internal sealed partial class IdeNavigationService
             var context = VsReflection.CreateInstance(_bufferedContextType, nonPublic: true);
             var optionsProvider = OptionsProviderProxy.Create(_optionsProviderType, _classificationOptionsDefault);
 
-            var task = (Task)findMethod.Invoke(service, new object[] { context, document, offset, optionsProvider, ct });
+            // Built from the signature rather than assumed: the parameter list has changed shape
+            // across VS versions, and the four values below are the only ones we have to give —
+            // anything else the method wants gets its own default rather than shifting the rest
+            // out of position.
+            var args = BuildFindUsagesArgs(findMethod, context, document, offset, optionsProvider, ct);
+            var task = (Task)findMethod.Invoke(service, args);
             await task.ConfigureAwait(false);
 
             var locations = ReadBufferedReferences(context);

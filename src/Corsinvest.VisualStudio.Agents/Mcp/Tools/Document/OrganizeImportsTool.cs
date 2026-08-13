@@ -26,13 +26,15 @@ internal sealed class OrganizeImportsTool : McpTool<OrganizeImportsArgs>
         "Organize and remove unused using/import directives in a file " +
         "via the IDE's Edit.RemoveAndSort command. " +
         "The file must live inside the open solution's folder; success=false otherwise. " +
-        "Leaves the buffer unsaved, like document_format — document_save writes it out.";
+        "Opens the file in the editor if it isn't already, and leaves that buffer unsaved like " +
+        "document_format — including that reading it back with the Read tool saves it first when " +
+        "autosave is on; document_read_buffer looks without writing.";
 
     public override bool Idempotent => true;
 
     protected override async Task<object> InvokeAsync(OrganizeImportsArgs args)
     {
-        var ok = await IdeContextService.Instance.OrganizeImportsAsync(args.FilePath);
-        return new { success = ok };
+        var (ok, reason) = await IdeContextService.Instance.OrganizeImportsAsync(args.FilePath);
+        return ok ? (object)new { success = true } : new { success = false, reason };
     }
 }

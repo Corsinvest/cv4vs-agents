@@ -14,6 +14,7 @@ internal sealed class BuildProjectArgs
     [Required, Description("Project name (or file name without extension) to build.")]
     public string ProjectName { get; set; }
 
+    [AllowedValues("error", "warning", "all")]
     [Description("How far down the Error List to report: 'error' (default), 'warning' for errors " +
                  "and warnings, or 'all' to include informational items. Each level means that one " +
                  "and everything more severe.")]
@@ -30,7 +31,10 @@ internal sealed class BuildProjectTool : McpTool<BuildProjectArgs>
         "succeeded plus what the Error List holds (file, line, description, severity). Blocks " +
         "until done. Reports errors only unless severity says otherwise; the message says how " +
         "many items were left out, and 'configuration' says which one it built — " +
-        "build_set_configuration changes it. The name is a project name, not a path — " +
+        "solution_set_configuration changes it. ok/failedProjects/message are the outcome; " +
+        "'errors' is the Error List, which the IDE updates a moment later and which can hold " +
+        "entries from a debug session as well as from the build — ide_read_output('Build') has " +
+        "the compiler's own log when the two disagree. The name is a project name, not a path — " +
         "ide_get_project_structure lists them. build_solution builds everything instead.";
 
     public override bool Idempotent => true;

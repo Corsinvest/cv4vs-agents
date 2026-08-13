@@ -71,6 +71,10 @@ internal sealed class ExpandExpressionTool : McpTool<ExpandExpressionArgs>
                 type = r.Type,
                 members = r.Members,
                 truncated = r.Truncated,
+                // Carried on the success path too: expanding a null succeeds with an empty member
+                // list, and without this the caller cannot tell that from an object that simply has
+                // no members.
+                reason = r.Reason,
             };
     }
 
