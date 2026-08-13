@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 71 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 70+ tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -47,7 +47,7 @@ fifth is high.
 **Naming.** `domain_verb[_object]`, snake_case, domain first — `nav_go_to_definition`,
 `debug_get_locals`. A domain exists once it has three or more tools; the rest live under `ide`.
 
-## Navigation (6)
+## Navigation
 
 | Tool | What it does |
 |---|---|
@@ -58,7 +58,7 @@ fifth is high.
 | `nav_rename_symbol` | Rename a symbol everywhere it's used across the solution (semantic, not text replace): give the file, the 1-based line where the symbol appears, its current name, and the new name. Updates the definition and all references and writes the changes directly. Atomic — if the rename would cause unresolved conflicts nothing is applied. The file must belong to a project in the open solution. Returns supported=false for languages this isn't available for; applied=false (with a reason) when the symbol can't be renamed or the new name is invalid. It writes to every file it touches, so ask before running it — nav_find_references shows the same set without changing anything. |
 | `nav_search_workspace_symbols` | Find a symbol by name across the entire solution (the 'Navigate To' search). Matches declarations, not text, so a hit is a real class/method/field and comes with its kind, its container and the declaration line itself. Returns up to 50 hits, each with name, kind, file, 1-based line, container_name and preview, ordered by file then line. Returns supported=false where no project provides NavigateTo — fall back to Grep then, which searches text and will also match usages and comments. This is the way in when the file is unknown: from a hit, nav_go_to_definition, nav_find_references and nav_get_document_symbols all take the file and line it returns. |
 
-## Editor (7)
+## Editor
 
 | Tool | What it does |
 |---|---|
@@ -70,7 +70,7 @@ fifth is high.
 | `editor_open_diff` | Open a side-by-side diff between an existing file and proposed new content, so the user can see an edit before it happens. The tabName given here is what editor_close_tab takes to close it again, and editor_close_all_diffs clears every one this server opened. |
 | `editor_open_file` | Open a file in the editor. Optionally select whole lines with startLine/endLine (1-based). Set activate to focus the tab. This is for showing the user something — reading a file needs no editor: use the Read tool, or document_read_buffer when the file is open and may hold unsaved changes. |
 
-## Document (6)
+## Document
 
 | Tool | What it does |
 |---|---|
@@ -81,7 +81,7 @@ fifth is high.
 | `document_run_cleanup` | Run the IDE's Code Cleanup on a file (Ctrl+K, Ctrl+E): formatting plus the fixers of the user's default cleanup profile. Richer than document_format, but the extra fixers are language-dependent (C#/VB get the most). The file must live inside the open solution's folder; success=false otherwise. |
 | `document_save` | Save an open file if it has unsaved changes. Returns saved=true if a save happened, false if the file wasn't open or was already saved — the two are not told apart here, document_check_dirty separates them beforehand. Needed after document_format or document_organize_imports, which change the buffer and leave it unsaved. |
 
-## Build (4)
+## Build
 
 | Tool | What it does |
 |---|---|
@@ -90,7 +90,7 @@ fifth is high.
 | `build_project` | Build a single project (by name) in the active configuration and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until done. Reports errors only unless severity says otherwise; the message says how many items were left out, and 'configuration' says which one it built — solution_set_configuration changes it. The name is a project name, not a path — ide_get_project_structure lists them. build_solution builds everything instead. |
 | `build_solution` | Build the entire solution and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until the build ends. Reports errors only unless severity says otherwise; the message says how many items were left out. Prefer this to a dotnet build in the shell: it goes through the open IDE, so there is no path to resolve and no clash with a debug session. Builds whichever configuration the IDE has active and reports it back as 'configuration' — solution_set_configuration changes it. build_project builds one project instead, and ide_read_output has the raw log when the Error List is not enough. |
 
-## Solution (5)
+## Solution
 
 | Tool | What it does |
 |---|---|
@@ -100,14 +100,14 @@ fifth is high.
 | `solution_set_configuration` | Switch the solution's active configuration (Debug, Release, …) — the one build_solution and build_project compile and debug_start launches. Pass 'Debug' or 'Release', or the full 'Release\|Any CPU' when a name has several platforms; returns ok plus the resolved configuration, or ok=false with the available ones if the name doesn't match. This is a change to the user's IDE and it persists: the toolbar dropdown moves and their next manual build follows it, so switch only when asked, and say so. solution_get_configuration reads the current one, and the valid names, without changing anything. |
 | `solution_set_startup_project` | Set the solution's startup project — the one debug_start (F5) launches. Pass the project name; returns ok plus the resolved startup project, or ok=false with the list of available projects if the name doesn't match. |
 
-## Project (2)
+## Project
 
 | Tool | What it does |
 |---|---|
 | `project_add_file` | Add a file that already exists on disk to a project, as Solution Explorer's 'Add → Existing Item' does. Needed for project types that list every file explicitly: there, a .cs written to disk compiles in the IDE but is missing from an MSBuild command-line build, which fails silently. SDK-style projects glob their files in and need no call — one made anyway reports that the file is already included. This does not create the file: write it first, then add it. project_remove_file is the reverse. |
 | `project_remove_file` | Remove a file from a project. The file stays on disk — this takes it out of the build, it does not delete it. The reverse of project_add_file. |
 
-## Debug (32)
+## Debug
 
 | Tool | What it does |
 |---|---|
@@ -144,7 +144,7 @@ fifth is high.
 | `debug_step` | Step the paused program by one statement. Direction: 'over' (run the line without entering called methods — default), 'into' (step into the call), 'out' (run to the end of the current method). Waits for the step to land and returns the file/line it reached, so a step over a slow call answers when it is done rather than straight away. If it has not landed within ten seconds — stepping over something that blocks, or the program ran on to a breakpoint — it comes back without a position and says to poll debug_get_state. Only valid in break mode. |
 | `debug_stop` | Stop the current debug session (equivalent to Shift+F5). No-op if not debugging. Non-blocking, so mode comes back null rather than a guess: poll debug_get_state to see the session reach 'design'. |
 
-## IDE (9)
+## IDE
 
 | Tool | What it does |
 |---|---|
