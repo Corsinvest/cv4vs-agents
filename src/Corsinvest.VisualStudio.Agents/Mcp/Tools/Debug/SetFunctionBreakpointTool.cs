@@ -16,6 +16,16 @@ internal sealed class SetFunctionBreakpointArgs
 
     [Description("Optional condition: the breakpoint only triggers when this expression is true.")]
     public string Condition { get; set; }
+
+    [Description("Only break once the function has been entered this many times. Omit (or 0) to " +
+        "break every time.")]
+    public int HitCount { get; set; }
+
+    [AllowedValues("equal", "greaterOrEqual", "multiple")]
+    [Description("How hitCount is read: 'equal' (default) breaks on exactly that call, " +
+        "'greaterOrEqual' on that call and every one after, 'multiple' on every Nth call. " +
+        "Ignored without a hitCount.")]
+    public string HitCountType { get; set; }
 }
 
 /// <summary>MCP tool: add a breakpoint on entry to a function by name (not file/line). Useful
@@ -25,8 +35,9 @@ internal sealed class SetFunctionBreakpointTool : McpTool<SetFunctionBreakpointA
     public override string Name => "debug_set_function_breakpoint";
     public override string Description =>
         "Add a breakpoint that triggers when a function is entered, identified by name " +
-        "(e.g. \"MyClass.Calculate\") instead of a file and line. Optionally pass a condition. " +
-        "Works whether or not a debug session is running. Use when you know the method but not " +
+        "(e.g. \"MyClass.Calculate\") instead of a file and line. Optionally pass a condition, or " +
+        "a hitCount to skip the first calls — the way to stop on the 500th call without a counter " +
+        "to test. Works whether or not a debug session is running. Use when you know the method but not " +
         "the exact line, or to avoid opening the file. debug_set_breakpoint takes a file and " +
         "line instead, debug_list_breakpoints shows what is set, and debug_start begins the " +
         "session that will hit it.";
@@ -35,7 +46,8 @@ internal sealed class SetFunctionBreakpointTool : McpTool<SetFunctionBreakpointA
 
     protected override async Task<object> InvokeAsync(SetFunctionBreakpointArgs args)
     {
-        var r = await IdeDebugService.Instance.SetFunctionBreakpointAsync(args.FunctionName, args.Condition);
+        var r = await IdeDebugService.Instance.SetFunctionBreakpointAsync(
+            args.FunctionName, args.Condition, args.HitCount, args.HitCountType);
         return new { ok = r.Ok, mode = r.Mode, reason = r.Reason };
     }
 }

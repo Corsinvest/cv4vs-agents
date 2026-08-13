@@ -92,6 +92,17 @@ Full description in [docs/architecture.md](docs/architecture.md). What matters w
   `Renamer`, `ICallHierarchyService`). Where a capability isn't available, feature-detect and return
   `supported=false`. Naming: `domain_verb[_object]`, snake_case, domain first (≥3 tools to earn a
   domain, else `ide`); the `mcp__vs__` prefix is added automatically.
+  - **`AlwaysLoad` is for the four that answer "what is the user looking at now"** (the editor
+    selections, open files, diagnostics). Everything else is deferred and costs nothing until the
+    CLI looks it up, which is why the catalogue can grow without slowing anything down — an
+    always-loaded tool costs ~50 tokens of context on *every* turn, so adding a fifth needs a
+    reason of that size.
+  - **Two tools, not one with a mode flag, when the choice changes what works afterwards.**
+    `debug_start` vs `debug_start_no_debugger`: after the second, nothing in `debug_get_*` will
+    ever have anything to report. A flag hides that behind a value the caller set turns ago; two
+    names put the consequence in the choice. Same reason `debug_set_breakpoint` and
+    `debug_set_function_breakpoint` stay apart — there, merging would also cost the schema its
+    `required` fields.
 - **List output must be sorted** — Roslyn collects in parallel and VS collections don't guarantee
   order. Typically file (OrdinalIgnoreCase), then line, then column/name.
 - **Fluent UI components stay pure** — only layout CSS (display, flex, gap, padding, position,

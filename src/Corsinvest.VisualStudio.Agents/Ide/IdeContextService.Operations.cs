@@ -134,10 +134,14 @@ internal sealed partial class IdeContextService
                 // BuildProject needs the active solution-configuration name and the
                 // project's unique name; match by file name or unique name.
                 var config = sb.ActiveConfiguration?.Name;
-                var proj = FindProject(dte, projectName);
+                var proj = FindProjectDeep(dte, projectName, out var available);
                 if (proj == null)
                 {
-                    return new BuildResult { Ok = false, Message = $"Project not found: {projectName}" };
+                    return new BuildResult
+                    {
+                        Ok = false,
+                        Message = $"Project not found: {projectName}. Available: {string.Join(", ", available)}",
+                    };
                 }
                 sb.BuildProject(config, proj.UniqueName, WaitForBuildToFinish: false);
             }
@@ -149,6 +153,12 @@ internal sealed partial class IdeContextService
 
             // LastBuildInfo = number of projects that FAILED (0 = success).
             var failed = sb.LastBuildInfo;
+            // MSBuild updates the Error List after the build state has already gone back to done,
+            // in both directions: a failed build read straight away came back with an empty list,
+            // and a successful one came back still holding the previous build's errors — measured
+            // surviving three green builds in a row, so "it clears itself next time" is not
+            // something to rely on. Waiting for the list to agree with LastBuildInfo covers both.
+            await WaitForErrorListAsync(dte, expectErrors: failed > 0);
             var (errors, skipped) = await CollectBuildErrorsAsync(dte, severity);
             var message = failed == 0 ? "Build succeeded." : $"Build failed: {failed} project(s).";
             // What was filtered out gets a line of its own. Without it a green build reads as
@@ -284,19 +294,35 @@ internal sealed partial class IdeContextService
         }
     }
 
-    private static Project FindProject(DTE dte, string name)
+    /// <summary>Wait for the Error List to catch up with the build that just ended, or give up
+    /// quietly. <paramref name="expectErrors"/> says which way: a failed build waits for errors to
+    /// appear, a successful one for the previous build's to go.
+    /// <para>The build being over is not the same as the list having been updated — MSBuild does
+    /// that after <c>BuildState</c> is already back to done, in both directions. Reading
+    /// immediately gave a failed build an empty list, whose errors then showed up in the NEXT
+    /// build's result; and gave a green build the errors of the one before it, measured surviving
+    /// three green builds in a row.</para>
+    /// <para>Giving up after the cap leaves the old behaviour rather than holding the caller: a
+    /// list that disagrees with the build is wrong, but so is a tool that never answers. A failure
+    /// with genuinely nothing to report — a project that would not load — pays the full cap, which
+    /// is why it is seconds rather than longer.</para></summary>
+    private static async Task WaitForErrorListAsync(DTE dte, bool expectErrors)
     {
-        foreach (Project p in dte.Solution.Projects)
+        for (var i = 0; i < ErrorListPollMaxTries; i++)
         {
-            if (string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(Path.GetFileNameWithoutExtension(p.UniqueName), name, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(p.UniqueName, name, StringComparison.OrdinalIgnoreCase))
-            {
-                return p;
-            }
+            // Errors only, whatever severity the caller asked for: a green build legitimately
+            // leaves warnings behind, and counting those as "not settled yet" would make every
+            // successful build with a warning in it pay the full cap for nothing.
+            var (items, _) = await CollectBuildErrorsAsync(dte, "error");
+            if (items.Count > 0 == expectErrors) { return; }
+            await Task.Delay(ErrorListPollMs);
         }
-        return null;
     }
+
+    private const int ErrorListPollMs = 100;
+    // 3 seconds: the list settles well under one on a real build, and neither direction may hold
+    // the tool longer than that when it never settles at all.
+    private const int ErrorListPollMaxTries = 3000 / ErrorListPollMs;
 
     /// <summary>Read the Error List after a build, down to <paramref name="severity"/>: "error"
     /// (the default), "warning", or "all" — each level meaning that one and everything worse, the
@@ -446,6 +472,187 @@ internal sealed partial class IdeContextService
         return names;
     }
 
+    /// <summary>Add an existing project file to the solution — Solution Explorer's "Add →
+    /// Existing Project". The project file must already exist; this does not scaffold one.</summary>
+    public async Task<(bool Ok, string Project, string Reason)> AddProjectToSolutionAsync(string projectPath)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        if (dte?.Solution == null) { return (false, null, "No solution open."); }
+        if (string.IsNullOrEmpty(projectPath) || !File.Exists(projectPath))
+        {
+            return (false, null, $"Project file not found on disk: {projectPath}");
+        }
+
+        try
+        {
+            var added = dte.Solution.AddFromFile(projectPath, false);
+            dte.Solution.SaveAs(dte.Solution.FullName);
+            return (true, added?.Name, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.AddProjectToSolutionAsync", ex);
+            return (false, null, $"Could not add the project: {ex.Message}");
+        }
+    }
+
+    /// <summary>Remove a project from the solution, leaving its files on disk — the project stops
+    /// being built, it is not deleted.</summary>
+    public async Task<(bool Ok, string Project, string Reason)> RemoveProjectFromSolutionAsync(string projectName)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        if (dte?.Solution == null) { return (false, null, "No solution open."); }
+
+        var proj = FindProjectDeep(dte, projectName, out var available);
+        if (proj == null)
+        {
+            return (false, null, $"Project not found: {projectName}. Available: {string.Join(", ", available)}");
+        }
+
+        try
+        {
+            var name = proj.Name;
+            dte.Solution.Remove(proj);
+            dte.Solution.SaveAs(dte.Solution.FullName);
+            return (true, name, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.RemoveProjectFromSolutionAsync", ex);
+            return (false, proj.Name, $"Could not remove the project: {ex.Message}");
+        }
+    }
+
+    /// <summary>Add an existing file on disk to a project, the way Solution Explorer's "Add →
+    /// Existing Item" does. Only for projects that list their files: an SDK-style project globs
+    /// them in already, and is reported as such rather than being handed a duplicate item.
+    ///
+    /// The file must exist — this includes, it does not create. Writing the file and telling the
+    /// project about it are separate steps, and merging them would give two ways to write a
+    /// file.</summary>
+    public async Task<(bool Ok, string Project, string Reason)> AddFileToProjectAsync(string projectName, string filePath)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        if (dte?.Solution == null) { return (false, null, "No solution open."); }
+
+        // Both arguments are checked before either is reported, so two wrong ones cost one call
+        // rather than two: fixing the file only to be told the project is wrong as well is a
+        // round-trip the caller should not have to pay for.
+        var proj = FindProjectDeep(dte, projectName, out var available);
+        var missingFile = string.IsNullOrEmpty(filePath) || !File.Exists(filePath);
+        if (proj == null || missingFile)
+        {
+            var problems = new List<string>();
+            if (proj == null) { problems.Add($"no project named '{projectName}' (available: {string.Join(", ", available)})"); }
+            if (missingFile) { problems.Add($"no file at '{filePath}' — write it first, then add it"); }
+            return (false, proj?.Name, string.Join("; ", problems));
+        }
+
+        try
+        {
+            if (proj.ProjectItems == null)
+            {
+                return (false, proj.Name, $"'{proj.Name}' has no item list to add to — its project type manages files itself.");
+            }
+            if (IsFileInProject(proj, filePath))
+            {
+                return (true, proj.Name, "Already in the project — nothing to do.");
+            }
+            proj.ProjectItems.AddFromFile(filePath);
+            proj.Save();
+            return (true, proj.Name, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.AddFileToProjectAsync", ex);
+            return (false, proj.Name, $"Could not add the file: {ex.Message}");
+        }
+    }
+
+    /// <summary>Remove a file from a project without deleting it from disk — <c>ProjectItem.Remove</c>,
+    /// not <c>Delete</c>. Taking a file out of the build and destroying it are different intents, and
+    /// only the first is reversible.</summary>
+    public async Task<(bool Ok, string Project, string Reason)> RemoveFileFromProjectAsync(string projectName, string filePath)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
+        if (dte?.Solution == null) { return (false, null, "No solution open."); }
+
+        var proj = FindProjectDeep(dte, projectName, out var available);
+        if (proj == null)
+        {
+            return (false, null, $"Project not found: {projectName}. Available: {string.Join(", ", available)}");
+        }
+
+        try
+        {
+            var item = FindProjectItem(proj.ProjectItems, filePath);
+            if (item == null)
+            {
+                return (false, proj.Name, $"'{filePath}' is not an item of '{proj.Name}'.");
+            }
+            item.Remove();
+            proj.Save();
+            return (true, proj.Name, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.RemoveFileFromProjectAsync", ex);
+            return (false, proj.Name, $"Could not remove the file: {ex.Message}");
+        }
+    }
+
+    /// <summary>Find a project by name, descending into solution folders, and collect the names of
+    /// all real projects for the not-found message. Must be called on the UI thread.</summary>
+    private static Project FindProjectDeep(DTE dte, string name, out List<string> available)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        available = [];
+        Project match = null;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Project p in dte.Solution.Projects)
+        {
+            CollectStartupCandidate(p, name, available, seen, 0, ref match);
+        }
+        available.Sort(StringComparer.OrdinalIgnoreCase);
+        return match;
+    }
+
+    /// <summary>Whether the project already lists this file, by full path. Must be called on the
+    /// UI thread.</summary>
+    private static bool IsFileInProject(Project proj, string filePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        return FindProjectItem(proj.ProjectItems, filePath) != null;
+    }
+
+    /// <summary>Locate a ProjectItem by file path, recursing into folders. Compares the item's own
+    /// FileNames(1) rather than its name, so a file added under a different display name is still
+    /// found. Must be called on the UI thread.</summary>
+    private static ProjectItem FindProjectItem(ProjectItems items, string filePath, int depth = 0)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (items == null || depth > MaxProjectDepth) { return null; }
+        foreach (ProjectItem item in items)
+        {
+            try
+            {
+                for (short i = 1; i <= item.FileCount; i++)
+                {
+                    if (string.Equals(item.FileNames[i], filePath, StringComparison.OrdinalIgnoreCase)) { return item; }
+                }
+            }
+            catch { /* an item that won't report its files can't be the one we want */ }
+
+            var nested = FindProjectItem(item.ProjectItems, filePath, depth + 1);
+            if (nested != null) { return nested; }
+        }
+        return null;
+    }
+
     /// <summary>The platform of a solution configuration, read from its first project context —
     /// SolutionConfiguration exposes no platform of its own. Empty when it has no projects.</summary>
     private static string PlatformOf(SolutionConfiguration c)
@@ -491,8 +698,49 @@ internal sealed partial class IdeContextService
             }
             return;
         }
+        if (IsMiscellaneousFiles(p)) { return; }
         names.Add(p.Name);
-        if (string.Equals(p.Name, target, StringComparison.OrdinalIgnoreCase)) { match = p; }
+        // Three spellings, because a caller has three plausible ones to hand: the display name, the
+        // solution-relative UniqueName, and the project file's own name — which differs from the
+        // display name whenever the .csproj was renamed in the solution but not on disk.
+        if (match == null && NameMatchesProject(p, target)) { match = p; }
+    }
+
+    /// <summary>The Miscellaneous Files node, by either of the two things that identify it. Must be
+    /// called on the UI thread.</summary>
+    private static bool IsMiscellaneousFiles(Project p)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (p.Kind == MiscellaneousFilesKind) { return true; }
+        try
+        {
+            return string.Equals(p.UniqueName, MiscellaneousFilesUniqueName, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            // An unloaded project throws on UniqueName; the kind above already had its say.
+            return false;
+        }
+    }
+
+    /// <summary>Whether a project answers to <paramref name="name"/> — by display name, by
+    /// UniqueName, or by its project file name without the extension.</summary>
+    private static bool NameMatchesProject(Project p, string name)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (string.IsNullOrEmpty(name)) { return false; }
+        if (string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)) { return true; }
+        try
+        {
+            return string.Equals(p.UniqueName, name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Path.GetFileNameWithoutExtension(p.UniqueName), name, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            // An unloaded project throws on UniqueName; the display name above already had its say.
+            OutputWindowLogger.Global.Warn($"[ide] could not read UniqueName of project '{p.Name}': {ex.Message}");
+            return false;
+        }
     }
 
     //  Project structure (MCP getProjectStructure)
@@ -529,6 +777,17 @@ internal sealed partial class IdeContextService
     // no real project, but its ProjectItems may nest sub-projects, so recurse.
     private const string SolutionFolderKind = "{66A26720-8FB5-11D2-AA7E-00C04F688DDE}";
 
+    /// <summary>"Miscellaneous Files" — where VS files anything opened from outside the solution
+    /// (decompiled sources, the temp files a diff runs on). A Project by type, but not one anybody
+    /// can build or add to, so it is no use as an answer to "which project did you mean".
+    ///
+    /// Both are checked because the display name is localised ("File esterni" on an Italian IDE)
+    /// and the kind alone has burnt us once: vsProjectKindMisc ends 671D, one digit from
+    /// vsProjectKindSolutionItems' 6720. Values read from EnvDTE.Constants rather than written
+    /// from memory.</summary>
+    private const string MiscellaneousFilesKind = "{66A2671D-8FB5-11D2-AA7E-00C04F688DDE}";
+    private const string MiscellaneousFilesUniqueName = "<MiscFiles>";
+
     // A solution folder can nest sub-projects, and nothing stops a hand-written .sln from making
     // that graph cyclic. A StackOverflowException is NOT catchable in .NET — it would take down
     // devenv.exe, while every other failure here degrades to a clean JSON-RPC error. The visited
@@ -548,6 +807,10 @@ internal sealed partial class IdeContextService
             }
             return;
         }
+        // Miscellaneous Files holds whatever was opened from outside the solution — a decompiled
+        // source, the temp files behind an open diff. Listing it as a project puts paths under
+        // %TEMP% in an answer about the solution's layout.
+        if (IsMiscellaneousFiles(p)) { return; }
 
         var node = new ProjectNode
         {
@@ -621,10 +884,11 @@ internal sealed partial class IdeContextService
     public async Task<IReadOnlyList<string>> GetWorkspaceFoldersAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
-        var solutionPath = dte?.Solution?.FullName;
-        if (string.IsNullOrEmpty(solutionPath)) { return []; }
-        var folder = Path.GetDirectoryName(solutionPath);
+        // The package already holds the resolved folder and keeps it current through the solution
+        // events — reading DTE.Solution.FullName here would mean re-deriving it, and getting it
+        // wrong wherever that property isn't a .sln path (Open Folder mode hands back the folder
+        // itself, so taking its directory yields the PARENT).
+        var folder = AgentsPackage.Instance?.CurrentSolutionFolder;
         return string.IsNullOrEmpty(folder)
                 ? Array.Empty<string>()
                 : [PathHelpers.LowercaseDrive(folder)];
@@ -702,6 +966,10 @@ internal sealed partial class IdeContextService
 
     //  Diagnostics (MCP getDiagnostics)
 
+    /// <summary>Bucket for Error List entries that name no file. Deliberately not a file: URI, so
+    /// nothing downstream mistakes it for a path it could open.</summary>
+    private const string SolutionLevelUri = "vs-solution:diagnostics";
+
     /// <summary>Read the IDE's Error List in the LSP shape the Claude CLI
     /// expects (DiagnosticFile[] — see <c>parseDiagnosticResult</c>
     /// in the CLI source). Optional URI filter restricts to one file;
@@ -723,8 +991,18 @@ internal sealed partial class IdeContextService
             ErrorItem item;
             try { item = errors.Item(i); } catch { continue; }
             if (item == null) { continue; }
+            // No file name: a project- or solution-level entry (an unresolved reference, a project
+            // that would not load a file). Dropping those lost 14 of 232 items on this solution,
+            // and they are the ones a caller cannot find any other way — file-level diagnostics at
+            // least surface again when that file is opened. They group under a marker URI rather
+            // than an empty one, which the CLI's parseDiagnosticResult would treat as a real path.
             var file = item.FileName ?? string.Empty;
-            if (string.IsNullOrEmpty(file)) { continue; }
+            var fileless = string.IsNullOrEmpty(file);
+            if (fileless)
+            {
+                if (!string.IsNullOrEmpty(fileUriFilter)) { continue; }
+                file = SolutionLevelUri;
+            }
             var severity = SeverityToLsp(item.ErrorLevel);
             if (!string.IsNullOrEmpty(severityFilter)
                 && !severity.Equals(severityFilter, StringComparison.OrdinalIgnoreCase))
@@ -756,7 +1034,7 @@ internal sealed partial class IdeContextService
         var result = new List<DiagnosticFile>(byFile.Count);
         foreach (var kv in byFile)
         {
-            var uri = PathHelpers.ToFileUri(kv.Key);
+            var uri = kv.Key == SolutionLevelUri ? SolutionLevelUri : PathHelpers.ToFileUri(kv.Key);
             if (!string.IsNullOrEmpty(fileUriFilter) && !PathHelpers.UrisEquivalent(fileUriFilter, uri)) { continue; }
             result.Add(new DiagnosticFile { Uri = uri, Diagnostics = kv.Value });
         }
@@ -891,7 +1169,7 @@ internal sealed partial class IdeContextService
     /// registry — we never match by caption (which would risk closing
     /// one of our own panes or any other tab whose title happens to
     /// contain "Claude Code").</summary>
-    public Task CloseTabAsync(string tabName)
+    public Task<bool> CloseTabAsync(string tabName)
         => IdeDiffViewer.Instance.CloseTabAsync(tabName);
 
     /// <summary>Close every diff frame opened by us. Iterates the
@@ -906,14 +1184,14 @@ internal sealed partial class IdeContextService
     /// .editorconfig, analyzer rules, and language-specific formatters.
     /// Opens the file if it isn't already to give the formatter a live
     /// document to act on.</summary>
-    public Task<bool> FormatDocumentAsync(string filePath)
+    public Task<(bool Ok, string Reason)> FormatDocumentAsync(string filePath)
         => RunOnActiveDocumentAsync(filePath, "Edit.FormatDocument");
 
     /// <summary>Run VS's <c>Edit.RemoveAndSort</c> command (organize +
     /// remove unused usings/imports). Same caveat as
     /// <see cref="FormatDocumentAsync"/>: file is opened for the
     /// language service to do its work.</summary>
-    public Task<bool> OrganizeImportsAsync(string filePath)
+    public Task<(bool Ok, string Reason)> OrganizeImportsAsync(string filePath)
         => RunOnActiveDocumentAsync(filePath, "Edit.RemoveAndSort");
 
     /// <summary>Run VS's Code Cleanup on a file (Ctrl+K, Ctrl+E), applying the
@@ -921,7 +1199,7 @@ internal sealed partial class IdeContextService
     /// selectable here: <c>ExecuteCommand</c> always runs the default one.
     /// Which fixers actually exist depends on the language — rich for C#/VB,
     /// little to nothing elsewhere — so success only means the command ran.</summary>
-    public Task<bool> RunCleanupAsync(string filePath)
+    public Task<(bool Ok, string Reason)> RunCleanupAsync(string filePath)
         => RunOnActiveDocumentAsync(filePath, "Edit.CodeCleanup");
 
     /// <summary>True when the path lies inside the open solution's folder. These commands rewrite
@@ -949,28 +1227,36 @@ internal sealed partial class IdeContextService
         }
     }
 
-    private async Task<bool> RunOnActiveDocumentAsync(string filePath, string dteCommand)
+    /// <summary>Run a VS command against one file. Reports why it did not run rather than a bare
+    /// false: Edit.CodeCleanup in particular is refused outright by some installations, and
+    /// "success: false" alone leaves no way to tell that from a wrong path.</summary>
+    private async Task<(bool Ok, string Reason)> RunOnActiveDocumentAsync(string filePath, string dteCommand)
     {
         filePath = PathHelpers.FromFileUri(filePath);
-        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) { return false; }
+        if (string.IsNullOrEmpty(filePath)) { return (false, "No file path given."); }
+        if (!File.Exists(filePath)) { return (false, $"No file at '{filePath}'."); }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }
+        if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return (false, "Visual Studio automation is not available."); }
         if (!IsInsideSolution(dte, filePath))
         {
             OutputWindowLogger.Global.Warn($"[mcp] {dteCommand} refused: '{filePath}' is outside the open solution");
-            return false;
+            return (false, $"'{filePath}' is outside the open solution — these commands rewrite the file, " +
+                           "so they only run on files the solution owns.");
         }
         try
         {
             var window = dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
             window?.Activate();
             dte.ExecuteCommand(dteCommand);
-            return true;
+            return (true, null);
         }
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException($"Ide.{dteCommand}", ex);
-            return false;
+            // VS refuses a command it cannot run right now — no cleanup profile configured, the
+            // language service without that fixer, a modal dialog in the way — and the message it
+            // throws with is the only account of which.
+            return (false, $"{dteCommand} did not run: {ex.Message}");
         }
     }
 }

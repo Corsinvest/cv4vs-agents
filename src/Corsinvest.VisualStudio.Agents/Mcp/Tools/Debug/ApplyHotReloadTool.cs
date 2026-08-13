@@ -16,9 +16,12 @@ internal sealed class ApplyHotReloadTool : McpTool<NoArgs>
     public override string Description =>
         "Apply your pending code edits to the running program WITHOUT restarting it (Hot Reload / " +
         "Edit-and-Continue). Use after editing a file during a debug session to see the change take " +
-        "effect live. Needs an active debug session. Some edits (changing a method signature, " +
-        "adding types, etc.) can't be hot-reloaded and require a restart — check ide_read_output for " +
-        "warnings. Differs from debug_evaluate, which changes values, not code.";
+        "effect live. Needs an active debug session. " +
+        "ok=true means the command ran, NOT that code changed: the IDE exposes no way to ask " +
+        "whether anything was pending, so calling this with nothing to apply succeeds too. What it " +
+        "actually did is in the output — read the 'Hot Reload' pane with ide_read_output. An edit " +
+        "Hot Reload cannot take (a changed method signature, a new type) needs debug_restart. " +
+        "Differs from debug_evaluate, which changes values, not code.";
 
     protected override async Task<object> InvokeAsync(NoArgs args)
     {

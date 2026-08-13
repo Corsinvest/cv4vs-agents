@@ -10,6 +10,7 @@ namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 internal sealed class BuildSolutionArgs
 {
+    [AllowedValues("error", "warning", "all")]
     [Description("How far down the Error List to report: 'error' (default), 'warning' for errors " +
                  "and warnings, or 'all' to include informational items. Each level means that one " +
                  "and everything more severe.")]
@@ -27,9 +28,11 @@ internal sealed class BuildSolutionTool : McpTool<BuildSolutionArgs>
         "unless severity says otherwise; the message says how many items were left out. Prefer " +
         "this to a dotnet build in the shell: it goes through the open IDE, so there is no path to " +
         "resolve and no clash with a debug session. Builds whichever configuration the IDE has " +
-        "active and reports it back as 'configuration' — build_set_configuration changes it. " +
-        "build_project builds one project instead, and ide_read_output has the raw log when the " +
-        "Error List is not enough.";
+        "active and reports it back as 'configuration' — solution_set_configuration changes it. " +
+        "ok/failedProjects/message are the outcome; 'errors' is the Error List, which the IDE " +
+        "updates a moment later and which can hold entries from a debug session as well as from " +
+        "the build. ide_read_output('Build') has the compiler's own log when the two disagree. " +
+        "build_project builds one project instead.";
 
     public override bool Idempotent => true;
 

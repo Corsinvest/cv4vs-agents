@@ -53,35 +53,43 @@ internal sealed class IdeOutputService
         ["Build Order"] = VSConstants.OutputWindowPaneGuid.SortedBuildOutputPane_guid,
     };
 
-    /// <summary>Resolve a built-in pane through IVsOutputWindow, which keys on the GUID rather
-    /// than the localised name and creates the pane when the Output window has never been opened
-    /// (VS builds them lazily). Returns null for panes with no stable GUID — those are found by
-    /// name. Must be called on the UI thread.</summary>
+    /// <summary>Resolve a built-in pane by GUID. The DTE pane object carries its own Guid as a
+    /// string, so the match is on identity and never on the localised display name.
+    ///
+    /// The IVsOutputWindow round-trip is only there for the pane that does not exist yet — VS
+    /// creates them lazily, and CreatePane materialises one without bringing the window forward.
+    /// Returns null for panes with no stable GUID; those are found by name. Must be called on the
+    /// UI thread.</summary>
     private static OutputWindowPane FindWellKnownPane(OutputWindow ow, string paneName)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (!WellKnownPanes.TryGetValue(paneName, out var guid)) { return null; }
 
+        var match = PaneByGuid(ow, guid);
+        if (match != null) { return match; }
+
+        // Not in the collection yet: ask the shell to create it, then look again.
         var vsOut = Package.GetGlobalService(typeof(SVsOutputWindow)) as IVsOutputWindow;
         if (vsOut == null) { return null; }
+        if (vsOut.CreatePane(ref guid, paneName, 1, 0) != VSConstants.S_OK) { return null; }
+        return PaneByGuid(ow, guid);
+    }
 
-        // GetPane fails when the pane doesn't exist yet; CreatePane materialises it without
-        // bringing the window to the front, then GetPane succeeds.
-        if (vsOut.GetPane(ref guid, out var vsPane) != VSConstants.S_OK || vsPane == null)
-        {
-            if (vsOut.CreatePane(ref guid, paneName, 1, 0) != VSConstants.S_OK) { return null; }
-            if (vsOut.GetPane(ref guid, out vsPane) != VSConstants.S_OK || vsPane == null) { return null; }
-        }
-
-        // IVsOutputWindowPane has no text accessor; re-find the same pane through the DTE
-        // collection, which does. Creating it above is what makes it appear there.
-        string localisedName = null;
-        vsPane.GetName(ref localisedName);
-        if (string.IsNullOrEmpty(localisedName)) { return null; }
-
+    /// <summary>The pane whose own Guid property matches, or null. Must be called on the UI
+    /// thread.</summary>
+    private static OutputWindowPane PaneByGuid(OutputWindow ow, Guid guid)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
         foreach (OutputWindowPane p in ow.OutputWindowPanes)
         {
-            if (string.Equals(p.Name, localisedName, StringComparison.Ordinal)) { return p; }
+            try
+            {
+                if (Guid.TryParse(p.Guid, out var paneGuid) && paneGuid == guid) { return p; }
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.Global.Warn($"[ide] could not read the GUID of output pane '{p.Name}': {ex.Message}");
+            }
         }
         return null;
     }
@@ -177,12 +185,19 @@ internal sealed class IdeOutputService
                 };
             }
 
-            var sel = td.Selection;
-            sel.StartOfDocument(false);
-            sel.EndOfDocument(true); // extend selection to the end
-            var text = sel.Text ?? "";
+            // Read through an EditPoint rather than by selecting all: selecting moves the caret and
+            // highlight the user left in that pane, and a read during a fix→build→read loop would
+            // take it away from them on every pass.
+            var text = td.StartPoint.CreateEditPoint().GetText(td.EndPoint) ?? "";
 
-            var allLines = text.Replace("\r\n", "\n").Split('\n');
+            // A pane's text ends with the newline that closed its last line, so Split leaves an
+            // empty element after it. Counted, it made totalLines one too many; tailed, it WAS the
+            // answer — tailLines:1 returned "" instead of the last line anyone had written. An
+            // empty pane is the same artefact at zero: "" splits to one empty element, and the
+            // pane reported a line it did not have.
+            var allLines = text.Length == 0
+                ? []
+                : text.Replace("\r\n", "\n").TrimEnd('\n').Split('\n');
             var total = allLines.Length;
             var truncated = tailLines > 0 && total > tailLines;
             var content = truncated
@@ -228,6 +243,36 @@ internal sealed class IdeOutputService
         {
             OutputWindowLogger.Global.LogException("IdeOutputService.ClearAsync", ex);
             return new OutputResult { Ok = false, Reason = "Failed to clear output pane." };
+        }
+    }
+
+    /// <summary>Write text to a pane, creating a custom one by that name if it doesn't exist —
+    /// the built-in panes are owned by VS, but a caller writing progress or a note of its own
+    /// wants a pane to appear rather than an error. Appends a newline unless the text ends in one,
+    /// so consecutive writes don't run together.</summary>
+    public async Task<OutputResult> WriteAsync(string paneName, string text, bool activate)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var ow = GetOutputWindow();
+            if (ow == null) { return new OutputResult { Ok = false, Reason = "Output window not available." }; }
+
+            var pane = FindPane(ow, paneName, out var panes)
+                ?? ow.OutputWindowPanes.Add(paneName);
+            if (pane == null)
+            {
+                return new OutputResult { Ok = false, AvailablePanes = panes, Reason = $"Could not create output pane '{paneName}'." };
+            }
+
+            pane.OutputString(text?.EndsWith("\n") == true ? text : text + "\n");
+            if (activate) { pane.Activate(); }
+            return new OutputResult { Ok = true, Pane = pane.Name };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeOutputService.WriteAsync", ex);
+            return new OutputResult { Ok = false, Reason = "Failed to write to the output pane." };
         }
     }
 

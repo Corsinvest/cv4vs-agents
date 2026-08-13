@@ -92,6 +92,19 @@ internal static class SchemaBuilder
             }
         }
 
+        // A closed set of values belongs in the schema, not only in the description: the client
+        // rejects a wrong one before the call is made, where prose only asks nicely.
+        var allowed = prop.GetCustomAttribute<AllowedValuesAttribute>()?.Values;
+        if (allowed is { Length: > 0 }) { meta["enum"] = allowed; }
+
+        // Same argument for bounds we would otherwise clamp silently inside the tool.
+        var range = prop.GetCustomAttribute<RangeAttribute>();
+        if (range != null)
+        {
+            meta["minimum"] = range.Minimum;
+            meta["maximum"] = range.Maximum;
+        }
+
         var desc = prop.GetCustomAttribute<DescriptionAttribute>()?.Text;
         if (!string.IsNullOrEmpty(desc)) { meta["description"] = desc; }
 
@@ -150,4 +163,13 @@ internal sealed class DescriptionAttribute(string text) : Attribute
 {
     public string Text { get; } = text;
 
+}
+
+/// <summary>The closed set of values a string argument accepts, emitted as JSON Schema
+/// <c>enum</c>. Ours rather than DataAnnotations' AllowedValues, which .NET Framework 4.8 does not
+/// have.</summary>
+[AttributeUsage(AttributeTargets.Property)]
+internal sealed class AllowedValuesAttribute(params string[] values) : Attribute
+{
+    public string[] Values { get; } = values;
 }

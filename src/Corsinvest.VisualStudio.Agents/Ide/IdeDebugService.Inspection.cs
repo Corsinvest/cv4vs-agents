@@ -22,8 +22,8 @@ internal sealed partial class IdeDebugService
     // Live inspection + stepping: every entry point here requires Break mode.
 
     private const string NotInBreak =
-        "Debugger must be paused (break mode) for this. Poll getDebugState and wait for mode='break' " +
-        "(set a breakpoint then start/continue, or call debugBreak).";
+        "Debugger must be paused (break mode) for this. Poll debug_get_state and wait for mode='break' " +
+        "(set a breakpoint then start/continue, or call debug_break).";
 
     /// <summary>Resume execution from a break (like F5 while paused).</summary>
     public async Task<DebugResult> ContinueAsync()
@@ -38,10 +38,13 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = NotInBreak };
             }
             dbg.Go(false);
+            // This break is over: the next one may land on another thread, and nothing guarantees a
+            // read in between to notice the program ran.
+            _stoppedThreadId = 0;
             // No Mode: Go() returns before the transition, so this reads the state being left. It
             // happened to be right — "run" either way — which is why it outlived the same fix on
             // start/stop/restart/break.
-            return new DebugResult { Ok = true, Reason = "Resumed — poll getDebugState for where it stops next." };
+            return new DebugResult { Ok = true, Reason = "Resumed — poll debug_get_state for where it stops next." };
         }
         catch (Exception ex)
         {
@@ -73,13 +76,26 @@ internal sealed partial class IdeDebugService
                 return new StepResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = NotInBreak };
             }
 
+            // An unknown direction is refused rather than treated as "over". The schema declares
+            // the three values, but nothing enforces it on the way in — and stepping over a line
+            // when the caller asked to step into it is a wrong answer disguised as a right one.
             switch ((direction ?? "over").ToLowerInvariant())
             {
                 case "into": dbg.StepInto(false); break;
                 case "out": dbg.StepOut(false); break;
-                case "over":
-                default: dbg.StepOver(false); break;
+                case "over": dbg.StepOver(false); break;
+                default:
+                    return new StepResult
+                    {
+                        Ok = false,
+                        Mode = ModeToString(dbg.CurrentMode),
+                        Reason = $"Unknown direction '{direction}'. Use 'over', 'into' or 'out'. Nothing was stepped.",
+                    };
             }
+
+            // The step leaves this break: whatever it lands on is a new one, on a thread this has no
+            // say over. Cleared so the wait below records the landing rather than keeping the old id.
+            _stoppedThreadId = 0;
 
             var landed = await WaitForBreakAsync(StepSettleTimeout);
             if (!landed)
@@ -89,7 +105,7 @@ internal sealed partial class IdeDebugService
                 return new StepResult
                 {
                     Ok = true,
-                    Reason = "Step still running after 10s — poll getDebugState for where it stops.",
+                    Reason = "Step still running after 10s — poll debug_get_state for where it stops.",
                 };
             }
 
@@ -101,6 +117,27 @@ internal sealed partial class IdeDebugService
             OutputWindowLogger.Global.LogException("IdeDebugService.StepAsync", ex);
             return new StepResult { Ok = false, Reason = "Failed to step." };
         }
+    }
+
+    /// <summary>The thread the debugger stopped on, or 0 when not stopped. CurrentLocation() answers
+    /// for that one thread — the breakpoint that was hit, or the caret VS brought to the suspension
+    /// point — so only its frames may carry a file and line.
+    ///
+    /// Recorded rather than derived because debug_select_thread moves Debugger.CurrentThread and
+    /// nothing remembers where the break landed. Tracking the thread the CALLER selected instead was
+    /// wrong in the symmetric case: selecting the stopping thread explicitly made it match too, and
+    /// the position was withheld from the one thread entitled to it.</summary>
+    private static int _stoppedThreadId;
+
+    /// <summary>Note which thread a break landed on, and forget it once the program runs again.
+    /// Called from GetDebugger(), so it runs before whatever the entry point came to do — including
+    /// the debug_select_thread that moves CurrentThread away from the answer.
+    /// <para>Only the first read while stopped counts: after that CurrentThread is whatever the
+    /// caller selected, and taking it again would record the choice instead of the break.</para></summary>
+    private static void TrackStoppedThread(Debugger dbg)
+    {
+        if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode) { _stoppedThreadId = 0; return; }
+        if (_stoppedThreadId == 0) { _stoppedThreadId = SafeThreadId(dbg.CurrentThread); }
     }
 
     /// <summary>Wait for the debugger to be back in break, or give up. Yields the UI thread between
@@ -123,6 +160,62 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Call stack of the current thread (only while paused).</summary>
+    /// <summary>The call stack of one thread by id, WITHOUT selecting it. Reading another thread's
+    /// stack otherwise means debug_select_thread first, which moves the debugger's current thread —
+    /// the user's Call Stack and Locals windows follow it, and nothing puts them back.
+    ///
+    /// No frame carries file/line here: EnvDTE reads those from the active document, which follows
+    /// the SELECTED frame, so they would describe the wrong thread entirely.</summary>
+    public async Task<CallStackResult> GetThreadCallStackAsync(int threadId)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new CallStackResult { Ok = false, Reason = "Debugger not available." }; }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new CallStackResult { Ok = false, InBreak = false, Reason = NotInBreak };
+            }
+
+            Thread match = null;
+            var known = new List<int>();
+            foreach (Thread t in dbg.CurrentProgram?.Threads ?? (Threads)null)
+            {
+                known.Add(t.ID);
+                if (t.ID == threadId) { match = t; break; }
+            }
+            if (match == null)
+            {
+                known.Sort();
+                return new CallStackResult
+                {
+                    Ok = false,
+                    InBreak = true,
+                    Reason = $"No thread with id {threadId}. Known ids: {string.Join(", ", known)} — debug_list_threads has the details.",
+                };
+            }
+
+            var frames = new List<StackFrameInfo>();
+            var i = 0;
+            foreach (StackFrame sf in match.StackFrames)
+            {
+                frames.Add(new StackFrameInfo
+                {
+                    Index = i++,
+                    Function = sf.FunctionName,
+                    Module = SafeModule(sf),
+                });
+            }
+            return new CallStackResult { Ok = true, InBreak = true, Frames = [.. frames] };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.GetThreadCallStackAsync", ex);
+            return new CallStackResult { Ok = false, Reason = "Failed to read the thread's call stack." };
+        }
+    }
+
     public async Task<CallStackResult> GetCallStackAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -158,15 +251,24 @@ internal sealed partial class IdeDebugService
                     });
                 }
             }
-            if (currentIndex < 0 && frames.Count > 0) { currentIndex = 0; }
+            // No match means the selected frame belongs to a DIFFERENT thread than the one whose
+            // stack this is. Falling back to frame 0 used to hang the editor's position on it —
+            // a worker blocked in WaitOne came back reading Program.cs:27, which is where the main
+            // thread was paused. Better to mark no frame current than to name the wrong file.
             if (currentIndex >= 0)
             {
                 frames[currentIndex].IsCurrent = true;
-                // The editor shows where the selected frame is, not where execution is paused —
-                // putting this on frame 0 after a select_frame gave it the caller's line.
-                var (file, line) = CurrentLocation();
-                frames[currentIndex].File = file;
-                frames[currentIndex].Line = line;
+                // Only for the thread the debugger stopped on. CurrentLocation answers with the
+                // breakpoint that was hit or the editor's caret, and both belong to that one
+                // thread: asked after a debug_select_thread onto a worker, it named the main
+                // thread's line as if it were the worker's. Other threads get no position —
+                // EnvDTE's StackFrame carries none of its own, and none beats someone else's.
+                if (thread.ID == _stoppedThreadId)
+                {
+                    var (file, line) = CurrentLocation();
+                    frames[currentIndex].File = file;
+                    frames[currentIndex].Line = line;
+                }
             }
             return new CallStackResult { Ok = true, InBreak = true, Frames = [.. frames] };
         }
@@ -208,7 +310,15 @@ internal sealed partial class IdeDebugService
                 if (source == null) { return; }
                 foreach (Expression e in source)
                 {
-                    var hasMembers = e.DataMembers?.Count > 0;
+                    // Top-level statements report `args` in BOTH collections, so it arrived twice —
+                    // once flagged as an argument, once not, which reads as a bug in the tool.
+                    // Arguments are collected first and win: knowing a name is a parameter says
+                    // more than knowing it is in scope.
+                    if (!isArgument && locals.Exists(l => string.Equals(l.Name, e.Name, StringComparison.Ordinal)))
+                    {
+                        continue;
+                    }
+                    var hasMembers = HasRealMembers(e);
                     locals.Add(new LocalInfo
                     {
                         Name = e.Name,
@@ -419,7 +529,18 @@ internal sealed partial class IdeDebugService
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("IdeDebugService.SelectFrameAsync", ex);
-            return new SelectFrameResult { Ok = false, Reason = "Failed to select the frame." };
+            // InBreak stays true: we got past the mode check to reach here, and reporting false
+            // would send the caller off to wait for a break it is already in. VS refuses a frame it
+            // has no symbols for — a runtime or OS frame — and its own message is the only thing
+            // that says which frame and why.
+            return new SelectFrameResult
+            {
+                Ok = false,
+                InBreak = true,
+                Reason = $"Could not select frame {index}: {ex.Message} " +
+                         "Frames with no symbols — runtime and OS ones — cannot be selected; " +
+                         "debug_get_callstack shows which have a module.",
+            };
         }
     }
 
@@ -491,6 +612,23 @@ internal sealed partial class IdeDebugService
                 };
             }
 
+            // A null reference has nothing to walk, but the debugger still hands back the type's
+            // "Static members" node — so this used to answer ok with one phantom entry and no sign
+            // that the object was null. Said outright instead.
+            if (IsNullValue(root.Value))
+            {
+                return new ExpandResult
+                {
+                    Ok = true,
+                    InBreak = true,
+                    Expression = expression,
+                    Value = root.Value,
+                    Type = root.Type,
+                    Members = [],
+                    Reason = $"{expression} is null — nothing to expand.",
+                };
+            }
+
             var truncated = false;
             return new ExpandResult
             {
@@ -551,7 +689,7 @@ internal sealed partial class IdeDebugService
         foreach (Expression m in members)
         {
             if (taken.Count >= maxMembers) { break; }
-            var hasMembers = m.DataMembers?.Count > 0;
+            var hasMembers = HasRealMembers(m);
             taken.Add(new LocalInfo
             {
                 Name = m.Name,
@@ -563,4 +701,24 @@ internal sealed partial class IdeDebugService
         }
         return [.. taken.OrderBy(l => l.Name, StringComparer.Ordinal)];
     }
+
+    /// <summary>Whether an expression has members worth expanding.
+    /// <para>Not just <c>DataMembers.Count > 0</c>: a null reference still reports one member — the
+    /// "Static members" node VS shows for the TYPE — so an InnerException that is null came back
+    /// saying it could be expanded, and expanding it answered with that one phantom entry. Reading
+    /// the value is the only way to tell, since the debugger renders a null reference as the string
+    /// "null" whatever its declared type is.</para></summary>
+    private static bool HasRealMembers(Expression e)
+    {
+        try
+        {
+            if (e.DataMembers == null || e.DataMembers.Count == 0) { return false; }
+            return !IsNullValue(e.Value);
+        }
+        catch (Exception) { return false; }
+    }
+
+    /// <summary>Whether the debugger rendered this value as a null reference.</summary>
+    private static bool IsNullValue(string value)
+        => string.Equals(value, "null", StringComparison.Ordinal);
 }

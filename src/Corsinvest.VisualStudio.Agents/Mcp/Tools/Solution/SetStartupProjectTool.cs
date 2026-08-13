@@ -21,7 +21,7 @@ internal sealed class SetStartupProjectArgs
 /// right one in a multi-project solution.</summary>
 internal sealed class SetStartupProjectTool : McpTool<SetStartupProjectArgs>
 {
-    public override string Name => "build_set_startup_project";
+    public override string Name => "solution_set_startup_project";
     public override string Description =>
         "Set the solution's startup project — the one debug_start (F5) launches. Pass the " +
         "project name; returns ok plus the resolved startup project, or ok=false with " +

@@ -35,9 +35,16 @@ internal sealed class FindReferencesTool : McpTool<FindReferencesArgs>
         "Find all references to a symbol across the solution (semantic, not text search): " +
         "give the file, the 1-based line where the symbol appears, and the symbol name. " +
         "Returns each reference's file/line (usages only — the symbol's own definition is " +
-        "excluded; use nav_go_to_definition for that). The file must belong to a project in the " +
-        "open solution. Returns supported=false for languages this isn't available for, or " +
-        "transiently while the solution is still loading — retry shortly before using grep.";
+        "excluded; use nav_go_to_definition for that). " +
+        "Which symbol it resolves depends on where you point it, and the answer changes with it: " +
+        "asked at a type's declaration it finds every use of the TYPE, but asked at a " +
+        "'new Foo()' it resolves the CONSTRUCTOR and finds only the places Foo is constructed. " +
+        "Point it at the declaration for the full set. The same line can appear twice at " +
+        "different columns for the same reason — a field declaration is a type reference, and the " +
+        "'new()' initialising it is a constructor reference. " +
+        "The file must belong to a project in the open solution. Returns supported=false for " +
+        "languages this isn't available for, or transiently while the solution is still loading — " +
+        "retry shortly before using grep.";
 
     public override bool ReadOnly => true;
     public override bool Idempotent => true;

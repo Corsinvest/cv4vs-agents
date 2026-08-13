@@ -26,13 +26,18 @@ internal sealed class CloseTabTool : McpTool<CloseTabArgs>
         "Close a diff tab this server opened, by the tabName that editor_open_diff was given. It " +
         "does NOT close arbitrary editor tabs: only frames in our own diff registry are touched, " +
         "so the user's documents are safe from it — and closing something they opened is not on " +
-        "offer. Finding no such tab is not an error. Use editor_close_all_diffs to clear them all.";
+        "offer. closed=false says nothing was closed, which covers all three harmless cases: the " +
+        "diff had already gone, the name never matched one of ours, or it names a document the " +
+        "user opened. Not an error either way. Use editor_close_all_diffs to clear them all.";
 
     public override bool Idempotent => true;
 
     protected override async Task<object> InvokeAsync(CloseTabArgs args)
     {
-        await IdeContextService.Instance.CloseTabAsync(args.TabName);
-        return new { success = true };
+        var closed = await IdeContextService.Instance.CloseTabAsync(args.TabName);
+        // success stays for the CLI, which only checks the call did not fail; closed is the answer
+        // to what was asked. Reporting success alone made "closed it" and "that was never mine"
+        // the same reply.
+        return new { success = true, closed };
     }
 }

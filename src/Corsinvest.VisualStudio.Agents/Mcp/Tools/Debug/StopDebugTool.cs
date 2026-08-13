@@ -14,6 +14,10 @@ internal sealed class StopDebugTool : McpTool<NoArgs>
     public override string Name => "debug_stop";
     public override string Description =>
         "Stop the current debug session (equivalent to Shift+F5). No-op if not debugging. " +
+        "What happens to the program depends on how the session began: one that debug_start " +
+        "launched is terminated, while one reached through debug_attach is only detached from and " +
+        "keeps running — Visual Studio does not kill a process it did not start. debug_detach " +
+        "always leaves it running and reports its PID. " +
         "Non-blocking, so mode comes back null rather than a guess: poll debug_get_state to see " +
         "the session reach 'design'.";
 

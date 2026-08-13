@@ -35,6 +35,9 @@ internal sealed partial class IdeNavigationService
         public bool Applied { get; set; }
         public string NewName { get; set; }
         public RenameChange[] ChangedFiles { get; set; } = [];
+        /// <summary>Occurrences rewritten across every file — the sum of ChangedFiles' counts,
+        /// added so a rename that reached forty files does not have to be added up by hand.</summary>
+        public int TotalOccurrences { get; set; }
         /// <summary>Where the rename couldn't be applied cleanly (unresolved conflicts).
         /// Populated only when Applied is false because of conflicts.</summary>
         public NavLocation[] Conflicts { get; set; } = [];
@@ -155,6 +158,16 @@ internal sealed partial class IdeNavigationService
                 changes.Add(new RenameChange { FilePath = path, Count = replacements.Count });
             }
 
+            // DocumentIds comes off a parallel collect, so the order it arrives in is whatever the
+            // scheduler settled on: two identical renames answered with the same files listed
+            // differently. Sorted by path so the result can be compared with the previous one.
+            changes.Sort((a, b) => string.Compare(a.FilePath, b.FilePath, StringComparison.OrdinalIgnoreCase));
+            conflicts.Sort((a, b) =>
+            {
+                var byPath = string.Compare(a.FilePath, b.FilePath, StringComparison.OrdinalIgnoreCase);
+                return byPath != 0 ? byPath : a.Line.CompareTo(b.Line);
+            });
+
             if (conflicts.Count > 0)
             {
                 return new RenameResult
@@ -169,13 +182,27 @@ internal sealed partial class IdeNavigationService
             // 4) Apply the new Solution to the workspace (writes the edits).
             // TryApplyChanges must run on the VS UI thread; the rest of the compute is fine on a
             // background thread, so we switch only for the apply.
+            //
+            // Files that are not open take the change straight to disk — no dirty buffer, no
+            // Ctrl+Z. That is the accepted behaviour, not an oversight. Opening them first was
+            // tried: it does give dirty buffers, but it costs a focused tab per touched file (four
+            // on a small solution-wide rename), and the undo it buys is lost anyway the moment
+            // anything reads one of those files back, because autosave flushes it. Better one
+            // predictable outcome than two that depend on which tabs the user left open.
             var newSolution = VsReflection.GetProp(repl, "NewSolution");
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
             var applied = (bool)VsReflection.Invoke(_workspace, "TryApplyChanges",
                 [newSolution.GetType()], [newSolution]);
             return !applied
                 ? new RenameResult { Supported = true, Applied = false, Reason = "Workspace rejected the changes (files modified meanwhile?)." }
-                : new RenameResult { Supported = true, Applied = true, NewName = newName, ChangedFiles = [.. changes] };
+                : new RenameResult
+                {
+                    Supported = true,
+                    Applied = true,
+                    NewName = newName,
+                    ChangedFiles = [.. changes],
+                    TotalOccurrences = changes.Sum(c => c.Count),
+                };
         }
         catch (Exception ex)
         {
@@ -183,4 +210,5 @@ internal sealed partial class IdeNavigationService
             return new RenameResult { Supported = false, Reason = "Rename failed (internal API changed?)." };
         }
     }
+
 }

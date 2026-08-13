@@ -92,7 +92,7 @@ own.
 
 - **[Two panes](#two-panes-one-extension)** — a rich WebView2 chat and a real terminal (ConPTY),
   both multi-instance and dockable side by side, each on its own session.
-- **[60+ MCP tools](docs/mcp-tools.md)** — Visual Studio's own navigation, references, rename,
+- **[70+ MCP tools](docs/mcp-tools.md)** — Visual Studio's own navigation, references, rename,
   diagnostics, build and the **live debugger** (breakpoints, stepping, locals, evaluate) handed to
   the agent. Not text search over source: the IDE's semantic, running view of your program.
 - **[Review changes in VS's own diff](docs/chat/diff.md)** — every Edit/Write shows as an inline diff,
@@ -429,7 +429,7 @@ among them — are saved as plain JSON under `%LOCALAPPDATA%`. See
 
 ## MCP tools (the IDE, exposed to Claude)
 
-An in-process MCP server hands the agent Visual Studio's own view of your code — **60+ tools** across
+An in-process MCP server hands the agent Visual Studio's own view of your code — **70+ tools** across
 navigation, editing, build, the live debugger and IDE state — with nothing to configure. They are
 language-agnostic by design: wired through Roslyn language services or language-agnostic VS/DTE
 APIs, never a C#/VB-only path. There is no list of supported languages — whatever your Visual

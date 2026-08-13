@@ -212,6 +212,11 @@ internal sealed partial class McpServerHost
         yield return new Tools.SetStartupProjectTool();
         yield return new Tools.SetConfigurationTool();
         yield return new Tools.GetConfigurationTool();
+        yield return new Tools.WriteOutputTool();
+        yield return new Tools.AddFileToProjectTool();
+        yield return new Tools.RemoveFileFromProjectTool();
+        yield return new Tools.AddProjectTool();
+        yield return new Tools.RemoveProjectTool();
         yield return new Tools.GetProjectStructureTool();
         yield return new Tools.GoToDefinitionTool();
         yield return new Tools.FindReferencesTool();
@@ -233,6 +238,11 @@ internal sealed partial class McpServerHost
         yield return new Tools.AttachDebugTool();
         yield return new Tools.ContinueDebugTool();
         yield return new Tools.StepDebugTool();
+        yield return new Tools.ReadConsoleTool();
+        yield return new Tools.SendConsoleTool();
+        yield return new Tools.DetachDebugTool();
+        yield return new Tools.GetExceptionSettingsTool();
+        yield return new Tools.GetThreadCallStackTool();
         yield return new Tools.GetDebugCallStackTool();
         yield return new Tools.GetDebugLocalsTool();
         yield return new Tools.EvaluateExpressionTool();

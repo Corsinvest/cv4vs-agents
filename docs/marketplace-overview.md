@@ -15,7 +15,7 @@
 drive the IDE itself: build the solution, read the errors, step the debugger, follow references
 through the symbol graph, run the tests.
 
-**60+ MCP tools**, in process — so the agent reads the live state Visual Studio already
+**70+ MCP tools**, in process — so the agent reads the live state Visual Studio already
 holds, not the files on disk.
 
 Visual Studio **2022 and 2026**. Free, GPL-3.0.
