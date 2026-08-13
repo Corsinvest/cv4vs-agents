@@ -172,9 +172,6 @@
     <Compile Include="Mcp\Tools\Solution\SetConfigurationTool.cs" />
     <Compile Include="Mcp\Tools\Solution\GetConfigurationTool.cs" />
     <Compile Include="Mcp\Tools\Ide\WriteOutputTool.cs" />
-    <Compile Include="Mcp\Tools\Project\AddFileToProjectTool.cs" />
-    <Compile Include="Mcp\Tools\Project\RemoveFileFromProjectTool.cs" />
-    <Compile Include="Mcp\Tools\Project\RemoveFileFromProjectTool.cs" />
     <Compile Include="Mcp\Tools\Ide\GetProjectStructureTool.cs" />
     <Compile Include="Mcp\Tools\Nav\GoToDefinitionTool.cs" />
     <Compile Include="Mcp\Tools\Nav\FindReferencesTool.cs" />
