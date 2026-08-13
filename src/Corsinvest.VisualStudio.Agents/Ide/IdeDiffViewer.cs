@@ -88,7 +88,11 @@ internal sealed partial class IdeDiffViewer
     {
         oldFilePath = PathHelpers.FromFileUri(oldFilePath);
         newFilePath = PathHelpers.FromFileUri(newFilePath);
-        if (string.IsNullOrEmpty(oldFilePath)) { return new DiffResult { Status = DiffRejected }; }
+        if (string.IsNullOrEmpty(oldFilePath))
+        {
+            OutputWindowLogger.Global.Warn("[diff] no old_file_path given — nothing to compare against");
+            return new DiffResult { Status = DiffRejected };
+        }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
         {
@@ -137,7 +141,11 @@ internal sealed partial class IdeDiffViewer
                 rightIsTemp: false, leftIsTemp: leftIsTemp);
             if (frame == null)
             {
-                // Nothing opened, so nothing will close and clean up after it.
+                // Nothing opened, so nothing will close and clean up after it. Logged because from
+                // the outside this is indistinguishable from a diff the user rejected in a hurry:
+                // both answer DIFF_REJECTED, one after a decision and one without ever asking.
+                OutputWindowLogger.Global.Warn(
+                    $"[diff] the comparison window did not open for '{caption}' — answering rejected without showing anything");
                 try { File.Delete(tempPath); } catch (Exception) { /* best effort */ }
                 return new DiffResult { Status = DiffRejected };
             }
@@ -172,7 +180,9 @@ internal sealed partial class IdeDiffViewer
                 onAccept: () => TryResolve(tempPath, FileSaved),
                 onReject: () => TryResolve(tempPath, TabClosed));
 
+            OutputWindowLogger.Global.Debug(() => $"[diff] waiting on '{registryKey}' — accept, reject or close resolves it");
             var status = await tcs.Task;
+            OutputWindowLogger.Global.Debug(() => $"[diff] '{registryKey}' resolved as {status}");
             // Ship the user's content along with FILE_SAVED so the CLI
             // can apply exactly what they kept (they may have edited the
             // proposed side before saving).
