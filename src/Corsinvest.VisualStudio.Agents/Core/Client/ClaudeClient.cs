@@ -624,6 +624,15 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public Task StopTaskAsync(string taskId)
         => SendControlRequestAsync(ClientMessages.ControlSubtype.StopTask, new { task_id = taskId });
 
+    /// <summary>Detach a running task from the turn: the blocking tool call returns at once and the
+    /// turn carries on, while the task keeps going and reports its end as usual.
+    /// <para>Keyed by tool_use_id, not task_id — that is what the CLI takes here. Omitting it
+    /// detaches every foreground task, which is what Ctrl+B does in the terminal.</para>
+    /// <para>One-way: there is no request that brings a task back into the turn.</para></summary>
+    public Task DetachTaskAsync(string toolUseId = null)
+        => SendControlRequestAsync(ClientMessages.ControlSubtype.DetachTask,
+                                   toolUseId == null ? null : new { tool_use_id = toolUseId });
+
     /// <summary>
     /// Asks the CLI to generate a short AI title for the current session, based on <paramref name="description"/>
     /// (typically the first user prompt). If <paramref name="persist"/> is true the CLI writes the title to the JSONL itself;

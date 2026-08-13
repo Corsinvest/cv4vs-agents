@@ -101,6 +101,9 @@ internal static class BridgeMessages
             public const string GetSubagent = "get_subagent";
             public const string SubagentCancel = "subagent_cancel";
             public const string SubagentCancelAll = "subagent_cancel_all";
+            /// <summary>Detach one sub-agent from the turn, so the turn stops waiting on it. Keyed
+            /// by toolUseId, which is what the CLI takes. One-way.</summary>
+            public const string SubagentDetach = "subagent_detach";
             public const string GetCompactSummary = "get_compact_summary";
         }
 
@@ -187,6 +190,12 @@ internal static class BridgeMessages
             public const string SubagentEnded = "subagent_ended";
             /// <summary>Turn ended — clear all active sub-agents (safety against a missed end).</summary>
             public const string SubagentClear = "subagent_clear";
+            /// <summary>A tracked sub-agent changed: a new status, or a new description. A patch
+            /// on an existing one, not a new task.</summary>
+            public const string SubagentUpdated = "subagent_updated";
+            /// <summary>The ids of the sub-agents currently running in the background. The whole
+            /// set every time — replace, do not merge.</summary>
+            public const string BackgroundTasks = "background_tasks";
             /// <summary>Response to get_compact_summary: a compaction's full summary text.</summary>
             public const string CompactSummaryResult = "compact_summary_result";
         }

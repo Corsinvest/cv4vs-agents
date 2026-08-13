@@ -102,6 +102,16 @@ public class SubagentCancelNotification
     public string TaskId { get; set; }
 }
 
+/// <summary>Detach one running sub-agent from the turn (chat_subagent_detach), so the turn stops
+/// waiting on it while it carries on.
+/// <para>Keyed by ToolUseId rather than TaskId, unlike cancel above: the CLI's request takes the
+/// originating tool_use block, not the task. A sub-agent whose launching row never arrived has
+/// none, and cannot be detached.</para></summary>
+public class SubagentDetachNotification
+{
+    public string ToolUseId { get; set; }
+}
+
 /// <summary>Load a page of transcript history (chat_get_history). beforeOffset = -1 for
 /// the initial page, else the byte offset to page older content above (default -1 so an
 /// absent value behaves like the initial page, matching the old data.Val default).</summary>

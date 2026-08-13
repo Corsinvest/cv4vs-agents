@@ -75,6 +75,10 @@ public interface IClaudeClient : IDisposable
     Task RewindFilesAsync(string userMessageId);
     Task StopTaskAsync(string taskId);
 
+    /// <summary>Detach a running task from the turn — keyed by tool_use_id, unlike the stop above.
+    /// One-way: nothing brings it back.</summary>
+    Task DetachTaskAsync(string toolUseId = null);
+
     /// <summary>Generates a short AI title for the session via CLI (uses Haiku under the hood).</summary>
     Task<string> GenerateSessionTitleAsync(string description, bool persist = false);
 
