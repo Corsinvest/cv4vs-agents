@@ -352,11 +352,24 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     /// <summary>The open folder's root, when VS has one open directly (no .sln) instead of a
     /// solution — null otherwise. <see cref="IVsFolderWorkspaceService"/> is MEF-exported, not a
-    /// COM service, hence going through <see cref="IComponentModel"/> rather than GetService.</summary>
+    /// COM service, hence going through <see cref="IComponentModel"/> rather than GetService.
+    /// Called directly from <see cref="InitializeAsync"/> (no enclosing try/catch there), so this
+    /// degrades to null on its own rather than fail package activation over an edition/workload
+    /// combination where the Open Folder assemblies turn out to be missing.</summary>
     private static string CurrentFolderWorkspaceLocation()
-        => (Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel)
-            ?.GetService<IVsFolderWorkspaceService>()
-            ?.CurrentWorkspace?.Location;
+    {
+        try
+        {
+            return (Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel)
+                ?.GetService<IVsFolderWorkspaceService>()
+                ?.CurrentWorkspace?.Location;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Pkg.CurrentFolderWorkspaceLocation", ex);
+            return null;
+        }
+    }
 
     protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
     {
