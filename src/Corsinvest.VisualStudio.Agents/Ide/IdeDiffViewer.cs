@@ -92,7 +92,14 @@ internal sealed partial class IdeDiffViewer
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
         {
-            var tempPath = WriteTemp(newFileContents, Path.GetFileName(newFilePath ?? oldFilePath));
+            // Match the original's line endings before writing. The proposed content arrives with
+            // whatever the CLI put in the JSON — LF, as a rule — and a CRLF file diffed against it
+            // makes VS open a MODAL "inconsistent line endings, normalise?" dialog. That blocks the
+            // UI thread, and with it every other MCP tool, until somebody answers: a diff that
+            // looked hung for ten minutes was this box waiting behind the editor.
+            var tempPath = WriteTemp(
+                MatchLineEndings(newFileContents, oldFilePath),
+                Path.GetFileName(newFilePath ?? oldFilePath));
 
             var isNewFile = !File.Exists(oldFilePath);
             var leftPath = oldFilePath;
@@ -128,7 +135,12 @@ internal sealed partial class IdeDiffViewer
                 leftLabel: Path.GetFileName(oldFilePath) + (isNewFile ? " (new file)" : " (current)"),
                 rightLabel: Path.GetFileName(newFilePath ?? oldFilePath) + " (proposed)",
                 rightIsTemp: false, leftIsTemp: leftIsTemp);
-            if (frame == null) { return new DiffResult { Status = DiffRejected }; }
+            if (frame == null)
+            {
+                // Nothing opened, so nothing will close and clean up after it.
+                try { File.Delete(tempPath); } catch (Exception) { /* best effort */ }
+                return new DiffResult { Status = DiffRejected };
+            }
 
             // Track the frame in the global registry so close_tab and closeAllDiffTabs can
             // address it by identity: matching on the caption also hits our own panes, whose
@@ -178,10 +190,16 @@ internal sealed partial class IdeDiffViewer
             try { pending.Frame?.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave); }
             catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.AutoClose", ex); }
 
-            // Cleanup pending + open-frames registration (file is
-            // auto-removed by VS since we marked it temporary).
             _pending.Remove(tempPath);
             if (pending.RegistryKey != null) { _openFrames.Remove(pending.RegistryKey); }
+
+            // Delete the proposed side ourselves. It is NOT passed as VSDIFFOPT_RightFileIsTemporary
+            // — that would have VS remove it the moment the window closes, and the read above needs
+            // it alive to carry the user's edits back. The comment here used to claim VS cleaned it
+            // up; fourteen claude-diff-* files in %TEMP%, six from one afternoon, said otherwise.
+            try { File.Delete(tempPath); }
+            catch (Exception ex) { OutputWindowLogger.Global.Warn($"[diff] could not delete the temp file: {ex.Message}"); }
+
             return new DiffResult { Status = status, SavedContent = saved };
         }
         catch (Exception ex)
@@ -404,6 +422,34 @@ internal sealed partial class IdeDiffViewer
         var temp = Path.Combine(Path.GetTempPath(), $"claude-diff-{Guid.NewGuid():N}-{namedFor}");
         File.WriteAllText(temp, content ?? string.Empty);
         return temp;
+    }
+
+    /// <summary>Rewrite <paramref name="content"/> with the line endings <paramref name="modelPath"/>
+    /// uses, so the two sides of a diff agree and VS has nothing to ask about.
+    /// <para>Decided by counting: a file with a mixture — and they exist — gets whichever it has
+    /// more of, which is the same answer the editor's own status bar gives. A file with no line
+    /// break at all, or one we cannot read, leaves the content alone: guessing CRLF on a one-line
+    /// file would be a change made for nothing.</para></summary>
+    private static string MatchLineEndings(string content, string modelPath)
+    {
+        if (string.IsNullOrEmpty(content)) { return content; }
+
+        string model;
+        try { model = File.Exists(modelPath) ? File.ReadAllText(modelPath) : null; }
+        catch (Exception) { return content; }
+        if (string.IsNullOrEmpty(model)) { return content; }
+
+        var crlf = 0;
+        var lf = 0;
+        for (var i = 0; i < model.Length; i++)
+        {
+            if (model[i] != '\n') { continue; }
+            if (i > 0 && model[i - 1] == '\r') { crlf++; } else { lf++; }
+        }
+        if (crlf == 0 && lf == 0) { return content; }
+
+        var normalized = content.Replace("\r\n", "\n");
+        return crlf >= lf ? normalized.Replace("\n", "\r\n") : normalized;
     }
 
     //  Pending-diff state (listener types live in IdeDiffViewer.Listeners.cs)
