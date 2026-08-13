@@ -34,7 +34,7 @@ internal sealed class FormatDocumentTool : McpTool<FormatDocumentArgs>
 
     protected override async Task<object> InvokeAsync(FormatDocumentArgs args)
     {
-        var ok = await IdeContextService.Instance.FormatDocumentAsync(args.FilePath);
-        return new { success = ok };
+        var (ok, reason) = await IdeContextService.Instance.FormatDocumentAsync(args.FilePath);
+        return ok ? (object)new { success = true } : new { success = false, reason };
     }
 }

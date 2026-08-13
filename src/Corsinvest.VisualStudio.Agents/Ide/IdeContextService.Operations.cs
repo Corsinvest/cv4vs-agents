@@ -1148,14 +1148,14 @@ internal sealed partial class IdeContextService
     /// .editorconfig, analyzer rules, and language-specific formatters.
     /// Opens the file if it isn't already to give the formatter a live
     /// document to act on.</summary>
-    public Task<bool> FormatDocumentAsync(string filePath)
+    public Task<(bool Ok, string Reason)> FormatDocumentAsync(string filePath)
         => RunOnActiveDocumentAsync(filePath, "Edit.FormatDocument");
 
     /// <summary>Run VS's <c>Edit.RemoveAndSort</c> command (organize +
     /// remove unused usings/imports). Same caveat as
     /// <see cref="FormatDocumentAsync"/>: file is opened for the
     /// language service to do its work.</summary>
-    public Task<bool> OrganizeImportsAsync(string filePath)
+    public Task<(bool Ok, string Reason)> OrganizeImportsAsync(string filePath)
         => RunOnActiveDocumentAsync(filePath, "Edit.RemoveAndSort");
 
     /// <summary>Run VS's Code Cleanup on a file (Ctrl+K, Ctrl+E), applying the
@@ -1163,7 +1163,7 @@ internal sealed partial class IdeContextService
     /// selectable here: <c>ExecuteCommand</c> always runs the default one.
     /// Which fixers actually exist depends on the language — rich for C#/VB,
     /// little to nothing elsewhere — so success only means the command ran.</summary>
-    public Task<bool> RunCleanupAsync(string filePath)
+    public Task<(bool Ok, string Reason)> RunCleanupAsync(string filePath)
         => RunOnActiveDocumentAsync(filePath, "Edit.CodeCleanup");
 
     /// <summary>True when the path lies inside the open solution's folder. These commands rewrite
@@ -1191,28 +1191,36 @@ internal sealed partial class IdeContextService
         }
     }
 
-    private async Task<bool> RunOnActiveDocumentAsync(string filePath, string dteCommand)
+    /// <summary>Run a VS command against one file. Reports why it did not run rather than a bare
+    /// false: Edit.CodeCleanup in particular is refused outright by some installations, and
+    /// "success: false" alone leaves no way to tell that from a wrong path.</summary>
+    private async Task<(bool Ok, string Reason)> RunOnActiveDocumentAsync(string filePath, string dteCommand)
     {
         filePath = PathHelpers.FromFileUri(filePath);
-        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) { return false; }
+        if (string.IsNullOrEmpty(filePath)) { return (false, "No file path given."); }
+        if (!File.Exists(filePath)) { return (false, $"No file at '{filePath}'."); }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }
+        if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return (false, "Visual Studio automation is not available."); }
         if (!IsInsideSolution(dte, filePath))
         {
             OutputWindowLogger.Global.Warn($"[mcp] {dteCommand} refused: '{filePath}' is outside the open solution");
-            return false;
+            return (false, $"'{filePath}' is outside the open solution — these commands rewrite the file, " +
+                           "so they only run on files the solution owns.");
         }
         try
         {
             var window = dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
             window?.Activate();
             dte.ExecuteCommand(dteCommand);
-            return true;
+            return (true, null);
         }
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException($"Ide.{dteCommand}", ex);
-            return false;
+            // VS refuses a command it cannot run right now — no cleanup profile configured, the
+            // language service without that fixer, a modal dialog in the way — and the message it
+            // throws with is the only account of which.
+            return (false, $"{dteCommand} did not run: {ex.Message}");
         }
     }
 }

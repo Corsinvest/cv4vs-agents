@@ -32,7 +32,7 @@ internal sealed class OrganizeImportsTool : McpTool<OrganizeImportsArgs>
 
     protected override async Task<object> InvokeAsync(OrganizeImportsArgs args)
     {
-        var ok = await IdeContextService.Instance.OrganizeImportsAsync(args.FilePath);
-        return new { success = ok };
+        var (ok, reason) = await IdeContextService.Instance.OrganizeImportsAsync(args.FilePath);
+        return ok ? (object)new { success = true } : new { success = false, reason };
     }
 }

@@ -254,6 +254,15 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>The reverse of <see cref="HitCountRule"/>, for reporting a breakpoint back.</summary>
+    private static string HitCountTypeToString(dbgHitCountType type) => type switch
+    {
+        dbgHitCountType.dbgHitCountTypeEqual => "equal",
+        dbgHitCountType.dbgHitCountTypeGreaterOrEqual => "greaterOrEqual",
+        dbgHitCountType.dbgHitCountTypeMultiple => "multiple",
+        _ => null,
+    };
+
     /// <summary>Translate a hit-count rule into the EnvDTE pair. A count of 0 means "break every
     /// time", which is <c>None</c> — the type is ignored then, so an unknown name is only reported
     /// when a count was actually given.</summary>
@@ -440,6 +449,10 @@ internal sealed partial class IdeDebugService
                     Function = isFile ? null : bp.FunctionName,
                     Condition = string.IsNullOrEmpty(bp.Condition) ? null : bp.Condition,
                     Enabled = bp.Enabled,
+                    HitCount = bp.HitCountTarget,
+                    HitCountType = bp.HitCountTarget > 0 ? HitCountTypeToString(bp.HitCountType) : null,
+                    // Breakpoint2 only; a plain Breakpoint has no count of its own.
+                    CurrentHits = (bp as EnvDTE80.Breakpoint2)?.CurrentHits ?? 0,
                 });
             }
             // Stable order so the model can compare across calls (file bps by file/line,

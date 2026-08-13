@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Ide;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
@@ -36,6 +37,10 @@ internal sealed class ActivateOutputTool : McpTool<ActivateOutputArgs>
     {
         var r = await IdeOutputService.Instance.ActivateAsync(args.Pane);
         if (!r.Ok) { return new { ok = false, reason = r.Reason, availablePanes = r.AvailablePanes }; }
-        return new { ok = true, pane = r.Pane };
+        // Same contract as ide_read_output: say which name was asked for when the IDE's own differs,
+        // and say nothing when it doesn't.
+        return string.Equals(r.Pane, args.Pane, StringComparison.OrdinalIgnoreCase)
+            ? new { ok = true, pane = r.Pane }
+            : (object)new { ok = true, pane = r.Pane, requestedPane = args.Pane };
     }
 }

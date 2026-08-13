@@ -492,7 +492,18 @@ internal sealed partial class IdeDebugService
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("IdeDebugService.SelectFrameAsync", ex);
-            return new SelectFrameResult { Ok = false, Reason = "Failed to select the frame." };
+            // InBreak stays true: we got past the mode check to reach here, and reporting false
+            // would send the caller off to wait for a break it is already in. VS refuses a frame it
+            // has no symbols for — a runtime or OS frame — and its own message is the only thing
+            // that says which frame and why.
+            return new SelectFrameResult
+            {
+                Ok = false,
+                InBreak = true,
+                Reason = $"Could not select frame {index}: {ex.Message} " +
+                         "Frames with no symbols — runtime and OS ones — cannot be selected; " +
+                         "debug_get_callstack shows which have a module.",
+            };
         }
     }
 

@@ -36,7 +36,7 @@ internal sealed class RunCleanupTool : McpTool<RunCleanupArgs>
 
     protected override async Task<object> InvokeAsync(RunCleanupArgs args)
     {
-        var ok = await IdeContextService.Instance.RunCleanupAsync(args.FilePath);
-        return new { success = ok };
+        var (ok, reason) = await IdeContextService.Instance.RunCleanupAsync(args.FilePath);
+        return ok ? (object)new { success = true } : new { success = false, reason };
     }
 }

@@ -40,6 +40,16 @@ internal sealed partial class IdeDebugService
         public string Function { get; set; }   // set for function breakpoints
         public string Condition { get; set; }  // null when unconditional
         public bool Enabled { get; set; }
+
+        /// <summary>The hit-count rule, when there is one. Without these a breakpoint set to stop on
+        /// the 500th pass reads exactly like one that stops every time — and "why did it not break"
+        /// is the question this list exists to answer.</summary>
+        public int HitCount { get; set; }
+        public string HitCountType { get; set; }   // null unless HitCount is set
+
+        /// <summary>Times it has been hit in this session — the difference between "never reached"
+        /// and "reached, and the condition said no".</summary>
+        public int CurrentHits { get; set; }
     }
 
     public sealed class BreakpointsResult
