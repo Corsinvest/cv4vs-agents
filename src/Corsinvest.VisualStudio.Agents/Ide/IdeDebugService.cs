@@ -244,10 +244,28 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>Translate a hit-count rule into the EnvDTE pair. A count of 0 means "break every
+    /// time", which is <c>None</c> — the type is ignored then, so an unknown name is only reported
+    /// when a count was actually given.</summary>
+    private static (dbgHitCountType Type, string Error) HitCountRule(int hitCount, string hitCountType)
+    {
+        if (hitCount <= 0) { return (dbgHitCountType.dbgHitCountTypeNone, null); }
+        return (hitCountType ?? "equal") switch
+        {
+            "equal" => (dbgHitCountType.dbgHitCountTypeEqual, null),
+            "greaterOrEqual" => (dbgHitCountType.dbgHitCountTypeGreaterOrEqual, null),
+            "multiple" => (dbgHitCountType.dbgHitCountTypeMultiple, null),
+            _ => (dbgHitCountType.dbgHitCountTypeNone,
+                  $"Unknown hitCountType '{hitCountType}'. Use 'equal', 'greaterOrEqual' or 'multiple'."),
+        };
+    }
+
     /// <summary>Add a breakpoint at <paramref name="filePath"/>:<paramref name="line"/>, with an
-    /// optional condition (true-expression). Works in any mode. Returns Ok even if VS can't bind
-    /// it yet (it binds when the code loads), as long as the request was accepted.</summary>
-    public async Task<DebugResult> SetBreakpointAsync(string filePath, int line, string condition)
+    /// optional condition (true-expression) and hit-count rule. Works in any mode. Returns Ok even
+    /// if VS can't bind it yet (it binds when the code loads), as long as the request was
+    /// accepted.</summary>
+    public async Task<DebugResult> SetBreakpointAsync(string filePath, int line, string condition,
+                                                      int hitCount = 0, string hitCountType = null)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
@@ -264,6 +282,9 @@ internal sealed partial class IdeDebugService
             // DataCount default is 1 per the API (0 is invalid). Language is left empty: VS binds from
             // the project/symbols at bind time (works for a closed file too, and for any language),
             // so an extension→name guess added no value and only covered a handful of languages.
+            var (hitType, hitError) = HitCountRule(hitCount, hitCountType);
+            if (hitError != null) { return new DebugResult { Ok = false, Reason = hitError }; }
+
             var hasCond = !string.IsNullOrWhiteSpace(condition);
             dbg.Breakpoints.Add(
                 Function: "",
@@ -276,8 +297,8 @@ internal sealed partial class IdeDebugService
                 Data: "",
                 DataCount: 1,
                 Address: "",
-                HitCount: 0,
-                HitCountType: dbgHitCountType.dbgHitCountTypeNone);
+                HitCount: Math.Max(0, hitCount),
+                HitCountType: hitType);
             return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
         }
         catch (Exception ex)
@@ -290,7 +311,8 @@ internal sealed partial class IdeDebugService
     /// <summary>Add a breakpoint that triggers on entry to a function by NAME (e.g.
     /// "MyNamespace.MyClass.Calculate"), instead of a file/line — handy when you know the method
     /// but not the line. Optional condition. Works in any mode.</summary>
-    public async Task<DebugResult> SetFunctionBreakpointAsync(string functionName, string condition)
+    public async Task<DebugResult> SetFunctionBreakpointAsync(string functionName, string condition,
+                                                              int hitCount = 0, string hitCountType = null)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
@@ -301,6 +323,9 @@ internal sealed partial class IdeDebugService
             {
                 return new DebugResult { Ok = false, Reason = "functionName is required." };
             }
+
+            var (hitType, hitError) = HitCountRule(hitCount, hitCountType);
+            if (hitError != null) { return new DebugResult { Ok = false, Reason = hitError }; }
 
             var hasCond = !string.IsNullOrWhiteSpace(condition);
             dbg.Breakpoints.Add(
@@ -314,8 +339,8 @@ internal sealed partial class IdeDebugService
                 Data: "",
                 DataCount: 1, // API default; 0 is invalid
                 Address: "",
-                HitCount: 0,
-                HitCountType: dbgHitCountType.dbgHitCountTypeNone);
+                HitCount: Math.Max(0, hitCount),
+                HitCountType: hitType);
             return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
         }
         catch (Exception ex)
@@ -653,7 +678,23 @@ internal sealed partial class IdeDebugService
 
             EnvDTE90.ExceptionSetting exItem;
             try { exItem = exGroup.Item(exceptionName); }
-            catch (Exception) { return new DebugResult { Ok = false, Reason = $"Exception '{exceptionName}' not found in group '{groupName}'. Pass the fully-qualified type name." }; }
+            catch (Exception)
+            {
+                // VS only lists a well-known subset, so a correctly-named application exception is
+                // absent — which is exactly the type worth breaking on. NewException adds the
+                // setting, the same as typing it into the Exception Settings window.
+                try { exItem = exGroup.NewException(exceptionName, 0); }
+                catch (Exception ex)
+                {
+                    OutputWindowLogger.Global.Warn($"[debug] could not add exception setting '{exceptionName}': {ex.Message}");
+                    return new DebugResult
+                    {
+                        Ok = false,
+                        Reason = $"Exception '{exceptionName}' is not in group '{groupName}' and could not be added. " +
+                                 "Pass the fully-qualified type name, and check the group is the right one.",
+                    };
+                }
+            }
 
             exGroup.SetBreakWhenThrown(breakWhenThrown, exItem);
             return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = $"Break-when-thrown {(breakWhenThrown ? "on" : "off")} for {exceptionName}." };
