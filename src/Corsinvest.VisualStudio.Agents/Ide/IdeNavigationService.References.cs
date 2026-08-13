@@ -120,22 +120,30 @@ internal sealed partial class IdeNavigationService
     /// 1-based <paramref name="line"/> of <paramref name="filePath"/>. Multi-language; never
     /// throws (degrades to Supported=false). The file must be in the open solution.</summary>
     public Task<NavResult> GetReferencesAsync(string filePath, int line, string symbolName, CancellationToken ct)
-        => RunFindUsagesAsync(_findReferencesAsync, "references", filePath, line, symbolName, ct);
+        => RunFindUsagesAsync(() => _findReferencesAsync, "references", filePath, line, symbolName, ct);
 
     /// <summary>Find all implementations of the symbol on that line — concrete classes/members that
     /// implement an interface, or override a virtual/abstract member (Go To Implementation).
     /// Different from references (callers) and definition (declaration). Multi-language; never
     /// throws. Uses the sibling FindImplementationsAsync of the same IFindUsagesService.</summary>
     public Task<NavResult> GetImplementationsAsync(string filePath, int line, string symbolName, CancellationToken ct)
-        => RunFindUsagesAsync(_findImplementationsAsync, "implementations", filePath, line, symbolName, ct);
+        => RunFindUsagesAsync(() => _findImplementationsAsync, "implementations", filePath, line, symbolName, ct);
 
     /// <summary>Shared driver for the two IFindUsagesService entry points (FindReferencesAsync /
     /// FindImplementationsAsync): both stream SourceReferenceItems into the buffered context, which
-    /// we then read back. <paramref name="kind"/> only flavours the messages.</summary>
+    /// we then read back. <paramref name="kind"/> only flavours the messages.
+    /// <para>The method arrives as a function, not as a MethodInfo, because the field it comes from
+    /// is filled by the probe below. Passed directly it was read at the call site — before the probe
+    /// had run — so the very first find-references of a session saw null and answered "the internal
+    /// API has moved", then worked ever after. A one-off failure that read like a version problem
+    /// and cleared itself on retry, which is the worst way for it to look.</para></summary>
     private async Task<NavResult> RunFindUsagesAsync(
-        MethodInfo findMethod, string kind, string filePath, int line, string symbolName, CancellationToken ct)
+        Func<MethodInfo> getFindMethod, string kind, string filePath, int line, string symbolName, CancellationToken ct)
     {
-        if (!EnsureRefsProbed() || findMethod == null)
+        // Probe first: it is what fills the field getFindMethod reads.
+        var probed = EnsureRefsProbed();
+        var findMethod = getFindMethod();
+        if (!probed || findMethod == null)
         {
             // Not an edition limit, whatever it reads like: this is Roslyn's own service, and it
             // ships with every edition. Saying where it broke beats implying the IDE cannot do it.
