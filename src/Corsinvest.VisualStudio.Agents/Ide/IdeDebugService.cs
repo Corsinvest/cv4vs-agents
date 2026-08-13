@@ -100,7 +100,17 @@ internal sealed partial class IdeDebugService
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("IdeDebugService.StartAsync", ex);
-            return new DebugResult { Ok = false, Reason = "Failed to start debugging." };
+            // VS refuses to start while it is still building or saving, and answers with a message
+            // that says which — swallowing it left the caller with "Failed to start debugging" and
+            // no idea that trying again a second later would work. The mode goes back too: on
+            // failure it is the real one, not the "pending" a start that took would report.
+            return new DebugResult
+            {
+                Ok = false,
+                Mode = ModeToString(GetDebugger()?.CurrentMode ?? dbgDebugMode.dbgDesignMode),
+                Reason = $"Could not start debugging: {ex.Message} " +
+                         "Visual Studio refuses this while a build or a save is still in flight — retrying shortly usually works.",
+            };
         }
     }
 
@@ -602,21 +612,25 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = true, Mode = "design", Reason = "Not debugging." };
             }
 
-            var detached = 0;
+            // Collected before detaching: once it is off the debugger's list, the pid is gone with
+            // it — and the pid is the whole point of the message, since the process outlives the
+            // session and whoever wants it gone has to find it by hand otherwise.
+            var pids = new List<int>();
             foreach (EnvDTE.Process p in dbg.DebuggedProcesses)
             {
                 // Process2.Detach takes WaitForBreakOrEnd; false returns as soon as the request is
                 // in, like every other transition here.
-                if (p is EnvDTE80.Process2 p2) { p2.Detach(false); detached++; }
+                if (p is EnvDTE80.Process2 p2) { pids.Add(p2.ProcessID); p2.Detach(false); }
             }
 
-            return detached == 0
+            return pids.Count == 0
                 ? new DebugResult { Ok = false, Reason = "No debugged process could be detached." }
                 : new DebugResult
                 {
                     Ok = true,
                     Mode = PendingMode,
-                    Reason = $"Detached from {detached} process(es); they keep running. " +
+                    Reason = $"Detached from PID {string.Join(", ", pids)} — still running, and no longer under the " +
+                             "debugger, so stopping now means killing the process. " +
                              "Poll debug_get_state for the mode — the transition is not immediate.",
                 };
         }

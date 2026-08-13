@@ -662,6 +662,10 @@ internal sealed partial class IdeContextService
             }
             return;
         }
+        // Miscellaneous Files is the bucket VS puts anything opened from outside the solution into —
+        // decompiled sources, temp diff files. It answers to Project, but nothing can be built or
+        // added to it, so offering its name as a choice only wastes a call.
+        if (p.Kind == MiscellaneousFilesKind) { return; }
         names.Add(p.Name);
         // Three spellings, because a caller has three plausible ones to hand: the display name, the
         // solution-relative UniqueName, and the project file's own name — which differs from the
@@ -722,6 +726,10 @@ internal sealed partial class IdeContextService
     // vsProjectKindSolutionItems / vsProjectKindMisc: a "solution folder" — it has
     // no real project, but its ProjectItems may nest sub-projects, so recurse.
     private const string SolutionFolderKind = "{66A26720-8FB5-11D2-AA7E-00C04F688DDE}";
+
+    /// <summary>"Miscellaneous Files" — where VS files anything opened from outside the solution.
+    /// A Project by type, but not one anybody can build or add to.</summary>
+    private const string MiscellaneousFilesKind = "{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}";
 
     // A solution folder can nest sub-projects, and nothing stops a hand-written .sln from making
     // that graph cyclic. A StackOverflowException is NOT catchable in .NET — it would take down
