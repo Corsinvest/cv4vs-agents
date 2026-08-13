@@ -28,7 +28,7 @@ internal sealed class BuildSolutionTool : McpTool<BuildSolutionArgs>
         "unless severity says otherwise; the message says how many items were left out. Prefer " +
         "this to a dotnet build in the shell: it goes through the open IDE, so there is no path to " +
         "resolve and no clash with a debug session. Builds whichever configuration the IDE has " +
-        "active and reports it back as 'configuration' — build_set_configuration changes it. " +
+        "active and reports it back as 'configuration' — solution_set_configuration changes it. " +
         "build_project builds one project instead, and ide_read_output has the raw log when the " +
         "Error List is not enough.";
 

@@ -240,6 +240,9 @@ internal sealed partial class McpServerHost
         yield return new Tools.StepDebugTool();
         yield return new Tools.ReadConsoleTool();
         yield return new Tools.SendConsoleTool();
+        yield return new Tools.DetachDebugTool();
+        yield return new Tools.GetExceptionSettingsTool();
+        yield return new Tools.GetThreadCallStackTool();
         yield return new Tools.GetDebugCallStackTool();
         yield return new Tools.GetDebugLocalsTool();
         yield return new Tools.EvaluateExpressionTool();

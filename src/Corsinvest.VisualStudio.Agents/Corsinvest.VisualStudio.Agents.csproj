@@ -169,8 +169,8 @@
     <Compile Include="Mcp\Tools\Solution\RemoveProjectTool.cs" />
     <Compile Include="Mcp\Tools\Project\AddFileToProjectTool.cs" />
     <Compile Include="Mcp\Tools\Project\RemoveFileFromProjectTool.cs" />
-    <Compile Include="Mcp\Tools\Build\SetConfigurationTool.cs" />
-    <Compile Include="Mcp\Tools\Build\GetConfigurationTool.cs" />
+    <Compile Include="Mcp\Tools\Solution\SetConfigurationTool.cs" />
+    <Compile Include="Mcp\Tools\Solution\GetConfigurationTool.cs" />
     <Compile Include="Mcp\Tools\Ide\WriteOutputTool.cs" />
     <Compile Include="Mcp\Tools\Project\AddFileToProjectTool.cs" />
     <Compile Include="Mcp\Tools\Project\RemoveFileFromProjectTool.cs" />
@@ -198,6 +198,9 @@
     <Compile Include="Mcp\Tools\Debug\StepDebugTool.cs" />
     <Compile Include="Mcp\Tools\Debug\ReadConsoleTool.cs" />
     <Compile Include="Mcp\Tools\Debug\SendConsoleTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\DetachDebugTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\GetExceptionSettingsTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\GetThreadCallStackTool.cs" />
     <Compile Include="Mcp\Tools\Debug\GetDebugCallStackTool.cs" />
     <Compile Include="Mcp\Tools\Debug\GetDebugLocalsTool.cs" />
     <Compile Include="Mcp\Tools\Debug\EvaluateExpressionTool.cs" />

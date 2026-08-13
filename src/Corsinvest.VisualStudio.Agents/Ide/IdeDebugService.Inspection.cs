@@ -123,6 +123,62 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Call stack of the current thread (only while paused).</summary>
+    /// <summary>The call stack of one thread by id, WITHOUT selecting it. Reading another thread's
+    /// stack otherwise means debug_select_thread first, which moves the debugger's current thread —
+    /// the user's Call Stack and Locals windows follow it, and nothing puts them back.
+    ///
+    /// No frame carries file/line here: EnvDTE reads those from the active document, which follows
+    /// the SELECTED frame, so they would describe the wrong thread entirely.</summary>
+    public async Task<CallStackResult> GetThreadCallStackAsync(int threadId)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new CallStackResult { Ok = false, Reason = "Debugger not available." }; }
+            if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode)
+            {
+                return new CallStackResult { Ok = false, InBreak = false, Reason = NotInBreak };
+            }
+
+            Thread match = null;
+            var known = new List<int>();
+            foreach (Thread t in dbg.CurrentProgram?.Threads ?? (Threads)null)
+            {
+                known.Add(t.ID);
+                if (t.ID == threadId) { match = t; break; }
+            }
+            if (match == null)
+            {
+                known.Sort();
+                return new CallStackResult
+                {
+                    Ok = false,
+                    InBreak = true,
+                    Reason = $"No thread with id {threadId}. Known ids: {string.Join(", ", known)} — debug_list_threads has the details.",
+                };
+            }
+
+            var frames = new List<StackFrameInfo>();
+            var i = 0;
+            foreach (StackFrame sf in match.StackFrames)
+            {
+                frames.Add(new StackFrameInfo
+                {
+                    Index = i++,
+                    Function = sf.FunctionName,
+                    Module = SafeModule(sf),
+                });
+            }
+            return new CallStackResult { Ok = true, InBreak = true, Frames = [.. frames] };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.GetThreadCallStackAsync", ex);
+            return new CallStackResult { Ok = false, Reason = "Failed to read the thread's call stack." };
+        }
+    }
+
     public async Task<CallStackResult> GetCallStackAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();

@@ -117,7 +117,7 @@ internal sealed class JsonRpcDispatcher
         "line), nav_find_references and nav_go_to_definition over grep (the symbol graph, not " +
         "text), ide_get_diagnostics over parsing build output.\n\n" +
         "Things that are easy to get wrong: build tools compile whichever configuration the IDE " +
-        "has active and report it back — build_set_configuration changes it, and the change stays " +
+        "has active and report it back — solution_set_configuration changes it, and the change stays " +
         "for the user's next manual build. Debug inspection needs the debugger paused; " +
         "debug_get_state says whether it is. Output panes are listed under the IDE's display " +
         "language, but the built-in ones also answer to their English names.";

@@ -587,6 +587,92 @@ internal sealed partial class IdeDebugService
 
     /// <summary>Start the program without the debugger (Ctrl+F5). If projectName is given, sets
     /// it as the startup project first via IdeContextService.</summary>
+    /// <summary>Detach the debugger and leave the program running — Debug ▸ Detach All. Different
+    /// from <see cref="StopAsync"/>, which kills the process: after attaching to something the
+    /// user did not launch, killing it is rarely what was meant.</summary>
+    public async Task<DebugResult> DetachAsync()
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
+            if (dbg.CurrentMode == dbgDebugMode.dbgDesignMode)
+            {
+                return new DebugResult { Ok = true, Mode = "design", Reason = "Not debugging." };
+            }
+
+            var detached = 0;
+            foreach (EnvDTE.Process p in dbg.DebuggedProcesses)
+            {
+                // Process2.Detach takes WaitForBreakOrEnd; false returns as soon as the request is
+                // in, like every other transition here.
+                if (p is EnvDTE80.Process2 p2) { p2.Detach(false); detached++; }
+            }
+
+            return detached == 0
+                ? new DebugResult { Ok = false, Reason = "No debugged process could be detached." }
+                : new DebugResult
+                {
+                    Ok = true,
+                    Reason = $"Detached from {detached} process(es); they keep running. " +
+                             "Poll debug_get_state for the mode — the transition is not immediate.",
+                };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.DetachAsync", ex);
+            return new DebugResult { Ok = false, Reason = "Failed to detach." };
+        }
+    }
+
+    /// <summary>Which exceptions are set to break, per group. Reports only what was changed from
+    /// the group default — the full list runs to thousands of types and says nothing.</summary>
+    public async Task<(bool Ok, List<ExceptionBreakSetting> Settings, string Reason)> GetExceptionSettingsAsync(string group)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            var groups = (dbg as EnvDTE90.Debugger3)?.ExceptionGroups;
+            if (groups == null)
+            {
+                return (false, null, "Exception settings not available on this debugger.");
+            }
+
+            var wanted = string.IsNullOrWhiteSpace(group) ? null : group;
+            var list = new List<ExceptionBreakSetting>();
+            foreach (EnvDTE90.ExceptionSettings gs in groups)
+            {
+                if (wanted != null && !string.Equals(gs.Name, wanted, StringComparison.OrdinalIgnoreCase)) { continue; }
+                foreach (EnvDTE90.ExceptionSetting s in gs)
+                {
+                    try
+                    {
+                        if (!s.BreakWhenThrown) { continue; }
+                        list.Add(new ExceptionBreakSetting { Group = gs.Name, Name = s.Name, BreakWhenThrown = true });
+                    }
+                    catch (Exception ex)
+                    {
+                        OutputWindowLogger.Global.Warn($"[debug] could not read an exception setting in '{gs.Name}': {ex.Message}");
+                    }
+                }
+            }
+
+            list.Sort((a, b) =>
+            {
+                var g = string.Compare(a.Group, b.Group, StringComparison.OrdinalIgnoreCase);
+                return g != 0 ? g : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+            });
+            return (true, list, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.GetExceptionSettingsAsync", ex);
+            return (false, null, "Failed to read exception settings.");
+        }
+    }
+
     public async Task<(bool Ok, string Reason)> StartWithoutDebuggingAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();

@@ -31,7 +31,7 @@ internal sealed class BuildProjectTool : McpTool<BuildProjectArgs>
         "succeeded plus what the Error List holds (file, line, description, severity). Blocks " +
         "until done. Reports errors only unless severity says otherwise; the message says how " +
         "many items were left out, and 'configuration' says which one it built — " +
-        "build_set_configuration changes it. The name is a project name, not a path — " +
+        "solution_set_configuration changes it. The name is a project name, not a path — " +
         "ide_get_project_structure lists them. build_solution builds everything instead.";
 
     public override bool Idempotent => true;

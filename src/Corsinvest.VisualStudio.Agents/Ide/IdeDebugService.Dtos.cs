@@ -194,4 +194,12 @@ internal sealed partial class IdeDebugService
         public int Line { get; set; }
         public string Reason { get; set; }
     }
+
+    /// <summary>One exception type the debugger is set to break on.</summary>
+    public sealed class ExceptionBreakSetting
+    {
+        public string Group { get; set; }
+        public string Name { get; set; }
+        public bool BreakWhenThrown { get; set; }
+    }
 }
