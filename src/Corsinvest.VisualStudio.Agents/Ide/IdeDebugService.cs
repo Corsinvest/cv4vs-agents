@@ -809,7 +809,12 @@ internal sealed partial class IdeDebugService
     private static bool IsCommandAvailable(DTE dte, string commandName)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        try { return dte?.Commands?.Item(commandName, -1)?.IsAvailable ?? false; }
+        try
+        {
+            var available = dte?.Commands?.Item(commandName, -1)?.IsAvailable ?? false;
+            OutputWindowLogger.Global.Debug(() => $"[debug] '{commandName}' IsAvailable={available}");
+            return available;
+        }
         catch (Exception ex)
         {
             OutputWindowLogger.Global.Warn($"[debug] could not read the state of '{commandName}': {ex.Message}");
