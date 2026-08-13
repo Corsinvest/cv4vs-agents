@@ -5,7 +5,7 @@ Visual Studio's own understanding of your code to the agent: navigation, referen
 diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
 running view of your program.
 
-The 66 tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 68 tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -95,7 +95,7 @@ and it accepts assignments.
 | `project_add_file` | Add a file that already exists on disk to a project, as Solution Explorer's 'Add → Existing Item' does. Needed for project types that list every file explicitly: there, a .cs written to disk compiles in the IDE but is missing from an MSBuild command-line build, which fails silently. SDK-style projects glob their files in and need no call — one made anyway reports that the file is already included. This does not create the file: write it first, then add it. project_remove_file is the reverse. |
 | `project_remove_file` | Remove a file from a project. The file stays on disk — this takes it out of the build, it does not delete it. The reverse of project_add_file. |
 
-## Debug (27)
+## Debug (29)
 
 | Tool | What it does |
 |---|---|
@@ -103,6 +103,8 @@ and it accepts assignments.
 | `debug_attach` | Attach the debugger to an already-running local process, by pid (preferred) or by a unique name substring. Use this instead of debug_start when the app is already running (web server, service, console). After attaching, the session is running — use debug_break or set a breakpoint to pause it, then inspect. Find the pid with debug_list_processes. |
 | `debug_break` | Pause the running program immediately (Debug > Break All), without waiting for a breakpoint, so the call stack and variables can be inspected. Non-blocking, so mode comes back null rather than a guess: poll debug_get_state to see it reach 'break' and learn where it stopped. Only valid while running. |
 | `debug_clear_breakpoints` | Remove all breakpoints in the solution — every one, including any the user set themselves, so prefer debug_remove_breakpoint when you only mean to undo your own. debug_list_breakpoints shows what is there first. Works in any mode. |
+| `debug_console_read` | Read what a debugged console application has written to its console window. This is the program's real stdout, which is NOT in the Debug output pane — that pane only carries Debug.WriteLine, so a Console.WriteLine prompt is invisible there. Use it to see what the program printed, and to find out whether it is sitting at a prompt waiting for input; debug_console_send answers it. Needs a running debug session and a project that has a console — a GUI or web app has none. |
+| `debug_console_send` | Send input to a debugged console application, as if it were typed at its console. Use it when debug_console_read shows the program waiting at a prompt — a Console.ReadLine that nobody answers blocks the debug session indefinitely. Pass 'text' (Enter is appended unless newline is false), or 'key' for a single named key; 'ctrl+c' and 'ctrl+break' interrupt the program rather than typing a character. Needs a running debug session and a project that has a console. |
 | `debug_continue` | Resume execution from a paused (break) state (like F5 while paused). The program runs until the next breakpoint or it exits. Non-blocking, so mode comes back null rather than a guess: poll debug_get_state to see where it stops next. Only valid in break mode. |
 | `debug_evaluate` | Evaluate an expression in the current stack frame while paused (break mode), like the Watch window: pass something like 'order.Items.Count'. Returns the value and type. Note: evaluating can call property getters/methods in the program, so it may have side-effects — prefer reading fields/properties. You can also assign (e.g. 'x = 5') to change a variable's value while paused, which is how you fix a value and retry a block with debug_set_next_statement. To see inside an object rather than read one field, debug_expand walks its members in a single call. Reads the frame debug_select_frame chose. Only valid in break mode. |
 | `debug_expand` | Expand an expression into its members while paused (break mode), so an object comes back as a tree instead of just a type name: pass 'order', 'order.Customer', 'this', or '$exception' when stopped on a throw (that one carries InnerException and the stack — expand it at depth 1, it is a framework type and depth 3 buries the message in static members). This is what debug_get_locals points at when it reports hasMembers=true — one call instead of a debug_evaluate per field. hasMembers on a returned node means there is more below it: expand that path to see it. truncated=true means a level had more members than maxMembers and what came back is a prefix. Note: reading a property runs its getter in the program, so this can have side-effects. Only valid in break mode. |

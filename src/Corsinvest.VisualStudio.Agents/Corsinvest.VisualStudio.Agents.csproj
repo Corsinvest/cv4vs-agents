@@ -129,6 +129,7 @@
     <Compile Include="Ide\IdeDebugService.Dtos.cs" />
     <Compile Include="Ide\IdeDebugService.Inspection.cs" />
     <Compile Include="Ide\IdeDebugService.Common.cs" />
+    <Compile Include="Ide\IdeConsoleService.cs" />
     <Compile Include="Ide\IdeOutputService.cs" />
     <Compile Include="Ide\IdeNavigationService.cs" />
     <Compile Include="Ide\IdeNavigationService.Definition.cs" />
@@ -195,6 +196,8 @@
     <Compile Include="Mcp\Tools\Debug\AttachDebugTool.cs" />
     <Compile Include="Mcp\Tools\Debug\ContinueDebugTool.cs" />
     <Compile Include="Mcp\Tools\Debug\StepDebugTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\ReadConsoleTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\SendConsoleTool.cs" />
     <Compile Include="Mcp\Tools\Debug\GetDebugCallStackTool.cs" />
     <Compile Include="Mcp\Tools\Debug\GetDebugLocalsTool.cs" />
     <Compile Include="Mcp\Tools\Debug\EvaluateExpressionTool.cs" />
