@@ -29,10 +29,9 @@ internal sealed class BuildSolutionTool : McpTool<BuildSolutionArgs>
         "this to a dotnet build in the shell: it goes through the open IDE, so there is no path to " +
         "resolve and no clash with a debug session. Builds whichever configuration the IDE has " +
         "active and reports it back as 'configuration' — solution_set_configuration changes it. " +
-        "Trust ok/failedProjects/message for the outcome rather than the length of 'errors': the " +
-        "Error List is filled asynchronously, so a failed build can answer before its errors have " +
-        "landed, and an entry left by an earlier build or a debug session can outlive a build that " +
-        "succeeded. ide_read_output('Build') has the compiler's own log when the list disagrees. " +
+        "ok/failedProjects/message are the outcome; 'errors' is the Error List, which the IDE " +
+        "updates a moment later and which can hold entries from a debug session as well as from " +
+        "the build. ide_read_output('Build') has the compiler's own log when the two disagree. " +
         "build_project builds one project instead.";
 
     public override bool Idempotent => true;

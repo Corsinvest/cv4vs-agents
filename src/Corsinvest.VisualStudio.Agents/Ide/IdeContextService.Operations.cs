@@ -153,10 +153,12 @@ internal sealed partial class IdeContextService
 
             // LastBuildInfo = number of projects that FAILED (0 = success).
             var failed = sb.LastBuildInfo;
-            // MSBuild hands its errors to the Error List after the build state has already gone
-            // back to done, so reading straight away caught a failed build with an empty list —
-            // and the next build then found the previous one's errors sitting there.
-            if (failed > 0) { await WaitForErrorListAsync(dte, severity); }
+            // MSBuild updates the Error List after the build state has already gone back to done,
+            // in both directions: a failed build read straight away came back with an empty list,
+            // and a successful one came back still holding the previous build's errors — measured
+            // surviving three green builds in a row, so "it clears itself next time" is not
+            // something to rely on. Waiting for the list to agree with LastBuildInfo covers both.
+            await WaitForErrorListAsync(dte, expectErrors: failed > 0);
             var (errors, skipped) = await CollectBuildErrorsAsync(dte, severity);
             var message = failed == 0 ? "Build succeeded." : $"Build failed: {failed} project(s).";
             // What was filtered out gets a line of its own. Without it a green build reads as
@@ -292,27 +294,34 @@ internal sealed partial class IdeContextService
         }
     }
 
-    /// <summary>Wait for a failed build's errors to reach the Error List, or give up quietly.
-    /// <para>The build being over is not the same as its diagnostics having arrived: MSBuild
-    /// forwards them after <c>BuildState</c> is already back to done. Reading immediately returned
-    /// an empty list for a build that had just failed, which then turned up in the NEXT build's
-    /// result — errors reported against the wrong build, and none against the right one.</para>
-    /// <para>Only called when the build failed, so a green build pays nothing. Giving up after the
-    /// cap leaves the old behaviour rather than holding the caller: an empty list is wrong, but so
-    /// is a tool that never answers.</para></summary>
-    private static async Task WaitForErrorListAsync(DTE dte, string severity)
+    /// <summary>Wait for the Error List to catch up with the build that just ended, or give up
+    /// quietly. <paramref name="expectErrors"/> says which way: a failed build waits for errors to
+    /// appear, a successful one for the previous build's to go.
+    /// <para>The build being over is not the same as the list having been updated — MSBuild does
+    /// that after <c>BuildState</c> is already back to done, in both directions. Reading
+    /// immediately gave a failed build an empty list, whose errors then showed up in the NEXT
+    /// build's result; and gave a green build the errors of the one before it, measured surviving
+    /// three green builds in a row.</para>
+    /// <para>Giving up after the cap leaves the old behaviour rather than holding the caller: a
+    /// list that disagrees with the build is wrong, but so is a tool that never answers. A failure
+    /// with genuinely nothing to report — a project that would not load — pays the full cap, which
+    /// is why it is seconds rather than longer.</para></summary>
+    private static async Task WaitForErrorListAsync(DTE dte, bool expectErrors)
     {
         for (var i = 0; i < ErrorListPollMaxTries; i++)
         {
-            var (items, skipped) = await CollectBuildErrorsAsync(dte, severity);
-            if (items.Count > 0 || skipped > 0) { return; }
+            // Errors only, whatever severity the caller asked for: a green build legitimately
+            // leaves warnings behind, and counting those as "not settled yet" would make every
+            // successful build with a warning in it pay the full cap for nothing.
+            var (items, _) = await CollectBuildErrorsAsync(dte, "error");
+            if (items.Count > 0 == expectErrors) { return; }
             await Task.Delay(ErrorListPollMs);
         }
     }
 
     private const int ErrorListPollMs = 100;
-    // 3 seconds: the list fills in well under one on a real build, and a failure with genuinely
-    // nothing in it (a project that could not be loaded at all) must not hold the tool.
+    // 3 seconds: the list settles well under one on a real build, and neither direction may hold
+    // the tool longer than that when it never settles at all.
     private const int ErrorListPollMaxTries = 3000 / ErrorListPollMs;
 
     /// <summary>Read the Error List after a build, down to <paramref name="severity"/>: "error"
