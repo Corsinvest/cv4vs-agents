@@ -223,7 +223,10 @@ internal sealed partial class IdeDebugService
                     });
                 }
             }
-            if (currentIndex < 0 && frames.Count > 0) { currentIndex = 0; }
+            // No match means the selected frame belongs to a DIFFERENT thread than the one whose
+            // stack this is. Falling back to frame 0 used to hang the editor's position on it —
+            // a worker blocked in WaitOne came back reading Program.cs:27, which is where the main
+            // thread was paused. Better to mark no frame current than to name the wrong file.
             if (currentIndex >= 0)
             {
                 frames[currentIndex].IsCurrent = true;

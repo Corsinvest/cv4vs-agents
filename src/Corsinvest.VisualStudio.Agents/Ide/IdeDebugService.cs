@@ -254,6 +254,38 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>How many times a breakpoint has actually been hit.
+    ///
+    /// The breakpoint in <c>Debugger.Breakpoints</c> is the one that was *asked for*; when the
+    /// debugger binds it, the hits land on the bound children it creates — one per address the
+    /// location resolved to. Reading the parent's own CurrentHits therefore answers 0 for a
+    /// breakpoint that has been hit five hundred times, which is worse than not reporting it at
+    /// all. Must be called on the UI thread.</summary>
+    private static int CountHits(Breakpoint bp)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (bp is not EnvDTE80.Breakpoint2 bp2) { return 0; }
+        try
+        {
+            var own = bp2.CurrentHits;
+            if (bp2.Children == null || bp2.Children.Count == 0) { return own; }
+
+            var total = 0;
+            foreach (Breakpoint child in bp2.Children)
+            {
+                if (child is EnvDTE80.Breakpoint2 c) { total += c.CurrentHits; }
+            }
+            // The parent counts too on some bindings; take whichever knows more rather than
+            // double-counting an unbound one.
+            return Math.Max(own, total);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[debug] could not read the hit count of a breakpoint: {ex.Message}");
+            return 0;
+        }
+    }
+
     /// <summary>The reverse of <see cref="HitCountRule"/>, for reporting a breakpoint back.</summary>
     private static string HitCountTypeToString(dbgHitCountType type) => type switch
     {
@@ -449,10 +481,12 @@ internal sealed partial class IdeDebugService
                     Function = isFile ? null : bp.FunctionName,
                     Condition = string.IsNullOrEmpty(bp.Condition) ? null : bp.Condition,
                     Enabled = bp.Enabled,
-                    HitCount = bp.HitCountTarget,
-                    HitCountType = bp.HitCountTarget > 0 ? HitCountTypeToString(bp.HitCountType) : null,
-                    // Breakpoint2 only; a plain Breakpoint has no count of its own.
-                    CurrentHits = (bp as EnvDTE80.Breakpoint2)?.CurrentHits ?? 0,
+                    // HitCountTarget is only meaningful with a type set: a breakpoint that was never
+                    // given a rule still reports a target of 1, which read as "break on the first
+                    // hit" when nobody had asked for one.
+                    HitCount = bp.HitCountType == dbgHitCountType.dbgHitCountTypeNone ? 0 : bp.HitCountTarget,
+                    HitCountType = HitCountTypeToString(bp.HitCountType),
+                    CurrentHits = CountHits(bp),
                 });
             }
             // Stable order so the model can compare across calls (file bps by file/line,

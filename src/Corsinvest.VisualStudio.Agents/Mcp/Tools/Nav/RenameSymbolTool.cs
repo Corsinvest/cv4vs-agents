@@ -37,13 +37,15 @@ internal sealed class RenameSymbolTool : McpTool<RenameSymbolArgs>
     public override string Description =>
         "Rename a symbol everywhere it's used across the solution (semantic, not text " +
         "replace): give the file, the 1-based line where the symbol appears, its current " +
-        "name, and the new name. Updates the definition and all references and writes the " +
-        "changes directly. Atomic — if the rename would cause unresolved conflicts nothing " +
-        "is applied. The file must belong to a project in the open solution. Returns " +
-        "supported=false for languages this isn't available for; applied=false (with a " +
-        "reason) when the symbol can't be renamed or the new name is invalid. It writes to every " +
-        "file it touches, so ask before running it — nav_find_references shows the same set " +
-        "without changing anything.";
+        "name, and the new name. Updates the definition and every reference. Atomic — if the " +
+        "rename would cause unresolved conflicts nothing is applied. " +
+        "The edits land in the IDE's buffers and are NOT written to disk: the files stay dirty " +
+        "until document_save, and a build or a shell command reading them still sees the old " +
+        "name. Ctrl+Z in the editor undoes the whole rename while it is unsaved. " +
+        "The file must belong to a project in the open solution. Returns supported=false for " +
+        "languages this isn't available for; applied=false (with a reason) when the symbol can't " +
+        "be renamed or the new name is invalid. It changes every file it touches, so ask before " +
+        "running it — nav_find_references shows the same set without changing anything.";
 
     public override bool Destructive => true;
 
