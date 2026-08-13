@@ -191,6 +191,13 @@ internal sealed class IdeOutputService
             var text = td.StartPoint.CreateEditPoint().GetText(td.EndPoint) ?? "";
 
             var allLines = text.Replace("\r\n", "\n").Split('\n');
+            // A pane's text ends with the newline that closed its last line, so Split leaves an
+            // empty element after it. Counted, it made totalLines one too many; tailed, it WAS the
+            // answer — tailLines:1 returned "" instead of the last line anyone had written.
+            if (allLines.Length > 1 && allLines[allLines.Length - 1].Length == 0)
+            {
+                allLines = [.. allLines.Take(allLines.Length - 1)];
+            }
             var total = allLines.Length;
             var truncated = tailLines > 0 && total > tailLines;
             var content = truncated
