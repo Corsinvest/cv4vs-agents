@@ -190,14 +190,14 @@ internal sealed class IdeOutputService
             // take it away from them on every pass.
             var text = td.StartPoint.CreateEditPoint().GetText(td.EndPoint) ?? "";
 
-            var allLines = text.Replace("\r\n", "\n").Split('\n');
             // A pane's text ends with the newline that closed its last line, so Split leaves an
             // empty element after it. Counted, it made totalLines one too many; tailed, it WAS the
-            // answer — tailLines:1 returned "" instead of the last line anyone had written.
-            if (allLines.Length > 1 && allLines[allLines.Length - 1].Length == 0)
-            {
-                allLines = [.. allLines.Take(allLines.Length - 1)];
-            }
+            // answer — tailLines:1 returned "" instead of the last line anyone had written. An
+            // empty pane is the same artefact at zero: "" splits to one empty element, and the
+            // pane reported a line it did not have.
+            var allLines = text.Length == 0
+                ? []
+                : text.Replace("\r\n", "\n").TrimEnd('\n').Split('\n');
             var total = allLines.Length;
             var truncated = tailLines > 0 && total > tailLines;
             var content = truncated
