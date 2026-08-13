@@ -242,18 +242,25 @@ internal sealed partial class IdeDiffViewer
         catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.ShowFromContents", ex); }
     }
 
-    /// <summary>Close a specific diff frame by tab name. Lookup is
-    /// against the open-frames registry — never against VS Window
-    /// captions. Returns silently if the name doesn't match anything
-    /// we opened.</summary>
-    public async Task CloseTabAsync(string tabName)
+    /// <summary>Close a specific diff frame by tab name. Lookup is against the open-frames
+    /// registry — never against VS window captions.
+    /// <para>Returns whether a frame was actually closed. It used to return nothing and the tool
+    /// answered success either way, so "closed it", "that one is already gone" and "that is the
+    /// user's own document, not mine to touch" were the same reply.</para></summary>
+    public async Task<bool> CloseTabAsync(string tabName)
     {
-        if (string.IsNullOrEmpty(tabName)) { return; }
+        if (string.IsNullOrEmpty(tabName)) { return false; }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (!_openFrames.TryGetValue(tabName, out var frame)) { return; }
+        if (!_openFrames.TryGetValue(tabName, out var frame)) { return false; }
         try { frame.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave); }
-        catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.CloseTab", ex); }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDiffViewer.CloseTab", ex);
+            _openFrames.Remove(tabName);
+            return false;
+        }
         _openFrames.Remove(tabName);
+        return true;
     }
 
     /// <summary>Close every diff frame currently in our open-frames

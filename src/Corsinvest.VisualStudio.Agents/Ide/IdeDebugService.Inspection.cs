@@ -318,7 +318,7 @@ internal sealed partial class IdeDebugService
                     {
                         continue;
                     }
-                    var hasMembers = e.DataMembers?.Count > 0;
+                    var hasMembers = HasRealMembers(e);
                     locals.Add(new LocalInfo
                     {
                         Name = e.Name,
@@ -612,6 +612,23 @@ internal sealed partial class IdeDebugService
                 };
             }
 
+            // A null reference has nothing to walk, but the debugger still hands back the type's
+            // "Static members" node — so this used to answer ok with one phantom entry and no sign
+            // that the object was null. Said outright instead.
+            if (IsNullValue(root.Value))
+            {
+                return new ExpandResult
+                {
+                    Ok = true,
+                    InBreak = true,
+                    Expression = expression,
+                    Value = root.Value,
+                    Type = root.Type,
+                    Members = [],
+                    Reason = $"{expression} is null — nothing to expand.",
+                };
+            }
+
             var truncated = false;
             return new ExpandResult
             {
@@ -672,7 +689,7 @@ internal sealed partial class IdeDebugService
         foreach (Expression m in members)
         {
             if (taken.Count >= maxMembers) { break; }
-            var hasMembers = m.DataMembers?.Count > 0;
+            var hasMembers = HasRealMembers(m);
             taken.Add(new LocalInfo
             {
                 Name = m.Name,
@@ -684,4 +701,24 @@ internal sealed partial class IdeDebugService
         }
         return [.. taken.OrderBy(l => l.Name, StringComparer.Ordinal)];
     }
+
+    /// <summary>Whether an expression has members worth expanding.
+    /// <para>Not just <c>DataMembers.Count > 0</c>: a null reference still reports one member — the
+    /// "Static members" node VS shows for the TYPE — so an InnerException that is null came back
+    /// saying it could be expanded, and expanding it answered with that one phantom entry. Reading
+    /// the value is the only way to tell, since the debugger renders a null reference as the string
+    /// "null" whatever its declared type is.</para></summary>
+    private static bool HasRealMembers(Expression e)
+    {
+        try
+        {
+            if (e.DataMembers == null || e.DataMembers.Count == 0) { return false; }
+            return !IsNullValue(e.Value);
+        }
+        catch (Exception) { return false; }
+    }
+
+    /// <summary>Whether the debugger rendered this value as a null reference.</summary>
+    private static bool IsNullValue(string value)
+        => string.Equals(value, "null", StringComparison.Ordinal);
 }

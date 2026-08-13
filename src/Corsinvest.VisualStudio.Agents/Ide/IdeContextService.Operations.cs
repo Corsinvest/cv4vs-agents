@@ -1169,7 +1169,7 @@ internal sealed partial class IdeContextService
     /// registry — we never match by caption (which would risk closing
     /// one of our own panes or any other tab whose title happens to
     /// contain "Claude Code").</summary>
-    public Task CloseTabAsync(string tabName)
+    public Task<bool> CloseTabAsync(string tabName)
         => IdeDiffViewer.Instance.CloseTabAsync(tabName);
 
     /// <summary>Close every diff frame opened by us. Iterates the
