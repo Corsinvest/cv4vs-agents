@@ -198,6 +198,14 @@ export class CvPermissionBanner extends LitElement {
             }
             #permission-buttons fluent-button {
                 justify-content: flex-start;
+                /* The number sits on the first line of a label that wraps, not centred against
+                 * the whole block. */
+                align-items: baseline;
+                /* Fluent sizes the button for one line, so a wrapped label ended up touching the
+                 * border. height:auto is what gives the padding somewhere to go. */
+                height: auto;
+                padding-top: 6px;
+                padding-bottom: 6px;
             }
             /* Question Submit/Cancel: centred (no number badge like permission choices). */
             #permission-buttons.question-actions fluent-button {
@@ -244,9 +252,17 @@ export class CvPermissionBanner extends LitElement {
             }
             /* Wraps the suggestion label so "Yes, allow …", "for" and the clickable
              * scope flow as normal inline text (the fluent-button slot would otherwise
-             * flex-gap the spans and swallow the spaces between words). */
+             * flex-gap the spans and swallow the spaces between words).
+             *
+             * block + text-align:left because Fluent centres its content part, and a label
+             * long enough to wrap had its second line centred under the first — the tail of
+             * a sentence reading as an element of its own. The number stays OUTSIDE this
+             * span, as it is on the other two buttons, so the wrapped lines line up with the
+             * text rather than under the digit. */
             .label {
                 white-space: normal;
+                display: block;
+                text-align: left;
             }
             /* Clickable scope word inside "Yes, allow … for {scope}". Clicking it
              * cycles the scope (session/project/…) without confirming the choice. */
@@ -1020,8 +1036,8 @@ export class CvPermissionBanner extends LitElement {
                                   appearance=${this._scopeActive ? 'primary' : 'outline'}
                                   @click=${() => this._onAllowWith(suggestion)}
                               >
+                                  <span class="num">${n++}</span>
                                   <span class="label">
-                                      <span class="num">${n++}</span>
                                       ${this._suggestionLabel(suggestion)}${
                                           suggestion.type !== 'setMode'
                                               ? html` for
