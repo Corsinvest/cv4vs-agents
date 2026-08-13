@@ -145,7 +145,7 @@ internal sealed class IdeConsoleService
         var records = new List<INPUT_RECORD>();
         if (!string.IsNullOrEmpty(key))
         {
-            if (!KeyCodes.TryGetValue(key, out var vk))
+            if (!KeyCodes.TryGetValue(key, out var k))
             {
                 return new ConsoleResult
                 {
@@ -154,8 +154,8 @@ internal sealed class IdeConsoleService
                     Reason = $"Unknown key '{key}'. Known: {string.Join(", ", KeyCodes.Keys)}, ctrl+c, ctrl+break.",
                 };
             }
-            records.Add(KeyEvent(vk, '\0', true));
-            records.Add(KeyEvent(vk, '\0', false));
+            records.Add(KeyEvent(k.Vk, k.Ch, true));
+            records.Add(KeyEvent(k.Vk, k.Ch, false));
         }
         else
         {
@@ -259,19 +259,27 @@ internal sealed class IdeConsoleService
 
     private const ushort VkReturn = 0x0D;
 
-    /// <summary>Named keys a caller can send. Deliberately small: the point is answering a prompt,
-    /// not driving a full-screen console UI.</summary>
-    private static readonly Dictionary<string, ushort> KeyCodes = new(StringComparer.OrdinalIgnoreCase)
+    /// <summary>Named keys a caller can send, each with the character the console should read for
+    /// it. Deliberately small: the point is answering a prompt, not driving a full-screen console
+    /// UI.
+    ///
+    /// The character is what matters. A key record carrying only a virtual-key code and a NUL
+    /// UnicodeChar is delivered and counted — WriteConsoleInput reports success — but a program
+    /// blocked in Console.ReadLine never sees it, because ReadLine reads characters. The arrow keys
+    /// have no character, which is why they are the ones that only work against a program reading
+    /// keys rather than lines.</summary>
+    private static readonly Dictionary<string, (ushort Vk, char Ch)> KeyCodes = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["enter"] = VkReturn,
-        ["escape"] = 0x1B,
-        ["tab"] = 0x09,
-        ["backspace"] = 0x08,
-        ["space"] = 0x20,
-        ["up"] = 0x26,
-        ["down"] = 0x28,
-        ["left"] = 0x25,
-        ["right"] = 0x27,
+        ["enter"] = (VkReturn, '\r'),
+        ["escape"] = (0x1B, (char)0x1B),
+        ["tab"] = (0x09, '\t'),
+        ["backspace"] = (0x08, '\b'),
+        ["space"] = (0x20, ' '),
+        // No character of their own: a program reading lines will not see these at all.
+        ["up"] = (0x26, char.MinValue),
+        ["down"] = (0x28, char.MinValue),
+        ["left"] = (0x25, char.MinValue),
+        ["right"] = (0x27, char.MinValue),
     };
 
     private static INPUT_RECORD KeyEvent(ushort vk, char ch, bool down) => new()

@@ -16,7 +16,8 @@ internal sealed class SendConsoleArgs
     [AllowedValues("enter", "escape", "tab", "backspace", "space", "up", "down", "left", "right",
                    "ctrl+c", "ctrl+break")]
     [Description("A single key to send instead of text. 'ctrl+c' and 'ctrl+break' interrupt a " +
-        "program that is blocked reading input.")]
+        "program that is blocked reading input. The arrow keys carry no character, so a program " +
+        "reading lines (Console.ReadLine) will not see them — they only reach one reading keys.")]
     public string Key { get; set; }
 
     [Description("Append Enter after the text (default true). Ignored when sending a key.")]
