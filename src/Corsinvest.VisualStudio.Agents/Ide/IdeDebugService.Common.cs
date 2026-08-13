@@ -17,7 +17,17 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 internal sealed partial class IdeDebugService
 {
     private static DTE GetDte() => Package.GetGlobalService(typeof(DTE)) as DTE;
-    private static Debugger GetDebugger() => GetDte()?.Debugger;
+
+    /// <summary>The debugger, noting on the way which thread a break landed on. Every entry point
+    /// goes through here, which is the only reason that note can be trusted: it is taken before any
+    /// of them acts, so it predates the debug_select_thread that would otherwise overwrite the
+    /// answer. See <see cref="TrackStoppedThread"/>.</summary>
+    private static Debugger GetDebugger()
+    {
+        var dbg = GetDte()?.Debugger;
+        if (dbg != null) { TrackStoppedThread(dbg); }
+        return dbg;
+    }
 
     /// <summary>Reported instead of a real mode by the transitions that do not block — start, stop
     /// and detach all return before VS has moved. A null mode there reads as "something went
