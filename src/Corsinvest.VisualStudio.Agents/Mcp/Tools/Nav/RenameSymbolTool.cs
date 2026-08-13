@@ -30,7 +30,10 @@ internal sealed class RenameSymbolArgs
 /// updates every reference and the definition. Applies the changes directly (no editor popup),
 /// atomically: if it would cause unresolved conflicts nothing is written. Multi-language where
 /// the VS language service supports it (C#/VB/F#/… ); returns supported=false otherwise so the
-/// model can fall back to manual edits.</summary>
+/// model can fall back to manual edits.
+/// <para>Every touched file is opened first, which is what keeps the edits in buffers: the
+/// workspace writes a change to a CLOSED document straight to disk, leaving nothing dirty and
+/// nothing for Ctrl+Z.</para></summary>
 internal sealed class RenameSymbolTool : McpTool<RenameSymbolArgs>
 {
     public override string Name => "nav_rename_symbol";
@@ -39,9 +42,14 @@ internal sealed class RenameSymbolTool : McpTool<RenameSymbolArgs>
         "replace): give the file, the 1-based line where the symbol appears, its current " +
         "name, and the new name. Updates the definition and every reference. Atomic — if the " +
         "rename would cause unresolved conflicts nothing is applied. " +
-        "The edits land in the IDE's buffers and are NOT written to disk: the files stay dirty " +
-        "until document_save, and a build or a shell command reading them still sees the old " +
-        "name. Ctrl+Z in the editor undoes the whole rename while it is unsaved. " +
+        "Opens and focuses the file you name — the IDE will not apply the change to a file that " +
+        "is not open in a live editor — so expect a tab and the editor's place to move. That " +
+        "file's edit lands in the buffer rather than on disk: it stays dirty, and Ctrl+Z undoes " +
+        "the rename while it is. Do not count on that lasting — with autosave on (the default) " +
+        "reading it back with the Read tool writes it out first, so the undo is gone and a build " +
+        "sees the new name. document_read_buffer looks without saving. Other files the rename " +
+        "reaches are written straight to disk if they are not already open, with no dirty buffer " +
+        "and no undo — open them first if that matters. " +
         "The file must belong to a project in the open solution. Returns supported=false for " +
         "languages this isn't available for; applied=false (with a reason) when the symbol can't " +
         "be renamed or the new name is invalid. It changes every file it touches, so ask before " +
