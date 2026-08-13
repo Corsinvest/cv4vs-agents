@@ -587,16 +587,11 @@ internal sealed partial class IdeDebugService
 
     /// <summary>Start the program without the debugger (Ctrl+F5). If projectName is given, sets
     /// it as the startup project first via IdeContextService.</summary>
-    public async Task<(bool Ok, string Reason)> StartWithoutDebuggingAsync(string projectName)
+    public async Task<(bool Ok, string Reason)> StartWithoutDebuggingAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = GetDte();
         if (dte == null) { return (false, "DTE unavailable."); }
-        if (!string.IsNullOrWhiteSpace(projectName))
-        {
-            var set = await IdeContextService.Instance.SetStartupProjectAsync(projectName);
-            if (!set.Ok) { return (false, set.Reason); }
-        }
         try
         {
             dte.ExecuteCommand("Debug.StartWithoutDebugging");

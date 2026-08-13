@@ -32,6 +32,18 @@ stepping tools carry nothing — they move the program forward, which is neither
 destructive. `debug_evaluate` is deliberately not read-only: evaluating can call property getters,
 and it accepts assignments.
 
+**A long catalogue costs nothing per turn.** Four of these tools sit in the model's prompt at all
+times — `editor_get_selection`, `editor_get_latest_selection`, `editor_get_open_files` and
+`ide_get_diagnostics`. The rest are deferred: the CLI keeps their names to hand and loads a tool's
+full definition when it goes looking for one. So the number of tools here is not a running cost,
+and adding one does not make the model slower.
+
+The four are the ones that answer *what is the user looking at right now* — context worth having
+before deciding what to do, rather than in response to deciding. Everything else is something you
+reach for once you know what you want, which is exactly when a search for it is free. A tool marked
+always-loaded costs roughly fifty tokens of context on every single turn, so the bar for adding a
+fifth is high.
+
 **Naming.** `domain_verb[_object]`, snake_case, domain first — `nav_go_to_definition`,
 `debug_get_locals`. A domain exists once it has three or more tools; the rest live under `ide`.
 
@@ -125,7 +137,7 @@ and it accepts assignments.
 | `debug_set_function_breakpoint` | Add a breakpoint that triggers when a function is entered, identified by name (e.g. "MyClass.Calculate") instead of a file and line. Optionally pass a condition, or a hitCount to skip the first calls — the way to stop on the 500th call without a counter to test. Works whether or not a debug session is running. Use when you know the method but not the exact line, or to avoid opening the file. debug_set_breakpoint takes a file and line instead, debug_list_breakpoints shows what is set, and debug_start begins the session that will hit it. |
 | `debug_set_next_statement` | Move the instruction pointer to this line WITHOUT running the code in between — the Set Next Statement command. Skips a call that would fail, or jumps back to retry a block after fixing a value with debug_evaluate. The line must be in the file execution is paused in: the jump cannot leave the method, and asking for another file is refused here because Visual Studio would not — it reads the number as a line of the CURRENT method and moves there instead. SIDE-EFFECTFUL, unlike the rest of the debug tools: the skipped statements never run, so anything they would have assigned keeps its old value, and jumping backwards runs side effects a second time. Nothing checks that the jump makes sense — prefer asking first. Stays in break mode, and only valid in break mode. |
 | `debug_start` | The debug entry point: the usual cycle is debug_set_breakpoint → debug_start → poll debug_get_state until mode='break' → debug_get_callstack / debug_get_locals → debug_step. Inspection only works in break mode, and reads the frame debug_select_frame chose on the thread debug_select_thread chose. Start debugging the solution's startup project (equivalent to F5). Non-blocking: returns once launched; the program then runs until it hits a breakpoint or exits. Poll debug_get_state to detect when it pauses (mode='break'). No-op if already debugging. |
-| `debug_start_no_debugger` | Start the program WITHOUT the debugger (equivalent to Ctrl+F5). Optionally pass a project name to set it as startup first. Use debug_start instead when you need breakpoints. Returns ok or ok=false with a reason. |
+| `debug_start_no_debugger` | Run the solution's startup project WITHOUT the debugger (equivalent to Ctrl+F5): breakpoints are ignored and exceptions do not break into the IDE, so none of the debug_get_* or debug_step tools will have anything to report afterwards — use debug_start when you need any of that. To run a different project, solution_set_startup_project first. Returns ok or ok=false with a reason. |
 | `debug_step` | Step the paused program by one statement. Direction: 'over' (run the line without entering called methods — default), 'into' (step into the call), 'out' (run to the end of the current method). Waits for the step to land and returns the file/line it reached, so a step over a slow call answers when it is done rather than straight away. If it has not landed within ten seconds — stepping over something that blocks, or the program ran on to a breakpoint — it comes back without a position and says to poll debug_get_state. Only valid in break mode. |
 | `debug_stop` | Stop the current debug session (equivalent to Shift+F5). No-op if not debugging. Non-blocking, so mode comes back null rather than a guess: poll debug_get_state to see the session reach 'design'. |
 
