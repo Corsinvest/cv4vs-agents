@@ -10,6 +10,7 @@ namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 internal sealed class BuildSolutionArgs
 {
+    [AllowedValues("error", "warning", "all")]
     [Description("How far down the Error List to report: 'error' (default), 'warning' for errors " +
                  "and warnings, or 'all' to include informational items. Each level means that one " +
                  "and everything more severe.")]

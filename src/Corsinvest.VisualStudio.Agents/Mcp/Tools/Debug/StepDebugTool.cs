@@ -10,6 +10,7 @@ namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 internal sealed class StepDebugArgs
 {
+    [AllowedValues("over", "into", "out")]
     [Description("Direction: 'over' (default, run the line without entering calls), 'into' (enter calls), or 'out' (run to the end of the current method).")]
     public string Direction { get; set; }
 }
