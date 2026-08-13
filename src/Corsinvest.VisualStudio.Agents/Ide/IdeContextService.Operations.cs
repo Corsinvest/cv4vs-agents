@@ -662,15 +662,29 @@ internal sealed partial class IdeContextService
             }
             return;
         }
-        // Miscellaneous Files is the bucket VS puts anything opened from outside the solution into —
-        // decompiled sources, temp diff files. It answers to Project, but nothing can be built or
-        // added to it, so offering its name as a choice only wastes a call.
-        if (p.Kind == MiscellaneousFilesKind) { return; }
+        if (IsMiscellaneousFiles(p)) { return; }
         names.Add(p.Name);
         // Three spellings, because a caller has three plausible ones to hand: the display name, the
         // solution-relative UniqueName, and the project file's own name — which differs from the
         // display name whenever the .csproj was renamed in the solution but not on disk.
         if (match == null && NameMatchesProject(p, target)) { match = p; }
+    }
+
+    /// <summary>The Miscellaneous Files node, by either of the two things that identify it. Must be
+    /// called on the UI thread.</summary>
+    private static bool IsMiscellaneousFiles(Project p)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (p.Kind == MiscellaneousFilesKind) { return true; }
+        try
+        {
+            return string.Equals(p.UniqueName, MiscellaneousFilesUniqueName, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            // An unloaded project throws on UniqueName; the kind above already had its say.
+            return false;
+        }
     }
 
     /// <summary>Whether a project answers to <paramref name="name"/> — by display name, by
@@ -727,9 +741,16 @@ internal sealed partial class IdeContextService
     // no real project, but its ProjectItems may nest sub-projects, so recurse.
     private const string SolutionFolderKind = "{66A26720-8FB5-11D2-AA7E-00C04F688DDE}";
 
-    /// <summary>"Miscellaneous Files" — where VS files anything opened from outside the solution.
-    /// A Project by type, but not one anybody can build or add to.</summary>
-    private const string MiscellaneousFilesKind = "{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}";
+    /// <summary>"Miscellaneous Files" — where VS files anything opened from outside the solution
+    /// (decompiled sources, the temp files a diff runs on). A Project by type, but not one anybody
+    /// can build or add to, so it is no use as an answer to "which project did you mean".
+    ///
+    /// Both are checked because the display name is localised ("File esterni" on an Italian IDE)
+    /// and the kind alone has burnt us once: vsProjectKindMisc ends 671D, one digit from
+    /// vsProjectKindSolutionItems' 6720. Values read from EnvDTE.Constants rather than written
+    /// from memory.</summary>
+    private const string MiscellaneousFilesKind = "{66A2671D-8FB5-11D2-AA7E-00C04F688DDE}";
+    private const string MiscellaneousFilesUniqueName = "<MiscFiles>";
 
     // A solution folder can nest sub-projects, and nothing stops a hand-written .sln from making
     // that graph cyclic. A StackOverflowException is NOT catchable in .NET — it would take down
@@ -750,6 +771,10 @@ internal sealed partial class IdeContextService
             }
             return;
         }
+        // Miscellaneous Files holds whatever was opened from outside the solution — a decompiled
+        // source, the temp files behind an open diff. Listing it as a project puts paths under
+        // %TEMP% in an answer about the solution's layout.
+        if (IsMiscellaneousFiles(p)) { return; }
 
         var node = new ProjectNode
         {
