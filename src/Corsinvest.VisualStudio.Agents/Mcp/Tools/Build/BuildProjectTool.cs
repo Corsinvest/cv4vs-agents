@@ -32,9 +32,9 @@ internal sealed class BuildProjectTool : McpTool<BuildProjectArgs>
         "until done. Reports errors only unless severity says otherwise; the message says how " +
         "many items were left out, and 'configuration' says which one it built — " +
         "solution_set_configuration changes it. Trust ok/failedProjects/message rather than the " +
-        "length of 'errors': the Error List only holds diagnostics for files open in an editor, so " +
-        "a failed build can come back with an empty list; ide_read_output('Build') has the full " +
-        "compiler log. The name is a project name, not a path — " +
+        "length of 'errors': the Error List is filled asynchronously, so a failed build can answer " +
+        "before its errors have landed; ide_read_output('Build') has the compiler's own log. " +
+        "The name is a project name, not a path — " +
         "ide_get_project_structure lists them. build_solution builds everything instead.";
 
     public override bool Idempotent => true;

@@ -33,9 +33,8 @@ internal sealed class GetDiagnosticsTool : McpTool<GetDiagnosticsArgs>
         "hundreds of warnings when you only care about the errors. " +
         "Returns an array of files, each with its diagnostics ([] when there are none). " +
         "Visual Studio only analyses files that are open in an editor, so this can be empty for a " +
-        "file nothing has looked at — and so is build_solution's error list, which reads the same " +
-        "window. For what the compiler found in a file nobody has opened, read the build log with " +
-        "ide_read_output('Build').";
+        "file nothing has looked at — build_solution fills the same window from the compiler, for " +
+        "every file, which is what to run when this comes back empty.";
     public override bool ReadOnly => true;
     public override bool Idempotent => true;
 
