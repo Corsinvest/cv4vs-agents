@@ -314,11 +314,14 @@ export class CvApp extends LitElement {
                         entryId = streamingId;
                         this._streamingMsgs.delete(parentId);
                     } else {
+                        const atBottom = this._isNearBottom();
                         const entry = CvApp.buildAssistantEntry(data);
                         entry.timestamp = data?.timestamp ?? Date.now();
                         this._appendEntry(entry, parentId);
                         entryId = entry.id;
-                        queueMicrotask(() => this._scrollToBottom());
+                        if (atBottom) {
+                            queueMicrotask(() => this._scrollToBottom());
+                        }
                     }
                     this._seedTurnTokens(entryId, data);
                 },
@@ -519,8 +522,11 @@ export class CvApp extends LitElement {
 
         this._offs.push(
             bridge.onNotification<CompactedNotification>(Msg.toWebView.chat.compacted, (data) => {
+                const atBottom = this._isNearBottom();
                 this._appendEntry(CvApp.buildCompactEntry(data));
-                queueMicrotask(() => this._scrollToBottom());
+                if (atBottom) {
+                    queueMicrotask(() => this._scrollToBottom());
+                }
             }),
         );
 
@@ -596,8 +602,11 @@ export class CvApp extends LitElement {
                         );
                         return;
                     }
+                    const atBottom = this._isNearBottom();
                     this._appendEntry(this.buildToolEntry(data), data.parentToolUseId ?? undefined);
-                    queueMicrotask(() => this._scrollToBottom());
+                    if (atBottom) {
+                        queueMicrotask(() => this._scrollToBottom());
+                    }
                 },
             ),
         );
@@ -1027,8 +1036,11 @@ export class CvApp extends LitElement {
         parentId = '',
     ): number {
         const entry = { kind: 'text', id: ++_entryIdSeq, ...msg } as E;
+        const atBottom = this._isNearBottom();
         this._appendEntry(entry, parentId);
-        queueMicrotask(() => this._scrollToBottom());
+        if (atBottom) {
+            queueMicrotask(() => this._scrollToBottom());
+        }
         return entry.id;
     }
 
@@ -1444,8 +1456,8 @@ export class CvApp extends LitElement {
         }
     }
 
-    /** True when scrolled at/near the bottom. Gates stream auto-follow so
-     *  the user isn't yanked down while reading scrolled-up content. */
+    /** True when scrolled at/near the bottom. Gates auto-follow (streaming deltas, new
+     *  entries, tool results) so the user isn't yanked down while reading scrolled-up content. */
     private _isNearBottom(threshold = 80): boolean {
         const el = this._messagesEl;
         if (!el) {
