@@ -111,6 +111,10 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
                 HandleSubagentCancelAll(data, id);
                 break;
 
+            case BridgeMessages.FromWebView.Chat.SubagentDetach:
+                HandleSubagentDetach(data, id);
+                break;
+
             case BridgeMessages.FromWebView.Chat.GetHistory:
                 HandleGetHistory(data, id);
                 break;

@@ -47,6 +47,11 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.Summary)).Null()
             .Member(x => nameof(x.ToolUseId)).Null();
         AddInterface<SubagentEndedNotification>();
+        // Both optional: a patch carries only the fields that changed.
+        AddInterface<SubagentUpdatedNotification>()
+            .Member(x => nameof(x.Status)).Null()
+            .Member(x => nameof(x.Description)).Null();
+        AddInterface<BackgroundTasksNotification>();
         AddInterface<CompactedNotification>();
         AddInterface<StatusNotification>();
         AddInterface<CliExitedNotification>();
@@ -188,6 +193,7 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<GetImageRequest>().Member(x => nameof(x.SessionId)).Optional();
         AddInterface<GetCompactSummaryRequest>().Member(x => nameof(x.SessionId)).Optional();
         AddInterface<SubagentCancelNotification>();
+        AddInterface<SubagentDetachNotification>();
         // getHistory always sends sessionId → keep it required-nullable.
         AddInterface<GetHistoryRequest>().Member(x => nameof(x.SessionId)).Null();
         AddInterface<GetUsageRequest>();

@@ -42,6 +42,9 @@ internal static class ClientMessages
         public const string CommandsChanged = "commands_changed";
         public const string TaskStarted = "task_started";
         public const string TaskProgress = "task_progress";
+        // Patch on a running task: the subset of its state that changed (status, is_backgrounded…).
+        // A task always starts in the foreground, so being backgrounded arrives only here.
+        public const string TaskUpdated = "task_updated";
         public const string TaskNotification = "task_notification";
         // Authoritative list of the session's active background tasks (agents). Empty `tasks` = none
         // running — the reliable signal for "everything, main + agents, is finished".
@@ -84,6 +87,14 @@ internal static class ClientMessages
         public const string McpToggle = "mcp_toggle";
         public const string McpStatus = "mcp_status";
         public const string StopTask = "stop_task";
+        // Detach a running task from the turn: the blocking tool call returns at once and the turn
+        // carries on, while the task keeps going and reports its end as usual. With a tool_use_id,
+        // only that one; without, all of them — the CLI's own Ctrl+B.
+        //
+        // Named for what it does, because the wire value does not: "background_tasks" here is a
+        // VERB (detach these), one underscore away from the background_tasks_changed EVENT (here
+        // is the list), and the two mean opposite things. One-way — nothing brings a task back.
+        public const string DetachTask = "background_tasks";
         public const string ApplyFlagSettings = "apply_flag_settings";
         public const string GetSettings = "get_settings";
         public const string GenerateSessionTitle = "generate_session_title";

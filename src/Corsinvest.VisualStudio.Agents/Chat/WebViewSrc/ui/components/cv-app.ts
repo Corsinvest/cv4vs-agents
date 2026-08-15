@@ -48,6 +48,8 @@ import type {
     SubagentStartedNotification,
     SubagentProgressNotification,
     SubagentEndedNotification,
+    SubagentUpdatedNotification,
+    BackgroundTasksNotification,
     CompactedNotification,
     EvictMessagesNotification,
     StatusNotification,
@@ -99,6 +101,10 @@ export class CvApp extends LitElement {
     /** Groups for the current tree, keyed by the array they were built from. */
     private _groupCache: { src: readonly UiEntry[]; groups: UiEntry[][] } | null = null;
     @state() private _subagentTasks = new Map<string, SubagentTask>();
+
+    /** Ids the CLI last reported as running in the background. Not @state: it decides what a task
+     *  is created with, and the map above is what the view renders. */
+    private _backgroundTaskIds = new Set<string>();
     @state() private _isBusy = appState.isBusy;
     @state() private _status = appState.status;
     /** A permission/Ask prompt is awaiting the user → hide the "waiting" spinner
@@ -510,6 +516,12 @@ export class CvApp extends LitElement {
                 appState.hasMoreHistory = false;
                 appState.loadingOlder = false;
                 appState.contextUsage = null;
+                // The chip's tasks belonged to the session that just went. Left alone they would
+                // hang in the composer with no transcript under them, and their end notifications
+                // would land on a session that no longer exists.
+                this._subagentTasks = new Map();
+                this._backgroundTaskIds = new Set();
+                appState.subagentTasks = [];
                 // The CLI's advisories are about the session that just went away ("session model
                 // could not be restored"), so they'd read as stale against the new one. The dead-CLI
                 // row is about the process instead: it survives, and cli_started clears it.
@@ -712,6 +724,11 @@ export class CvApp extends LitElement {
                         recentTools: [],
                         usage: { totalTokens: 0, toolUses: 0, durationMs: 0 },
                         startedAt: Date.now(),
+                        // Asked here rather than waited for: the list naming this task arrives
+                        // BEFORE the task itself — measured 19ms earlier — so a row that only ever
+                        // got marked by a later list would sit under the wrong heading until one
+                        // happened to come, and for the last task launched, never.
+                        background: this._backgroundTaskIds.has(d.taskId),
                     });
                     this._subagentTasks = m;
                     this._publishSubagentTasks(m);
@@ -788,6 +805,56 @@ export class CvApp extends LitElement {
                     m.delete(d.taskId);
                     this._subagentTasks = m;
                     this._publishSubagentTasks(m);
+                },
+            ),
+        );
+        this._offs.push(
+            bridge.onNotification<SubagentUpdatedNotification>(
+                Msg.toWebView.chat.subagentUpdated,
+                (d) => {
+                    // A patch on a task already here. One we never saw start is not ours to invent:
+                    // the CLI backgrounds Bash commands too, and those have no sub-agent row.
+                    const prev = d?.taskId ? this._subagentTasks.get(d.taskId) : undefined;
+                    if (!prev) {
+                        return;
+                    }
+                    const m = new Map(this._subagentTasks);
+                    m.set(d.taskId, {
+                        ...prev,
+                        // Only what the patch carried: the wire sends the fields that changed, and
+                        // a missing one means unchanged, not absent.
+                        status: d.status ?? prev.status,
+                        description: d.description ?? prev.description,
+                    });
+                    this._subagentTasks = m;
+                    this._publishSubagentTasks(m);
+                },
+            ),
+        );
+        this._offs.push(
+            bridge.onNotification<BackgroundTasksNotification>(
+                Msg.toWebView.chat.backgroundTasks,
+                (d) => {
+                    // The authoritative set, so it is applied to every tracked task rather than
+                    // merged: one that drops off the list is no longer in the background, and one
+                    // never seen here never was. Ids only — the row's own figures stay untouched.
+                    const ids = new Set(d?.taskIds ?? []);
+                    // Kept for the tasks that have not arrived yet: this message beats
+                    // subagent_started to the WebView, so the set has to outlive the call.
+                    this._backgroundTaskIds = ids;
+                    let changed = false;
+                    const m = new Map(this._subagentTasks);
+                    for (const [id, t] of m) {
+                        const background = ids.has(id);
+                        if (background !== !!t.background) {
+                            m.set(id, { ...t, background });
+                            changed = true;
+                        }
+                    }
+                    if (changed) {
+                        this._subagentTasks = m;
+                        this._publishSubagentTasks(m);
+                    }
                 },
             ),
         );
@@ -1744,6 +1811,10 @@ export class CvApp extends LitElement {
                 }
                 ${this._exchanges.map((group) => this.renderExchange(group))}
                 ${
+                    // Only the main turn. Sub-agents outliving it are the chip's job — it sits in
+                    // the composer with a live count whether or not a turn is running, and it says
+                    // WHAT is working, which a spinner cannot. Lighting the spinner for them would
+                    // promise a reply that is not coming.
                     this._isBusy && !this._awaitingUser
                         ? html`<cv-spinner .status=${this._status}></cv-spinner>`
                         : nothing

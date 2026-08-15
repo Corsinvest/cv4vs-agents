@@ -75,6 +75,8 @@ export type { GetImageRequest } from './generated/GetImageRequest';
 export type { SubagentStartedNotification } from './generated/SubagentStartedNotification';
 export type { SubagentProgressNotification } from './generated/SubagentProgressNotification';
 export type { SubagentEndedNotification } from './generated/SubagentEndedNotification';
+export type { SubagentUpdatedNotification } from './generated/SubagentUpdatedNotification';
+export type { BackgroundTasksNotification } from './generated/BackgroundTasksNotification';
 export type { SubagentUsageDto } from './generated/SubagentUsageDto';
 
 /** Context compaction (`chat_compacted`, header-only: uuid/trigger/preTokens) and CLI process
@@ -193,6 +195,7 @@ export type { GetSuggestionsRequest } from './generated/GetSuggestionsRequest';
 export type { ToolOutputNotification } from './generated/ToolOutputNotification';
 export type { GetSubagentRequest } from './generated/GetSubagentRequest';
 export type { SubagentCancelNotification } from './generated/SubagentCancelNotification';
+export type { SubagentDetachNotification } from './generated/SubagentDetachNotification';
 export type { GetHistoryRequest } from './generated/GetHistoryRequest';
 export type { GetUsageRequest } from './generated/GetUsageRequest';
 export type { UsageDto } from './generated/UsageDto';
@@ -274,6 +277,14 @@ export interface SubagentTask {
     recentTools: string[]; // last 3 tool names — at(-1) is what it is doing now
     summary?: string;
     usage: SubagentUsageDto;
+    /** Running in the background, so it outlives the turn that launched it. Set from the
+     *  authoritative id list (background_tasks_changed), not from task_updated's is_backgrounded:
+     *  that flag only ever describes a foreground task being pushed down, and the agents the CLI
+     *  launches asynchronously are background from birth — measured, they never emit it. */
+    background?: boolean;
+    /** Last status the CLI reported for it — 'paused' and 'killed' have no other way in. Undefined
+     *  until a patch carries one. */
+    status?: string;
     /** The task that launched this one, undefined at top level. The wire carries no parent link,
      *  so it is derived from where the launching row sits in the entry tree; it settles once that
      *  row has arrived (the task can beat it by a few ms). */

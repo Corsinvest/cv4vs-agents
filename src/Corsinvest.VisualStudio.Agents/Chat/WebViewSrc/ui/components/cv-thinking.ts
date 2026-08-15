@@ -6,6 +6,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { renderMarkdown } from '../../core/markdown';
+import { onTick, type UnsubscribeTick } from '../../core/tick';
 import { formatTokenCount, formatDuration } from '../helpers/format';
 import { statusDotStyles } from '../styles/shared';
 import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
@@ -33,22 +34,24 @@ export class CvThinking extends LitElement {
     /** Re-render tick while streaming. Only a clock: the elapsed value is derived from startedAt,
      *  so a missed tick shows the right number late, never a wrong one. */
     @state() private _now = 0;
-    private _timer = 0;
+    private _unsubscribeTick?: UnsubscribeTick;
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
-        clearInterval(this._timer);
+        this._unsubscribeTick?.();
+        this._unsubscribeTick = undefined;
     }
 
-    /** Runs the tick only while the block is open-ended: a finished thought has durationMs and
-     *  needs no clock, and the element outlives the streaming (it stays in the transcript). */
+    /** Subscribes only while the block is open-ended: a finished thought has durationMs and needs
+     *  no clock, and the element outlives the streaming (it stays in the transcript) — so this
+     *  follows `streaming`, not the element's lifetime. */
     override updated(): void {
         const wants = this.streaming && this.startedAt > 0;
-        if (wants && !this._timer) {
-            this._timer = window.setInterval(() => (this._now = Date.now()), 1000);
-        } else if (!wants && this._timer) {
-            clearInterval(this._timer);
-            this._timer = 0;
+        if (wants && !this._unsubscribeTick) {
+            this._unsubscribeTick = onTick(() => (this._now = Date.now()));
+        } else if (!wants && this._unsubscribeTick) {
+            this._unsubscribeTick();
+            this._unsubscribeTick = undefined;
         }
     }
 

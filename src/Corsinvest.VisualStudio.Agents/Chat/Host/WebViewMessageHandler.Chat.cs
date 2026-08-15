@@ -199,6 +199,12 @@ internal sealed partial class WebViewMessageHandler
         }
     }
 
+    private void HandleSubagentDetach(JObject data, int? id)
+    {
+        var toolUseId = data.ToObject<Contracts.SubagentDetachNotification>().ToolUseId ?? "";
+        if (!string.IsNullOrEmpty(toolUseId)) { _ = client?.DetachTaskAsync(toolUseId); }
+    }
+
     private void HandleSubagentCancelAll(JObject data, int? id)
     {
         // The UI knows the active taskIds; it sends one cancel per id. As a fallback,

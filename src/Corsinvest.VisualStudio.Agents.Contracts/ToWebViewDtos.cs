@@ -152,6 +152,32 @@ public class SubagentEndedNotification
     public string Status { get; set; }
 }
 
+/// <summary>Which sub-agents are running in the background, as ids (background_tasks_changed).
+/// <para>Ids only, deliberately: the rows themselves — description, tools, tokens, duration —
+/// come from the task_started/task_progress pair and are already tracked. This says which of
+/// those to file under "background", nothing more.</para>
+/// <para>REPLACE semantics: the whole set every time, so the receiver swaps rather than merges.
+/// Empty means none. The CLI emits nothing at startup, so an empty set is also the right state
+/// after a restart.</para></summary>
+public class BackgroundTasksNotification
+{
+    public string[] TaskIds { get; set; } = [];
+}
+
+/// <summary>A change to a sub-agent already being tracked (task_updated): a new status, or a
+/// renamed description.
+/// <para>A patch on the task the started/progress pair already built, not a new one. Fields the
+/// CLI did not send stay null — the wire patch carries only what changed.</para>
+/// <para>The patch also carries is_backgrounded, which is NOT taken: it only ever describes a
+/// foreground task being pushed down, and the CLI's asynchronous agents are background from
+/// birth, so it never arrives for them. BackgroundTasksNotification is what says which are.</para></summary>
+public class SubagentUpdatedNotification
+{
+    public string TaskId { get; set; }
+    public string Status { get; set; }
+    public string Description { get; set; }
+}
+
 /// <summary>Context was compacted (chat_compacted): tokens before/after.</summary>
 public class CompactedNotification
 {

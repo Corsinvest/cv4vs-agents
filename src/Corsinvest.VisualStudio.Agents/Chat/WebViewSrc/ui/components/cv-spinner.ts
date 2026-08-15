@@ -6,6 +6,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { SpinnerVerbsConfigDto } from '../../core/types';
 import { formatDurationSec } from '../helpers/format';
+import { onTick, type UnsubscribeTick } from '../../core/tick';
 
 // Verbs the spinner cycles; replace/extend via setVerbsConfig at runtime.
 const DEFAULT_VERBS: readonly string[] = [
@@ -87,7 +88,6 @@ const FRAMES: readonly string[] = [...STAR_GROW, ...[...STAR_GROW].reverse()];
 const FRAME_INTERVAL_MS = 120;
 const VERB_MIN_MS = 2000;
 const VERB_MAX_MS = 5000;
-const ELAPSED_INTERVAL_MS = 1000;
 
 let _activeVerbs: readonly string[] = DEFAULT_VERBS;
 
@@ -166,31 +166,38 @@ export class CvSpinner extends LitElement {
 
     private _frameTimer = 0;
     private _verbTimer = 0;
-    private _elapsedTimer = 0;
+    private _unsubscribeTick?: UnsubscribeTick;
     private _startedAt = 0;
 
     override connectedCallback(): void {
         super.connectedCallback();
         let i = 0;
+        // The frames stay on their own timer: at 120ms they are an animation, and rounding them to
+        // the shared second would turn the spinner into a stutter.
         this._frameTimer = window.setInterval(() => {
             i = (i + 1) % FRAMES.length;
             this._frame = FRAMES[i];
         }, FRAME_INTERVAL_MS);
         this._scheduleNextVerb();
-        // performance.now(): monotonic, so a system-clock change mid-turn can't make the
-        // counter jump or go backwards. The element is created when the turn starts and
-        // destroyed when it ends, so mount time IS the turn start and needs no reset.
+        // performance.now(): monotonic, so a system-clock change mid-turn can't make the counter
+        // jump or go backwards. The element is created when the turn starts and destroyed when it
+        // ends, so mount time IS the turn start and needs no reset.
+        //
+        // The shared tick only says WHEN to recompute; the value still comes from performance.now(),
+        // so the monotonic guarantee survives while this second counts in step with the elapsed
+        // badges beside it instead of drifting against them.
         this._startedAt = performance.now();
-        this._elapsedTimer = window.setInterval(() => {
+        this._unsubscribeTick = onTick(() => {
             this._elapsedSec = Math.floor((performance.now() - this._startedAt) / 1000);
-        }, ELAPSED_INTERVAL_MS);
+        });
     }
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         clearInterval(this._frameTimer);
         clearTimeout(this._verbTimer);
-        clearInterval(this._elapsedTimer);
+        this._unsubscribeTick?.();
+        this._unsubscribeTick = undefined;
     }
 
     private _scheduleNextVerb(): void {
