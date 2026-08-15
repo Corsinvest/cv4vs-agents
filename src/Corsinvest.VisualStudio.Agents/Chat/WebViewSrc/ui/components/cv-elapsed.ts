@@ -5,6 +5,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { formatDuration } from '../helpers/format';
+import { onTick, type UnsubscribeTick } from '../../core/tick';
 
 /**
  * The running clock on an Agent row, advancing once a second while the sub-agent works.
@@ -46,7 +47,7 @@ export class CvElapsed extends LitElement {
     /** The clock the badge was last drawn against. Bumping it is what re-renders the text. */
     @state() private _now = Date.now();
 
-    private _timer = 0;
+    private _unsubscribeTick?: UnsubscribeTick;
 
     override connectedCallback() {
         super.connectedCallback();
@@ -59,24 +60,27 @@ export class CvElapsed extends LitElement {
     }
 
     override updated() {
-        // startedAt arrives (or is cleared) by property, so the timer follows it rather than the
-        // element's lifetime: a row can be built before its task is known.
+        // startedAt arrives (or is cleared) by property, so the subscription follows it rather than
+        // the element's lifetime: a row can be built before its task is known.
         this._sync();
     }
 
     private _sync(): void {
-        if (this.startedAt > 0 && !this._timer) {
-            this._timer = window.setInterval(() => {
+        if (this.startedAt > 0 && !this._unsubscribeTick) {
+            // The shared clock, not one of our own: a running sub-agent draws this badge twice —
+            // transcript row and chip — and two intervals started seconds apart showed the same
+            // task as 28s in one place and 29s in the other.
+            this._unsubscribeTick = onTick(() => {
                 this._now = Date.now();
-            }, 1000);
-        } else if (this.startedAt <= 0 && this._timer) {
+            });
+        } else if (this.startedAt <= 0 && this._unsubscribeTick) {
             this._stop();
         }
     }
 
     private _stop(): void {
-        clearInterval(this._timer);
-        this._timer = 0;
+        this._unsubscribeTick?.();
+        this._unsubscribeTick = undefined;
     }
 
     override render() {

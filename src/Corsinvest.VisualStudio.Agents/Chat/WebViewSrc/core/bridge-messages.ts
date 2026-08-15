@@ -58,6 +58,7 @@ export const Msg = {
             getSubagent: 'get_subagent',
             subagentCancel: 'subagent_cancel',
             subagentCancelAll: 'subagent_cancel_all',
+            subagentDetach: 'subagent_detach',
             getCompactSummary: 'get_compact_summary',
         },
         ui: {
@@ -112,6 +113,8 @@ export const Msg = {
             subagentProgress: 'subagent_progress',
             subagentEnded: 'subagent_ended',
             subagentClear: 'subagent_clear',
+            subagentUpdated: 'subagent_updated',
+            backgroundTasks: 'background_tasks',
             compactSummaryResult: 'compact_summary_result',
         },
         ui: {

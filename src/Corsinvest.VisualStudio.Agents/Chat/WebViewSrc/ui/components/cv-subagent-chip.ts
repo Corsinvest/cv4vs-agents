@@ -7,11 +7,17 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Bot16Regular from '@fluentui/svg-icons/icons/bot_16_regular.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
+import ArrowMinimize16Regular from '@fluentui/svg-icons/icons/arrow_minimize_16_regular.svg';
+import './cv-elapsed';
 import { formatTokens, formatDuration } from '../helpers/format';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { iconStyles, statusDotStyles } from '../styles/shared';
-import type { SubagentTask, SubagentCancelNotification } from '../../core/types';
+import type {
+    SubagentTask,
+    SubagentCancelNotification,
+    SubagentDetachNotification,
+} from '../../core/types';
 
 /** A pulsing chip in the input row showing the count of active sub-agents.
  *  Hidden when none. Click opens a light-dismiss popover (like the permission
@@ -82,6 +88,18 @@ export class CvSubagentChip extends LitElement {
                 font-weight: var(--fontWeightSemibold);
                 margin-bottom: 10px;
             }
+            /* The second section's heading: quieter than the first, and spaced away from the rows
+             * above so the two groups read apart without a rule between them. */
+            .head.sub {
+                font-size: 1em;
+                margin-top: 12px;
+                color: var(--colorNeutralForeground3);
+            }
+            /* Nothing above it to be separated from — every task is in the background, which is
+               the common case once the CLI has launched them all asynchronously. */
+            .head.sub.first {
+                margin-top: 0;
+            }
             .row {
                 display: flex;
                 align-items: center;
@@ -126,6 +144,14 @@ export class CvSubagentChip extends LitElement {
                 font-size: 0.85em;
                 color: var(--colorNeutralForeground3);
                 font-variant-numeric: tabular-nums;
+            }
+            /* cv-elapsed carries its own badge styling for the transcript row it was written for —
+               a left margin and a dimmer size. Here it is a column in a grid-like row, so those
+               are overridden rather than added to what .time already sets. */
+            cv-elapsed.time {
+                margin-left: 0;
+                font-size: 0.85em;
+                opacity: 1;
             }
             /* Stop / Stop-all are <fluent-button> — keep them pure; only layout here. */
             .stopall,
@@ -216,9 +242,75 @@ export class CvSubagentChip extends LitElement {
         }
     }
 
+    /** Keyed by toolUseId, which is what the CLI's request takes — a task whose launching row
+     *  never arrived has none, and the button is not offered for it. */
+    private _detach(toolUseId: string) {
+        bridge.sendNotification<SubagentDetachNotification>(Msg.fromWebView.chat.subagentDetach, {
+            toolUseId,
+        });
+    }
+
     private _toggle = (): void => {
         this._open = !this._open;
     };
+
+    /** One task row. Identical for both sections — a backgrounded sub-agent is the same task with
+     *  the same figures, still running, which is the whole reason it is worth showing. */
+    private _row(t: SubagentTask, indents: Map<string, number>) {
+        const indent = indents.get(t.taskId);
+        const paused = t.status === 'paused';
+        // Read out once so the handler below can use it without an assertion.
+        const detachable = t.background ? undefined : t.toolUseId;
+        return html`<div class="row" style=${indent ? `padding-left:${indent}px` : ''}>
+            <!-- The blinking dot means "working"; a paused task keeps the neutral one, which is
+                 the same distinction the spinner makes. -->
+            <span class="cv-dot ${paused ? '' : 'active'}" title=${paused ? 'Paused' : ''}></span>
+            <div class="main">
+                <div class="desc" title=${this._desc(t)}>${this._desc(t)}</div>
+                <div class="meta">
+                    <span class="now">${t.recentTools[t.recentTools.length - 1] ?? '—'}</span>
+                    <span class="v">${t.usage.toolUses}</span>
+                    ${t.usage.toolUses === 1 ? 'tool' : 'tools'} ·
+                    <span class="v">${formatTokens(t.usage.totalTokens)}</span> tok
+                </div>
+            </div>
+            <!-- A running clock, not the total the sub-agent reports: that one only moves when it
+                 reports a tool use, so between two tools the number sat still for as long as the
+                 call took. cv-elapsed derives it from startedAt and ticks on its own; a task with
+                 no startedAt (one that arrived before we tracked it) keeps the reported figure,
+                 which is at least honest about being a total. -->
+            ${
+                t.startedAt
+                    ? html`<cv-elapsed class="time" .startedAt=${t.startedAt}></cv-elapsed>`
+                    : html`<span class="time">${formatDuration(t.usage.durationMs)}</span>`
+            }
+            <!-- Only on rows still attached to the turn. The CLI answers backgrounded:false when
+                 there is nothing to detach, so offering it on one already down would be a button
+                 that does nothing. -->
+            ${
+                detachable
+                    ? html`<fluent-button
+                          class="stop"
+                          appearance="transparent"
+                          size="small"
+                          title="Run in the background — the turn stops waiting for it"
+                          aria-label="Run in the background"
+                          @click=${() => this._detach(detachable)}
+                          >${unsafeHTML(ArrowMinimize16Regular)}</fluent-button
+                      >`
+                    : nothing
+            }
+            <fluent-button
+                class="stop"
+                appearance="transparent"
+                size="small"
+                title="Stop"
+                aria-label="Stop"
+                @click=${() => this._stop(t.taskId)}
+                >${unsafeHTML(Stop16Filled)}</fluent-button
+            >
+        </div>`;
+    }
 
     override render() {
         const n = this.tasks.length;
@@ -226,6 +318,11 @@ export class CvSubagentChip extends LitElement {
             return nothing;
         }
         const indents = this._indents();
+        // Two sections rather than two tabs: the question the chip answers is "is anything still
+        // running", and a tab would hide half the answer behind a click. The background one only
+        // appears when there is something in it, so the usual case looks unchanged.
+        const foreground = this.tasks.filter((t) => !t.background);
+        const background = this.tasks.filter((t) => t.background);
         return html`<fluent-button
                 id="cv-subagent-chip-btn"
                 class="chip"
@@ -246,6 +343,9 @@ export class CvSubagentChip extends LitElement {
             </fluent-button>
             <div id="cv-subagents-popover" class="popover" ?hidden=${!this._open}>
                 <div class="head">
+                    <!-- The total, matching the badge — not the foreground count. Everything in
+                         here is a sub-agent; "Background" below is a subset of it, not a rival
+                         category, and Stop all acts on the lot. -->
                     <span>Sub-agents (${n})</span>
                     <fluent-button
                         class="stopall"
@@ -257,40 +357,15 @@ export class CvSubagentChip extends LitElement {
                         <span>Stop all</span>
                     </fluent-button>
                 </div>
-                ${this.tasks.map(
-                    (t) =>
-                        html`<div
-                            class="row"
-                            style=${
-                                indents.get(t.taskId)
-                                    ? `padding-left:${indents.get(t.taskId)}px`
-                                    : ''
-                            }
-                        >
-                            <span class="cv-dot active"></span>
-                            <div class="main">
-                                <div class="desc" title=${this._desc(t)}>${this._desc(t)}</div>
-                                <div class="meta">
-                                    <span class="now"
-                                        >${t.recentTools[t.recentTools.length - 1] ?? '—'}</span
-                                    >
-                                    <span class="v">${t.usage.toolUses}</span>
-                                    ${t.usage.toolUses === 1 ? 'tool' : 'tools'} ·
-                                    <span class="v">${formatTokens(t.usage.totalTokens)}</span> tok
-                                </div>
-                            </div>
-                            <span class="time">${formatDuration(t.usage.durationMs)}</span>
-                            <fluent-button
-                                class="stop"
-                                appearance="transparent"
-                                size="small"
-                                title="Stop"
-                                aria-label="Stop"
-                                @click=${() => this._stop(t.taskId)}
-                                >${unsafeHTML(Stop16Filled)}</fluent-button
-                            >
-                        </div>`,
-                )}
+                ${foreground.map((t) => this._row(t, indents))}
+                ${
+                    background.length > 0
+                        ? html`<div class="head sub ${foreground.length === 0 ? 'first' : ''}">
+                                  <span>Background (${background.length})</span>
+                              </div>
+                              ${background.map((t) => this._row(t, indents))}`
+                        : nothing
+                }
             </div>`;
     }
 }

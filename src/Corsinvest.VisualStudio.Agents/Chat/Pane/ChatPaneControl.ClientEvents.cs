@@ -556,6 +556,22 @@ public partial class ChatPaneControl
                     },
                 });
             }
+            else if (subtype == ClientMessages.SystemSubtype.TaskUpdated)
+            {
+                // A patch on a task the chip is already showing — backgrounding does not start a
+                // new one. Only what the chip renders is forwarded; the rest of the patch
+                // (end_time, total_paused_ms, error) has nowhere to go yet.
+                //
+                // Sent whether or not either is present: a patch about a task we never saw start
+                // is dropped on the other side, which is cheaper than reasoning about it here.
+                var patch = obj["patch"] as JObject;
+                _bridge.Send(BridgeMessages.ToWebView.Chat.SubagentUpdated, new Contracts.SubagentUpdatedNotification
+                {
+                    TaskId = obj.Val("task_id", ""),
+                    Status = patch?.Val("status", (string)null),
+                    Description = patch?.Val("description", (string)null),
+                });
+            }
             else if (subtype == ClientMessages.SystemSubtype.TaskNotification)
             {
                 _bridge.Send(BridgeMessages.ToWebView.Chat.SubagentEnded, new Contracts.SubagentEndedNotification
@@ -617,7 +633,20 @@ public partial class ChatPaneControl
                 // Authoritative active-agent list. Track whether any are running so a `result` that
                 // ends the MAIN turn (while async agents outlive it) doesn't fire a premature
                 // "finished" — we notify only when this is empty (updates on finish AND on cancel).
-                _hasBackgroundTasks = obj["tasks"] is JArray tasks && tasks.Count > 0;
+                var tasks = obj["tasks"] as JArray;
+                _hasBackgroundTasks = tasks != null && tasks.Count > 0;
+
+                // Forwarded as a set of ids, which is all it carries. task_updated's
+                // is_backgrounded covers only a foreground task being pushed down, and the agents
+                // the CLI launches asynchronously never make that transition — they are background
+                // from birth, so that flag never arrived and the chip filed them under the wrong
+                // heading. This list has them from the first moment.
+                _bridge.Send(BridgeMessages.ToWebView.Chat.BackgroundTasks, new Contracts.BackgroundTasksNotification
+                {
+                    TaskIds = tasks?.Select(t => t.Val("task_id", ""))
+                                    .Where(s => !string.IsNullOrEmpty(s))
+                                    .ToArray() ?? [],
+                });
             }
             else if (subtype == ClientMessages.SystemSubtype.Informational)
             {
@@ -783,6 +812,14 @@ public partial class ChatPaneControl
             // Workdir is fixed on the entry at creation; only the attached session changes here.
             // Track it so the History picker marks the live session with a ✓ (CLI sets it too).
             Entry.ActiveSessionId = e.SessionId;
+
+            // Background tasks belong to the process that was running them. The CLI emits nothing
+            // at startup — the level signal only speaks when membership CHANGES — so a set left
+            // over from the previous process would stand until the next task started.
+            _hasBackgroundTasks = false;
+            _bridge.Send(BridgeMessages.ToWebView.Chat.BackgroundTasks,
+                         new Contracts.BackgroundTasksNotification());
+
             // The banner only needs the "process is back up" signal to clear its error — it reads
             // no payload, so send a bare notification.
             _bridge.Send(BridgeMessages.ToWebView.Cli.Started, null);
