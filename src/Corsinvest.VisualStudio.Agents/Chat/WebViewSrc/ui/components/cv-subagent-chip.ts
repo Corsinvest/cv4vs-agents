@@ -8,6 +8,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Bot16Regular from '@fluentui/svg-icons/icons/bot_16_regular.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
 import ArrowMinimize16Regular from '@fluentui/svg-icons/icons/arrow_minimize_16_regular.svg';
+import './cv-elapsed';
 import { formatTokens, formatDuration } from '../helpers/format';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
@@ -144,6 +145,14 @@ export class CvSubagentChip extends LitElement {
                 color: var(--colorNeutralForeground3);
                 font-variant-numeric: tabular-nums;
             }
+            /* cv-elapsed carries its own badge styling for the transcript row it was written for —
+               a left margin and a dimmer size. Here it is a column in a grid-like row, so those
+               are overridden rather than added to what .time already sets. */
+            cv-elapsed.time {
+                margin-left: 0;
+                font-size: 0.85em;
+                opacity: 1;
+            }
             /* Stop / Stop-all are <fluent-button> — keep them pure; only layout here. */
             .stopall,
             .stop {
@@ -265,7 +274,16 @@ export class CvSubagentChip extends LitElement {
                     <span class="v">${formatTokens(t.usage.totalTokens)}</span> tok
                 </div>
             </div>
-            <span class="time">${formatDuration(t.usage.durationMs)}</span>
+            <!-- A running clock, not the total the sub-agent reports: that one only moves when it
+                 reports a tool use, so between two tools the number sat still for as long as the
+                 call took. cv-elapsed derives it from startedAt and ticks on its own; a task with
+                 no startedAt (one that arrived before we tracked it) keeps the reported figure,
+                 which is at least honest about being a total. -->
+            ${
+                t.startedAt
+                    ? html`<cv-elapsed class="time" .startedAt=${t.startedAt}></cv-elapsed>`
+                    : html`<span class="time">${formatDuration(t.usage.durationMs)}</span>`
+            }
             <!-- Only on rows still attached to the turn. The CLI answers backgrounded:false when
                  there is nothing to detach, so offering it on one already down would be a button
                  that does nothing. -->
