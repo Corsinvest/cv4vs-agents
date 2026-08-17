@@ -68,6 +68,19 @@ export class CvQueueRow extends LitElement {
             .drop-btn {
                 flex-shrink: 0;
             }
+            /* Cut to icon width, like every other icon trigger in the composer: at Fluent's width
+               for a labelled button the bin never reached the edge the send button below it sits
+               on, however much padding the row was given. */
+            .count-btn,
+            .clear-btn {
+                padding: 3px;
+                min-width: 0;
+            }
+            /* The row's 4px gap was set when these were wide enough to space themselves; at icon
+               width it leaves the bin looking like part of the count control. */
+            .count-btn {
+                margin-right: 4px;
+            }
             .count-btn svg,
             .clear-btn svg,
             .drop-btn svg {
@@ -208,8 +221,9 @@ export class CvQueueRow extends LitElement {
     private _renderClear(count: number) {
         return html`<fluent-button
             class="clear-btn"
-            appearance="transparent"
+            appearance="subtle"
             size="small"
+            icon-only
             title=${count === 1 ? 'Remove from queue' : 'Clear queue'}
             aria-label=${count === 1 ? 'Remove from queue' : 'Clear queue'}
             @click=${this._clear}
@@ -263,8 +277,9 @@ export class CvQueueRow extends LitElement {
                             >
                             <fluent-button
                                 class="drop-btn"
-                                appearance="transparent"
+                                appearance="subtle"
                                 size="small"
+                                icon-only
                                 title="Remove from queue"
                                 aria-label="Remove from queue"
                                 @click=${() => this._drop(m.uuid)}
