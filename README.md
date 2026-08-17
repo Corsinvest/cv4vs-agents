@@ -442,8 +442,9 @@ Every tool is listed and described in **[MCP tools](docs/mcp-tools.md)**.
 
 ## Options
 
-All settings live under **Tools → Options → cv4vs Agents**, split into four pages — General,
-Chat, Debug and **Profiles** (see [Two panes, one extension](#two-panes-one-extension)).
+All settings live under **Tools → Options → cv4vs Agents**, split into five pages — General,
+Chat, Debug, **Editor prompts** and **Profiles** (see
+[Two panes, one extension](#two-panes-one-extension)).
 Every setting is documented in **[docs/options.md](docs/options.md)**.
 
 Visual Studio persists them in its own settings store; profiles, per-solution state and caches
