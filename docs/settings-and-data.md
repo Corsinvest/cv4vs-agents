@@ -18,6 +18,7 @@ Uninstalling the extension leaves both trees behind — see [Removing everything
 |---|---|
 | Environment profiles | `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\profiles.json` |
 | Editor context-menu prompts | `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\editor-prompts.json` |
+| `@` picker ignore rules | `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\picker-ignore.gitignore` |
 | Open panes per solution | `…\cv4vs-agents\data\projects\<project-hash>\workspace.json` |
 | Usage stats cache | `…\<project-hash>\<config-id>\stats-cache.json` |
 
@@ -32,7 +33,9 @@ to point at: Visual Studio persists them in its own settings store, per VS insta
 
 **Profiles** and **Editor prompts** are the exceptions: they edit `profiles.json` and
 `editor-prompts.json` (below) instead, so the launcher menu and the editor context menu can be
-built without first materialising the Options page.
+built without first materialising the Options page. **Ignored patterns** is a third: the row shows
+where `picker-ignore.gitignore` is and its `…` button opens that file, since the content is a rule
+list with comments — something to edit in a real editor and copy between machines.
 
 ## Our data folder
 
@@ -41,6 +44,7 @@ Root: `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\`
 ```
 profiles.json                       environment profiles (name, enabled, env vars)
 editor-prompts.json                 editor context-menu prompts (title, prompt, needs-selection)
+picker-ignore.gitignore             extra `@` picker ignore rules, on top of the workspace's own
 WebView2/                           WebView2 user-data (chat UI cache/storage)
 icons/                              file-type icons rasterised from VS KnownMonikers
 data/projects/<project-hash>/

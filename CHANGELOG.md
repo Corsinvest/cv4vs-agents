@@ -6,7 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-08-17
+
+A session can be driven from somewhere else — claude.ai/code, or a phone — and the code you are
+looking at can start one, from the right-click menu. The MCP catalogue reaches past reading the
+solution into changing it: files into projects, projects into the solution, the configuration
+builds go through. And an Output window that is not in English stops hiding the build log.
+
 ### Added
+
+- **Remote Control: drive a session from claude.ai/code or your phone.** A pane can hand its
+  session to the CLI's bridge and post the URL and a QR into the transcript, so the same
+  conversation continues from a browser or a phone while Visual Studio keeps it. The QR is for the
+  phone; the link beside it now has a copy button, because sending it to someone meant selecting a
+  URL wrapped across three lines on purpose. Opening it also closes the command menu — the other
+  toggles act in place and leave it up, but this one posts a card into the transcript and the menu
+  was sitting on top of what you had just asked for. If the bridge drops, the banner says so rather
+  than advertising a session that has gone. See [Remote Control](docs/chat/remote-control.md).
+
+- **Ask Claude about the code you are looking at, from the right-click menu.** A **cv4vs Agents**
+  submenu on the editor's context menu — Explain, Review, Find bugs, Write tests, Simplify — writes
+  the prompt into a chat pane's composer instead of sending it, since the canned text is generic
+  and usually wants half a line added first. Entries that need a selection are greyed out rather
+  than hidden, the way Copilot's are: one that comes and goes reads as a bug. The prompts carry no
+  code — the file and selection reach the CLI through the IDE context, and Claude reads the symbol
+  with the `nav_*` tools — so **Options → Editor prompts** lets you write your own: title, prompt,
+  and whether it needs a selection, in the order they appear. Which pane receives is the last one
+  worked in, brought forward; with none open, one is opened. The IDE-context eye is re-opened with
+  the prompt, since asking about this code with nothing saying which file it is would reach the CLI
+  as a question about nothing.
 
 - **Take one message back out of the queue.** Writing while a turn runs queues the message, and
   until now regretting one meant Stop — which clears the queue but interrupts the answer with it,
@@ -17,6 +45,109 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   view anyway. The row is there only while something is queued, so it costs no space the rest of
   the time, and the bin keeps its place in both forms so it can be hit without looking. Nothing
   reaches the model either way: a queued message was never given to the CLI.
+
+- **The agent can change the solution, not just read it.** A `.cs` written to disk compiles in the
+  IDE and is missing from a command-line build, because this project lists every file explicitly —
+  the first trap in our own contributor notes. `project_add_file` goes through the same path
+  Solution Explorer's "Add → Existing Item" takes, so the item lands where the project system wants
+  it; an SDK-style project that globs its files says the file is already included rather than
+  adding a duplicate. With it come `project_remove_file` and `solution_add_project` /
+  `solution_remove_project` one level up. All four leave the files on disk: taking something out of
+  the build and deleting it are different intents, and only the first is reversible.
+
+- **Which configuration a build went through, and switching it.** Builds followed whichever
+  configuration the IDE happened to have active, and nothing in the exchange said which — with the
+  toolbar on Release and the caller assuming Debug there was no way to tell. `build_solution` and
+  `build_project` now report it, `solution_get_configuration` reads the active one plus the names
+  that can be asked for without building anything, and `solution_set_configuration` switches it.
+  Switching is a tool of its own rather than an argument on the build, because it changes the IDE
+  and leaves it changed: the toolbar dropdown moves and the user's next manual build follows it.
+
+- **`build_cancel`.** A build had a thirty-minute ceiling and then gave up, leaving the IDE
+  compiling with nothing able to stop it — the next build found the road occupied. This closes that
+  path, including a build the user started outside the chat. Finding nothing running reports
+  success, since that is the state the caller asked for, and the build timeout message now names
+  the tool, so the model meets it at the moment it needs it.
+
+- **`ide_write_output`.** Writes into an Output window pane, creating it on demand — somewhere to
+  leave a note where the user will see it, that outlives the turn.
+
+- **Every tool says whether it reads or writes.** Without the standard MCP annotations the CLI
+  cannot tell one from the other, so `nav_find_references` cost the same permission prompt as
+  `debug_stop`. Three independent flags rather than one value, because the axes combine: read-only
+  and idempotent, or destructive and idempotent. The stepping tools stay deliberately bare — they
+  advance execution, which is neither.
+
+- **Backgrounded sub-agents are visible in the chip.** Sub-agents that outlive the turn had nowhere
+  to be seen: the chat looked finished while three of them were still working. They render as a
+  section under the foreground rows rather than behind a tab, which would hide half the answer
+  behind a click, and the heading counts the whole set — Background is a subset, not a rival
+  category. One clock drives every elapsed badge on the page instead of a timer per row.
+
+### Fixed
+
+- **Chat and CLI panes started in the wrong folder with a folder open.** With Visual Studio in Open
+  Folder mode — no `.sln` — the panes fell back to the user profile, so the CLI worked from the home
+  directory rather than the folder on screen. `IVsSolution` reports no directory there, because
+  there is no solution file backing it; the folder now comes from the workspace itself. A missing
+  Open Folder assembly degrades to the old fallback instead of failing package activation.
+  Thanks to [@olxsoft01-boop](https://github.com/olxsoft01-boop).
+
+- **The transcript was yanked to the bottom while reading back.** New assistant text, tool rows,
+  thinking blocks, compaction notices and errors all scrolled to the bottom unconditionally,
+  fighting anyone who had scrolled up to read an earlier message. They are gated on the same
+  near-bottom check the streaming deltas already used.
+  Thanks to [@olxsoft01-boop](https://github.com/olxsoft01-boop).
+
+- **A queued message ended the running turn's exchange.** Write a second prompt while a turn is
+  answering and the header of the turn actually in flight came unstuck halfway through its own
+  reply. A message waiting in the queue heads no turn — the CLI has not been given it — but it
+  opened an exchange all the same, ending the running one early, and a pinned user bubble only
+  holds within its own exchange. It now stays with the turn in progress and opens its own once sent.
+
+- **Built-in Output panes were unreachable outside an English IDE.** The Build pane is
+  "Compilazione" on an Italian install, and the panes were matched by display name — so
+  `ide_read_output`, `ide_clear_output` and `ide_activate_output` all answered "no output pane named
+  'Build'" with a list in which Build indeed was not there, indistinguishable from a build that
+  produced nothing. The four built-in panes now resolve through a GUID that does not change with the
+  IDE language, and a pane the Output window has never displayed is realised before being read —
+  it holds what the build wrote, but refuses to hand over its text until it has been shown once.
+
+- **The `@` picker's ignore rules never matched what they were written to match.** Patterns were
+  tested against the wrong form of the path, so rules that looked right in the settings did nothing
+  in the picker.
+
+- **Project-level diagnostics were dropped, and the workspace folder was wrong.** The Error List
+  carries entries that name no file — an unresolved reference, a file the project would not add —
+  and every one was discarded: 14 of 232 on this solution, and the ones a caller cannot find another
+  way, since a diagnostic attached to a file surfaces again when that file is opened and these never
+  do. Separately, the workspace folder was re-derived from the solution path, which in Open Folder
+  mode handed the CLI the *parent* of the open folder — wrong in a way that reads as right.
+
+- **A wrapped permission label was centred.** "Yes, allow Bash(cd …) for this project (just you)"
+  is long enough to wrap in a narrow pane, and the second line came out centred under the first, so
+  the tail of a sentence read as an element of its own. The two short buttons never showed it
+  because they never wrap.
+
+- **A freshly opened pane's composer took the caret but not the keyboard.** Only on the first open:
+  the composer drew its focus border while the keystrokes went to Visual Studio.
+
+### Changed
+
+- **The `@` picker's ignore rules are a `.gitignore` file, not a list of patterns.** They were a
+  string array in the Visual Studio settings store, each entry an exact name, an extension with a
+  leading dot, or a `*`/`?` glob — three conventions of our own for something every developer
+  already knows how to write. They now live in a real `.gitignore` under the app data folder, with
+  its syntax, its comments and its negations; **Options → Chat → Ignored patterns** shows the path,
+  and the `…` button opens the file in the editor. Two consequences worth knowing: the rules now
+  apply **only where the workspace's own ignore rules say nothing**, so a repository that ignores
+  its own build output decides for itself and these are the fallback for one that ships no rules at
+  all; and **a customised list from 1.3.0 does not carry over** — the file starts from the shipped
+  defaults, which are the same set the array held, so only a hand-edited list needs redoing.
+
+- **`build_set_startup_project` is now `solution_set_startup_project`.** The startup project is a
+  property of the solution, not of a project, and the API says so. Nothing outside the catalogue
+  refers to tools by name, and the model reads the catalogue fresh each session.
 
 ## [1.3.0] - 2026-08-10
 
