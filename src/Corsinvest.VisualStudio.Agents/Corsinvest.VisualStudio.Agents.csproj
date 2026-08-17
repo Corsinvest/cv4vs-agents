@@ -90,6 +90,15 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.0.31902.203" NoWarn="NU1604" />
+    <!-- Open Folder workspace API (IVsFolderWorkspaceService) — not part of the SDK meta-package
+         above. Pinned to an old, low-dependency release on purpose: it only needs
+         Microsoft.VisualStudio.Threading >= 15.8.132, well under what the SDK already resolves,
+         so it can't bump Threading/Shell.15.0 to a version that conflicts elsewhere. The
+         interface itself has been stable since VS 2017. Private=False: VS's own newer in-box
+         copy (CommonExtensions\Microsoft\OpenFolder\) is what actually loads at runtime. -->
+    <PackageReference Include="Microsoft.VisualStudio.Workspace.VSIntegration" Version="16.3.43" NoWarn="NU1604">
+      <Private>False</Private>
+    </PackageReference>
     <PackageReference Include="Microsoft.VSSDK.BuildTools" Version="17.14.2101" NoWarn="NU1604" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3912.50" NoWarn="NU1604;NU1603" />
     <!-- Pin to 13.0.1: the version VS loads at runtime from its
