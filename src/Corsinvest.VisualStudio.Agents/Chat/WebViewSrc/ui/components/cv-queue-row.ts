@@ -7,12 +7,20 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Delete16Regular from '@fluentui/svg-icons/icons/delete_16_regular.svg';
 import TextBulletList16Regular from '@fluentui/svg-icons/icons/text_bullet_list_16_regular.svg';
+import Attach16Regular from '@fluentui/svg-icons/icons/attach_16_regular.svg';
 import { parseIdeContextTags } from '../../core/ide';
 import { iconStyles } from '../styles/shared';
+import { iconUrl } from '../../core/icon-url';
+import type { Attachment } from '../../core/types';
+import './cv-attach-chip';
 
 export interface QueuedMessage {
     text: string;
     uuid: string;
+    /** What the message carries. cv-prompt's queue entries have always held these; the type
+     *  simply did not say so, and the list could not tell a prompt with a screenshot from one
+     *  without. */
+    attachments?: Attachment[];
 }
 
 /** The row above the composer while messages are waiting to be sent. Stop drops the whole queue
@@ -61,6 +69,20 @@ export class CvQueueRow extends LitElement {
             }
             .spacer {
                 flex: 1;
+            }
+            /* Sits between the text and the buttons, so it must not be what gives way when the
+               text is long — the text has the ellipsis for that. */
+            .file-count {
+                display: inline-flex;
+                align-items: center;
+                gap: 2px;
+                flex-shrink: 0;
+                font-size: 0.85em;
+                color: var(--colorNeutralForeground3);
+            }
+            .file-count svg {
+                width: 14px;
+                height: 14px;
             }
             /* Triggers are <fluent-button> — keep them pure (layout only). */
             .count-btn,
@@ -151,19 +173,34 @@ export class CvQueueRow extends LitElement {
                 color: var(--colorNeutralForeground3);
                 font-variant-numeric: tabular-nums;
             }
-            /* The whole message, not a label: by the time a turn has been running the echoed
-               bubble has scrolled out of the viewport, so this is the only place left to read
-               what is about to be sent. Clamped so one long message cannot push the others out
-               of reach; the title attribute still carries the rest. */
+            /* Enough of the message to tell it from the others, not the message itself: by the
+               time a turn has been running the echoed bubble has scrolled out of the viewport, so
+               this is the only place left to check what is about to be sent — but three lines of
+               a pasted function already say which one it is, and six let one entry crowd out the
+               rest. The title attribute carries the whole text.
+               Plain text, never rendered markdown: this is for recognising a message, and a code
+               block with its own background and padding would add height exactly where there is
+               none to spare. */
             .item-text {
-                flex: 1;
-                min-width: 0;
                 white-space: pre-wrap;
                 overflow-wrap: anywhere;
                 overflow: hidden;
                 display: -webkit-box;
                 -webkit-box-orient: vertical;
-                -webkit-line-clamp: 6;
+                -webkit-line-clamp: 3;
+            }
+            /* The same chip the composer and the sent bubble use, so an attachment looks the same
+               at all three points of one message's life. Wraps under the text rather than beside
+               it: the row is already tight between the ordinal and the bin. */
+            .item-files {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                margin-top: 4px;
+            }
+            .item-body {
+                flex: 1;
+                min-width: 0;
             }
         `,
     ];
@@ -208,6 +245,47 @@ export class CvQueueRow extends LitElement {
         return parseIdeContextTags(text).text;
     }
 
+    /** Built here rather than inline in the list: `.item-text` is `white-space: pre-wrap`, so the
+     *  indentation the template would put around the interpolation becomes leading whitespace on
+     *  screen — which is what pushed every entry away from its ordinal. */
+    private static _renderItemText(text: string) {
+        const shown = CvQueueRow._shown(text);
+        return html`<div class="item-text" title=${shown}>${shown}</div>`;
+    }
+
+    /** The single-message row has only the width left over by the label and the two buttons, so
+     *  what fits there is a paperclip and a number — enough to say the message is not text alone.
+     *  The names are in the title, and in the chips once there is a list to hold them. */
+    private static _renderFileCount(files?: Attachment[]) {
+        if (!files?.length) {
+            return nothing;
+        }
+        const names = files.map((f) => f.name).join('\n');
+        return html`<span class="file-count" title=${names}>
+            ${unsafeHTML(Attach16Regular)}${files.length > 1 ? files.length : nothing}
+        </span>`;
+    }
+
+    /** What the message carries, as the chips the composer and the sent bubble already use.
+     *  Not removable and not clickable: taking one attachment out of a queued message is not a
+     *  thing the queue can do — the bin drops the message whole — and opening it would put a
+     *  lightbox over the list you are reading. */
+    private static _renderFiles(files?: Attachment[]) {
+        if (!files?.length) {
+            return nothing;
+        }
+        return html`<div class="item-files">
+            ${files.map(
+                (a) =>
+                    html`<cv-attach-chip
+                        .src=${a.isImage ? (a.preview ?? a.dataUrl) : iconUrl(a.name)}
+                        .label=${a.name}
+                        title=${a.name}
+                    ></cv-attach-chip>`,
+            )}
+        </div>`;
+    }
+
     private _drop(uuid: string): void {
         this.dispatchEvent(
             new CustomEvent('drop-queued', { detail: { uuid }, bubbles: true, composed: true }),
@@ -242,8 +320,9 @@ export class CvQueueRow extends LitElement {
                 ${
                     n === 1
                         ? html`<span class="text" title=${CvQueueRow._shown(this.messages[0].text)}
-                              >${CvQueueRow._shown(this.messages[0].text)}</span
-                          >`
+                                  >${CvQueueRow._shown(this.messages[0].text)}</span
+                              >
+                              ${CvQueueRow._renderFileCount(this.messages[0].attachments)}`
                         : html`<span class="spacer"></span>
                               <fluent-button
                                   class="count-btn"
@@ -272,9 +351,10 @@ export class CvQueueRow extends LitElement {
                     (m, i) =>
                         html`<div class="item">
                             <span class="ord">${i + 1}</span>
-                            <span class="item-text" title=${CvQueueRow._shown(m.text)}
-                                >${CvQueueRow._shown(m.text)}</span
-                            >
+                            <div class="item-body">
+                                ${CvQueueRow._renderItemText(m.text)}
+                                ${CvQueueRow._renderFiles(m.attachments)}
+                            </div>
                             <fluent-button
                                 class="drop-btn"
                                 appearance="subtle"
