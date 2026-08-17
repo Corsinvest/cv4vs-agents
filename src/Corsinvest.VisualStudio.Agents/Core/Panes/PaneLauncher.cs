@@ -111,9 +111,10 @@ internal static class PaneLauncher
         return pkg.FindToolWindow(WindowType(entry.Kind), entry.PaneId, create: false)?.Frame;
     }
 
-    /// <summary>The pane's working directory: the open solution's folder, else the user profile
-    /// (so claude.exe always has a real cwd). Resolved once here, then injected into the entry and
-    /// constant for the pane's life — a solution change closes the pane rather than moving it.</summary>
+    /// <summary>The pane's working directory: the open solution's folder (or the open folder, in
+    /// Open-Folder mode), else the user profile (so claude.exe always has a real cwd). Resolved
+    /// once here, then injected into the entry and constant for the pane's life — a solution
+    /// change closes the pane rather than moving it.</summary>
     private static string ResolveWorkdir()
         => AgentsPackage.Instance?.CurrentSolutionFolder
            ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
