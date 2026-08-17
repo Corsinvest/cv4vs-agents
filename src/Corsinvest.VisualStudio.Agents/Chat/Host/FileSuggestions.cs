@@ -24,14 +24,26 @@ internal static class FileSuggestions
 {
     public static List<FileSuggestionItem> Get(string root, string query)
     {
+        using var _ = OutputWindowLogger.Global.PerfSpan($"FileSuggestions.Get(q={query?.Length ?? 0} chars)");
         var result = new List<FileSuggestionItem>();
         try
         {
             if (!Directory.Exists(root)) { return result; }
 
             var opts = AgentsOptions.Chat;
-            var patterns = ParsePatterns(opts.IgnoredPatterns);
-            var ignore = opts.UseGitIgnore ? GitIgnoreCache.Get(root) : null;
+            // The picker's own rules, read from their file and parsed by the same .gitignore
+            // parser as the workspace's — one syntax, and the one already written in every repo.
+            var configured = GitIgnoreCache.GetConfigured();
+            // The workspace rules are the bottom of the stack; EnumerateFiles pushes a nested
+            // .gitignore onto it for the subtree that declares one.
+            var ignores = new List<(string Root, GitIgnore Ignore)>();
+            using (OutputWindowLogger.Global.PerfSpan("[picker] gitignore load"))
+            {
+                var ignore = opts.UseGitIgnore ? GitIgnoreCache.Get(root) : null;
+                if (ignore != null) { ignores.Add((root, ignore)); }
+            }
+            GitIgnore.ResetStats();
+            if (ignores.Count > 0) { GitIgnore.CountFile(); }
 
             // Backslashes accepted as separators so a path pasted from Explorer still matches.
             var qLower = query.Replace('\\', '/').ToLowerInvariant();
@@ -45,8 +57,11 @@ internal static class FileSuggestions
             // what the recursive walk now produces.
             var hits = new SortedList<string, FileSuggestionItem>(StringComparer.OrdinalIgnoreCase);
             var visited = 0;
+            // Which budget ended the walk, if either — the alphabetical cut it implies is why a
+            // folder late in the alphabet can be missing entirely.
+            string cappedBy = null;
 
-            foreach (var file in EnumerateFiles(root, root, patterns, ignore))
+            foreach (var file in EnumerateFiles(root, root, configured, ignores))
             {
                 // This runs on every keystroke, so the walk is bounded by how much of the tree it
                 // touches, not by how deep it goes: depth is what hides files, sheer volume is what
@@ -56,7 +71,11 @@ internal static class FileSuggestions
                 // tail of directories whose contents had all been dropped — `tools/cli-probe/` and
                 // nothing under it. Alphabetical order means the cut lands wherever it lands, which
                 // is the trade any capped file picker makes.
-                if (hits.Count >= MaxRows || ++visited > MaxVisited) { break; }
+                if (hits.Count >= MaxRows || ++visited > MaxVisited)
+                {
+                    cappedBy = hits.Count >= MaxRows ? nameof(MaxRows) : nameof(MaxVisited);
+                    break;
+                }
 
                 var rel = PathHelpers.Relative(root, file);
                 // Matched against the whole query, not just the part after the last slash: the
@@ -99,6 +118,21 @@ internal static class FileSuggestions
             }
 
             result.AddRange(hits.Values);
+
+            // rows/visited say how much of the tree the budget bought, and capped says whether the
+            // list is the whole tree or a prefix of the alphabet. regex/path is the multiplier the
+            // rules cost — it went from 201 to ~150 when the negations moved into their own list,
+            // and it is the number to watch if a big repository ever feels slow again.
+            // rules[] names the shape of what was parsed: neg>0 and files>1 only appear on a build
+            // that keeps negations and reads nested files, which is what tells a measurement of
+            // this code from one of a stale copy still installed alongside it.
+            var (ignoreCalls, ignoreRegex) = GitIgnore.Stats;
+            var last = result.Count > 0 ? result[result.Count - 1].Name : "-";
+            var shape = ignores.Count > 0 ? $"{ignores[0].Ignore.Shape},files={GitIgnore.FilesConsulted}" : "off";
+            OutputWindowLogger.Global.Perf(() =>
+                $"[picker] rules[{shape}] rows={result.Count} visited={visited} capped={cappedBy ?? "no"} "
+                + $"ignore: calls={ignoreCalls} regex={ignoreRegex} "
+                + $"({(ignoreCalls > 0 ? (double)ignoreRegex / ignoreCalls : 0):0.0}/path) last={last}");
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("FileSuggestions.Get", ex); }
         return result;
@@ -106,123 +140,83 @@ internal static class FileSuggestions
 
     /// <summary>Rows shown, files and derived directories together. Deliberately generous: the walk
     /// is alphabetical, so a low cap does not sample the tree, it stops partway through and hides
-    /// everything from there to the end of the alphabet — `tools/` never showed up. Bounded all the
-    /// same: cv-popover-list renders every row it is given, with no virtualisation.</summary>
-    private const int MaxRows = 600;
+    /// everything from there to the end of the alphabet — at 600 this repository's own `tools/` was
+    /// cut, 31 rows short of the 631 it produces. Bounded all the same: cv-popover-list renders
+    /// every row it is given, with no virtualisation.
+    /// <para>Affordable at this size only because the ignore rules now prune what they always meant
+    /// to: the same walk was 1,165 files and ~1.4s of pattern matching before the character classes
+    /// were fixed, and is 563 files and ~190ms after.</para></summary>
+    private const int MaxRows = 2000;
 
     /// <summary>Files the walk will look at before giving up, ignored ones excluded. Guards the
     /// per-keystroke cost on a huge tree; it is not a depth limit.</summary>
     private const int MaxVisited = 20000;
 
     /// <summary>Files under <paramref name="dir"/>, at any depth, ignored ones left out.
-    /// Directories are pruned rather than filtered so their contents cost nothing.</summary>
-    private static IEnumerable<string> EnumerateFiles(string dir, string root, List<IgnorePattern> patterns, GitIgnore ignore)
+    /// Directories are pruned rather than filtered so their contents cost nothing.
+    /// <para><paramref name="ignores"/> holds the workspace rules plus one entry for every
+    /// <c>.gitignore</c> on the way down, each paired with the directory it was read from — its
+    /// patterns are relative to that directory, not to the workspace. The walk is already
+    /// recursive, so a nested file costs one lookup when its directory is entered rather than a
+    /// search per path. Without this, `WebViewSrc/.gitignore` went unread and its `dist/` — named
+    /// nowhere else — put 13 build artefacts in the menu.</para></summary>
+    private static IEnumerable<string> EnumerateFiles(
+        string dir, string root, GitIgnore configured, List<(string Root, GitIgnore Ignore)> ignores)
     {
         foreach (var file in Directory.GetFiles(dir).OrderBy(a => a, StringComparer.OrdinalIgnoreCase))
         {
-            if (IsIgnored(Path.GetFileName(file), file, root, isDir: false, patterns, ignore)) { continue; }
+            if (IsIgnored(file, root, isDir: false, configured, ignores)) { continue; }
             yield return file;
         }
 
         foreach (var sub in Directory.GetDirectories(dir).OrderBy(a => a, StringComparer.OrdinalIgnoreCase))
         {
-            if (IsIgnored(Path.GetFileName(sub), sub, root, isDir: true, patterns, ignore)) { continue; }
-            foreach (var file in EnumerateFiles(sub, root, patterns, ignore))
+            // An excluded directory is still walked when a `!` rule names something inside it:
+            // `.vscode/*` with `!.vscode/settings.json` means the directory goes, its settings
+            // file stays, and pruning here would take the file with it. The files inside are
+            // filtered individually, so only what the negations rescue comes back.
+            if (IsIgnored(sub, root, isDir: true, configured, ignores)
+                && !ignores.Any(x => x.Ignore.KeepsSubtree(sub, x.Root))
+                && configured?.KeepsSubtree(sub, root) != true)
+            {
+                continue;
+            }
+
+            // A .gitignore here applies to this subtree only, so it is pushed for the descent and
+            // popped after: the list is shared down the recursion rather than copied per level.
+            var nested = GitIgnoreCache.GetNested(sub);
+            if (nested != null) { ignores.Add((sub, nested)); GitIgnore.CountFile(); }
+            foreach (var file in EnumerateFiles(sub, root, configured, ignores))
             {
                 yield return file;
             }
+            if (nested != null) { ignores.RemoveAt(ignores.Count - 1); }
         }
     }
 
     /// <summary>
-    /// Tests <paramref name="name"/> against user patterns and the workspace `.gitignore`.
-    /// Patterns: glob (<c>*</c>/<c>?</c>), exact name (case-insensitive), or <c>.ext</c> shorthand.
+    /// Tests a path against the workspace's ignore rules, then against the configured patterns.
+    /// Both are read by the same parser, so there is one syntax here and it is git's.
     /// </summary>
-    private static bool IsIgnored(string name, string fullPath, string root, bool isDir, List<IgnorePattern> patterns, GitIgnore ignore)
+    private static bool IsIgnored(string fullPath, string root, bool isDir, GitIgnore configured, List<(string Root, GitIgnore Ignore)> ignores)
     {
-        foreach (var p in patterns)
+        // The workspace rules are asked FIRST, deepest file first: they are what this project says
+        // about itself, while the configured patterns are a default for a project that says
+        // nothing. Where the two disagree the specific answer is the right one — the defaults hide
+        // `.vscode/`, which this repository re-includes a settings.json from on purpose.
+        for (var i = ignores.Count - 1; i >= 0; i--)
         {
-            if (p.Regex != null)
-            {
-                if (p.Regex.IsMatch(name)) { return true; }
-                continue;
-            }
-            if (string.Equals(name, p.Text, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-            if (!isDir && p.IsExtension && string.Equals(Path.GetExtension(name), p.Text, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+            if (ignores[i].Ignore.TryMatch(fullPath, ignores[i].Root, isDir, out var ignored)) { return ignored; }
         }
-        return ignore?.Matches(fullPath, root, isDir) == true;
-    }
 
-    /// <summary>
-    /// Compiles configured patterns into matchers: exact name, <c>.ext</c> shorthand, or glob regex.
-    /// </summary>
-    private static List<IgnorePattern> ParsePatterns(string[] entries)
-    {
-        var list = new List<IgnorePattern>();
-        if (entries == null) { return list; }
-        foreach (var raw in entries)
-        {
-            if (raw == null) { continue; }
-            var t = raw.Trim();
-            if (t.Length == 0) { continue; }
-
-            if (t.IndexOf('*') >= 0 || t.IndexOf('?') >= 0)
-            {
-                list.Add(new IgnorePattern { Regex = GlobToRegex(t) });
-                continue;
-            }
-
-            // ".ext" shorthand also matches as a name, so ".env" still matches the file `.env`.
-            var isExt = t.StartsWith(".") && t.IndexOf('.', 1) < 0
-                        && t.IndexOf('/') < 0 && t.IndexOf('\\') < 0;
-            list.Add(new IgnorePattern { Text = t, IsExtension = isExt });
-        }
-        return list;
-    }
-
-    private static Regex GlobToRegex(string glob)
-    {
-        var sb = new System.Text.StringBuilder("^");
-        foreach (var ch in glob)
-        {
-            switch (ch)
-            {
-                case '*': sb.Append("[^/\\\\]*"); break;
-                case '?': sb.Append("[^/\\\\]"); break;
-                case '.':
-                case '+':
-                case '(':
-                case ')':
-                case '|':
-                case '^':
-                case '$':
-                case '{':
-                case '}':
-                case '[':
-                case ']':
-                case '\\':
-                    sb.Append('\\').Append(ch); break;
-                default: sb.Append(ch); break;
-            }
-        }
-        sb.Append('$');
-        return new Regex(sb.ToString(), RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    }
-
-    private sealed class IgnorePattern
-    {
-        /// <summary>Exact-match text (null when this is a glob pattern).</summary>
-        public string Text;
-        /// <summary>True when <see cref="Text"/> should also match as a file extension.</summary>
-        public bool IsExtension;
-        /// <summary>Compiled regex for glob patterns (null for plain names).</summary>
-        public Regex Regex;
+        // Nothing had an opinion, so the configured patterns decide. Skipping them inside a
+        // repository — on the argument that git's silence means "tracked" — was measured on a
+        // .gitignore with no node_modules rule: the walk listed 2,000 rows of dependencies and hit
+        // the cap, which is the alphabetical truncation this whole change set removed. They are
+        // the guard for exactly that, so they stay.
+        return configured != null
+            && configured.TryMatch(fullPath, root, isDir, out var byPattern)
+            && byPattern;
     }
 }
 
@@ -233,6 +227,10 @@ internal static class FileSuggestions
 internal static class GitIgnoreCache
 {
     private static readonly Dictionary<string, (DateTime Mtime, GitIgnore Ignore)> _cache
+        = new(StringComparer.OrdinalIgnoreCase);
+    // Keyed by the .gitignore's own path: a nested file is read once and reused across walks,
+    // which is what keeps the per-directory lookup from costing a parse each time.
+    private static readonly Dictionary<string, (DateTime Mtime, GitIgnore Ignore)> _nested
         = new(StringComparer.OrdinalIgnoreCase);
     private static readonly object _lock = new();
 
@@ -273,6 +271,64 @@ internal static class GitIgnoreCache
         }
     }
 
+    /// <summary>The picker's own rules (<see cref="IgnoreRulesStore"/>), parsed as a `.gitignore`.
+    /// Keyed on the file's mtime so editing it in VS takes effect on the next `@` without a
+    /// restart, while an unchanged file costs one stat per walk.</summary>
+    private static DateTime _configuredMtime = DateTime.MaxValue;
+    private static GitIgnore _configured;
+
+    public static GitIgnore GetConfigured()
+    {
+        var mtime = IgnoreRulesStore.LastWriteUtc;
+        lock (_lock)
+        {
+            if (_configuredMtime == mtime) { return _configured; }
+            try
+            {
+                var text = IgnoreRulesStore.Read();
+                _configured = string.IsNullOrWhiteSpace(text) ? null : GitIgnore.Parse(text);
+                _configuredMtime = mtime;
+                return _configured;
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.Global.LogException("GitIgnoreCache.GetConfigured", ex);
+                return null;
+            }
+        }
+    }
+
+    /// <summary>The `.gitignore` sitting in <paramref name="dir"/>, or null when there is none —
+    /// git's global excludes are NOT folded in here, unlike <see cref="Get"/>: those belong to the
+    /// workspace once, and re-applying them at every level would only repeat work. Called once per
+    /// directory the walk enters, so the absent case (the overwhelming majority) is one
+    /// File.Exists.</summary>
+    public static GitIgnore GetNested(string dir)
+    {
+        var path = Path.Combine(dir, ".gitignore");
+        if (!File.Exists(path)) { return null; }
+
+        var mtime = File.GetLastWriteTimeUtc(path);
+        lock (_lock)
+        {
+            if (_nested.TryGetValue(path, out var cached) && cached.Mtime == mtime)
+            {
+                return cached.Ignore;
+            }
+            try
+            {
+                var ignore = GitIgnore.Parse(File.ReadAllText(path));
+                _nested[path] = (mtime, ignore);
+                return ignore;
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.Global.LogException("GitIgnoreCache.GetNested", ex);
+                return null;
+            }
+        }
+    }
+
     /// <summary>Git's global excludes file. Resolved once: `core.excludesFile` can point anywhere,
     /// so it is asked of git rather than guessed, with git's own default as the fallback.</summary>
     private static readonly Lazy<string> GlobalExcludesFile = new(() =>
@@ -308,14 +364,102 @@ internal static class GitIgnoreCache
 
 /// <summary>
 /// Lightweight `.gitignore` matcher: plain names, anchored <c>/</c>, dir-only trailing <c>/</c>,
-/// basic <c>*</c>/<c>?</c> globs. Skips negations and brace expansions — rare enough that a full
-/// gitignore implementation would not pay for itself here.
+/// basic <c>*</c>/<c>?</c> globs, negations, and character classes. Skips brace expansions — rare
+/// enough that a full gitignore implementation would not pay for itself here.
 /// </summary>
 internal sealed class GitIgnore
 {
-    private readonly List<Pattern> _patterns;
+    // Split at construction rather than filtered per path: the exclusions answer almost every
+    // call on their own, and a path they don't match never touches the negation list at all.
+    private readonly List<Pattern> _excludes;
+    private readonly List<Pattern> _negations;
+    // Literal leading directories of the negations, e.g. `.vscode` for `!.vscode/settings.json`.
+    // Read by KeepsSubtree to tell a directory that must be descended into from one that can be
+    // pruned; empty for the overwhelming majority of files, where the test costs nothing.
+    private readonly List<string> _negatedPrefixes;
 
-    private GitIgnore(List<Pattern> patterns) => _patterns = patterns;
+    private GitIgnore(List<Pattern> patterns)
+    {
+        _excludes = patterns.Where(p => !p.Negate).ToList();
+        _negations = patterns.Where(p => p.Negate).ToList();
+        _negatedPrefixes = _negations
+            .Select(p => LiteralPrefix(p.Glob))
+            .Where(s => s.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>The part of a glob before its first wildcard, trimmed to whole path segments —
+    /// <c>src/Foo/Debug/**</c> gives <c>src/Foo/Debug</c>. Empty when the glob starts with a
+    /// wildcard, which is the "could be anywhere" case and prunes nothing.</summary>
+    private static string LiteralPrefix(string glob)
+    {
+        var wildcard = glob.IndexOfAny(['*', '?', '[']);
+        var head = wildcard < 0 ? glob : glob.Substring(0, wildcard);
+        var lastSlash = head.LastIndexOf('/');
+        return wildcard < 0 ? head : (lastSlash < 0 ? "" : head.Substring(0, lastSlash));
+    }
+
+    /// <summary>True when a negation could re-include something inside <paramref name="rel"/>, so
+    /// the directory must be walked even though a rule excludes it.
+    /// <para>git resolves `.vscode/*` plus `!.vscode/settings.json` by listing the directory and
+    /// filtering file by file; this walk prunes instead, and a pruned directory takes its
+    /// re-included files with it. Only directories that actually sit on a negation's path pay the
+    /// extra descent.</para></summary>
+    public bool KeepsSubtree(string fullPath, string root)
+    {
+        if (_negatedPrefixes.Count == 0) { return false; }
+        var rel = PathHelpers.Relative(root, fullPath);
+        foreach (var prefix in _negatedPrefixes)
+        {
+            // Either the directory contains the negation (`.vscode` for `.vscode/settings.json`)
+            // or it is inside one (`Mcp/Tools/Debug/Sub` for `Mcp/Tools/Debug/**`).
+            if (prefix.StartsWith(rel, StringComparison.OrdinalIgnoreCase)
+                && (prefix.Length == rel.Length || prefix[rel.Length] == '/'))
+            {
+                return true;
+            }
+            if (rel.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                && (rel.Length == prefix.Length || rel[prefix.Length] == '/'))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Counters for the picker's perf line: paths tested, and regex matches that cost. Plain
+    // statics because one Get() walks on one thread and reads them at the end; they are a
+    // diagnostic, so a lost increment would misreport nothing that matters.
+    private static int _calls;
+    private static int _regexRuns;
+
+    /// <summary>Nested .gitignore files pushed during the walk, plus the workspace one. Counted
+    /// where they are read rather than where they are used: one increment per directory entered
+    /// costs nothing, while marking each instance as it answers would put bookkeeping on the
+    /// per-path path.</summary>
+    private static int _filesConsulted;
+
+    internal static int FilesConsulted => _filesConsulted;
+
+    /// <summary>Record that a .gitignore joined the stack.</summary>
+    internal static void CountFile() => _filesConsulted++;
+
+    /// <summary>Zero the counters at the start of a walk.</summary>
+    internal static void ResetStats() { _calls = 0; _regexRuns = 0; _filesConsulted = 0; }
+
+    /// <summary>What this instance parsed, for the picker's perf line. A build that still drops
+    /// negations cannot report neg&gt;0, so the shape says which code is answering — a stale copy
+    /// of the extension otherwise reports numbers that look entirely plausible.</summary>
+    internal string Shape
+        => $"n={_excludes.Count + _negations.Count},neg={_negations.Count},"
+         + $"dir={_excludes.Count(p => p.DirOnly) + _negations.Count(p => p.DirOnly)}";
+
+    /// <summary>Paths tested, regex matches run, and milliseconds spent inside
+    /// <see cref="Matches"/> since <see cref="ResetStats"/>. Two counters rather than a timer:
+    /// the regex count is what the per-pattern work multiplies, and reading a clock twice per
+    /// path costs more than the thing it was measuring.</summary>
+    internal static (int Calls, int RegexRuns) Stats => (_calls, _regexRuns);
 
     public static GitIgnore Parse(string content)
     {
@@ -324,8 +468,21 @@ internal sealed class GitIgnore
         {
             var line = raw.Trim();
             if (line.Length == 0 || line[0] == '#') { continue; }
-            if (line[0] == '!') { continue; }                 // negations: skip
+            // A '!' re-includes what an earlier rule excluded. Kept rather than skipped because
+            // the two halves of this repository's own `[Dd]ebug/` + `!…/Mcp/Tools/Debug/**` pair
+            // only give the right answer together: honouring the first without the second hides
+            // 32 tracked source files.
+            var negate = line[0] == '!';
+            if (negate) { line = line.Substring(1); }
             if (line.IndexOfAny(['{', '}', ',']) >= 0) { continue; } // braces: skip
+
+            // `dir/*` and `dir/**` mean "everything inside dir", so the rule is really about dir:
+            // git never lists an ignored directory, while this walk asks about the directory
+            // itself to decide whether to descend. Left as written, `**/[Bb]in/*` matched neither
+            // the `bin` directory nor anything below its first level, and 450 build outputs of
+            // 1,165 listed files came from that one rule.
+            if (line.EndsWith("/**", StringComparison.Ordinal)) { line = line.Substring(0, line.Length - 3); }
+            else if (line.EndsWith("/*", StringComparison.Ordinal)) { line = line.Substring(0, line.Length - 2); }
 
             var dirOnly = false;
             if (line.EndsWith("/", StringComparison.Ordinal))
@@ -334,56 +491,103 @@ internal sealed class GitIgnore
                 line = line.Substring(0, line.Length - 1);
             }
 
-            var anchored = false;
-            if (line.StartsWith("/", StringComparison.Ordinal))
-            {
-                anchored = true;
-                line = line.Substring(1);
-            }
+            // A leading '/' anchors the pattern to the root. Stripping it is not enough: what
+            // decides is that the rule must then be matched against the PATH, never against a
+            // bare name — `/build/` compared by name would hide Mcp/Tools/Build/ exactly as the
+            // unanchored form does, which is the difference the anchor exists to express.
+            var anchored = line.StartsWith("/", StringComparison.Ordinal);
+            if (anchored) { line = line.Substring(1); }
 
             if (line.Length == 0) { continue; }
 
+            // A malformed character class would throw out of the Regex constructor and take the
+            // whole file with it; dropping the one rule leaves the rest working.
+            Regex regex;
+            try { regex = GlobToRegex(line); }
+            catch (ArgumentException ex)
+            {
+                OutputWindowLogger.Global.Warn($"[picker] skipped .gitignore pattern '{raw.Trim()}': {ex.Message}");
+                continue;
+            }
+
             patterns.Add(new Pattern
             {
-                Anchored = anchored,
                 DirOnly = dirOnly,
-                Regex = GlobToRegex(line),
+                Negate = negate,
+                // A pattern with no separator matches a NAME at any depth, one with a separator
+                // matches the path. git's own rule, and what decides which string to test below.
+                // An anchored rule is a path rule even when it has no separator left in it.
+                NameOnly = !anchored && line.IndexOf('/') < 0,
+                Glob = line,
+                Regex = regex,
             });
         }
         return new GitIgnore(patterns);
     }
 
     /// <summary>
-    /// True when <paramref name="fullPath"/> (an absolute path) matches
-    /// any non-negated pattern. Comparison is case-insensitive (Windows).
+    /// True when <paramref name="fullPath"/> (an absolute path) is ignored: the LAST rule that
+    /// matches decides, so a later <c>!</c> re-includes what an earlier rule excluded — git's own
+    /// precedence. Comparison is case-insensitive (Windows).
     /// </summary>
     public bool Matches(string fullPath, string root, bool isDirectory)
     {
         var rel = PathHelpers.Relative(root, fullPath);
         if (rel.Length == 0) { return false; }
 
-        // Each path segment is also a candidate for unanchored patterns
-        // (so `node_modules` matches `src/foo/node_modules`).
-        var segments = rel.Split('/');
+        // One test per rule, against the string that rule is about: the name for a
+        // separator-less pattern, the relative path otherwise.
+        //
+        // A name pattern used to be tried against every path segment as well, so that
+        // `node_modules` would match `src/foo/node_modules`. That was reachable only for a path
+        // whose ANCESTOR matched, and the walk prunes an ignored directory before descending into
+        // it (FileSuggestions.EnumerateFiles) — so those segments had already been ruled out by the
+        // time this saw them.
+        //
+        // The exclusions are walked first and stop at the first match, which is the common case:
+        // a path nothing excludes is the one that ends up in the list, and it costs one pass.
+        // Only a path that IS excluded pays for the negations — 11 rules of 273 here — and only
+        // the LAST rule that matches decides, so those are walked in full.
+        return TryMatch(fullPath, root, isDirectory, out var ignored) && ignored;
+    }
 
-        foreach (var p in _patterns)
+    /// <summary>The verdict of THIS file's rules, and whether it has one at all. False when no rule
+    /// here mentions the path, which is what lets a stack of nested files be consulted deepest
+    /// first: a file that says nothing hands the question to the one above it, while a `!` here
+    /// answers "not ignored" and stops the search rather than falling through to a parent that
+    /// would exclude it.</summary>
+    public bool TryMatch(string fullPath, string root, bool isDirectory, out bool ignored)
+    {
+        ignored = false;
+        var rel = PathHelpers.Relative(root, fullPath);
+        if (rel.Length == 0) { return false; }
+
+        _calls++;
+        var name = NameOf(rel);
+
+        var matched = false;
+        foreach (var p in _excludes)
         {
             if (p.DirOnly && !isDirectory) { continue; }
-
-            if (p.Anchored)
-            {
-                if (p.Regex.IsMatch(rel)) { return true; }
-            }
-            else
-            {
-                if (p.Regex.IsMatch(rel)) { return true; }
-                foreach (var seg in segments)
-                {
-                    if (p.Regex.IsMatch(seg)) { return true; }
-                }
-            }
+            _regexRuns++;
+            if (p.Regex.IsMatch(p.NameOnly ? name : rel)) { matched = true; ignored = true; break; }
         }
-        return false;
+        // Negations are only consulted for a path something excluded — except that a nested file's
+        // `!` also has to answer for a path excluded further up, so they are checked either way.
+        foreach (var p in _negations)
+        {
+            if (p.DirOnly && !isDirectory) { continue; }
+            _regexRuns++;
+            if (p.Regex.IsMatch(p.NameOnly ? name : rel)) { matched = true; ignored = false; break; }
+        }
+        return matched;
+    }
+
+    /// <summary>The last segment of a forward-slashed relative path.</summary>
+    private static string NameOf(string rel)
+    {
+        var slash = rel.LastIndexOf('/');
+        return slash < 0 ? rel : rel.Substring(slash + 1);
     }
 
     private static Regex GlobToRegex(string glob)
@@ -403,6 +607,25 @@ internal sealed class GitIgnore
                 sb.Append("(?:.*/)?");
                 continue;
             }
+            // `[Dd]ebug` is a character class in a glob exactly as it is in a regex, so it goes
+            // through rather than being escaped. Escaping it was why every bracketed rule in the
+            // stock VisualStudio .gitignore — [Dd]ebug/, [Rr]elease/, [Bb]in, [Oo]bj — was inert:
+            // they compiled to the literal text "[Oo]bj", which names no directory, so 615 build
+            // artefacts of 1,165 listed files were offered by the picker.
+            if (ch == '[')
+            {
+                var close = IndexOfClassEnd(glob, i);
+                // Unterminated: git treats the bracket as an ordinary character, so escape it.
+                if (close < 0) { sb.Append("\\["); continue; }
+                var body = glob.Substring(i + 1, close - i - 1);
+                // git negates a class with '!', .NET with '^'.
+                if (body.Length > 0 && body[0] == '!') { body = "^" + body.Substring(1); }
+                // A class must not match a separator: a path is compared whole, and `[Bb]in` has
+                // no business matching the '/' that ends a directory name.
+                sb.Append("(?!/)[").Append(body).Append(']');
+                i = close;
+                continue;
+            }
             switch (ch)
             {
                 case '*': sb.Append("[^/]*"); break;
@@ -416,7 +639,6 @@ internal sealed class GitIgnore
                 case '$':
                 case '{':
                 case '}':
-                case '[':
                 case ']':
                 case '\\':
                     sb.Append('\\').Append(ch); break;
@@ -424,13 +646,33 @@ internal sealed class GitIgnore
             }
         }
         sb.Append('$');
-        return new Regex(sb.ToString(), RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        // Interpreted, not Compiled: these are ~270 DIFFERENT patterns, each run a few hundred
+        // times per walk, so the IL each Compiled regex emits on first use is never amortised —
+        // it is paid once per pattern and thrown away with the cache.
+        return new Regex(sb.ToString(), RegexOptions.IgnoreCase);
+    }
+
+    /// <summary>Index of the <c>]</c> closing the class opened at <paramref name="open"/>, or -1
+    /// when there is none. A <c>]</c> in first position (after an optional negator) is a literal
+    /// member of the class, not its end — <c>[]]</c> matches a bracket.</summary>
+    private static int IndexOfClassEnd(string glob, int open)
+    {
+        var i = open + 1;
+        if (i < glob.Length && (glob[i] == '!' || glob[i] == '^')) { i++; }
+        if (i < glob.Length && glob[i] == ']') { i++; }
+        return glob.IndexOf(']', i);
     }
 
     private sealed class Pattern
     {
-        public bool Anchored;
         public bool DirOnly;
+        /// <summary>The glob carries no separator, so it matches a bare name at any depth.</summary>
+        public bool NameOnly;
+        /// <summary>A <c>!</c> rule: matching re-includes the path instead of ignoring it.</summary>
+        public bool Negate;
+        /// <summary>The glob as parsed, prefixes stripped. Kept for the negations, whose literal
+        /// head decides which directories cannot be pruned.</summary>
+        public string Glob;
         public Regex Regex;
     }
 }

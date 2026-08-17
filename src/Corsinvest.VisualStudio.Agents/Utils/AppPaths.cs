@@ -25,6 +25,13 @@ internal static class AppPaths
     /// the menu is queried constantly by VS, long before any Options page exists.</summary>
     public static readonly string EditorPromptsFile = Path.Combine(DataFolder, "editor-prompts.json");
 
+    /// <summary>What the `@` file picker hides on top of the workspace's own rules. A file rather
+    /// than a settings-store value because the content IS a .gitignore — comments, sections, one
+    /// rule per line — which is a thing to read and copy between machines, not a preference.
+    /// <para>Named `.gitignore` rather than `.json` so VS opens it with the editor that already
+    /// colours the format, and so nothing has to be escaped into a JSON string.</para></summary>
+    public static readonly string IgnoreRulesFile = Path.Combine(DataFolder, "picker-ignore.gitignore");
+
     /// <summary>
     /// Cache folder for file-type icons rasterised from VS KnownMonikers. The
     /// WebView serves these via the `cv4vs-icons.local` virtual host, generated
