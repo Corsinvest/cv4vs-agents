@@ -43,7 +43,12 @@ public sealed class ClaudePaths
     // Not replicated (rare on Windows): the CLI also realpath's the cwd (symlink/junction
     // canonicalization). The >200-char case IS handled, by SessionFolder rather than here.
     public static string ProjectFolderName(string workingDirectory)
-        => Regex.Replace(Path.GetFullPath(workingDirectory), "[^a-zA-Z0-9]", "-");
+        => NonAlphanumeric.Replace(Path.GetFullPath(workingDirectory), "-");
+
+    /// <summary>The CLI's character class verbatim: it is the contract, so it stays legible as the
+    /// rule it mirrors rather than becoming a hand-written char walk. Static because ConfigId is a
+    /// property and re-ran the shared-cache lookup on every read.</summary>
+    private static readonly Regex NonAlphanumeric = new("[^a-zA-Z0-9]", RegexOptions.Compiled);
 
     /// <summary>Longest folder name the CLI writes before it truncates — filesystems cap a single
     /// path component at 255 bytes, and it leaves room for the suffix it adds.</summary>
@@ -81,7 +86,7 @@ public sealed class ClaudePaths
     /// <summary>Stable filesystem-safe id for this config-dir, used to namespace our own per-config-dir
     /// data (e.g. stats). Derived from the resolved config-dir path with the same folder-name rule, so it
     /// stays stable across profile renames and two profiles on the SAME config-dir share the same id.</summary>
-    public string ConfigId => Regex.Replace(ClaudeFolder, "[^a-zA-Z0-9]", "-");
+    public string ConfigId => NonAlphanumeric.Replace(ClaudeFolder, "-");
 
     /// <summary>Paths for a profile's config-dir. A profile always exists (native "Claude" included),
     /// so there is no null case — the config-dir comes from <see cref="GetConfigDir"/>.</summary>

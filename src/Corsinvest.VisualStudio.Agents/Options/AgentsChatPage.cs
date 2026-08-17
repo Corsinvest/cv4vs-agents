@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using System;
 using System.ComponentModel;
 using System.Drawing.Design;
 using System.Runtime.InteropServices;
@@ -148,17 +149,15 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Ignore")]
     [DisplayName("Ignored patterns")]
-    [Description("Patterns hidden from the `@` file picker. Each entry can be: an exact folder/file name (e.g. `node_modules`, `.DS_Store`), an extension prefixed with `.` (e.g. `.exe` matches `*.exe`), or a glob with `*`/`?` (e.g. `*.bak`). Click `…` to edit one entry per line.")]
-    [Editor("System.Windows.Forms.Design.StringArrayEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", typeof(UITypeEditor))]
-    public string[] IgnoredPatterns { get; set; } =
-    [
-        ".git", ".vs", ".vscode", ".idea", ".hg", ".svn",
-        "node_modules", "bin", "obj", "dist", "build", "out", "target",
-        ".next", ".nuxt", ".svelte-kit",
-        "__pycache__", ".venv", "venv", ".pytest_cache",
-        ".gradle", ".terraform", ".cache",
-        ".DS_Store", "Thumbs.db", ".env",
-        ".exe", ".dll", ".pdb", ".ilk", ".suo", ".user",
-        ".log", ".tmp", ".bak",
-    ];
+    [Description("Extra rules hiding files from the `@` file picker, on top of the workspace's own. Written as a `.gitignore` and kept as one — click `…` to open the file in the editor. Applied only where the workspace's rules say nothing.")]
+    [Editor(typeof(IgnoreRulesFileEditor), typeof(UITypeEditor))]
+    // Not the rules themselves: those live in a file (Chat/Host/IgnoreRulesStore.cs), because a
+    // commented rule list is something to edit in a real editor and copy between machines, not a
+    // settings-store value. This property exists to give the Options page a row to put the button
+    // on, and reports where the file is.
+    public string IgnoredPatterns
+    {
+        get => AppPaths.IgnoreRulesFile;
+        set { /* read-only: the editor opens the file, it never writes a value back */ }
+    }
 }

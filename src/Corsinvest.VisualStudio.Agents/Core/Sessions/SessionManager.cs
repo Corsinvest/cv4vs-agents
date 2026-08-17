@@ -144,12 +144,16 @@ internal sealed partial class SessionManager
             var line = lines[i];
             if (line.Length == 0) { continue; }
 
-            info.CustomTitle ??= MatchField(line, "custom-title", "customTitle");
-            info.AiTitle ??= MatchField(line, "ai-title", "aiTitle");
-            info.LastPrompt ??= MatchField(line, "last-prompt", "lastPrompt")
+            // Read the line's type ONCE: every test below used to re-scan the whole line for it,
+            // and a tool_result line runs to tens of KB.
+            var lineType = FindJsonStringValue(line, "type");
+
+            info.CustomTitle ??= MatchField(lineType, line, "custom-title", "customTitle");
+            info.AiTitle ??= MatchField(lineType, line, "ai-title", "aiTitle");
+            info.LastPrompt ??= MatchField(lineType, line, "last-prompt", "lastPrompt")
                                ?? ExtractUserText(line);
-            bool isUser = IsType(line, "user");
-            bool isAssistant = IsType(line, "assistant");
+            bool isUser = lineType == "user";
+            bool isAssistant = lineType == "assistant";
             bool isTurnLine = isUser || isAssistant;
             if (isTurnLine)
             {
@@ -178,8 +182,10 @@ internal sealed partial class SessionManager
     private static bool IsType(string line, string type)
         => string.Equals(FindJsonStringValue(line, "type"), type, StringComparison.Ordinal);
 
-    private static string MatchField(string line, string type, string field)
-        => IsType(line, type) ? FindJsonStringValue(line, field) : null;
+    /// <summary>The field, when the line is of the wanted type. Takes the type the caller already
+    /// resolved: ScanLines reads it once per line rather than re-scanning for it per field.</summary>
+    private static string MatchField(string lineType, string line, string type, string field)
+        => string.Equals(lineType, type, StringComparison.Ordinal) ? FindJsonStringValue(line, field) : null;
 
     /// <summary>True when the line carries <c>"key": true</c>. Tolerates the space after the colon
     /// for the same reason as <see cref="IsType"/>.</summary>

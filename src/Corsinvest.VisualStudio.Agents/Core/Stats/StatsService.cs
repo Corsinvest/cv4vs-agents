@@ -955,8 +955,11 @@ internal static class StatsService
         return rel.Replace('\\', '/');
     }
 
+    // Both separators tested in place: the Replace this used to do copied the whole path, once per
+    // file, inside the indexing Parallel.ForEach.
     private static bool IsSubagentPath(string fullPath) =>
-        fullPath.Replace('\\', '/').Contains("/subagents/");
+        fullPath.IndexOf(@"\subagents\", StringComparison.OrdinalIgnoreCase) >= 0
+        || fullPath.IndexOf("/subagents/", StringComparison.OrdinalIgnoreCase) >= 0;
 
     /// <summary>Re-aggregate a file only if changed: same mtime → reuse; grown (append) → delta
     /// from the cached size; shrunk/rewritten → recompute; new → full. Returns the fresh entry and

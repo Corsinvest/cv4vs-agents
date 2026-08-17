@@ -305,6 +305,7 @@
     <Compile Include="Core\Plugins\PluginService.cs" />
     <Compile Include="Chat\Host\BridgeMessages.cs" />
     <Compile Include="Chat\Host\FileSuggestions.cs" />
+    <Compile Include="Chat\Host\IgnoreRulesStore.cs" />
     <Compile Include="Chat\Host\WebViewBridge.cs" />
     <Compile Include="Chat\Host\WebViewBridge.Payloads.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.cs" />
@@ -319,6 +320,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Options\AgentsGeneralPage.cs" />
+    <Compile Include="Options\IgnoreRulesFileEditor.cs" />
     <Compile Include="Options\AgentsChatPage.cs">
       <SubType>Component</SubType>
     </Compile>
