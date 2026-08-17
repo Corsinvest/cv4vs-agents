@@ -1286,13 +1286,22 @@ export class CvApp extends LitElement {
      * so that reply keeps the question which actually prompted it. The fading is already handled —
      * the uuid left `appState.queuedUuids` — so only the position is left.
      *
-     * No scroll: the user may well be reading further up, often the very reason they queued
-     * something, and the jump button already covers going back down.
+     * Follows only if the view was already at the bottom, like every other path that changes the
+     * transcript. Someone reading further up — often the very reason they queued something — is
+     * left where they are, with the jump button to come back; someone at the bottom would otherwise
+     * watch the bubble slide out of view and be left staring at the gap it came from.
+     *
+     * Read before the mutation: moving the bubble is what changes the height, so asking afterwards
+     * measures the layout the answer is supposed to decide about.
      */
     private _onQueuedSent = (e: CustomEvent<{ uuid: string }>): void => {
         const uuid = e.detail?.uuid;
         if (uuid) {
+            const atBottom = this._isNearBottom();
             this._mutate(() => this._transcript.moveToEnd(uuid));
+            if (atBottom) {
+                queueMicrotask(() => this._scrollToBottom());
+            }
         }
     };
 
