@@ -98,8 +98,13 @@ export class CvApp extends LitElement {
      *  before the batch with the one after, so two invalidations in the same microtask would
      *  toggle a boolean back to where it started and the render would be skipped. */
     @state() private _rev = 0;
-    /** Groups for the current tree, keyed by the array they were built from. */
-    private _groupCache: { src: readonly UiEntry[]; groups: UiEntry[][] } | null = null;
+    /** Groups for the current tree, keyed by the array they were built from and the queued set
+     *  that decided which user messages were allowed to open an exchange. */
+    private _groupCache: {
+        src: readonly UiEntry[];
+        queued: ReadonlySet<string>;
+        groups: UiEntry[][];
+    } | null = null;
     @state() private _subagentTasks = new Map<string, SubagentTask>();
 
     /** Ids the CLI last reported as running in the background. Not @state: it decides what a task
@@ -138,11 +143,14 @@ export class CvApp extends LitElement {
     @state() private _queuedUuids = new Set(appState.queuedUuids);
 
     /** Derived, never stored: recomputed only when the tree changes identity. Holding the groups
-     *  as state gave them two writers, and that is how they and the entries drifted apart. */
+     *  as state gave them two writers, and that is how they and the entries drifted apart.
+     *  Keyed on the queued set too: a message leaving the queue opens the exchange it was held
+     *  out of, and the entries array does not change identity when that happens. */
     private get _exchanges(): UiEntry[][] {
         const src = this._transcript.entries;
-        if (this._groupCache?.src !== src) {
-            this._groupCache = { src, groups: buildGroups(src) };
+        const queued = this._queuedUuids;
+        if (this._groupCache?.src !== src || this._groupCache.queued !== queued) {
+            this._groupCache = { src, queued, groups: buildGroups(src, queued) };
         }
         return this._groupCache.groups;
     }
