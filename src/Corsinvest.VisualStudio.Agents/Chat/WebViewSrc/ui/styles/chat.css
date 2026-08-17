@@ -109,10 +109,13 @@ cv-message[queued] {
 cv-message {
     transition: opacity 0.15s ease-in;
 }
-/* Pin only when the exchange's first message is a REAL user bubble. A history page can
- * start on a synthetic role:user line (tool_result / meta-injection) that renders as a
- * tool/other; the [role="user"] guard keeps that leading group from pinning wrongly. */
-body.sticky-user .cv-exchange > cv-message[role="user"]:first-child {
+/* Pin only when the exchange's first message is a REAL user bubble, and one the CLI has
+ * actually been given. A history page can start on a synthetic role:user line (tool_result /
+ * meta-injection) that renders as a tool/other; the [role="user"] guard keeps that leading
+ * group from pinning wrongly. A queued message is a user bubble in every other respect, so
+ * :not([queued]) is what keeps it out: pinning it would head a turn that has not begun. It
+ * scrolls with the rest until it is sent, then loses the attribute and pins like any other. */
+body.sticky-user .cv-exchange > cv-message[role="user"]:not([queued]):first-child {
     position: sticky;
     top: -12px;
     padding-top: 12px;
@@ -120,7 +123,7 @@ body.sticky-user .cv-exchange > cv-message[role="user"]:first-child {
     z-index: 2;
     background: var(--colorNeutralBackground1);
 }
-body.sticky-user .cv-exchange > cv-message[role="user"]:first-child .cv-message.user {
+body.sticky-user .cv-exchange > cv-message[role="user"]:not([queued]):first-child .cv-message.user {
     background: var(--colorNeutralBackground3);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
