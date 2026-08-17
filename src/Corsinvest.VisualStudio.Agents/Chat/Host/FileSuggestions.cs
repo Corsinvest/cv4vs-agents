@@ -37,13 +37,8 @@ internal static class FileSuggestions
             // The workspace rules are the bottom of the stack; EnumerateFiles pushes a nested
             // .gitignore onto it for the subtree that declares one.
             var ignores = new List<(string Root, GitIgnore Ignore)>();
-            using (OutputWindowLogger.Global.PerfSpan("[picker] gitignore load"))
-            {
-                var ignore = opts.UseGitIgnore ? GitIgnoreCache.Get(root) : null;
-                if (ignore != null) { ignores.Add((root, ignore)); }
-            }
-            GitIgnore.ResetStats();
-            if (ignores.Count > 0) { GitIgnore.CountFile(); }
+            var ignore = opts.UseGitIgnore ? GitIgnoreCache.Get(root) : null;
+            if (ignore != null) { ignores.Add((root, ignore)); }
 
             // Backslashes accepted as separators so a path pasted from Explorer still matches.
             var qLower = query.Replace('\\', '/').ToLowerInvariant();
@@ -119,20 +114,11 @@ internal static class FileSuggestions
 
             result.AddRange(hits.Values);
 
-            // rows/visited say how much of the tree the budget bought, and capped says whether the
-            // list is the whole tree or a prefix of the alphabet. regex/path is the multiplier the
-            // rules cost — it went from 201 to ~150 when the negations moved into their own list,
-            // and it is the number to watch if a big repository ever feels slow again.
-            // rules[] names the shape of what was parsed: neg>0 and files>1 only appear on a build
-            // that keeps negations and reads nested files, which is what tells a measurement of
-            // this code from one of a stale copy still installed alongside it.
-            var (ignoreCalls, ignoreRegex) = GitIgnore.Stats;
-            var last = result.Count > 0 ? result[result.Count - 1].Name : "-";
-            var shape = ignores.Count > 0 ? $"{ignores[0].Ignore.Shape},files={GitIgnore.FilesConsulted}" : "off";
+            // capped is the one worth reporting: it says the list is a prefix of the alphabet
+            // rather than the whole tree, which is how a folder late in the alphabet goes missing
+            // with nothing else to show for it.
             OutputWindowLogger.Global.Perf(() =>
-                $"[picker] rules[{shape}] rows={result.Count} visited={visited} capped={cappedBy ?? "no"} "
-                + $"ignore: calls={ignoreCalls} regex={ignoreRegex} "
-                + $"({(ignoreCalls > 0 ? (double)ignoreRegex / ignoreCalls : 0):0.0}/path) last={last}");
+                $"[picker] rows={result.Count} visited={visited} capped={cappedBy ?? "no"}");
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("FileSuggestions.Get", ex); }
         return result;
@@ -185,7 +171,7 @@ internal static class FileSuggestions
             // A .gitignore here applies to this subtree only, so it is pushed for the descent and
             // popped after: the list is shared down the recursion rather than copied per level.
             var nested = GitIgnoreCache.GetNested(sub);
-            if (nested != null) { ignores.Add((sub, nested)); GitIgnore.CountFile(); }
+            if (nested != null) { ignores.Add((sub, nested)); }
             foreach (var file in EnumerateFiles(sub, root, configured, ignores))
             {
                 yield return file;
@@ -428,38 +414,6 @@ internal sealed class GitIgnore
         return false;
     }
 
-    // Counters for the picker's perf line: paths tested, and regex matches that cost. Plain
-    // statics because one Get() walks on one thread and reads them at the end; they are a
-    // diagnostic, so a lost increment would misreport nothing that matters.
-    private static int _calls;
-    private static int _regexRuns;
-
-    /// <summary>Nested .gitignore files pushed during the walk, plus the workspace one. Counted
-    /// where they are read rather than where they are used: one increment per directory entered
-    /// costs nothing, while marking each instance as it answers would put bookkeeping on the
-    /// per-path path.</summary>
-    private static int _filesConsulted;
-
-    internal static int FilesConsulted => _filesConsulted;
-
-    /// <summary>Record that a .gitignore joined the stack.</summary>
-    internal static void CountFile() => _filesConsulted++;
-
-    /// <summary>Zero the counters at the start of a walk.</summary>
-    internal static void ResetStats() { _calls = 0; _regexRuns = 0; _filesConsulted = 0; }
-
-    /// <summary>What this instance parsed, for the picker's perf line. A build that still drops
-    /// negations cannot report neg&gt;0, so the shape says which code is answering — a stale copy
-    /// of the extension otherwise reports numbers that look entirely plausible.</summary>
-    internal string Shape
-        => $"n={_excludes.Count + _negations.Count},neg={_negations.Count},"
-         + $"dir={_excludes.Count(p => p.DirOnly) + _negations.Count(p => p.DirOnly)}";
-
-    /// <summary>Paths tested, regex matches run, and milliseconds spent inside
-    /// <see cref="Matches"/> since <see cref="ResetStats"/>. Two counters rather than a timer:
-    /// the regex count is what the per-pattern work multiplies, and reading a clock twice per
-    /// path costs more than the thing it was measuring.</summary>
-    internal static (int Calls, int RegexRuns) Stats => (_calls, _regexRuns);
 
     public static GitIgnore Parse(string content)
     {
@@ -562,14 +516,12 @@ internal sealed class GitIgnore
         var rel = PathHelpers.Relative(root, fullPath);
         if (rel.Length == 0) { return false; }
 
-        _calls++;
         var name = NameOf(rel);
 
         var matched = false;
         foreach (var p in _excludes)
         {
             if (p.DirOnly && !isDirectory) { continue; }
-            _regexRuns++;
             if (p.Regex.IsMatch(p.NameOnly ? name : rel)) { matched = true; ignored = true; break; }
         }
         // Negations are only consulted for a path something excluded — except that a nested file's
@@ -577,7 +529,6 @@ internal sealed class GitIgnore
         foreach (var p in _negations)
         {
             if (p.DirOnly && !isDirectory) { continue; }
-            _regexRuns++;
             if (p.Regex.IsMatch(p.NameOnly ? name : rel)) { matched = true; ignored = false; break; }
         }
         return matched;
