@@ -136,18 +136,6 @@ export abstract class ToolRenderer {
         });
     }
 
-    /** Header + a custom body the tool builds (todos, questions). */
-    protected rowCustom(body: TemplateResult, autoOpen = true): TemplateResult {
-        const show = this.host.status !== 'pending';
-        return this.chrome({
-            body: show ? body : null,
-            open: show && (autoOpen || this.host.expanded),
-            // No explicit onClick: chrome's rowClick falls back to toggleExpanded via the chevron.
-            onClick: null,
-            chevron: show,
-        });
-    }
-
     /** Whether the row has something to expand into (drives the chevron + row toggle). Default: a
      *  non-empty body. Agent widens this to include its live sub-agent children, so the chevron
      *  shows while the sub-agent runs, not only once it finishes. */
@@ -169,7 +157,10 @@ export abstract class ToolRenderer {
         return false;
     }
 
-    private chrome(opts: {
+    /** The row itself. The rowX helpers above are the shared shapes; a tool whose body is its
+     *  own (Ask, TodoWrite) calls this directly rather than through a shape that, not knowing
+     *  what the body holds, can't tell whether there is anything to expand into. */
+    protected chrome(opts: {
         body: TemplateResult | null;
         open: boolean;
         onClick: (() => void) | null;

@@ -365,8 +365,15 @@ export class ReadMcpResourceRenderer extends HeaderOnlyRenderer {
 
 export class TodoWriteRenderer extends ToolRenderer {
     readonly name = 'TodoWrite';
+    /** The list is the whole content — no chevron, there is no second view to expand into. */
     override row(): TemplateResult {
-        return this.rowCustom(this.todoBody());
+        const done = this.host.status !== 'pending';
+        return this.chrome({
+            body: done ? this.todoBody() : null,
+            open: done,
+            onClick: null,
+            chevron: false,
+        });
     }
     override header(): TemplateResult {
         return html`${this.nameSpan('Update Todos')}`;
@@ -401,8 +408,15 @@ export class TodoWriteRenderer extends ToolRenderer {
 
 export class AskUserQuestionRenderer extends ToolRenderer {
     readonly name = 'AskUserQuestion';
+    /** Same shape as TodoWrite: the questions body is what there is, so no chevron. */
     override row(): TemplateResult {
-        return this.rowCustom(this.questionsBody());
+        const done = this.host.status !== 'pending';
+        return this.chrome({
+            body: done ? this.questionsBody() : null,
+            open: done,
+            onClick: null,
+            chevron: false,
+        });
     }
     override header(): TemplateResult {
         const qs = (this.host.input.questions ?? []) as AskQuestion[];
