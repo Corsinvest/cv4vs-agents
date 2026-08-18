@@ -433,7 +433,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                 ${this.answerCopy(questions, answered)}
                 <div class="cv-question-list cv-question-compact">
                     ${questions.map((q) => {
-                        const chosen = chosenLabels(q, answered);
+                        const chosen = answerText(q, answered);
                         return html`<div class="cv-question-answer">
                             ${
                                 q.header
@@ -442,9 +442,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                                           >${truncate(q.question ?? '', 60)}</span
                                       >`
                             }
-                            <span class="cv-question-answer-val"
-                                >${chosen.length ? chosen.join(', ') : '—'}</span
-                            >
+                            <span class="cv-question-answer-val">${chosen}</span>
                         </div>`;
                     })}
                 </div>
@@ -463,9 +461,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
         }
         const title = (q: AskQuestion): string => q.header || q.question || '';
         const md = appState.ui.compactOutputAskAnswers
-            ? questions
-                  .map((q) => `- **${title(q)}**: ${chosenLabels(q, answered).join(', ') || '—'}`)
-                  .join('\n')
+            ? questions.map((q) => `- **${title(q)}**: ${answerText(q, answered)}`).join('\n')
             : questions
                   .map((q, i) => {
                       const opts = (q.options ?? [])
@@ -531,6 +527,20 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                                     </span>
                                 </div>`;
                             })}
+                            ${
+                                // A free-text answer matches none of the options above, so without
+                                // this the question renders as if it had gone unanswered.
+                                freeTextAnswer(q, answered) && !chosenLabels(q, answered).length
+                                    ? html`<div class="cv-question-opt chosen">
+                                          <span class="cv-question-opt-mark">●</span>
+                                          <span class="cv-question-opt-text">
+                                              <span class="cv-question-opt-label"
+                                                  >${freeTextAnswer(q, answered)}</span
+                                              >
+                                          </span>
+                                      </div>`
+                                    : nothing
+                            }
                         </div>`;
                     })}
                 </div>
@@ -552,4 +562,45 @@ function isChosen(label: string, answered: string): boolean {
 /** The option labels chosen for a question, per {@link isChosen}. */
 function chosenLabels(q: AskQuestion, answered: string): string[] {
     return (q.options ?? []).map((o) => o.label ?? '').filter((l) => isChosen(l, answered));
+}
+
+/**
+ * The free-text answer to `q`, or '' when there isn't one.
+ *
+ * The CLI reports answers as prose wrapping `"<question>"="<answer>"` pairs, followed by
+ * instructions addressed to the model. Keying on the question text is what makes this safe with
+ * several questions at once: each one picks its own pair instead of the whole blob, which would
+ * otherwise put another question's answer under this header.
+ *
+ * Returns '' when the shape isn't there — a CLI that words this differently gets an em dash, not
+ * a paragraph of its own prose rendered as if the user had typed it.
+ */
+function freeTextAnswer(q: AskQuestion, answered: string): string {
+    const question = q.question ?? '';
+    if (!question || !answered) {
+        return '';
+    }
+    const escaped = question.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const m = new RegExp(`"${escaped}"\\s*=\\s*"([^"]*)"`).exec(answered);
+    return m ? m[1].trim() : '';
+}
+
+/**
+ * What to show as the answer to `q`: the options that matched, or — when none did — the answer
+ * text itself.
+ *
+ * "Other" is free text, so it is never one of the declared options and matching against them can
+ * only come up empty. Showing a dash there loses something the user typed: the answer reached the
+ * CLI, and re-reading the chat is the one place it can still be seen.
+ *
+ * Only for a single question, and only when it is the sole one: with several, the result text
+ * covers all of them and there is no way to tell which part answered which — a substring match
+ * cannot split prose it did not structure. Better an em dash than the wrong answer under a header.
+ */
+function answerText(q: AskQuestion, answered: string): string {
+    const chosen = chosenLabels(q, answered);
+    if (chosen.length) {
+        return chosen.join(', ');
+    }
+    return freeTextAnswer(q, answered) || '—';
 }
