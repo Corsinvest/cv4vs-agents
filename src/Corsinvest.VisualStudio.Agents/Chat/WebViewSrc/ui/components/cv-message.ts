@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, nothing } from 'lit';
+import { LitElement, html, nothing, type PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import BranchFork16Regular from '@fluentui/svg-icons/icons/branch_fork_16_regular.svg';
@@ -22,6 +22,7 @@ import { displayPathUi } from '../paths';
 import { parseIdeContextTags } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
+import { observeSize } from '../resize';
 import type {
     IdeContextRef,
     ForkNotification,
@@ -65,7 +66,8 @@ export class CvMessage extends LitElement {
     @state() private _isOverflowing = false;
     // Re-measure the truncation on width changes: text re-wraps, so the px cap and the "Show more"
     // decision must be recomputed. updated() alone fires on property change, not on resize.
-    private _resizeObs?: ResizeObserver;
+    private _unobserve?: () => void;
+    private _offUi?: () => void;
     // Last observed width — the observer fires on our own max-height writes too, so re-measure only
     // when the WIDTH actually changed (that's what re-wraps the text). Avoids a feedback loop.
     private _lastWidth = 0;
@@ -146,32 +148,46 @@ export class CvMessage extends LitElement {
         return this;
     }
 
+    override connectedCallback(): void {
+        super.connectedCallback();
+        // previewLines IS the cap, so a change to it changes the truncation of every bubble.
+        this._offUi = appState.on('ui', () => this._measure());
+    }
+
     override disconnectedCallback(): void {
         super.disconnectedCallback();
+        this._offUi?.();
+        this._offUi = undefined;
         if (this._streamTimer) {
             clearTimeout(this._streamTimer);
             this._streamTimer = undefined;
         }
-        this._resizeObs?.disconnect();
-        this._resizeObs = undefined;
+        this._unobserve?.();
+        this._unobserve = undefined;
     }
 
-    override updated(): void {
-        this._measure();
+    override updated(changed: PropertyValues): void {
+        // Only what can change the measured height. _measure() writes maxHeight and then reads
+        // scrollHeight, which is a synchronous layout: doing it on every update meant one forced
+        // reflow per user bubble per pass. Width changes come from the ResizeObserver below, and
+        // previewLines — the cap itself, which lives in the options and not in a property — from
+        // the state subscription in connectedCallback.
+        if (changed.has('text') || changed.has('expanded') || changed.has('role')) {
+            this._measure();
+        }
         // Observe width once the row exists: re-wrapping on resize changes the truncation.
-        if (this.role === 'user' && !this._resizeObs) {
+        if (this.role === 'user' && !this._unobserve) {
             const el = this.querySelector('.cv-message.user') as HTMLElement | null;
             if (el) {
                 this._lastWidth = el.clientWidth;
-                this._resizeObs = new ResizeObserver((entries) => {
-                    const w = entries[0]?.contentRect.width ?? 0;
+                this._unobserve = observeSize(el, (entry) => {
+                    const w = entry.contentRect.width;
                     if (Math.abs(w - this._lastWidth) < 1) {
                         return; // height-only change (our own max-height write) — skip
                     }
                     this._lastWidth = w;
                     this._measure();
                 });
-                this._resizeObs.observe(el);
             }
         }
     }

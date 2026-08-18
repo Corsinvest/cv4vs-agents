@@ -25,6 +25,20 @@ test('split: riprende dopo una fence chiusa', () => {
     assert.equal(t.slice(0, cut), 'testo\n\n```ts\nconst a = 1;\n```\n\n');
 });
 
+test('split: la riga che chiude una fence e gia un punto di taglio', () => {
+    // Senza riga vuota dopo la fence: il blocco e' comunque finito, e lasciarlo nella coda
+    // significa ri-evidenziarlo per intero a ogni passata.
+    const t = 'testo\n\n```ts\nconst a = 1;\n```\ncoda in corso';
+    const cut = stableMarkdownSplit(t);
+    assert.equal(t.slice(0, cut), 'testo\n\n```ts\nconst a = 1;\n```\n');
+});
+
+test('split: una fence ancora aperta non e un punto di taglio', () => {
+    const t = 'testo\n\n```ts\nconst a = 1;';
+    const cut = stableMarkdownSplit(t);
+    assert.equal(t.slice(0, cut), 'testo\n\n');
+});
+
 test('split: senza righe vuote non taglia', () => {
     assert.equal(stableMarkdownSplit('un solo paragrafo che cresce'), 0);
 });

@@ -165,14 +165,21 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
         const track = e.currentTarget as HTMLElement;
         track.setPointerCapture(e.pointerId);
         this._commit(this._indexFromPointer(e.clientX, track));
-        const move = (ev: PointerEvent) => this._commit(this._indexFromPointer(ev.clientX, track));
-        const up = (ev: PointerEvent) => {
+        // pointercancel too, not just pointerup: a gesture the browser takes over (touch scroll,
+        // capture lost) ends without one, and every such drag would leave its pair behind.
+        const drag = new AbortController();
+        const { signal } = drag;
+        const end = (ev: PointerEvent) => {
             track.releasePointerCapture(ev.pointerId);
-            track.removeEventListener('pointermove', move);
-            track.removeEventListener('pointerup', up);
+            drag.abort();
         };
-        track.addEventListener('pointermove', move);
-        track.addEventListener('pointerup', up);
+        track.addEventListener(
+            'pointermove',
+            (ev: PointerEvent) => this._commit(this._indexFromPointer(ev.clientX, track)),
+            { signal },
+        );
+        track.addEventListener('pointerup', end, { signal });
+        track.addEventListener('pointercancel', end, { signal });
     };
 
     private _onKeyDown = (e: KeyboardEvent): void => {

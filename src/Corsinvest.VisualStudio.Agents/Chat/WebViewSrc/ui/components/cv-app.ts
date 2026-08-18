@@ -70,6 +70,7 @@ import type {
     CliExitedNotification,
     RemoteControlNotification,
 } from '../../core/types';
+import { EMPTY } from '../../core/types';
 import { GetHistoryReq } from '../../core/request-types';
 import { modelLabel } from '../../core/ai-models';
 import { turnErrorLabel, turnErrorDetail, isUserAbort } from '../../core/turn-errors';
@@ -105,6 +106,9 @@ export class CvApp extends LitElement {
         queued: ReadonlySet<string>;
         groups: UiEntry[][];
     } | null = null;
+    /** Copy text of an exchange's actions row, keyed on the group buildGroups produced it from.
+     *  Weak so a group the next rebuild drops takes its entry with it. */
+    private _joinCache = new WeakMap<UiEntry[], string>();
     @state() private _subagentTasks = new Map<string, SubagentTask>();
 
     /** Ids the CLI last reported as running in the background. Not @state: it decides what a task
@@ -904,6 +908,7 @@ export class CvApp extends LitElement {
         this.removeEventListener('model-switched', this._onModelSwitched as EventListener);
         this.removeEventListener('queued-sent', this._onQueuedSent as EventListener);
         this.removeEventListener('queued-dropped', this._onQueuedDropped as EventListener);
+        this.removeEventListener('show-remote-link', this._onShowRemoteLink);
         for (const off of this._offs) {
             off();
         }
@@ -1727,7 +1732,14 @@ export class CvApp extends LitElement {
         if (last.role === 'assistant' && last.streaming) {
             return nothing;
         }
-        const text = blocks.map((b) => b.text).join('\n\n');
+        // Joining every block of every exchange on each pass is the kind of work that only shows up
+        // once a chat is long. Keyed on the group array, which buildGroups rebuilds whenever the
+        // transcript changes and keeps otherwise — so any edit to any block gives a new key.
+        let text = this._joinCache.get(group);
+        if (text === undefined) {
+            text = blocks.map((b) => b.text).join('\n\n');
+            this._joinCache.set(group, text);
+        }
         const ts = last.timestamp ?? 0;
         // Keyed on the last text block — the one entry both writers can name: `assistantText` has
         // only the message it just closed, and `exchangeEnded` looks the same one up. Keying on the
@@ -1797,8 +1809,8 @@ export class CvApp extends LitElement {
             ?loaded=${e.role === 'compact' ? !!e.loaded : false}
             .uuid=${e.role === 'compact' || e.role === 'user' ? (e.uuid ?? '') : ''}
             ?queued=${e.role === 'user' && !!e.uuid && this._queuedUuids.has(e.uuid)}
-            .images=${e.role === 'user' ? (e.images ?? []) : []}
-            .files=${e.role === 'user' ? (e.files ?? []) : []}
+            .images=${e.role === 'user' ? (e.images ?? EMPTY) : EMPTY}
+            .files=${e.role === 'user' ? (e.files ?? EMPTY) : EMPTY}
             ?streaming=${e.role === 'assistant' ? !!e.streaming : false}
             ?isError=${e.role === 'slash-result' ? e.isError : e.role === 'assistant' && !!e.error}
             .timestamp=${
@@ -1815,7 +1827,7 @@ export class CvApp extends LitElement {
             .status=${e.status}
             .result=${e.result}
             .elapsedSec=${e.elapsedSec}
-            .childItems=${e.children?.items ?? []}
+            .childItems=${e.children?.items ?? EMPTY}
             .fullLineCount=${e.fullLineCount}
             .extras=${e.extras ?? null}
             .agentId=${e.agentId ?? ''}
