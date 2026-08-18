@@ -72,6 +72,12 @@ export class CvSpeakBtn extends LitElement {
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         this._stopSpeaking();
+    }
+
+    /** Back to idle, and out of `active` — which is what it means to no longer be reading. Leaving
+     *  a finished button in the set is what made it hold every button that had ever spoken. */
+    private _toIdle(): void {
+        this._state = 'idle';
         active.delete(this);
     }
 
@@ -79,9 +85,10 @@ export class CvSpeakBtn extends LitElement {
      *  unmount. (cancel() clears the queue — only one utterance is ever queued.) */
     _stopSpeaking(): void {
         if (this._state !== 'idle') {
-            this._state = 'idle';
+            this._toIdle();
             window.speechSynthesis.cancel();
         }
+        active.delete(this);
     }
 
     private _onClick = (e: Event): void => {
@@ -105,12 +112,8 @@ export class CvSpeakBtn extends LitElement {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
         // Reset to idle when the engine finishes or errors so the icon never stays stuck on "pause".
-        u.onend = () => {
-            this._state = 'idle';
-        };
-        u.onerror = () => {
-            this._state = 'idle';
-        };
+        u.onend = () => this._toIdle();
+        u.onerror = () => this._toIdle();
         this._state = 'speaking';
         active.add(this);
         window.speechSynthesis.speak(u);

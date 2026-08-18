@@ -22,6 +22,7 @@ import { displayPathUi } from '../paths';
 import { parseIdeContextTags } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
+import { observeSize } from '../resize';
 import type {
     IdeContextRef,
     ForkNotification,
@@ -65,7 +66,7 @@ export class CvMessage extends LitElement {
     @state() private _isOverflowing = false;
     // Re-measure the truncation on width changes: text re-wraps, so the px cap and the "Show more"
     // decision must be recomputed. updated() alone fires on property change, not on resize.
-    private _resizeObs?: ResizeObserver;
+    private _unobserve?: () => void;
     // Last observed width — the observer fires on our own max-height writes too, so re-measure only
     // when the WIDTH actually changed (that's what re-wraps the text). Avoids a feedback loop.
     private _lastWidth = 0;
@@ -152,26 +153,25 @@ export class CvMessage extends LitElement {
             clearTimeout(this._streamTimer);
             this._streamTimer = undefined;
         }
-        this._resizeObs?.disconnect();
-        this._resizeObs = undefined;
+        this._unobserve?.();
+        this._unobserve = undefined;
     }
 
     override updated(): void {
         this._measure();
         // Observe width once the row exists: re-wrapping on resize changes the truncation.
-        if (this.role === 'user' && !this._resizeObs) {
+        if (this.role === 'user' && !this._unobserve) {
             const el = this.querySelector('.cv-message.user') as HTMLElement | null;
             if (el) {
                 this._lastWidth = el.clientWidth;
-                this._resizeObs = new ResizeObserver((entries) => {
-                    const w = entries[0]?.contentRect.width ?? 0;
+                this._unobserve = observeSize(el, (entry) => {
+                    const w = entry.contentRect.width;
                     if (Math.abs(w - this._lastWidth) < 1) {
                         return; // height-only change (our own max-height write) — skip
                     }
                     this._lastWidth = w;
                     this._measure();
                 });
-                this._resizeObs.observe(el);
             }
         }
     }

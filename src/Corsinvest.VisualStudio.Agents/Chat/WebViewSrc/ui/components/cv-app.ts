@@ -904,6 +904,7 @@ export class CvApp extends LitElement {
         this.removeEventListener('model-switched', this._onModelSwitched as EventListener);
         this.removeEventListener('queued-sent', this._onQueuedSent as EventListener);
         this.removeEventListener('queued-dropped', this._onQueuedDropped as EventListener);
+        this.removeEventListener('show-remote-link', this._onShowRemoteLink);
         for (const off of this._offs) {
             off();
         }
