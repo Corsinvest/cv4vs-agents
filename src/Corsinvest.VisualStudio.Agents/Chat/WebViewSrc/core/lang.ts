@@ -110,19 +110,46 @@ export function resolveLang(label: string | undefined | null): string {
     return ALIASES[lc] || lc;
 }
 
+// Bounded like the markdown one, and for the same reason: the callers are Lit render() bodies, so
+// a tool row re-highlights its whole body whenever anything about the row changes. Only settled
+// text benefits — a growing code fence is a new key on every pass, so the streaming path (which
+// goes through renderMarkdown's own cache) neither hits this nor thrashes it.
+const HL_CACHE_MAX = 100;
+const _hlCache = new Map<string, string | null>();
+
+/** Drop the memoized highlights. Paired with clearMarkdownCache() — same lifetime, same reason. */
+export function clearHighlightCache(): void {
+    _hlCache.clear();
+}
+
 /**
  * Highlight `code` as `label` (a fence label or a file extension), returning HTML.
  * Null when the language is unknown or hljs throws — the caller then renders the text
  * plain, which is what an unhighlighted file should look like anyway.
+ * Memoized by code+language — see HL_CACHE_MAX.
  */
 export function highlightCode(code: string, label: string | undefined | null): string | null {
     const language = resolveLang(label);
     if (!language || !hljs.getLanguage(language)) {
         return null;
     }
-    try {
-        return hljs.highlight(code, { language, ignoreIllegals: true }).value;
-    } catch {
-        return null;
+    const key = `${language} ${code}`;
+    const cached = _hlCache.get(key);
+    // has() and not a null check: null is a real result (hljs threw) and worth keeping.
+    if (cached !== undefined || _hlCache.has(key)) {
+        _hlCache.delete(key);
+        _hlCache.set(key, cached ?? null);
+        return cached ?? null;
     }
+    let out: string | null;
+    try {
+        out = hljs.highlight(code, { language, ignoreIllegals: true }).value;
+    } catch {
+        out = null;
+    }
+    _hlCache.set(key, out);
+    if (_hlCache.size > HL_CACHE_MAX) {
+        _hlCache.delete(_hlCache.keys().next().value as string);
+    }
+    return out;
 }

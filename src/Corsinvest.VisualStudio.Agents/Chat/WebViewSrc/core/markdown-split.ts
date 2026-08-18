@@ -7,8 +7,8 @@
 
 /**
  * Offset of the last point in `text` that later text cannot change the meaning of — a blank line
- * outside a fenced block. Markdown separates blocks there, so everything before it is settled and
- * can be rendered once instead of on every delta.
+ * outside a fenced block, or the line that closes one. Markdown separates blocks there, so
+ * everything before it is settled and can be rendered once instead of on every delta.
  *
  * Returns 0 when there is no such point (a single growing paragraph, or nothing but a settled
  * prefix), which tells the caller to render the whole thing. Deliberately conservative: cutting
@@ -26,6 +26,12 @@ export function stableMarkdownSplit(text: string): number {
         const line = lines[i];
         if (/^\s*```/.test(line)) {
             inFence = !inFence;
+            // The line that CLOSES a fence settles the whole block: nothing later can reopen it.
+            // Without this the open fence stays in the tail and every pass re-highlights all of
+            // it — the cost that grows with the block, on the content most likely to be long.
+            if (!inFence) {
+                cut = pos + line.length + 1;
+            }
         } else if (!inFence && i > 0 && line.trim() === '') {
             // Everything up to and including this blank line is final.
             cut = pos + line.length + 1;
