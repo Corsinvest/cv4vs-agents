@@ -70,6 +70,7 @@ import type {
     CliExitedNotification,
     RemoteControlNotification,
 } from '../../core/types';
+import { EMPTY } from '../../core/types';
 import { GetHistoryReq } from '../../core/request-types';
 import { modelLabel } from '../../core/ai-models';
 import { turnErrorLabel, turnErrorDetail, isUserAbort } from '../../core/turn-errors';
@@ -80,14 +81,6 @@ let _entryIdSeq = 0;
 /** Notice key for the "CLI process exited" row, so a restart clears exactly that one. */
 const CLI_EXITED_KEY = 'cli-exited';
 const REMOTE_CONTROL_ERROR_KEY = 'remote-control-error';
-
-/**
- * The one empty array the render passes hand out, because a fresh `[]` is a new identity and Lit
- * compares properties by identity: a literal in a template marks its element dirty on EVERY pass,
- * so a single streaming delta re-rendered every message and every tool row in the transcript.
- * Frozen so a consumer that mutates its own prop can't reach the others through it.
- */
-const EMPTY: readonly never[] = Object.freeze([]);
 
 /**
  * Root component. Owns the chat entry list and wires the bridge messages
