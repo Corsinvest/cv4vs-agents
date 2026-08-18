@@ -7,7 +7,7 @@
 
 import { marked, type Renderer, type Tokens } from 'marked';
 import DOMPurify from 'dompurify';
-import { resolveLang, highlightCode } from './lang';
+import { resolveLang, highlightCode, clearHighlightCache } from './lang';
 import { escapeHtml } from './html';
 import { findFileRefs, firstRefHint, parseFileRef } from './file-links';
 
@@ -139,6 +139,8 @@ const _mdCache = new Map<string, string>();
  *  messages compete with a dead one's for the same 200 slots. */
 export function clearMarkdownCache(): void {
     _mdCache.clear();
+    // The highlight memo holds fragments of the same messages, so it goes with them.
+    clearHighlightCache();
 }
 
 /**

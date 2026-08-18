@@ -55,6 +55,29 @@ export class CvMicButton extends LitElement {
     // Text accumulated from final results in this recording session.
     private _finalText = '';
 
+    /**
+     * Stop the recognition session when the button goes away (pane closed mid-dictation): the
+     * engine holds the microphone until someone says otherwise, and nothing else would.
+     *
+     * `abort()` and not `stop()`: stop() finalises the pending utterance and fires one last
+     * `onresult`, which would dispatch `transcript` at a detached listener. The handlers are
+     * cleared first because abort() still fires `onend`, and that branch dispatches
+     * `recording-end` — cv-prompt's handler reads its textarea, which is gone by then.
+     */
+    override disconnectedCallback(): void {
+        super.disconnectedCallback();
+        const sr = this._speech;
+        if (!sr) {
+            return;
+        }
+        this._speech = null;
+        this._recording = false;
+        sr.onresult = null;
+        sr.onend = null;
+        sr.onerror = null;
+        sr.abort();
+    }
+
     private _onClick = (): void => {
         if (this._recording) {
             this._speech?.stop();

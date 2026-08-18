@@ -13,6 +13,7 @@ import './cv-copy-btn';
 // The Agent row's running clock, rendered by AgentRenderer.header() into this row's light DOM.
 import './cv-elapsed';
 import type { ToolStatus, ToolUseData, UiEntry, ToolResultExtrasDto } from '../../core/types';
+import { EMPTY } from '../../core/types';
 import { makeRenderer } from '../tool-renderers';
 import { BridgeToolHost, cleanResult } from '../tool-renderers/tool-host';
 import type { ToolRowState } from '../tool-renderers/types';
@@ -217,7 +218,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
                                     .status=${c.status}
                                     .result=${c.result}
                                     .elapsedSec=${c.elapsedSec}
-                                    .childItems=${c.children?.items ?? []}
+                                    .childItems=${c.children?.items ?? EMPTY}
                                     .fullLineCount=${c.fullLineCount}
                                     .extras=${c.extras ?? null}
                                     .agentId=${c.agentId ?? ''}

@@ -8,6 +8,14 @@
 import type { SubagentUsageDto } from './generated/SubagentUsageDto';
 import type { ToolResultExtrasDto } from './generated/ToolResultExtrasDto';
 
+/**
+ * The one empty array the render passes hand out, because a fresh `[]` is a new identity and Lit
+ * compares properties by identity: a literal in a template marks its element dirty on EVERY pass,
+ * so a single streaming delta re-rendered every message and every tool row in the transcript.
+ * Frozen so a consumer that mutates its own prop can't reach the others through it.
+ */
+export const EMPTY: readonly never[] = Object.freeze([]);
+
 export type Theme = 'dark' | 'light';
 
 /** Reasoning effort level union ('low'|'medium'|'high'|'xhigh'), generated from C#. */

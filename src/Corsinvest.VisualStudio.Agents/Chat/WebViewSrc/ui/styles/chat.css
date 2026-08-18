@@ -98,6 +98,23 @@
     margin-bottom: 10px;
     position: relative;
 }
+/* Skip the layout of answers that are off screen. A long chat is thousands of nodes the browser
+ * re-measures on every reflow, and almost none of them are in view: measured on a 24.5k-node
+ * transcript the median full layout went from 45.3ms to 9.7ms, i.e. from three dropped frames to
+ * inside the budget.
+ *
+ * On .cv-response and NOT on .cv-exchange: the leading user bubbles are position:sticky and live
+ * in the exchange, and the containment content-visibility applies would pin them to their own box.
+ *
+ * The size is the median of a real transcript (p25 650, median 1121, p75 1552 px). It only ever
+ * applies to a block that has never been laid out — `auto` means the real height is remembered
+ * from the first render on, viewport or not — so it matters for the first pass through a chat and
+ * for scrollHeight, which _prependWithAnchor anchors history loading on. Measured: 400/800/1550px
+ * are indistinguishable once the chat has been scrolled through, which is what that `auto` says. */
+.cv-exchange > .cv-response {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 1100px;
+}
 /* A message typed while a turn was running: the bubble is there because the user wrote it, but
  * the CLI has not been given it yet. Faded rather than badged — in a column of full-strength
  * bubbles a pale one reads at a glance, and the bubble already carries copy/fork actions on hover

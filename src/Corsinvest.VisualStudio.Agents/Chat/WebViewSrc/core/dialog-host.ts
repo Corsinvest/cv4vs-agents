@@ -13,9 +13,14 @@ import type { LightboxRequest, DiffDialogNotification } from './types';
 // The dialog custom elements are registered by the UI layer (cv-app imports them),
 // not here — core/ must not import ui/. mount() only creates the already-defined tag.
 
+// Close of the instance currently up for a tag, so a reopen tears the old one down the same way
+// its own `close` event would.
+const mounted = new Map<string, (keepFocus?: boolean) => void>();
+
 function mount(tag: string, props?: Record<string, unknown>): void {
-    // Replace any already-open dialog of the same tag (reopen = fresh data, last wins).
-    document.querySelector(tag)?.remove();
+    // Replace any already-open dialog of the same tag (reopen = fresh data, last wins). Keep the
+    // focus: the outgoing restore is delayed, so it would land after this one is up and steal it.
+    mounted.get(tag)?.(true);
 
     const el = document.createElement(tag);
     if (props) {
@@ -27,20 +32,27 @@ function mount(tag: string, props?: Record<string, unknown>): void {
     // Esc → ui_escape → closeTopDialog → close()). Removing the element without popping leaves a
     // phantom entry that swallows the next Esc before it reaches the composer menus.
     let closed = false;
-    const close = (): void => {
+    // Arg is ours, not the listener's: `close` is also an event handler, so guard on `true`.
+    const close = (keepFocus?: unknown): void => {
         if (closed) {
             return;
         }
         closed = true;
         popDialog(close);
+        if (mounted.get(tag) === close) {
+            mounted.delete(tag);
+        }
         el.remove();
-        restoreFocus(returnFocus);
+        if (keepFocus !== true) {
+            restoreFocus(returnFocus);
+        }
     };
 
     // The component emits `close` on toggle-closed (Esc/backdrop) or its ✕.
     el.addEventListener('close', close, { once: true });
 
     pushDialog(close);
+    mounted.set(tag, close);
     document.body.appendChild(el);
     (el as { open?: boolean }).open = true;
 }

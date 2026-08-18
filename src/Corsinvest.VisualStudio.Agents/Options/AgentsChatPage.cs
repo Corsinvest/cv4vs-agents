@@ -53,7 +53,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Display")]
     [DisplayName("Preview lines")]
-    [Description("Number of lines shown in preview areas (tool output and user messages). 0 = no preview.")]
+    [Description("Number of lines shown in preview areas (tool output and user messages). 0 turns previews off: tool rows start collapsed (the chevron opens them in full) and user bubbles keep a short 3-line preview.")]
     public int PreviewLines { get; set; } = 3;
 
     [Category("File links")]
