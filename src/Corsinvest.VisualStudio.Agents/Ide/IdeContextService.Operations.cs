@@ -114,7 +114,7 @@ internal sealed partial class IdeContextService
     /// plus the Error List down to <paramref name="severity"/>. Kicks the build without waiting and
     /// polls SolutionBuild.BuildState, so the IDE stays live while it runs — see
     /// <see cref="WaitForBuildAsync"/>.</summary>
-    public async Task<BuildResult> BuildAsync(string projectName, string severity = "error")
+    public async Task<BuildResult> BuildAsync(string projectName, string severity)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE;

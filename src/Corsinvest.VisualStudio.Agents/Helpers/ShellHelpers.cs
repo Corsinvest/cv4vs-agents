@@ -36,7 +36,7 @@ internal static class ShellHelpers
     /// VsShellUtilities call underneath, but its ShowWarning shows OK/Cancel rather than OK, and
     /// its ShowConfirm hardcodes Yes as the default button (see <see cref="Confirm"/>).</para>
     /// <para>UI thread only — the shell cannot raise a dialog from anywhere else.</para></summary>
-    public static void ShowMessage(string text, string title, bool warning = false)
+    public static void ShowMessage(string text, string title, bool warning)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         VsShellUtilities.ShowMessageBox(
