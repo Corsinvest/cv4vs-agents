@@ -639,11 +639,13 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._cmdOpen = false;
             this._cmdQuery = '';
         }
-        // Live `@` trigger: popover open while caret sits inside an `@token`.
-        if (e.data === '@') {
+        // Live `@` trigger: popover open while caret sits inside an `@token`. Typing the `@` is
+        // not enough — it has to start a token, or an email address would open the menu. Asking
+        // _getAtQuery is what decides that, so the two can never disagree.
+        const query = this._getAtQuery();
+        if (e.data === '@' && query !== null) {
             this._atOpen = true;
         }
-        const query = this._getAtQuery();
         if (query === null) {
             if (this._atOpen) {
                 this._atOpen = false;
@@ -698,14 +700,19 @@ export class CvPrompt extends LitElement implements CommandHost {
         return m ? m[1] : null;
     }
 
-    /** Returns chars typed after the last `@` in the current line, or null. */
+    /** Returns chars typed after the last `@` token in the current text, or null. The `@` must
+     *  start a token (preceded by start-of-text or whitespace), the same rule `/` follows above —
+     *  and, more to the point, the rule the CLI itself applies when it looks for attachments
+     *  (`/(^|\s)@([^\s]+)\b/` in its own attachment parser). Without it an email address opens the
+     *  menu and queries the host for a file the CLI will never attach, and Enter picks a suggestion
+     *  instead of sending. */
     private _getAtQuery(): string | null {
         const ta = this._ta;
         if (!ta) {
             return null;
         }
         const before = ta.value.slice(0, ta.selectionStart ?? 0);
-        const m = before.match(/@([^\s]*)$/);
+        const m = before.match(/(?:^|\s)@([^\s]*)$/);
         return m ? m[1] : null;
     }
 
@@ -883,13 +890,17 @@ export class CvPrompt extends LitElement implements CommandHost {
         if (!ta) {
             return;
         }
-        // Replace the current `@xxx` token (last `@` to caret) with the pick.
+        // Replace the current `@xxx` token with the pick. Matched the same way _getAtQuery finds
+        // it — from an `@` that STARTS a token, not the last `@` in the text: in "mario@rossi"
+        // that one sits inside a word, and replacing from there would rewrite the word.
         const caret = ta.selectionStart ?? ta.value.length;
         const before = ta.value.slice(0, caret);
-        const start = before.lastIndexOf('@');
-        if (start < 0) {
+        const m = before.match(/(?:^|\s)@[^\s]*$/);
+        if (!m) {
             return;
         }
+        // index points at the whitespace when there is one; the `@` is the char after it.
+        const start = (m.index ?? 0) + (m[0].startsWith('@') ? 0 : 1);
         ta.value = ta.value.slice(0, start) + e.detail.token + ta.value.slice(caret);
         const newCaret = start + e.detail.token.length;
         ta.setSelectionRange(newCaret, newCaret);
