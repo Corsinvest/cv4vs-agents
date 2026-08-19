@@ -109,13 +109,12 @@ export class CvContextGauge extends LitElement {
             }
             /* Hung from the ring's right edge, not its left: Fluent aligns the list's start to the
                trigger's, which on the last control in the row throws 280px of menu out to the left
-               and leaves the pointer crossing open air to reach it. */
+               and leaves the pointer crossing open air to reach it. Flush with that edge — send
+               used to sit past the ring and the list hung into its width, but send now lives inside
+               the field and there is nothing to the right to lean on. */
             fluent-menu-list {
                 inset-inline-start: unset;
-                /* Negative, so the right edge lands past the ring rather than flush with it: the
-                   composer's own padding is to the right of the trigger, and hanging into it keeps
-                   the menu from crowding the row it belongs to. */
-                inset-inline-end: calc(anchor(self-end) - 24px);
+                inset-inline-end: anchor(self-end);
             }
             .sep {
                 height: 1px;
@@ -288,14 +287,15 @@ export class CvContextGauge extends LitElement {
                     </fluent-menu-item>
                 </fluent-menu-list>
             </fluent-menu>
-            <fluent-tooltip anchor="gauge-tip" positioning="above-end">
-                <span class="tip-name"
-                    >${known ? `${remainingPct.toFixed(0)}% of context left` : 'Context'}</span
-                >
-                <span class="tip-action"
-                    >${known ? 'Click for the breakdown' : 'Known once the first turn lands'}</span
-                >
-            </fluent-tooltip>
+            <!-- Named like the other triggers, because a ring on its own says nothing about what it
+                 measures. "left" stays: the arc fills with what has been CONSUMED while the number
+                 is what REMAINS, so a bare percentage would read as the opposite of the ring beside
+                 it. Before the first result there is no number and the name stands alone — an empty
+                 ring already says there is nothing to read yet. Nothing about clicking either: this
+                 is a menu trigger, and the menu says what it offers when it opens. -->
+            <fluent-tooltip anchor="gauge-tip" positioning="above-end"
+                >${known ? `Context: ${remainingPct.toFixed(0)}% left` : 'Context'}</fluent-tooltip
+            >
         `;
     }
 }

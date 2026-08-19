@@ -6,7 +6,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
 import { tooltipStyles } from '../styles/shared';
-import { currentEffortLevels, EffortCommand } from '../../core/commands/model-controls';
+import { currentEffortLevels } from '../../core/commands/model-controls';
 import { effortLabel } from '../../core/types';
 
 /**
@@ -25,7 +25,7 @@ export class CvEffortSelector extends LitElement {
             :host {
                 display: contents;
             }
-            /* See cv-model-selector: Fluent's own pill, ours only the metrics. */
+            /* See cv-model-selector: Fluent's own subtle button, ours only the metrics. */
             .trigger {
                 font-size: var(--fontSizeBase200);
                 padding-inline: 8px;
@@ -41,9 +41,6 @@ export class CvEffortSelector extends LitElement {
     @state() private _current = appState.currentModel;
 
     private _offs: Array<() => void> = [];
-    // The menu row for the same thing: its label and description are the one place that says what
-    // effort is, so the tooltip borrows them instead of wording it a second time.
-    private readonly _command = new EffortCommand();
 
     override connectedCallback(): void {
         super.connectedCallback();
@@ -85,16 +82,15 @@ export class CvEffortSelector extends LitElement {
             <fluent-button
                 id="effort-trigger"
                 class="trigger"
-                shape="circular"
+                appearance="subtle"
                 size="small"
                 @click=${this._onClick}
             >
                 <span>${label}</span>
             </fluent-button>
-            <fluent-tooltip anchor="effort-trigger" positioning="above-end">
-                <span class="tip-name">${this._command.label}: ${label}</span>
-                <span class="tip-action">${this._command.description}</span>
-            </fluent-tooltip>
+            <!-- The button already shows the level; the tooltip only has to say what the word is
+                 the level OF. -->
+            <fluent-tooltip anchor="effort-trigger" positioning="above-end">Effort</fluent-tooltip>
         `;
     }
 }

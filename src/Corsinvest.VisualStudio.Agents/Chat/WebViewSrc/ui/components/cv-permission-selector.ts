@@ -8,7 +8,6 @@ import { state as appState } from '../../core/state';
 import { tooltipStyles } from '../styles/shared';
 import type { PermissionMode } from '../../core/types';
 import { permissionItems } from '../../core/permission-modes';
-import { SwitchPermissionModeCommand } from '../../core/commands/builtin-commands';
 
 /**
  * Permission-mode trigger in the input toolbar: shows the active mode and asks cv-prompt to
@@ -26,7 +25,7 @@ export class CvPermissionSelector extends LitElement {
             :host {
                 display: contents;
             }
-            /* See cv-model-selector: Fluent's own pill, ours only the metrics. */
+            /* See cv-model-selector: Fluent's own subtle button, ours only the metrics. */
             .trigger {
                 font-size: var(--fontSizeBase200);
                 padding-inline: 8px;
@@ -37,10 +36,6 @@ export class CvPermissionSelector extends LitElement {
 
     @state() private _current: PermissionMode = appState.permissionMode;
     @state() private _models = appState.models;
-
-    // The menu row for the same thing: its description is the one place that says what picking a
-    // mode does, so the tooltip borrows it instead of wording it a second time.
-    private readonly _command = new SwitchPermissionModeCommand();
 
     private _off?: () => void;
     private _offModels?: () => void;
@@ -76,17 +71,19 @@ export class CvPermissionSelector extends LitElement {
             <fluent-button
                 id="perm-trigger"
                 class="trigger"
-                shape="circular"
+                appearance="subtle"
                 size="small"
                 @click=${this._onClick}
             >
                 <span>${item.short}</span>
             </fluent-button>
-            <fluent-tooltip anchor="perm-trigger" positioning="above-end">
-                <span class="tip-name">${item.label}</span>
-                <span class="tip-desc">${item.description}</span>
-                <span class="tip-action">${this._command.description} — Shift+Tab to switch</span>
-            </fluent-tooltip>
+            <!-- The name of the control, not of the mode: three of the five modes are shown in full
+                 on the button already (Manual, Plan, Auto), so echoing the label would be the same
+                 word twice. What a mode allows, and the Shift+Tab hint, are in cv-permission-list —
+                 a click answers that better than a tooltip repeating it. -->
+            <fluent-tooltip anchor="perm-trigger" positioning="above-end"
+                >Permission mode</fluent-tooltip
+            >
         `;
     }
 }

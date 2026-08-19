@@ -5,7 +5,7 @@
 import type { TemplateResult } from 'lit';
 
 /**
- * Chat command model — the `/` menu and the lightning action menu are built from
+ * Chat command model — the `/` menu and the attach menu's command item are built from
  * these. Same shape as the tool-renderers: a command is a small class that gets a
  * CommandHost (the atomic actions it may call) and stays pure — no bridge/state/DOM
  * imports. Mirrors the CLI's kinds: `run` acts and is done (CLI `local`); `render`

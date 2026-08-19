@@ -141,16 +141,12 @@ export class CvMicButton extends LitElement {
             >
                 ${unsafeHTML(Mic16Regular)}
             </fluent-button>
-            <fluent-tooltip anchor="btn-mic" positioning="above-end">
-                <span class="tip-name">${this._recording ? 'Recording' : 'Dictate'}</span>
-                <span class="tip-action"
-                    >${
-                        this._recording
-                            ? 'Click to stop — what was heard stays in the message'
-                            : 'Speak instead of typing'
-                    }</span
-                >
-            </fluent-tooltip>`;
+            <!-- positioning=after, like the file chip and the remote chip further along this row:
+                 the button sits at the left end of the toolbar, so the tooltip opens towards the
+                 space there is, and above would land on the field. -->
+            <fluent-tooltip anchor="btn-mic" positioning="after"
+                >${this._recording ? 'Stop recording' : 'Voice recording'}</fluent-tooltip
+            >`;
     }
 }
 

@@ -152,7 +152,6 @@ export class CvIdeContextBadge extends LitElement {
                 id="ide-badge"
                 class=${cls}
                 appearance="subtle"
-                shape="circular"
                 size="small"
                 @click=${this._onToggleEye}
             >
@@ -171,14 +170,13 @@ export class CvIdeContextBadge extends LitElement {
             </fluent-button>
             <!-- The path, not the bare name the chip already shows: it says WHICH file, through
                  displayPathUi so it follows "Show relative paths" like the tool rows and falls back
-                 to the full path outside the workdir. tip-desc for the second line, as on the model
-                 tooltip — tip-action's smaller size is for a third one. -->
+                 to the full path outside the workdir. That line is the data, so it keeps tip-name;
+                 the second says which of the two states the toggle is in, which the eye alone does
+                 not. Not "click to stop" — clicking a toggle is what a toggle is for. -->
             <fluent-tooltip anchor="ide-badge" positioning="after">
                 <span class="tip-name">${displayPathUi(ctx.filePath)}${lineInfo}</span>
-                <!-- On one line on purpose: tooltipStyles sets white-space: pre-line, so a line
-                     break here would render as blank space inside the tooltip. -->
                 <span class="tip-desc"
-                    >${this._enabled ? 'Goes with every message — click to stop' : 'Is not sent — click to include it'}</span
+                    >${this._enabled ? 'Sent with every message' : 'Not sent'}</span
                 >
             </fluent-tooltip>
         `;

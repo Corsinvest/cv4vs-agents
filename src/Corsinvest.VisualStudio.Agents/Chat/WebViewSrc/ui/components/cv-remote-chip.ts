@@ -121,10 +121,11 @@ export class CvRemoteChip extends LitElement {
             </fluent-menu>
             <!-- positioning=after, like the file chip beside it: above would land on the
                  textarea and cover what is being typed. -->
-            <fluent-tooltip anchor="remote-tip" positioning="after">
-                <span class="tip-name">Remote Control</span>
-                <span class="tip-desc">This session can be driven from claude.ai/code</span>
-            </fluent-tooltip>
+            <!-- One line: the chip is only on while the feature is, so what it is worth saying is
+                 what that means, not the name a menu item repeats. -->
+            <fluent-tooltip anchor="remote-tip" positioning="after"
+                >Driven from claude.ai/code</fluent-tooltip
+            >
         `;
     }
 }

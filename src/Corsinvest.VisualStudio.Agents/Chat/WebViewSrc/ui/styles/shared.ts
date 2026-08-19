@@ -39,8 +39,12 @@ export const iconTriggerStyles = css`
  * Shared tooltip for the composer's triggers. A `title` attribute is drawn by the OS, so it keeps
  * the system's light/dark whatever theme VS is in — `fluent-tooltip` is themed like the rest.
  *
- * Three optional lines, in the order the reader needs them: what the setting is on (`.tip-name`),
- * what that means (`.tip-desc`), and what clicking does (`.tip-action`).
+ * Nearly every tooltip here is one bare line: a trigger showing an icon needs naming, one showing a
+ * value needs only the part it had to shorten, and a trigger that opens a list needs neither —
+ * the list carries a description per row already. Never a line for what clicking does, either;
+ * that is what the trigger being a button says.
+ *
+ * `.tip-name` / `.tip-desc` are what is left, for the one case with two things to say at once.
  */
 export const tooltipStyles = css`
     /* :popover-open, not the bare tag: fluent-tooltip is a popover, and a closed popover is hidden
@@ -67,11 +71,6 @@ export const tooltipStyles = css`
     }
     .tip-desc {
         color: var(--colorNeutralForeground2);
-    }
-    /* The verb, set apart from the description of what is currently in force. */
-    .tip-action {
-        color: var(--colorNeutralForeground3);
-        font-size: var(--fontSizeBase100);
     }
 `;
 

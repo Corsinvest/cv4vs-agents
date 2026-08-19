@@ -2,12 +2,11 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, css, nothing } from 'lit';
+import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
 import { iconStyles, tooltipStyles } from '../styles/shared';
-import { modelLabel, modelLabelShort, resolveModelValue } from '../../core/ai-models';
-import { SwitchModelCommand } from '../../core/commands/builtin-commands';
+import { modelLabelShort } from '../../core/ai-models';
 
 /**
  * Model trigger in the input toolbar, next to the permission selector: shows the active model and
@@ -15,8 +14,8 @@ import { SwitchModelCommand } from '../../core/commands/builtin-commands';
  * owns the menu — same split as cv-permission-selector.
  *
  * The label is deliberately the SHORT name: the toolbar row is narrow and already carries attach,
- * slash, gauge, sub-agent, IDE badge, permission, mic and send. The full name and the model's
- * description go in the title, where there is no space pressure.
+ * gauge, sub-agent, IDE badge, permission and mic. The full name and the model's description are
+ * in the list a click opens, where there is no space pressure.
  */
 @customElement('cv-model-selector')
 export class CvModelSelector extends LitElement {
@@ -29,11 +28,14 @@ export class CvModelSelector extends LitElement {
             }
             /* A provider can return a long id as the display name; cap it rather than
                letting the toolbar reflow. */
-            /* The pill is Fluent's own — shape="circular" and the default appearance, so its
-               hover, pressed and focus come with it in either theme rather than being written out
-               here. Only the metrics are ours: even size="small" is padded for a control standing
-               alone, and min-width holds a floor a word like "Opus" never reaches. Both live on
-               the host (the template is a single content span), so no ::part is involved. */
+            /* Flat at rest, relief on hover — appearance="subtle" is Fluent's own, so the hover,
+               pressed and focus states come with it in either theme rather than being written out
+               here. No shape either: Fluent only has rules for circular and square, so the plain
+               button already carries the radius size="small" gives it. No caret: this shows a
+               value, and a value reads as chosen, therefore changeable. Only the metrics are ours —
+               even size="small" is padded for a control standing alone, and min-width holds a floor
+               a word like "Opus" never reaches. Both live on the host (the template is a single
+               content span), so no ::part is involved. */
             .trigger {
                 font-size: var(--fontSizeBase200);
                 padding-inline: 8px;
@@ -49,10 +51,6 @@ export class CvModelSelector extends LitElement {
 
     @state() private _current = appState.currentModel;
     @state() private _models = appState.models;
-
-    // The menu row for the same thing: its description is the one place that says what picking a
-    // model does, so the tooltip borrows it instead of wording it a second time.
-    private readonly _command = new SwitchModelCommand();
 
     private _off?: () => void;
     private _offModels?: () => void;
@@ -81,28 +79,24 @@ export class CvModelSelector extends LitElement {
     override render() {
         // Read so the label re-resolves when the catalogue lands (it maps value → displayName).
         void this._models;
-        const full = modelLabel(this._current);
-        // Full name + the CLI's own description of THIS model ("Opus 5 with 1M context · Best for
-        // everyday, complex tasks"), then the command's line for what clicking does. The button has
-        // no room for any of it; the tooltip has plenty.
-        const info = this._models.find((m) => m.value === resolveModelValue(this._current));
-        // fluent-tooltip, not a title attribute: the native one is drawn by the OS, so it keeps the
-        // system's light/dark regardless of the theme VS is in. Same reason the gauge uses one.
+        // fluent-tooltip, not a title attribute: the native one is drawn by the OS, so it follows
+        // Windows' light/dark rather than the theme VS is in — and VS has themes (Blue, third-party
+        // ones) that neither of the two settings a WebView2 profile can be put in would match.
+        // Same reason the gauge uses one.
         return html`
             <fluent-button
                 id="model-trigger"
                 class="trigger"
-                shape="circular"
+                appearance="subtle"
                 size="small"
                 @click=${this._onClick}
             >
                 <span>${modelLabelShort(this._current)}</span>
             </fluent-button>
-            <fluent-tooltip anchor="model-trigger" positioning="above-end">
-                <span class="tip-name">${full}</span>
-                ${info?.description ? html`<span class="tip-desc">${info.description}</span>` : nothing}
-                <span class="tip-action">${this._command.description}</span>
-            </fluent-tooltip>
+            <!-- The name of the control, like the permission trigger beside it. The full name, the
+                 [1m] variant and the description are all in cv-model-list, one row each — a click
+                 answers "which model is this exactly" better than a tooltip echoing the button. -->
+            <fluent-tooltip anchor="model-trigger" positioning="above-end">Model</fluent-tooltip>
         `;
     }
 }

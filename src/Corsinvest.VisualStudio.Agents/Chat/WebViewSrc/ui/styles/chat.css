@@ -75,13 +75,14 @@
     margin-bottom: 4px;
 }
 /* The composer's outer wrapper — rendered by cv-app (light DOM), holding the
- * permission banner + <cv-prompt>. The prompt's own chrome is Shadow DOM. */
+ * permission banner + <cv-prompt>. The prompt's own chrome is Shadow DOM.
+ * No rule and no fill of its own: the field inside carries the one border in the
+ * composer, and a second line above it would say the same thing twice. Sitting on
+ * the message list's own ground is what VS Code and the desktop app do. */
 #composer-area {
     position: relative;
     flex-shrink: 0;
-    border-top: 1px solid var(--colorNeutralStroke2);
     padding: 8px;
-    background: var(--colorNeutralBackground2);
 }
 /* A stopped turn ("[Request interrupted…]") gets an orange bar instead of the blue
    brand bar, so it reads as an interruption rather than a normal user prompt. */

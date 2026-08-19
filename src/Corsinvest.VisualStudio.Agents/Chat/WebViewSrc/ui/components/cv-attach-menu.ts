@@ -5,15 +5,18 @@
 import { LitElement, html, css } from 'lit';
 import { customElement } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-// A plus, not a paperclip: the menu offers "Add content" as well as a file upload, so it means
-// "add something to the message" rather than strictly "attach a file".
+// A plus, not a paperclip or an @: the menu holds three different actions, and any of those glyphs
+// would promise one of them. The plus promises nothing and lets the list say what is on offer.
 import Add16Regular from '@fluentui/svg-icons/icons/add_16_regular.svg';
-import ArrowUpload16Regular from '@fluentui/svg-icons/icons/arrow_upload_16_regular.svg';
-import DocumentText16Regular from '@fluentui/svg-icons/icons/document_text_16_regular.svg';
+// Each item wears the glyph of the key that does the same thing, so the menu teaches @ and /.
+import Attach16Regular from '@fluentui/svg-icons/icons/attach_16_regular.svg';
+import Mention16Regular from '@fluentui/svg-icons/icons/mention_16_regular.svg';
+import SlashForward16Regular from '@fluentui/svg-icons/icons/slash_forward_16_regular.svg';
 import { iconStyles, iconTriggerStyles, tooltipStyles } from '../styles/shared';
 
 /**
- * Attach-actions button in the input toolbar, built on `<fluent-menu>`.
+ * The input toolbar's one "put something in this message" button, built on `<fluent-menu>`:
+ * attach a file from disk, reference one from the workspace (`@`), or run a command (`/`).
  * No "Add active file": cv-ide-context-badge covers it and the host
  * auto-injects the file path / selection into every prompt. Shadow DOM.
  *
@@ -33,7 +36,7 @@ export class CvAttachMenu extends LitElement {
             }
             /* Size the list to its longest item. fluent-menu's positioning layer
              * otherwise pins the list to the trigger (the ~28px button), which
-             * squeezes it and clips "Upload from computer". */
+             * squeezes it and clips "Reference a workspace file". */
             fluent-menu-list {
                 width: max-content !important;
                 min-width: 200px !important;
@@ -66,9 +69,15 @@ export class CvAttachMenu extends LitElement {
         this.dispatchEvent(new CustomEvent('pick-file', { bubbles: true, composed: true }));
     };
 
-    /** "Add content": insert "@" in the prompt to open the workspace file list. */
+    /** "Reference a workspace file": insert "@" in the prompt to open the workspace file list. */
     private _onAddContent = (): void => {
         this.dispatchEvent(new CustomEvent('add-mention', { bubbles: true, composed: true }));
+    };
+
+    /** "Slash command": the full palette with its own search box — the mouse path to the commands,
+     *  which typing `/` reaches from the keyboard. */
+    private _onCommands = (): void => {
+        this.dispatchEvent(new CustomEvent('open-commands', { bubbles: true, composed: true }));
     };
 
     override render() {
@@ -94,26 +103,31 @@ export class CvAttachMenu extends LitElement {
                     <span id="attach-tip" class="tip-anchor">${unsafeHTML(Add16Regular)}</span>
                 </fluent-button>
                 <fluent-menu-list>
+                    <!-- "Attach" against "Reference" names the real difference between the two:
+                         one embeds the file's content, the other only points at a path. The
+                         ellipsis marks the one that opens a dialog. -->
                     <fluent-menu-item @click=${this._onUpload}>
-                        <span slot="start">${unsafeHTML(ArrowUpload16Regular)}</span>
-                        Upload from computer
+                        <span slot="start">${unsafeHTML(Attach16Regular)}</span>
+                        Attach a file…
                     </fluent-menu-item>
                     <fluent-menu-item @click=${this._onAddContent}>
-                        <span slot="start">${unsafeHTML(DocumentText16Regular)}</span>
-                        Add content
+                        <span slot="start">${unsafeHTML(Mention16Regular)}</span>
+                        Reference a workspace file
+                    </fluent-menu-item>
+                    <fluent-menu-item @click=${this._onCommands}>
+                        <span slot="start">${unsafeHTML(SlashForward16Regular)}</span>
+                        Slash command
                     </fluent-menu-item>
                 </fluent-menu-list>
             </fluent-menu>
             <!-- Outside the menu: inside it the tooltip would be a menu child, and fluent-menu lays
                  out only its trigger and its list. Anchored to the same id the list uses — one
                  names the anchor, the other looks the element up, and they don't collide. -->
-            <!-- positioning=before, like the slash trigger next to it: opening above would land on
-                 the placeholder, and beside the button is the only direction with nothing under it.
-                 tip-desc, not tip-action: alone, the smaller action size reads as a footnote to
-                 something that isn't there. -->
-            <fluent-tooltip anchor="attach-tip" positioning="before">
-                <span class="tip-desc">A file from disk, or a path from the workspace</span>
-            </fluent-tooltip>
+            <!-- positioning=after, like the mic and the file chip along this row: the button is at
+                 the left end of the toolbar, so opening before it would land off the pane.
+                 One word, no tip-* classes: the list under the button already says what is on
+                 offer, so the tooltip only has to name the button. -->
+            <fluent-tooltip anchor="attach-tip" positioning="after">Add</fluent-tooltip>
         `;
     }
 }
