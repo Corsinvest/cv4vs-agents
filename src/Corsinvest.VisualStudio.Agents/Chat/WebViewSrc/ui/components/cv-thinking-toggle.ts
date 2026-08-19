@@ -103,10 +103,11 @@ export class CvThinkingToggle extends LitElement {
             >
                 ${unsafeHTML(on ? Lightbulb16Filled : Lightbulb16Regular)}
             </fluent-button>
-            <fluent-tooltip anchor="thinking-trigger" positioning="above-end">
-                <span class="tip-name">${this._command.label}: ${on ? 'on' : 'off'}</span>
-                <span class="tip-action">${this._command.description}</span>
-            </fluent-tooltip>
+            <!-- Only the name: filled against outline is Fluent's own on/off, so the bulb already
+                 says which way the toggle is. -->
+            <fluent-tooltip anchor="thinking-trigger" positioning="above-end"
+                >Thinking</fluent-tooltip
+            >
         `;
     }
 }

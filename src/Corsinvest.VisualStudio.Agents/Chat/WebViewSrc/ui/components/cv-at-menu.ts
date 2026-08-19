@@ -51,6 +51,18 @@ export class CvAtMenu extends LitElement {
         return slash > 0 ? rel.slice(0, slash) : '';
     }
 
+    /**
+     * The `@…` token for a path, quoted when it contains a space.
+     *
+     * The CLI reads attachments with two patterns, `@"<path>"` and a bare `@<path>` that stops at
+     * the first whitespace — so an unquoted path with a space in it silently references only the
+     * part before the space. The user has no way to get this right by hand: it is the menu that
+     * writes the token.
+     */
+    private _token(path: string): string {
+        return path.includes(' ') ? `@"${path}"` : `@${path}`;
+    }
+
     private _pick(item: AtItemDto): void {
         const wd = appState.workingDirectory;
         const rel = relPath(item.path, wd);
@@ -60,9 +72,11 @@ export class CvAtMenu extends LitElement {
             // when the search stopped at the first level — the recursive one finds a file wherever
             // it sits, so the walk is gone and a folder is now a reference in its own right.
             const dirToken = rel && rel !== normPath(item.path) ? rel : fileName(item.path);
+            // The trailing slash goes INSIDE the quotes: it is part of the path the CLI reads, and
+            // outside them it would sit past the closing quote where nothing looks for it.
             this.dispatchEvent(
                 new CustomEvent<{ token: string; isDir: true }>('select-at', {
-                    detail: { token: `@${dirToken}/ `, isDir: true },
+                    detail: { token: `${this._token(`${dirToken}/`)} `, isDir: true },
                     bubbles: true,
                     composed: true,
                 }),
@@ -73,7 +87,7 @@ export class CvAtMenu extends LitElement {
             rel && rel !== normPath(item.path) ? rel : item.name || fileName(item.path);
         this.dispatchEvent(
             new CustomEvent<{ token: string; isDir: false }>('select-at', {
-                detail: { token: `@${replacement} `, isDir: false },
+                detail: { token: `${this._token(replacement)} `, isDir: false },
                 bubbles: true,
                 composed: true,
             }),

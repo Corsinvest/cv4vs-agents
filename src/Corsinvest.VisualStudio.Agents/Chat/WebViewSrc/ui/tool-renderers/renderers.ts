@@ -464,15 +464,20 @@ export class AskUserQuestionRenderer extends ToolRenderer {
             ? questions.map((q) => `- **${title(q)}**: ${answerText(q, answered)}`).join('\n')
             : questions
                   .map((q, i) => {
-                      const opts = (q.options ?? [])
-                          .map((o) => {
-                              const label = o.label ?? '';
-                              const mark = isChosen(label, answered) ? '✅ ' : '';
-                              const desc = o.description ? ` — ${o.description}` : '';
-                              return `- ${mark}${label}${desc}`;
-                          })
-                          .join('\n');
-                      return `**${i + 1}. ${title(q)}**\n\n${opts}`;
+                      const chosen = chosenLabels(q, answered);
+                      const rows = (q.options ?? []).map((o) => {
+                          const label = o.label ?? '';
+                          const mark = chosen.includes(label) ? '✅ ' : '';
+                          const desc = o.description ? ` — ${o.description}` : '';
+                          return `- ${mark}${label}${desc}`;
+                      });
+                      // Typed into "Other": no declared option carries it, so it needs a row of
+                      // its own or the copied markdown lists the choices with none of them ticked.
+                      const free = chosen.length ? '' : questionAnswer(q, answered);
+                      if (free) {
+                          rows.push(`- ✅ ${free}`);
+                      }
+                      return `**${i + 1}. ${title(q)}**\n\n${rows.join('\n')}`;
                   })
                   .join('\n\n');
         return html`<cv-copy-btn
@@ -501,6 +506,10 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                 <div class="cv-question-list">
                     ${questions.map((q) => {
                         const opts = q.options ?? [];
+                        // Once per question, not once per option: every option would otherwise
+                        // re-run the same regex over the whole result text.
+                        const chosen = chosenLabels(q, answered);
+                        const free = chosen.length ? '' : questionAnswer(q, answered);
                         return html`<div class="cv-question">
                             <div class="cv-question-head">
                                 ${
@@ -512,9 +521,13 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                             </div>
                             ${opts.map((o) => {
                                 const label = o.label ?? '';
-                                const chosen = isChosen(label, answered);
-                                return html`<div class="cv-question-opt ${chosen ? 'chosen' : ''}">
-                                    <span class="cv-question-opt-mark">${chosen ? '●' : '○'}</span>
+                                const isPicked = chosen.includes(label);
+                                return html`<div
+                                    class="cv-question-opt ${isPicked ? 'chosen' : ''}"
+                                >
+                                    <span class="cv-question-opt-mark"
+                                        >${isPicked ? '●' : '○'}</span
+                                    >
                                     <span class="cv-question-opt-text">
                                         <span class="cv-question-opt-label">${label}</span>
                                         ${
@@ -530,13 +543,11 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                             ${
                                 // A free-text answer matches none of the options above, so without
                                 // this the question renders as if it had gone unanswered.
-                                freeTextAnswer(q, answered) && !chosenLabels(q, answered).length
+                                free
                                     ? html`<div class="cv-question-opt chosen">
                                           <span class="cv-question-opt-mark">●</span>
                                           <span class="cv-question-opt-text">
-                                              <span class="cv-question-opt-label"
-                                                  >${freeTextAnswer(q, answered)}</span
-                                              >
+                                              <span class="cv-question-opt-label">${free}</span>
                                           </span>
                                       </div>`
                                     : nothing
@@ -553,19 +564,29 @@ function cleanText(s: string): string {
     return (s ?? '').replace(/\s+$/, '');
 }
 
-/** True if `label` appears in the CLI's answered-result text. The answer isn't
- *  structured, so membership is a substring match (as VS Code does). */
-function isChosen(label: string, answered: string): boolean {
-    return !!label && !!answered && answered.includes(label);
-}
-
-/** The option labels chosen for a question, per {@link isChosen}. */
+/**
+ * The option labels chosen for `q`.
+ *
+ * Matched against this question's own answer — the `"<question>"="<answer>"` pair — and not
+ * against the whole result text. Two things go wrong when the blob is searched instead: one
+ * option's label can sit inside a longer one ("Tab" inside "Tab to indent, spaces to align"),
+ * and with several questions the labels of one can appear in another's answer. Either way more
+ * than one row comes back marked chosen for a single-answer question.
+ *
+ * Within that answer, membership is still a substring test: multi-select answers arrive as one
+ * string with the labels run together, so there is no separator to split on.
+ */
 function chosenLabels(q: AskQuestion, answered: string): string[] {
-    return (q.options ?? []).map((o) => o.label ?? '').filter((l) => isChosen(l, answered));
+    const mine = questionAnswer(q, answered);
+    if (!mine) {
+        return [];
+    }
+    return (q.options ?? []).map((o) => o.label ?? '').filter((l) => !!l && mine.includes(l));
 }
 
 /**
- * The free-text answer to `q`, or '' when there isn't one.
+ * The answer the user gave to `q` — a declared option's label or free text alike — or '' when it
+ * cannot be told apart.
  *
  * The CLI reports answers as prose wrapping `"<question>"="<answer>"` pairs, followed by
  * instructions addressed to the model. Keying on the question text is what makes this safe with
@@ -575,7 +596,7 @@ function chosenLabels(q: AskQuestion, answered: string): string[] {
  * Returns '' when the shape isn't there — a CLI that words this differently gets an em dash, not
  * a paragraph of its own prose rendered as if the user had typed it.
  */
-function freeTextAnswer(q: AskQuestion, answered: string): string {
+function questionAnswer(q: AskQuestion, answered: string): string {
     const question = q.question ?? '';
     if (!question || !answered) {
         return '';
@@ -592,15 +613,11 @@ function freeTextAnswer(q: AskQuestion, answered: string): string {
  * "Other" is free text, so it is never one of the declared options and matching against them can
  * only come up empty. Showing a dash there loses something the user typed: the answer reached the
  * CLI, and re-reading the chat is the one place it can still be seen.
- *
- * Only for a single question, and only when it is the sole one: with several, the result text
- * covers all of them and there is no way to tell which part answered which — a substring match
- * cannot split prose it did not structure. Better an em dash than the wrong answer under a header.
  */
 function answerText(q: AskQuestion, answered: string): string {
     const chosen = chosenLabels(q, answered);
     if (chosen.length) {
         return chosen.join(', ');
     }
-    return freeTextAnswer(q, answered) || '—';
+    return questionAnswer(q, answered) || '—';
 }

@@ -788,6 +788,10 @@ export class CvPermissionBanner extends LitElement {
 
     /** Enter in the Other field advances to the next question; Shift+Enter adds
      *  a newline, so a multi-line answer is still possible. */
+    /** Enter moves on, Shift+Enter breaks the line — the composer's own bargain, and the reason
+     *  the field is a textarea at all. On the last question there is nothing to move on to, so
+     *  Enter submits: otherwise the only way out of this field is the mouse, the digit shortcut
+     *  being deliberately dead while typing here. */
     private _onOtherKey = (e: KeyboardEvent): void => {
         e.stopPropagation();
         if (e.key !== 'Enter' || e.shiftKey) {
@@ -797,6 +801,12 @@ export class CvPermissionBanner extends LitElement {
         const qs = this._questions();
         if (this._qIndex < qs.length - 1) {
             this._qIndex = this._qIndex + 1;
+            return;
+        }
+        // Same guard the Submit button carries: a half-filled set must not go just because the
+        // caret happened to be in the last question's Other box.
+        if (this._allAnswered()) {
+            this._submitAnswers();
         }
     };
 
