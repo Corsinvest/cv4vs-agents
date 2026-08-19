@@ -413,7 +413,7 @@ internal static class StatsService
         }
         try
         {
-            return [.. new Sessions.SessionManager(paths, cwd).Load().Where(s => s.Id != null)];
+            return [.. new Sessions.SessionManager(paths, cwd, OutputWindowLogger.Global).Load().Where(s => s.Id != null)];
         }
         catch (Exception ex)
         {

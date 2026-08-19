@@ -29,8 +29,9 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
     private ClaudePaths PaneClaudePaths => entry.ClaudePaths;
 
     /// <summary>Build a SessionManager keyed on this session's config-dir and working directory.
-    /// New instance per call — SessionManager is stateless besides the readonly fields.</summary>
-    private SessionManager Sessions => new(PaneClaudePaths, client.WorkingDirectory);
+    /// New instance per call: these are single-session reads, so the scan cache a long-lived
+    /// instance would keep is of no use to them.</summary>
+    private SessionManager Sessions => new(PaneClaudePaths, client.WorkingDirectory, log);
 
     // id is the request/response correlation id (null for notifications). The 5 request cases
     // (get_image/get_history/get_subagent/get_usage/file_get_suggestions) echo it back via
