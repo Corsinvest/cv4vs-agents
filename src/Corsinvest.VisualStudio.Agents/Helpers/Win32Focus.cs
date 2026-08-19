@@ -54,8 +54,7 @@ internal static class Win32Focus
     /// expired), or null when the toast could not be shown. Disposing it twice is harmless.
     /// <paramref name="onClosed"/> runs when the balloon goes away on its own, so the caller can
     /// drop the handle it is holding.</summary>
-    public static IDisposable ShowToast(string title, string message, Action onClick = null,
-                                        Action onClosed = null)
+    public static IDisposable ShowToast(string title, string message, Action onClick, Action onClosed)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         try

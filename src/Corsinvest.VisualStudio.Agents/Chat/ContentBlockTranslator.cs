@@ -278,7 +278,7 @@ internal static class ContentBlockTranslator
         }
     }
 
-    private static Contracts.ToolPermissionNotification BuildToolPermission(JToken item, string parentToolUseId, bool needsPermission = false, JArray permissionSuggestions = null)
+    private static Contracts.ToolPermissionNotification BuildToolPermission(JToken item, string parentToolUseId, bool needsPermission, JArray permissionSuggestions)
     {
         var name = item.Val("name", "");
         var id = item.Val("id", "");

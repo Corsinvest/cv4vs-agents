@@ -316,7 +316,7 @@ internal sealed partial class IdeDebugService
     /// if VS can't bind it yet (it binds when the code loads), as long as the request was
     /// accepted.</summary>
     public async Task<DebugResult> SetBreakpointAsync(string filePath, int line, string condition,
-                                                      int hitCount = 0, string hitCountType = null)
+                                                      int hitCount, string hitCountType)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
@@ -363,7 +363,7 @@ internal sealed partial class IdeDebugService
     /// "MyNamespace.MyClass.Calculate"), instead of a file/line — handy when you know the method
     /// but not the line. Optional condition. Works in any mode.</summary>
     public async Task<DebugResult> SetFunctionBreakpointAsync(string functionName, string condition,
-                                                              int hitCount = 0, string hitCountType = null)
+                                                              int hitCount, string hitCountType)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try

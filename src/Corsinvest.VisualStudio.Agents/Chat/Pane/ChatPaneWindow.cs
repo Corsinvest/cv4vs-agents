@@ -55,7 +55,7 @@ public sealed class ChatPaneWindow : PaneWindowBase, IOleCommandTarget
 
     /// <summary>Forward to the hosted control so the launcher can seed a forked
     /// session before the pane loads (Content is a DockPanel, not the control).</summary>
-    internal void SetStartupSession(string sessionId, string initialPrompt = null)
+    internal void SetStartupSession(string sessionId, string initialPrompt)
     {
         if (PaneControl is ChatPaneControl ctl) { ctl.SetStartupSession(sessionId, initialPrompt); }
     }

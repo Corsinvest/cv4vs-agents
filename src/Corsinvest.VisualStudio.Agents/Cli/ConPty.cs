@@ -76,7 +76,7 @@ internal static class ConPty
     /// CLI/z.ai) coexist without a shared-env race. The returned session owns all handles.
     /// </summary>
     public static Session Create(string command, string workingDirectory, short cols, short rows,
-        IReadOnlyDictionary<string, string> env = null)
+        IReadOnlyDictionary<string, string> env)
     {
         var (inRead, inWrite, outRead, outWrite) = CreatePipes();
 

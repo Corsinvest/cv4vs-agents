@@ -21,7 +21,7 @@ public static class ClaudeCliLauncher
     /// filtered by the CLI to just executeCode/getDiagnostics — and pre-approves them with
     /// --allowedTools (every MCP tool otherwise prompts on each call). Returns <c>null</c>
     /// if the binary is missing.</summary>
-    public static string BuildConPtyCommandLine(bool ide = true, int mcpPort = 0, string mcpAuthToken = null)
+    public static string BuildConPtyCommandLine(bool ide, int mcpPort, string mcpAuthToken)
     {
         var exe = ClaudeInstall.ResolveExecutable();
         if (exe == null) { return null; }
