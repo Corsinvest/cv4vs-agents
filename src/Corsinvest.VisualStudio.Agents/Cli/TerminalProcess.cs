@@ -51,8 +51,8 @@ internal sealed class TerminalProcess : IDisposable
     /// A non-empty <paramref name="env"/> gives the child a per-process environment (see
     /// <see cref="ConPty.Create"/>). Throws if already started or disposed.
     /// </summary>
-    public void Start(string command, string workingDirectory, short cols = 120, short rows = 40,
-        IReadOnlyDictionary<string, string> env = null)
+    public void Start(string command, string workingDirectory, short cols, short rows,
+        IReadOnlyDictionary<string, string> env)
     {
         lock (_gate)
         {

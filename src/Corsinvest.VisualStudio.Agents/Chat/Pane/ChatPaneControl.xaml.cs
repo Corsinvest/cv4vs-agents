@@ -306,7 +306,7 @@ public partial class ChatPaneControl : PaneControlBase
     /// than fresh, pre-filling the composer with <paramref name="initialPrompt"/>.
     /// Must be called before the pane's Loaded fires (PaneLauncher does this right
     /// after creating the window, like AssignPaneId).</summary>
-    internal void SetStartupSession(string sessionId, string initialPrompt = null)
+    internal void SetStartupSession(string sessionId, string initialPrompt)
     {
         _startupSessionId = sessionId;
         _startupPrompt = initialPrompt;

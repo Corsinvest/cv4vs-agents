@@ -60,7 +60,7 @@ internal sealed class NdjsonTransport : IDisposable
     }
 
     public void Start(string exePath, string arguments, string workingDirectory,
-        System.Collections.Generic.IReadOnlyDictionary<string, string> extraEnv = null)
+        System.Collections.Generic.IReadOnlyDictionary<string, string> extraEnv)
     {
         if (_disposed) { return; }
 
