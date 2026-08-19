@@ -20,7 +20,8 @@ import './cv-popover-list';
 import type { CvPopoverList, ListSection } from './cv-popover-list';
 
 /**
- * Unified command palette for the input toolbar — the `/` menu and the lightning button open this.
+ * Unified command palette for the input toolbar — typing `/` and the attach menu's
+ * "Slash command" item both open this.
  * A wrapper over cv-popover-list: it owns the DOMAIN logic (fuzzy filter with Fuse, per-section
  * grouping, the heterogeneous trailing controls) and passes the grouped commands + a renderRow to
  * the generic list, which owns the popover/navigation/scroll. Parent-controlled like cv-at-menu:
@@ -30,9 +31,9 @@ import type { CvPopoverList, ListSection } from './cv-popover-list';
 export class CvCommandMenu extends LitElement {
     @property({ type: Boolean, reflect: true }) open = false;
     /** Filter text. Driven by the parent (textarea) when opened from `/`; owned by the list's
-     *  own search box when opened from the lightning button (`searchable`). */
+     *  own search box when opened from the menu item (`searchable`). */
     @property({ attribute: false }) query = '';
-    /** True when opened from the lightning button: show the search box in the list. */
+    /** True when opened from the menu item: show the search box in the list. */
     @property({ type: Boolean }) searchable = false;
     /** Show only these commands, by id, in the order given — the toolbar's Effort trigger opens
      *  the menu on that one row. Takes precedence over `query`: a trigger that means "this exact

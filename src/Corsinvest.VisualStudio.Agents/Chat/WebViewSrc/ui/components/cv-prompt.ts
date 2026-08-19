@@ -51,7 +51,6 @@ import './cv-model-selector';
 import './cv-permission-list';
 import './cv-permission-selector';
 import './cv-mic-button';
-import './cv-slash-menu';
 import { openLightbox, openPluginManagerDialog } from '../../core/dialog-host';
 import { openAttachment } from '../../core/lazy';
 
@@ -170,39 +169,59 @@ export class CvPrompt extends LitElement implements CommandHost {
             .notice {
                 margin-bottom: 6px;
             }
+            /* A bare column: the border belongs to #field, not here. position:relative because the
+               popovers (@, commands, model, permission) anchor to it. */
             #box {
                 position: relative;
-                background: var(--colorNeutralBackground3);
-                border: 1px solid var(--colorNeutralStrokeAccessible);
-                border-radius: var(--borderRadiusMedium);
                 display: flex;
                 flex-direction: column;
-                transition: border-color 0.15s;
             }
             /* display:flex above beats the UA [hidden] rule (id specificity), so hide explicitly
                while an ask/permission is pending — the composer stays mounted (draft preserved). */
             #box[hidden] {
                 display: none;
             }
+            /* The composer's one border, and it draws a line with a meaning: what travels with this
+               message is inside (attachment chips, the text, send), what outlives it is not (model,
+               effort, permission, the gauge). */
+            #field {
+                display: flex;
+                flex-direction: column;
+                background: var(--colorNeutralBackground3);
+                border: 1px solid var(--colorNeutralStroke2);
+                border-radius: var(--borderRadiusLarge);
+                transition: border-color 0.15s;
+            }
             /* While the textarea has focus, the border reflects the active permission
-             * mode — quick visual feedback for Shift+Tab cycling. */
-            #box:focus-within[data-permission-mode='default'] {
+             * mode — quick visual feedback for Shift+Tab cycling. The mode colour IS the focus
+             * state; a separate accent would only fight it for the same border. */
+            #box[data-permission-mode='default'] #field:focus-within {
                 /* Peach (a light warm orange) — lighter and clearly apart from the Red
                  * used by 'auto', which Pumpkin/DarkOrange sat too close to. */
                 border-color: var(--colorPalettePeachBorderActive);
             }
-            #box:focus-within[data-permission-mode='acceptEdits'] {
+            #box[data-permission-mode='acceptEdits'] #field:focus-within {
                 border-color: var(--colorNeutralStrokeAccessible);
             }
-            #box:focus-within[data-permission-mode='plan'] {
+            #box[data-permission-mode='plan'] #field:focus-within {
                 border-color: var(--colorBrandStroke1);
             }
-            #box:focus-within[data-permission-mode='auto'] {
+            #box[data-permission-mode='auto'] #field:focus-within {
                 border-color: var(--colorPaletteRedBorderActive);
             }
-            #box.drag-over {
+            /* The drop target is the whole composer (the handlers sit on #box), but the highlight
+               goes on the field: it is the thing the file ends up in. */
+            #box.drag-over #field {
                 border-color: var(--colorBrandStroke1);
                 background: var(--colorBrandBackground2);
+            }
+            /* Text and send on one line, send pinned to the bottom so it stays put as the textarea
+               grows. */
+            #input-line {
+                display: flex;
+                align-items: flex-end;
+                gap: 4px;
+                padding-inline-end: 6px;
             }
             #input {
                 width: 100%;
@@ -226,12 +245,13 @@ export class CvPrompt extends LitElement implements CommandHost {
             #input::placeholder {
                 color: var(--colorNeutralForeground3);
             }
+            /* Outside the field and with no chrome of its own: these settings outlive the message,
+               so nothing should tie them to it. */
             #toolbar {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
-                padding: 4px;
-                border-top: 1px solid var(--colorNeutralStroke2);
+                padding: 4px 2px 0;
             }
             #toolbar-left,
             #toolbar-right {
@@ -253,16 +273,19 @@ export class CvPrompt extends LitElement implements CommandHost {
             #toolbar-right {
                 flex: 0 0 auto;
             }
-            /* Send button: shrink the inline icon to 16px (Fluent default 20px dominates
-             * a small button); turn it red when the CLI is busy so it reads as "stop". */
-            /* The one filled button in the composer: appearance="primary" brings the brand fill,
-               its hover and its disabled state, so only the metrics are ours. */
+            /* The one filled button in the composer. appearance="primary" is what makes the three
+               states tell themselves apart: grey while the field is empty (nothing to send), brand
+               once there is something (the action is ready), red while a turn runs (stop). Bare
+               would leave the first two a shade of grey apart. Fluent brings the fill, its hover
+               and its disabled state, so only the metrics are ours. */
             #send {
                 padding: 3px;
                 min-width: 0;
+                margin-block-end: 6px;
             }
             /* Busy = "Stop": red like the mic's recording state (same "click to stop the live
-               action" pattern) — the one state Fluent has no appearance for. */
+               action" pattern) — the one state Fluent has no appearance for. It changes in place:
+               send and stop are one button, and it never moves between them. */
             #send.is-busy {
                 background: var(--colorPaletteRedBackground3);
                 border-color: var(--colorPaletteRedBackground3);
@@ -271,14 +294,14 @@ export class CvPrompt extends LitElement implements CommandHost {
                 background: var(--colorPaletteRedForeground1);
                 border-color: var(--colorPaletteRedForeground1);
             }
+            /* Inside the field, on its own band above the text: a long list pushes the textarea
+               down instead of eating its first line. Fill and padding separate it — no rule, the
+               field's border is meant to be the only line here. */
             #attachments {
                 display: flex;
                 flex-wrap: wrap;
                 gap: 4px;
-                /* Divider separating the attachment badges from the prompt below. */
-                padding: 0 2px 6px;
-                margin-bottom: 6px;
-                border-bottom: 1px solid var(--colorNeutralStroke2);
+                padding: 6px 8px 0;
                 position: relative;
             }
         `,
@@ -291,11 +314,11 @@ export class CvPrompt extends LitElement implements CommandHost {
     @state() private _queue: Array<{ text: string; attachments: Attachment[]; uuid: string }> = [];
     @state() private _atOpen = false;
     @state() private _atItems: AtItemDto[] = [];
-    // Command palette (`/` trigger or the lightning button). `_cmdQuery` is the
-    // text after `/` while typing; empty when opened from the lightning button.
+    // Command palette (typing `/`, or the attach menu's "Slash command" item). `_cmdQuery` is the
+    // text after `/` while typing; empty when opened from the menu.
     @state() private _cmdOpen = false;
     @state() private _cmdQuery = '';
-    // True when the palette was opened from the lightning button (owns its own
+    // True when the palette was opened from the menu item (owns its own
     // search box + focus); false when opened by typing `/` (textarea drives it).
     @state() private _cmdSearchable = false;
     // Non-null when the palette was opened on one specific row (the Effort trigger): the ids to
@@ -445,7 +468,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._subagentTasks = v;
         });
 
-        // Close a lightning-opened palette on an outside click. (The `/`-opened
+        // Close a menu-opened palette on an outside click. (The `/`-opened
         // one closes on textarea blur; this covers the searchable case, whose
         // focus lives in the menu's own search box.)
         document.addEventListener('pointerdown', this._onDocPointerDown, true);
@@ -492,8 +515,8 @@ export class CvPrompt extends LitElement implements CommandHost {
         e.stopPropagation();
     };
 
-    /** Outside-click closes the searchable (lightning) palette. The lightning
-     *  button's own click toggles, so ignore clicks on it (it handles itself). */
+    /** Outside-click closes the searchable (menu-opened) palette. The attach menu's own click
+     *  toggles, so ignore clicks on it (it handles itself). */
     private _onDocPointerDown = (e: PointerEvent): void => {
         // Outside-click closes the model list (clicks on it are handled by its rows). As with the
         // mode list, the toolbar trigger toggles itself — closing here too would reopen-then-close.
@@ -531,11 +554,12 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
         const path = e.composedPath();
         if (!path.some((n) => n instanceof Element && n.tagName === 'CV-COMMAND-MENU')) {
-            // Both triggers toggle themselves; closing here too would reopen-then-close.
+            // Both triggers toggle themselves; closing here too would reopen-then-close. The
+            // attach menu is one of them: its "Slash command" item is what opens this palette.
             const onTrigger = path.some(
                 (n) =>
                     n instanceof Element &&
-                    (n.tagName === 'CV-SLASH-MENU' || n.tagName === 'CV-EFFORT-SELECTOR'),
+                    (n.tagName === 'CV-ATTACH-MENU' || n.tagName === 'CV-EFFORT-SELECTOR'),
             );
             if (!onTrigger) {
                 this._closeCommandMenu();
@@ -691,7 +715,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         if (this._atOpen) {
             this._atOpen = false;
         }
-        // Don't close a lightning-opened palette: focus moves to its own search
+        // Don't close a menu-opened palette: focus moves to its own search
         // box (blurring the textarea). That menu closes on its own Esc/select or
         // an outside click, not on this blur.
         if (!this._cmdSearchable) {
@@ -1226,7 +1250,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     /** Insert text at the caret in the prompt box. For "@" this also opens the
-     *  file-mention menu (so the lightning "Mention file" item behaves like a
+     *  file-mention menu (so the "Reference a workspace file" item behaves like a
      *  typed "@"). A leading space is added when needed so it parses fresh. */
     insertAtCaret(text: string): void {
         const ta = this._ta;
@@ -1369,10 +1393,10 @@ export class CvPrompt extends LitElement implements CommandHost {
         appState.isBusy = false;
     }
 
-    /** Lightning button: toggle the full palette with its own search box focused
-     *  (all sections, the menu owns filtering + keyboard nav). */
+    /** The attach menu's "Slash command" item: toggle the full palette with its own search box
+     *  focused (all sections, the menu owns filtering + keyboard nav). */
     private _onOpenCommands = (): void => {
-        // Re-clicking the lightning while its own list is open closes it (toggle). Not when the
+        // Re-opening it while its own list is open closes it (toggle). Not when the
         // palette is open on a single row: that came from another trigger, so this click means
         // "show me all of them", not "close".
         if (this._cmdOpen && this._cmdSearchable && !this._cmdOnly) {
@@ -1537,30 +1561,56 @@ export class CvPrompt extends LitElement implements CommandHost {
                 @drop=${this._onDrop}
             >
                 <cv-notice-stack @notice-dismissed=${this._onNoticeDismissed}></cv-notice-stack>
-                ${this._renderChips()}
                 <cv-queue-row
                     .messages=${this._queue}
                     @drop-queued=${this._onDropQueued}
                     @clear-queue=${this._onClearQueue}
                 ></cv-queue-row>
-                <textarea
-                    id="input"
-                    placeholder=${
-                        this._isBusy
-                            ? 'Queue another message… (Esc to stop)'
-                            : // @ and / are the two things nobody discovers on their own, so they
-                              // lead; the send key follows because it's configurable (Ctrl+Enter).
-                              `Send a message…  @ for files, / for commands  ·  ${
-                                  appState.ui.useCtrlEnterToSend ? 'Ctrl+Enter' : 'Enter'
-                              } to send`
-                    }
-                    rows="1"
-                    aria-label="Prompt"
-                    @input=${this._onInput}
-                    @keydown=${this._onKeyDown}
-                    @paste=${this._onPaste}
-                    @blur=${this._onTextareaBlur}
-                ></textarea>
+                <!-- Everything that travels with this message, and the one border that says so. -->
+                <div id="field">
+                    ${this._renderChips()}
+                    <div id="input-line">
+                        <textarea
+                            id="input"
+                            placeholder=${
+                                this._isBusy
+                                    ? 'Queue another message… (Esc to stop)'
+                                    : // @ and / are the two things nobody discovers on their own, so they
+                                      // lead; the send key follows because it's configurable (Ctrl+Enter).
+                                      `Send a message…  @ for files, / for commands  ·  ${
+                                          appState.ui.useCtrlEnterToSend ? 'Ctrl+Enter' : 'Enter'
+                                      } to send`
+                            }
+                            rows="1"
+                            aria-label="Prompt"
+                            @input=${this._onInput}
+                            @keydown=${this._onKeyDown}
+                            @paste=${this._onPaste}
+                            @blur=${this._onTextareaBlur}
+                        ></textarea>
+                        <fluent-button
+                            id="send"
+                            class=${this._isBusy ? 'is-busy' : ''}
+                            appearance="primary"
+                            shape="rounded"
+                            size="small"
+                            icon-only
+                            ?disabled=${!this._isBusy && !this._hasText && this._attachments.length === 0}
+                            @click=${this._onSendClick}
+                        >
+                            ${unsafeHTML(this._isBusy ? Stop16Filled : Send16Filled)}
+                        </fluent-button>
+                        <!-- The key is named because it is configurable: this is the one place
+                             that says which of Enter / Ctrl+Enter is in force. -->
+                        <fluent-tooltip anchor="send" positioning="above-end"
+                            >${
+                                this._isBusy
+                                    ? 'Stop — Esc'
+                                    : `Send — ${appState.ui.useCtrlEnterToSend ? 'Ctrl+Enter' : 'Enter'}`
+                            }</fluent-tooltip
+                        >
+                    </div>
+                </div>
                 <cv-at-menu
                     .anchor=${this._ta ?? null}
                     .items=${this._atItems}
@@ -1592,7 +1642,13 @@ export class CvPrompt extends LitElement implements CommandHost {
                         @add-mention=${this._onAddMention}
                     >
                         <cv-attach-menu></cv-attach-menu>
-                        <cv-slash-menu></cv-slash-menu>
+                        <!-- Dictation produces text, the way attach produces content: it belongs
+                             with what fills the message, not with the settings that describe it. -->
+                        <cv-mic-button
+                            @transcript=${this._onMicTranscript}
+                            @recording-start=${this._onMicStart}
+                            @recording-end=${this._onMicEnd}
+                        ></cv-mic-button>
                         <cv-subagent-chip .tasks=${this._subagentTasks}></cv-subagent-chip>
                         <!-- Before the file chip, not after: that one is the only item here that
                              resizes (it absorbs the row's spare width), so anything past it moves
@@ -1606,40 +1662,17 @@ export class CvPrompt extends LitElement implements CommandHost {
                         @open-permissions=${this._onOpenPermissions}
                         @open-effort=${this._onOpenEffort}
                     >
-                        <!-- Turn settings with send, not with attach/commands: the left of the row
-                             is what goes into the message, the right is how and when it leaves.
-                             The gap between the two groups is the separation. -->
+                        <!-- The settings that outlive the message: the left of the row is what goes
+                             into it, the right is how it will be answered. The gap between the two
+                             groups is the separation. -->
                         <cv-thinking-toggle .host=${this}></cv-thinking-toggle>
                         <cv-effort-selector></cv-effort-selector>
                         <cv-model-selector></cv-model-selector>
                         <cv-permission-selector></cv-permission-selector>
-                        <!-- The gauge sits with send, not with attach/commands: those act on the
-                             message you are writing, while how much context is left is about the
-                             conversation you are about to add to. -->
+                        <!-- Out here with the settings, not in the field with send: how much
+                             context is left is about the conversation, not about the message you
+                             are writing. -->
                         <cv-context-gauge></cv-context-gauge>
-                        <cv-mic-button
-                            @transcript=${this._onMicTranscript}
-                            @recording-start=${this._onMicStart}
-                            @recording-end=${this._onMicEnd}
-                        ></cv-mic-button>
-                        <fluent-button
-                            id="send"
-                            class=${this._isBusy ? 'is-busy' : ''}
-                            appearance="primary"
-                            shape="rounded"
-                            size="small"
-                            icon-only
-                            ?disabled=${!this._isBusy && !this._hasText && this._attachments.length === 0}
-                            @click=${this._onSendClick}
-                        >
-                            ${unsafeHTML(this._isBusy ? Stop16Filled : Send16Filled)}
-                        </fluent-button>
-                        <fluent-tooltip anchor="send" positioning="above-end">
-                            <span class="tip-name">${this._isBusy ? 'Stop' : 'Send'}</span>
-                            <span class="tip-action"
-                                >${this._isBusy ? 'Interrupt the turn — Esc' : 'Enter'}</span
-                            >
-                        </fluent-tooltip>
                     </div>
                 </div>
                 <input

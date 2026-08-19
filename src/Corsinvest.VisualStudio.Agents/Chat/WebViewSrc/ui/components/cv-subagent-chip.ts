@@ -42,7 +42,7 @@ export class CvSubagentChip extends LitElement {
             .chip {
                 display: inline-flex;
                 align-items: center;
-                /* Sit apart from the neighbouring toolbar buttons (+, lightning). */
+                /* Sit apart from the neighbouring toolbar buttons. */
                 margin-inline-start: 4px;
             }
             .chip svg {
