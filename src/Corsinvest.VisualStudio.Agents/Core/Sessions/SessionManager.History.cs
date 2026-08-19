@@ -513,7 +513,7 @@ internal sealed partial class SessionManager
     /// <summary>Build a HistoryPage from a flat array of JSONL lines (chronological order).
     /// Used by ReadSubagentHistory (forward pass). ReadHistoryRaw keeps its own reverse-scan
     /// paginated reader — its algorithm can't share this simple forward builder.</summary>
-    private static HistoryPage BuildHistoryPageFromLines(string[] lines, SubagentContext subagent = null)
+    private static HistoryPage BuildHistoryPageFromLines(string[] lines, SubagentContext subagent)
     {
         var messages = new List<JToken>();
         string lastUserText = null;

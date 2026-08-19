@@ -68,8 +68,8 @@ internal sealed partial class WebViewMessageHandler
                                                                    string sessionId,
                                                                    string toolUseId,
                                                                    ClaudePaths paths,
-                                                                   string toolName = "",
-                                                                   string agentId = null)
+                                                                   string toolName,
+                                                                   string agentId)
     {
         var path = TranscriptPathFor(workingDirectory, sessionId, toolUseId, paths, agentId);
         if (path == null) { return default; }
@@ -102,7 +102,7 @@ internal sealed partial class WebViewMessageHandler
     /// <summary>What the tool answered. Unlike the IN side this is always text meant for the model,
     /// never a file: a Write reports "File created successfully at: …", a Read returns the content
     /// with line numbers prefixed. That is why the temp it opens into stays .txt.</summary>
-    private static string FindToolResult(string workingDirectory, string sessionId, string toolUseId, ClaudePaths paths, string agentId = null)
+    private static string FindToolResult(string workingDirectory, string sessionId, string toolUseId, ClaudePaths paths, string agentId)
     {
         var path = TranscriptPathFor(workingDirectory, sessionId, toolUseId, paths, agentId);
         if (path == null) { return null; }

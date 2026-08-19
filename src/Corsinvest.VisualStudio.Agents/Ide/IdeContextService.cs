@@ -74,18 +74,17 @@ internal sealed partial class IdeContextService : IDisposable
     public event Action<EditorContext> ContextChanged;
 
     /// <summary>Start tracking the active editor's selection. Idempotent.
-    /// Must be called on the UI thread. The package passes in the MEF
-    /// <see cref="IVsEditorAdaptersFactoryService"/> (resolved via
-    /// IComponentModel) so we can map IVsTextView → IWpfTextView.</summary>
-    public void SubscribeToEditorEvents(IVsEditorAdaptersFactoryService editorAdapters = null)
+    /// Must be called on the UI thread. The MEF
+    /// <see cref="IVsEditorAdaptersFactoryService"/> is resolved via
+    /// IComponentModel so we can map IVsTextView → IWpfTextView.</summary>
+    public void SubscribeToEditorEvents()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (_subscribed) { return; }
         try
         {
-            _editorAdapters = editorAdapters
-                ?? (Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel)
-                    ?.GetService<IVsEditorAdaptersFactoryService>();
+            _editorAdapters = (Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel)
+                ?.GetService<IVsEditorAdaptersFactoryService>();
             if (_editorAdapters == null)
             {
                 OutputWindowLogger.Global.Warn("[ide-context] editor adapters unavailable — selection tracking will not fire");

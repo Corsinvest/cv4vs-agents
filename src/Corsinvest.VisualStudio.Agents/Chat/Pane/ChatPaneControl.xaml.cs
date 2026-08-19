@@ -306,7 +306,7 @@ public partial class ChatPaneControl : PaneControlBase
     /// than fresh, pre-filling the composer with <paramref name="initialPrompt"/>.
     /// Must be called before the pane's Loaded fires (PaneLauncher does this right
     /// after creating the window, like AssignPaneId).</summary>
-    internal void SetStartupSession(string sessionId, string initialPrompt = null)
+    internal void SetStartupSession(string sessionId, string initialPrompt)
     {
         _startupSessionId = sessionId;
         _startupPrompt = initialPrompt;
@@ -567,7 +567,7 @@ public partial class ChatPaneControl : PaneControlBase
     /// <summary>Writes text into the composer. <paramref name="withIdeContext"/> also re-opens the
     /// IDE-context eye: a prompt picked from the editor context menu is about the file it came
     /// from, and with the eye shut the CLI is never told which file that is.</summary>
-    private void SetComposerText(string text, bool withIdeContext = false)
+    private void SetComposerText(string text, bool withIdeContext)
         => Dispatcher.Invoke(() =>
         {
             if (withIdeContext && Entry != null && !Entry.Options.SendSelection)
