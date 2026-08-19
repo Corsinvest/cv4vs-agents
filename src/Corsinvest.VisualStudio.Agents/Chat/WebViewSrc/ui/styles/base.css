@@ -68,15 +68,13 @@ body {
  * Bridge that here for inline SVG inside a Fluent host in the light DOM
  * (shadow components use the shared iconStyles instead). */
 fluent-button svg,
-fluent-link svg,
-fluent-option svg {
+fluent-link svg {
     fill: currentColor;
 }
 /* Outline icons drawn with `<path stroke="…">` declare `fill="none"` on
  * the root <svg>; respect that so they don't get filled by the rule above. */
 fluent-button svg[fill='none'],
-fluent-link svg[fill='none'],
-fluent-option svg[fill='none'] {
+fluent-link svg[fill='none'] {
     fill: none;
 }
 /* Fluent's small icon-only button scales its glyph to 20px; pin it to 14, the size every action
