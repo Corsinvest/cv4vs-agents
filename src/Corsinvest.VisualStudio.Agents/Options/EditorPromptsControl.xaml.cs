@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Editor;
+using Corsinvest.VisualStudio.Agents.Helpers;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -46,11 +47,9 @@ public partial class EditorPromptsControl : UserControl
 
     private void OnRestoreDefaultsClick(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show(
+        if (!ShellHelpers.ConfirmOkCancel(
                 "Replace the list with the prompts the extension ships with? Your own are lost.",
-                "Editor prompts",
-                MessageBoxButton.OKCancel,
-                MessageBoxImage.Warning) != MessageBoxResult.OK)
+                "Editor prompts"))
         {
             return;
         }

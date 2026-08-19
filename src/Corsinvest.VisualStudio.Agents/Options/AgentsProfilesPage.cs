@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Core.Profiles;
+using Corsinvest.VisualStudio.Agents.Helpers;
 using Microsoft.VisualStudio.Shell;
 using System.Collections.Generic;
 using System.Linq;
@@ -55,8 +56,7 @@ public class AgentsProfilesPage : UIElementDialogPage
             }
             else
             {
-                MessageBox.Show(error, "Profiles",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShellHelpers.ShowMessage(error, "Profiles", warning: true);
                 e.ApplyBehavior = ApplyKind.Cancel; // keep the Options dialog open, don't save
                 return;
             }

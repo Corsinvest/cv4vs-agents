@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Core.Profiles;
+using Corsinvest.VisualStudio.Agents.Helpers;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -241,8 +242,7 @@ public partial class ProfilesControl : UserControl
         }
         catch (Exception)
         {
-            MessageBox.Show("Cannot read the clipboard.", "Paste from JSON",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShellHelpers.ShowMessage("Cannot read the clipboard.", "Paste from JSON", warning: true);
             return;
         }
 
@@ -254,20 +254,17 @@ public partial class ProfilesControl : UserControl
         }
         catch (Exception)
         {
-            MessageBox.Show("Invalid JSON", "Paste from JSON",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            ShellHelpers.ShowMessage("Invalid JSON", "Paste from JSON", warning: true);
             return;
         }
 
         if (_envRows.Count > 0)
         {
-            var ok = MessageBox.Show(
-                "Replace the current environment variables with the pasted ones?",
-                "Paste from JSON",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question,
-                MessageBoxResult.No);
-            if (ok != MessageBoxResult.Yes) { return; }
+            if (!ShellHelpers.Confirm("Replace the current environment variables with the pasted ones?",
+                                     "Paste from JSON"))
+            {
+                return;
+            }
         }
 
         _envRows.Clear();

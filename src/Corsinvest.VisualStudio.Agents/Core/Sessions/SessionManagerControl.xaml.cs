@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Helpers;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
@@ -319,11 +320,7 @@ public partial class SessionManagerControl : UserControl
         catch (Exception ex)
         {
             row.CancelEdit();
-            MessageBox.Show(
-                $"Failed to rename session:\n{ex.Message}",
-                "Rename failed",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+            ShellHelpers.ShowMessage($"Failed to rename session:\n{ex.Message}", "Rename failed", warning: true);
         }
     }
 
@@ -356,13 +353,7 @@ public partial class SessionManagerControl : UserControl
         {
             // Always confirm: delete unlinks the JSONL from disk, no undo.
             var preview = string.IsNullOrEmpty(row.DisplayTitle) ? row.Id : row.DisplayTitle;
-            var ok = MessageBox.Show(
-                $"Delete session \"{preview}\"?\nThis cannot be undone.",
-                "Delete session",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning,
-                MessageBoxResult.No);
-            if (ok != MessageBoxResult.Yes) { return; }
+            if (!ShellHelpers.Confirm($"Delete session \"{preview}\"?\nThis cannot be undone.", "Delete session")) { return; }
 
             DeleteRow(row);
         }
@@ -395,11 +386,7 @@ public partial class SessionManagerControl : UserControl
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
-                $"Failed to delete session:\n{ex.Message}",
-                "Delete failed",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+            ShellHelpers.ShowMessage($"Failed to delete session:\n{ex.Message}", "Delete failed", warning: true);
         }
     }
 }
