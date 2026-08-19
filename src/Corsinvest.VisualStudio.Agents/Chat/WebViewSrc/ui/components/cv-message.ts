@@ -40,9 +40,11 @@ import type {
  */
 @customElement('cv-message')
 export class CvMessage extends LitElement {
-    // reflect: the sticky-user CSS keys off [role="user"] to pin only real user bubbles,
+    // reflect: the sticky-user CSS keys off [msg-role="user"] to pin only real user bubbles,
     // never a leading assistant/tool group that a history page split off from its user.
-    @property({ reflect: true }) role: MessageRole = 'assistant';
+    // NOT `role`: that is the ARIA attribute, and 'status' is a real ARIA role — reflecting it
+    // made every status bubble a live region nested inside cv-app's aria-live #messages.
+    @property({ reflect: true, attribute: 'msg-role' }) role: MessageRole = 'assistant';
     // Typed during a turn and still waiting for it to end: reflected so chat.css can fade the
     // bubble, since an unsent message that looks sent is the whole reason this exists.
     @property({ type: Boolean, reflect: true }) queued = false;
