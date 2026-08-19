@@ -8,6 +8,7 @@ using Corsinvest.VisualStudio.Agents.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,7 +19,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Sessions;
 /// <summary>Reads/writes CLI session JSONL files for one config-dir. The config-dir is
 /// constant for a pane's lifetime, so it's injected once via the constructor rather than
 /// threaded through every call — a config-dir can never be silently forgotten.</summary>
-internal sealed partial class SessionManager
+internal sealed partial class SessionManager(ClaudePaths paths, string workingDirectory, OutputWindowLogger log)
 {
     // Metadata scan: read a fixed 64 KB window from the start and from the end
     // of the JSONL in one read each, decode once, scan the lines.
@@ -28,21 +29,9 @@ internal sealed partial class SessionManager
     // scan hit at chunk boundaries (garbled accented chars in titles).
     private const int LiteReadWindowBytes = 64 * 1024;
 
-    private readonly ClaudePaths _paths;
-    private readonly string _workingDirectory;
-    private readonly OutputWindowLogger _log;
-
-    // Optional: the session dialog builds one with no pane behind it (→ Global, unprefixed).
-    public SessionManager(ClaudePaths paths, string workingDirectory, OutputWindowLogger log = null)
-    {
-        _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-        _workingDirectory = workingDirectory ?? throw new ArgumentNullException(nameof(workingDirectory));
-        _log = log ?? OutputWindowLogger.Global;
-    }
-
     // The session folder / a session .jsonl path for this instance's workdir, honouring
     // this instance's config-dir. One place each so the path construction lives in a single spot.
-    private string FolderFor() => LongPath(_paths.SessionFolder(_workingDirectory));
+    private string FolderFor() => LongPath(paths.SessionFolder(workingDirectory));
 
     /// <summary>Null for an id that isn't a plain token, so a traversal never reaches Path.Combine.
     /// <para>The id can come straight off a WebView DTO (<c>p.SessionId ?? client.SessionId</c> in
@@ -54,7 +43,7 @@ internal sealed partial class SessionManager
     /// and File.Exists(null) is false — a rejected id degrades to "no such session".</para></summary>
     private string FileFor(string sessionId)
         => IsSafePathToken(sessionId)
-            ? LongPath(Path.Combine(_paths.SessionFolder(_workingDirectory), sessionId + ".jsonl"))
+            ? LongPath(Path.Combine(paths.SessionFolder(workingDirectory), sessionId + ".jsonl"))
             : null;
 
     /// <summary>Past 260 characters .NET Framework refuses the path outright — DirectoryNotFoundException
@@ -67,9 +56,31 @@ internal sealed partial class SessionManager
     private static string LongPath(string path)
         => path.Length < 260 || path.StartsWith(@"\\", StringComparison.Ordinal) ? path : @"\\?\" + path;
 
+    /// <summary>One scanned .jsonl. A session file only ever grows — even Rename appends — so a
+    /// file whose write stamp hasn't moved cannot have new metadata, and the scan can be skipped.
+    /// <para><see cref="Title"/> null = scanned and not listable (a sub-agent sidechain, or a
+    /// session no prompt was ever sent in). Cached all the same, so those aren't re-read either.</para></summary>
+    private sealed class CacheEntry
+    {
+        public DateTime LastWriteUtc;
+        public string Title;
+    }
+
+    /// <summary>Scans kept between calls to <see cref="Load"/>, so a caller that lists the same
+    /// folder repeatedly — the session picker reopening — only re-reads what changed.
+    /// <para>Per instance, not static: an instance is one working directory, which is both why the
+    /// bare session id works as a key and why the memory can't pile up. A caller that Loads once
+    /// and drops the manager (the Statistics tree does, for every project on the machine) takes
+    /// the cache down with it.</para></summary>
+    private readonly ConcurrentDictionary<string, CacheEntry> _scanCacheById = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The sessions for this workdir, newest first, as list rows — Id, Title, LastUsedAt
+    /// and WorkingDirectory, which is all any caller has ever read. Sessions with no title of any
+    /// kind and sub-agent sidechains are left out; neither is something a user picks.
+    /// <para>For the full metadata of one session use <see cref="ScanTitle"/> or ScanMetadata.</para></summary>
     public List<SessionInfo> Load()
     {
-        using var _ = OutputWindowLogger.Global.PerfSpan("SessionManager.Load");
+        using var _ = log.PerfSpan("SessionManager.Load");
         var folder = FolderFor();
         if (!Directory.Exists(folder)) { return []; }
 
@@ -77,22 +88,48 @@ internal sealed partial class SessionManager
             .OrderByDescending(f => f.LastWriteTime)
             .ToArray();
 
-        OutputWindowLogger.Global.Perf(() => $"sessions: loading {files.Length} files");
-
-        return files
+        var scanned = 0;
+        var result = files
             // FullName, not FolderFor's own prefixing: a folder can sit under the limit while the
             // file inside it goes over — the CLI's folder name is nearly the whole workdir, and a
             // GUID plus ".jsonl" is another 41 characters on top.
             .AsParallel()
-            .Select(f => ReadSessionFile(LongPath(f.FullName)))
-            .Where(x => x != null)
-            .OrderByDescending(x => x.LastUsedAt)
+            .Select(f =>
+            {
+                // The id IS the file name, so it doubles as the cache key.
+                var id = Path.GetFileNameWithoutExtension(f.Name);
+                var stamp = f.LastWriteTimeUtc;
+                if (!_scanCacheById.TryGetValue(id, out var entry) || entry.LastWriteUtc != stamp)
+                {
+                    System.Threading.Interlocked.Increment(ref scanned);
+                    var scan = ReadSessionFile(LongPath(f.FullName));
+                    entry = new CacheEntry { LastWriteUtc = stamp, Title = scan?.Title };
+                    _scanCacheById[id] = entry;
+                }
+                return (id, entry);
+            })
+            // No title: a sub-agent sidechain, or a session no prompt was ever sent in.
+            .Where(x => x.entry.Title != null)
+            .OrderByDescending(x => x.entry.LastWriteUtc)
+            // The entry keeps UTC so comparing stamps can't be tripped by a DST change between
+            // two Loads; SessionInfo wants local.
+            .Select(x => new SessionInfo
+            {
+                Id = x.id,
+                Title = x.entry.Title,
+                LastUsedAt = x.entry.LastWriteUtc.ToLocalTime(),
+                WorkingDirectory = workingDirectory,
+            })
             .ToList();
+
+        log.Perf(() => $"sessions: {files.Length} files, {scanned} scanned, {files.Length - scanned} from cache");
+        return result;
     }
 
-    // Instance method (not static): needs _workingDirectory to stamp SessionInfo.WorkingDirectory.
-    // Called only from Load(), including from its .AsParallel() — reading a readonly field
-    // concurrently is safe, so this doesn't need to stay static.
+    /// <summary>The scan of one session file, or null when it holds no listable session — a
+    /// sub-agent sidechain, or one no prompt was ever sent in. Only Title is filled beyond what
+    /// ScanMetadata returns: Load() has the id, the workdir and the write time already, and asking
+    /// the filesystem for the date here would cost a syscall per session.</summary>
     private SessionInfo ReadSessionFile(string path)
     {
         try
@@ -100,16 +137,14 @@ internal sealed partial class SessionManager
             var info = ScanMetadata(path);
             if (info == null) { return null; }
 
-            info.Id = Path.GetFileNameWithoutExtension(path);
-            info.WorkingDirectory = _workingDirectory;
-            info.LastUsedAt = File.GetLastWriteTime(path);
-
+            // IsNullOrWhiteSpace, not != null: a prompt of nothing but blank lines survives
+            // ToSingleLine as blanks, and listing it gives a row with no text on it.
             var rawTitle = info.CustomTitle ?? info.AiTitle ?? info.LastPrompt;
-            if (rawTitle == null) { return null; }
+            if (string.IsNullOrWhiteSpace(rawTitle)) { return null; }
             info.Title = StringHelpers.ToSingleLine(rawTitle, MaxTitleLength);
             return info;
         }
-        catch (Exception ex) { _log.Warn($"[sessions] skipped {Path.GetFileName(path)}: {ex.GetType().Name}: {ex.Message}"); return null; }
+        catch (Exception ex) { log.Warn($"[sessions] skipped {Path.GetFileName(path)}: {ex.GetType().Name}: {ex.Message}"); return null; }
     }
 
     private static SessionInfo ScanMetadata(string path)
@@ -402,7 +437,7 @@ internal sealed partial class SessionManager
                 if (!string.IsNullOrEmpty(uuid)) { uuidMap[uuid] = Guid.NewGuid().ToString(); }
                 kept.Add(obj);
             }
-            if (!foundCut) { _log.Debug(() => "[sessions] fork-at uuid not found in source session → fork aborted"); return null; }
+            if (!foundCut) { log.Debug(() => "[sessions] fork-at uuid not found in source session → fork aborted"); return null; }
 
             // Remap every id that references a message — leaving one pointing at an
             // old uuid would dangle, since those ids are all regenerated above.
@@ -418,7 +453,7 @@ internal sealed partial class SessionManager
                 writer.WriteLine(obj.ToString(Formatting.None));
             }
         }
-        catch (Exception ex) { _log.LogException("SessionManager.fork", ex); return null; }
+        catch (Exception ex) { log.LogException("SessionManager.fork", ex); return null; }
 
         return new ForkResult { NewSessionId = newSessionId, ExcludedPrompt = excludedPrompt };
     }

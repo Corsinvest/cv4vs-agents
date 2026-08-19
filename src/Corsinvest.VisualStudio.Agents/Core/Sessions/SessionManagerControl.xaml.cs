@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -49,8 +51,14 @@ public partial class SessionManagerControl : UserControl
         _paths = paths;
         _workingDirectory = workingDirectory;
         _activeSessionId = activeSessionId;
+        _sessions = new SessionManager(paths, workingDirectory, OutputWindowLogger.Global);
         Loaded += (_, _) => Refresh();
     }
+
+    /// <summary>One for the control's lifetime so its scan cache survives between opens: the
+    /// picker lists the same folder every time, so every Refresh after the first is a directory
+    /// listing and nothing more.</summary>
+    private readonly SessionManager _sessions;
 
     private void ApplyActiveFlag()
     {
@@ -61,8 +69,11 @@ public partial class SessionManagerControl : UserControl
         }
     }
 
-    /// <summary>Reload the session list from disk. Cheap (~50 ms), safe to
-    /// call on popup open or after a rename/delete.</summary>
+    /// <summary>Reload the session list from disk, off the UI thread — a workdir worked on daily
+    /// runs to a couple of thousand sessions, one file opened each, and doing that synchronously
+    /// froze Visual Studio for as long as it took.
+    /// <para>Safe to call on popup open or after a rename/delete: late results are dropped
+    /// (see <see cref="_loadGeneration"/>), so overlapping calls can't interleave rows.</para></summary>
     public void Refresh()
     {
         _allSessions.Clear();
@@ -71,22 +82,57 @@ public partial class SessionManagerControl : UserControl
             ApplyFilter();
             return;
         }
-        try
+
+        // Or the empty-state hint announces "No sessions found." while they are still being read.
+        _loading = true;
+        ApplyFilter();
+
+        var generation = ++_loadGeneration;
+        var sessionManager = _sessions;
+        _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
-            foreach (var s in new SessionManager(_paths, _workingDirectory).Load())
+            List<SessionInfo> sessions;
+            try
+            {
+                sessions = await Task.Run(sessionManager.Load);
+            }
+            catch (Exception ex)
+            {
+                // Swallowed: an unreadable folder shouldn't crash the picker. Still has to clear
+                // the loading state, or the hint sits on "Loading sessions…" for good.
+                OutputWindowLogger.Global.LogException("SessionManagerControl.Refresh", ex);
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (generation == _loadGeneration)
+                {
+                    _loading = false;
+                    ApplyFilter();
+                }
+                return;
+            }
+
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            // A newer Refresh started while this one was reading: its rows are the ones that
+            // belong on screen, and it has already cleared the list.
+            if (generation != _loadGeneration) { return; }
+
+            foreach (var s in sessions)
             {
                 _allSessions.Add(SessionRow.From(s));
             }
-        }
-        catch
-        {
-            // Swallowed: an unreadable folder shouldn't crash the picker.
-            OutputWindowLogger.Global.Warn("[sessions] failed to load the session list — picker may be empty");
-        }
-        ApplyActiveFlag();
-        ApplyFilter();
+            _loading = false;
+            ApplyActiveFlag();
+            ApplyFilter();
+        });
         // Focus is the host's job: FocusSearch must run after the popup is up.
     }
+
+    /// <summary>Bumped by every <see cref="Refresh"/>; a scan whose generation is stale by the
+    /// time it finishes throws its rows away rather than appending them to a newer list.</summary>
+    private int _loadGeneration;
+
+    /// <summary>True while a scan is in flight, so the empty list reads as "reading" rather
+    /// than "there are none".</summary>
+    private bool _loading;
 
     private void ApplyFilter()
     {
@@ -102,6 +148,7 @@ public partial class SessionManagerControl : UserControl
         {
             _filtered.Add(r);
         }
+        EmptyHint.Text = _loading ? "Loading sessions…" : "No sessions found.";
         EmptyHint.Visibility = _filtered.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -265,7 +312,7 @@ public partial class SessionManagerControl : UserControl
         }
         try
         {
-            new SessionManager(_paths, _workingDirectory).Rename(row.Id, trimmed);
+            _sessions.Rename(row.Id, trimmed);
             row.DisplayTitle = trimmed;
             row.CancelEdit();
         }
@@ -342,7 +389,7 @@ public partial class SessionManagerControl : UserControl
     {
         try
         {
-            new SessionManager(_paths, _workingDirectory).Delete(row.Id);
+            _sessions.Delete(row.Id);
             _allSessions.Remove(_allSessions.FirstOrDefault(r => r.Id == row.Id));
             ApplyFilter();
         }

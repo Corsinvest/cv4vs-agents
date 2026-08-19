@@ -24,9 +24,10 @@ public partial class ChatPaneControl : PaneControlBase
 {
     public override bool SupportsTitleEditing => true;
 
-    /// <summary>New instance per call, keyed on the pane's current working directory
-    /// (constant for the pane's lifetime). Cheap enough that a shared field would add nothing.</summary>
-    private SessionManager Sessions => new(PaneClaudePaths, Entry.WorkingDirectory);
+    /// <summary>New instance per call, keyed on the pane's current working directory (constant for
+    /// the pane's lifetime). These callers read one session at a time, so the scan cache a
+    /// long-lived instance would keep buys them nothing.</summary>
+    private SessionManager Sessions => new(PaneClaudePaths, Entry.WorkingDirectory, _log);
 
     /// <summary>Re-read the freshest title (custom/ai/last-prompt) for the current
     /// session from its JSONL. Called on load/fork and at turn end so a generated
