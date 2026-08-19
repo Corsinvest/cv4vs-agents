@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Editor;
+using Corsinvest.VisualStudio.Agents.Helpers;
 using Microsoft.VisualStudio.Shell;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,7 +50,7 @@ public class AgentsEditorPromptsPage : UIElementDialogPage
             }
             else
             {
-                MessageBox.Show(error, "Editor prompts", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShellHelpers.ShowMessage(error, "Editor prompts", warning: true);
                 e.ApplyBehavior = ApplyKind.Cancel;
                 return;
             }
