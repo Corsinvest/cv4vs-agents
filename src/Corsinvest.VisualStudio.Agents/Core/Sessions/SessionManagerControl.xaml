@@ -224,7 +224,8 @@
       </ListBox.ItemTemplate>
     </ListBox>
 
-    <!-- Empty state hint -->
+    <!-- Empty state hint, and the loading message too: the scan is off the UI thread, so the list
+         is briefly empty on open. Text is set in ApplyFilter. -->
     <TextBlock Grid.Row="2" x:Name="EmptyHint"
                Text="No sessions found." Margin="12,8"
                Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.SystemGrayTextBrushKey}}"

@@ -26,7 +26,7 @@ internal sealed partial class SessionManager
 
     public HistoryPage ReadHistoryRaw(string sessionId, int batchSize, long beforeOffset, out SessionInfo info)
     {
-        using var _ = OutputWindowLogger.Global.PerfSpan($"ReadHistoryRaw({sessionId}, batch={batchSize}, before={beforeOffset})");
+        using var _ = log.PerfSpan($"ReadHistoryRaw({sessionId}, batch={batchSize}, before={beforeOffset})");
         var page = new HistoryPage { Messages = [] };
         var folder = FolderFor();
         var path = FileFor(sessionId);
@@ -35,7 +35,7 @@ internal sealed partial class SessionManager
         if (!File.Exists(path)) { return page; }
 
         var fileSize = new FileInfo(path).Length;
-        OutputWindowLogger.Global.Perf(() => $"history file: {fileSize / 1024} KB");
+        log.Perf(() => $"history file: {fileSize / 1024} KB");
 
         // `info` is built only on the initial load (beforeOffset == -1); lazy pages skip it.
         var isInitialLoad = beforeOffset < 0;
@@ -44,7 +44,7 @@ internal sealed partial class SessionManager
             info = new SessionInfo
             {
                 Id = sessionId,
-                WorkingDirectory = _workingDirectory,
+                WorkingDirectory = workingDirectory,
                 LastUsedAt = File.GetLastWriteTime(path),
             };
         }
@@ -186,7 +186,7 @@ internal sealed partial class SessionManager
                 page.HasMore = pos > 0;
             }
         }
-        catch (Exception ex) { _log.LogException("SessionManager.ReadHistoryRaw", ex); }
+        catch (Exception ex) { log.LogException("SessionManager.ReadHistoryRaw", ex); }
 
         if (info != null)
         {
@@ -202,7 +202,7 @@ internal sealed partial class SessionManager
         // oldestIsPrompt tells whether the page ends on a real user prompt (good) or was cut by
         // reaching the file start / a metadata-only tail.
         var oldestIsPrompt = messagesNewestFirst.Count > 0 && IsRealUserPrompt(messagesNewestFirst[0]);
-        OutputWindowLogger.Global.Perf(() => $"history: scanned {totalLinesScanned} lines ({skippedLines} skipped, {parsedLines} parsed), kept {messagesNewestFirst.Count} (batch={batchSize}) " +
+        log.Perf(() => $"history: scanned {totalLinesScanned} lines ({skippedLines} skipped, {parsedLines} parsed), kept {messagesNewestFirst.Count} (batch={batchSize}) " +
             $"bytes[{page.OldestOffset}..{(isInitialLoad ? "END" : beforeOffset.ToString())}] hasMore={page.HasMore} oldestIsPrompt={oldestIsPrompt}");
         page.Messages = new JArray(messagesNewestFirst);
         return page;
@@ -217,7 +217,7 @@ internal sealed partial class SessionManager
     /// meant to run off the UI thread after the initial render.</summary>
     public List<string> ReadUserPrompts(string sessionId)
     {
-        using var _ = OutputWindowLogger.Global.PerfSpan($"ReadUserPrompts({sessionId})");
+        using var _ = log.PerfSpan($"ReadUserPrompts({sessionId})");
         var promptsNewestFirst = new List<string>();
         var folder = FolderFor();
         var path = FileFor(sessionId);
@@ -273,7 +273,7 @@ internal sealed partial class SessionManager
                 }
             }
         }
-        catch (Exception ex) { _log.LogException("SessionManager.ReadUserPrompts", ex); }
+        catch (Exception ex) { log.LogException("SessionManager.ReadUserPrompts", ex); }
 
         promptsNewestFirst.Reverse(); // chronological (oldest first) for the WebView
         return promptsNewestFirst;
@@ -473,7 +473,7 @@ internal sealed partial class SessionManager
                     : content[blockIdx] as JObject;
             }
         }
-        catch (Exception ex) { _log.LogException("SessionManager.ReadMessageBlock", ex); }
+        catch (Exception ex) { log.LogException("SessionManager.ReadMessageBlock", ex); }
         return null;
     }
 
@@ -506,7 +506,7 @@ internal sealed partial class SessionManager
                 return ""; // next line wasn't the summary
             }
         }
-        catch (Exception ex) { _log.LogException("SessionManager.ReadCompactSummary", ex); }
+        catch (Exception ex) { log.LogException("SessionManager.ReadCompactSummary", ex); }
         return "";
     }
 
@@ -537,7 +537,7 @@ internal sealed partial class SessionManager
 
         /// <summary>A session with no sidecars yields an empty map, which leaves every row exactly
         /// as it was before this existed.</summary>
-        public static SubagentContext Read(string dir)
+        public static SubagentContext Read(string dir, OutputWindowLogger log)
         {
             var ctx = new SubagentContext();
             if (!Directory.Exists(dir)) { return ctx; }
@@ -558,8 +558,7 @@ internal sealed partial class SessionManager
                     catch { /* a malformed sidecar only costs that one link */ }
                 }
             }
-            // Static nested helper: no SessionManager instance, so no pane tag here.
-            catch (Exception ex) { OutputWindowLogger.Global.LogException("SessionManager.SubagentContext.Read", ex); }
+            catch (Exception ex) { log.LogException("SessionManager.SubagentContext.Read", ex); }
             return ctx;
         }
 
@@ -582,7 +581,7 @@ internal sealed partial class SessionManager
     /// tools); true reads the whole file. Missing file or empty agentId → empty page (no throw).</summary>
     public HistoryPage ReadSubagentHistory(string sessionId, string agentId, bool fullFile)
     {
-        using var _ = OutputWindowLogger.Global.PerfSpan($"ReadSubagentHistory({agentId}, full={fullFile})");
+        using var _ = log.PerfSpan($"ReadSubagentHistory({agentId}, full={fullFile})");
         // agentId/sessionId reach here from the WebView; reject anything that isn't a
         // plain id token so they can't traverse out of the session dir into the path.
         if (!IsSafePathToken(sessionId) || !IsSafePathToken(agentId)) { return new HistoryPage { Messages = [] }; }
@@ -606,8 +605,8 @@ internal sealed partial class SessionManager
                 var size = fs.Length;
                 lines = ReadWindow(fs, Math.Max(0, size - LiteReadWindowBytes), dropPartialFirstLine: size > LiteReadWindowBytes);
             }
-            return BuildHistoryPageFromLines(lines, SubagentContext.Read(dir));
+            return BuildHistoryPageFromLines(lines, SubagentContext.Read(dir, log));
         }
-        catch (Exception ex) { _log.LogException("SessionManager.ReadSubagentHistory", ex); return new HistoryPage { Messages = [] }; }
+        catch (Exception ex) { log.LogException("SessionManager.ReadSubagentHistory", ex); return new HistoryPage { Messages = [] }; }
     }
 }
