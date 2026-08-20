@@ -3,10 +3,14 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 // File-type icon URL helper.
-// Icons live on the `cv4vs-icons.local` virtual host; the C# side generates
-// PNGs lazily from VS KnownMonikers and caches them on disk.
+// Icons live on a virtual host; the C# side generates PNGs lazily from VS KnownMonikers and
+// caches them on disk.
+//
+// Must match AppPaths.IconHost, which is where the suffix is explained — a copy rather than a
+// value we are told, because URLs are built on the first render, before any message from the
+// host could have arrived. Drift shows up as icons missing on the next run.
 
-const ICON_HOST = 'https://cv4vs-icons.local';
+const ICON_HOST = 'https://cv4vs-icons.invalid';
 
 /**
  * URL of the icon that best represents the given path.
