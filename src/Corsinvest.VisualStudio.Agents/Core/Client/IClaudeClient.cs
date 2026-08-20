@@ -21,6 +21,9 @@ public interface IClaudeClient : IDisposable
     string SessionId { get; }
     string Model { get; }
     string PermissionMode { get; }
+    /// <summary>Whether THIS process is keeping file snapshots — read from the environment at
+    /// launch, so it does not follow a change to the option until the next chat.</summary>
+    bool FileCheckpoints { get; }
     bool IsRunning { get; }
     /// <summary>AccountInfo from the last init (email, organization,
     /// subscriptionType, apiProvider). Null until init / for 3P sessions.</summary>
@@ -72,7 +75,10 @@ public interface IClaudeClient : IDisposable
     /// <summary>Read the CLI's current settings (effortLevel, alwaysThinkingEnabled,
     /// fastMode, switchModelsOnFlag, …) to seed the Model menu toggles. Null on error.</summary>
     Task<JObject> GetSettingsAsync();
-    Task RewindFilesAsync(string userMessageId);
+    /// <summary>Restore the files to the snapshot the CLI took before that user message. With
+    /// dryRun it only reports whether it could, and with what (canRewind, filesChanged, insertions,
+    /// deletions) — the one way to know a checkpoint exists. Null when the CLI refused.</summary>
+    Task<JObject> RewindFilesAsync(string userMessageId, bool dryRun);
     Task StopTaskAsync(string taskId);
 
     /// <summary>Detach a running task from the turn — keyed by tool_use_id, unlike the stop above.

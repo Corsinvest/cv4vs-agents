@@ -10,6 +10,9 @@ export const Msg = {
     fromWebView: {
         session: {
             fork: 'fork_session',
+            rewind: 'rewind_files',
+            rewindDiff: 'rewind_diff',
+            getRewindPoints: 'get_rewind_points',
         },
         file: {
             getSuggestions: 'get_file_suggestions',
@@ -71,6 +74,10 @@ export const Msg = {
         },
         file: {
             suggestions: 'file_suggestions',
+        },
+        session: {
+            rewindResult: 'rewind_result',
+            rewindPoints: 'rewind_points',
         },
         cli: {
             started: 'cli_started',

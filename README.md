@@ -98,6 +98,10 @@ own.
 - **[Review changes in VS's own diff](docs/chat/diff.md)** — every Edit/Write shows as an inline diff,
   and opens in Visual Studio's native, **editable** side-by-side diff: **save (Ctrl+S) to accept** or
   **close to reject**, the CLI applies it only if you saved.
+- **[Take the files back](docs/chat/rewind.md)** — `/rewind` restores them to the state before any
+  message of the session, and leaves the conversation where it is. Pick a message and it says what
+  would change — files, lines added and removed — before you commit to it; click a file and its copy
+  from before that message opens in VS's diff, against what is on disk now.
 - **[Clickable file references](docs/file-links.md)** — when Claude writes `ClientEvents.cs:208` (or a
   range, `Stats.cs:35-48`, or a whole list, `Package.cs:124,185,202`) the reference becomes a link that
   opens the file in VS — a range **selects those lines**, and every line in a list is its own link. It
@@ -150,9 +154,9 @@ own.
 - **[Restore panes on solution open](docs/options.md#general)** *(opt-in)* — reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
-- **[Tune it to your taste](docs/options.md)** — 25 options across General, Chat and Debug: what
+- **[Tune it to your taste](docs/options.md)** — 26 options across General, Chat and Debug: what
   the chat shows, how diffs render, which keys send, the starting permission mode, autosave,
-  upload and `@`-picker filters, log verbosity.
+  file checkpoints, upload and `@`-picker filters, log verbosity.
 - **[It tells you when it needs you](#pane-attention-notifications)** — with several panes working
   at once, the one waiting on a permission raises a VS info bar, or an OS toast when you're outside
   Visual Studio. Clicking it takes you to that pane, focus already on the question.

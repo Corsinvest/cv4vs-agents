@@ -25,6 +25,9 @@ import type {
     GetSuggestionsResponse,
     GetCompactSummaryRequest,
     GetCompactSummaryResponse,
+    RewindRequest,
+    RewindResultNotification,
+    RewindPointsNotification,
 } from './types';
 import type { PluginListResponse } from './generated/PluginListResponse';
 import type { MarketplaceListResponse } from './generated/MarketplaceListResponse';
@@ -79,6 +82,21 @@ export const GetStatsReq = new RequestType<GetStatsRequest, StatsResponse>(
 export const GetSuggestionsReq = new RequestType<GetSuggestionsRequest, GetSuggestionsResponse>(
     Msg.fromWebView.file.getSuggestions,
     Msg.toWebView.file.suggestions,
+);
+
+/** Restore the files to the CLI's snapshot before a user message — or, with `dryRun`, only ask
+ *  whether it could. The probe is what tells a message with a checkpoint from one without. */
+export const RewindReq = new RequestType<RewindRequest, RewindResultNotification>(
+    Msg.fromWebView.session.rewind,
+    Msg.toWebView.session.rewindResult,
+);
+
+/** Which messages a rewind could restore something for. Read from the transcript in one pass, so
+ *  the picker can leave out the turns that changed no file instead of offering a row that would
+ *  refuse. */
+export const RewindPointsReq = new RequestType<Record<string, never>, RewindPointsNotification>(
+    Msg.fromWebView.session.getRewindPoints,
+    Msg.toWebView.session.rewindPoints,
 );
 
 export const PluginListReq = new RequestType<Record<string, never>, PluginListResponse>(

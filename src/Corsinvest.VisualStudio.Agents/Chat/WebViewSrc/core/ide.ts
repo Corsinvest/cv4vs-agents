@@ -48,3 +48,17 @@ export function parseIdeContextTags(text: string | undefined | null): {
         .trim();
     return { text: cleaned, refs };
 }
+
+/**
+ * A user message with every injected block taken out — what the person actually typed.
+ *
+ * For the callers that want the words and nothing else: a copy to the clipboard, a queued bubble,
+ * a one-line label in a picker. They used to reach into `parseIdeContextTags(t).text` and drop the
+ * refs on the floor, which reads as if the refs mattered and were being ignored.
+ *
+ * Deliberately a wrapper rather than a second regex: the tag list lives in ONE place, so a block
+ * the CLI starts injecting tomorrow disappears from every one of these at once.
+ */
+export function cleanMessageOnlyText(text: string | undefined | null): string {
+    return parseIdeContextTags(text).text;
+}

@@ -13,6 +13,8 @@ import { fetchSubagent, fetchContextUsage, fetchCompactSummary } from '../../cor
 import { Transcript } from '../../core/transcript';
 import { clearMarkdownCache } from '../../core/markdown';
 import { buildGroups } from '../../core/exchanges';
+import { openRewindDialog } from '../../core/dialog-host';
+import { cleanMessageOnlyText } from '../../core/ide';
 import './cv-notice-stack';
 import type { CvNoticeStack } from './cv-notice-stack';
 import './cv-welcome';
@@ -27,6 +29,7 @@ import './cv-usage-dialog';
 import './cv-stats-dialog';
 import './cv-context-dialog';
 import './cv-plugin-manager';
+import './cv-rewind-dialog';
 import './cv-lightbox';
 import './cv-diff-dialog';
 import './cv-permission-banner';
@@ -39,6 +42,7 @@ import type {
     UiToolEntry,
     UiImage,
     UiFile,
+    RewindPoint,
     UiUserEntry,
     UiAssistantEntry,
     UiThinkingEntry,
@@ -233,6 +237,8 @@ export class CvApp extends LitElement {
         // The toolbar chip asking for the session link back, once its notice has been dismissed
         // or the user simply wants it again.
         this.addEventListener('show-remote-link', this._onShowRemoteLink);
+        // The /rewind command, which needs the transcript this component owns.
+        this.addEventListener('open-rewind', this._onOpenRewind);
 
         // Session/system notices: this stack keeps the `top` ones (a per-turn notice is picked up by
         // cv-prompt's own stack listening on the same channel).
@@ -1797,6 +1803,28 @@ export class CvApp extends LitElement {
         if (status === 'connected' && url) {
             this._postRemoteControlCard(url);
         }
+    };
+
+    /** Open the rewind dialog on this session's user messages, newest first — the order the list
+     *  is read in, since a rewind is nearly always to something recent. Only messages with a uuid:
+     *  it is what addresses a checkpoint, and one without cannot be a target. */
+    private _onOpenRewind = (): void => {
+        const points: RewindPoint[] = [];
+        for (const e of this._transcript.entries) {
+            if (e.kind === 'text' && e.role === 'user' && e.uuid) {
+                // The stored text carries whatever the composer prepended — the open file, the
+                // editor selection. A row reading "<ide_opened_file>The user opened…" identifies
+                // nothing: what tells one restore point from another is the prompt itself.
+                const text = cleanMessageOnlyText(e.text);
+                // Nothing left once the injected blocks are out: the turn was context and no
+                // words, so there is no label to put on the row and nothing to recognise it by.
+                if (text) {
+                    points.push({ uuid: e.uuid, text, timestamp: e.timestamp });
+                }
+            }
+        }
+        points.reverse();
+        openRewindDialog(points);
     };
 
     private renderMessage(e: Exclude<UiEntry, UiToolEntry | UiThinkingEntry>) {

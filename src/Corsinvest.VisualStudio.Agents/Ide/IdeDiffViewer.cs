@@ -222,8 +222,17 @@ internal sealed partial class IdeDiffViewer
     /// <summary>WebView-style entry point: the chat has BOTH contents in memory. Both sides go to
     /// temp. Clicking the same <paramref name="toolUseId"/> twice closes it (toggle); a different
     /// one replaces it — keying on the file path would make two edits to the same file the
-    /// same diff.</summary>
-    public async Task ShowFromContentsAsync(string toolUseId, string filePath, string oldContent, string newContent)
+    /// same diff.
+    /// <para>The pane labels default to a pending edit ("Original" / "Proposed") because that is
+    /// what this shows most of the time. A rewind preview passes its own: there the right-hand side
+    /// is the file as it stands now, and calling that "Proposed" says the opposite of the truth.</para></summary>
+    public async Task ShowFromContentsAsync(
+        string toolUseId,
+        string filePath,
+        string oldContent,
+        string newContent,
+        string leftLabel,
+        string rightLabel)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
@@ -241,7 +250,7 @@ internal sealed partial class IdeDiffViewer
             var frame = OpenComparison(
                 leftPath: tempOld, rightPath: tempNew,
                 caption: caption,
-                leftLabel: "Original", rightLabel: "Proposed",
+                leftLabel: leftLabel, rightLabel: rightLabel,
                 rightIsTemp: true, leftIsTemp: true);
             if (frame != null)
             {

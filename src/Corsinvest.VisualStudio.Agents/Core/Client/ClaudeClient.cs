@@ -42,6 +42,11 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     public string WorkingDirectory { get; private set; }
     public string SessionId { get; private set; }
+
+    /// <summary>Whether THIS process was launched with file checkpointing on — not what the option
+    /// says now. The CLI reads it from the environment at startup, so changing the option leaves a
+    /// running session as it was, and the UI has to follow the process rather than the setting.</summary>
+    public bool FileCheckpoints => _lastOptions?.FileCheckpoints ?? false;
     public string Model { get; private set; }
     public string PermissionMode { get; private set; } = Client.PermissionMode.Default;
     public int? BridgeEpoch { get; private set; }
@@ -228,6 +233,17 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // CLI replies in headless mode and omits the disabled models. (Verified with
         // tools/cli-probe: this env var alone flips unavailable_models on.)
         env["CLAUDE_CODE_ENTRYPOINT"] = "claude-vscode";
+        // Without this the CLI takes no file snapshots at all on our path, so there is nothing to
+        // rewind to. It keeps file history unconditionally when it runs its own REPL, but a
+        // stream-json session is "non-interactive" to it and there the feature is opt-in through
+        // this variable — which is how the VS Code extension gets it too: it passes
+        // `enableFileCheckpointing: true` to the Agent SDK, and the SDK sets exactly this.
+        // NOT forced past a user who turned checkpointing off: the CLI reads this one only while
+        // CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING is unset, and that is the right way round. Whoever
+        // set the disable meant it, and the cost of ignoring them is copies of their files on disk.
+        // Off leaves the variable unset rather than setting it false — that is what "not asked for"
+        // looks like to the CLI, and it keeps the profile's own env the only other voice.
+        if (options.FileCheckpoints) { env["CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"] = "true"; }
         _transport.Start(ClaudeInstall.ResolveExecutable(), args, options.WorkingDirectory, env);
 
         ProcessStarted?.Invoke(this, new ProcessStartedEventArgs
@@ -400,6 +416,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
             ResumeSessionId = SessionId ?? _lastOptions.ResumeSessionId,
             InitialPermissionMode = PermissionMode ?? _lastOptions.InitialPermissionMode,
             AllowBypassPermissions = _lastOptions.AllowBypassPermissions,
+            FileCheckpoints = _lastOptions.FileCheckpoints,
             SsePort = _lastOptions.SsePort,   // keep talking to the same MCP server after a restart
             // Keep the profile's provider across respawns — else the pane silently reverts to native Claude.
             Env = _env ?? _lastOptions?.Env,
@@ -431,6 +448,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
                 // Preserved across respawn like Env: losing it would make bypass unreachable
                 // for the rest of the pane's life, with nothing to explain why.
                 AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
+                // Preserved for the same reason: it is read from the environment at launch, so a
+                // respawn that dropped it would quietly stop taking snapshots mid-session.
+                FileCheckpoints = _lastOptions?.FileCheckpoints ?? true,
                 Env = _env,
             });
         }
@@ -461,6 +481,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
                 ResumeSessionId = sessionId,
                 InitialPermissionMode = PermissionMode,
                 AllowBypassPermissions = _lastOptions?.AllowBypassPermissions ?? false,
+                // Preserved for the same reason: it is read from the environment at launch, so a
+                // respawn that dropped it would quietly stop taking snapshots mid-session.
+                FileCheckpoints = _lastOptions?.FileCheckpoints ?? true,
                 Env = _env,
             });
         }
@@ -618,8 +641,29 @@ internal sealed partial class ClaudeClient : IClaudeClient
         catch { return null; }
     }
 
-    public Task RewindFilesAsync(string userMessageId)
-        => SendControlRequestAsync(ClientMessages.ControlSubtype.RewindFiles, new { user_message_id = userMessageId });
+    /// <summary>Restore the files to the CLI's snapshot taken before <paramref name="userMessageId"/>.
+    /// <para>With <paramref name="dryRun"/> nothing is written: the CLI answers whether it *could*
+    /// rewind to that message, and with what — <c>canRewind</c>, plus <c>filesChanged</c>,
+    /// <c>insertions</c> and <c>deletions</c>. That is the only way to know whether a checkpoint
+    /// exists for a message, so it is what a UI asks before offering the action.</para>
+    /// <para>The response is returned rather than dropped: an error here ("File rewinding is not
+    /// enabled", "No file checkpoint found for this message") is the answer, not a failure.</para></summary>
+    public async Task<JObject> RewindFilesAsync(string userMessageId, bool dryRun)
+    {
+        try
+        {
+            return await SendControlRequestAsync(
+                ClientMessages.ControlSubtype.RewindFiles,
+                new { user_message_id = userMessageId, dry_run = dryRun });
+        }
+        catch (Exception ex)
+        {
+            // A refusal comes back as an error response, and "no checkpoint here" is a normal
+            // answer for a probe — log it and let the caller read canRewind=false.
+            _log.Warn($"[client] rewind_files failed (uuid={userMessageId}, dryRun={dryRun}): {ex.Message}");
+            return null;
+        }
+    }
 
     public Task StopTaskAsync(string taskId)
         => SendControlRequestAsync(ClientMessages.ControlSubtype.StopTask, new { task_id = taskId });

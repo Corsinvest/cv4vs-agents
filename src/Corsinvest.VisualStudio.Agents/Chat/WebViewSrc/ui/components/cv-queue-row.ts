@@ -8,7 +8,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Delete16Regular from '@fluentui/svg-icons/icons/delete_16_regular.svg';
 import TextBulletList16Regular from '@fluentui/svg-icons/icons/text_bullet_list_16_regular.svg';
 import Attach16Regular from '@fluentui/svg-icons/icons/attach_16_regular.svg';
-import { parseIdeContextTags } from '../../core/ide';
+import { cleanMessageOnlyText } from '../../core/ide';
 import { iconStyles } from '../styles/shared';
 import { iconUrl } from '../../core/icon-url';
 import type { Attachment } from '../../core/types';
@@ -242,7 +242,7 @@ export class CvQueueRow extends LitElement {
      *  prepends, which the CLI needs and a reader does not — the same strip cv-message applies
      *  before showing a user bubble. */
     private static _shown(text: string): string {
-        return parseIdeContextTags(text).text;
+        return cleanMessageOnlyText(text);
     }
 
     /** Built here rather than inline in the list: `.item-text` is `white-space: pre-wrap`, so the

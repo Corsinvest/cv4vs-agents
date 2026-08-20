@@ -23,6 +23,21 @@ internal static class BridgeMessages
         public static class Session
         {
             public const string Fork = "fork_session";
+
+            /// <summary>Ask the CLI to restore the files to the snapshot it took before a user
+            /// message, or — with dryRun — only whether it could and with what. The probe is what
+            /// tells a checkpoint apart from none: the CLI keeps file history per session, and in
+            /// SDK mode only when it was started with it enabled.</summary>
+            public const string Rewind = "rewind_files";
+
+            /// <summary>Open VS's diff viewer on one file a rewind would touch: its copy from
+            /// before the message against what is on disk now. Fire-and-forget — the answer is the
+            /// diff tab, not a response.</summary>
+            public const string RewindDiff = "rewind_diff";
+
+            /// <summary>Which of this session's messages actually have a file snapshot, so the
+            /// picker can leave out the ones a rewind would do nothing for.</summary>
+            public const string GetRewindPoints = "get_rewind_points";
         }
 
         /// <summary>`@` picker suggestions.</summary>
@@ -128,6 +143,13 @@ internal static class BridgeMessages
         public static class File
         {
             public const string Suggestions = "file_suggestions";
+        }
+
+        /// <summary>Answer to a rewind request — the probe's verdict, or the outcome of a real one.</summary>
+        public static class Session
+        {
+            public const string RewindResult = "rewind_result";
+            public const string RewindPoints = "rewind_points";
         }
 
         /// <summary>CLI lifecycle and runtime events.</summary>

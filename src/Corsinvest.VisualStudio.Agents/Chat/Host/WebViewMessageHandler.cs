@@ -148,6 +148,18 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
                 HandleFork(data, id);
                 break;
 
+            case BridgeMessages.FromWebView.Session.Rewind:
+                HandleRewind(data, id);
+                break;
+
+            case BridgeMessages.FromWebView.Session.RewindDiff:
+                HandleRewindDiff(data, id);
+                break;
+
+            case BridgeMessages.FromWebView.Session.GetRewindPoints:
+                HandleGetRewindPoints(data, id);
+                break;
+
             case BridgeMessages.FromWebView.Open.IdeOutputWindow:
                 HandleIdeOutputWindow(data, id);
                 break;

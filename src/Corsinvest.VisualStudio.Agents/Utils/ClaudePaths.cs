@@ -28,6 +28,12 @@ public sealed class ClaudePaths
     public string ProjectsFolder { get; }
     public string IdeFolder { get; }
 
+    /// <summary>Where the CLI keeps the copies it takes before editing a file — one sub-folder per
+    /// session, holding whole files (not diffs) named by a hash of the path plus a version. Which
+    /// copy belongs to which message is NOT derivable from here: the transcript's
+    /// `file-history-snapshot` records name it, which is why SessionManager reads them.</summary>
+    public string FileHistoryFolder { get; }
+
     public ClaudePaths(string configDir)
     {
         // NFC-normalize, take raw (no ~ expansion) — matches the CLI's getClaudeConfigHomeDir.
@@ -35,6 +41,7 @@ public sealed class ClaudePaths
         SettingsFile = Path.Combine(ClaudeFolder, "settings.json");
         ProjectsFolder = Path.Combine(ClaudeFolder, "projects");
         IdeFolder = Path.Combine(ClaudeFolder, "ide");
+        FileHistoryFolder = Path.Combine(ClaudeFolder, "file-history");
     }
 
     // Mirrors the CLI folder-naming: the CLI resolves the cwd to an absolute path, then

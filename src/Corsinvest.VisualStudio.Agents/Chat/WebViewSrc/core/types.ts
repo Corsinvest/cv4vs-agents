@@ -200,6 +200,18 @@ export type { RespondPermissionNotification } from './generated/RespondPermissio
 export type { SetSendSelectionNotification } from './generated/SetSendSelectionNotification';
 export type { IdeFileNotification } from './generated/IdeFileNotification';
 export type { GetSuggestionsRequest } from './generated/GetSuggestionsRequest';
+export type { RewindRequest } from './generated/RewindRequest';
+export type { RewindResultNotification } from './generated/RewindResultNotification';
+export type { RewindDiffNotification } from './generated/RewindDiffNotification';
+export type { RewindPointsNotification } from './generated/RewindPointsNotification';
+
+/** One user message as the rewind dialog needs it: what to show, and what to rewind to. Not a wire
+ *  type — it is built from the transcript, which is why it lives here and not in generated/. */
+export interface RewindPoint {
+    uuid: string;
+    text: string;
+    timestamp?: number;
+}
 export type { ToolOutputNotification } from './generated/ToolOutputNotification';
 export type { GetSubagentRequest } from './generated/GetSubagentRequest';
 export type { SubagentCancelNotification } from './generated/SubagentCancelNotification';

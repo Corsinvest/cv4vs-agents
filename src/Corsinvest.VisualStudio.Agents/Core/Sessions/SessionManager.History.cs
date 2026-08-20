@@ -477,6 +477,106 @@ internal sealed partial class SessionManager
         return null;
     }
 
+    /// <summary>The messages worth offering as rewind targets: those the CLI recorded a file
+    /// snapshot for, with at least one file in it.
+    /// <para>The CLI accepts ANY user message as a target — it answers canRewind:true for one that
+    /// changed nothing, with an empty file list. VS Code lists them all for that reason, but there
+    /// a rewind also forks the conversation, so a message with no file changes is still somewhere
+    /// to go back to. Here it restores files and nothing else, which makes such a row a dead end.
+    /// </para>
+    /// <para>One pass over the transcript, not a probe per message: the CLI has already written
+    /// what it knows into the session file, and asking it one message at a time would be a
+    /// round-trip each to learn what a single read answers for all of them.</para>
+    /// <para>An empty `trackedFileBackups` is skipped: the record is written for a turn before it
+    /// is known whether anything will be touched, so an empty one is a turn that touched nothing.
+    /// </para></summary>
+    public HashSet<string> ReadRewindableUuids(string sessionId)
+    {
+        var result = new HashSet<string>(StringComparer.Ordinal);
+        if (!IsSafePathToken(sessionId)) { return result; }
+        var path = FileFor(sessionId);
+        if (!File.Exists(path)) { return result; }
+        try
+        {
+            foreach (var line in File.ReadLines(path, Encoding.UTF8))
+            {
+                if (string.IsNullOrWhiteSpace(line) || !IsType(line, "file-history-snapshot")) { continue; }
+                JObject obj; try { obj = JObject.Parse(line); } catch { continue; }
+                var id = obj.Val("messageId", "");
+                if (string.IsNullOrEmpty(id)) { continue; }
+                if (obj["snapshot"]?["trackedFileBackups"] is JObject backups && backups.Count > 0)
+                {
+                    result.Add(id);
+                }
+            }
+        }
+        catch (Exception ex) { log.LogException("SessionManager.ReadRewindableUuids", ex); }
+        return result;
+    }
+
+    /// <summary>Which backup each file would be restored from by a rewind to <paramref
+    /// name="messageUuid"/> — read from the `file-history-snapshot` records the CLI writes into the
+    /// transcript.
+    /// <para>This is what makes a rewind showable rather than only doable: `rewind_files` with
+    /// dry_run answers WHICH files would change and by how much, but not what they held, while the
+    /// snapshots name the copy on disk (`~/.claude/file-history/&lt;session&gt;/&lt;name&gt;`) so
+    /// the two versions can be diffed.</para>
+    /// <para><b>Not just the target's own snapshot.</b> A snapshot lists the files touched in THAT
+    /// turn, while a rewind restores everything that moved from that point onwards — so a file
+    /// first edited three turns later is in the dry-run's list but not in the target's record. The
+    /// scan therefore runs from the target forward and keeps, per file, the FIRST backup it meets:
+    /// that copy predates the edit that introduced it, which is exactly the state being restored.
+    /// </para>
+    /// <para>A null `backupFileName` means the file did not exist at that point — restoring it
+    /// deletes it rather than writing an older copy, so it is kept rather than skipped.</para>
+    /// <para>Empty when the message has no snapshot at all: the CLI keeps file history per session,
+    /// and only when started with it enabled. Absence is an answer, not a failure.</para></summary>
+    public List<FileBackupInfo> ReadFileBackups(string sessionId, string messageUuid)
+    {
+        var result = new List<FileBackupInfo>();
+        if (!IsSafePathToken(sessionId) || string.IsNullOrEmpty(messageUuid)) { return result; }
+        var path = FileFor(sessionId);
+        if (!File.Exists(path)) { return result; }
+        try
+        {
+            // Keyed by the path as the CLI spells it, so a file met again in a later turn does not
+            // overwrite the earlier — and older — backup that a rewind would actually use.
+            var found = new Dictionary<string, FileBackupInfo>(StringComparer.OrdinalIgnoreCase);
+            var reached = false;
+            foreach (var line in File.ReadLines(path, Encoding.UTF8))
+            {
+                // Cheap pre-filter on the raw line, like the reads above: parsing every line of a
+                // long transcript to find a handful of records is what makes this slow. IsType
+                // rather than a literal '"type":"…"' so a pretty-printed writer reads the same.
+                if (string.IsNullOrWhiteSpace(line) || !IsType(line, "file-history-snapshot")) { continue; }
+                JObject obj; try { obj = JObject.Parse(line); } catch { continue; }
+                if (!reached)
+                {
+                    // Everything before the target belongs to turns a rewind would leave alone.
+                    if (obj.Val("messageId", "") != messageUuid) { continue; }
+                    reached = true;
+                }
+                if (obj["snapshot"]?["trackedFileBackups"] is not JObject backups) { continue; }
+                foreach (var kv in backups)
+                {
+                    if (found.ContainsKey(kv.Key)) { continue; }
+                    var b = kv.Value as JObject;
+                    found[kv.Key] = new FileBackupInfo
+                    {
+                        // Relative to the working directory when the file sits under it, absolute
+                        // otherwise — the CLI shortens it on the way in.
+                        Path = kv.Key,
+                        BackupFileName = b?.Val("backupFileName", (string)null),
+                        Version = b?.Val("version", 0) ?? 0,
+                    };
+                }
+            }
+            result.AddRange(found.Values);
+        }
+        catch (Exception ex) { log.LogException("SessionManager.ReadFileBackups", ex); }
+        return result;
+    }
+
     /// <summary>Read the compaction summary that follows the compact_boundary with the given uuid:
     /// the next .jsonl line, flagged isCompactSummary with a string content. "" if absent.</summary>
     public string ReadCompactSummary(string sessionId, string boundaryUuid)

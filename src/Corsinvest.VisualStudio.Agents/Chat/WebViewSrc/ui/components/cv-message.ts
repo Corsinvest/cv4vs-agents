@@ -19,7 +19,7 @@ import { iconUrl } from '../../core/icon-url';
 import { fileName } from '../../core/path';
 import { formatTokenCount } from '../helpers/format';
 import { displayPathUi } from '../paths';
-import { parseIdeContextTags } from '../../core/ide';
+import { parseIdeContextTags, cleanMessageOnlyText } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
 import { observeSize } from '../resize';
@@ -233,7 +233,7 @@ export class CvMessage extends LitElement {
      * messages get an always-visible "Show more" button on the fade instead (see the user render).
      */
     private _renderActions() {
-        const copyText = parseIdeContextTags(this.text).text;
+        const copyText = cleanMessageOnlyText(this.text);
         const showFork = this.role === 'user' && !!this.uuid;
         return html`<div class="cv-msg-actions">
             <cv-copy-btn .text=${copyText} title="Copy message"></cv-copy-btn>

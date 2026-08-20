@@ -196,6 +196,22 @@ public class ForkNotification
     public string SessionId { get; set; }
 }
 
+/// <summary>Restore the files to the CLI's snapshot before a user message (rewind_files).
+/// With <see cref="DryRun"/> nothing is written — the CLI only reports whether it could.</summary>
+public class RewindRequest
+{
+    public string MessageUuid { get; set; }
+    public bool DryRun { get; set; }
+}
+
+/// <summary>Show, in VS's diff viewer, what rewinding to a message would undo for one file
+/// (rewind_diff). Only the path travels: the host reads both sides itself.</summary>
+public class RewindDiffNotification
+{
+    public string MessageUuid { get; set; }
+    public string FilePath { get; set; }
+}
+
 /// <summary>Open an external URL in the default browser (open_external_url).</summary>
 public class ExternalUrlNotification
 {
