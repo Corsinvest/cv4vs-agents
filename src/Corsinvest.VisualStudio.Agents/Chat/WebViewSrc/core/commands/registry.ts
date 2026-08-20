@@ -28,6 +28,7 @@ import {
     EffortCommand,
     SwitchModelsOnFlagCommand,
 } from './model-controls';
+import { RewindCommand } from './rewind';
 import { SlashCommand } from './slash';
 
 /**
@@ -42,6 +43,7 @@ export const STATIC_COMMANDS: readonly ChatCommand[] = [
     new ClearCommand(),
     new NewConversationCommand(),
     new ResumeConversationCommand(),
+    new RewindCommand(),
     new RemoteControlCommand(),
     new SwitchModelCommand(),
     new SwitchPermissionModeCommand(),

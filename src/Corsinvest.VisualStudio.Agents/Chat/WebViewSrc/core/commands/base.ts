@@ -48,6 +48,9 @@ export interface CommandHost {
     openCliTerminal(): void;
     /** Open this pane's session picker (same popup as the toolbar History button). */
     openSessionHistory(): void;
+    /** Open the rewind dialog. Routed through the host because the list it shows is built from the
+     *  transcript, which belongs to cv-app — a command cannot read it from here. */
+    openRewind(): void;
     /** Open a fresh chat pane (same as the toolbar "+" for Chat). */
     openChatPane(): void;
     openPluginManager(): void;

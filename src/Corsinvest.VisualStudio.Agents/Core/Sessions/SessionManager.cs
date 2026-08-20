@@ -288,6 +288,23 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
         catch { return raw; }
     }
 
+    /// <summary>One file the CLI backed up before a message, from its `file-history-snapshot`
+    /// record. Read by <see cref="ReadFileBackups"/>; what makes a rewind showable, since the
+    /// snapshot names the copy on disk while the rewind request only counts the changes.</summary>
+    public sealed class FileBackupInfo
+    {
+        /// <summary>Relative to the working directory when the file sits under it, absolute
+        /// otherwise — the CLI shortens it on the way in.</summary>
+        public string Path { get; set; }
+
+        /// <summary>Name of the copy under `~/.claude/file-history/&lt;session&gt;/`. Null when the
+        /// file did not exist at that point: rewinding there DELETES it rather than restoring
+        /// anything, which is the one case a diff cannot show.</summary>
+        public string BackupFileName { get; set; }
+
+        public int Version { get; set; }
+    }
+
     /// <summary>
     /// One page of chat history loaded by <see cref="ReadHistoryRaw"/>.
     /// </summary>

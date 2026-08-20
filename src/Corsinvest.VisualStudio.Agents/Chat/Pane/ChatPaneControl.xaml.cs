@@ -137,8 +137,20 @@ public partial class ChatPaneControl : PaneControlBase
                 InDev = true,
 #endif
             },
-            VsOptions = WebViewBridge.BuildVsOptions(),
+            VsOptions = PaneVsOptions(),
         });
+
+    /// <summary>The VS Options as they apply to THIS pane. Everything comes straight from the
+    /// options page except file checkpointing, which claude.exe reads from its environment at
+    /// startup: a session keeps what it was launched with, so the flag has to report the process
+    /// rather than the setting — otherwise Rewind would be offered on a session with no snapshots
+    /// behind it.</summary>
+    private Contracts.VsOptionsDto PaneVsOptions()
+    {
+        var opts = WebViewBridge.BuildVsOptions();
+        if (_client != null) { opts.FileCheckpoints = _client.FileCheckpoints; }
+        return opts;
+    }
 
     /// <summary>Send a loaded history page to the WebView (messages + paging), then kick off the
     /// input ↑/↓ prompt history load in the background. Loading a session's transcript always loads
@@ -456,7 +468,24 @@ public partial class ChatPaneControl : PaneControlBase
     /// the WebView — it does NOT touch CLI state (model/mode/toggles) or respawn the CLI.</summary>
     private void OnOptionsApplied()
     {
-        _bridge?.Send(BridgeMessages.ToWebView.Ui.VsSettings, WebViewBridge.BuildVsOptions());
+        var opts = PaneVsOptions();
+        _bridge?.Send(BridgeMessages.ToWebView.Ui.VsSettings, opts);
+
+        // Say so when the setting was just changed and this session cannot follow it: the option is
+        // read by claude.exe at startup. Without the notice the checkbox looks broken — ticked in
+        // Options, and no Rewind in the menu.
+        if (_client != null && AgentsOptions.Chat.FileCheckpoints != opts.FileCheckpoints)
+        {
+            _bridge?.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
+            {
+                Key = "filecheckpoints",
+                Severity = Contracts.NoticeVariantDto.Info,
+                Message = opts.FileCheckpoints
+                    ? "File checkpoints stay on for this chat — turning them off applies to the next one you open."
+                    : "File checkpoints are off for this chat — open a new one to start keeping them.",
+                Position = Contracts.NoticePositionDto.Top,
+            });
+        }
 
         var sid = _client?.SessionId;
         if (string.IsNullOrEmpty(sid)) { return; }
@@ -551,6 +580,9 @@ public partial class ChatPaneControl : PaneControlBase
             ResumeSessionId = _startupSessionId,
             InitialPermissionMode = permMode,
             AllowBypassPermissions = allowBypass,
+            // Read here rather than in ClaudeClient: the client is given its settings, it does not
+            // go looking for them — and this one is fixed for the life of the process anyway.
+            FileCheckpoints = AgentsOptions.Chat.FileCheckpoints,
             SsePort = ssePort,
             Env = Entry.Profile.Env,
         });

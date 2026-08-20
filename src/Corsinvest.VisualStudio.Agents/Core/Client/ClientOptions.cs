@@ -20,6 +20,13 @@ public sealed class ClientOptions
     /// up front — see the launch args in <see cref="ClaudeClient"/>.</summary>
     public bool AllowBypassPermissions { get; set; }
 
+    /// <summary>Whether the CLI should snapshot files before editing them, so Rewind has something
+    /// to restore (Options → Chat).
+    /// <para>Decided at launch and not changeable after: the CLI reads it from the environment when
+    /// the process starts. Turning it off mid-session would leave the snapshots already taken
+    /// in place, which is why the option says it applies to the next chat.</para></summary>
+    public bool FileCheckpoints { get; set; } = true;
+
     /// <summary>Loopback port of the IDE's MCP server. When &gt; 0 it is passed as
     /// <c>CLAUDE_CODE_SSE_PORT</c> so the CLI connects to THIS server instead of
     /// scanning the lock dir — deterministic with multiple VS instances open.</summary>

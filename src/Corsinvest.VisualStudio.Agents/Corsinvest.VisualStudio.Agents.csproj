@@ -323,6 +323,7 @@
     <Compile Include="Chat\Host\WebViewMessageHandler.Chat.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Plugins.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Helpers.cs" />
+    <Compile Include="Chat\Host\WebViewMessageHandler.Rewind.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Misc.cs" />
     <Compile Include="Options\AgentsOptions.cs" />
     <Compile Include="Options\AgentsOptionsPage.cs">
