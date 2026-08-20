@@ -32,10 +32,25 @@ internal static class AppPaths
     /// colours the format, and so nothing has to be escaped into a JSON string.</para></summary>
     public static readonly string IgnoreRulesFile = Path.Combine(DataFolder, "picker-ignore.gitignore");
 
+    /// <summary>The virtual hosts the WebView is served from: one for the bundle, one for the
+    /// lazily-rasterised file icons.
+    /// <para>The `.invalid` suffix is the load-bearing part. `.local` belongs to mDNS, so Windows
+    /// answers a name under it with a multicast query and waits ~2s for a reply that never comes —
+    /// before WebView2 serves the file from disk anyway. Measured here: 2551ms from responseEnd to
+    /// domInteractive under `.local`, 397ms under `.invalid`, on an otherwise identical load. The
+    /// WebView2 docs say the same ("using .local … can cause a delay during navigations. You should
+    /// avoid using .local if you can") and point at RFC 6761's reserved names, of which this is
+    /// one.</para>
+    /// <para>The WebView has its own copy of the icon host in `core/icon-url.ts` — it builds URLs
+    /// on the first render, before any message from us could have arrived. If the two ever drift
+    /// apart the icons vanish on the next run, which is a loud enough failure.</para></summary>
+    public const string WebViewHost = "cv4vs.invalid";
+    public const string IconHost = "cv4vs-icons.invalid";
+
     /// <summary>
-    /// Cache folder for file-type icons rasterised from VS KnownMonikers. The
-    /// WebView serves these via the `cv4vs-icons.local` virtual host, generated
-    /// lazily the first time an extension is requested.
+    /// Cache folder for file-type icons rasterised from VS KnownMonikers, served
+    /// over <see cref="IconHost"/> and generated lazily the first time an
+    /// extension is requested.
     /// </summary>
     public static readonly string IconCacheFolder = Path.Combine(DataFolder, "icons");
 
