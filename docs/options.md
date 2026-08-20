@@ -25,6 +25,7 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 | Chat font size | int (px) | `13` | Font size of the chat message text. |
 | Show WebView developer entries | bool | `false` | Add "WebView DevTools" and "WebView task manager" to the chat toolbar's "More" (…) menu — the browser console/DOM/network on the chat itself, and the browser's processes with their memory and CPU. Pre-release builds always offer both. |
 | Autosave before Claude reads/writes | bool | `true` | Save a dirty file before Claude reads/writes it, so it sees your in-editor edits, not the stale on-disk version. |
+| Keep file checkpoints (Rewind) | bool | `true` | Let Claude copy a file before editing it, so [`/rewind`](chat/rewind.md) can restore it. Copies live under `~/.claude/file-history` and are never cleaned up — the reason to turn this off if you do not use Rewind. Read when a chat starts, so it applies to the next one you open. |
 | Send post-edit diagnostics to Claude (experimental) | bool | `false` | Feed back the new errors/warnings an edit introduced. Experimental — unreliable because VS only analyses files open in an editor (see IDE integration). |
 | Allowed upload file extensions | string[] | 93 defaults | Extensions accepted on upload/drop. Images → images, `.pdf` → document, rest → text; anything else rejected. Editable list. |
 | Sticky user messages | bool | `true` | Pin the current exchange's user message at the top while the reply/tool rows scroll below. |
