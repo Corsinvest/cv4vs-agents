@@ -610,6 +610,11 @@ public class VsOptionsDto
     public bool UseCtrlEnterToSend { get; set; }
     public bool CompactOutputAskAnswers { get; set; }
     public bool AllowDangerouslySkipPermissions { get; set; }
+
+    /// <summary>Whether the CLI is keeping file snapshots for this pane. What hides the Rewind
+    /// command when it is not: a command that can only answer "nothing to restore" is worse than
+    /// one that is not offered.</summary>
+    public bool FileCheckpoints { get; set; }
     public bool DiffIgnoreWhitespace { get; set; }
     public bool ShowOpenDiffInVsButton { get; set; }
     public string[] AllowedUploadExtensions { get; set; }
@@ -679,4 +684,43 @@ public class ExchangeEndedNotification
     /// <summary>Machine-readable failure cause for the notice label: `terminal_reason` when the
     /// CLI sends it (finer), else the result `subtype` (error_max_turns, …). Empty when none.</summary>
     public string ErrorKind { get; set; } = "";
+}
+
+/// <summary>Answer to a rewind request (rewind_result).
+/// <para>The two calls answer differently, and the caller knows which it asked for. A dry run
+/// reports what WOULD change — <see cref="FilesChanged"/>, <see cref="Insertions"/>,
+/// <see cref="Deletions"/>. A real rewind carries only the outcome: observed on the wire as
+/// <c>{"canRewind": true, "skippedLinks": 0}</c>, with the statistics absent. So a zero here after
+/// a real rewind means "not reported", not "nothing changed".</para>
+/// <para><see cref="CanRewind"/> false with a reason in <see cref="Error"/> is a normal answer, not
+/// a failure: the session may have no checkpoint for that message, or file history may be off
+/// altogether (in SDK mode the CLI keeps it only when started with it enabled).</para></summary>
+public class RewindResultNotification
+{
+    public string MessageUuid { get; set; }
+    public bool CanRewind { get; set; }
+
+    /// <summary>Why not, when CanRewind is false — the CLI's own wording.</summary>
+    public string Error { get; set; } = "";
+
+    /// <summary>What the rewind would touch, when the CLI reported it (probe only). Absolute paths.
+    /// Null when it said nothing about the diff.</summary>
+    public string[] FilesChanged { get; set; }
+
+    public int Insertions { get; set; }
+    public int Deletions { get; set; }
+
+    /// <summary>How many files the CLI did NOT restore because they are symlinks. A count, not the
+    /// paths: the wire carries `"skippedLinks": 0`. The one case where a rewind is partial, so it
+    /// has to be said rather than left to be discovered.</summary>
+    public int SkippedLinks { get; set; }
+}
+
+/// <summary>Which messages a rewind could actually restore something for (rewind_points), read
+/// from the snapshots the CLI recorded in the transcript. The picker lists these and leaves the
+/// rest out: the CLI would accept any user message, but here a rewind only touches files, so a
+/// turn that changed none of them is a row with nowhere to go.</summary>
+public class RewindPointsNotification
+{
+    public string[] Uuids { get; set; }
 }

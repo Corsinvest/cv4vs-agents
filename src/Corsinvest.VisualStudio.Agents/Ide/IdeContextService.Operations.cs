@@ -1152,13 +1152,16 @@ internal sealed partial class IdeContextService
         string oldFilePath, string newFilePath, string newFileContents, string tabName)
         => IdeDiffViewer.Instance.OpenAsync(oldFilePath, newFilePath, newFileContents, tabName);
 
-    /// <summary>Show a diff between two strings (used by the WebView
-    /// chat path: it has the original and proposed contents in memory).
-    /// Wrapper around <see cref="OpenDiffAsync"/> with a synthetic
+    /// <summary>Show a diff between two strings (used by the WebView chat path, which has both
+    /// contents in memory). Wrapper around <see cref="OpenDiffAsync"/> with a synthetic
     /// <c>old</c> path written to temp. <paramref name="toolUseId"/> identifies the frame so it
-    /// can later be closed by request rather than by "whichever was last".</summary>
-    public Task ShowDiffAsync(string toolUseId, string filePath, string oldContent, string newContent)
-        => IdeDiffViewer.Instance.ShowFromContentsAsync(toolUseId, filePath, oldContent, newContent);
+    /// can later be closed by request rather than by "whichever was last".
+    /// <para>The labels are the caller's because the same viewer serves two questions: a pending
+    /// edit is "Original" against "Proposed", while a rewind preview is the copy from before a
+    /// message against what is on disk now — calling that one "Proposed" would say the opposite of
+    /// the truth.</para></summary>
+    public Task ShowDiffAsync(string toolUseId, string filePath, string oldContent, string newContent, string leftLabel, string rightLabel)
+        => IdeDiffViewer.Instance.ShowFromContentsAsync(toolUseId, filePath, oldContent, newContent, leftLabel, rightLabel);
 
     /// <summary>Close the diff opened for a given tool_use, if any. Used when its permission is
     /// answered — a diff the user opened themselves is never touched.</summary>

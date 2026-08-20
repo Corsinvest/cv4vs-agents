@@ -11,6 +11,10 @@ import '@fluentui/web-components/counter-badge.js';
 import '@fluentui/web-components/dialog.js';
 import '@fluentui/web-components/dialog-body.js';
 import '@fluentui/web-components/link.js';
+// Trial: the rewind dialog's second list. Both are needed together — an option outside a listbox
+// has no selection to belong to.
+import '@fluentui/web-components/listbox.js';
+import '@fluentui/web-components/option.js';
 import '@fluentui/web-components/message-bar.js';
 import '@fluentui/web-components/menu.js';
 import '@fluentui/web-components/menu-item.js';

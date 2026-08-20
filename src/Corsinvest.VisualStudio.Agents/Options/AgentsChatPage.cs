@@ -77,6 +77,11 @@ public class AgentsChatPage : AgentsOptionsPage
     public bool Autosave { get; set; } = true;
 
     [Category("Files")]
+    [DisplayName("Keep file checkpoints (Rewind)")]
+    [Description("Let Claude keep a copy of each file before it edits one, so the Rewind command can put them back the way they were before a message. The copies live under ~/.claude/file-history and are never cleaned up, which is the reason to turn this off if you do not use Rewind. Only files Claude edits are covered — what it changes by running a command is not. Takes effect on the next chat you open.")]
+    public bool FileCheckpoints { get; set; } = true;
+
+    [Category("Files")]
     [DisplayName("Send post-edit diagnostics to Claude (experimental)")]
     [Description("EXPERIMENTAL, off by default. After Claude edits a file, send back the new errors/warnings that edit introduced. Currently unreliable: Visual Studio only analyses files open in an editor, so the Error List is often still empty when we read it right after the edit — Claude then gets nothing. Use the ide_get_diagnostics MCP tool instead, which works because it runs when the Error List has settled.")]
     public bool PostEditDiagnostics { get; set; } = false;

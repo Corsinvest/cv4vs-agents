@@ -37,6 +37,7 @@ internal sealed partial class WebViewBridge
             UseCtrlEnterToSend = chat.UseCtrlEnterToSend,
             CompactOutputAskAnswers = chat.CompactOutputAskAnswers,
             AllowDangerouslySkipPermissions = chat.AllowDangerouslySkipPermissions,
+            FileCheckpoints = chat.FileCheckpoints,
             DiffIgnoreWhitespace = chat.DiffIgnoreWhitespace,
             ShowOpenDiffInVsButton = chat.ShowOpenDiffInVsButton,
             AllowedUploadExtensions = NormalizeExtensions(chat.AllowedUploadFileExtensions),

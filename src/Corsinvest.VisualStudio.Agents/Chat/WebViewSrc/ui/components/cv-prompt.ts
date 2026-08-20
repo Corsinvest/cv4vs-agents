@@ -1323,6 +1323,12 @@ export class CvPrompt extends LitElement implements CommandHost {
         bridge.sendNotification(Msg.fromWebView.open.sessionHistory, {});
     }
 
+    /** Ask cv-app to open the rewind dialog. Not a bridge call like the ones around it: the list it
+     *  shows is built from the transcript, which lives up there. */
+    openRewind(): void {
+        this.dispatchEvent(new CustomEvent('open-rewind', { bubbles: true, composed: true }));
+    }
+
     /** Open a fresh chat pane (host runs PaneLauncher.OpenNew(Chat)). */
     openChatPane(): void {
         bridge.sendNotification(Msg.fromWebView.open.chatPane, {});

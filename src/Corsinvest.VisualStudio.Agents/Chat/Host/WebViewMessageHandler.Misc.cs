@@ -10,10 +10,12 @@ using System.Linq;
 namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 
 /// <summary>
-/// WebViewMessageHandler single-case dispatchers whose namespaces have only one message:
-/// Session.Fork and File.GetSuggestions. Grouped here so the base file holds just the switch and
-/// class lifecycle; the per-namespace groups (Cli/Open/Chat/Plugins) and shared helpers are their
-/// own partials.
+/// WebViewMessageHandler dispatchers that answer to nothing else: forking a session, and the `@`
+/// picker's file suggestions. Grouped here so the base file holds just the switch and the class
+/// lifecycle; the groups that hang together (Cli/Open/Chat/Plugins/Rewind) and the shared helpers
+/// are their own partials.
+/// <para>Fork sits in Session alongside the rewind messages but not with them: it writes a new
+/// transcript and opens a pane, where those restore files in this one.</para>
 /// </summary>
 internal sealed partial class WebViewMessageHandler
 {
