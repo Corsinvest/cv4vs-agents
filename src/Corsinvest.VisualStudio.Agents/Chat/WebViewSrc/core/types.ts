@@ -7,6 +7,8 @@
 
 import type { SubagentUsageDto } from './generated/SubagentUsageDto';
 import type { ToolResultExtrasDto } from './generated/ToolResultExtrasDto';
+// Imported, not just re-exported below: UserTextEcho extends it, and a re-export is not in scope.
+import type { UserTextNotification } from './generated/UserTextNotification';
 
 /**
  * The one empty array the render passes hand out, because a fresh `[]` is a new identity and Lit
@@ -129,7 +131,7 @@ export type { CliErrorNotification } from './generated/CliErrorNotification';
 
 /** A user message echo (`chat_user_text`) + its stripped image/document placeholders.
  *  Generated from C# by TypeGen — re-exported here. */
-export type { UserTextNotification } from './generated/UserTextNotification';
+export type { UserTextNotification };
 export type { UserImageDto } from './generated/UserImageDto';
 export type { UserFileDto } from './generated/UserFileDto';
 
@@ -257,12 +259,19 @@ export interface PendingPermission {
  *  IDE-context badge. Generated from C# by TypeGen — re-exported here. */
 export type { IdeContextNotification } from './generated/IdeContextNotification';
 
-// Bare reference to a file open/selected in the IDE.
-// Returned by parseIdeContextTags; the UI layer turns each ref into a chip.
+// Bare reference to a file open/selected in the IDE; the UI layer turns each one into a chip.
+// Two sources: the composer on submit, and parseIdeContextTags on a replayed message.
 export interface IdeContextRef {
     filePath: string;
     startLine?: number;
     endLine?: number;
+}
+
+/** The host's notification plus the editor refs the composer holds itself. A field rather than an
+ *  `<ide_*>` tag on the text: the tag the model reads is composed host-side, and one glued on here
+ *  would only be parsed back apart by this same WebView. */
+export interface UserTextEcho extends UserTextNotification {
+    ideRefs?: IdeContextRef[];
 }
 
 /** Token usage of a single assistant turn — generated from C# (Contracts.ContextUsageDto)
@@ -364,6 +373,9 @@ export interface UiUserEntry extends UiEntryBase {
     uuid?: string;
     images?: UiImage[];
     files?: UiFile[];
+    /** What the editor was showing when this turn was sent. Taken out of `text` at build time,
+     *  so a long selection doesn't sit in the transcript for the whole session. */
+    ideRefs?: IdeContextRef[];
 }
 
 /** An assistant turn; `streaming` is UI-only (true while the delta text is still growing). */

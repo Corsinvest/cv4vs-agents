@@ -229,7 +229,11 @@ internal static class ContentBlockTranslator
                 }
                 else if (type == "text")
                 {
-                    userText = item.Val("text", "");
+                    // Join, don't overwrite: one submitted string can arrive as several text
+                    // blocks — the IDE-context tag gets one of its own. The newline is the one
+                    // the split consumed.
+                    var blockText = item.Val("text", "");
+                    userText = userText == null ? blockText : userText + "\n" + blockText;
                 }
                 else if (type == "image")
                 {

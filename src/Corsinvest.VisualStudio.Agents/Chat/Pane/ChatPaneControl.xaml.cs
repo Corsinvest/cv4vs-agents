@@ -426,10 +426,6 @@ public partial class ChatPaneControl : PaneControlBase
         WebView.HostFilesDropped -= OnHostFilesDropped;
         WebView.PreviewMouseDown -= OnWebViewClicked;
         IdeContextService.Instance.ContextChanged -= OnEditorContextChanged;
-        // EnsureClient hooked this on the IdeContextService singleton; without the unhook the
-        // closed pane leaks (singleton keeps it alive) and its dead _client keeps logging
-        // "transport not running" on every selection change. -= is safe even if never hooked.
-        IdeContextService.Instance.ContextChanged -= OnEditorContextChangedForChat;
         _handler?.Dispose();
         // Detach the client events before disposing: an event still in flight (a final
         // stdout line as the process closes) would otherwise reach this disposed control.
@@ -627,11 +623,6 @@ public partial class ChatPaneControl : PaneControlBase
             McpMessageHandler = json => Mcp.McpServerHost.Instance.ServeMcpMessageAsync(json)
         };
         AttachClientEvents(_client);
-        // Unhook first, like MessageReceived below: the subscription lives on a singleton that
-        // outlives the client, so a second pass here would send every selection change twice.
-        IdeContextService.Instance.ContextChanged -= OnEditorContextChangedForChat;
-        IdeContextService.Instance.ContextChanged += OnEditorContextChangedForChat;
-
         _handler = new WebViewMessageHandler(_bridge, _client, Entry, _log);
         _bridge.MessageReceived -= OnBridgeMessage;
         _bridge.MessageReceived += OnBridgeMessage;
@@ -671,31 +662,4 @@ public partial class ChatPaneControl : PaneControlBase
         }
     }
 
-    private void OnEditorContextChangedForChat(EditorContext ctx)
-    {
-        if (_client == null)
-        {
-            _log.Trace(() => "[ChatSelection] skip: _client null");
-            return;
-        }
-        // Eye closed for this session (the composer's IDE-context badge): don't leak the editor
-        // selection into the chat. Send an empty selection so the CLI drops any cached one.
-        if (ctx == null || Entry?.Options.SendSelection == false)
-        {
-            _log.Trace(() => "[ChatSelection] no context / eye off → empty selection");
-            _client.SendSelectionChanged(string.Empty, null, null, 0, 0, 0, 0, isEmpty: true);
-        }
-        else
-        {
-            _log.Trace(() => $"[ChatSelection] file={ctx.FilePath} sel={ctx.HasSelection} lines={ctx.StartLine}-{ctx.EndLine} running={_client.IsRunning}");
-            _client.SendSelectionChanged(ctx.SelectedText ?? string.Empty,
-                                         ctx.FilePath,
-                                         PathHelpers.ToFileUri(ctx.FilePath),
-                                         Math.Max(0, ctx.StartLine - 1),
-                                         Math.Max(0, ctx.StartColumn),
-                                         Math.Max(0, ctx.EndLine - 1),
-                                         Math.Max(0, ctx.EndColumn),
-                                         !ctx.HasSelection);
-        }
-    }
 }

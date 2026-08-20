@@ -615,6 +615,11 @@ public class VsOptionsDto
     /// command when it is not: a command that can only answer "nothing to restore" is worse than
     /// one that is not offered.</summary>
     public bool FileCheckpoints { get; set; }
+
+    /// <summary>Whether the selected code itself rides along with the prompt, or only its file and
+    /// line numbers. The host composes the tag either way — the WebView is told so the context chip
+    /// can show WHICH of the two is going out.</summary>
+    public bool SendSelectionText { get; set; }
     public bool DiffIgnoreWhitespace { get; set; }
     public bool ShowOpenDiffInVsButton { get; set; }
     public string[] AllowedUploadExtensions { get; set; }

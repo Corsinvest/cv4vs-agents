@@ -19,10 +19,11 @@ import { iconUrl } from '../../core/icon-url';
 import { fileName } from '../../core/path';
 import { formatTokenCount } from '../helpers/format';
 import { displayPathUi } from '../paths';
-import { parseIdeContextTags, cleanMessageOnlyText } from '../../core/ide';
+import { cleanMessageOnlyText } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
 import { openLightbox } from '../../core/dialog-host';
 import { observeSize } from '../resize';
+import { EMPTY } from '../../core/types';
 import type {
     IdeContextRef,
     ForkNotification,
@@ -63,6 +64,9 @@ export class CvMessage extends LitElement {
     @property({ type: Boolean }) isError = false;
     @property({ attribute: false }) images: UiImage[] = [];
     @property({ attribute: false }) files: UiFile[] = [];
+    /** Editor context for this turn, extracted by buildUserEntry — `text` never carries the
+     *  `<ide_*>` block any more. */
+    @property({ attribute: false }) ideRefs: IdeContextRef[] = [];
 
     @property({ type: Boolean, reflect: true }) expanded = false;
     @state() private _isOverflowing = false;
@@ -386,7 +390,7 @@ export class CvMessage extends LitElement {
     }
 
     /** Render one chip per IDE context ref attached to a user message. */
-    private _renderIdeChips(refs: IdeContextRef[]) {
+    private _renderIdeChips(refs: readonly IdeContextRef[]) {
         return refs.map((r) => {
             // Chip shows `name:start-end` (editor style, range only for a real
             // selection); tooltip carries the full relative path.
@@ -423,13 +427,11 @@ export class CvMessage extends LitElement {
             case 'user': {
                 // A slash-command envelope renders as the raw "/name args" in a normal user
                 // bubble (blue band), same as a typed message. A bare "/compact" has no envelope
-                // and flows through parseIdeContextTags unchanged.
+                // and reaches here as plain text.
                 const slashText = renderSlashCommand(this.text);
-                // Strip CLI-injected <ide_*> tags and render them as chips
-                // above the bubble instead of showing them verbatim.
-                const { text, refs } = slashText
-                    ? { text: slashText, refs: [] as IdeContextRef[] }
-                    : parseIdeContextTags(this.text);
+                const text = slashText || this.text;
+                // The chips come from the entry, built once when the message arrived.
+                const refs = slashText ? (EMPTY as readonly IdeContextRef[]) : this.ideRefs;
                 // Skip empty user envelopes (e.g. tool_result-only messages,
                 // consumed by the host for the tool row's OUT cell).
                 if (

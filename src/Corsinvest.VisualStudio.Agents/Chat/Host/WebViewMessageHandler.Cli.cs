@@ -21,8 +21,32 @@ internal sealed partial class WebViewMessageHandler
         var p = data.ToObject<Contracts.SendPromptNotification>();
         log.Debug(() => $"[{BridgeMessages.FromWebView.Cli.SendPrompt}] text len={(p.Text ?? "").Length} sessionId={client.SessionId ?? "(none)"} running={client.IsRunning}");
         // attachments stays a raw JArray: BuildContentBlocks turns it into CLI blocks.
-        var blocks = WebViewBridge.BuildContentBlocks(p.Text ?? "", data["attachments"] as JArray);
+        var blocks = WebViewBridge.BuildContentBlocks(BuildIdeContextBlock() + (p.Text ?? ""),
+                                                     data["attachments"] as JArray);
         client.SendPrompt(blocks, p.Uuid ?? "");
+    }
+
+    /// <summary>The `&lt;ide_*&gt;` block that goes in front of the prompt, or "" when there is no
+    /// editor context to report. Composed here rather than in the composer so the selected code
+    /// never crosses the bridge — the WebView only needs the file and the lines for its chip.</summary>
+    private string BuildIdeContextBlock()
+    {
+        if (entry?.Options.SendSelection == false) { return ""; }
+        var ctx = Ide.IdeContextService.Instance.GetCurrentContext();
+        if (string.IsNullOrEmpty(ctx?.FilePath)) { return ""; }
+        if (!ctx.HasSelection)
+        {
+            return $"<ide_opened_file>The user opened the file {ctx.FilePath} in the IDE. " +
+                   "This may or may not be related to the current task.</ide_opened_file>\n";
+        }
+        var head = $"<ide_selection>The user selected the lines {ctx.StartLine} to {ctx.EndLine} " +
+                   $"from {ctx.FilePath}";
+        const string tail = "This may or may not be related to the current task.</ide_selection>\n";
+        // With the text, the shape is the VS Code webview's — what the CLI's readers expect.
+        // Without, the tag ends on the path rather than trailing a colon over nothing.
+        return Options.AgentsOptions.Chat.SendSelectionText
+            ? $"{head}:\n{ctx.SelectedText ?? ""}\n\n{tail}"
+            : $"{head}. {tail}";
     }
 
     private void HandleRespondPermission(JObject data, int? id)
@@ -46,9 +70,8 @@ internal sealed partial class WebViewMessageHandler
 
     private void HandleSetSendSelection(JObject data, int? id)
     {
-        // Eye toggle: flip this session's SendSelection. OnEditorContextChangedForChat
-        // reads it and sends an empty selection while off. Re-emit the current context on
-        // re-enable so the chat regains the selection without waiting for the next change.
+        // Re-emit after the flip so re-opening the eye recovers the current selection instead of
+        // waiting for the next editor change.
         entry.Options.SendSelection = data.ToObject<Contracts.SetSendSelectionNotification>().Enabled;
         Ide.IdeContextService.Instance.ForceEmitCurrentContext();
     }
