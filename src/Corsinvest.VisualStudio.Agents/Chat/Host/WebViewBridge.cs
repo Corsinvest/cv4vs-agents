@@ -80,8 +80,10 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             // Inject boot-time theme script BEFORE navigation to avoid FOUC (refreshed via InjectTheme).
             if (_pendingTheme.HasValue) { await RegisterBootThemeScriptAsync(_pendingTheme.Value); }
 
-            // Virtual https host instead of file:// — file:// makes every resource cross-origin
-            // (browser warnings, hljs CSS silently ignored). Virtual host gives same-origin + correct MIME.
+            // Virtual https host instead of file:// — Chromium gives every file: document an origin
+            // unique to its own path, so the page cannot even reach itself ("Unsafe attempt to load
+            // URL … from frame with URL …", the same URL on both sides). The virtual host gives one
+            // real origin, correct MIME types, and a secure context.
             var indexPath = AppPaths.WebViewHtml();
             var folder = Path.GetDirectoryName(indexPath);
             if (!File.Exists(indexPath))
@@ -90,15 +92,17 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
                 // nothing — say which path we resolved before it does.
                 log.Warn($"[webview] index.html not found at '{indexPath}' — the chat can't load");
             }
-            webView.CoreWebView2.SetVirtualHostNameToFolderMapping("cv4vs.local", folder, CoreWebView2HostResourceAccessKind.Allow);
+            webView.CoreWebView2.SetVirtualHostNameToFolderMapping(AppPaths.WebViewHost, folder, CoreWebView2HostResourceAccessKind.Allow);
 
             // Lazy-served icons: virtual-host would serve from disk and 404 on not-yet-generated PNGs,
             // so intercept the request instead and generate on demand from KnownMonikers on the UI thread.
             Directory.CreateDirectory(AppPaths.IconCacheFolder);
-            webView.CoreWebView2.AddWebResourceRequestedFilter("https://cv4vs-icons.local/*", CoreWebView2WebResourceContext.Image);
+            webView.CoreWebView2.AddWebResourceRequestedFilter($"https://{AppPaths.IconHost}/*", CoreWebView2WebResourceContext.Image);
             webView.CoreWebView2.WebResourceRequested += OnIconRequested;
 
-            webView.Source = new Uri("https://cv4vs.local/" + Path.GetFileName(indexPath));
+            // https, not http: the scheme costs nothing either way (nothing ever connects — the
+            // host is served from disk), and https is what gives the page a secure context.
+            webView.Source = new Uri($"https://{AppPaths.WebViewHost}/" + Path.GetFileName(indexPath));
         }
         catch (Exception ex)
         {
@@ -469,7 +473,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         || type == BridgeMessages.ToWebView.Chat.ToolProgress;
 
     /// <summary>
-    /// Intercepts every `https://cv4vs-icons.local/<key>.png` fetch from
+    /// Intercepts every `<see cref="AppPaths.IconHost"/>/<key>.png` fetch from
     /// the WebView. Ensures the PNG exists on disk (generating it from
     /// the matching VS KnownMoniker on first hit), then serves the bytes
     /// back as the HTTP response.
