@@ -33,7 +33,11 @@ export function parseIdeContextTags(text: string | undefined | null): {
             }
             const selection = match.match(/<ide_selection>([\s\S]*?)<\/ide_selection>/);
             if (selection) {
-                const selMatch = selection[1].match(/lines (\d+) to (\d+) from (.+):\s*\n/);
+                // Either shape: `from PATH:` then the code, or `from PATH.` when only the lines
+                // were sent. The path is lazy so it stops at whichever terminator comes first.
+                const selMatch = selection[1].match(
+                    /lines (\d+) to (\d+) from (.+?)(?::\s*\n|\.\s)/,
+                );
                 if (selMatch) {
                     refs.push({
                         filePath: selMatch[3].trim(),

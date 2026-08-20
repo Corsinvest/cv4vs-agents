@@ -370,8 +370,15 @@ telemetry. See [Context, usage & statistics](docs/chat/context-and-usage.md).
 
 ## IDE integration
 
-- **IDE context badge** — a chip above the composer showing the active file; click opens it at the
-  selection. An eye icon toggles whether the file/selection is shared with the session.
+- **IDE context badge** — a chip above the composer showing the active file and, when you have
+  selected code, its line range. Clicking it toggles whether that context is shared with the
+  session; while it is off the chip dims and shows a struck-through eye.
+  - A trailing icon says **what** is going out: 🔖 the position alone (file and lines), 🧾 the
+    position **plus the selected code**. The second appears only with *Options → Chat → Send the
+    selected text* on **and** a live selection — an open file with no selection has no code to
+    attach, so it stays a bookmark. Sending the code is what makes an **unsaved** buffer readable,
+    since otherwise Claude opens the file and sees the saved version; it also costs those tokens on
+    every message. See [Spending less context](#spending-less-context).
 - **Post-edit diagnostics** *(experimental, off by default)* — after Claude edits a file, feed back the
   **new** errors/warnings that edit introduced (diffed against the Error List before the edit). The idea
   is to close the edit → error → fix loop without a manual build, as the VS Code extension does. **It is
@@ -410,6 +417,31 @@ you can answer immediately. It clears when you answer, click into the pane, or u
 
 - **CLI banner** — a bar shown if the CLI process exits unexpectedly.
 - **Open Claude in Terminal** — launch an interactive CLI session.
+
+---
+
+## Spending less context
+
+Tokens are a budget, and the chat's context window is the part of it you can watch filling up — the
+gauge in the composer shows how much room is left before the CLI compacts the conversation.
+
+Most of what looks like a saving isn't. **A setting that changes what the chat draws changes nothing
+about what was sent**: by the time a tool result is on screen it has already been through the model.
+Preview lines, Compact Ask answers, Show tool errors inline, the diff options — all rendering. These
+four are the ones that reach the wire:
+
+| | Where | Default | What it does |
+|---|---|---|---|
+| **The eye** on the file chip | composer, **per pane** | open | Shuts off the file/lines block on every message. The biggest single knob — reach for it when the conversation has nothing to do with what is on screen. |
+| **Send the selected text with the message** | Options → Chat | **off** | On, your selected code rides along with *every* message while that selection stands (the chip's icon turns from 🔖 to 🧾). Off, Claude opens the file when it needs it. Turn it on for unsaved buffers, where the copy on disk is the stale one. |
+| **Extended thinking / effort** | model menu, **per session** | thinking off | Buys the model room to reason before answering — worth it on a hard bug, wasted on a rename. |
+| **Send post-edit diagnostics** | Options → Chat | **off** | Feeds the errors an edit introduced back into the context after every edit. |
+
+Three of the four already default to the cheap setting, so the one to know about is the eye — it is
+per-pane and per-session, made to be flicked rather than configured.
+
+Full detail, including what specifically does *not* help:
+[Spending less context](docs/chat/context-and-usage.md#spending-less-context).
 
 ---
 

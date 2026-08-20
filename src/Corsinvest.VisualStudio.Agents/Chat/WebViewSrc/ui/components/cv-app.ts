@@ -14,7 +14,7 @@ import { Transcript } from '../../core/transcript';
 import { clearMarkdownCache } from '../../core/markdown';
 import { buildGroups } from '../../core/exchanges';
 import { openRewindDialog } from '../../core/dialog-host';
-import { cleanMessageOnlyText } from '../../core/ide';
+import { cleanMessageOnlyText, parseIdeContextTags } from '../../core/ide';
 import './cv-notice-stack';
 import type { CvNoticeStack } from './cv-notice-stack';
 import './cv-welcome';
@@ -66,7 +66,7 @@ import type {
     AssistantTextNotification,
     ExchangeEndedNotification,
     CliErrorNotification,
-    UserTextNotification,
+    UserTextEcho,
     ToolPermissionNotification,
     HistoryEventDto,
     HistoryLoadedNotification,
@@ -294,7 +294,7 @@ export class CvApp extends LitElement {
         );
 
         this._offs.push(
-            bridge.onNotification<UserTextNotification>(Msg.toWebView.chat.userText, (data) => {
+            bridge.onNotification<UserTextEcho>(Msg.toWebView.chat.userText, (data) => {
                 const entry = CvApp.buildUserEntry(data);
                 if (!entry) {
                     return;
@@ -974,7 +974,7 @@ export class CvApp extends LitElement {
         for (const ev of events ?? []) {
             switch (ev.type) {
                 case Msg.toWebView.chat.userText: {
-                    const d = ev.data as UserTextNotification;
+                    const d = ev.data as UserTextEcho;
                     const e = CvApp.buildUserEntry(d);
                     if (e) {
                         place(e, d.parentToolUseId);
@@ -1337,11 +1337,9 @@ export class CvApp extends LitElement {
     // and the history replay (then batch/prepend). Zero side effects: no _entries,
     // no _appendEntry, no scroll, no gauge. The one construction path for both.
 
-    /** UserTextNotification → a user or slash-result entry (with lazy image/file chips), or null when
+    /** A user message → a user or slash-result entry (with lazy image/file chips), or null when
      *  it's a sub-agent tool-result echo / meta-injection / empty envelope that shouldn't render. */
-    private static buildUserEntry(
-        d: UserTextNotification,
-    ): UiUserEntry | UiSlashResultEntry | null {
+    private static buildUserEntry(d: UserTextEcho): UiUserEntry | UiSlashResultEntry | null {
         if (d.parentToolUseId && !d.text?.startsWith('[Request interrupted')) {
             return null;
         }
@@ -1361,6 +1359,11 @@ export class CvApp extends LitElement {
                   }
                 : null;
         }
+        // Once, here — not at render time. Live the composer hands the refs over structured;
+        // replayed they are still a tag inside the text, as in any session the terminal or VS
+        // Code wrote.
+        const { text: ownText, refs: parsedRefs } = parseIdeContextTags(text);
+        const ideRefs = d.ideRefs ?? parsedRefs;
         const images: UiImage[] = (d.images ?? []).map((img) => ({
             name: 'image',
             lazy: img.uuid ? { uuid: img.uuid, blockIdx: img.blockIdx } : undefined,
@@ -1372,17 +1375,18 @@ export class CvApp extends LitElement {
         }));
         // CLI meta-injections are filtered host-side (ContentBlockTranslator via MetaInjection),
         // so anything that reaches here is a real user turn.
-        if (!text && images.length === 0 && files.length === 0) {
+        if (!ownText && images.length === 0 && files.length === 0 && ideRefs.length === 0) {
             return null;
         }
         return {
             kind: 'text',
             id: ++_entryIdSeq,
             role: 'user',
-            text,
+            text: ownText,
             uuid: d.uuid ?? undefined,
             images: images.length > 0 ? images : undefined,
             files: files.length > 0 ? files : undefined,
+            ideRefs: ideRefs.length > 0 ? ideRefs : undefined,
             timestamp: d.timestamp ?? undefined,
         };
     }
@@ -1839,6 +1843,7 @@ export class CvApp extends LitElement {
             ?queued=${e.role === 'user' && !!e.uuid && this._queuedUuids.has(e.uuid)}
             .images=${e.role === 'user' ? (e.images ?? EMPTY) : EMPTY}
             .files=${e.role === 'user' ? (e.files ?? EMPTY) : EMPTY}
+            .ideRefs=${e.role === 'user' ? (e.ideRefs ?? EMPTY) : EMPTY}
             ?streaming=${e.role === 'assistant' ? !!e.streaming : false}
             ?isError=${e.role === 'slash-result' ? e.isError : e.role === 'assistant' && !!e.error}
             .timestamp=${

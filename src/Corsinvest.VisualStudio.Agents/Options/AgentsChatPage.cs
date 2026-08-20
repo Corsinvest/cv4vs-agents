@@ -127,6 +127,11 @@ public class AgentsChatPage : AgentsOptionsPage
     public bool UseCtrlEnterToSend { get; set; } = false;
 
     [Category("Input")]
+    [DisplayName("Send the selected text with the message")]
+    [Description("Attach the selected code to the message, not just its file and line numbers. Costs tokens on every message sent with a selection, so it is off by default — but it is what makes an unsaved buffer readable, since otherwise the model opens the file from disk and sees the saved version. The composer's file badge shows which of the two is going out.")]
+    public bool SendSelectionText { get; set; } = false;
+
+    [Category("Input")]
     [DisplayName("Initial permission mode")]
     [Description("Permission mode every new chat session starts in. You can still change it per-session from the toolbar. \"Manual\" (Default) is the most cautious. \"BypassPermissions\" also requires \"Allow dangerously skip permissions\" below — without it, sessions start in Manual.")]
     public InitialPermissionMode InitialPermissionMode { get; set; } = InitialPermissionMode.Default;

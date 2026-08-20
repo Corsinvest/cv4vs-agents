@@ -20,7 +20,8 @@ import type {
     NoticeNotification,
     NoticeDismissedDetail,
     PromptHistoryNotification,
-    UserTextNotification,
+    UserTextEcho,
+    IdeContextRef,
     UserImageDto,
     UserFileDto,
     SendPromptNotification,
@@ -959,24 +960,24 @@ export class CvPrompt extends LitElement implements CommandHost {
         // Client-minted uuid: the CLI reuses it for the JSONL entry, so
         // fork_session works on live messages too (not just replayed ones).
         const uuid = crypto.randomUUID();
-        // Build the final prompt once: prepend the active editor's <ide_*> tag
-        // when the IDE-context toggle is on. Doing it here (not in _dispatch)
-        // means the echoed bubble and the CLI get the identical text — and
-        // cv-message parses the tag back into a file/selection chip.
+        // For the bubble's chip only — the tag the model reads is composed host-side, where the
+        // selected code is, so nothing here has to match its wording.
         // A slash command never carries IDE context (matches the VS Code webview:
         // ct = enabled && !startsWith('/')) — the file/selection chip would be noise on /model etc.
         const ctx =
             appState.ideContextEnabled && !text.startsWith('/') ? appState.ideContext : null;
-        const ideBlock = !ctx?.filePath
-            ? ''
-            : ctx.hasSelection
-              ? `<ide_selection>The user selected the lines ${ctx.startLine} to ${ctx.endLine} from ${ctx.filePath}:\n\nThis may or may not be related to the current task.</ide_selection>\n`
-              : `<ide_opened_file>The user opened the file ${ctx.filePath} in the IDE. This may or may not be related to the current task.</ide_opened_file>\n`;
-        const payload = { text: ideBlock + text, attachments: this._attachments, uuid };
+        const ideRefs: IdeContextRef[] = !ctx?.filePath
+            ? []
+            : [
+                  ctx.hasSelection
+                      ? { filePath: ctx.filePath, startLine: ctx.startLine, endLine: ctx.endLine }
+                      : { filePath: ctx.filePath },
+              ];
+        const payload = { text, attachments: this._attachments, uuid };
         // Echo the user bubble locally now (stream-json doesn't reflect the
         // submitted message back). Same path for live and queued messages, so
         // a queued one shows up immediately instead of waiting for the flush.
-        this._echoUserMessage(payload);
+        this._echoUserMessage(payload, ideRefs);
         if (this._isBusy) {
             // Already running → enqueue. Drained when isBusy flips to false.
             this._setQueue([...this._queue, payload]);
@@ -1087,11 +1088,14 @@ export class CvPrompt extends LitElement implements CommandHost {
      *  they resolve from the JSONL on click, matching the history-replay format so
      *  there's a single rendering path. blockIdx is the send-order index, matching
      *  the content[] block the host writes. */
-    private _echoUserMessage(payload: {
-        text: string;
-        attachments: Attachment[];
-        uuid: string;
-    }): void {
+    private _echoUserMessage(
+        payload: {
+            text: string;
+            attachments: Attachment[];
+            uuid: string;
+        },
+        ideRefs: IdeContextRef[] = [],
+    ): void {
         if (!payload.text && payload.attachments.length === 0) {
             return;
         }
@@ -1109,12 +1113,13 @@ export class CvPrompt extends LitElement implements CommandHost {
                 files.push({ name: att.name, uuid: payload.uuid, blockIdx: i });
             }
         });
-        const msg: UserTextNotification = {
+        const msg: UserTextEcho = {
             text: payload.text,
             uuid: payload.uuid,
             images: images.length > 0 ? images : null,
             files: files.length > 0 ? files : null,
             parentToolUseId: null,
+            ideRefs: ideRefs.length > 0 ? ideRefs : undefined,
         };
         bridge.emit(Msg.toWebView.chat.userText, msg);
     }

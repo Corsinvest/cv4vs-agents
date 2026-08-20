@@ -6,6 +6,8 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import EyeOff16Regular from '@fluentui/svg-icons/icons/eye_off_16_regular.svg';
+import Bookmark16Regular from '@fluentui/svg-icons/icons/bookmark_16_regular.svg';
+import CodeBlock16Regular from '@fluentui/svg-icons/icons/code_block_16_regular.svg';
 import { state as appState } from '../../core/state';
 import type { IdeContextNotification, SetSendSelectionNotification } from '../../core/types';
 import { bridge } from '../../core/bridge';
@@ -69,6 +71,20 @@ export class CvIdeContextBadge extends LitElement {
                 height: 14px;
                 display: block;
             }
+            /* Trailing "what goes out" glyph. Dimmer than the name it follows: it qualifies the
+               chip, it is not the point of it. */
+            .what {
+                flex-shrink: 0;
+                display: inline-flex;
+                align-items: center;
+                color: var(--colorNeutralForeground3);
+                opacity: 0.8;
+            }
+            .what svg {
+                width: 13px;
+                height: 13px;
+                display: block;
+            }
             /* A ceiling, not a width: a short name takes the room it needs and a long one stops
                here. The ellipsis goes at the START — a truncated name keeps its extension and last
                words, which is what tells one file from another, while the head is usually a shared
@@ -100,9 +116,13 @@ export class CvIdeContextBadge extends LitElement {
 
     @state() private _ctx: IdeContextNotification | null = appState.ideContext;
     @state() private _enabled = appState.ideContextEnabled;
+    /** Mirrored rather than read at render time because Options → Apply replaces the whole `ui`
+     *  block while the chat is open, and the chip has to follow it. */
+    @state() private _withText = appState.ui.sendSelectionText;
 
     private _offCtx?: () => void;
     private _offEnabled?: () => void;
+    private _offUi?: () => void;
 
     override connectedCallback(): void {
         super.connectedCallback();
@@ -112,12 +132,16 @@ export class CvIdeContextBadge extends LitElement {
         this._offEnabled = appState.on('ideContextEnabled', (v) => {
             this._enabled = v;
         });
+        this._offUi = appState.on('ui', (v) => {
+            this._withText = v.sendSelectionText;
+        });
     }
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         this._offCtx?.();
         this._offEnabled?.();
+        this._offUi?.();
     }
 
     private _onToggleEye = (e: Event): void => {
@@ -146,6 +170,9 @@ export class CvIdeContextBadge extends LitElement {
         // Editor-style `:start-end` range, shown only for a real selection
         // (a bare open file carries no lines). Matches the in-bubble chip.
         const lineInfo = ctx.hasSelection ? `:${ctx.startLine}-${ctx.endLine}` : '';
+        // The option alone doesn't decide it: with no selection there is no code to attach, so an
+        // open file stays a bookmark whatever the setting says.
+        const withCode = this._withText && ctx.hasSelection;
 
         return html`
             <fluent-button
@@ -167,16 +194,31 @@ export class CvIdeContextBadge extends LitElement {
                 <img class="file-icon" src=${iconUrl(ctx.fileName)} width="16" height="16" alt="" />
                 <span class="name"><bdi>${ctx.fileName}</bdi></span>
                 ${lineInfo ? html`<span class="info">${lineInfo}</span>` : nothing}
+                <!-- An indicator, not a second button: the chip has one action and it is the eye.
+                     Dropped while paused — nothing is going out to describe. -->
+                ${
+                    this._enabled
+                        ? html`<span class="what"
+                              >${unsafeHTML(withCode ? CodeBlock16Regular : Bookmark16Regular)}</span
+                          >`
+                        : nothing
+                }
             </fluent-button>
             <!-- The path, not the bare name the chip already shows: it says WHICH file, through
                  displayPathUi so it follows "Show relative paths" like the tool rows and falls back
                  to the full path outside the workdir. That line is the data, so it keeps tip-name;
-                 the second says which of the two states the toggle is in, which the eye alone does
-                 not. Not "click to stop" — clicking a toggle is what a toggle is for. -->
+                 the second is where the trailing glyph gets its words — an icon on its own is a
+                 riddle. Not "click to stop": clicking a toggle is what a toggle is for. -->
             <fluent-tooltip anchor="ide-badge" positioning="after">
                 <span class="tip-name">${displayPathUi(ctx.filePath)}${lineInfo}</span>
                 <span class="tip-desc"
-                    >${this._enabled ? 'Sent with every message' : 'Not sent'}</span
+                    >${
+                        !this._enabled
+                            ? 'Not sent'
+                            : withCode
+                              ? 'Sent with every message, selected code included'
+                              : 'Sent with every message — the position, not the code'
+                    }</span
                 >
             </fluent-tooltip>
         `;

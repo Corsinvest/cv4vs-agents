@@ -14,6 +14,7 @@ export interface VsOptionsDto {
     compactOutputAskAnswers: boolean;
     allowDangerouslySkipPermissions: boolean;
     fileCheckpoints: boolean;
+    sendSelectionText: boolean;
     diffIgnoreWhitespace: boolean;
     showOpenDiffInVsButton: boolean;
     allowedUploadExtensions: string[];

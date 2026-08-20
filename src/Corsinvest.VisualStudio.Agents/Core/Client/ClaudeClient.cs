@@ -835,41 +835,6 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public Task McpToggleAsync(string serverName, bool enabled)
         => SendControlRequestAsync(ClientMessages.ControlSubtype.McpToggle, new { serverName, enabled });
 
-    public void SendSelectionChanged(string text, string filePath, string fileUrl,
-                                      int startLine, int startChar, int endLine, int endChar,
-                                      bool isEmpty)
-    {
-        var transport = _transport;
-        if (!transport.IsRunning)
-        {
-            _log.Trace(() => "[ChatSelection] SendSelectionChanged skip: transport not running");
-            return;
-        }
-        _log.Trace(() => $"[ChatSelection] SendSelectionChanged → filePath={filePath} isEmpty={isEmpty} line={startLine}-{endLine}");
-        transport.Write(new
-        {
-            type = "request",
-            channelId = "",
-            requestId = "",
-            request = new
-            {
-                type = "selection_changed",
-                selection = new
-                {
-                    text = text ?? string.Empty,
-                    filePath,
-                    fileUrl,
-                    selection = new
-                    {
-                        start = new { line = startLine, character = startChar },
-                        end = new { line = endLine, character = endChar },
-                        isEmpty,
-                    },
-                },
-            },
-        });
-    }
-
     public void SendPrompt(JArray contentBlocks, string uuid)
     {
         EnsureRunning();

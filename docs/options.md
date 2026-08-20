@@ -25,6 +25,7 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 | Chat font size | int (px) | `13` | Font size of the chat message text. |
 | Show WebView developer entries | bool | `false` | Add "WebView DevTools" and "WebView task manager" to the chat toolbar's "More" (…) menu — the browser console/DOM/network on the chat itself, and the browser's processes with their memory and CPU. Pre-release builds always offer both. |
 | Autosave before Claude reads/writes | bool | `true` | Save a dirty file before Claude reads/writes it, so it sees your in-editor edits, not the stale on-disk version. |
+| Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them — the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](chat/context-and-usage.md#spending-less-context). |
 | Keep file checkpoints (Rewind) | bool | `true` | Let Claude copy a file before editing it, so [`/rewind`](chat/rewind.md) can restore it. Copies live under `~/.claude/file-history` and are never cleaned up — the reason to turn this off if you do not use Rewind. Read when a chat starts, so it applies to the next one you open. |
 | Send post-edit diagnostics to Claude (experimental) | bool | `false` | Feed back the new errors/warnings an edit introduced. Experimental — unreliable because VS only analyses files open in an editor (see IDE integration). |
 | Allowed upload file extensions | string[] | 93 defaults | Extensions accepted on upload/drop. Images → images, `.pdf` → document, rest → text; anything else rejected. Editable list. |
@@ -101,7 +102,7 @@ add the half line that matters before it goes.
 | Column | Meaning |
 |---|---|
 | Title | What the menu item reads. |
-| Prompt | What reaches the composer. The instruction alone: the file and selection travel with it through the IDE context, and Claude reads the symbol itself with the `nav_*` tools, so pasting code in here only duplicates what the pane already sends. |
+| Prompt | What reaches the composer. The instruction alone: which file and which lines travel with it through the IDE context, and Claude reads the symbol itself with the `nav_*` tools, so pasting code in here only duplicates what the pane already points at. |
 | Needs selection | Greys the entry out when nothing is selected, the way Copilot greys "Optimize selection". Leave it off for prompts that read fine against the whole file. |
 
 Rows appear in the menu in the order listed, so the one you reach for most belongs at the top;

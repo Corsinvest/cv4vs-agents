@@ -96,9 +96,6 @@ public interface IClaudeClient : IDisposable
     Task McpReconnectAsync(string serverName);
     Task McpToggleAsync(string serverName, bool enabled);
 
-    void SendSelectionChanged(string text, string filePath, string fileUrl,
-                              int startLine, int startChar, int endLine, int endChar,
-                              bool isEmpty);
     void SendPrompt(JArray contentBlocks, string uuid);
 
     /// <summary>Responds to a ToolPermissionRequested event, correlating by the
