@@ -197,7 +197,7 @@ export function renderMarkdown(text: string | undefined | null): string {
  * on the real (still-growing) text, and the final render uses `renderMarkdown`
  * on the complete text. Same sanitized pipeline → same safety.
  */
-function closeOpenMarkdown(text: string): string {
+export function closeOpenMarkdown(text: string): string {
     // Walk lines tracking whether we're inside a fenced code block. A line that
     // *starts* with ``` flips the state — so ``` that appear as content (not at
     // line start, or while already inside a block) don't throw off the count.

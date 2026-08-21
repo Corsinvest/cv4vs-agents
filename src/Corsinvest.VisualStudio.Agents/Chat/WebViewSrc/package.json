@@ -10,7 +10,7 @@
         "build:dev": "node tools/gen-bridge.mjs && node esbuild.config.mjs --dev",
         "dev": "node tools/gen-bridge.mjs && node esbuild.config.mjs --watch",
         "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
-        "test": "node --test \"tests/**/*.test.ts\"",
+        "test": "node --import ./tests/_helpers/register.mjs --test \"tests/**/*.test.ts\"",
         "lint": "eslint \"{core,ui,tests}/**/*.ts\"",
         "lint:fix": "eslint --fix \"{core,ui,tests}/**/*.ts\"",
         "format": "prettier --write \"{core,ui,tests}/**/*.ts\" \"*.ts\"",
