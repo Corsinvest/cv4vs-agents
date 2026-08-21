@@ -10,6 +10,7 @@ import DOMPurify from 'dompurify';
 import { resolveLang, highlightCode, clearHighlightCache } from './lang';
 import { escapeHtml } from './html';
 import { findFileRefs, firstRefHint, parseFileRef } from './file-links';
+import { renderCodespanInner } from './codespan-link';
 
 // CLI-internal tags that look like HTML but are content; DOMPurify would
 // drop them silently, so escape up-front to render as literal text.
@@ -20,6 +21,15 @@ const _LITERAL_TAG_RE =
 const renderer = new marked.Renderer() as Renderer & {
     code: (token: Tokens.Code) => string;
     link: (token: Tokens.Link) => string;
+    codespan: (token: Tokens.Codespan) => string;
+};
+
+// Inline `code` that is a file reference and nothing else becomes a link inside the span. marked
+// tokenizes code spans before any extension runs, so the fileLink tokenizer below never sees them —
+// which is the right rule for a fence and the wrong one here, since the model backticks a filename
+// precisely because it is one. The decision lives in codespan-link.ts so it can be tested.
+renderer.codespan = function (token: Tokens.Codespan): string {
+    return `<code>${renderCodespanInner(token.text ?? '', { parseFileRef, escapeHtml })}</code>`;
 };
 
 renderer.code = function (token: Tokens.Code): string {
@@ -162,7 +172,9 @@ export function renderMarkdown(text: string | undefined | null): string {
     try {
         const html = marked.parse(normalized, { async: false }) as string;
         out = DOMPurify.sanitize(html, {
-            ADD_ATTR: ['target', 'frompre', 'data-file', 'data-line'],
+            // data-line-end is what makes a range select rather than just scroll. It was missing
+            // here while the renderer emitted it, so "x.cs:35-48" opened at 35 and selected nothing.
+            ADD_ATTR: ['target', 'frompre', 'data-file', 'data-line', 'data-line-end'],
             ADD_TAGS: ['cv-copy-btn'],
         });
     } catch (err) {
@@ -185,7 +197,7 @@ export function renderMarkdown(text: string | undefined | null): string {
  * on the real (still-growing) text, and the final render uses `renderMarkdown`
  * on the complete text. Same sanitized pipeline → same safety.
  */
-function closeOpenMarkdown(text: string): string {
+export function closeOpenMarkdown(text: string): string {
     // Walk lines tracking whether we're inside a fenced code block. A line that
     // *starts* with ``` flips the state — so ``` that appear as content (not at
     // line start, or while already inside a block) don't throw off the count.
