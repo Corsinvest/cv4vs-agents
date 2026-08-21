@@ -363,7 +363,9 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     text-decoration: underline;
     color: inherit;
 }
-/* "path:line" file link inside rendered markdown (fileLink marked extension) — opens in VS on click. */
+/* "path:line" file link inside rendered markdown — opens in VS on click. Appears both in prose
+ * (the fileLink marked extension) and inside an inline code span whose whole content is a
+ * reference, where it keeps the span's monospace and only takes the link colour. */
 .cv-file-link {
     color: var(--colorBrandForegroundLink);
     text-decoration: none;
