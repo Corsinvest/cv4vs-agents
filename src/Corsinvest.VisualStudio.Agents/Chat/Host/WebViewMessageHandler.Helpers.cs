@@ -318,12 +318,15 @@ internal sealed partial class WebViewMessageHandler
         {
             if (AgentsOptions.Chat.SelectLinesOnOpen && endLine >= startLine && endLine > 0)
             {
-                sel.GotoLine(startLine, true);
-                if (endLine > startLine)
-                {
-                    sel.LineDown(true, endLine - startLine);
-                }
-                sel.EndOfLine(true);
+                // Anchored at the END and extended upwards, so the caret — and with it the view —
+                // lands on the first line. A range names a block by where it begins: selecting
+                // downwards leaves the caret at the bottom, and an 80-line range then scrolls its
+                // own first line off the top of the screen, which is the one the model meant.
+                // MoveToLineAndOffset rather than GotoLine, as everywhere else here: it says which
+                // column it wants instead of inheriting wherever the caret happened to be.
+                sel.MoveToLineAndOffset(endLine, 1, false);
+                sel.EndOfLine(false);
+                sel.MoveToLineAndOffset(startLine, 1, true);
             }
             else
             {
