@@ -6,6 +6,135 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-20
+
+Claude can put your files back where they were without touching the conversation, and the chat
+stops being slow in the two places it was: a long transcript no longer re-renders itself on every
+token, and opening a pane no longer waits three seconds on a name lookup that was never going to
+resolve. The composer is redrawn around one border instead of six, and four bugs turned up while
+doing it.
+
+### Added
+
+- **`/rewind` — put the files back, leave the conversation alone.** Claude edits a handful of files
+  across a long turn and one of them was a mistake; undo in the editor only reaches what is open,
+  and re-asking rarely restores exactly what was there. The command opens a picker of the session's
+  user messages, and choosing one shows **what going back to it would change before anything is
+  written**: which files, how many lines each. Clicking a file opens it in **Visual Studio's own
+  diff** — its copy from before that message against what is on disk now — so the decision is made
+  looking at the change, not at a filename. Only the Rewind button touches disk.
+  - **The conversation is never modified.** VS Code's version rewinds the transcript too, and forks
+    it; this one restores files and nothing else, so the chat you are reading stays the chat you
+    were having.
+  - Only messages that actually changed files are offered — a question that changed nothing is not
+    a place to go back to.
+  - A file the turn *created* has no earlier copy, so rewinding past it deletes the file and the
+    diff shows an empty left side. Said in the dialog rather than discovered afterwards.
+  - The command hides itself when the pane has no snapshots behind it, which is the honest answer
+    to a command that could only reply "nothing to restore".
+  - Snapshots come from the CLI, under `~/.claude/file-history` — now documented in
+    [Settings and data](docs/settings-and-data.md), as the one folder there that grows on its own
+    and is never cleaned up. **Options → Chat → Keep file checkpoints** turns it off; it is read
+    when a chat starts, so flipping it mid-session leaves that session as it was and says so.
+  - See [Rewind](docs/chat/rewind.md).
+
+- **Send the selected code with the message, for the buffer you have not saved.** The block that
+  travels with each prompt named the lines — *lines 40 to 78 from Foo.cs* — and carried nothing
+  between them, so on an unsaved buffer the model opened the file and read the stale version from
+  disk. **Options → Chat → Send the selected text with the message** attaches the selection itself.
+  Off by default: the code goes out again with *every* message while that selection stands,
+  including "yes" and "go on", and with it off the model opens the file only when it needs to.
+  The context chip says which of the two is going out — a bookmark for the position alone, a code
+  block when the text rides along. See
+  [Spending less context](docs/chat/context-and-usage.md#spending-less-context), which is new and
+  covers what actually saves context and what only looks like it does.
+
+### Changed
+
+- **The composer, redrawn around one border.** Six borders became one, on the text field itself;
+  the model, effort, permission and context controls sit outside it as flat subtle buttons, and
+  attachment chips moved to their own band above the text — a long list now pushes the field down
+  instead of eating the first line you type. The slash button is gone: its job is the third item in
+  the `+` menu, next to attaching a file and referencing one, which is where you were already
+  looking. Tooltips stopped repeating what clicking obviously does.
+
+### Fixed
+
+- **Ask: one answer ticked several options.** The chosen-option test searched the whole result
+  text, so "Tab to indent, spaces to align" also lit *Tab* and *Spaces*, and "Dark High Contrast"
+  lit *Dark*. With several questions it reached across them and ticked options from the wrong one.
+  The copy button had the same bug, and additionally listed nothing ticked when the answer came
+  through Other.
+
+- **An Ask answered with Other showed no answer at all.** Typing a free-text answer rendered as
+  unanswered — an em dash in the compact cell, no chosen row in the full list, a dash in the copied
+  markdown. The answer had always reached the CLI; only the rendering lost it.
+
+- **Enter in the last question's Other box did nothing.** It submits now.
+
+- **The `@` menu opened on email addresses, and half-referenced paths with spaces.** Typing
+  `mario@rossi.it` opened the file picker, and Enter or Tab then picked a suggestion instead of
+  sending the message; the trigger now follows the CLI's own rule (start of text, or whitespace
+  before the `@`). And a picked file whose path contains a space reached the CLI cut short —
+  `docs/my notes/todo.md` arrived as `docs/my` — so the menu now quotes it.
+
+- **The IDE-context chip vanished when a session was reopened.** A submitted message can reach the
+  CLI as several text blocks, and the replay kept only the last one — which meant the block holding
+  the context tag was the one overwritten. Live it was fine; on reopening it was gone.
+
+- **The chevron on Ask and Update Todos toggled nothing.** Both rows looked open-and-active at rest
+  and did nothing when clicked, because neither has a second view to expand into. The Agent row
+  keeps its chevron, which works.
+
+- **The confirmation dialogs were drawn by Windows, not by Visual Studio.** Deleting a session,
+  restoring the default editor prompts, pasting a malformed profile — each threw up a white Windows
+  box in the middle of a dark IDE. All nine now use the shell's own dialog, themed like everything
+  else, and the Yes/No ones default to **No**: a stray Enter no longer deletes a session.
+
+- **The session picker froze Visual Studio while it read the folder.** Opening the list scanned
+  every session file on the UI thread — on this repo's own working directory, 2031 sessions across
+  520 MB. The popup now opens immediately and fills in behind: **508ms cold, 40ms warm**, and the
+  IDE stays responsive throughout. While it is still reading, the empty list says so instead of
+  claiming there are no sessions; and a session whose only prompt was blank lines no longer shows
+  as an empty row.
+
+- **The microphone stayed on after closing a pane mid-dictation**, and **reopening a dialog left a
+  phantom entry** that swallowed the next Escape.
+
+- **A bogus ARIA role on every chat bubble.** Five of the seven message kinds were opening a nested
+  live region inside one that already existed, so screen readers announced things twice or not at
+  all.
+
+- **The queue row, in the two things it is for.** Its bin now lines up with the send button below
+  it, all three bins light up on hover, a long queued message clamps at three lines instead of six
+  — one pasted function used to bury everything else waiting — and a queued message with
+  attachments shows the same chip the composer and the sent bubble show.
+
+- **A queued message scrolled out from under you.** Sending one slid its bubble below the reply and
+  left you looking at a gap; if you were already at the bottom, the view follows it now. Scrolled
+  up, nothing moves.
+
+### Performance
+
+- **Opening a chat pane is about three seconds faster.** The page had its HTML in 4ms and then sat
+  there for two and a half seconds — the same ±3ms gap however loaded the machine was, which is the
+  shape of a fixed wait rather than of work. It was the hostname: the WebView is served from a
+  virtual host, and `.local` is reserved for mDNS, so Windows answered it with a multicast query and
+  waited out the timeout before WebView2 served the file from disk as it was always going to.
+  Opening a pane goes from **~4.5s to ~1.5s**, and the number stops moving — 1215/1255/1334ms across
+  three panes, against 2.1–4.3s before.
+
+- **A long transcript no longer re-renders itself on every token.** One streaming delta used to
+  update every message and every tool row in the conversation, and force a reflow per user bubble.
+  Measured on a real 24.5k-node transcript — 318 tool rows, 402 messages — median full layout fell
+  from **46.4ms to 8.8ms (81%)**, and a token now updates only the message that changed. Code stops
+  re-highlighting once its fence closes.
+
+### Internal
+
+- Twenty optional parameters that no call site relied on, removed from the C# side. No behaviour
+  change: the signatures now say what the calls actually do.
+
 ## [1.4.0] - 2026-08-17
 
 A session can be driven from somewhere else — claude.ai/code, or a phone — and the code you are
