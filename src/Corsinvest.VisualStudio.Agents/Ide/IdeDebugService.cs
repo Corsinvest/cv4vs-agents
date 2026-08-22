@@ -43,16 +43,9 @@ internal sealed partial class IdeDebugService
             var state = new DebugState { Mode = ModeToString(dbg.CurrentMode) };
             if (dbg.CurrentMode == dbgDebugMode.dbgBreakMode)
             {
-                // In break mode VS moves the caret to the current statement; the active
-                // document's selection gives us file + line of where execution is paused.
-                // (EnvDTE's StackFrame exposes only FunctionName, not a source location.)
-                try
-                {
-                    var doc = GetDte()?.ActiveDocument;
-                    state.CurrentFile = doc?.FullName;
-                    if (doc?.Selection is TextSelection sel) { state.CurrentLine = sel.ActivePoint.Line; }
-                }
-                catch { /* location not available — leave file/line unset */ }
+                var (file, line) = CurrentLocation();
+                state.CurrentFile = file;
+                state.CurrentLine = line;
 
                 // If we're paused on an exception, $exception holds it (debugger pseudo-variable).
                 // Absent/invalid when the break is a plain breakpoint — leave the fields null.
@@ -192,9 +185,8 @@ internal sealed partial class IdeDebugService
             try { dte.ExecuteCommand("Debug.SetNextStatement", ""); }
             catch (Exception ex) { return new DebugResult { Ok = false, Reason = $"Visual Studio refused the jump: {ex.Message.Trim()}" }; }
 
-            // The line asked for, not CurrentLocation(): we are still stopped on whatever breakpoint
-            // got us here, so that would report where the jump came FROM. It is also the one place
-            // that already knows the answer — the jump either landed on the requested line or threw.
+            // The line asked for: the jump either landed there or threw, so this is already the
+            // answer and re-reading the frame would only risk disagreeing with it.
             return new DebugResult
             {
                 Ok = true,
@@ -244,6 +236,8 @@ internal sealed partial class IdeDebugService
 
             try { dte.ExecuteCommand("Debug.RunToCursor", ""); }
             catch (Exception ex) { return new DebugResult { Ok = false, Reason = $"Visual Studio refused it: {ex.Message.Trim()}" }; }
+
+            LeavingBreak();
 
             return new DebugResult { Ok = true, Reason = $"Running to {System.IO.Path.GetFileName(filePath)}:{line} — poll debug_get_state; it may stop earlier." };
         }

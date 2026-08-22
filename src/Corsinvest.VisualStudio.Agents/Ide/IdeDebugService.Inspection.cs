@@ -41,9 +41,7 @@ internal sealed partial class IdeDebugService
                 return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = NotInBreak };
             }
             dbg.Go(false);
-            // This break is over: the next one may land on another thread, and nothing guarantees a
-            // read in between to notice the program ran.
-            _stoppedThreadId = 0;
+            LeavingBreak();
             // No Mode: Go() returns before the transition, so this reads the state being left. It
             // happened to be right — "run" either way — which is why it outlived the same fix on
             // start/stop/restart/break.
@@ -96,9 +94,7 @@ internal sealed partial class IdeDebugService
                     };
             }
 
-            // The step leaves this break: whatever it lands on is a new one, on a thread this has no
-            // say over. Cleared so the wait below records the landing rather than keeping the old id.
-            _stoppedThreadId = 0;
+            LeavingBreak();
 
             var landed = await WaitForBreakAsync(StepSettleTimeout);
             if (!landed)
@@ -122,27 +118,6 @@ internal sealed partial class IdeDebugService
         }
     }
 
-    /// <summary>The thread the debugger stopped on, or 0 when not stopped. CurrentLocation() answers
-    /// for that one thread — the breakpoint that was hit, or the caret VS brought to the suspension
-    /// point — so only its frames may carry a file and line.
-    ///
-    /// Recorded rather than derived because debug_select_thread moves Debugger.CurrentThread and
-    /// nothing remembers where the break landed. Tracking the thread the CALLER selected instead was
-    /// wrong in the symmetric case: selecting the stopping thread explicitly made it match too, and
-    /// the position was withheld from the one thread entitled to it.</summary>
-    private static int _stoppedThreadId;
-
-    /// <summary>Note which thread a break landed on, and forget it once the program runs again.
-    /// Called from GetDebugger(), so it runs before whatever the entry point came to do — including
-    /// the debug_select_thread that moves CurrentThread away from the answer.
-    /// <para>Only the first read while stopped counts: after that CurrentThread is whatever the
-    /// caller selected, and taking it again would record the choice instead of the break.</para></summary>
-    private static void TrackStoppedThread(Debugger dbg)
-    {
-        if (dbg.CurrentMode != dbgDebugMode.dbgBreakMode) { _stoppedThreadId = 0; return; }
-        if (_stoppedThreadId == 0) { _stoppedThreadId = SafeThreadId(dbg.CurrentThread); }
-    }
-
     /// <summary>Wait for the debugger to be back in break, or give up. Yields the UI thread between
     /// looks — the transition is processed there, so holding it would stop the very thing being
     /// waited for. Returns false on timeout.</summary>
@@ -162,13 +137,9 @@ internal sealed partial class IdeDebugService
         return false;
     }
 
-    /// <summary>Call stack of the current thread (only while paused).</summary>
     /// <summary>The call stack of one thread by id, WITHOUT selecting it. Reading another thread's
     /// stack otherwise means debug_select_thread first, which moves the debugger's current thread —
-    /// the user's Call Stack and Locals windows follow it, and nothing puts them back.
-    ///
-    /// No frame carries file/line here: EnvDTE reads those from the active document, which follows
-    /// the SELECTED frame, so they would describe the wrong thread entirely.</summary>
+    /// the user's Call Stack and Locals windows follow it, and nothing puts them back.</summary>
     public async Task<CallStackResult> GetThreadCallStackAsync(int threadId)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -203,11 +174,14 @@ internal sealed partial class IdeDebugService
             var i = 0;
             foreach (StackFrame sf in match.StackFrames)
             {
+                var (file, line) = FrameLocation(sf);
                 frames.Add(new StackFrameInfo
                 {
                     Index = i++,
                     Function = sf.FunctionName,
                     Module = SafeModule(sf),
+                    File = file,
+                    Line = line,
                 });
             }
             return new CallStackResult { Ok = true, InBreak = true, Frames = [.. frames] };
@@ -244,35 +218,21 @@ internal sealed partial class IdeDebugService
                 foreach (StackFrame sf in thread.StackFrames)
                 {
                     if (currentIndex < 0 && current != null && SameFrame(sf, current)) { currentIndex = i; }
+                    var (file, line) = FrameLocation(sf);
                     frames.Add(new StackFrameInfo
                     {
                         Index = i++,
                         Function = sf.FunctionName,
                         Module = SafeModule(sf),
-                        // EnvDTE StackFrame has no file/line; those come from the active doc, which
-                        // follows the SELECTED frame — so they go on that one, below.
+                        File = file,
+                        Line = line,
                     });
                 }
             }
             // No match means the selected frame belongs to a DIFFERENT thread than the one whose
-            // stack this is. Falling back to frame 0 used to hang the editor's position on it —
-            // a worker blocked in WaitOne came back reading Program.cs:27, which is where the main
-            // thread was paused. Better to mark no frame current than to name the wrong file.
-            if (currentIndex >= 0)
-            {
-                frames[currentIndex].IsCurrent = true;
-                // Only for the thread the debugger stopped on. CurrentLocation answers with the
-                // breakpoint that was hit or the editor's caret, and both belong to that one
-                // thread: asked after a debug_select_thread onto a worker, it named the main
-                // thread's line as if it were the worker's. Other threads get no position —
-                // EnvDTE's StackFrame carries none of its own, and none beats someone else's.
-                if (thread.ID == _stoppedThreadId)
-                {
-                    var (file, line) = CurrentLocation();
-                    frames[currentIndex].File = file;
-                    frames[currentIndex].Line = line;
-                }
-            }
+            // stack this is. Marking none current is better than pointing at frame 0 of the wrong
+            // thread.
+            if (currentIndex >= 0) { frames[currentIndex].IsCurrent = true; }
             return new CallStackResult { Ok = true, InBreak = true, Frames = [.. frames] };
         }
         catch (Exception ex)
