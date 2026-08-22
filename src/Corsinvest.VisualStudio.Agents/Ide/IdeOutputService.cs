@@ -29,6 +29,10 @@ internal sealed class IdeOutputService
         public string Pane { get; set; }
         public string Content { get; set; }
         public int TotalLines { get; set; }
+
+        /// <summary>Lines matching the pattern, or null when there was none. Without it a short
+        /// answer reads as a short pane: 3 of 40000 lines and 3 lines total look the same.</summary>
+        public int? MatchedLines { get; set; }
         public bool Truncated { get; set; }
         public string[] AvailablePanes { get; set; } = [];
         public string Reason { get; set; }
@@ -150,9 +154,26 @@ internal sealed class IdeOutputService
     }
 
     /// <summary>Read a pane by name (case-insensitive). With no name, returns the list of
-    /// available pane names instead of content. tailLines caps the returned lines.</summary>
-    public async Task<OutputResult> ReadAsync(string paneName, int tailLines)
+    /// available pane names instead of content. tailLines caps the returned lines; pattern keeps
+    /// only the lines matching a regex.</summary>
+    public async Task<OutputResult> ReadAsync(string paneName, int tailLines, string pattern)
     {
+        System.Text.RegularExpressions.Regex rx = null;
+        if (!string.IsNullOrEmpty(pattern))
+        {
+            // Compiled before the thread switch: a bad pattern is the caller's mistake and should
+            // come back as one, not as an exception thrown from the middle of a UI-thread read.
+            try
+            {
+                rx = new System.Text.RegularExpressions.Regex(pattern,
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            }
+            catch (ArgumentException ex)
+            {
+                return new OutputResult { Ok = false, Reason = $"Invalid pattern: {ex.Message}" };
+            }
+        }
+
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
         {
@@ -199,10 +220,23 @@ internal sealed class IdeOutputService
                 ? []
                 : text.Replace("\r\n", "\n").TrimEnd('\n').Split('\n');
             var total = allLines.Length;
-            var truncated = tailLines > 0 && total > tailLines;
-            var content = truncated
-                ? string.Join("\n", allLines.Skip(total - tailLines))
-                : text;
+
+            // Filter first, then tail: "the last N lines that match" is what searching a long log
+            // wants. Tailing first would answer "the matches among the last N", which finds nothing
+            // whenever what is being looked for scrolled past.
+            var lines = allLines;
+            int? matched = null;
+            if (rx != null)
+            {
+                lines = [.. allLines.Where(l => rx.IsMatch(l))];
+                matched = lines.Length;
+            }
+
+            var truncated = tailLines > 0 && lines.Length > tailLines;
+            var kept = truncated ? lines.Skip(lines.Length - tailLines) : lines;
+            // Only re-join when something was dropped or filtered; otherwise the original text keeps
+            // whatever line endings the pane wrote.
+            var content = truncated || rx != null ? string.Join("\n", kept) : text;
 
             return new OutputResult
             {
@@ -210,6 +244,7 @@ internal sealed class IdeOutputService
                 Pane = pane.Name,
                 Content = content,
                 TotalLines = total,
+                MatchedLines = matched,
                 Truncated = truncated,
             };
         }

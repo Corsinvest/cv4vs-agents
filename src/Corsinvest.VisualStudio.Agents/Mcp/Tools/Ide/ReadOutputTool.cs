@@ -17,6 +17,9 @@ internal sealed class ReadOutputArgs
 
     [Description("Max number of lines to return from the end of the pane (default 200).")]
     public int TailLines { get; set; } = 200;
+
+    [Description("Optional regex (case-insensitive). Keeps only the lines that match, before tailLines is applied — so this is 'the last N matching lines', not 'the matches among the last N'.")]
+    public string Pattern { get; set; }
 }
 
 /// <summary>MCP tool: read text from a VS Output window pane (Build, Debug, the running
@@ -29,7 +32,10 @@ internal sealed class ReadOutputTool : McpTool<ReadOutputArgs>
         "running program's output). Omit 'pane' to list the available pane names first — note " +
         "those come back in the IDE's language ('Compilazione' for Build on an Italian VS), but " +
         "the built-in panes are also reachable under their English names. " +
-        "'tailLines' caps how many lines are returned from the end (default 200). Useful to " +
+        "'tailLines' caps how many lines are returned from the end (default 200), and 'pattern' — a " +
+        "case-insensitive regex — keeps only matching lines, which is how a specific message is " +
+        "found in a long build log without pulling all of it; matchedLines says how many there were. " +
+        "Useful to " +
         "see build/debug output or the debuggee's console writes that don't go through the " +
         "shell — including what a frozen thread stopped printing, which is how debug_freeze_thread " +
         "is checked. ide_clear_output first to read only what happens next, ide_activate_output to " +
@@ -40,7 +46,7 @@ internal sealed class ReadOutputTool : McpTool<ReadOutputArgs>
 
     protected override async Task<object> InvokeAsync(ReadOutputArgs args)
     {
-        var r = await IdeOutputService.Instance.ReadAsync(args.Pane, args.TailLines);
+        var r = await IdeOutputService.Instance.ReadAsync(args.Pane, args.TailLines, args.Pattern);
         if (!r.Ok) { return new { ok = false, reason = r.Reason, availablePanes = r.AvailablePanes }; }
         if (string.IsNullOrWhiteSpace(args.Pane))
         {
@@ -60,6 +66,7 @@ internal sealed class ReadOutputTool : McpTool<ReadOutputArgs>
                 requestedPane = args.Pane,
                 content = r.Content,
                 totalLines = r.TotalLines,
+                matchedLines = r.MatchedLines,
                 truncated = r.Truncated,
             };
         }
@@ -69,6 +76,7 @@ internal sealed class ReadOutputTool : McpTool<ReadOutputArgs>
             pane = r.Pane,
             content = r.Content,
             totalLines = r.TotalLines,
+            matchedLines = r.MatchedLines,
             truncated = r.Truncated,
         };
     }

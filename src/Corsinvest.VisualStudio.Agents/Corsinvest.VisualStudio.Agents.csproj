@@ -195,6 +195,7 @@
     <Compile Include="Mcp\Tools\Debug\SetBreakpointTool.cs" />
     <Compile Include="Mcp\Tools\Debug\SetFunctionBreakpointTool.cs" />
     <Compile Include="Mcp\Tools\Debug\RemoveBreakpointTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\EnableBreakpointTool.cs" />
     <Compile Include="Mcp\Tools\Debug\ClearBreakpointsTool.cs" />
     <Compile Include="Mcp\Tools\Debug\ListBreakpointsTool.cs" />
     <Compile Include="Mcp\Tools\Debug\BreakDebugTool.cs" />

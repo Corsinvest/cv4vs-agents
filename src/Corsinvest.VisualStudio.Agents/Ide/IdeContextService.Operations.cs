@@ -425,23 +425,68 @@ internal sealed partial class IdeContextService
     /// <summary>Report the active solution configuration and the ones that can be asked for.
     /// Reading this through a build would mean compiling the solution to learn a setting, and
     /// finding out what exists at all would mean sending a wrong name and reading the error.</summary>
-    public async Task<(bool Ok, string Configuration, string[] Available, string Reason)> GetConfigurationAsync()
+    public async Task<(bool Ok, string Configuration, string[] Available, string StartupProject, string Reason)> GetConfigurationAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
         var sb = dte?.Solution?.SolutionBuild;
-        if (sb == null) { return (false, null, [], "No solution open."); }
+        if (sb == null) { return (false, null, [], null, "No solution open."); }
 
         try
         {
             var names = CollectConfigurations(sb, null, out _);
-            return (true, ActiveConfigurationName(sb), [.. names], null);
+            return (true, ActiveConfigurationName(sb), [.. names], StartupProjectName(dte, sb), null);
         }
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("Ide.GetConfigurationAsync", ex);
-            return (false, null, [], $"Could not read the configuration: {ex.Message}");
+            return (false, null, [], null, $"Could not read the configuration: {ex.Message}");
         }
+    }
+
+    /// <summary>The startup project's display name, or null when none is set — or when more than
+    /// one is, which is a multi-startup solution this cannot describe in one name.
+    /// <para>StartupProjects holds UNIQUE names ("src\App\App.csproj"), while the name every
+    /// other tool takes and reports is the display one ("App"). Translating here keeps the pair
+    /// symmetric: what this returns is what solution_set_startup_project accepts.</para></summary>
+    private static string StartupProjectName(DTE dte, SolutionBuild sb)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            if (sb.StartupProjects is not Array arr || arr.Length != 1) { return null; }
+            var unique = arr.GetValue(0) as string;
+            if (string.IsNullOrEmpty(unique)) { return null; }
+
+            foreach (Project p in dte.Solution.Projects)
+            {
+                var found = FindByUniqueName(p, unique);
+                if (found != null) { return found.Name; }
+            }
+            // Known by the build but not found in the tree: better the unique name than nothing.
+            return unique;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[ide] could not read the startup project: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>Depth-first match on UniqueName, descending solution folders — a project nested in
+    /// one is not in Solution.Projects at the top level.</summary>
+    private static Project FindByUniqueName(Project project, string unique)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (string.Equals(project.UniqueName, unique, StringComparison.OrdinalIgnoreCase)) { return project; }
+        if (project.ProjectItems == null) { return null; }
+        foreach (ProjectItem item in project.ProjectItems)
+        {
+            if (item.SubProject == null) { continue; }
+            var found = FindByUniqueName(item.SubProject, unique);
+            if (found != null) { return found; }
+        }
+        return null;
     }
 
     /// <summary>The solution's configurations as sorted "name|platform" strings, and — when
