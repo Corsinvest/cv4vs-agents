@@ -40,7 +40,10 @@ internal sealed class SetFunctionBreakpointTool : McpTool<SetFunctionBreakpointA
         "to test. Works whether or not a debug session is running. Use when you know the method but not " +
         "the exact line, or to avoid opening the file. debug_set_breakpoint takes a file and " +
         "line instead, debug_list_breakpoints shows what is set, and debug_start begins the " +
-        "session that will hit it.";
+        "session that will hit it. " +
+        "A name that matches nothing is accepted just the same — it stays unresolved instead of " +
+        "failing. debug_list_breakpoints reports bound once the session is running: 0 there means " +
+        "the name never matched, so check the spelling or how the type is qualified.";
 
     public override bool Idempotent => true;
 

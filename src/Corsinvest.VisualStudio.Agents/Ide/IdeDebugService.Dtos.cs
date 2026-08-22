@@ -30,6 +30,11 @@ internal sealed partial class IdeDebugService
         public bool Ok { get; set; }
         public string Mode { get; set; }
         public string Reason { get; set; }
+
+        /// <summary>How many code locations a breakpoint resolved to, or null outside a debug
+        /// session, where nothing has bound yet and 0 would read as a failure. 0 during a session
+        /// means the breakpoint will not stop anything. Only set by the breakpoint tools.</summary>
+        public int? Bound { get; set; }
     }
 
     /// <summary>One breakpoint in the solution (file/line OR function, plus condition/enabled).</summary>
@@ -50,6 +55,12 @@ internal sealed partial class IdeDebugService
         /// <summary>Times it has been hit in this session — the difference between "never reached"
         /// and "reached, and the condition said no".</summary>
         public int CurrentHits { get; set; }
+
+        /// <summary>Code locations this breakpoint resolved to, or null outside a session where
+        /// nothing has bound yet. The third answer to "why did it not break", after the hit count:
+        /// 0 means it never will, because the line holds no code or the module's symbols are not
+        /// loaded — as opposed to bound and simply not reached.</summary>
+        public int? Bound { get; set; }
     }
 
     public sealed class BreakpointsResult

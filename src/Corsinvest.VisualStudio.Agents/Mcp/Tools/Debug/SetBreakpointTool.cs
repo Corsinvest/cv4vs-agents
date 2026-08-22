@@ -41,7 +41,10 @@ internal sealed class SetBreakpointTool : McpTool<SetBreakpointArgs>
         "that must be true for the breakpoint to trigger), or a hitCount to skip the first passes " +
         "— the way to stop on the 500th iteration of a loop without a counter variable to test. " +
         "Works whether or not a debug session is running. Combine with debug_start + " +
-        "debug_get_state to pause execution at this point.";
+        "debug_get_state to pause execution at this point. " +
+        "Accepting the line does not mean the debugger can stop on it: binding happens later, and a " +
+        "line with no executable code binds to nothing. debug_list_breakpoints reports bound once " +
+        "the session is running, which is where \"why did it never stop\" gets answered.";
 
     public override bool Idempotent => true;
 
