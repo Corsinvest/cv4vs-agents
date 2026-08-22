@@ -97,6 +97,7 @@ export class CvRemoteChip extends LitElement {
                     id="menu-trigger"
                     slot="trigger"
                     class="trigger"
+                    aria-label="Remote control"
                     appearance="subtle"
                     shape="rounded"
                     size="small"

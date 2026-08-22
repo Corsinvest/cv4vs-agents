@@ -133,6 +133,7 @@ export class CvMicButton extends LitElement {
         return html`<fluent-button
                 id="btn-mic"
                 class=${`trigger${this._recording ? ' is-recording' : ''}`}
+                aria-label=${this._recording ? 'Stop recording' : 'Voice recording'}
                 appearance="subtle"
                 shape="rounded"
                 size="small"
