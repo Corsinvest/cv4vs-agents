@@ -94,6 +94,7 @@ export class CvThinkingToggle extends LitElement {
             <fluent-button
                 id="thinking-trigger"
                 class="trigger"
+                aria-label="Thinking"
                 appearance="subtle"
                 shape="rounded"
                 size="small"

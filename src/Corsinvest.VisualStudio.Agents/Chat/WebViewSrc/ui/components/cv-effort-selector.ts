@@ -82,6 +82,7 @@ export class CvEffortSelector extends LitElement {
             <fluent-button
                 id="effort-trigger"
                 class="trigger"
+                aria-label="Effort"
                 appearance="subtle"
                 size="small"
                 @click=${this._onClick}

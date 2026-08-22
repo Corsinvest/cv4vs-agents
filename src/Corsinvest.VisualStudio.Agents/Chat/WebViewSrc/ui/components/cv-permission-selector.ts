@@ -71,6 +71,7 @@ export class CvPermissionSelector extends LitElement {
             <fluent-button
                 id="perm-trigger"
                 class="trigger"
+                aria-label="Permission mode"
                 appearance="subtle"
                 size="small"
                 @click=${this._onClick}

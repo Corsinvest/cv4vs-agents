@@ -92,6 +92,7 @@ export class CvAttachMenu extends LitElement {
                     id="menu-trigger"
                     slot="trigger"
                     class="trigger"
+                    aria-label="Add"
                     appearance="subtle"
                     shape="rounded"
                     size="small"

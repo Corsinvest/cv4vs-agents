@@ -87,6 +87,7 @@ export class CvModelSelector extends LitElement {
             <fluent-button
                 id="model-trigger"
                 class="trigger"
+                aria-label="Model"
                 appearance="subtle"
                 size="small"
                 @click=${this._onClick}

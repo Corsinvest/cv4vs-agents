@@ -1613,6 +1613,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                         <fluent-button
                             id="send"
                             class=${this._isBusy ? 'is-busy' : ''}
+                            aria-label=${this._isBusy ? 'Stop' : 'Send'}
                             appearance="primary"
                             shape="rounded"
                             size="small"

@@ -59,6 +59,9 @@ export const tooltipStyles = css`
         padding: 6px 8px;
         max-width: 320px;
         box-sizing: border-box;
+        /* A tooltip is chrome, not content: it gets read, not copied. Without this it inherits the
+           document default and clicking an open one highlights its text in blue. */
+        user-select: none;
         /* Lets a plain string with newlines break where it says to, so a tooltip with two or three
            lines doesn't need an element per line. */
         white-space: pre-line;
