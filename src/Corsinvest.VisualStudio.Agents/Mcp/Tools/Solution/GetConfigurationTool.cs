@@ -18,7 +18,10 @@ internal sealed class GetConfigurationTool : McpTool<NoArgs>
         "compile — plus every configuration that can be asked for ('Debug|Any CPU', " +
         "'Release|Any CPU', …). Takes no arguments and changes nothing. Use it to check what a " +
         "build will produce, or to see the valid names before solution_set_configuration, which is " +
-        "what actually switches it.";
+        "what actually switches it. " +
+        "Also reports startupProject — the one debug_start runs — under the name " +
+        "solution_set_startup_project takes, so it can be read before changing it and put back " +
+        "after. null when none is set, or when several are.";
 
     public override bool ReadOnly => true;
     public override bool Idempotent => true;
@@ -26,6 +29,6 @@ internal sealed class GetConfigurationTool : McpTool<NoArgs>
     protected override async Task<object> InvokeAsync(NoArgs args)
     {
         var r = await IdeContextService.Instance.GetConfigurationAsync();
-        return new { ok = r.Ok, configuration = r.Configuration, available = r.Available, reason = r.Reason };
+        return new { ok = r.Ok, configuration = r.Configuration, available = r.Available, startupProject = r.StartupProject, reason = r.Reason };
     }
 }
