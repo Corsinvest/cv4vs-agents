@@ -56,6 +56,24 @@ internal sealed partial class IdeContextService
             && d != 0;
     }
 
+    /// <summary>The path of an open document, matched the way the shell sees it. Returns the
+    /// moniker rather than a bool so the caller can then look the document up by a path DTE agrees
+    /// with, whatever casing or separator style it came in as.
+    /// <para>Goes through the frames for the reason the enumeration exists: DTE.Documents misses
+    /// tabs whose buffer is not materialised yet. A preview tab reported "not open" from there while
+    /// checkDocumentDirty, which does use the frames, said it was open AND dirty — for exactly the
+    /// file whose buffer differs from disk, which is the one case worth asking about.</para></summary>
+    private static string OpenDocumentMoniker(string path)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        foreach (var frame in DocumentFrames())
+        {
+            var moniker = FrameMoniker(frame);
+            if (PathEquals(moniker, path)) { return moniker; }
+        }
+        return null;
+    }
+
     private static bool PathEquals(string a, string b)
         => !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b)
            && string.Equals(a.Replace('/', '\\').TrimEnd('\\'),

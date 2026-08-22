@@ -420,6 +420,67 @@ internal sealed partial class IdeDebugService
 
     /// <summary>Remove the breakpoint(s) at <paramref name="filePath"/>:<paramref name="line"/>.
     /// Returns the number removed in Reason (0 if none matched).</summary>
+    /// <summary>Enable or disable the breakpoints at a file+line, or the ones on a function name.
+    /// <para>The non-destructive half of debug_remove_breakpoint: disabling keeps the condition and
+    /// hit-count rule, which removing throws away with no way to put them back. The case is a
+    /// breakpoint in hot code that keeps stopping the session while the caller is trying to reach a
+    /// different one.</para></summary>
+    public async Task<DebugResult> EnableBreakpointAsync(string filePath, int line, string functionName, bool enabled)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
+
+            var byFunction = !string.IsNullOrWhiteSpace(functionName);
+            if (!byFunction && (string.IsNullOrEmpty(filePath) || line < 1))
+            {
+                return new DebugResult { Ok = false, Reason = "Either functionName, or filePath and a 1-based line, are required." };
+            }
+
+            var changed = 0;
+            var matched = 0;
+            foreach (Breakpoint bp in dbg.Breakpoints)
+            {
+                var isFile = bp.LocationType == dbgBreakpointLocationType.dbgBreakpointLocationTypeFile;
+                var match = byFunction
+                    ? !isFile && string.Equals(bp.FunctionName, functionName, StringComparison.OrdinalIgnoreCase)
+                    : isFile && bp.FileLine == line && string.Equals(bp.File, filePath, StringComparison.OrdinalIgnoreCase);
+                if (!match) { continue; }
+
+                matched++;
+                // Setting Enabled to what it already is is not an error, but counting it would
+                // report work that did not happen.
+                if (bp.Enabled != enabled) { bp.Enabled = enabled; changed++; }
+            }
+
+            var what = byFunction ? functionName : $"{System.IO.Path.GetFileName(filePath)}:{line}";
+            var state = enabled ? "enabled" : "disabled";
+            // "Found nothing" and "found it, already that way" read the same when they share a
+            // message, and the first one is a mistake the caller has to fix — most often a line
+            // number VS moved: a breakpoint asked for on a blank line binds to the next statement,
+            // and that new line is the one this matches on. debug_list_breakpoints has the real one.
+            if (matched == 0)
+            {
+                return new DebugResult
+                {
+                    Ok = true,
+                    Mode = ModeToString(dbg.CurrentMode),
+                    Reason = $"No breakpoint at {what} — debug_list_breakpoints has the ones that exist; VS may have moved it to the nearest line with code.",
+                };
+            }
+            return changed == 0
+                ? new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = $"Already {state}: {matched} at {what}." }
+                : new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = $"{(enabled ? "Enabled" : "Disabled")} {changed} at {what}." };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.EnableBreakpointAsync", ex);
+            return new DebugResult { Ok = false, Reason = "Failed to change the breakpoint." };
+        }
+    }
+
     public async Task<DebugResult> RemoveBreakpointAsync(string filePath, int line)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
