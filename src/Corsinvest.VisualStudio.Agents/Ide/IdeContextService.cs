@@ -458,6 +458,10 @@ internal sealed partial class IdeContextService : IDisposable
         public string Content { get; set; }
         public int TotalLines { get; set; }
         public bool Truncated { get; set; }
+
+        /// <summary>1-based line the content starts at, so a range read can be placed back in the
+        /// file without counting from the top.</summary>
+        public int StartLine { get; set; }
         public string Reason { get; set; }
     }
 
@@ -465,7 +469,7 @@ internal sealed partial class IdeContextService : IDisposable
     /// changes included. With no path, reads the active document: "what I'm looking at" is the
     /// gesture this exists for, and it's the user who picks it, not the model. The on-disk
     /// version is the Read tool's job; this one is for what hasn't been written yet.</summary>
-    public async Task<BufferReadResult> ReadDocumentBufferAsync(string filePath, int maxLines)
+    public async Task<BufferReadResult> ReadDocumentBufferAsync(string filePath, int maxLines, int startLine, int endLine)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
@@ -483,9 +487,16 @@ internal sealed partial class IdeContextService : IDisposable
             {
                 doc = null;
                 var target = PathHelpers.FromFileUri(filePath);
-                foreach (Document d in dte.Documents)
+                // Ask the shell whether it is open, then DTE for the buffer: the frames see preview
+                // tabs that DTE.Documents does not, and the moniker they answer with is a path DTE
+                // will match on.
+                var moniker = OpenDocumentMoniker(target);
+                if (moniker != null)
                 {
-                    if (string.Equals(d.FullName, target, StringComparison.OrdinalIgnoreCase)) { doc = d; break; }
+                    foreach (Document d in dte.Documents)
+                    {
+                        if (PathEquals(d.FullName, moniker)) { doc = d; break; }
+                    }
                 }
                 if (doc == null)
                 {
@@ -501,19 +512,38 @@ internal sealed partial class IdeContextService : IDisposable
             }
 
             var totalLines = td.EndPoint.Line;
-            var truncated = maxLines > 0 && totalLines > maxLines;
+
+            // A range wins over maxLines: asked for lines 400-450, taking 450 from the top and
+            // throwing away 400 is the whole file's worth of tokens for fifty lines of answer.
+            var from = startLine > 0 ? Math.Min(startLine, totalLines) : 1;
+            var to = endLine > 0 ? Math.Min(Math.Max(endLine, from), totalLines) : 0;
+
             var start = td.StartPoint.CreateEditPoint();
+            if (from > 1) { start.MoveToLineAndOffset(from, 1); }
+
+            bool truncated;
             string text;
-            if (truncated)
+            if (to > 0)
+            {
+                var stop = td.StartPoint.CreateEditPoint();
+                // Start of the line after the last one wanted, so the range is inclusive.
+                if (to < totalLines) { stop.MoveToLineAndOffset(to + 1, 1); }
+                else { stop.MoveToPoint(td.EndPoint); }
+                text = start.GetText(stop) ?? string.Empty;
+                truncated = to < totalLines;
+            }
+            else if (maxLines > 0 && totalLines - from + 1 > maxLines)
             {
                 // Keep the head: unlike an output pane, a file is read top-down.
                 var stop = td.StartPoint.CreateEditPoint();
-                stop.MoveToLineAndOffset(maxLines + 1, 1);
+                stop.MoveToLineAndOffset(from + maxLines, 1);
                 text = start.GetText(stop) ?? string.Empty;
+                truncated = true;
             }
             else
             {
                 text = start.GetText(td.EndPoint) ?? string.Empty;
+                truncated = false;
             }
 
             return new BufferReadResult
@@ -524,6 +554,7 @@ internal sealed partial class IdeContextService : IDisposable
                 Content = text,
                 TotalLines = totalLines,
                 Truncated = truncated,
+                StartLine = from,
             };
         }
         catch (Exception ex)
