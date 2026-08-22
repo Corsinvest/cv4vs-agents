@@ -26,8 +26,8 @@ internal sealed class GetThreadCallStackTool : McpTool<GetThreadCallStackArgs>
         "several threads — chasing a deadlock, seeing what a worker is blocked on — where " +
         "debug_select_thread + debug_get_callstack would move the debugger's current thread each " +
         "time, taking the user's Call Stack and Locals windows with it and never putting them " +
-        "back. Frames carry no file or line here: the IDE reads those from the selected frame, so " +
-        "they would describe a different thread. Needs break mode; debug_list_threads has the ids.";
+        "back. Each frame carries its own file and line where it has source. Needs break mode; " +
+        "debug_list_threads has the ids.";
 
     public override bool ReadOnly => true;
     public override bool Idempotent => true;
@@ -40,7 +40,14 @@ internal sealed class GetThreadCallStackTool : McpTool<GetThreadCallStackArgs>
         {
             ok = true,
             threadId = args.ThreadId,
-            frames = r.Frames.Select(f => new { index = f.Index, function = f.Function, module = f.Module }).ToArray(),
+            frames = r.Frames.Select(f => new
+            {
+                index = f.Index,
+                function = f.Function,
+                module = f.Module,
+                file = f.File,
+                line = f.Line,
+            }).ToArray(),
         };
     }
 }
