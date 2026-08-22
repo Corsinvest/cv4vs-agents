@@ -9,6 +9,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+// Not `using System.Diagnostics`: it collides with EnvDTE on both Debugger and StackFrame, which
+// this file uses constantly. Only Stopwatch is needed, so it is aliased instead.
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace Corsinvest.VisualStudio.Agents.Ide;
 
@@ -300,6 +303,9 @@ internal sealed partial class IdeDebugService
 
             var locals = new List<LocalInfo>();
             var truncated = false;
+            // One clock for both collections: the deadline is on the capture, not on each group, so
+            // arguments that take their time leave less for locals rather than doubling the wait.
+            var clock = Stopwatch.StartNew();
             // Arguments are a separate collection on the frame, and were missing entirely: stopped
             // in a method, its parameters are usually the first thing worth reading.
             Collect(frame.Arguments, isArgument: true);
@@ -310,6 +316,7 @@ internal sealed partial class IdeDebugService
                 if (source == null) { return; }
                 foreach (Expression e in source)
                 {
+                    if (clock.Elapsed >= WalkDeadline) { truncated = true; break; }
                     // Top-level statements report `args` in BOTH collections, so it arrived twice —
                     // once flagged as an argument, once not, which reads as a bug in the tool.
                     // Arguments are collected first and win: knowing a name is a parameter says
@@ -326,7 +333,7 @@ internal sealed partial class IdeDebugService
                         Value = e.Value,
                         HasMembers = hasMembers,
                         IsArgument = isArgument,
-                        Members = hasMembers && depth > 0 ? WalkMembers(e, depth, maxMembers, ref truncated) : null,
+                        Members = hasMembers && depth > 0 ? WalkMembers(e, depth, maxMembers, clock, ref truncated) : null,
                     });
                 }
             }
@@ -637,7 +644,7 @@ internal sealed partial class IdeDebugService
                 Expression = expression,
                 Value = root.Value,
                 Type = root.Type,
-                Members = WalkMembers(root, depth, maxMembers, ref truncated),
+                Members = WalkMembers(root, depth, maxMembers, Stopwatch.StartNew(), ref truncated),
                 Truncated = truncated,
             };
         }
@@ -675,11 +682,24 @@ internal sealed partial class IdeDebugService
               + "debug_get_callstack lists them, debug_select_frame switches.";
     }
 
+    /// <summary>How long one capture may spend materialising members before it gives up and
+    /// reports the result as truncated.
+    /// <para>depth and maxMembers bound the shape of the walk, which is not the same as bounding
+    /// its cost: reading <c>Expression.Value</c> or <c>DataMembers</c> evaluates properties inside
+    /// the debuggee, synchronously, on this thread. One getter that blocks — a lazy load, a lock, a
+    /// remote call — and a walk well within its node limits still hangs the IDE. This is the ceiling
+    /// that counts what the nodes cost rather than how many were asked for.</para></summary>
+    private static readonly TimeSpan WalkDeadline = TimeSpan.FromMilliseconds(2000);
+
     /// <summary>One level of members, recursing while <paramref name="depth"/> is left. Sorted by
-    /// name like the locals list, so two reads of the same object line up.</summary>
-    private static LocalInfo[] WalkMembers(Expression parent, int depth, int maxMembers, ref bool truncated)
+    /// name like the locals list, so two reads of the same object line up.
+    /// <para><paramref name="clock"/> is started by the caller and shared by every branch of one
+    /// capture — including a sibling walk over another collection — so the deadline applies to the
+    /// capture as a whole and a slow first group cannot spend the whole budget unnoticed.</para></summary>
+    private static LocalInfo[] WalkMembers(Expression parent, int depth, int maxMembers, Stopwatch clock, ref bool truncated)
     {
         if (depth <= 0) { return null; }
+        if (clock.Elapsed >= WalkDeadline) { truncated = true; return null; }
 
         var members = parent.DataMembers;
         if (members == null || members.Count == 0) { return null; }
@@ -689,6 +709,9 @@ internal sealed partial class IdeDebugService
         foreach (Expression m in members)
         {
             if (taken.Count >= maxMembers) { break; }
+            // Checked per member, not per level: the members of one object are exactly where a
+            // single slow getter shows up, and the loop must be able to stop inside it.
+            if (clock.Elapsed >= WalkDeadline) { truncated = true; break; }
             var hasMembers = HasRealMembers(m);
             taken.Add(new LocalInfo
             {
@@ -696,7 +719,7 @@ internal sealed partial class IdeDebugService
                 Type = m.Type,
                 Value = m.Value,
                 HasMembers = hasMembers,
-                Members = hasMembers ? WalkMembers(m, depth - 1, maxMembers, ref truncated) : null,
+                Members = hasMembers ? WalkMembers(m, depth - 1, maxMembers, clock, ref truncated) : null,
             });
         }
         return [.. taken.OrderBy(l => l.Name, StringComparer.Ordinal)];
