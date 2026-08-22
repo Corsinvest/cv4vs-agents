@@ -362,8 +362,7 @@ const DRIVE = /[A-Za-z]:$/;
 
 /** How strict the path check is. Prose is scanned blind, so it needs the extension allow-list to keep
  *  "localhost.net:4040" / "19.99:2" from rendering as dead links; a markdown href was written as a link
- *  by the model on purpose, so any plausible path shape is enough. See the file-link entry in
- *  docs/internal/TODO.md for the measurements. */
+ *  by the model on purpose, so any plausible path shape is enough. */
 export type RefStrictness = 'known-ext' | 'plausible-path';
 
 /** Scan `text` for file references, growing outwards from each ".ext" anchor. Returns them in order,

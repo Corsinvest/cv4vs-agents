@@ -180,7 +180,7 @@ internal static class StatsService
         foreach (var p in projects)
         {
             // Walked to the folder the project IS, not to the one above it. A project whose cwd also
-            // has projects beneath it — C:\Users\daniele.corsini, with AppData and source under it —
+            // has projects beneath it — a user profile folder, with AppData and source under it —
             // would otherwise be filed one level up while its own name branched separately, showing
             // the same folder twice. Filed here, it meets that branch and ToFolderNode folds the two
             // into the single node a folder with nothing under it already produces.
