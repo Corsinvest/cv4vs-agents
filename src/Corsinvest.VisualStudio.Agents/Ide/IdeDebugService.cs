@@ -532,9 +532,15 @@ internal sealed partial class IdeDebugService
         {
             var dbg = GetDebugger();
             if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
+            // Already paused is what the caller asked for, not a failure: refusing it made a model
+            // that had lost track of the mode retry or give up, when the answer was "you are there".
+            if (dbg.CurrentMode == dbgDebugMode.dbgBreakMode)
+            {
+                return new DebugResult { Ok = true, Mode = "break", Reason = "Already paused — debug_get_state has the position." };
+            }
             if (dbg.CurrentMode != dbgDebugMode.dbgRunMode)
             {
-                return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = "Can only break while running." };
+                return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = "Not debugging — debug_start first." };
             }
             dbg.Break(false); // false = don't block until the break completes
             // No Mode, same as start/stop/restart: the call returns before the transition, so
