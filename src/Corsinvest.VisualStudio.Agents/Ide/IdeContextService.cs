@@ -530,7 +530,11 @@ internal sealed partial class IdeContextService : IDisposable
                 if (to < totalLines) { stop.MoveToLineAndOffset(to + 1, 1); }
                 else { stop.MoveToPoint(td.EndPoint); }
                 text = start.GetText(stop) ?? string.Empty;
-                truncated = to < totalLines;
+                // Not "there is more file after this": the caller asked for a range and got all of
+                // it, so nothing was cut. Saying otherwise made truncated useless for deciding
+                // whether to ask again — which is the only thing it is for. It only turns true when
+                // the range itself was clipped, i.e. endLine ran past the end of the file.
+                truncated = endLine > totalLines;
             }
             else if (maxLines > 0 && totalLines - from + 1 > maxLines)
             {

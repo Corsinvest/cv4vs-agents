@@ -440,6 +440,7 @@ internal sealed partial class IdeDebugService
             }
 
             var changed = 0;
+            var matched = 0;
             foreach (Breakpoint bp in dbg.Breakpoints)
             {
                 var isFile = bp.LocationType == dbgBreakpointLocationType.dbgBreakpointLocationTypeFile;
@@ -448,14 +449,29 @@ internal sealed partial class IdeDebugService
                     : isFile && bp.FileLine == line && string.Equals(bp.File, filePath, StringComparison.OrdinalIgnoreCase);
                 if (!match) { continue; }
 
+                matched++;
                 // Setting Enabled to what it already is is not an error, but counting it would
                 // report work that did not happen.
                 if (bp.Enabled != enabled) { bp.Enabled = enabled; changed++; }
             }
 
             var what = byFunction ? functionName : $"{System.IO.Path.GetFileName(filePath)}:{line}";
+            var state = enabled ? "enabled" : "disabled";
+            // "Found nothing" and "found it, already that way" read the same when they share a
+            // message, and the first one is a mistake the caller has to fix — most often a line
+            // number VS moved: a breakpoint asked for on a blank line binds to the next statement,
+            // and that new line is the one this matches on. debug_list_breakpoints has the real one.
+            if (matched == 0)
+            {
+                return new DebugResult
+                {
+                    Ok = true,
+                    Mode = ModeToString(dbg.CurrentMode),
+                    Reason = $"No breakpoint at {what} — debug_list_breakpoints has the ones that exist; VS may have moved it to the nearest line with code.",
+                };
+            }
             return changed == 0
-                ? new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = $"Nothing changed for {what} — no breakpoint there, or it was already {(enabled ? "enabled" : "disabled")}." }
+                ? new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = $"Already {state}: {matched} at {what}." }
                 : new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = $"{(enabled ? "Enabled" : "Disabled")} {changed} at {what}." };
         }
         catch (Exception ex)
