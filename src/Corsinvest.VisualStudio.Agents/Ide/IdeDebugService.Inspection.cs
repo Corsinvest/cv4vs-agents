@@ -529,7 +529,7 @@ internal sealed partial class IdeDebugService
                 return new EvalResult { Ok = false, InBreak = false, Reason = NotInBreak };
             }
 
-            var ex = dbg.GetExpression(expression, true, -1);
+            var ex = dbg.GetExpression(expression, true, EvalTimeoutMs);
             return new EvalResult
             {
                 Ok = true,
@@ -567,7 +567,7 @@ internal sealed partial class IdeDebugService
                 return new ExpandResult { Ok = false, InBreak = false, Reason = NotInBreak };
             }
 
-            var root = dbg.GetExpression(expression, true, -1);
+            var root = dbg.GetExpression(expression, true, EvalTimeoutMs);
             if (!root.IsValidValue)
             {
                 return new ExpandResult
@@ -650,6 +650,12 @@ internal sealed partial class IdeDebugService
     /// remote call — and a walk well within its node limits still hangs the IDE. This is the ceiling
     /// that counts what the nodes cost rather than how many were asked for.</para></summary>
     private static readonly TimeSpan WalkDeadline = TimeSpan.FromMilliseconds(2000);
+
+    /// <summary>How long GetExpression may take on the expression itself, in milliseconds. The same
+    /// hazard as <see cref="WalkDeadline"/> one level up: evaluating the root runs a getter too, and
+    /// -1 — the value this used to pass — means "no limit", so one that blocks parks the UI thread
+    /// with nothing to end the wait.</summary>
+    private const int EvalTimeoutMs = 2000;
 
     /// <summary>One level of members, recursing while <paramref name="depth"/> is left. Sorted by
     /// name like the locals list, so two reads of the same object line up.

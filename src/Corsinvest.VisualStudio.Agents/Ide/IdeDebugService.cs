@@ -255,6 +255,29 @@ internal sealed partial class IdeDebugService
     /// location resolved to. Reading the parent's own CurrentHits therefore answers 0 for a
     /// breakpoint that has been hit five hundred times, which is worse than not reporting it at
     /// all. Must be called on the UI thread.</summary>
+    /// <summary>How many code locations a breakpoint resolved to, or null outside a session.
+    /// <para>Children is the binding: one child per address the debugger resolved. Read here rather
+    /// than after Breakpoints.Add because binding is asynchronous — measured, every breakpoint reads
+    /// as 0 in the instant after it is created, whether or not it goes on to bind, so the answer is
+    /// only worth anything once some time has passed.</para></summary>
+    private static int? BoundCount(Breakpoint bp, Debugger dbg)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            // Nothing binds in design mode, and 0 there would read as "broken" for every breakpoint
+            // set before the session starts — which is the normal way to set one.
+            if (dbg == null || dbg.CurrentMode == dbgDebugMode.dbgDesignMode) { return null; }
+            if (bp is not EnvDTE80.Breakpoint2 bp2) { return null; }
+            return bp2.Children?.Count ?? 0;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[debug] could not read a breakpoint's bound locations: {ex.Message}");
+            return null;
+        }
+    }
+
     private static int CountHits(Breakpoint bp)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -481,6 +504,7 @@ internal sealed partial class IdeDebugService
                     HitCount = bp.HitCountType == dbgHitCountType.dbgHitCountTypeNone ? 0 : bp.HitCountTarget,
                     HitCountType = HitCountTypeToString(bp.HitCountType),
                     CurrentHits = CountHits(bp),
+                    Bound = BoundCount(bp, dbg),
                 });
             }
             // Stable order so the model can compare across calls (file bps by file/line,
@@ -508,9 +532,15 @@ internal sealed partial class IdeDebugService
         {
             var dbg = GetDebugger();
             if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
+            // Already paused is what the caller asked for, not a failure: refusing it made a model
+            // that had lost track of the mode retry or give up, when the answer was "you are there".
+            if (dbg.CurrentMode == dbgDebugMode.dbgBreakMode)
+            {
+                return new DebugResult { Ok = true, Mode = "break", Reason = "Already paused — debug_get_state has the position." };
+            }
             if (dbg.CurrentMode != dbgDebugMode.dbgRunMode)
             {
-                return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = "Can only break while running." };
+                return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = "Not debugging — debug_start first." };
             }
             dbg.Break(false); // false = don't block until the break completes
             // No Mode, same as start/stop/restart: the call returns before the transition, so
