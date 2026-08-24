@@ -125,12 +125,12 @@ export class BridgeToolHost implements ToolHost {
         bridge.sendNotification<ExternalUrlNotification>(Msg.fromWebView.open.externalUrl, { url });
     }
 
-    openDiffInVs(filePath: string, oldString: string, newString: string): void {
+    openDiffInVs(): void {
+        // Ids only: the host reads both sides back out of the transcript, so an edit's content
+        // does not cross the bridge again on every click.
         bridge.sendNotification<DiffDialogNotification>(Msg.fromWebView.open.diffDialog, {
             toolUseId: this.toolUseId,
-            filePath,
-            oldString,
-            newString,
+            agentId: this.agentId,
         });
     }
 

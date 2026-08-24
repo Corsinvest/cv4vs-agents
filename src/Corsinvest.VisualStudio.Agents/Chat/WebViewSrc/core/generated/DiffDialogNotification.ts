@@ -5,7 +5,5 @@
 
 export interface DiffDialogNotification {
     toolUseId: string;
-    filePath: string;
-    oldString: string;
-    newString: string;
+    agentId: string;
 }

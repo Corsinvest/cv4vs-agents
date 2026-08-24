@@ -411,7 +411,7 @@ export abstract class ToolRenderer {
             <div
                 class="cv-tool-body"
                 style="cursor:pointer"
-                @click=${() => this.host.openDiffInVs(fp, oldS, newS)}
+                @click=${() => this.host.openDiffInVs()}
             >
                 <cv-diff-preview
                     .oldString=${oldS}
@@ -466,10 +466,6 @@ export abstract class ToolRenderer {
 
     /** Diff tools' header buttons: "open diff in VS" + (on error) "show error". */
     protected diffActionButtons(): TemplateResult {
-        const inp = this.host.input;
-        const fp = String(inp.file_path ?? inp.path ?? '');
-        const oldS = String(inp.old_string ?? '');
-        const newS = String(inp.new_string ?? inp.content ?? '');
         return html`<div class="cv-tool-actions">
             ${
                 this.host.status === 'error'
@@ -498,7 +494,7 @@ export abstract class ToolRenderer {
                 title="Open diff in Visual Studio"
                 @click=${(e: Event) => {
                     e.stopPropagation();
-                    this.host.openDiffInVs(fp, oldS, newS);
+                    this.host.openDiffInVs();
                 }}
             >
                 ${unsafeHTML(VisualStudioIcon)}
