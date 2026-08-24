@@ -411,7 +411,7 @@ export abstract class ToolRenderer {
             <div
                 class="cv-tool-body"
                 style="cursor:pointer"
-                @click=${() => this.host.openDiffDialog(fp, oldS, newS)}
+                @click=${() => this.host.openDiffInVs(fp, oldS, newS)}
             >
                 <div class="cv-diff-summary ${this.host.status === 'error' ? 'is-error' : ''}">
                     ${this.diffSummary(oldS, newS)}
