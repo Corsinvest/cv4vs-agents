@@ -76,8 +76,13 @@ export class CvDiffPreview extends LitElement {
         // can reach, and the full diff is one click away in Visual Studio.
         const shown = rows.slice(0, VISIBLE_ROWS);
         const more = rows.length - shown.length;
+        // Extension only, like Write's renderer (renderers.ts): highlightCode resolves a fence
+        // label or extension, not a full path, so the path itself would never match.
+        const name = this.filePath.split(/[\\/]/).pop() ?? '';
+        const dot = name.lastIndexOf('.');
+        const lang = dot > 0 ? name.slice(dot + 1) : '';
         return html`<div class="cv-diff-preview-wrap" data-action="diff-expand">
-            ${shown.map((r) => this._row(r, this.filePath))}
+            ${shown.map((r) => this._row(r, lang))}
             ${more > 0 ? html`<div class="cv-diff-more">… ${more} more lines</div>` : nothing}
         </div>`;
     }

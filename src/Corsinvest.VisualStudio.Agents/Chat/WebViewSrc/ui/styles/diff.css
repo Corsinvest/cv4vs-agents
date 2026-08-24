@@ -24,8 +24,12 @@ cv-diff-preview {
 .cv-diff-summary.is-error {
     color: var(--colorPaletteRedForeground1);
 }
-/* Change counts in the row title. Same tokens the rewind dialog uses for its
- * own copy of these: a Light-DOM row cannot reach a component's static styles. */
+/* Change counts in the row title (the +N/-N spans in .cv-diff-summary — see
+ * base.ts's diffSummary()). Same tokens the rewind dialog uses for its own
+ * copy of these: a Light-DOM row cannot reach a component's static styles.
+ * Reused below on .cv-diff-row for the preview's per-line background: same
+ * class name, different subtree, no collision — text color here, background
+ * there. */
 .cv-diff-ins {
     color: var(--colorPaletteGreenForeground1);
 }
@@ -253,7 +257,9 @@ cv-diff-dialog fluent-dialog-body::part(title) {
     font-size: var(--fontSizeBase100);
     padding: 2px 8px;
 }
-/* Row background says which line changed; <mark> says which piece inside it. */
+/* Row background says which line changed; <mark> says which piece inside it.
+ * Same class names as the +N/-N summary spans above (different subtree,
+ * different property — see the comment there), applied here to .cv-diff-row. */
 .cv-diff-ins {
     background: var(--colorPaletteGreenBackground1);
 }
