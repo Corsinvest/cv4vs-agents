@@ -216,3 +216,53 @@ cv-diff-dialog fluent-dialog-body::part(title) {
     text-decoration: none;
     padding: 0;
 }
+
+/* Inline diff rows. The grid keeps the two gutters aligned while the text
+ * wraps: the pane owns no horizontal scroll any more, which is what the
+ * old side-by-side layout prevented. */
+.cv-diff-row {
+    display: grid;
+    grid-template-columns: 2.2em 2.2em 0.9em 1fr;
+    font-family: var(--fontFamilyMonospace);
+    font-size: var(--fontSizeBase200);
+    line-height: 1.45;
+}
+.cv-diff-ln {
+    color: var(--colorNeutralForeground4);
+    text-align: right;
+    padding-right: 0.5em;
+    user-select: none;
+}
+.cv-diff-sign {
+    color: var(--colorNeutralForeground4);
+    user-select: none;
+}
+.cv-diff-txt {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding-right: 6px;
+}
+.cv-diff-hunk {
+    color: var(--colorNeutralForeground4);
+    font-family: var(--fontFamilyMonospace);
+    font-size: var(--fontSizeBase100);
+    padding: 2px 8px;
+}
+.cv-diff-more {
+    color: var(--colorNeutralForeground4);
+    font-size: var(--fontSizeBase100);
+    padding: 2px 8px;
+}
+/* Row background says which line changed; <mark> says which piece inside it. */
+.cv-diff-ins {
+    background: var(--colorPaletteGreenBackground1);
+}
+.cv-diff-del {
+    background: var(--colorPaletteRedBackground1);
+}
+.cv-diff-ins mark,
+.cv-diff-del mark {
+    background: var(--colorPaletteYellowBackground2);
+    color: inherit;
+    border-radius: 2px;
+}
