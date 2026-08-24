@@ -8,6 +8,8 @@
 
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
+import { editRangeFromHunks } from '../../core/diff-rows';
+import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
 import type { ToolHost, ToolRowState } from './types';
 import type {
     IdeFileNotification,
@@ -51,11 +53,17 @@ export class BridgeToolHost implements ToolHost {
     get fullLineCount(): number {
         return this.row.fullLineCount ?? 0;
     }
+    /** The CLI's own hunks for this edit, once its result has arrived. */
+    get diffPatch(): PatchHunkDto[] | null {
+        return this.row.extras?.patch ?? null;
+    }
+    /** Where the edit landed, derived from the CLI's own hunks — the same patch the preview
+     *  renders, so the jump and the diff can never disagree about the same edit. */
     get editStartLine(): number {
-        return this.row.extras?.editRange?.startLine ?? 0;
+        return editRangeFromHunks(this.row.extras?.patch)[0];
     }
     get editEndLine(): number {
-        return this.row.extras?.editRange?.endLine ?? 0;
+        return editRangeFromHunks(this.row.extras?.patch)[1];
     }
     get agentId(): string {
         return this.row.agentId ?? '';

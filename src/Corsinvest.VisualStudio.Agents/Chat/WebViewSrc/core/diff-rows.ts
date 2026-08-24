@@ -7,6 +7,7 @@
 
 import { structuredPatch, diffWords } from 'diff';
 import { patchPathFor } from './diff';
+import type { PatchHunkDto } from './generated/PatchHunkDto';
 
 export type Seg = { text: string; changed: boolean };
 
@@ -59,22 +60,14 @@ function segmentsOf(oldLine: string, newLine: string, side: 'del' | 'ins'): Seg[
 
 const whole = (text: string): Seg[] => [{ text, changed: false }];
 
-export function buildRows(
-    oldStr: string | undefined | null,
-    newStr: string | undefined | null,
-    filePath: string | undefined | null,
-    context: number,
-    ignoreWhitespace = false,
-): Row[] {
-    const name = patchPathFor(filePath);
-    const patch = structuredPatch(name, name, oldStr ?? '', newStr ?? '', '', '', {
-        context,
-        ignoreWhitespace,
-        stripTrailingCr: true,
-    });
-
+/**
+ * Rows from hunks somebody else computed — the CLI's own, carried on the tool result. Preferred
+ * over buildRows: those hunks know the file's real line numbers and bring the context around the
+ * change, neither of which an Edit's two input fragments can give.
+ */
+export function rowsFromHunks(hunks: readonly PatchHunkDto[] | null | undefined): Row[] {
     const rows: Row[] = [];
-    for (const hunk of patch.hunks) {
+    for (const hunk of hunks ?? []) {
         rows.push({ kind: 'hunk', oldNo: hunk.oldStart, newNo: hunk.newStart, segs: [] });
         let o = hunk.oldStart;
         let n = hunk.newStart;
@@ -125,4 +118,65 @@ export function buildRows(
         }
     }
     return rows;
+}
+
+/**
+ * Rows from two strings we diff ourselves. Only for an edit whose result has not arrived yet:
+ * the tool's input carries the two fragments and nothing else, so the hunks come out numbered
+ * from 1 — true of the fragment, false of the file. The caller drops the numbers there.
+ */
+export function buildRows(
+    oldStr: string | undefined | null,
+    newStr: string | undefined | null,
+    filePath: string | undefined | null,
+    context: number,
+    ignoreWhitespace = false,
+): Row[] {
+    const name = patchPathFor(filePath);
+    const patch = structuredPatch(name, name, oldStr ?? '', newStr ?? '', '', '', {
+        context,
+        ignoreWhitespace,
+        stripTrailingCr: true,
+    });
+    return rowsFromHunks(patch.hunks);
+}
+
+/**
+ * Where an edit landed, for the jump the file link makes: the first and last line the change
+ * ADDED, not the hunk's own span — that spans the context too, and selecting it would highlight
+ * three untouched lines either side.
+ *
+ * Walks the first hunk only: MultiEdit yields several non-contiguous ones, and the first is where
+ * the change starts, which is where to jump. '+' and context lines both exist in the file after
+ * the edit and advance the counter; '-' lines are gone and do not. A hunk with no '+' at all —
+ * a pure deletion — falls back to its own span, which is the closest thing to a location it has.
+ */
+export function editRangeFromHunks(
+    hunks: readonly PatchHunkDto[] | null | undefined,
+): [number, number] {
+    const first = hunks?.[0];
+    if (!first || first.newStart <= 0) {
+        return [0, 0];
+    }
+    let line = first.newStart;
+    let start = 0;
+    let end = 0;
+    for (const text of first.lines ?? []) {
+        if (text.startsWith('-')) {
+            continue;
+        }
+        if (text.startsWith('+')) {
+            if (start === 0) {
+                start = line;
+            }
+            end = line;
+        }
+        line++;
+    }
+    if (start > 0) {
+        return [start, end];
+    }
+    return first.newLines > 0
+        ? [first.newStart, first.newStart + first.newLines - 1]
+        : [first.newStart, first.newStart];
 }

@@ -336,14 +336,12 @@ internal sealed partial class SessionManager
                         ? subagent.SpawnedAgentIdFor(msg)
                         : ToolUseResultField(obj, "agentId");
                     if (!string.IsNullOrEmpty(agentId)) { msg["agentId"] = agentId; }
-                    // Same lift for the edit's line range: toolUseResult doesn't survive into the
-                    // replay, so what HistoryReplay needs has to travel on the message itself.
-                    var editRange = ToolUseResultEditRange(obj["toolUseResult"] as JObject);
-                    if (editRange.Start > 0)
-                    {
-                        msg["editStartLine"] = editRange.Start;
-                        msg["editEndLine"] = editRange.End;
-                    }
+                    // Same lift for the patch: toolUseResult doesn't survive into the replay, so
+                    // what HistoryReplay needs has to travel on the message itself. The one nested
+                    // value among these — the others are scalars on purpose — because it is the
+                    // CLI's own JSON travelling verbatim, not an object of ours being serialised.
+                    var patch = ToolUseResultPatch(obj["toolUseResult"] as JObject);
+                    if (patch != null) { msg["diffPatch"] = patch; }
                     // Same lift again, for what an Agent run cost. Only a completed run has these:
                     // an interrupted one leaves toolUseResult a bare string, so nothing is lifted
                     // and the row shows no figures — the same as live.

@@ -5,7 +5,8 @@
 import { LitElement, html, nothing, type TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { buildRows, type Row, type Seg } from '../../core/diff-rows';
+import { buildRows, rowsFromHunks, type Row, type Seg } from '../../core/diff-rows';
+import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
 import { highlightCode } from '../../core/lang';
 import { state as appState } from '../../core/state';
 
@@ -29,6 +30,10 @@ export class CvDiffPreview extends LitElement {
     @property() newString = '';
     @property() filePath = '';
 
+    /** The CLI's own hunks, once its result has arrived. Preferred over diffing the two input
+     *  fragments: only these know the file's real line numbers and carry the surrounding context. */
+    @property({ attribute: false }) patch: PatchHunkDto[] | null = null;
+
     // Light DOM: the row that renders this is itself Light DOM
     // (cv-tool-row.ts:77), and the styles live in the global diff.css. Moving
     // this component to a shadow root belongs to the CSS migration, not here.
@@ -44,14 +49,17 @@ export class CvDiffPreview extends LitElement {
         return seg.changed ? html`<mark>${inner}</mark>` : html`${inner}`;
     }
 
-    private _row(row: Row, lang: string): TemplateResult {
+    private _row(row: Row, lang: string, numbered: boolean): TemplateResult {
         if (row.kind === 'hunk') {
             return html`<div class="cv-diff-hunk">@@ ${row.oldNo} ${row.newNo} @@</div>`;
         }
         const sign = row.kind === 'ins' ? '+' : row.kind === 'del' ? '-' : ' ';
+        // One gutter, not two: a '-' is only in the old file and a '+' only in the new, so each
+        // row has exactly one number worth showing. Two columns spent a second 2.2em repeating
+        // the context rows and blanking on every change.
+        const no = row.kind === 'del' ? row.oldNo : row.newNo;
         return html`<div class="cv-diff-row cv-diff-${row.kind}">
-            <span class="cv-diff-ln">${row.oldNo ?? ''}</span>
-            <span class="cv-diff-ln">${row.newNo ?? ''}</span>
+            ${numbered ? html`<span class="cv-diff-ln">${no ?? ''}</span>` : nothing}
             <span class="cv-diff-sign">${sign}</span>
             <span class="cv-diff-txt">${row.segs.map((s) => this._seg(s, lang))}</span>
         </div>`;
@@ -61,13 +69,19 @@ export class CvDiffPreview extends LitElement {
         if (!this.oldString && !this.newString) {
             return html`<div class="cv-diff-empty">No changes</div>`;
         }
-        const rows = buildRows(
-            this.oldString,
-            this.newString,
-            this.filePath,
-            CONTEXT_LINES,
-            appState.ui.diffIgnoreWhitespace,
-        );
+        // Until the tool_result lands there is no patch, only the two fragments the input carried.
+        // Diffing those is the best available answer, but their line numbers describe the fragment
+        // and not the file — so that branch renders without a gutter rather than with a wrong one.
+        const fromCli = !!this.patch?.length;
+        const rows = fromCli
+            ? rowsFromHunks(this.patch)
+            : buildRows(
+                  this.oldString,
+                  this.newString,
+                  this.filePath,
+                  CONTEXT_LINES,
+                  appState.ui.diffIgnoreWhitespace,
+              );
         if (!rows.length) {
             return html`<div class="cv-diff-empty">No changes</div>`;
         }
@@ -80,8 +94,11 @@ export class CvDiffPreview extends LitElement {
         const name = this.filePath.split(/[\\/]/).pop() ?? '';
         const dot = name.lastIndexOf('.');
         const lang = dot > 0 ? name.slice(dot + 1) : '';
-        return html`<div class="cv-diff-preview-wrap" data-action="diff-expand">
-            ${shown.map((r) => this._row(r, lang))}
+        return html`<div
+            class="cv-diff-preview-wrap ${fromCli ? '' : 'no-gutter'}"
+            data-action="diff-expand"
+        >
+            ${shown.map((r) => this._row(r, lang, fromCli))}
             ${more > 0 ? html`<div class="cv-diff-more">… ${more} more lines</div>` : nothing}
         </div>`;
     }

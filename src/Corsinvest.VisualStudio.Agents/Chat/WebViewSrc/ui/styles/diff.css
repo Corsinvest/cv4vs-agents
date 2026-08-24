@@ -68,7 +68,7 @@ cv-diff-preview {
  * old side-by-side layout prevented. */
 .cv-diff-row {
     display: grid;
-    grid-template-columns: 2.2em 2.2em 0.9em 1fr;
+    grid-template-columns: 2.6em 0.9em 1fr;
     font-family: var(--fontFamilyMonospace);
     font-size: var(--fontSizeBase200);
     line-height: 1.45;
@@ -87,6 +87,10 @@ cv-diff-preview {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     padding-right: 6px;
+}
+/* No patch yet, so no line numbers to show: the gutter goes with them. */
+.cv-diff-preview-wrap.no-gutter .cv-diff-row {
+    grid-template-columns: 0.9em 1fr;
 }
 .cv-diff-hunk {
     color: var(--colorNeutralForeground4);

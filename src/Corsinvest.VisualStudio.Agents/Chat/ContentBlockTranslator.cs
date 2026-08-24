@@ -23,53 +23,63 @@ namespace Corsinvest.VisualStudio.Agents.Chat;
 /// </summary>
 internal sealed class ToolResultExtras
 {
-    /// <summary>Lines an edit landed on. (0, 0) when the tool isn't an edit or wrote a new file.</summary>
-    public (int Start, int End) EditRange { get; set; }
+    /// <summary>The edit's hunks as the CLI computed them. Null when it reported none. Carries the
+    /// file's own line numbers and the context around each change, neither of which a patch
+    /// computed from the tool's two input fragments could know.</summary>
+    public Contracts.PatchHunkDto[] Patch { get; set; }
 
-    /// <summary>What an Agent run cost. All zero while it runs, for every other tool, and for an
+    /// <summary>What an Agent run cost. Null while it runs, for every other tool, and for an
     /// interrupted run — the CLI reports no totals there.</summary>
-    public (long DurationMs, long Tokens, int ToolUses) AgentTotals { get; set; }
+    public Contracts.AgentRunTotalsDto AgentTotals { get; set; }
 
     /// <summary>Read them off a live toolUseResult. Null-safe: the object is a bare string on an
     /// error result, and both helpers already guard that shape.</summary>
     public static ToolResultExtras FromToolUseResult(JObject toolUseResult) => new()
     {
-        EditRange = Core.Sessions.SessionManager.ToolUseResultEditRange(toolUseResult),
-        AgentTotals = Core.Sessions.SessionManager.ToolUseResultAgentTotals(toolUseResult),
+        AgentTotals = TotalsOrNull(Core.Sessions.SessionManager.ToolUseResultAgentTotals(toolUseResult)),
+        Patch = Core.Sessions.SessionManager.ToolUseResultPatch(toolUseResult)
+            ?.ToObject<Contracts.PatchHunkDto[]>(),
     };
 
-    /// <summary>Read them back off a replayed message, where history lifted them as scalars. The
-    /// lift stays flat on purpose: that JObject goes into the history page and is read back with
-    /// Val(), so nesting there would mean serializing a sub-object inside another document.</summary>
+    /// <summary>Read them back off a replayed message, where history lifted them. The lift stays
+    /// flat for the scalars on purpose: that JObject goes into the history page and is read back
+    /// with Val(), so nesting there would mean serializing a sub-object inside another document.
+    /// <para>The patch is the exception, and earns it: what travels is the CLI's own JSON verbatim,
+    /// not an object of ours being serialized — and there is no flat shape for a list of hunks that
+    /// wouldn't amount to inventing one.</para></summary>
     public static ToolResultExtras FromMessage(JObject msg) => new()
     {
-        EditRange = (msg.Val("editStartLine", 0), msg.Val("editEndLine", 0)),
-        AgentTotals = (msg.Val("agentDurationMs", 0L),
-                       msg.Val("agentTokens", 0L),
-                       msg.Val("agentToolUses", 0)),
+        // The one lifted value that isn't a scalar — see the lift in SessionManager.History.
+        Patch = (msg["diffPatch"] as JArray)?.ToObject<Contracts.PatchHunkDto[]>(),
+        AgentTotals = TotalsOrNull((msg.Val("agentDurationMs", 0L),
+                                    msg.Val("agentTokens", 0L),
+                                    msg.Val("agentToolUses", 0))),
     };
+
+    /// <summary>The totals as a DTO, or null when the run reported none — a zero duration is how
+    /// both sources say "nothing to report", and a DTO full of zeros would claim otherwise.</summary>
+    private static Contracts.AgentRunTotalsDto TotalsOrNull((long DurationMs, long Tokens, int ToolUses) t)
+        => t.DurationMs > 0
+            ? new Contracts.AgentRunTotalsDto
+            {
+                DurationMs = t.DurationMs,
+                Tokens = t.Tokens,
+                ToolUses = t.ToolUses,
+            }
+            : null;
 
     /// <summary>The wire shape: each group present only when the tool reported it, and the whole
     /// object null when it reported neither — so the WebView tests for presence, never for a zero
     /// that could also mean "ran for 0ms".</summary>
     public Contracts.ToolResultExtrasDto ToDto()
     {
-        var edit = EditRange.Start > 0
-            ? new Contracts.EditLineRangeDto { StartLine = EditRange.Start, EndLine = EditRange.End }
-            : null;
-
-        var totals = AgentTotals.DurationMs > 0
-            ? new Contracts.AgentRunTotalsDto
-            {
-                DurationMs = AgentTotals.DurationMs,
-                Tokens = AgentTotals.Tokens,
-                ToolUses = AgentTotals.ToolUses,
-            }
-            : null;
-
-        return edit == null && totals == null
+        return AgentTotals == null && Patch == null
             ? null
-            : new Contracts.ToolResultExtrasDto { EditRange = edit, AgentTotals = totals };
+            : new Contracts.ToolResultExtrasDto
+            {
+                AgentTotals = AgentTotals,
+                Patch = Patch,
+            };
     }
 }
 

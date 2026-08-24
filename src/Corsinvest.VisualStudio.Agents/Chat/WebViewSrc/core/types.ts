@@ -107,7 +107,6 @@ export type { ToolResultNotification } from './generated/ToolResultNotification'
 /** Per-tool fields on a tool_result, grouped so adding another one touches the DTO and its
  *  renderer instead of every layer in between. Each member is null when its tool didn't report. */
 export type { ToolResultExtrasDto } from './generated/ToolResultExtrasDto';
-export type { EditLineRangeDto } from './generated/EditLineRangeDto';
 export type { AgentRunTotalsDto } from './generated/AgentRunTotalsDto';
 
 /** Rate-limit notice (`chat_rate_limit`) + its severity union.

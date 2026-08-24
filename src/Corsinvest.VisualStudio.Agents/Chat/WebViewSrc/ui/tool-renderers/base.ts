@@ -417,6 +417,7 @@ export abstract class ToolRenderer {
                     .oldString=${oldS}
                     .newString=${newS}
                     .filePath=${fp}
+                    .patch=${this.host.diffPatch}
                 ></cv-diff-preview>
                 ${errBox}
             </div>

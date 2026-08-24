@@ -8,6 +8,7 @@
 // everything else (markup, row layout, string cleanup) lives in ToolRenderer.
 // No renderer imports bridge/state — only CvToolRow does.
 
+import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
 import type { TemplateResult, nothing } from 'lit';
 import type {
     ToolStatus,
@@ -55,6 +56,9 @@ export interface ToolHost extends ToolRowState {
     /** What a finished Agent run cost, or null: while it runs, for every other tool, and for an
      *  interrupted run — the CLI reports no totals there. */
     readonly agentTotals: AgentRunTotalsDto | null;
+    /** The CLI's own hunks for an edit, or null until its result arrives. Unlike a patch built
+     *  from the tool's two input fragments, these carry the file's real line numbers. */
+    readonly diffPatch: PatchHunkDto[] | null;
 
     /** Open a file in VS, optionally selecting a line range. */
     openFile(filePath: string, startLine?: number, endLine?: number): void;
