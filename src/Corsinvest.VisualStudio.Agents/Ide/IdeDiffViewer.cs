@@ -256,6 +256,11 @@ internal sealed partial class IdeDiffViewer
             {
                 _openFrames[caption] = frame;
                 if (!string.IsNullOrEmpty(toolUseId)) { _chatDiffs[toolUseId] = frame; }
+                // No pending diff to resolve here (this viewer is read-only): the listener is
+                // hooked purely to take the two temps away with the window. CloseChatFrame goes
+                // through CloseFrame, which raises OnClose too, so the toggle and close-all paths
+                // clean up through the same listener.
+                HookFrameClose(frame, null, tempOld, tempNew);
             }
             else
             {
@@ -263,6 +268,11 @@ internal sealed partial class IdeDiffViewer
                 // only way to see a full diff, so how often it fails decides whether a fallback
                 // is needed at all.
                 OutputWindowLogger.Global.Warn($"[diff] chat diff did not open for '{caption}' — nothing shown");
+                // Nothing opened, so nothing will close and take the temps with it.
+                foreach (var t in new[] { tempOld, tempNew })
+                {
+                    try { File.Delete(t); } catch (Exception) { /* best effort */ }
+                }
             }
         }
         catch (Exception ex)
@@ -380,10 +390,10 @@ internal sealed partial class IdeDiffViewer
     /// pending diff to TAB_CLOSED. Each frame gets its own listener
     /// instance — VS supports a single notify per frame, but our
     /// listener is just a thin pass-through.</summary>
-    private void HookFrameClose(IVsWindowFrame frame, string tempPath)
+    private void HookFrameClose(IVsWindowFrame frame, string tempPath, params string[] ownedTemps)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        var listener = new FrameCloseListener(this, tempPath);
+        var listener = new FrameCloseListener(this, tempPath, ownedTemps);
         frame.SetProperty((int)__VSFPROPID.VSFPROPID_ViewHelper, listener);
     }
 
