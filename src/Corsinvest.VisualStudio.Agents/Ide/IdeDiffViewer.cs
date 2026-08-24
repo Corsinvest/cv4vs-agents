@@ -257,8 +257,21 @@ internal sealed partial class IdeDiffViewer
                 _openFrames[caption] = frame;
                 if (!string.IsNullOrEmpty(toolUseId)) { _chatDiffs[toolUseId] = frame; }
             }
+            else
+            {
+                // Logged to size the fallback question: with the HTML dialog gone this is the
+                // only way to see a full diff, so how often it fails decides whether a fallback
+                // is needed at all.
+                OutputWindowLogger.Global.Warn($"[diff] chat diff did not open for '{caption}' — nothing shown");
+            }
         }
-        catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.ShowFromContents", ex); }
+        catch (Exception ex)
+        {
+            // Same reasoning as the null-frame branch above: this is the only path left to a
+            // full diff once the HTML dialog is gone, so failures here need to be countable.
+            OutputWindowLogger.Global.Warn($"[diff] chat diff could not open for {Path.GetFileName(filePath)}: {ex.Message}");
+            OutputWindowLogger.Global.LogException("IdeDiffViewer.ShowFromContents", ex);
+        }
     }
 
     /// <summary>Close a specific diff frame by tab name. Lookup is against the open-frames
