@@ -31,6 +31,13 @@ export class CvPermissionSelector extends LitElement {
                 padding-inline: 8px;
                 min-width: 0;
             }
+            /* The one mode that asks nothing before running anything, said where the modes are
+             * named — the composer border only shows it while the composer has focus. On the span:
+             * the button is Fluent's, which takes layout from us and nothing else. */
+            .trigger .danger {
+                color: var(--colorPaletteRedForeground1);
+                font-weight: var(--fontWeightSemibold);
+            }
         `,
     ];
 
@@ -76,7 +83,9 @@ export class CvPermissionSelector extends LitElement {
                 size="small"
                 @click=${this._onClick}
             >
-                <span>${item.short}</span>
+                <span class=${this._current === 'bypassPermissions' ? 'danger' : ''}
+                    >${item.short}</span
+                >
             </fluent-button>
             <!-- The name of the control, not of the mode: three of the five modes are shown in full
                  on the button already (Manual, Plan, Auto), so echoing the label would be the same
