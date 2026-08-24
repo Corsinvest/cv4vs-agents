@@ -16,24 +16,15 @@ cv-diff-preview {
     font-size: var(--fontSizeBase200);
 }
 
-.cv-diff-summary {
-    color: var(--colorNeutralForeground3);
-    font-size: var(--fontSizeBase200);
-    padding: 4px 0 6px;
-}
-.cv-diff-summary.is-error {
-    color: var(--colorPaletteRedForeground1);
-}
-/* Change counts in the row title (the +N/-N spans in .cv-diff-summary — see
- * base.ts's diffSummary()). Same tokens the rewind dialog uses for its own
- * copy of these: a Light-DOM row cannot reach a component's static styles.
- * Reused below on .cv-diff-row for the preview's per-line background: same
- * class name, different subtree, no collision — text color here, background
- * there. */
-.cv-diff-ins {
+/* Change counts trailing the path in the row header (base.ts's diffSummary()).
+ * Named apart from the preview's .cv-diff-ins/.cv-diff-del rows below: the
+ * counts now live inside the header link, so a shared name would paint them
+ * with the row background too. Same tokens the rewind dialog uses for its own
+ * copy — a Light-DOM row cannot reach a component's static styles. */
+.cv-diff-count-ins {
     color: var(--colorPaletteGreenForeground1);
 }
-.cv-diff-del {
+.cv-diff-count-del {
     color: var(--colorPaletteRedForeground1);
 }
 

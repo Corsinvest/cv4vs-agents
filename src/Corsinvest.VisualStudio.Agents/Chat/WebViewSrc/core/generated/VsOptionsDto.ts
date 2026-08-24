@@ -16,7 +16,6 @@ export interface VsOptionsDto {
     fileCheckpoints: boolean;
     sendSelectionText: boolean;
     diffIgnoreWhitespace: boolean;
-    showOpenDiffInVsButton: boolean;
     allowedUploadExtensions: string[];
     extraLinkableExtensions: string[];
     appVersion: string;

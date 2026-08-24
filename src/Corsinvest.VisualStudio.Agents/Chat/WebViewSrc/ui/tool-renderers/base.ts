@@ -413,9 +413,6 @@ export abstract class ToolRenderer {
                 style="cursor:pointer"
                 @click=${() => this.host.openDiffInVs(fp, oldS, newS)}
             >
-                <div class="cv-diff-summary ${this.host.status === 'error' ? 'is-error' : ''}">
-                    ${this.diffSummary(oldS, newS)}
-                </div>
                 <cv-diff-preview
                     .oldString=${oldS}
                     .newString=${newS}
@@ -426,8 +423,8 @@ export abstract class ToolRenderer {
         `;
     }
 
-    /** One-line summary above the diff ("Edit failed" / "+3 -14" / "Modified"). */
-    private diffSummary(oldS: string, newS: string): TemplateResult {
+    /** Change counts for the row header, trailing the path ("Edit failed" / "+3 −14" / "Modified"). */
+    protected diffSummary(oldS: string, newS: string): TemplateResult {
         if (this.host.status === 'error') {
             return html`Edit failed`;
         }
@@ -436,8 +433,8 @@ export abstract class ToolRenderer {
         if (!added && !removed) {
             return html`Modified`;
         }
-        return html`${added ? html`<span class="cv-diff-ins">+${added}</span>` : nothing}
-        ${removed ? html`<span class="cv-diff-del">−${removed}</span>` : nothing}`;
+        return html`${added ? html`<span class="cv-diff-count-ins">+${added}</span>` : nothing}
+        ${removed ? html`<span class="cv-diff-count-del">−${removed}</span>` : nothing}`;
     }
 
     /** The header actions this tool shows (right of the header, before the chevron). Default: an

@@ -56,7 +56,14 @@ export class EditRenderer extends ToolRenderer {
     }
     override header(): TemplateResult {
         const fp = String(this.host.input.file_path ?? '');
-        const link = this.editFileLink(fp, html`${displayPathUi(fp)}`);
+        const oldS = String(this.host.input.old_string ?? '');
+        const newS = String(this.host.input.new_string ?? '');
+        // Counts trail the path inside the link's own span so they follow its last line when a
+        // long path wraps, instead of sitting on a line of their own below the row.
+        const link = this.editFileLink(
+            fp,
+            html`${displayPathUi(fp)} ${this.diffSummary(oldS, newS)}`,
+        );
         return html`${this.nameSpan(this.label())}${this.detailSpan(link)}`;
     }
 }
