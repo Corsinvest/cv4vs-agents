@@ -300,12 +300,12 @@ See [Options → Profiles](docs/options.md#profiles).
   errors (toggleable). On an Edit the selection lands on the lines that changed — taken from the
   patch the CLI itself computed, so it is right even after the edit has been applied and the file
   touched again (**Select lines when opening file**).
-- **[Inline diffs](docs/chat/diff.md)** — Edit/Write rows show a diff (configurable context lines /
-  ignore-whitespace), expandable to a full-screen viewer with four view modes — **split**
-  (side-by-side), **unified**, **patch**, and **auto**, which switches between split and unified by
-  available width; an **Open in Visual Studio** button opens it in VS's native side-by-side diff.
-  There you review — and edit — the proposed change with the full editor, then **save (Ctrl+S) to
-  accept** it or **close the tab to reject**; the CLI applies the edit only if you saved.
+- **[Inline diffs](docs/chat/diff.md)** — Edit/Write rows show a diff with the file's own line
+  numbers and the context around each change, syntax-highlighted, with the changed words marked
+  inside an edited line; the row's title carries the counts (`+3 −14`). Clicking it opens the change
+  in VS's native side-by-side diff, where you review — and edit — it with the full editor, then
+  **save (Ctrl+S) to accept** or **close the tab to reject**; the CLI applies the edit only if you
+  saved.
 - **Full Markdown rendering** — tables, lists, blockquotes, links, and fenced code blocks rendered
   with **syntax highlighting** (highlight.js) across all common languages.
 - **Everything is copyable** — a copy button on every message, tool row and code block, so any part
