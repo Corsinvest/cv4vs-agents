@@ -31,8 +31,7 @@ export class CvDiffPreview extends LitElement {
 
     // Light DOM: the row that renders this is itself Light DOM
     // (cv-tool-row.ts:77), and the styles live in the global diff.css. Moving
-    // this component to a shadow root belongs to the CSS migration, not here —
-    // what diff2html forced was the *markup*, not the render root.
+    // this component to a shadow root belongs to the CSS migration, not here.
     override createRenderRoot() {
         return this;
     }

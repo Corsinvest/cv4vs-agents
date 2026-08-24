@@ -62,8 +62,6 @@ export interface ToolHost extends ToolRowState {
     openFileAtEdit(filePath: string): void;
     /** Open an external URL via the host. */
     openUrl(url: string): void;
-    /** Open the side-by-side diff dialog inside the webview (click on the row). */
-    openDiffDialog(filePath: string, oldString: string, newString: string): void;
     /** Send the diff to Visual Studio's native diff viewer (VS icon button). */
     openDiffInVs(filePath: string, oldString: string, newString: string): void;
     /** Open this tool's IN or OUT content in a temp file in VS. */

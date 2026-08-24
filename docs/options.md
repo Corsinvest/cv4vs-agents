@@ -36,7 +36,6 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 | Initial permission mode | `Default` / `AcceptEdits` / `Plan` | `Default` | Mode every new chat starts in (changeable per-session from the toolbar). `Default` = ask before edits. |
 | Allow dangerously skip permissions | bool | `false` | Enables the toolbar's "Bypass permissions" (never asks — even for dangerous commands). |
 | Diff — ignore whitespace | bool | `false` | Ignore leading/trailing whitespace when computing the diff. |
-| Diff — show "Open diff in Visual Studio" button | bool | `true` | Show the VS-icon button on Edit/Write rows that opens the change in VS's native diff viewer. |
 | Respect `.gitignore` | bool | `true` | Also hide `.gitignore`-matched files/folders from the `@` picker (re-read on change, cached otherwise). |
 | Ignored patterns | file path | shipped defaults | Extra rules hiding files from the `@` picker, written as a `.gitignore` and kept as one — the row shows where the file is and `…` opens it in the editor. Applied only where the workspace's own ignore rules say nothing, so they are the fallback for a project that ships none. |
 | Extra linkable extensions | string[] | *(empty)* | Extensions to also linkify when Claude names a file **in prose** (`render.wgsl:20`), on top of the ~270 built-in ones — needed only for a language not shipped yet. A markdown link written by the model is always linked, whatever its extension. One per line, without the dot. See [Clickable file references](file-links.md). |

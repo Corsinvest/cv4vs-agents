@@ -621,7 +621,6 @@ public class VsOptionsDto
     /// can show WHICH of the two is going out.</summary>
     public bool SendSelectionText { get; set; }
     public bool DiffIgnoreWhitespace { get; set; }
-    public bool ShowOpenDiffInVsButton { get; set; }
     public string[] AllowedUploadExtensions { get; set; }
     public string[] ExtraLinkableExtensions { get; set; }
     public string AppVersion { get; set; }

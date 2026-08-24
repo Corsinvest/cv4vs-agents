@@ -146,11 +146,6 @@ public class AgentsChatPage : AgentsOptionsPage
     [Description("Ignore leading and trailing whitespace when computing diff.")]
     public bool DiffIgnoreWhitespace { get; set; } = false;
 
-    [Category("Diff")]
-    [DisplayName("Show \"Open diff in Visual Studio\" button")]
-    [Description("Show the Visual Studio icon button on Edit/Write tool rows that opens the change in VS's native side-by-side diff viewer. Disable to hide it.")]
-    public bool ShowOpenDiffInVsButton { get; set; } = true;
-
     [Category("Ignore")]
     [DisplayName("Respect .gitignore")]
     [Description("Also hide files/folders matched by the workspace's `.gitignore`, and by git's global excludes file (`core.excludesFile`), from the `@` file picker. Re-read on every change to either file (cached when unchanged).")]

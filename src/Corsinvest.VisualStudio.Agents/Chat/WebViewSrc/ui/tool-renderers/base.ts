@@ -491,24 +491,20 @@ export abstract class ToolRenderer {
                       </fluent-button>`
                     : nothing
             }
-            ${
-                appState.ui.showOpenDiffInVsButton
-                    ? html`<fluent-button
-                          class="trigger cv-tool-actions-vs"
-                          appearance="subtle"
-                          shape="rounded"
-                          size="small"
-                          icon-only
-                          title="Open diff in Visual Studio"
-                          @click=${(e: Event) => {
-                              e.stopPropagation();
-                              this.host.openDiffInVs(fp, oldS, newS);
-                          }}
-                      >
-                          ${unsafeHTML(VisualStudioIcon)}
-                      </fluent-button>`
-                    : nothing
-            }
+            <fluent-button
+                class="trigger cv-tool-actions-vs"
+                appearance="subtle"
+                shape="rounded"
+                size="small"
+                icon-only
+                title="Open diff in Visual Studio"
+                @click=${(e: Event) => {
+                    e.stopPropagation();
+                    this.host.openDiffInVs(fp, oldS, newS);
+                }}
+            >
+                ${unsafeHTML(VisualStudioIcon)}
+            </fluent-button>
         </div>`;
     }
 }

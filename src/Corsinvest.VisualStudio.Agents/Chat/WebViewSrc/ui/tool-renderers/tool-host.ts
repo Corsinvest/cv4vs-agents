@@ -8,7 +8,6 @@
 
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
-import { openDiffDialog } from '../../core/dialog-host';
 import type { ToolHost, ToolRowState } from './types';
 import type {
     IdeFileNotification,
@@ -116,10 +115,6 @@ export class BridgeToolHost implements ToolHost {
 
     openUrl(url: string): void {
         bridge.sendNotification<ExternalUrlNotification>(Msg.fromWebView.open.externalUrl, { url });
-    }
-
-    openDiffDialog(filePath: string, oldString: string, newString: string): void {
-        openDiffDialog({ toolUseId: this.toolUseId, filePath, oldString, newString });
     }
 
     openDiffInVs(filePath: string, oldString: string, newString: string): void {

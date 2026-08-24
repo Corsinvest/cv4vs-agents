@@ -118,10 +118,9 @@ const config = {
 };
 
 // Anything missing here reaches the user as a package that installs cleanly and misbehaves at
-// runtime — no index.html throws DirectoryNotFoundException, no diff2html.min.css renders
-// side-by-side diffs as stacked blocks, no logo shows a broken image. Skipping the copy quietly
-// (`if (existsSync(src))`) is what let two of those ship: the build stayed green and a stale dist/
-// from an earlier run hid the gap until someone cleaned it.
+// runtime — no index.html throws DirectoryNotFoundException, no logo shows a broken image.
+// Skipping the copy quietly (`if (existsSync(src))`) is what let two of those ship: the build
+// stayed green and a stale dist/ from an earlier run hid the gap until someone cleaned it.
 async function copyRequired(src, dest) {
     if (!existsSync(src)) {
         throw new Error(`[esbuild] missing ${src} — the VSIX would ship without it`);
@@ -140,14 +139,6 @@ async function copyStatic() {
     for (const f of ['vs.min.css', 'vs2015.min.css']) {
         await copyRequired(path.join('node_modules', 'highlight.js', 'styles', f), path.join('dist', 'hljs', f));
     }
-
-    // diff2html layout CSS (`.d2h-files-diff` flex, `.d2h-file-side-diff`
-    // inline-block 50%, etc). Without it side-by-side renders as two stacked
-    // full-width blocks instead of a real split view.
-    await copyRequired(
-        path.join('node_modules', 'diff2html', 'bundles', 'css', 'diff2html.min.css'),
-        path.join('dist', 'diff2html.min.css'),
-    );
 
     // Images the WebView loads by relative path (cv-welcome's logo). Copy the whole folder rather
     // than naming files: a list means a new image silently stays out of dist/ — and out of the VSIX,

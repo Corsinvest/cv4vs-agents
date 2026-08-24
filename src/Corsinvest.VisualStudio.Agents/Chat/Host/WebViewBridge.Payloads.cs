@@ -40,7 +40,6 @@ internal sealed partial class WebViewBridge
             FileCheckpoints = chat.FileCheckpoints,
             SendSelectionText = chat.SendSelectionText,
             DiffIgnoreWhitespace = chat.DiffIgnoreWhitespace,
-            ShowOpenDiffInVsButton = chat.ShowOpenDiffInVsButton,
             AllowedUploadExtensions = NormalizeExtensions(chat.AllowedUploadFileExtensions),
             // Bare (no dot, lowercase): the webview matches these against a parsed extension, not
             // against a file name, so the dot-prefixed shape used for uploads would never hit.
