@@ -25,6 +25,7 @@ import '../components/cv-copy-btn';
 import '../components/cv-diff-preview';
 import { cleanResult, previewText } from './tool-host';
 import { state as appState } from '../../core/state';
+import { countChanges } from '../../core/diff-stats';
 import { renderMarkdown } from '../../core/markdown';
 import { highlightCode } from '../../core/lang';
 import type { ToolHost } from './types';
@@ -425,26 +426,18 @@ export abstract class ToolRenderer {
         `;
     }
 
-    /** One-line summary above the diff ("Edit failed" / "Added N lines" / …). */
-    private diffSummary(oldS: string, newS: string): string {
+    /** One-line summary above the diff ("Edit failed" / "+3 -14" / "Modified"). */
+    private diffSummary(oldS: string, newS: string): TemplateResult {
         if (this.host.status === 'error') {
-            return 'Edit failed';
+            return html`Edit failed`;
         }
-        const oldLines = (oldS || '').split('\n').length;
-        const newLines = (newS || '').split('\n').length;
-        const added = Math.max(0, newLines - oldLines);
-        const removed = Math.max(0, oldLines - newLines);
-        const pl = (n: number) => (n !== 1 ? 's' : '');
-        if (added > 0 && removed > 0) {
-            return `Added ${added} line${pl(added)}, removed ${removed} line${pl(removed)}`;
+        const fp = String(this.host.input.file_path ?? this.host.input.path ?? '');
+        const { added, removed } = countChanges(oldS, newS, fp, appState.ui.diffIgnoreWhitespace);
+        if (!added && !removed) {
+            return html`Modified`;
         }
-        if (added > 0) {
-            return `Added ${added} line${pl(added)}`;
-        }
-        if (removed > 0) {
-            return `Removed ${removed} line${pl(removed)}`;
-        }
-        return 'Modified';
+        return html`${added ? html`<span class="cv-diff-ins">+${added}</span>` : nothing}
+        ${removed ? html`<span class="cv-diff-del">−${removed}</span>` : nothing}`;
     }
 
     /** The header actions this tool shows (right of the header, before the chevron). Default: an

@@ -24,6 +24,10 @@ cv-diff-preview {
 .cv-diff-summary.is-error {
     color: var(--colorPaletteRedForeground1);
 }
+/* Change counts in the row title. Same tokens the rewind dialog uses for its
+ * own copy of these: a Light-DOM row cannot reach a component's static styles. */
+.cv-diff-ins { color: var(--colorPaletteGreenForeground1); }
+.cv-diff-del { color: var(--colorPaletteRedForeground1); }
 
 .cv-diff-empty {
     padding: 8px;
