@@ -210,6 +210,9 @@ export class CvPrompt extends LitElement implements CommandHost {
             #box[data-permission-mode='auto'] #field:focus-within {
                 border-color: var(--colorPaletteRedBorderActive);
             }
+            #box[data-permission-mode='bypassPermissions'] #field:focus-within {
+                border-color: var(--colorPaletteRedBorderActive);
+            }
             /* The drop target is the whole composer (the handlers sit on #box), but the highlight
                goes on the field: it is the thing the file ends up in. */
             #box.drag-over #field {

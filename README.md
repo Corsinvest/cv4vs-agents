@@ -286,6 +286,12 @@ See [Options → Profiles](docs/options.md#profiles).
   unsupported).
 - **Model switcher & controls** — pick the model; toggle extended **Thinking**, **Fast mode**, an
   **Effort** slider, and auto-switch-on-flag.
+- **Permission mode** — Shift+Tab cycles it, and while the composer has focus its border takes the
+  mode's colour, so the change is visible where you are already looking. **Bypass permissions** —
+  the mode that runs everything without asking, dangerous commands included — is named in red on
+  the toolbar whether or not the composer has focus: it is the one worth noticing when you come
+  back to a pane and don't remember how you left it. It only appears at all if
+  [Allow dangerously skip permissions](docs/options.md) is on.
 - **Notice bar** — info/success/warning/error messages above the composer (e.g. rate-limit notices).
 
 ### Conversation
