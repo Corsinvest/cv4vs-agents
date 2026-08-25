@@ -245,6 +245,7 @@
     <Compile Include="Core\Panes\PaneRegistry.cs" />
     <Compile Include="Core\Panes\PaneControlBase.cs" />
     <Compile Include="Core\Client\ClaudeInstall.cs" />
+    <Compile Include="Core\Client\ClaudeUpdateCheck.cs" />
     <Compile Include="Core\Client\ClientMessages.cs" />
     <Compile Include="Core\Client\ClientOptions.cs" />
     <Compile Include="Core\Client\ContextUsage.cs" />

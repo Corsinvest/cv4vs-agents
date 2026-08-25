@@ -6,6 +6,7 @@
 using Corsinvest.VisualStudio.Agents.Options;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Client;
@@ -97,21 +98,44 @@ public static class ClaudeInstall
         if (!string.IsNullOrEmpty(localAppData)) { yield return Path.Combine(localAppData, "npm"); }
     }
 
-    /// <summary>Installed CLI version from the npm package.json next to a node_modules binary
-    /// (<c>bin/claude.exe</c> → <c>../package.json</c>). Returns <c>null</c> for non-npm installs
-    /// (native/WinGet have no package.json) or when the field is missing.</summary>
+    /// <summary>Installed CLI version, or <c>null</c> if the binary can't be found or won't say.
+    ///
+    /// Asks the CLI rather than reading the npm <c>package.json</c> next to it: that manifest only
+    /// exists for an npm install, so the native installer, WinGet and a hand-set
+    /// <c>ClaudeExecutablePath</c> all came back "(unknown)". <c>--version</c> is a documented
+    /// flag and answers whatever the layout. Costs a process start, and the one caller is the
+    /// session-info dialog, opened by hand — no reason to cache it.</summary>
     public static string Version()
     {
         var exe = ResolveExecutable();
         if (exe == null) { return null; }
-        var pkg = Path.Combine(Path.GetDirectoryName(Path.GetDirectoryName(exe)), "package.json");
-        if (!File.Exists(pkg)) { return null; }
         try
         {
-            var json = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(pkg));
-            return (string)json["version"];
+            var psi = new ProcessStartInfo(exe)
+            {
+                Arguments = "--version",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                StandardOutputEncoding = System.Text.Encoding.UTF8,
+            };
+            using var p = Process.Start(psi);
+            var stdout = p.StandardOutput.ReadToEndAsync();
+            if (!p.WaitForExit(5000))
+            {
+                try { p.Kill(); } catch { /* already gone */ }
+                OutputWindowLogger.Global.Warn("[cli] `claude --version` timed out");
+                return null;
+            }
+            // "2.1.245 (Claude Code)" — the version is the first token.
+            var first = stdout.Result?.Trim().Split(' ')[0];
+            return string.IsNullOrEmpty(first) ? null : first;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[cli] could not read the CLI version from {exe}: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>WPF panel explaining the CLI is not installed, with a button opening the setup page.

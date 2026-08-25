@@ -590,6 +590,28 @@ public partial class ChatPaneControl : PaneControlBase
         {
             SetComposerText(_startupPrompt, withIdeContext: !restoreState);
         }
+
+        // Detached from the startup path on purpose: it is a network call, and the chat must open
+        // at the same speed whether the registry answers in 50ms, in five seconds, or never.
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            var update = await Core.Client.ClaudeUpdateCheck.CheckAsync();
+            if (update == null) { return; }
+
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            _bridge?.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
+            {
+                Key = "cli-update",
+                // Info, not warning: nothing is wrong and nothing is blocked — a newer release
+                // exists, which is worth saying once and colouring like a fact.
+                // Sticky all the same: the chat may well be opened and left alone for a while, and
+                // a row that fades after a few seconds is easy to miss entirely.
+                Severity = Contracts.NoticeVariantDto.Info,
+                Sticky = true,
+                Message = $"Claude Code {update.Value.Latest} is available (you have {update.Value.Local})",
+                Position = Contracts.NoticePositionDto.Top,
+            });
+        });
     }
 
     /// <summary>Writes text into the composer. <paramref name="withIdeContext"/> also re-opens the
