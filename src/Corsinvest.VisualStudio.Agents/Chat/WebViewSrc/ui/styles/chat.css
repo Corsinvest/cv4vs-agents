@@ -116,6 +116,14 @@
     content-visibility: auto;
     contain-intrinsic-size: auto 1100px;
 }
+/* Set by _prependWithAnchor for the length of a history prepend. The anchor holds a distance
+ * against scrollHeight, and the estimates above make that total jump the moment a block is
+ * measured for the first time — 504px over twelve blocks on a real transcript, straight into the
+ * resting position. Laying them out for real costs one full layout per page loaded, against a
+ * visible drop of a couple of paragraphs every time. */
+#messages.anchoring > .cv-exchange > .cv-response {
+    content-visibility: visible;
+}
 /* A message typed while a turn was running: the bubble is there because the user wrote it, but
  * the CLI has not been given it yet. Faded rather than badged — in a column of full-strength
  * bubbles a pale one reads at a glance, and the bubble already carries copy/fork actions on hover
