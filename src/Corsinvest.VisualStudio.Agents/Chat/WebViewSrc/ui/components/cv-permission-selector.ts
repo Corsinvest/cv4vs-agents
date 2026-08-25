@@ -72,8 +72,10 @@ export class CvPermissionSelector extends LitElement {
         // _models is read so the label re-resolves when the catalogue (and thus the
         // available modes) changes.
         void this._models;
-        const items = permissionItems();
-        const item = items.find((it) => it.value === this._current) ?? items[0];
+        // No fallback to the first item: the CLI can sit in a mode the picker doesn't list
+        // (`dontAsk`, or `auto`/`bypassPermissions` once filtered out), and labelling that
+        // "Manual" would state the opposite of what is in force. The raw value is ugly and true.
+        const item = permissionItems().find((it) => it.value === this._current);
         return html`
             <fluent-button
                 id="perm-trigger"
@@ -84,7 +86,7 @@ export class CvPermissionSelector extends LitElement {
                 @click=${this._onClick}
             >
                 <span class=${this._current === 'bypassPermissions' ? 'danger' : ''}
-                    >${item.short}</span
+                    >${item?.short ?? this._current}</span
                 >
             </fluent-button>
             <!-- The name of the control, not of the mode: three of the five modes are shown in full
