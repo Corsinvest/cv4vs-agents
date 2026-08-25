@@ -2,16 +2,16 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-// Patch text construction for diffs. Pure, no DOM — the renderer (which
-// pulls in diff2html and touches `document`) lives in ui/diff.ts.
+// Patch text construction for diffs. Pure, no DOM — consumed by diff-rows.ts
+// (inline preview) and diff-stats.ts (+N/-M counts).
 
 import { createPatch } from 'diff';
 import { ALIASES, FILE_NAME_LANGS } from './lang';
 import { normPath } from './path';
 
 /**
- * Rewrite/append the path's extension so diff2html's header gives highlight.js
- * a language it understands (e.g. `Dockerfile` -> a known ext).
+ * Rewrite/append the path's extension so the name we hand to highlightCode
+ * resolves to a language it understands (e.g. `Dockerfile` -> a known ext).
  */
 export function patchPathFor(filePath: string | undefined | null): string {
     const path = normPath(filePath) || 'file';

@@ -99,6 +99,42 @@ internal sealed partial class WebViewMessageHandler
         catch (Exception ex) { OutputWindowLogger.Global.LogException("FindToolInput/Result", ex); }
         return default;
     }
+    /// <summary>The tool call's raw `input` object. FindToolInput projects it for display — for an
+    /// Edit that means the whole JSON as one string — and a diff needs the fields apart, so this
+    /// returns the object itself. Null when the transcript has no such tool_use.</summary>
+    private static JObject FindToolInputRaw(string workingDirectory,
+                                            string sessionId,
+                                            string toolUseId,
+                                            ClaudePaths paths,
+                                            string agentId)
+    {
+        var path = TranscriptPathFor(workingDirectory, sessionId, toolUseId, paths, agentId);
+        if (path == null) { return null; }
+        try
+        {
+            foreach (var line in File.ReadLines(path, System.Text.Encoding.UTF8))
+            {
+                if (string.IsNullOrWhiteSpace(line) || !line.Contains(toolUseId)) { continue; }
+                try
+                {
+                    var obj = JObject.Parse(line);
+                    if (obj.Val("type", "") != "assistant") { continue; }
+                    if (obj["message"]?["content"] is not JArray content) { continue; }
+                    foreach (var item in content)
+                    {
+                        if (item.Val("type", "") == "tool_use" && item.Val("id") == toolUseId)
+                        {
+                            return item["input"] as JObject;
+                        }
+                    }
+                }
+                catch { /* silent: skip malformed JSONL line */ }
+            }
+        }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("FindToolInputRaw", ex); }
+        return null;
+    }
+
     /// <summary>What the tool answered. Unlike the IN side this is always text meant for the model,
     /// never a file: a Write reports "File created successfully at: …", a Read returns the content
     /// with line numbers prefixed. That is why the temp it opens into stays .txt.</summary>
@@ -223,7 +259,8 @@ internal sealed partial class WebViewMessageHandler
         var ext = Path.GetExtension(title);
         if (string.IsNullOrEmpty(ext)) { ext = ".txt"; }
         var baseName = Path.GetFileNameWithoutExtension(title);
-        var tmpPath = Path.Combine(Path.GetTempPath(), $"claude_{SanitizeFileName(baseName)}{ext}");
+        var tmpPath = Path.Combine(Path.GetTempPath(),
+                                   $"{AppConstants.AppId}-{SanitizeFileName(baseName)}{ext}");
         if (isBase64)
         {
             File.WriteAllBytes(tmpPath, Convert.FromBase64String(content));

@@ -188,7 +188,6 @@ interface Snapshot {
     };
     options: {
         previewLines: number;
-        diffIgnoreWhitespace: boolean;
         showCostAndDuration: boolean;
         showRelativePaths: boolean;
         stickyUserMessages: boolean;
@@ -241,7 +240,6 @@ function snapshot(): Snapshot {
         },
         options: {
             previewLines: state.ui.previewLines,
-            diffIgnoreWhitespace: state.ui.diffIgnoreWhitespace,
             showCostAndDuration: state.ui.showCostAndDuration,
             showRelativePaths: state.ui.showRelativePaths,
             stickyUserMessages: state.ui.stickyUserMessages,

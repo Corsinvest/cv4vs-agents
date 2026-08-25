@@ -141,16 +141,6 @@ public class AgentsChatPage : AgentsOptionsPage
     [Description("When enabled, the toolbar's permission menu offers \"Bypass permissions\", which never asks for approval — even for commands that can destroy data. Enabling it does not skip anything by itself: the mode still has to be selected. Takes effect on new sessions (the CLI decides at launch whether the mode can ever be entered). Off by default.")]
     public bool AllowDangerouslySkipPermissions { get; set; } = false;
 
-    [Category("Diff")]
-    [DisplayName("Ignore whitespace")]
-    [Description("Ignore leading and trailing whitespace when computing diff.")]
-    public bool DiffIgnoreWhitespace { get; set; } = false;
-
-    [Category("Diff")]
-    [DisplayName("Show \"Open diff in Visual Studio\" button")]
-    [Description("Show the Visual Studio icon button on Edit/Write tool rows that opens the change in VS's native side-by-side diff viewer. Disable to hide it.")]
-    public bool ShowOpenDiffInVsButton { get; set; } = true;
-
     [Category("Ignore")]
     [DisplayName("Respect .gitignore")]
     [Description("Also hide files/folders matched by the workspace's `.gitignore`, and by git's global excludes file (`core.excludesFile`), from the `@` file picker. Re-read on every change to either file (cached when unchanged).")]

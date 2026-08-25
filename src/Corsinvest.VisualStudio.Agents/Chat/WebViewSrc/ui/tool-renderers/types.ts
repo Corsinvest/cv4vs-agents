@@ -8,6 +8,7 @@
 // everything else (markup, row layout, string cleanup) lives in ToolRenderer.
 // No renderer imports bridge/state — only CvToolRow does.
 
+import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
 import type { TemplateResult, nothing } from 'lit';
 import type {
     ToolStatus,
@@ -55,6 +56,9 @@ export interface ToolHost extends ToolRowState {
     /** What a finished Agent run cost, or null: while it runs, for every other tool, and for an
      *  interrupted run — the CLI reports no totals there. */
     readonly agentTotals: AgentRunTotalsDto | null;
+    /** The CLI's own hunks for an edit, or null until its result arrives. Unlike a patch built
+     *  from the tool's two input fragments, these carry the file's real line numbers. */
+    readonly diffPatch: PatchHunkDto[] | null;
 
     /** Open a file in VS, optionally selecting a line range. */
     openFile(filePath: string, startLine?: number, endLine?: number): void;
@@ -62,10 +66,9 @@ export interface ToolHost extends ToolRowState {
     openFileAtEdit(filePath: string): void;
     /** Open an external URL via the host. */
     openUrl(url: string): void;
-    /** Open the side-by-side diff dialog inside the webview (click on the row). */
-    openDiffDialog(filePath: string, oldString: string, newString: string): void;
-    /** Send the diff to Visual Studio's native diff viewer (VS icon button). */
-    openDiffInVs(filePath: string, oldString: string, newString: string): void;
+    /** Open this edit in Visual Studio's native diff viewer (VS icon button). Takes no
+     *  arguments: the host reads both sides out of the transcript by tool_use id. */
+    openDiffInVs(): void;
     /** Open this tool's IN or OUT content in a temp file in VS. */
     openOutput(which: 'in' | 'out'): void;
     /** Open this tool's full error output in VS (resolved by toolUseId). */

@@ -215,15 +215,6 @@ public class ToolPermissionCancelNotification
     public string ToolUseId { get; set; }
 }
 
-/// <summary>Lines an edit landed on, from the patch the CLI computed applying it — Edit/Write/
-/// MultiEdit. Sent back verbatim when the user clicks the path, so the editor never has to search
-/// the file for them. Absent for a brand-new file, which has no patch.</summary>
-public class EditLineRangeDto
-{
-    public int StartLine { get; set; }
-    public int EndLine { get; set; }
-}
-
 /// <summary>What an Agent run cost, from the totals the CLI writes on its tool_result. Absent while
 /// it runs, and for an INTERRUPTED run — there the CLI reports no figures at all, so the row shows
 /// none rather than a number that would understate what it spent.</summary>
@@ -232,6 +223,19 @@ public class AgentRunTotalsDto
     public long DurationMs { get; set; }
     public long Tokens { get; set; }
     public int ToolUses { get; set; }
+}
+
+/// <summary>One hunk of the patch the CLI computed when it applied an edit, verbatim from
+/// toolUseResult.structuredPatch. Line numbers are the file's, which is the whole point: an
+/// Edit's input carries only the two fragments, so a patch computed from those starts at 1.
+/// `Lines` are unified-diff rows — first char '-', '+' or ' ', then the text.</summary>
+public class PatchHunkDto
+{
+    public int OldStart { get; set; }
+    public int OldLines { get; set; }
+    public int NewStart { get; set; }
+    public int NewLines { get; set; }
+    public string[] Lines { get; set; }
 }
 
 /// <summary>The fields only one tool family reads, grouped so adding another one touches this class
@@ -243,8 +247,8 @@ public class AgentRunTotalsDto
 /// second is computed for every tool_result and describes `result`, like isError.</summary>
 public class ToolResultExtrasDto
 {
-    public EditLineRangeDto EditRange { get; set; }
     public AgentRunTotalsDto AgentTotals { get; set; }
+    public PatchHunkDto[] Patch { get; set; }
 }
 
 /// <summary>A tool call's result (chat_tool_result). result is preview-clipped;
@@ -620,8 +624,6 @@ public class VsOptionsDto
     /// line numbers. The host composes the tag either way — the WebView is told so the context chip
     /// can show WHICH of the two is going out.</summary>
     public bool SendSelectionText { get; set; }
-    public bool DiffIgnoreWhitespace { get; set; }
-    public bool ShowOpenDiffInVsButton { get; set; }
     public string[] AllowedUploadExtensions { get; set; }
     public string[] ExtraLinkableExtensions { get; set; }
     public string AppVersion { get; set; }

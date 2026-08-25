@@ -8,7 +8,8 @@
 
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
-import { openDiffDialog } from '../../core/dialog-host';
+import { editRangeFromHunks } from '../../core/diff-rows';
+import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
 import type { ToolHost, ToolRowState } from './types';
 import type {
     IdeFileNotification,
@@ -52,11 +53,17 @@ export class BridgeToolHost implements ToolHost {
     get fullLineCount(): number {
         return this.row.fullLineCount ?? 0;
     }
+    /** The CLI's own hunks for this edit, once its result has arrived. */
+    get diffPatch(): PatchHunkDto[] | null {
+        return this.row.extras?.patch ?? null;
+    }
+    /** Where the edit landed, derived from the CLI's own hunks — the same patch the preview
+     *  renders, so the jump and the diff can never disagree about the same edit. */
     get editStartLine(): number {
-        return this.row.extras?.editRange?.startLine ?? 0;
+        return editRangeFromHunks(this.row.extras?.patch)[0];
     }
     get editEndLine(): number {
-        return this.row.extras?.editRange?.endLine ?? 0;
+        return editRangeFromHunks(this.row.extras?.patch)[1];
     }
     get agentId(): string {
         return this.row.agentId ?? '';
@@ -118,16 +125,12 @@ export class BridgeToolHost implements ToolHost {
         bridge.sendNotification<ExternalUrlNotification>(Msg.fromWebView.open.externalUrl, { url });
     }
 
-    openDiffDialog(filePath: string, oldString: string, newString: string): void {
-        openDiffDialog({ toolUseId: this.toolUseId, filePath, oldString, newString });
-    }
-
-    openDiffInVs(filePath: string, oldString: string, newString: string): void {
+    openDiffInVs(): void {
+        // Ids only: the host reads both sides back out of the transcript, so an edit's content
+        // does not cross the bridge again on every click.
         bridge.sendNotification<DiffDialogNotification>(Msg.fromWebView.open.diffDialog, {
             toolUseId: this.toolUseId,
-            filePath,
-            oldString,
-            newString,
+            agentId: this.agentId,
         });
     }
 
