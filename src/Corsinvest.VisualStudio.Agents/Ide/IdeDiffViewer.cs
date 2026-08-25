@@ -263,9 +263,8 @@ internal sealed partial class IdeDiffViewer
             }
             else
             {
-                // Logged to size the fallback question: with the HTML dialog gone this is the
-                // only way to see a full diff, so how often it fails decides whether a fallback
-                // is needed at all.
+                // Logged because this is the only route to a full diff: a silent failure looks
+                // exactly like a diff nobody asked for.
                 OutputWindowLogger.Global.Warn($"[diff] chat diff did not open for '{caption}' — nothing shown");
                 // Nothing opened, so nothing will close and take the temps with it.
                 foreach (var t in new[] { tempOld, tempNew })
@@ -276,8 +275,7 @@ internal sealed partial class IdeDiffViewer
         }
         catch (Exception ex)
         {
-            // Same reasoning as the null-frame branch above: this is the only path left to a
-            // full diff once the HTML dialog is gone, so failures here need to be countable.
+            // Same reasoning as the null-frame branch above.
             OutputWindowLogger.Global.Warn($"[diff] chat diff could not open for {Path.GetFileName(filePath)}: {ex.Message}");
             OutputWindowLogger.Global.LogException("IdeDiffViewer.ShowFromContents", ex);
         }

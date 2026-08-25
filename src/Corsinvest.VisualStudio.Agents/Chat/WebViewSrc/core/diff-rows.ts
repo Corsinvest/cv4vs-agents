@@ -19,10 +19,9 @@ export type Row = {
 };
 
 /**
- * Only word-diff a pair that is mostly the same line. An unrelated pair diffs
- * into "everything changed", which marks the whole row and says nothing —
- * measured on a real patch: 24 of 28 rows fully marked without this gate.
- * diff2html gates the same way (`matchWordsThreshold`).
+ * Only word-diff a pair that is mostly the same line. A replaced block is rarely one line for
+ * one, so pairing by position alone hands unrelated lines to the word-diff — which then marks
+ * both of them end to end, saying nothing at all.
  */
 const WORD_DIFF_THRESHOLD = 0.5;
 
@@ -80,8 +79,8 @@ export function rowsFromHunks(hunks: readonly PatchHunkDto[] | null | undefined)
                 continue;
             }
 
-            // Take the whole -/+ run: a replaced block is rarely 1-for-1, and
-            // pairing the last '-' with the first '+' marks unrelated lines.
+            // The whole run, not one pair at a time: the gate above decides which of them
+            // are actually related.
             const dels: string[] = [];
             const inss: string[] = [];
             while (i < lines.length && lines[i][0] === '-') {

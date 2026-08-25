@@ -53,9 +53,8 @@ export class CvDiffPreview extends LitElement {
             return html`<div class="cv-diff-hunk">@@ ${row.oldNo} ${row.newNo} @@</div>`;
         }
         const sign = row.kind === 'ins' ? '+' : row.kind === 'del' ? '-' : ' ';
-        // One gutter, not two: a '-' is only in the old file and a '+' only in the new, so each
-        // row has exactly one number worth showing. Two columns spent a second 2.2em repeating
-        // the context rows and blanking on every change.
+        // One gutter: a '-' exists only in the old file and a '+' only in the new, so every
+        // row has exactly one number worth showing.
         const no = row.kind === 'del' ? row.oldNo : row.newNo;
         return html`<div class="cv-diff-row cv-diff-${row.kind}">
             ${numbered ? html`<span class="cv-diff-ln">${no ?? ''}</span>` : nothing}

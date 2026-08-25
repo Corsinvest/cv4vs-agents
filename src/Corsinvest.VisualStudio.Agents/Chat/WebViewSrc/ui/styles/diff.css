@@ -17,10 +17,8 @@ cv-diff-preview {
 }
 
 /* Change counts trailing the path in the row header (base.ts's diffSummary()).
- * Named apart from the preview's .cv-diff-ins/.cv-diff-del rows below: the
- * counts now live inside the header link, so a shared name would paint them
- * with the row background too. Same tokens the rewind dialog uses for its own
- * copy — a Light-DOM row cannot reach a component's static styles. */
+ * The rewind dialog keeps its own copy of these colours: it is Shadow DOM, and
+ * a Light-DOM row cannot reach a component's static styles. */
 .cv-diff-count-ins {
     color: var(--colorPaletteGreenForeground1);
 }
@@ -63,9 +61,8 @@ cv-diff-preview {
     padding: 0;
 }
 
-/* Inline diff rows. The grid keeps the two gutters aligned while the text
- * wraps: the pane owns no horizontal scroll any more, which is what the
- * old side-by-side layout prevented. */
+/* Inline diff rows. The grid keeps the gutter aligned while the text wraps —
+ * nothing here owns a horizontal scroll. */
 .cv-diff-row {
     display: grid;
     grid-template-columns: 2.6em 0.9em 1fr;
@@ -103,9 +100,7 @@ cv-diff-preview {
     font-size: var(--fontSizeBase100);
     padding: 2px 8px;
 }
-/* Row background says which line changed; <mark> says which piece inside it.
- * Same class names as the +N/-N summary spans above (different subtree,
- * different property — see the comment there), applied here to .cv-diff-row. */
+/* Row background says which line changed; <mark> says which piece inside it. */
 .cv-diff-ins {
     background: var(--colorPaletteGreenBackground1);
 }

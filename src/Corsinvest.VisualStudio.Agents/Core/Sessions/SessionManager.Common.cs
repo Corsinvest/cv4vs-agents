@@ -96,9 +96,8 @@ internal sealed partial class SessionManager
                toolUseResult.Val("totalToolUseCount", 0));
 
     /// <summary>The hunks the CLI computed for an edit, verbatim. Null when the result carries no
-    /// patch (a Write on a new file has none) or reports no change at all — measured on real
-    /// sessions: 620 results out of 6918 have an empty array, and rendering those as a diff would
-    /// show an empty box where "no changes" is the honest answer.
+    /// patch — a Write on a new file has none — and also when it reports an empty one, which is
+    /// how "nothing changed" arrives: rendering that as a diff would draw an empty box.
     /// <para>The jump the file link makes is derived from these too, WebView-side
     /// (editRangeFromHunks): one patch, one answer, so the jump and the diff cannot disagree.</para></summary>
     internal static JArray ToolUseResultPatch(JObject toolUseResult)
