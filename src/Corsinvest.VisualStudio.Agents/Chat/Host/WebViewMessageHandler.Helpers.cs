@@ -259,7 +259,8 @@ internal sealed partial class WebViewMessageHandler
         var ext = Path.GetExtension(title);
         if (string.IsNullOrEmpty(ext)) { ext = ".txt"; }
         var baseName = Path.GetFileNameWithoutExtension(title);
-        var tmpPath = Path.Combine(Path.GetTempPath(), $"claude_{SanitizeFileName(baseName)}{ext}");
+        var tmpPath = Path.Combine(Path.GetTempPath(),
+                                   $"{AppConstants.AppId}-{SanitizeFileName(baseName)}{ext}");
         if (isBase64)
         {
             File.WriteAllBytes(tmpPath, Convert.FromBase64String(content));

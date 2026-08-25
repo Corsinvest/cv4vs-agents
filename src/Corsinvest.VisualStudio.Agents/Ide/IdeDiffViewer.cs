@@ -205,8 +205,7 @@ internal sealed partial class IdeDiffViewer
 
             // Delete the proposed side ourselves. It is NOT passed as VSDIFFOPT_RightFileIsTemporary
             // — that would have VS remove it the moment the window closes, and the read above needs
-            // it alive to carry the user's edits back. The comment here used to claim VS cleaned it
-            // up; fourteen claude-diff-* files in %TEMP%, six from one afternoon, said otherwise.
+            // it alive to carry the user's edits back.
             try { File.Delete(tempPath); }
             catch (Exception ex) { OutputWindowLogger.Global.Warn($"[diff] could not delete the temp file: {ex.Message}"); }
 
@@ -466,9 +465,12 @@ internal sealed partial class IdeDiffViewer
         return false;
     }
 
+    /// <summary>One side of a comparison, on disk. The prefix is what identifies these as ours in
+    /// %TEMP% — the IDE-context filter recognises them by name, having no list of paths.</summary>
     private static string WriteTemp(string content, string namedFor)
     {
-        var temp = Path.Combine(Path.GetTempPath(), $"claude-diff-{Guid.NewGuid():N}-{namedFor}");
+        var temp = Path.Combine(Path.GetTempPath(),
+                                $"{AppConstants.AppId}-diff-{Guid.NewGuid():N}-{namedFor}");
         File.WriteAllText(temp, content ?? string.Empty);
         return temp;
     }

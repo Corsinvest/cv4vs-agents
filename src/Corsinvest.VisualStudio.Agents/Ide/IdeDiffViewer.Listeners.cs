@@ -67,8 +67,8 @@ internal sealed partial class IdeDiffViewer
     /// a save, the RDT listener already resolved to FILE_SAVED and our
     /// TrySetResult is a no-op.
     /// <para><paramref name="ownedTemps"/> are deleted here too: VSDIFFOPT_*FileIsTemporary only
-    /// tells VS how to treat them (no save prompt, no recent-files entry), it never removes them —
-    /// measured before this: 213 files left in %TEMP% over four months.</para></summary>
+    /// tells VS how to treat them (no save prompt, no recent-files entry), never to remove
+    /// them.</para></summary>
     private sealed class FrameCloseListener(IdeDiffViewer owner, string tempPath, string[] ownedTemps = null)
         : IVsWindowFrameNotify3, IVsWindowFrameNotify2, IVsWindowFrameNotify
     {
