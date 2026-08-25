@@ -10,7 +10,7 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { fileName } from '../../core/path';
 import { displayPathUi } from '../paths';
 import { truncate } from '../helpers/format';
-import { ToolRenderer } from './base';
+import { ToolRenderer, type ClipMode } from './base';
 import { state as appState } from '../../core/state';
 import { formatDuration, formatTokens } from '../helpers/format';
 import type { AskQuestion } from '../../core/types';
@@ -93,17 +93,20 @@ export class WriteRenderer extends ToolRenderer {
      *  so it is dropped too — an error still gets its row, being the one thing the header can't say.
      *  The body is a file, so it is highlighted as one, by its own extension. */
     override body(): TemplateResult | null {
+        return this.ioGrid(this.inputText(), {
+            showOut: this.host.status === 'error',
+            inLabel: '',
+            highlightAs: this.highlightAs(),
+        });
+    }
+    override highlightAs(): string {
         const name =
             String(this.host.input.file_path ?? '')
                 .split(/[\\/]/)
                 .pop() ?? '';
         const dot = name.lastIndexOf('.');
-        return this.ioGrid(this.inputText(), {
-            showOut: this.host.status === 'error',
-            inLabel: '',
-            // Extension only when there is one: an extensionless name is not its own language.
-            highlightAs: dot > 0 ? name.slice(dot + 1) : '',
-        });
+        // Extension only when there is one: an extensionless name is not its own language.
+        return dot > 0 ? name.slice(dot + 1) : '';
     }
 }
 
@@ -182,6 +185,16 @@ export class ShellRenderer extends ToolRenderer {
         super(host);
         this.host.clipsOutput = true;
     }
+    /** A command is code, and the thing that gets re-read most — pipes, redirections, quoting.
+     *  Both shells are hljs natives, so the language is what tells the two renderers apart. */
+    override highlightAs(): string {
+        return 'bash';
+    }
+    /** The command is never clipped, unlike the output it produces: half a pipeline says nothing,
+     *  where the first lines of a log still do. Cheap in practice — half the commands are one line. */
+    protected override clipsInput(): ClipMode {
+        return 'never';
+    }
     override header(): TemplateResult {
         const i = this.host.input;
         const cmd = String(i.command ?? i.script ?? i.code ?? '');
@@ -196,6 +209,9 @@ export class ShellRenderer extends ToolRenderer {
 
 export class PowerShellRenderer extends ShellRenderer {
     override readonly name = 'PowerShell';
+    override highlightAs(): string {
+        return 'powershell';
+    }
 }
 
 export class WebFetchRenderer extends ToolRenderer {

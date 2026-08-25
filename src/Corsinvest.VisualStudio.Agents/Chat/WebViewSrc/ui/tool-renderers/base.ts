@@ -29,6 +29,14 @@ import { renderMarkdown } from '../../core/markdown';
 import { highlightCode } from '../../core/lang';
 import type { ToolHost } from './types';
 
+/** How a body cell treats the preview cap.
+ *  'always'  — clip even when the row is expanded (a long stdout stays a preview; the full
+ *              text is one click away in the editor, so the cell never has to hold it).
+ *  'preview' — clip until the row is expanded. The default for every tool.
+ *  'never'   — show it whole, cap or not: half a shell pipeline says nothing, where the
+ *              first lines of a log still do. */
+export type ClipMode = 'always' | 'preview' | 'never';
+
 export abstract class ToolRenderer {
     constructor(protected host: ToolHost) {}
 
@@ -47,7 +55,21 @@ export abstract class ToolRenderer {
 
     /** Body content. Default: the IN/OUT grid. null = no body. */
     body(): TemplateResult | null {
-        return this.ioGrid(this.inputText());
+        return this.ioGrid(this.inputText(), { highlightAs: this.highlightAs() });
+    }
+
+    /** Highlight language for the IN cell, '' for none — the OUT cell is never highlighted.
+     *  Default: no colouring, most tool input being a JSON dump rather than a language.
+     *  Mutually exclusive with a markdown body: ioGrid renders prose before it ever reaches
+     *  the highlighter. */
+    highlightAs(): string {
+        return '';
+    }
+
+    /** Clip mode for the IN cell. Default: whatever the row does with its output. A tool whose
+     *  input is the thing the user re-reads (a shell command) overrides this to 'never'. */
+    protected clipsInput(): ClipMode {
+        return this.host.clipsOutput ? 'always' : 'preview';
     }
 
     /** Name shown in the header. Default: the raw tool name. */
@@ -327,21 +349,24 @@ export abstract class ToolRenderer {
         // Markdown cells hold prose (an Agent's prompt and its report), so they render as rich
         // text and in full: clipping a paragraph mid-sentence hides the answer, and the preview
         // cap exists for tool output — logs, file dumps — where the first lines are enough.
-        const cell = (t: string, extra = '') => {
+        const cell = (t: string, clip: ClipMode, lang: string, extra = '') => {
             if (markdown) {
                 return html`<div class="cv-tool-body-md md" @click=${this.onMarkdownClick}>
                     ${unsafeHTML(renderMarkdown(t))}
                 </div>`;
             }
-            const shown = previewText(
-                t,
-                appState.ui.previewLines,
-                this.host.expanded,
-                this.host.clipsOutput,
-            );
-            // Highlight only what a caller asked to (Write's file content): tool OUTPUT is logs
-            // and dumps, where colouring guesses at structure that isn't there.
-            const code = highlightAs ? highlightCode(shown, highlightAs) : null;
+            // 'never' bypasses previewText: its only whole-text exit is gated on `expanded`,
+            // so no value of its `clip` flag can mean "uncapped while collapsed".
+            const shown =
+                clip === 'never'
+                    ? t
+                    : previewText(
+                          t,
+                          appState.ui.previewLines,
+                          this.host.expanded,
+                          clip === 'always',
+                      );
+            const code = lang ? highlightCode(shown, lang) : null;
             return code
                 ? html`<pre
                       class="cv-tool-body-pre hljs ${extra}"
@@ -370,7 +395,10 @@ export abstract class ToolRenderer {
                                           : nothing
                                   }
                                   <div class="cv-tool-body-cell">
-                                      ${cell(inText)}${copyBtn(inText, 'in')}
+                                      ${cell(inText, this.clipsInput(), highlightAs)}${copyBtn(
+                                          inText,
+                                          'in',
+                                      )}
                                   </div>
                               </div>`
                             : nothing
@@ -386,7 +414,15 @@ export abstract class ToolRenderer {
                                       >${this.host.status === 'error' ? 'ERR' : 'OUT'}</span
                                   >
                                   <div class="cv-tool-body-cell">
-                                      ${cell(outText, 'cv-tool-body-result')}${copyBtn(outText, 'out')}
+                                      <!-- Never highlighted, whatever the IN cell asked for: tool
+                                           output is logs and dumps, where colouring guesses at
+                                           structure that isn't there. -->
+                                      ${cell(
+                                          outText,
+                                          this.host.clipsOutput ? 'always' : 'preview',
+                                          '',
+                                          'cv-tool-body-result',
+                                      )}${copyBtn(outText, 'out')}
                                   </div>
                               </div>`
                             : nothing
