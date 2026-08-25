@@ -8,6 +8,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { buildRows, rowsFromHunks, type Row, type Seg } from '../../core/diff-rows';
 import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
 import { highlightCode } from '../../core/lang';
+import { markRanges, rangesOf } from '../../core/mark-ranges';
 
 /** Unchanged lines kept around each change — what git and GitHub show. */
 const CONTEXT_LINES = 3;
@@ -18,10 +19,10 @@ const VISIBLE_ROWS = 12;
 /**
  * Inline diff preview for tool rows (Edit / Write / MultiEdit).
  *
- * Three layers that do not fight each other, applied in this order: the patch
- * says which rows changed, the word-diff which piece inside a row, the
- * highlighter what the code says. The order is a constraint — the highlighter
- * returns HTML, and feeding that to the word-diff would cut its tags in half.
+ * Three layers: the patch says which rows changed, the word-diff which piece inside a row, the
+ * highlighter what the code says. The highlighter needs the whole line — given a changed piece
+ * alone it sees a word out of context and returns `boolean` plain, not as a keyword — so it runs
+ * first and markRanges puts the marks over its HTML.
  */
 @customElement('cv-diff-preview')
 export class CvDiffPreview extends LitElement {
@@ -40,17 +41,20 @@ export class CvDiffPreview extends LitElement {
         return this;
     }
 
-    /** Highlight one segment. Null (unknown language, or hljs threw) renders
-     *  plain text, which is what an unhighlighted file should look like. */
-    private _seg(seg: Seg, lang: string): TemplateResult {
-        const hl = highlightCode(seg.text, lang);
-        const inner = hl ? unsafeHTML(hl) : seg.text;
-        return seg.changed ? html`<mark>${inner}</mark>` : html`${inner}`;
+    /** The row's text, highlighted whole and then marked. Null (unknown language, or hljs threw)
+     *  renders the segments plain, which is what an unhighlighted file should look like. */
+    private _text(segs: Seg[], lang: string): TemplateResult {
+        const line = segs.map((s) => s.text).join('');
+        const hl = highlightCode(line, lang);
+        if (!hl) {
+            return html`${segs.map((s) => (s.changed ? html`<mark>${s.text}</mark>` : s.text))}`;
+        }
+        return html`${unsafeHTML(markRanges(hl, rangesOf(segs)))}`;
     }
 
     private _row(row: Row, lang: string, numbered: boolean): TemplateResult {
         if (row.kind === 'hunk') {
-            return html`<div class="cv-diff-hunk">@@ ${row.oldNo} ${row.newNo} @@</div>`;
+            return html`<div class="cv-diff-hunk"></div>`;
         }
         const sign = row.kind === 'ins' ? '+' : row.kind === 'del' ? '-' : ' ';
         // One gutter: a '-' exists only in the old file and a '+' only in the new, so every
@@ -59,7 +63,7 @@ export class CvDiffPreview extends LitElement {
         return html`<div class="cv-diff-row cv-diff-${row.kind}">
             ${numbered ? html`<span class="cv-diff-ln">${no ?? ''}</span>` : nothing}
             <span class="cv-diff-sign">${sign}</span>
-            <span class="cv-diff-txt">${row.segs.map((s) => this._seg(s, lang))}</span>
+            <span class="cv-diff-txt">${this._text(row.segs, lang)}</span>
         </div>`;
     }
 
@@ -71,9 +75,12 @@ export class CvDiffPreview extends LitElement {
         // Diffing those is the best available answer, but their line numbers describe the fragment
         // and not the file — so that branch renders without a gutter rather than with a wrong one.
         const fromCli = !!this.patch?.length;
-        const rows = fromCli
+        const all = fromCli
             ? rowsFromHunks(this.patch)
             : buildRows(this.oldString, this.newString, this.filePath, CONTEXT_LINES);
+        // The leading hunk marker separates nothing. Dropped before the slice below, or it would
+        // still spend one of the visible rows.
+        const rows = all[0]?.kind === 'hunk' ? all.slice(1) : all;
         if (!rows.length) {
             return html`<div class="cv-diff-empty">No changes</div>`;
         }

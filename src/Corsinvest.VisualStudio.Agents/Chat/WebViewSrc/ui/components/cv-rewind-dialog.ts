@@ -112,8 +112,10 @@ export class CvRewindDialog extends CvDialogBase {
                 background: var(--colorNeutralBackground3);
                 font-size: var(--fontSizeBase200);
             }
+            /* A sentence now, not a count, so it wraps and needs the leading. */
             .summary {
                 color: var(--colorNeutralForeground2);
+                line-height: 1.4;
                 margin-bottom: 6px;
             }
             .ins {
@@ -310,7 +312,7 @@ export class CvRewindDialog extends CvDialogBase {
         const files = i.filesChanged ?? [];
         // Every user message is a valid target — that is the CLI's model, not an accident — so a
         // message that changed nothing answers canRewind:true with an empty list. Saying "the code
-        // has not changed" is the answer; "0 files · +0 −0" would look like a failed read.
+        // has not changed" is the answer; a sentence counting zero lines would look like a failed read.
         if (!files.length) {
             return html`<div class="impact muted">
                 The code has not changed since this message, so nothing would be restored.
@@ -318,9 +320,14 @@ export class CvRewindDialog extends CvDialogBase {
         }
         return html`<div class="impact">
             <div class="summary">
-                ${files.length} file${files.length === 1 ? '' : 's'} ·
-                <span class="ins">+${i.insertions}</span>
-                <span class="del">−${i.deletions}</span>
+                <!-- Spelled out, and in the future tense, because these count the rewind rather than
+                     the edits since the checkpoint: the CLI diffs the file on disk *towards* the
+                     snapshot (fileHistory.ts, diffLines(current, backup)), so its deletions are the
+                     lines this button would take away. As "+2 −5" they read as the opposite. -->
+                <span class="del">${i.deletions} line${i.deletions === 1 ? '' : 's'}</span>
+                will be removed and
+                <span class="ins">${i.insertions} line${i.insertions === 1 ? '' : 's'}</span>
+                added across ${files.length} file${files.length === 1 ? '' : 's'}:
             </div>
             <div class="files">
                 ${files.map(

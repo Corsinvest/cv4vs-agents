@@ -36,14 +36,17 @@ cv-diff-preview {
  * nothing here owns a horizontal scroll. */
 .cv-diff-row {
     display: grid;
-    grid-template-columns: 2.6em 0.9em 1fr;
+    grid-template-columns: 3.4em 0.9em 1fr;
     font-family: var(--fontFamilyMonospace);
     font-size: var(--fontSizeBase200);
     line-height: 1.45;
 }
+/* Four digits plus the padding either side: a number that fills the column
+ * touches the row's left border. */
 .cv-diff-ln {
     color: var(--colorNeutralForeground4);
     text-align: right;
+    padding-left: 0.5em;
     padding-right: 0.5em;
     user-select: none;
 }
@@ -60,27 +63,47 @@ cv-diff-preview {
 .cv-diff-preview-wrap.no-gutter .cv-diff-row {
     grid-template-columns: 0.9em 1fr;
 }
+/* Between two hunks, and only there: the gutter numbers already say where each
+ * one starts, so the separator has nothing to spell out. */
 .cv-diff-hunk {
-    color: var(--colorNeutralForeground4);
-    font-family: var(--fontFamilyMonospace);
-    font-size: var(--fontSizeBase100);
-    padding: 2px 8px;
+    border-top: 1px solid var(--colorNeutralStroke2);
+    margin: 4px 0;
 }
 .cv-diff-more {
     color: var(--colorNeutralForeground4);
     font-size: var(--fontSizeBase100);
     padding: 2px 8px;
 }
-/* Row background says which line changed; <mark> says which piece inside it. */
+/* Row background says which line changed; <mark> says which piece inside it.
+ * Both stay weak, and the gutter takes the row's colour instead: a solid fill
+ * would be a second colour over the syntax highlighting, and the code loses. */
 .cv-diff-ins {
-    background: var(--colorPaletteGreenBackground1);
+    background: color-mix(in srgb, var(--colorPaletteGreenBackground1) 60%, transparent);
+    color: var(--colorPaletteGreenForeground1);
 }
 .cv-diff-del {
-    background: var(--colorPaletteRedBackground1);
+    background: color-mix(in srgb, var(--colorPaletteRedBackground1) 60%, transparent);
+    color: var(--colorPaletteRedForeground1);
 }
-.cv-diff-ins mark,
+.cv-diff-ins .cv-diff-ln,
+.cv-diff-del .cv-diff-ln,
+.cv-diff-ins .cv-diff-sign,
+.cv-diff-del .cv-diff-sign {
+    color: inherit;
+}
+.cv-diff-ins .cv-diff-txt,
+.cv-diff-del .cv-diff-txt {
+    color: var(--colorNeutralForeground1);
+}
+/* Translucent on purpose: an opaque fill hides the token colour underneath, and
+ * the changed word is the one place the highlighting is worth reading. */
+.cv-diff-ins mark {
+    background: color-mix(in srgb, var(--colorPaletteGreenBackground3) 45%, transparent);
+    color: inherit;
+    border-radius: 2px;
+}
 .cv-diff-del mark {
-    background: var(--colorPaletteYellowBackground2);
+    background: color-mix(in srgb, var(--colorPaletteRedBackground3) 40%, transparent);
     color: inherit;
     border-radius: 2px;
 }
