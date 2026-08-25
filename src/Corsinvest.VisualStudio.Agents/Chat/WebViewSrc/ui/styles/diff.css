@@ -32,35 +32,6 @@ cv-diff-preview {
     font-size: var(--fontSizeBase200);
 }
 
-.cv-diff-patch-wrap {
-    position: relative;
-}
-/* cv-copy-btn is display:contents, so position its inner button via ::part.
- * Opaque background so the icon stays visible over the patch text. */
-.cv-diff-patch-copy::part(button) {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    background: var(--colorNeutralBackground1);
-    border: 1px solid var(--colorNeutralStroke2);
-    border-radius: var(--borderRadiusSmall);
-}
-.cv-diff-patch-text {
-    font-family: var(--fontFamilyMonospace);
-    font-size: var(--fontSizeBase200);
-    margin: 0;
-    padding: 8px 12px;
-    color: var(--colorNeutralForeground1);
-    white-space: pre;
-    overflow: auto;
-    background: transparent;
-}
-.cv-diff-patch-text code {
-    font-family: inherit;
-    background: transparent;
-    padding: 0;
-}
-
 /* Inline diff rows. The grid keeps the gutter aligned while the text wraps —
  * nothing here owns a horizontal scroll. */
 .cv-diff-row {
