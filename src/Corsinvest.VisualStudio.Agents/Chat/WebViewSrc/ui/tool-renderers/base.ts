@@ -430,7 +430,7 @@ export abstract class ToolRenderer {
             return html`Edit failed`;
         }
         const fp = String(this.host.input.file_path ?? this.host.input.path ?? '');
-        const { added, removed } = countChanges(oldS, newS, fp, appState.ui.diffIgnoreWhitespace);
+        const { added, removed } = countChanges(oldS, newS, fp);
         if (!added && !removed) {
             return html`Modified`;
         }

@@ -207,7 +207,6 @@ const _impl = new StoreImpl<AppState>({
         allowDangerouslySkipPermissions: false,
         fileCheckpoints: false,
         sendSelectionText: false,
-        diffIgnoreWhitespace: false,
         allowedUploadExtensions: [],
         extraLinkableExtensions: [],
         appVersion: '',

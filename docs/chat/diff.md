@@ -18,9 +18,6 @@ what is being changed without a line gutter, and gains the numbers once the edit
 Long lines wrap instead of scrolling sideways, so the preview reads in a docked tool window. A large
 change is cut short — click it to see the whole thing in Visual Studio's own diff.
 
-**Ignore whitespace** (**Options → Chat → Diff**) leaves leading and trailing whitespace out of the
-comparison.
-
 ## Opening the file at the change
 
 Clicking the path on an Edit row opens the file in Visual Studio with the **changed lines already

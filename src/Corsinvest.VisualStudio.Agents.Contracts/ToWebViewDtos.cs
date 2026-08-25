@@ -624,7 +624,6 @@ public class VsOptionsDto
     /// line numbers. The host composes the tag either way — the WebView is told so the context chip
     /// can show WHICH of the two is going out.</summary>
     public bool SendSelectionText { get; set; }
-    public bool DiffIgnoreWhitespace { get; set; }
     public string[] AllowedUploadExtensions { get; set; }
     public string[] ExtraLinkableExtensions { get; set; }
     public string AppVersion { get; set; }

@@ -8,7 +8,6 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { buildRows, rowsFromHunks, type Row, type Seg } from '../../core/diff-rows';
 import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
 import { highlightCode } from '../../core/lang';
-import { state as appState } from '../../core/state';
 
 /** Unchanged lines kept around each change — what git and GitHub show. */
 const CONTEXT_LINES = 3;
@@ -75,13 +74,7 @@ export class CvDiffPreview extends LitElement {
         const fromCli = !!this.patch?.length;
         const rows = fromCli
             ? rowsFromHunks(this.patch)
-            : buildRows(
-                  this.oldString,
-                  this.newString,
-                  this.filePath,
-                  CONTEXT_LINES,
-                  appState.ui.diffIgnoreWhitespace,
-              );
+            : buildRows(this.oldString, this.newString, this.filePath, CONTEXT_LINES);
         if (!rows.length) {
             return html`<div class="cv-diff-empty">No changes</div>`;
         }
