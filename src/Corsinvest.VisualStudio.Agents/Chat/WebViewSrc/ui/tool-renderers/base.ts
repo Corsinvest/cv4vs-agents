@@ -190,7 +190,7 @@ export abstract class ToolRenderer {
                               >`
                             : nothing
                     }
-                    ${this.renderHeaderActions()}
+                    ${this.headerActions()}
                     ${
                         opts.chevron
                             ? html`<fluent-button
@@ -437,29 +437,43 @@ export abstract class ToolRenderer {
         ${removed ? html`<span class="cv-diff-count-del">−${removed}</span>` : nothing}`;
     }
 
-    /** The header actions this tool shows (right of the header, before the chevron). Default: an
-     *  error button on a failed tool, nothing otherwise. Renderers override to add their own. */
+    /** Everything in the header's action slot: the error button — an invariant of a failed row,
+     *  not something a renderer opts into — plus whatever the tool itself offers. Kept out of
+     *  renderHeaderActions() so a renderer that overrides it can't drop the error button by
+     *  forgetting to call super: on a failed Agent, expanding used to swap the error away for
+     *  copy/show-all exactly when the user went looking for what failed. */
+    private headerActions(): TemplateResult | typeof nothing {
+        const failed = this.host.status === 'error';
+        const own = this.renderHeaderActions();
+        if (!failed && own === nothing) {
+            return nothing;
+        }
+        return html`<div class="cv-tool-actions">
+            ${failed ? this.errorButton() : nothing}${own}
+        </div>`;
+    }
+
+    /** The tool's OWN header actions (right of the header, before the chevron). Default: none.
+     *  Renderers override to add theirs; the error button is added by headerActions(). */
     protected renderHeaderActions(): TemplateResult | typeof nothing {
-        return this.host.status === 'error' ? this.errorButton() : nothing;
+        return nothing;
     }
 
     /** The "show error details in VS" icon button. */
-    protected errorButton(): TemplateResult {
-        return html`<div class="cv-tool-actions">
-            <fluent-button
-                class="trigger cv-tool-actions-error"
-                appearance="subtle"
-                shape="rounded"
-                size="small"
-                icon-only
-                title="Show error details"
-                @click=${(e: Event) => {
-                    e.stopPropagation();
-                    this.host.openError();
-                }}
-            >
-                ${unsafeHTML(ErrorCircle16Regular)}
-            </fluent-button>
-        </div>`;
+    private errorButton(): TemplateResult {
+        return html`<fluent-button
+            class="trigger cv-tool-actions-error"
+            appearance="subtle"
+            shape="rounded"
+            size="small"
+            icon-only
+            title="Show error details"
+            @click=${(e: Event) => {
+                e.stopPropagation();
+                this.host.openError();
+            }}
+        >
+            ${unsafeHTML(ErrorCircle16Regular)}
+        </fluent-button>`;
     }
 }
