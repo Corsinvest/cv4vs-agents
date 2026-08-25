@@ -15,8 +15,6 @@ export interface VsOptionsDto {
     allowDangerouslySkipPermissions: boolean;
     fileCheckpoints: boolean;
     sendSelectionText: boolean;
-    diffIgnoreWhitespace: boolean;
-    showOpenDiffInVsButton: boolean;
     allowedUploadExtensions: string[];
     extraLinkableExtensions: string[];
     appVersion: string;

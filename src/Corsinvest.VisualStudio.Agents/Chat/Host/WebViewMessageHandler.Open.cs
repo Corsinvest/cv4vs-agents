@@ -109,8 +109,32 @@ internal sealed partial class WebViewMessageHandler
     private void HandleDiffDialog(JObject data, int? id)
     {
         var p = data.ToObject<Contracts.DiffDialogNotification>();
+        var toolUseId = p.ToolUseId ?? "";
+        if (string.IsNullOrEmpty(toolUseId)) { return; }
+
+        // The sub-agent transcript first when there is one, then the main file — same order and
+        // same reason as HandleOpenToolIo: an Agent row carries an agentId while its own tool_use
+        // lives in the main transcript, so neither file alone answers for every row.
+        var agentId = p.AgentId ?? "";
+        JObject input = null;
+        foreach (var lookIn in string.IsNullOrEmpty(agentId) ? [null] : new[] { agentId, null })
+        {
+            input = FindToolInputRaw(client.WorkingDirectory, client.SessionId, toolUseId,
+                                     PaneClaudePaths, lookIn);
+            if (input != null) { break; }
+        }
+        if (input == null)
+        {
+            log.Warn($"[diff] no tool_use {toolUseId} in the transcript — nothing to compare");
+            return;
+        }
+
         _ = Ide.IdeContextService.Instance.ShowDiffAsync(
-            p.ToolUseId ?? "", p.FilePath ?? "", p.OldString ?? "", p.NewString ?? "",
+            toolUseId,
+            input.Val("file_path", ""),
+            input.Val("old_string", ""),
+            // Write has no old/new pair: its whole content is the new side, against an empty one.
+            input.Val("new_string") ?? input.Val("content", ""),
             leftLabel: "Original", rightLabel: "Proposed");
     }
 

@@ -31,7 +31,6 @@ import './cv-context-dialog';
 import './cv-plugin-manager';
 import './cv-rewind-dialog';
 import './cv-lightbox';
-import './cv-diff-dialog';
 import './cv-permission-banner';
 import './cv-spinner';
 import './cv-tool-row';
@@ -1588,8 +1587,8 @@ export class CvApp extends LitElement {
      * Prepend a page of older history while keeping the user's reading row
      * fixed. We anchor on the DISTANCE FROM THE BOTTOM (`scrollHeight -
      * scrollTop`), which is invariant to content growing both above (the
-     * prepended page) and below (async-rendered markdown / diff2html / lazy
-     * images) the viewport — unlike a one-shot `scrollTop += delta`, which
+     * prepended page) and below (async-rendered markdown / lazy images) the
+     * viewport — unlike a one-shot `scrollTop += delta`, which
      * slides as async children settle. A ResizeObserver keeps re-applying the
      * anchor until the list height stops changing, so there are no magic frame
      * counts. `scroll-behavior` is forced to `auto` during the operation so the
@@ -1620,7 +1619,7 @@ export class CvApp extends LitElement {
         void this.updateComplete.then(() => {
             anchor();
             // Re-anchor ONLY when the content height actually changes (async
-            // markdown / diff2html / lazy images settling). Anchoring every
+            // markdown / lazy images settling). Anchoring every
             // frame regardless — as a plain rAF loop would — rewrites scrollTop
             // against sub-pixel readback noise and produces a visible jitter.
             // A ResizeObserver fires precisely on the height changes we care
@@ -1655,7 +1654,7 @@ export class CvApp extends LitElement {
      * Wait for Lit to flush the DOM before measuring scrollHeight — scrolling in a microtask
      * (pre-render) lands short, leaving the last lines cut off. The two catch-up passes absorb
      * what keeps growing after the first paint: that is images (cv-message awaits fetchChatImage),
-     * NOT markdown or diff2html — both are synchronous and already final when Lit is done.
+     * NOT markdown or the diff preview — both are synchronous and already final when Lit is done.
      *
      * `sustainFrames` keeps re-landing for that many frames, for callers that just swapped in a
      * whole page of transcript. Loading it in the caller instead multiplied these three passes by

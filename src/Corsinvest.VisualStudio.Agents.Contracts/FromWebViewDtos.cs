@@ -159,13 +159,14 @@ public class OpenAttachmentNotification
     public string MediaType { get; set; }
 }
 
-/// <summary>Show the VS diff dialog for a proposed edit (open_diff_dialog).</summary>
+/// <summary>Open the edit in VS's diff viewer (open_diff_dialog). Only the ids travel: the host
+/// reads the two sides back out of the transcript, so an edit's content crosses the bridge once
+/// (when the CLI reports it) instead of again on every click. AgentId names the sub-agent
+/// transcript to look in, and is empty for the session's own tools.</summary>
 public class DiffDialogNotification
 {
     public string ToolUseId { get; set; }
-    public string FilePath { get; set; }
-    public string OldString { get; set; }
-    public string NewString { get; set; }
+    public string AgentId { get; set; }
 }
 
 /// <summary>Hot-swap the permission mode (cli_set_permission_mode).</summary>

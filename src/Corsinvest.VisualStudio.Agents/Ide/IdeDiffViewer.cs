@@ -205,8 +205,7 @@ internal sealed partial class IdeDiffViewer
 
             // Delete the proposed side ourselves. It is NOT passed as VSDIFFOPT_RightFileIsTemporary
             // — that would have VS remove it the moment the window closes, and the read above needs
-            // it alive to carry the user's edits back. The comment here used to claim VS cleaned it
-            // up; fourteen claude-diff-* files in %TEMP%, six from one afternoon, said otherwise.
+            // it alive to carry the user's edits back.
             try { File.Delete(tempPath); }
             catch (Exception ex) { OutputWindowLogger.Global.Warn($"[diff] could not delete the temp file: {ex.Message}"); }
 
@@ -256,9 +255,30 @@ internal sealed partial class IdeDiffViewer
             {
                 _openFrames[caption] = frame;
                 if (!string.IsNullOrEmpty(toolUseId)) { _chatDiffs[toolUseId] = frame; }
+                // No pending diff to resolve here (this viewer is read-only): the listener is
+                // hooked purely to take the two temps away with the window. CloseChatFrame goes
+                // through CloseFrame, which raises OnClose too, so the toggle and close-all paths
+                // clean up through the same listener.
+                HookFrameClose(frame, null, tempOld, tempNew);
+            }
+            else
+            {
+                // Logged because this is the only route to a full diff: a silent failure looks
+                // exactly like a diff nobody asked for.
+                OutputWindowLogger.Global.Warn($"[diff] chat diff did not open for '{caption}' — nothing shown");
+                // Nothing opened, so nothing will close and take the temps with it.
+                foreach (var t in new[] { tempOld, tempNew })
+                {
+                    try { File.Delete(t); } catch (Exception) { /* best effort */ }
+                }
             }
         }
-        catch (Exception ex) { OutputWindowLogger.Global.LogException("IdeDiffViewer.ShowFromContents", ex); }
+        catch (Exception ex)
+        {
+            // Same reasoning as the null-frame branch above.
+            OutputWindowLogger.Global.Warn($"[diff] chat diff could not open for {Path.GetFileName(filePath)}: {ex.Message}");
+            OutputWindowLogger.Global.LogException("IdeDiffViewer.ShowFromContents", ex);
+        }
     }
 
     /// <summary>Close a specific diff frame by tab name. Lookup is against the open-frames
@@ -367,10 +387,10 @@ internal sealed partial class IdeDiffViewer
     /// pending diff to TAB_CLOSED. Each frame gets its own listener
     /// instance — VS supports a single notify per frame, but our
     /// listener is just a thin pass-through.</summary>
-    private void HookFrameClose(IVsWindowFrame frame, string tempPath)
+    private void HookFrameClose(IVsWindowFrame frame, string tempPath, params string[] ownedTemps)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        var listener = new FrameCloseListener(this, tempPath);
+        var listener = new FrameCloseListener(this, tempPath, ownedTemps);
         frame.SetProperty((int)__VSFPROPID.VSFPROPID_ViewHelper, listener);
     }
 
@@ -443,9 +463,12 @@ internal sealed partial class IdeDiffViewer
         return false;
     }
 
+    /// <summary>One side of a comparison, on disk. The prefix is what identifies these as ours in
+    /// %TEMP% — the IDE-context filter recognises them by name, having no list of paths.</summary>
     private static string WriteTemp(string content, string namedFor)
     {
-        var temp = Path.Combine(Path.GetTempPath(), $"claude-diff-{Guid.NewGuid():N}-{namedFor}");
+        var temp = Path.Combine(Path.GetTempPath(),
+                                $"{AppConstants.AppId}-diff-{Guid.NewGuid():N}-{namedFor}");
         File.WriteAllText(temp, content ?? string.Empty);
         return temp;
     }

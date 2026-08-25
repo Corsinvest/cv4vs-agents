@@ -83,7 +83,7 @@ internal sealed partial class SessionManager
         => (line?["toolUseResult"] as JObject)?[field]?.Value<string>();
 
     /// <summary>What an Agent run cost, from the totals the CLI writes on its tool_result. Takes
-    /// the toolUseResult object itself, like <see cref="ToolUseResultEditRange"/> — live holds one,
+    /// the toolUseResult object itself, like <see cref="ToolUseResultPatch"/> — live holds one,
     /// history reads it off the line.
     /// All zero when the run has no totals, which is the normal shape for an INTERRUPTED agent:
     /// there toolUseResult is a bare string ("User rejected tool use", "Error: [Request interrupted
@@ -95,46 +95,14 @@ internal sealed partial class SessionManager
                toolUseResult.Val("totalTokens", 0L),
                toolUseResult.Val("totalToolUseCount", 0));
 
-    /// <summary>Lines the CLI computed when it applied an edit, from the first hunk of
-    /// structuredPatch. Takes the toolUseResult object itself — live already holds one, history
-    /// reads it off the line. (0, 0) when there is no patch (a Write on a new file has none) or
-    /// the shape isn't the expected one. MultiEdit yields several non-contiguous hunks; the first
-    /// is where the change starts, which is where to jump.
-    /// newStart/newLines span the whole hunk, context lines included — selecting that range would
-    /// highlight three untouched lines either side. The added lines are the answer, so walk
-    /// `lines`: '+' and context both exist in the file after the edit and advance the counter,
-    /// '-' lines are gone and don't. An all-context hunk (no '+') falls back to the whole
-    /// span.</summary>
-    internal static (int Start, int End) ToolUseResultEditRange(JObject toolUseResult)
-    {
-        if (toolUseResult?["structuredPatch"] is not JArray hunks
-            || hunks.Count == 0
-            || hunks[0] is not JObject first)
-        {
-            return (0, 0);
-        }
-        var hunkStart = first["newStart"]?.Value<int>() ?? 0;
-        if (hunkStart <= 0) { return (0, 0); }
+    /// <summary>The hunks the CLI computed for an edit, verbatim. Null when the result carries no
+    /// patch — a Write on a new file has none — and also when it reports an empty one, which is
+    /// how "nothing changed" arrives: rendering that as a diff would draw an empty box.
+    /// <para>The jump the file link makes is derived from these too, WebView-side
+    /// (editRangeFromHunks): one patch, one answer, so the jump and the diff cannot disagree.</para></summary>
+    internal static JArray ToolUseResultPatch(JObject toolUseResult)
+        => toolUseResult?["structuredPatch"] is JArray hunks && hunks.Count > 0 ? hunks : null;
 
-        var line = hunkStart;
-        var addedStart = 0;
-        var addedEnd = 0;
-        foreach (var entry in first["lines"] as JArray ?? [])
-        {
-            var text = entry?.Value<string>() ?? "";
-            if (text.StartsWith("-")) { continue; }
-            if (text.StartsWith("+"))
-            {
-                if (addedStart == 0) { addedStart = line; }
-                addedEnd = line;
-            }
-            line++;
-        }
-        if (addedStart > 0) { return (addedStart, addedEnd); }
-
-        var span = first["newLines"]?.Value<int>() ?? 0;
-        return span > 0 ? (hunkStart, hunkStart + span - 1) : (hunkStart, hunkStart);
-    }
     /// <summary>A path token (sessionId/agentId) is safe only if it's a plain id —
     /// letters, digits, '-' and '_'. Blocks separators and '..' traversal.</summary>
     internal static bool IsSafePathToken(string s)

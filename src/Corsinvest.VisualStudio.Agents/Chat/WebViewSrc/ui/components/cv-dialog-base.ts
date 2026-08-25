@@ -15,9 +15,8 @@ import { property, query } from 'lit/decorators.js';
  * `protected` so each child's render() can wire `this._dlg` / `this._onDialogToggle` / `this._close`.
  */
 export abstract class CvDialogBase extends LitElement {
-    // NOTE: render root (Shadow vs light DOM) is NOT set here — it's per-dialog. Five dialogs use
-    // Shadow DOM (their own `static styles`); cv-diff-dialog overrides createRenderRoot to light DOM
-    // (diff2html markup needs global CSS). Setting it here would strip the shadow dialogs' styles.
+    // NOTE: render root is NOT set here — each dialog owns its Shadow DOM (`static styles`).
+    // Setting it here would centralize what each concrete dialog already declares itself.
 
     @property({ type: Boolean, reflect: true }) open = false;
 

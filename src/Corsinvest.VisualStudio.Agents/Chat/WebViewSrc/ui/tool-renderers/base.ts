@@ -19,12 +19,12 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import ErrorCircle16Regular from '@fluentui/svg-icons/icons/error_circle_16_regular.svg';
 import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
-import VisualStudioIcon from '../icons/visualStudio.svg';
 import { truncate, formatDurationSec } from '../helpers/format';
 import '../components/cv-copy-btn';
 import '../components/cv-diff-preview';
 import { cleanResult, previewText } from './tool-host';
 import { state as appState } from '../../core/state';
+import { countChanges } from '../../core/diff-stats';
 import { renderMarkdown } from '../../core/markdown';
 import { highlightCode } from '../../core/lang';
 import type { ToolHost } from './types';
@@ -410,41 +410,31 @@ export abstract class ToolRenderer {
             <div
                 class="cv-tool-body"
                 style="cursor:pointer"
-                @click=${() => this.host.openDiffDialog(fp, oldS, newS)}
+                @click=${() => this.host.openDiffInVs()}
             >
-                <div class="cv-diff-summary ${this.host.status === 'error' ? 'is-error' : ''}">
-                    ${this.diffSummary(oldS, newS)}
-                </div>
                 <cv-diff-preview
                     .oldString=${oldS}
                     .newString=${newS}
                     .filePath=${fp}
+                    .patch=${this.host.diffPatch}
                 ></cv-diff-preview>
                 ${errBox}
             </div>
         `;
     }
 
-    /** One-line summary above the diff ("Edit failed" / "Added N lines" / …). */
-    private diffSummary(oldS: string, newS: string): string {
+    /** Change counts for the row header, trailing the path ("Edit failed" / "+3 −14" / "Modified"). */
+    protected diffSummary(oldS: string, newS: string): TemplateResult {
         if (this.host.status === 'error') {
-            return 'Edit failed';
+            return html`Edit failed`;
         }
-        const oldLines = (oldS || '').split('\n').length;
-        const newLines = (newS || '').split('\n').length;
-        const added = Math.max(0, newLines - oldLines);
-        const removed = Math.max(0, oldLines - newLines);
-        const pl = (n: number) => (n !== 1 ? 's' : '');
-        if (added > 0 && removed > 0) {
-            return `Added ${added} line${pl(added)}, removed ${removed} line${pl(removed)}`;
+        const fp = String(this.host.input.file_path ?? this.host.input.path ?? '');
+        const { added, removed } = countChanges(oldS, newS, fp);
+        if (!added && !removed) {
+            return html`Modified`;
         }
-        if (added > 0) {
-            return `Added ${added} line${pl(added)}`;
-        }
-        if (removed > 0) {
-            return `Removed ${removed} line${pl(removed)}`;
-        }
-        return 'Modified';
+        return html`${added ? html`<span class="cv-diff-count-ins">+${added}</span>` : nothing}
+        ${removed ? html`<span class="cv-diff-count-del">−${removed}</span>` : nothing}`;
     }
 
     /** The header actions this tool shows (right of the header, before the chevron). Default: an
@@ -470,52 +460,6 @@ export abstract class ToolRenderer {
             >
                 ${unsafeHTML(ErrorCircle16Regular)}
             </fluent-button>
-        </div>`;
-    }
-
-    /** Diff tools' header buttons: "open diff in VS" + (on error) "show error". */
-    protected diffActionButtons(): TemplateResult {
-        const inp = this.host.input;
-        const fp = String(inp.file_path ?? inp.path ?? '');
-        const oldS = String(inp.old_string ?? '');
-        const newS = String(inp.new_string ?? inp.content ?? '');
-        return html`<div class="cv-tool-actions">
-            ${
-                this.host.status === 'error'
-                    ? html`<fluent-button
-                          class="trigger cv-tool-actions-error"
-                          appearance="subtle"
-                          shape="rounded"
-                          size="small"
-                          icon-only
-                          title="Show error details"
-                          @click=${(e: Event) => {
-                              e.stopPropagation();
-                              this.host.openError();
-                          }}
-                      >
-                          ${unsafeHTML(ErrorCircle16Regular)}
-                      </fluent-button>`
-                    : nothing
-            }
-            ${
-                appState.ui.showOpenDiffInVsButton
-                    ? html`<fluent-button
-                          class="trigger cv-tool-actions-vs"
-                          appearance="subtle"
-                          shape="rounded"
-                          size="small"
-                          icon-only
-                          title="Open diff in Visual Studio"
-                          @click=${(e: Event) => {
-                              e.stopPropagation();
-                              this.host.openDiffInVs(fp, oldS, newS);
-                          }}
-                      >
-                          ${unsafeHTML(VisualStudioIcon)}
-                      </fluent-button>`
-                    : nothing
-            }
         </div>`;
     }
 }

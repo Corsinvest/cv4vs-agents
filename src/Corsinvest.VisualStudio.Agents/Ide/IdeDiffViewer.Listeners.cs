@@ -65,18 +65,34 @@ internal sealed partial class IdeDiffViewer
     /// <summary>Per-frame notify: when the diff frame closes, resolves
     /// the matching pending diff to TAB_CLOSED. If the close came after
     /// a save, the RDT listener already resolved to FILE_SAVED and our
-    /// TrySetResult is a no-op.</summary>
-    private sealed class FrameCloseListener(IdeDiffViewer owner, string tempPath) : IVsWindowFrameNotify3, IVsWindowFrameNotify2, IVsWindowFrameNotify
+    /// TrySetResult is a no-op.
+    /// <para><paramref name="ownedTemps"/> are deleted here too: VSDIFFOPT_*FileIsTemporary only
+    /// tells VS how to treat them (no save prompt, no recent-files entry), never to remove
+    /// them.</para></summary>
+    private sealed class FrameCloseListener(IdeDiffViewer owner, string tempPath, string[] ownedTemps = null)
+        : IVsWindowFrameNotify3, IVsWindowFrameNotify2, IVsWindowFrameNotify
     {
-        int IVsWindowFrameNotify3.OnClose(ref uint pgrfSaveOptions)
+        /// <summary>Resolve the pending diff, then drop the temps this frame owned. Best effort:
+        /// OnClose runs before the frame is really gone, so VS may still hold a handle — a file
+        /// left behind is the old behaviour, not a regression worth an exception.</summary>
+        private void Closed()
         {
             owner.TryResolve(tempPath, TabClosed);
+            foreach (var path in ownedTemps ?? [])
+            {
+                try { System.IO.File.Delete(path); } catch (Exception) { /* best effort */ }
+            }
+        }
+
+        int IVsWindowFrameNotify3.OnClose(ref uint pgrfSaveOptions)
+        {
+            Closed();
             return VSConstants.S_OK;
         }
 
         int IVsWindowFrameNotify2.OnClose(ref uint pgrfSaveOptions)
         {
-            owner.TryResolve(tempPath, TabClosed);
+            Closed();
             return VSConstants.S_OK;
         }
 

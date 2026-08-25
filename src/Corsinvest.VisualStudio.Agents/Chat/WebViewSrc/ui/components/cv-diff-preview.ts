@@ -2,35 +2,26 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html } from 'lit';
+import { LitElement, html, nothing, type TemplateResult } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { buildPatch } from '../../core/diff';
-import { clampPatch } from '../../core/patch-clamp';
-import { state as appState } from '../../core/state';
-import { renderDiff, SPLIT_THRESHOLD, type DiffFormat } from '../diff';
-import { observeSize } from '../resize';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { buildRows, rowsFromHunks, type Row, type Seg } from '../../core/diff-rows';
+import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
+import { highlightCode } from '../../core/lang';
 
 /** Unchanged lines kept around each change — what git and GitHub show. */
 const CONTEXT_LINES = 3;
 
-/** Rows the preview is tall enough to show. Measured: diff2html's compact row is ~20.6px. */
+/** Rows shown before the preview stops; the whole diff opens in Visual Studio. */
 const VISIBLE_ROWS = 12;
 
 /**
- * Patch lines built at all — tied to what fits, because the box does not scroll vertically
- * (see `_draw`: overflow-y is hidden, only the horizontal one is left to diff2html). A line
- * past the visible ones is DOM nobody can reach; the full diff lives in the expand dialog.
+ * Inline diff preview for tool rows (Edit / Write / MultiEdit).
  *
- * Not a context setting either: context is per hunk, so a file with scattered edits produces
- * many hunks and a long patch whatever the context.
- */
-const MAX_PATCH_LINES = VISIBLE_ROWS;
-
-/**
- * Inline diff preview for tool rows (Edit / Write / MultiEdit). Lit emits only
- * the wrapper; diff2html paints inside it imperatively after `updated()` since
- * it mutates the DOM directly. A ResizeObserver swaps line-by-line ↔
- * side-by-side at the width threshold.
+ * Three layers that do not fight each other, applied in this order: the patch
+ * says which rows changed, the word-diff which piece inside a row, the
+ * highlighter what the code says. The order is a constraint — the highlighter
+ * returns HTML, and feeding that to the word-diff would cut its tags in half.
  */
 @customElement('cv-diff-preview')
 export class CvDiffPreview extends LitElement {
@@ -38,94 +29,70 @@ export class CvDiffPreview extends LitElement {
     @property() newString = '';
     @property() filePath = '';
 
-    private _wrap?: HTMLDivElement;
-    private _patch = '';
-    private _format: DiffFormat | null = null;
-    private _unobserve?: () => void;
+    /** The CLI's own hunks, once its result has arrived. Preferred over diffing the two input
+     *  fragments: only these know the file's real line numbers and carry the surrounding context. */
+    @property({ attribute: false }) patch: PatchHunkDto[] | null = null;
 
-    // Light DOM, same reason as cv-diff-dialog: diff2html markup needs the global CSS.
+    // Light DOM: the row that renders this is itself Light DOM
+    // (cv-tool-row.ts:77), and the styles live in the global diff.css. Moving
+    // this component to a shadow root belongs to the CSS migration, not here.
     override createRenderRoot() {
         return this;
     }
 
+    /** Highlight one segment. Null (unknown language, or hljs threw) renders
+     *  plain text, which is what an unhighlighted file should look like. */
+    private _seg(seg: Seg, lang: string): TemplateResult {
+        const hl = highlightCode(seg.text, lang);
+        const inner = hl ? unsafeHTML(hl) : seg.text;
+        return seg.changed ? html`<mark>${inner}</mark>` : html`${inner}`;
+    }
+
+    private _row(row: Row, lang: string, numbered: boolean): TemplateResult {
+        if (row.kind === 'hunk') {
+            return html`<div class="cv-diff-hunk">@@ ${row.oldNo} ${row.newNo} @@</div>`;
+        }
+        const sign = row.kind === 'ins' ? '+' : row.kind === 'del' ? '-' : ' ';
+        // One gutter: a '-' exists only in the old file and a '+' only in the new, so every
+        // row has exactly one number worth showing.
+        const no = row.kind === 'del' ? row.oldNo : row.newNo;
+        return html`<div class="cv-diff-row cv-diff-${row.kind}">
+            ${numbered ? html`<span class="cv-diff-ln">${no ?? ''}</span>` : nothing}
+            <span class="cv-diff-sign">${sign}</span>
+            <span class="cv-diff-txt">${row.segs.map((s) => this._seg(s, lang))}</span>
+        </div>`;
+    }
+
     override render() {
         if (!this.oldString && !this.newString) {
-            return html`<div class="cv-diff-preview-wrap">
-                <div class="cv-diff-empty">No changes</div>
-            </div>`;
+            return html`<div class="cv-diff-empty">No changes</div>`;
         }
-        return html`<div class="cv-diff-preview-wrap" data-action="diff-expand"></div>`;
-    }
-
-    override firstUpdated(): void {
-        this._wrap =
-            this.querySelector<HTMLDivElement>('.cv-diff-preview-wrap[data-action]') ?? undefined;
-        this._draw();
-        // Observe the host, not the inner wrap: side-by-side content pins the
-        // wrap above the threshold and blocks swap-back; the host follows the
-        // message column width unaffected.
-        this._unobserve = observeSize(this, () => this._maybeSwapFormat());
-    }
-
-    override updated(changed: Map<string, unknown>): void {
-        if (changed.has('oldString') || changed.has('newString') || changed.has('filePath')) {
-            this._wrap =
-                this.querySelector<HTMLDivElement>('.cv-diff-preview-wrap[data-action]') ??
-                undefined;
-            this._format = null;
-            this._draw();
+        // Until the tool_result lands there is no patch, only the two fragments the input carried.
+        // Diffing those is the best available answer, but their line numbers describe the fragment
+        // and not the file — so that branch renders without a gutter rather than with a wrong one.
+        const fromCli = !!this.patch?.length;
+        const rows = fromCli
+            ? rowsFromHunks(this.patch)
+            : buildRows(this.oldString, this.newString, this.filePath, CONTEXT_LINES);
+        if (!rows.length) {
+            return html`<div class="cv-diff-empty">No changes</div>`;
         }
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._unobserve?.();
-        this._unobserve = undefined;
-    }
-
-    private _draw(): void {
-        const wrap = this._wrap;
-        if (!wrap) {
-            return;
-        }
-        // Clamp the patch, not just the height: the cap below hides rows diff2html has already
-        // built, so a large edit would sit in the DOM in full to show a dozen lines.
-        this._patch = clampPatch(
-            buildPatch(
-                this.oldString,
-                this.newString,
-                this.filePath,
-                CONTEXT_LINES,
-                appState.ui.diffIgnoreWhitespace,
-            ),
-            MAX_PATCH_LINES,
-        );
-        const fmt: DiffFormat =
-            this.offsetWidth >= SPLIT_THRESHOLD ? 'side-by-side' : 'line-by-line';
-        this._format = fmt;
-        // Horizontal scroll is owned by diff2html per-pane (.d2h-file-side-diff /
-        // .d2h-file-diff); a wrap-level x-scroll would merge panes and break scroll-syncing.
-        wrap.style.maxHeight = `${VISIBLE_ROWS * 20 + 8}px`;
-        wrap.style.overflowY = 'hidden';
-        wrap.style.overflowX = 'hidden';
-        wrap.innerHTML = '';
-        renderDiff(wrap, this._patch, fmt);
-    }
-
-    private _maybeSwapFormat(): void {
-        const wrap = this._wrap;
-        if (!wrap || !this._patch) {
-            return;
-        }
-        const wantSplit = this.offsetWidth >= SPLIT_THRESHOLD;
-        const isSplit = this._format === 'side-by-side';
-        if (wantSplit === isSplit) {
-            return;
-        }
-        const fmt: DiffFormat = wantSplit ? 'side-by-side' : 'line-by-line';
-        this._format = fmt;
-        wrap.innerHTML = '';
-        renderDiff(wrap, this._patch, fmt);
+        // Only what fits is built: a row past the visible ones is DOM nobody
+        // can reach, and the full diff is one click away in Visual Studio.
+        const shown = rows.slice(0, VISIBLE_ROWS);
+        const more = rows.length - shown.length;
+        // Extension only, like Write's renderer (renderers.ts): highlightCode resolves a fence
+        // label or extension, not a full path, so the path itself would never match.
+        const name = this.filePath.split(/[\\/]/).pop() ?? '';
+        const dot = name.lastIndexOf('.');
+        const lang = dot > 0 ? name.slice(dot + 1) : '';
+        return html`<div
+            class="cv-diff-preview-wrap ${fromCli ? '' : 'no-gutter'}"
+            data-action="diff-expand"
+        >
+            ${shown.map((r) => this._row(r, lang, fromCli))}
+            ${more > 0 ? html`<div class="cv-diff-more">… ${more} more lines</div>` : nothing}
+        </div>`;
     }
 }
 

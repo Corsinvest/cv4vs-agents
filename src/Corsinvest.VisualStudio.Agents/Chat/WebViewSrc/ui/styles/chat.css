@@ -318,11 +318,6 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 /* "Open diff in Visual Studio" icon: tinted purple to echo the slash-cmd band
  * ("special action" colour). The SVG is a solid fill (reads well at 14px), so tint
  * the fill; clear the generic `fill: currentColor` on this one. */
-.cv-tool-actions-vs svg,
-.cv-tool-actions-vs svg path {
-    fill: var(--colorPaletteBerryBorderActive);
-    stroke: none;
-}
 /* A tool row's nested children (Agent / Skill transcript today).
  * No rule down the side: the indent already says "these belong to the row above". */
 .cv-children {

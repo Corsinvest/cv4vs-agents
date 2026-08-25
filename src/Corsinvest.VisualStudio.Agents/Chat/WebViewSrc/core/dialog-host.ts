@@ -8,7 +8,7 @@
 // with a single place owning the lifecycle: return-focus capture and the Esc
 // stack (dialog-focus). Reopening the same tag replaces the previous instance.
 import { captureFocus, restoreFocus, pushDialog, popDialog } from './dialog-focus';
-import type { LightboxRequest, DiffDialogNotification, RewindPoint } from './types';
+import type { LightboxRequest, RewindPoint } from './types';
 
 // The dialog custom elements are registered by the UI layer (cv-app imports them),
 // not here — core/ must not import ui/. mount() only creates the already-defined tag.
@@ -66,5 +66,3 @@ export const openPluginManagerDialog = (): void => mount('cv-plugin-manager');
 export const openRewindDialog = (points: RewindPoint[]): void =>
     mount('cv-rewind-dialog', { points });
 export const openLightbox = (req: LightboxRequest): void => mount('cv-lightbox', { req });
-export const openDiffDialog = (req: DiffDialogNotification): void =>
-    mount('cv-diff-dialog', { req });
