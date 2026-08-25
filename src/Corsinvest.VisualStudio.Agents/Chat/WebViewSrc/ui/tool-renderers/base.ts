@@ -389,16 +389,18 @@ export abstract class ToolRenderer {
                                   style="cursor:pointer"
                                   @click=${() => this.host.openOutput('in')}
                               >
-                                  ${
-                                      inLabel
-                                          ? html`<span class="cv-tool-body-label">${inLabel}</span>`
-                                          : nothing
-                                  }
+                                  <div class="cv-tool-body-head">
+                                      ${
+                                          inLabel
+                                              ? html`<span class="cv-tool-body-label"
+                                                    >${inLabel}</span
+                                                >`
+                                              : nothing
+                                      }
+                                      ${copyBtn(inText, 'in')}
+                                  </div>
                                   <div class="cv-tool-body-cell">
-                                      ${cell(inText, this.clipsInput(), highlightAs)}${copyBtn(
-                                          inText,
-                                          'in',
-                                      )}
+                                      ${cell(inText, this.clipsInput(), highlightAs)}
                                   </div>
                               </div>`
                             : nothing
@@ -410,9 +412,12 @@ export abstract class ToolRenderer {
                                   style="cursor:pointer"
                                   @click=${() => this.host.openOutput('out')}
                               >
-                                  <span class="cv-tool-body-label"
-                                      >${this.host.status === 'error' ? 'ERR' : 'OUT'}</span
-                                  >
+                                  <div class="cv-tool-body-head">
+                                      <span class="cv-tool-body-label"
+                                          >${this.host.status === 'error' ? 'ERR' : 'OUT'}</span
+                                      >
+                                      ${copyBtn(outText, 'out')}
+                                  </div>
                                   <div class="cv-tool-body-cell">
                                       <!-- Never highlighted, whatever the IN cell asked for: tool
                                            output is logs and dumps, where colouring guesses at
@@ -422,7 +427,7 @@ export abstract class ToolRenderer {
                                           this.host.clipsOutput ? 'always' : 'preview',
                                           '',
                                           'cv-tool-body-result',
-                                      )}${copyBtn(outText, 'out')}
+                                      )}
                                   </div>
                               </div>`
                             : nothing
