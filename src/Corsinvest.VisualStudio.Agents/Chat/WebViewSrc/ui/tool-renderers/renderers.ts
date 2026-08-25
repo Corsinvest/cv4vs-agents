@@ -51,9 +51,6 @@ export class EditRenderer extends ToolRenderer {
     override row(): TemplateResult {
         return this.rowDiff();
     }
-    protected override renderHeaderActions(): TemplateResult | typeof nothing {
-        return this.diffActionButtons();
-    }
     override header(): TemplateResult {
         const fp = String(this.host.input.file_path ?? '');
         const oldS = String(this.host.input.old_string ?? '');
@@ -70,7 +67,7 @@ export class EditRenderer extends ToolRenderer {
 
 /** Write creates a file, so there is no "before" to diff against: rendered as the plain content,
  *  not as a diff where every line is an addition. Deliberately NOT extending EditRenderer — it
- *  would bring rowDiff() and the Accept/Reject buttons, which have nothing to act on here.
+ *  would bring rowDiff(), which has nothing to compare here.
  *  Same split VS Code makes (Edit → diff component, Write → the content). */
 export class WriteRenderer extends ToolRenderer {
     readonly name = 'Write';

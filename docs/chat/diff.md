@@ -34,7 +34,7 @@ Turn it off with **Select lines when opening file** (**Options → Chat**) to ju
 
 ## Open in Visual Studio
 
-Clicking the preview — or the **Open in Visual Studio** button on the row — hands the change to VS's
+Clicking the preview hands the change to VS's
 **native, interactive side-by-side diff**: the real editor on both sides, not a static rendered
 diff. Clicking the same row again closes it; opening another change replaces it, so the chat never
 leaves a trail of diff tabs behind.

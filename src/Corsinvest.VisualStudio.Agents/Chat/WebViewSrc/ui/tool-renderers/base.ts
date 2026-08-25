@@ -19,7 +19,6 @@ import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import ErrorCircle16Regular from '@fluentui/svg-icons/icons/error_circle_16_regular.svg';
 import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
-import VisualStudioIcon from '../icons/visualStudio.svg';
 import { truncate, formatDurationSec } from '../helpers/format';
 import '../components/cv-copy-btn';
 import '../components/cv-diff-preview';
@@ -460,44 +459,6 @@ export abstract class ToolRenderer {
                 }}
             >
                 ${unsafeHTML(ErrorCircle16Regular)}
-            </fluent-button>
-        </div>`;
-    }
-
-    /** Diff tools' header buttons: "open diff in VS" + (on error) "show error". */
-    protected diffActionButtons(): TemplateResult {
-        return html`<div class="cv-tool-actions">
-            ${
-                this.host.status === 'error'
-                    ? html`<fluent-button
-                          class="trigger cv-tool-actions-error"
-                          appearance="subtle"
-                          shape="rounded"
-                          size="small"
-                          icon-only
-                          title="Show error details"
-                          @click=${(e: Event) => {
-                              e.stopPropagation();
-                              this.host.openError();
-                          }}
-                      >
-                          ${unsafeHTML(ErrorCircle16Regular)}
-                      </fluent-button>`
-                    : nothing
-            }
-            <fluent-button
-                class="trigger cv-tool-actions-vs"
-                appearance="subtle"
-                shape="rounded"
-                size="small"
-                icon-only
-                title="Open diff in Visual Studio"
-                @click=${(e: Event) => {
-                    e.stopPropagation();
-                    this.host.openDiffInVs();
-                }}
-            >
-                ${unsafeHTML(VisualStudioIcon)}
             </fluent-button>
         </div>`;
     }
