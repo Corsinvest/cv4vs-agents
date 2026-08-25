@@ -275,11 +275,9 @@ export class AgentRenderer extends ToolRenderer {
         return this.body() !== null || this.host.agentId !== '' || this.host.childCount > 0;
     }
     protected override renderHeaderActions(): TemplateResult | typeof nothing {
-        // Copy-output + show-all only make sense once the transcript is open (same as before, when the
-        // slot was gated on `open`). Collapsed → just the error button, if any.
-        return this.host.expanded
-            ? this.host.componentHeaderActions()
-            : super.renderHeaderActions();
+        // Show-all only makes sense once the transcript is open. The error button isn't ours to
+        // render: headerActions() adds it on a failed row whatever we return here.
+        return this.host.expanded ? this.host.componentHeaderActions() : nothing;
     }
 }
 
