@@ -1100,8 +1100,10 @@ export class CvApp extends LitElement {
                     appState.loadingOlder = false;
                     return;
                 }
+                // The lock stays held across the prepend — _prependWithAnchor releases it once
+                // Lit has flushed. Releasing here let the next scroll event fire a second fetch
+                // while the first page was still being anchored.
                 const out = this._applyHistoryPage(data, data?.events ?? []);
-                appState.loadingOlder = false;
                 this._prependWithAnchor(out);
             })
             .catch(() => {
@@ -1584,15 +1586,25 @@ export class CvApp extends LitElement {
     }
 
     /**
-     * Prepend a page of older history while keeping the user's reading row
-     * fixed. We anchor on the DISTANCE FROM THE BOTTOM (`scrollHeight -
-     * scrollTop`), which is invariant to content growing both above (the
-     * prepended page) and below (async-rendered markdown / lazy images) the
-     * viewport — unlike a one-shot `scrollTop += delta`, which
-     * slides as async children settle. A ResizeObserver keeps re-applying the
-     * anchor until the list height stops changing, so there are no magic frame
-     * counts. `scroll-behavior` is forced to `auto` during the operation so the
-     * imperative `scrollTop` writes aren't swallowed by the smooth animation.
+     * Prepend a page of older history while keeping the user's reading row fixed.
+     *
+     * We anchor on the DISTANCE FROM THE BOTTOM (`scrollHeight - scrollTop`), which is invariant
+     * to content growing both above (the prepended page) and below (async-rendered markdown /
+     * lazy images) the viewport — unlike a one-shot `scrollTop += delta`, which slides as async
+     * children settle. It has to be a measure of the list rather than a reference to a node in
+     * it: the transcript renders without keys, so Lit rewrites the existing sections in place
+     * and the node that was the joint holds different entries after the prepend.
+     *
+     * That measure is only stable if the list is really laid out, hence the `anchoring` class —
+     * see the comment on it below.
+     *
+     * A ResizeObserver keeps re-applying the anchor while the prepended entries settle, so there
+     * are no magic frame counts. It watches the .cv-response blocks: #messages is `flex: 1` so
+     * its own box never changes, and content-visibility contains each block's layout inside it,
+     * so the section wrapping one does not resize when it is finally measured.
+     *
+     * `scroll-behavior` is forced to `auto` throughout so the imperative writes aren't swallowed
+     * by the smooth animation.
      */
     private _prependWithAnchor(older: UiEntry[]): void {
         const el = this._messagesEl;
@@ -1601,6 +1613,14 @@ export class CvApp extends LitElement {
             appState.loadingOlder = false;
             return;
         }
+        // Lay the whole transcript out for real while we anchor against it. `content-visibility:
+        // auto` counts a block that has never been on screen as its contain-intrinsic-size guess,
+        // so scrollHeight moves by however wrong those guesses were the moment the blocks are
+        // measured — 504px over twelve blocks on a real transcript, which lands straight in the
+        // resting position. A class on the scroller rather than inline styles on the blocks:
+        // #messages is ours, the blocks belong to Lit and it rewrites them on the next render.
+        el.classList.add('anchoring');
+
         const distFromBottom = el.scrollHeight - el.scrollTop;
         const prevBehavior = el.style.scrollBehavior;
         el.style.scrollBehavior = 'auto';
@@ -1624,11 +1644,18 @@ export class CvApp extends LitElement {
             // against sub-pixel readback noise and produces a visible jitter.
             // A ResizeObserver fires precisely on the height changes we care
             // about; a timer just bounds how long we keep listening.
+            // On the .cv-response blocks, not on #messages or its sections: the scroller is
+            // `flex: 1` so its box never changes, and content-visibility contains the layout of
+            // each block inside it — a section does not resize when the block it wraps is finally
+            // measured. The blocks are where the height actually moves.
             const ro = new ResizeObserver(() => anchor());
-            ro.observe(el);
+            for (const block of el.querySelectorAll('.cv-response')) {
+                ro.observe(block);
+            }
             window.setTimeout(() => {
                 ro.disconnect();
                 el.style.scrollBehavior = prevBehavior;
+                el.classList.remove('anchoring');
             }, 1500);
             appState.loadingOlder = false;
         });
