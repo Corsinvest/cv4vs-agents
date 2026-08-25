@@ -448,17 +448,13 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 .cv-tool-body-result {
     margin: 0;
 }
-/* Copy button on each IN/OUT cell of the tool body. `cv-copy-btn` is
- * display:contents, so we position its inner button via ::part. The button
- * sits ON TOP of the monospace pre — so it needs an opaque background to
- * mask the text behind it (otherwise the icon overlaps the code). */
+/* Copy button on each IN/OUT cell of the tool body. It shares the label's line
+ * rather than floating over the code: the cell scrolls, and a button anchored
+ * to its top corner leaves the viewport while the text is still being read.
+ * `cv-copy-btn` is display:contents, so its inner button is reached via ::part. */
 .cv-tool-body-copy-btn::part(button) {
-    position: absolute;
-    top: 0;
-    right: 0;
     opacity: 0;
     transition: opacity 0.15s;
-    background: var(--colorNeutralBackground1);
     border-radius: var(--borderRadiusSmall);
 }
 .cv-tool-body-row:hover .cv-tool-body-copy-btn::part(button) {
@@ -616,6 +612,23 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 .cv-tool-body-cell {
     position: relative;
     min-width: 0;
+}
+/* The label's line, with the copy button at the far end. margin-left on the
+ * button rather than space-between: a labelless row (Write: the body IS the
+ * file) has only the button, and space-between would leave it on the left.
+ * The button is taller than the 10px label, so the row keeps the label's
+ * height and lets it overflow — otherwise every tool row grows by the
+ * difference. */
+.cv-tool-body-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 1.2em;
+}
+/* On ::part, not on the host: cv-copy-btn is display:contents, so the button
+ * itself is the flex item and the host has no box to push. */
+.cv-tool-body-head .cv-tool-body-copy-btn::part(button) {
+    margin-left: auto;
 }
 .cv-tool-body-label {
     font-family: var(--fontFamilyMonospace);
