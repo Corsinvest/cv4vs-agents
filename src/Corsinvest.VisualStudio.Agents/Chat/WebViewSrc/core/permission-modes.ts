@@ -14,6 +14,7 @@ import Flash20Regular from '@fluentui/svg-icons/icons/flash_20_regular.svg';
 import ShieldDismiss20Regular from '@fluentui/svg-icons/icons/shield_dismiss_20_regular.svg';
 import { state as appState } from './state';
 import { resolveModelValue } from './ai-models';
+import { PERMISSION_MODE } from './types';
 import type { PermissionMode } from './types';
 
 export interface PermissionItem {
@@ -32,14 +33,14 @@ export const PERMISSION_ITEMS: PermissionItem[] = [
     // the spare width is better spent on the limits of each mode (verified in the CLI:
     // acceptEdits only auto-approves writes inside the working directory).
     {
-        value: 'default',
+        value: PERMISSION_MODE.default,
         label: 'Manual',
         short: 'Manual',
         description: 'Every edit and command waits for your approval',
         icon: HandRight20Regular,
     },
     {
-        value: 'acceptEdits',
+        value: PERMISSION_MODE.acceptEdits,
         label: 'Edit automatically',
         short: 'Auto-edit',
         description:
@@ -47,21 +48,21 @@ export const PERMISSION_ITEMS: PermissionItem[] = [
         icon: Code20Regular,
     },
     {
-        value: 'plan',
+        value: PERMISSION_MODE.plan,
         label: 'Plan',
         short: 'Plan',
         description: 'Reads and explores freely, then proposes a plan — no file is changed',
         icon: ClipboardBulletListLtr20Regular,
     },
     {
-        value: 'auto',
+        value: PERMISSION_MODE.auto,
         label: 'Auto',
         short: 'Auto',
         description: 'Decides per task when to act and when to ask, based on how risky it is',
         icon: Flash20Regular,
     },
     {
-        value: 'bypassPermissions',
+        value: PERMISSION_MODE.bypassPermissions,
         label: 'Bypass permissions',
         short: 'Bypass',
         description: 'Nothing is ever asked, including commands that can destroy data',
@@ -71,21 +72,24 @@ export const PERMISSION_ITEMS: PermissionItem[] = [
 
 /** Gate the optional modes: `auto` only when the current model supports it,
  *  `bypassPermissions` only when the option is enabled. Before the model catalogue
- *  arrives, keep `auto` shown. */
+ *  arrives we cannot know, and the two ways to be wrong are not equal: offering `auto`
+ *  to a model that refuses it makes the row vanish from under the cursor, while hiding
+ *  it costs nothing the user notices — unless it is the mode they are already in, which
+ *  is why that one case keeps it. */
 export function permissionItems(): PermissionItem[] {
     const value = resolveModelValue(appState.currentModel);
     const m = appState.models.find((x) => x.value === value);
-    const autoOk = m ? m.supportsAutoMode : true;
+    const autoOk = m ? m.supportsAutoMode : appState.permissionMode === PERMISSION_MODE.auto;
     // Two gates: our own VS option AND the CLI's effective settings — an org can
     // forbid the mode via managed settings. Without the second one we would offer a mode the CLI
     // then refuses. Note the different sources: `ui.*` is a VS Option, the other is CLI state.
     const bypassOk =
         appState.ui.allowDangerouslySkipPermissions && !appState.bypassPermissionsDisabled;
     return PERMISSION_ITEMS.filter((it) => {
-        if (it.value === 'auto') {
+        if (it.value === PERMISSION_MODE.auto) {
             return autoOk;
         }
-        if (it.value === 'bypassPermissions') {
+        if (it.value === PERMISSION_MODE.bypassPermissions) {
             return bypassOk;
         }
         return true;

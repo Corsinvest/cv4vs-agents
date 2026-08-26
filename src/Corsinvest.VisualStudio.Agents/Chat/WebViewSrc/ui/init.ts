@@ -9,6 +9,7 @@ import { bridge } from '../core/bridge';
 import { Msg } from '../core/bridge-messages';
 import { state } from '../core/state';
 import type { IdeContextNotification } from '../core/types';
+import { PERMISSION_MODE } from '../core/types';
 import { normPath } from '../core/path';
 import { closeTopDialog } from '../core/dialog-focus';
 import { setExtraLinkableExtensions } from '../core/file-links';
@@ -92,7 +93,7 @@ function wireBridgeHandlers(): void {
             return;
         }
         state.currentModel = c.model;
-        state.permissionMode = (c.permissionMode as PermissionMode) || 'default';
+        state.permissionMode = (c.permissionMode as PermissionMode) || PERMISSION_MODE.default;
         if (c.effortLevel) {
             state.effortLevel = c.effortLevel;
         }

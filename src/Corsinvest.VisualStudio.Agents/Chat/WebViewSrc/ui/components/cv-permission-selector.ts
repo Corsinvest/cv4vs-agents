@@ -7,6 +7,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
 import { tooltipStyles } from '../styles/shared';
 import type { PermissionMode } from '../../core/types';
+import { PERMISSION_MODE } from '../../core/types';
 import { permissionItems } from '../../core/permission-modes';
 
 /**
@@ -85,7 +86,7 @@ export class CvPermissionSelector extends LitElement {
                 size="small"
                 @click=${this._onClick}
             >
-                <span class=${this._current === 'bypassPermissions' ? 'danger' : ''}
+                <span class=${this._current === PERMISSION_MODE.bypassPermissions ? 'danger' : ''}
                     >${item?.short ?? this._current}</span
                 >
             </fluent-button>
