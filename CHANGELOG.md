@@ -6,6 +6,124 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-08-26
+
+The inline diff was rebuilt around the patch the CLI already sends, so it shows the file's real line
+numbers instead of numbering every edit from 1 — and the full-screen viewer we drew ourselves is
+gone, because Visual Studio's own diff was one click away the whole time. The debugger tools stopped
+answering with the editor's caret instead of their own position, and four of them gained the piece
+that was missing. Plus the fixes you find by reading transcripts: a file path in backticks is now a
+link, a shell command is highlighted, and scrolling up for older history no longer moves the page
+under you.
+
+### Added
+
+- **The diff shows the file's line numbers, and the context around the change.** An Edit's input
+  carries two fragments, not the file, so diffing them produced a patch that started at line 1 every
+  time: line 219 appeared as line 1, with nothing around it. The CLI computes the right patch when
+  it applies the edit and sends it on the tool result — real line numbers, three lines of context
+  either side. That patch now travels whole to the preview instead of being read for one number and
+  discarded. The jump and the preview read the same hunks, so the two can no longer disagree about
+  where a change is.
+- **Long lines wrap.** Measured on a real C# diff: median line 59 characters against roughly 45 that
+  fit in a docked tool window. More than half of every diff needed sideways scrolling to read.
+- **The changed words keep their syntax colours.** A changed piece used to be highlighted on its
+  own, and a highlighter given `boolean` alone sees a word rather than a keyword — so the one place
+  worth reading came back plain. The line is highlighted whole and the word-diff's marks are laid
+  over it.
+- **Counts in the title, the way git reports them.** An edit that replaced fourteen lines with one
+  said "Removed 13 lines"; git calls that +1 −14, and so does anyone reading the row.
+- **Shell commands render as code.** The IN cell of a Bash or PowerShell row was a flat block of
+  text, and a command is the thing that gets re-read most — pipes, redirections, quoting. It is now
+  highlighted, and never truncated: measured over 6839 shell commands in this project's own
+  transcripts, 73% already fit the three-line cap, so showing the rest whole costs almost nothing.
+- **A newer Claude Code gets a notice.** The chat says so at the top when the npm registry has a
+  release newer than the installed CLI. It only says so — the CLI is not ours, and replacing it
+  under a live session would break that session. Once per Visual Studio, and detached from startup:
+  the pane opens at the same speed whether the registry answers in 50ms or never.
+- **`debug_enable_breakpoint`.** Turning a breakpoint off meant removing it, which took its
+  condition and hit-count rule with it and could not put them back. The case that wants this is
+  ordinary: a breakpoint in hot code that keeps interrupting while you are trying to reach a
+  different one.
+- **`document_read_buffer` reads a range.** Only a line cap existed, counted from the top, so lines
+  400–450 of a large file meant pulling 450 and discarding 400.
+- **`ide_read_output` filters by pattern.** On a Debug pane holding tens of thousands of lines there
+  was no way to say "the lines that mention X". The filter runs *before* the tail, which is the
+  order that matters — "the last N matching lines", not "the matches among the last N".
+- **`solution_get_configuration` reports the startup project.** It could be set but never read, so
+  the only way to use it was blind, with no way to put the previous one back.
+- **A file reference in backticks is a link.** Counted over 25 real sessions in this repository: 33
+  references written inside inline code against 2 written bare — the feature worked on one case in
+  seventeen. Only when the whole span is a reference: `Foo.cs:12` qualifies, `cat Foo.cs:12` does
+  not. On the sample, 33 links and no false positives.
+- **The mode that never asks now looks like it.** Four of the five permission modes tinted the
+  composer border; `bypassPermissions` — the one that runs everything without asking, dangerous
+  commands included — had no rule at all and inherited the resting grey. It gets the red, and its
+  name on the toolbar in red, which is the part that answers "how did I leave this pane".
+
+### Changed
+
+- **Clicking a diff opens Visual Studio's diff viewer.** The full-screen dialog we drew ourselves is
+  gone, and with it the library behind it: 89.6 KB minified plus 16.9 KB of CSS, replaced by about
+  forty lines of grid. That library rendered a GitHub-shaped page — side-by-side panes, synchronised
+  scroll, a file list — none of which fits a tool window 350px wide, and everything built to make it
+  fit was compensation. **Options → Chat → Diff** goes with it: its one setting governed a patch we
+  no longer compute, so it had stopped changing the diff it named. So does *Show the "open in VS"
+  button*, which existed to hide a duplicate and would now hide the only route.
+- **Every icon-only button in the composer has a name a screen reader can reach.** A tooltip is
+  drawn next to a control, not attached to it, so eleven buttons were labelled in a way assistive
+  technology never saw. The worst was the Send button, which had no name by any route.
+- **The IN/OUT copy button stopped covering the code.** It sat over the first line of the very text
+  it copies, and on a long cell it scrolled out of view while the code was still being read.
+
+### Fixed
+
+- **The debugger answered with the editor's caret, not its own position.** Where execution is paused
+  was read from the active document's caret. The two agree most of the time, which is why it
+  survived — they part company exactly when a tool moves the caret itself, so after `run_to_line` or
+  `debug_set_next_statement` the state reported the line we had just planted. Opening any file while
+  paused was enough to make it point somewhere else entirely. Every frame of a call stack now
+  carries its own file and line too, which is what `debug_get_thread_callstack` exists for.
+- **A locals walk could freeze Visual Studio.** Depth and member caps bound the *shape* of a
+  capture, not its cost: reading a value runs a getter inside the debugged program, and one that
+  takes a lock or calls out to the network left the walk sitting there with no limit exceeded,
+  because none of them measured time. There is now a deadline, checked where a single slow getter is
+  actually reached.
+- **Evaluating an expression had no time limit at all** — the member walk had a ceiling for exactly
+  this reason; the evaluation it starts from did not.
+- **A breakpoint that could never fire looked like any other.** Setting one answered "ok" whether
+  the line held executable code or not, and a function breakpoint answered the same for a method
+  name that matched nothing. `debug_list_breakpoints` now reports how many locations each one bound
+  to, which is half of "why did it not break".
+- **Asking to pause an already-paused program was an error** — that is the state the caller was
+  asking for.
+- **`document_read_buffer` said "not open" for the file most worth reading.** It looked the document
+  up by a route that misses preview tabs, so a file open in one had `document_check_dirty` answering
+  "open, and dirty" while this one sent the caller to disk — for exactly the file whose buffer
+  differs from it.
+- **Loading older history dropped the reading position.** Scrolling up left the transcript a couple
+  of paragraphs below where it had been: blocks that have never been on screen are counted at a
+  guess until they are laid out for real, and on a real transcript those guesses were off by 504px
+  over twelve blocks. Two supporting bugs went with it — the observer meant to re-anchor while
+  images settle watched an element whose height never changes, and a second page could be fetched
+  while the first was still being placed.
+- **Expanding a failed Agent hid the button explaining the failure.** The row's action slot was
+  replaced rather than extended, so opening the one row you open *because* it failed swapped the
+  error button away.
+- **The rewind dialog read its two counts backwards.** "+2 −5" described the change in the wrong
+  direction: those are the lines the button is about to add and remove. Now spelled out in the
+  future tense — "5 lines will be removed and 2 lines added across 1 file".
+- **A word-diff marked whole lines as changed.** Pairing each removed line with the added one that
+  follows treats two unrelated lines as one edit: measured on a real patch, 24 rows out of 28 were
+  marked end to end, which says nothing at all. A pair is now word-diffed only when most of its
+  words already match — same measurement afterwards, a single word inside a ninety-character line.
+- **The range in a file link never worked.** `x.cs:35-48` opened at line 35 and selected nothing —
+  the attribute carrying the end of the range was being stripped before it reached the page. A range
+  selected downwards also left Visual Studio scrolled to its *end*, with the beginning off the top
+  of the screen.
+- **Diff temp files were never deleted** — 213 of them in `%TEMP%`, the oldest four months old. They
+  now leave with the window that showed them.
+
 ## [1.5.0] - 2026-08-20
 
 Claude can put your files back where they were without touching the conversation, and the chat
