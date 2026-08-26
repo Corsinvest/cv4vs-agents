@@ -433,8 +433,8 @@ gauge in the composer shows how much room is left before the CLI compacts the co
 
 Most of what looks like a saving isn't. **A setting that changes what the chat draws changes nothing
 about what was sent**: by the time a tool result is on screen it has already been through the model.
-Preview lines, Compact Ask answers, Show tool errors inline, the diff options — all rendering. These
-four are the ones that reach the wire:
+Preview lines, Collapse tool results, Compact Ask answers, Show tool errors inline — all rendering.
+These four are the ones that reach the wire:
 
 | | Where | Default | What it does |
 |---|---|---|---|
