@@ -360,10 +360,39 @@ export class EnterPlanModeRenderer extends HeaderOnlyRenderer {
     }
 }
 
-export class ExitPlanModeRenderer extends HeaderOnlyRenderer {
+export class ExitPlanModeRenderer extends ToolRenderer {
     readonly name = 'ExitPlanMode';
+    /** Same shape as Ask: the outcome IS the body, so no chevron — and nothing to show
+     *  while the banner is still up. */
+    override row(): TemplateResult {
+        const done = this.host.status !== 'pending';
+        return this.chrome({
+            body: done ? this.outcomeBody() : null,
+            open: done,
+            onClick: null,
+            chevron: false,
+        });
+    }
     override header(): TemplateResult {
-        return html`${this.nameSpan('ExitPlanMode')}`;
+        return html`${this.nameSpan("Claude's Plan")}`;
+    }
+    /** What the user decided, in the Ask answer's shape: a chip for the question, the
+     *  choice next to it. The plan itself was read in the banner and is in the approved-plan
+     *  message that follows — repeating it here would say the same thing three times. */
+    private outcomeBody(): TemplateResult {
+        const approved = this.host.status !== 'error';
+        return html`
+            <div class="cv-tool-body">
+                <div class="cv-question-list cv-question-compact">
+                    <div class="cv-question-answer">
+                        <span class="cv-question-chip">Plan</span>
+                        <span class="cv-question-answer-val"
+                            >${approved ? 'Approved' : 'Kept planning'}</span
+                        >
+                    </div>
+                </div>
+            </div>
+        `;
     }
 }
 

@@ -8,7 +8,9 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import LockClosed16Regular from '@fluentui/svg-icons/icons/lock_closed_16_regular.svg';
 import QuestionCircle16Regular from '@fluentui/svg-icons/icons/question_circle_16_regular.svg';
 import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
+import ClipboardBulletListLtr16Regular from '@fluentui/svg-icons/icons/clipboard_bullet_list_ltr_16_regular.svg';
 import { iconStyles } from '../styles/shared';
+import { renderMarkdown } from '../../core/markdown';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { state as appState } from '../../core/state';
@@ -18,6 +20,8 @@ import type {
     ToolPermissionNotification,
     ToolPermissionCancelNotification,
     RespondPermissionNotification,
+    SetPermissionModeNotification,
+    PermissionMode,
     AskQuestion,
 } from '../../core/types';
 
@@ -45,6 +49,11 @@ interface PermissionSuggestion {
 }
 
 const OTHER = 'Other';
+
+/** The tool the model calls to leave plan mode. Its request is a permission request like any
+ *  other, but the choice is not "may I run this" — it is which mode the session continues in,
+ *  so it gets its own wording (see _renderPlanPermission). */
+const EXIT_PLAN_MODE = 'ExitPlanMode';
 
 /** Scope destinations the "Yes, allow …" choice can cycle through. The order is
  *  narrowest-first, so the least far-reaching scope is the default. Clicking the
@@ -143,6 +152,24 @@ export class CvPermissionBanner extends LitElement {
                 white-space: pre-wrap;
                 max-height: 160px;
                 overflow-y: auto;
+            }
+            /* The plan is prose, not a command: rendered markdown, in the body font, and taller
+               than the command box — it is what the choice is about, so it is worth the room. */
+            #plan-body {
+                font-size: var(--fontSizeBase200);
+                color: var(--colorNeutralForeground2);
+                background: var(--colorNeutralBackground3);
+                border-radius: var(--borderRadiusMedium);
+                padding: 8px 10px;
+                margin-top: 6px;
+                max-height: 40vh;
+                overflow-y: auto;
+            }
+            #plan-body > :first-child {
+                margin-top: 0;
+            }
+            #plan-body > :last-child {
+                margin-bottom: 0;
             }
             /* Short single-line command shown inline: an expander would cost a click for one line. */
             #permission-detail-inline {
@@ -593,6 +620,16 @@ export class CvPermissionBanner extends LitElement {
      *  focus the deny field as the final number. */
     private _numberedActions(): Array<() => void> {
         const p = this._pending;
+        // The plan banner draws its own buttons, so its numbers have to be built the same way
+        // or the keys land on choices that aren't there.
+        if (p?.name === EXIT_PLAN_MODE) {
+            return [
+                () => this._onAcceptPlan('acceptEdits'),
+                () => this._onAcceptPlan('default'),
+                () => this._onDeny(),
+                () => this._focusDenyInput(),
+            ];
+        }
         const suggestion = (p?.permissionSuggestions ?? [])[0];
         const actions: Array<() => void> = [() => this._onAllow()];
         if (suggestion) {
@@ -955,9 +992,12 @@ export class CvPermissionBanner extends LitElement {
      *  For setMode suggestions this is the whole label (no scope cycle). */
     private _suggestionLabel(s: PermissionSuggestion): string {
         if (s.type === 'setMode') {
-            return s.mode === 'acceptEdits'
-                ? 'Yes, allow all edits this session'
-                : 'Yes, and don’t ask again';
+            if (s.mode === 'acceptEdits') {
+                return 'Yes, allow all edits this session';
+            }
+            // `default` asks about every edit again — the opposite of not asking, so it can't
+            // share the wording below.
+            return s.mode === 'default' ? 'Yes, return to normal mode' : 'Yes, and don’t ask again';
         }
         const rule = s.rules?.[0];
         // Prefer the specific rule pattern; fall back to the tool name.
@@ -1019,6 +1059,9 @@ export class CvPermissionBanner extends LitElement {
         }
         if (p.name === 'AskUserQuestion') {
             return this._renderQuestions();
+        }
+        if (p.name === EXIT_PLAN_MODE) {
+            return this._renderPlanPermission(p);
         }
         // At most THREE numbered choices — 1 Yes, 2 "allow … for this project"
         // (the suggestions collapsed into one), 3 No: more rows than that and the
@@ -1104,6 +1147,74 @@ export class CvPermissionBanner extends LitElement {
         );
         this._dismiss();
     };
+
+    /** Accept the plan and continue in `mode`. Two messages, in this order: the mode first, the
+     *  allow second — the turn resumes the moment the tool is allowed, so a mode arriving after
+     *  it would leave the first edit to be judged in plan mode, and blocked.
+     *
+     *  Not `updatedPermissions`: the CLI attaches no permission_suggestions to ExitPlanMode (its
+     *  checkPermissions returns a bare `ask`), and the terminal builds the setMode itself, in a
+     *  component the SDK channel never runs. set_permission_mode is the path the selector already
+     *  uses, so the mode is applied once, by the CLI. */
+    private _onAcceptPlan(mode: PermissionMode): void {
+        if (!this._pending) {
+            return;
+        }
+        // Optimistic, like the selector's own switch: the host echoes back what the CLI really
+        // holds (and system/status confirms it), so a refusal rolls this back.
+        appState.permissionMode = mode;
+        bridge.sendNotification<SetPermissionModeNotification>(
+            Msg.fromWebView.cli.setPermissionMode,
+            { mode },
+        );
+        this._respond(true);
+    }
+
+    /** Leaving plan mode: the question is not "may I run this tool" but which mode the session
+     *  continues in, so both answers are a yes and each says which mode follows. */
+    private _renderPlanPermission(p: ToolPermission) {
+        const plan = typeof p.input?.plan === 'string' ? p.input.plan : '';
+        return html`
+            <div id="permission-area">
+                <div id="permission-header">
+                    ${unsafeHTML(ClipboardBulletListLtr16Regular)}
+                    <span id="permission-title">Accept this plan?</span>
+                </div>
+                ${
+                    plan
+                        ? html`<div id="plan-body">${unsafeHTML(renderMarkdown(plan))}</div>`
+                        : nothing
+                }
+                <div id="permission-buttons">
+                    <fluent-button
+                        appearance="primary"
+                        @click=${() => this._onAcceptPlan('acceptEdits')}
+                    >
+                        <span class="num">1</span> Yes, and auto-accept
+                    </fluent-button>
+                    <fluent-button
+                        appearance="outline"
+                        @click=${() => this._onAcceptPlan('default')}
+                    >
+                        <span class="num">2</span>
+                        <span class="label">Yes, and manually approve edits</span>
+                    </fluent-button>
+                    <fluent-button appearance="outline" @click=${this._onDeny}>
+                        <span class="num">3</span> No, keep planning
+                    </fluent-button>
+                </div>
+                <fluent-textarea
+                    id="permission-deny-input"
+                    appearance="outline"
+                    auto-resize
+                    resize="none"
+                    placeholder="Tell Claude what to do instead…"
+                    @keydown=${this._onDenyInputKey}
+                ></fluent-textarea>
+                <div id="permission-hint">Esc to cancel</div>
+            </div>
+        `;
+    }
 
     /** Interactive AskUserQuestion UI: per-question tabs, radio/checkbox
      *  options, an "Other" free-text option, and a Submit footer. */

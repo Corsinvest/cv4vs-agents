@@ -131,6 +131,9 @@ public interface IClaudeClient : IDisposable
     event EventHandler<ToolProgressEventArgs> ToolProgressReceived;
     event EventHandler<JObject> SystemMessageReceived;
     event EventHandler<string> SessionIdChanged;
+    /// <summary>The CLI moved to another permission mode on its own: a plan approved from the
+    /// ExitPlanMode dialog, Shift+Tab or /plan from a remote terminal, a rewind. Arg = the new mode.</summary>
+    event EventHandler<string> PermissionModeChanged;
     event EventHandler<string> ConversationReset;
     event EventHandler<string> Error;
     event EventHandler<ProcessStartedEventArgs> ProcessStarted;
