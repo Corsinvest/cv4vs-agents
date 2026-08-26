@@ -94,9 +94,9 @@ The gauge tells you the window is filling; this is what you can actually do abou
 
 Worth saying first, because most of the Chat options page looks like it belongs here and does not:
 **a setting that changes what the chat draws changes nothing about what was sent.** By the time the
-tool result is on screen, it has already been through the model. Preview lines, Compact Ask answers,
-Show tool errors inline, the diff options — every one of those is a rendering choice. The knobs
-below are the ones that reach the wire.
+tool result is on screen, it has already been through the model. Preview lines, Collapse tool
+results, Compact Ask answers, Show tool errors inline — every one of those is a rendering choice.
+The knobs below are the ones that reach the wire.
 
 ### What travels with every message
 

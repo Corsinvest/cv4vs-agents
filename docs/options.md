@@ -21,7 +21,8 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 | Show cost and duration | bool | `false` | Show cost (USD) and duration after each response. |
 | Show relative paths in tool rows | bool | `true` | File paths relative to the working directory (full path if outside it). |
 | Select lines when opening file | bool | `true` | When opening a file from a tool row, select the relevant lines in the editor. |
-| Preview lines | int | `3` | Lines shown in preview areas (tool output, user messages). `0` = no preview. |
+| Preview lines | int | `3` | Lines shown in preview areas (tool output, user messages) before a body is clipped. `0` shows an open row whole, however long it is. |
+| Collapse tool results | bool | `false` | Start every tool row closed, so a long session reads as what Claude did rather than how it got there. The chevron opens one when you want it; a failed row still shows its dot and the button that opens the full output. |
 | Chat font size | int (px) | `13` | Font size of the chat message text. |
 | Show WebView developer entries | bool | `false` | Add "WebView DevTools" and "WebView task manager" to the chat toolbar's "More" (…) menu — the browser console/DOM/network on the chat itself, and the browser's processes with their memory and CPU. Pre-release builds always offer both. |
 | Autosave before Claude reads/writes | bool | `true` | Save a dirty file before Claude reads/writes it, so it sees your in-editor edits, not the stale on-disk version. |

@@ -52,8 +52,13 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Display")]
     [DisplayName("Preview lines")]
-    [Description("Number of lines shown in preview areas (tool output and user messages). 0 turns previews off: tool rows start collapsed (the chevron opens them in full) and user bubbles keep a short 3-line preview.")]
+    [Description("Number of lines shown in preview areas (tool output and user messages) before a body is clipped. 0 shows an open row whole, however long it is. To start rows closed instead, use Collapse tool results below.")]
     public int PreviewLines { get; set; } = 3;
+
+    [Category("Display")]
+    [DisplayName("Collapse tool results")]
+    [Description("Start every tool row closed, so a long session reads as what Claude did rather than how it got there. The chevron opens one when you want it, and a failed tool stays open either way. Separate from Preview lines, which decides how much of an OPEN row is shown.")]
+    public bool CollapseTools { get; set; }
 
     [Category("File links")]
     [DisplayName("Extra linkable extensions")]
