@@ -19,6 +19,7 @@ import type {
     Theme,
     VsOptionsDto,
 } from './types';
+import { PERMISSION_MODE } from './types';
 
 interface AppState {
     workingDirectory: string;
@@ -164,7 +165,7 @@ type Store<T extends object> = T & { on: OnFn<T> };
 const _impl = new StoreImpl<AppState>({
     workingDirectory: '',
     currentModel: null,
-    permissionMode: 'default',
+    permissionMode: PERMISSION_MODE.default,
     slashCommands: [],
     theme: 'dark',
     effortLevel: 'high',

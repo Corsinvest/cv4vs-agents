@@ -15,6 +15,7 @@ import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { state as appState } from '../../core/state';
 import { PermissionQueue } from '../../core/permission-queue';
+import { PERMISSION_MODE } from '../../core/types';
 import type {
     ToolResultNotification,
     ToolPermissionNotification,
@@ -624,8 +625,8 @@ export class CvPermissionBanner extends LitElement {
         // or the keys land on choices that aren't there.
         if (p?.name === EXIT_PLAN_MODE) {
             return [
-                () => this._onAcceptPlan('acceptEdits'),
-                () => this._onAcceptPlan('default'),
+                () => this._onAcceptPlan(PERMISSION_MODE.acceptEdits),
+                () => this._onAcceptPlan(PERMISSION_MODE.default),
                 () => this._onDeny(),
                 () => this._focusDenyInput(),
             ];
@@ -992,12 +993,14 @@ export class CvPermissionBanner extends LitElement {
      *  For setMode suggestions this is the whole label (no scope cycle). */
     private _suggestionLabel(s: PermissionSuggestion): string {
         if (s.type === 'setMode') {
-            if (s.mode === 'acceptEdits') {
+            if (s.mode === PERMISSION_MODE.acceptEdits) {
                 return 'Yes, allow all edits this session';
             }
             // `default` asks about every edit again — the opposite of not asking, so it can't
             // share the wording below.
-            return s.mode === 'default' ? 'Yes, return to normal mode' : 'Yes, and don’t ask again';
+            return s.mode === PERMISSION_MODE.default
+                ? 'Yes, return to normal mode'
+                : 'Yes, and don’t ask again';
         }
         const rule = s.rules?.[0];
         // Prefer the specific rule pattern; fall back to the tool name.
@@ -1188,13 +1191,13 @@ export class CvPermissionBanner extends LitElement {
                 <div id="permission-buttons">
                     <fluent-button
                         appearance="primary"
-                        @click=${() => this._onAcceptPlan('acceptEdits')}
+                        @click=${() => this._onAcceptPlan(PERMISSION_MODE.acceptEdits)}
                     >
                         <span class="num">1</span> Yes, and auto-accept
                     </fluent-button>
                     <fluent-button
                         appearance="outline"
-                        @click=${() => this._onAcceptPlan('default')}
+                        @click=${() => this._onAcceptPlan(PERMISSION_MODE.default)}
                     >
                         <span class="num">2</span>
                         <span class="label">Yes, and manually approve edits</span>
