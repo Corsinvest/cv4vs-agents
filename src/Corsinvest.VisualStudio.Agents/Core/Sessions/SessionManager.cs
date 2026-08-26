@@ -214,7 +214,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
     /// <summary>True when the line's top-level "type" equals <paramref name="type"/>. Goes through
     /// FindJsonStringValue rather than matching a literal '"type":"x"' so a writer that pretty-prints
     /// (space after the colon) is read the same as the CLI's compact output.</summary>
-    private static bool IsType(string line, string type)
+    internal static bool IsType(string line, string type)
         => string.Equals(FindJsonStringValue(line, "type"), type, StringComparison.Ordinal);
 
     /// <summary>The field, when the line is of the wanted type. Takes the type the caller already

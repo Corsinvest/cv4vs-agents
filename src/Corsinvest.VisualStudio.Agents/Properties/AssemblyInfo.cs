@@ -4,8 +4,13 @@
  */
 
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows;
+
+// The UI-free logic worth testing (the .jsonl scan, StatsAggregator, the path helpers) is internal,
+// and making it public to be reachable would widen the surface for one consumer that ships to nobody.
+[assembly: InternalsVisibleTo("Corsinvest.VisualStudio.Agents.Tests")]
 
 // Custom WPF controls (Core/Controls) resolve their default ControlTemplate from Themes/Generic.xaml
 // in this assembly. Required for CvExpander's chevron template to load.
