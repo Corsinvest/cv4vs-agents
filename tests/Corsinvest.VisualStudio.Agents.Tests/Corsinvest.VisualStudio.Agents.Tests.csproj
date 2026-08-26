@@ -1,0 +1,63 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Unit tests for the UI-free parts of the host: the .jsonl scan, StatsAggregator, the path
+    helpers. Deliberately OUTSIDE src/ and glob-based: the extension's own .csproj is legacy-style
+    with explicit <Compile> items, and a glob project living inside that tree invites the two
+    conventions to be confused.
+
+    net48 to match the assembly under test. Not packed, not shipped: the VSIX references the
+    extension, never this.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Corsinvest.VisualStudio.Agents.Tests</RootNamespace>
+    <!-- The extension project is a VSIX; nothing here should try to deploy one. -->
+    <DeployExtension>false</DeployExtension>
+    <!-- MSB3277: the extension drags in the VS SDK's own assemblies, several of which ship in more
+         than one version. VS itself resolves them at runtime and these tests never load them —
+         they exercise string and path helpers. Left on, the conflict list is hundreds of lines and
+         buries anything real, which is the failure mode the threading warnings already demonstrate. -->
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <!-- 13.0.1 exactly: the version VS forces at runtime, so the tests read the DTOs through the
+         same Newtonsoft the extension will actually get. A higher one throws MissingMethodException
+         in the IDE (CLAUDE.md), and a test passing against a version that never ships proves nothing. -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <!--
+    The assembly under test, NOT a ProjectReference. The extension is a legacy-style VSIX whose
+    dependencies come from packages.config + <HintPath>; asking the modern SDK to rebuild it
+    resolves none of them and buries the run in CS0246 for JObject, DTE2 and CoreWebView2*.
+    Referencing what MSBuild already produced tests the shipped assembly and leaves the build of
+    the extension to the one tool that knows how to do it.
+
+    So: msbuild (or build_solution) first, dotnet test second. That order IS the gate.
+  -->
+  <ItemGroup>
+    <Reference Include="Corsinvest.VisualStudio.Agents">
+      <HintPath>..\..\src\Corsinvest.VisualStudio.Agents\bin\$(Configuration)\Corsinvest.VisualStudio.Agents.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- The wire DTOs. A ProjectReference would be fine here — this one is SDK-style and builds on
+       its own — but it is read from the same output folder as the assembly above so both always
+       come from the one build, rather than from two that could be a compile apart. -->
+  <ItemGroup>
+    <Reference Include="Corsinvest.VisualStudio.Agents.Contracts">
+      <HintPath>..\..\src\Corsinvest.VisualStudio.Agents\bin\$(Configuration)\Corsinvest.VisualStudio.Agents.Contracts.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
