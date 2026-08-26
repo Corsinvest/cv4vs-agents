@@ -334,6 +334,26 @@ internal sealed partial class ClaudeClient
                     break;
                 }
 
+            // Every mutation of the CLI's permission mode is announced here — the ExitPlanMode
+            // dialog approving a plan, Shift+Tab or /plan from a remote terminal, a rewind, our own
+            // set_permission_mode: the CLI registers a single listener on the mode diff, so no path
+            // escapes it. Approving a plan is the case that bites: the CLI leaves `plan` for
+            // acceptEdits by itself, and the selector would keep reading "Plan" while files are
+            // written. `break`, not `return`: the pane reads the same subtype for the compacting
+            // spinner. A change of ours arrives here after the ack already wrote the field, so the
+            // guard below keeps it silent.
+            case ClientMessages.SystemSubtype.Status:
+                {
+                    var mode = obj.Val("permissionMode");
+                    if (!string.IsNullOrEmpty(mode) && mode != PermissionMode)
+                    {
+                        _log.Debug(() => $"[client] permission mode {PermissionMode} → {mode}");
+                        PermissionMode = mode;
+                        PermissionModeChanged?.Invoke(this, mode);
+                    }
+                    break;
+                }
+
             case ClientMessages.SystemSubtype.BridgeState:
                 // Whole payload: the state values and the reconnect sequence are read from the
                 // CLI's source, never observed on the wire, and the event may carry fields we

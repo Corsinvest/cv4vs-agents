@@ -191,7 +191,11 @@ export type { InitPayloadNotification } from './generated/InitPayloadNotificatio
 // once claude.exe has answered initialize + get_settings.
 export type { CliStateNotification } from './generated/CliStateNotification';
 
-export type PermissionMode = 'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions';
+/** The five modes the picker offers. The CLI reports others too (`dontAsk`, and whatever a future
+ *  version adds): they travel as their raw string rather than being coerced into one of these —
+ *  a mode shown wrong is worse than a mode shown ugly. `string & {}` keeps the completions. */
+export type PermissionMode =
+    'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' | (string & {});
 
 // FromWebView input payloads (WebView → C#) — generated from C# (Contracts.*InputDto) by
 // TypeGen. Used to type the bridge.post(...) call sites so a payload that diverges from the

@@ -79,6 +79,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public event EventHandler<ToolProgressEventArgs> ToolProgressReceived;
     public event EventHandler<JObject> SystemMessageReceived;
     public event EventHandler<string> SessionIdChanged;
+    public event EventHandler<string> PermissionModeChanged;
     /// <summary>The CLI reset the conversation (/clear). Arg = new_conversation_id.
     /// A fresh system/init with the new session_id follows.</summary>
     public event EventHandler<string> ConversationReset;

@@ -188,12 +188,14 @@ function wireBridgeHandlers(): void {
     });
 
     // Both selectors switch optimistically and the host echoes back what the CLI really holds —
-    // on success the same value, on failure the previous one, which rolls the UI back.
+    // on success the same value, on failure the previous one, which rolls the UI back. The
+    // permission one also arrives unprompted, when the CLI changes mode by itself (a plan
+    // approved, Shift+Tab from a remote terminal): same message, no caller waiting for it.
     bridge.onNotification<PermissionModeChangedNotification>(
         Msg.toWebView.cli.permissionModeChanged,
         (data) => {
             if (data?.mode) {
-                state.permissionMode = data.mode as PermissionMode;
+                state.permissionMode = data.mode;
             }
         },
     );

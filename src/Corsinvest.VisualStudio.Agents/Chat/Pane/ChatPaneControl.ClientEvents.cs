@@ -41,6 +41,7 @@ public partial class ChatPaneControl
         c.ToolProgressReceived += OnToolProgress;
         c.SystemMessageReceived += OnSystemMessage;
         c.SessionIdChanged += OnSessionIdChanged;
+        c.PermissionModeChanged += OnPermissionModeChanged;
         c.ConversationReset += OnConversationReset;
         c.Error += OnClientError;
         c.ProcessStarted += OnProcessStarted;
@@ -65,6 +66,7 @@ public partial class ChatPaneControl
         c.ToolProgressReceived -= OnToolProgress;
         c.SystemMessageReceived -= OnSystemMessage;
         c.SessionIdChanged -= OnSessionIdChanged;
+        c.PermissionModeChanged -= OnPermissionModeChanged;
         c.Error -= OnClientError;
         c.ProcessStarted -= OnProcessStarted;
         c.ProcessExited -= OnProcessExited;
@@ -192,8 +194,10 @@ public partial class ChatPaneControl
                 {
                     // Empty model → the webview shows "Default"; get_settings usually fills it in.
                     Model = e.Model ?? "",
-                    // The CLI doesn't report permissionMode (it obeys the --permission-mode we passed);
-                    // it's carried on the event, captured at this startup so a respawn can't stale it.
+                    // The startup reply doesn't carry permissionMode — it's ours, passed as
+                    // --permission-mode — so it's read from the client here, captured at this
+                    // startup so a respawn can't stale it. Later changes DO come from the CLI,
+                    // on system/status (OnPermissionModeChanged).
                     PermissionMode = e.PermissionMode ?? "default",
                     EffortLevel = Enum.TryParse<Contracts.EffortLevelDto>(e.EffortLevel, ignoreCase: true, out var lvl) ? lvl : (Contracts.EffortLevelDto?)null,
                     AlwaysThinkingEnabled = e.AlwaysThinkingEnabled,
@@ -776,6 +780,14 @@ public partial class ChatPaneControl
             Entry.ActiveSessionId = id;
             RefreshTitleFromDisk();
         });
+
+    // Same channel the selector already listens on for the ack of its own change: from the
+    // WebView's side there is no difference between "your change went through" and "the CLI
+    // changed it without you".
+    private void OnPermissionModeChanged(object sender, string mode)
+        => Dispatcher.Invoke(() => _bridge?.Send(
+            BridgeMessages.ToWebView.Cli.PermissionModeChanged,
+            new Contracts.PermissionModeChangedNotification { Mode = mode }));
 
     // The CLI reset the conversation (/clear): empty the transcript now. The respawn's
     // StartupAsync re-seeds the UI (OnCliStateReceived); system/init updates the session id.
