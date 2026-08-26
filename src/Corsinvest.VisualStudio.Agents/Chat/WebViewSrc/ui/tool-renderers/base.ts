@@ -474,8 +474,8 @@ export abstract class ToolRenderer {
         if (!added && !removed) {
             return html`Modified`;
         }
-        return html`${added ? html`<span class="cv-diff-count-ins">+${added}</span>` : nothing}
-        ${removed ? html`<span class="cv-diff-count-del">−${removed}</span>` : nothing}`;
+        return html`<span class="cv-diff-count-ins">+${added}</span>
+            <span class="cv-diff-count-del">−${removed}</span>`;
     }
 
     /** Everything in the header's action slot: the error button — an invariant of a failed row,
