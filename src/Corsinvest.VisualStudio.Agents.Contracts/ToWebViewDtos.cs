@@ -607,6 +607,7 @@ public class VsOptionsDto
 {
     public bool ShowCostAndDuration { get; set; }
     public int PreviewLines { get; set; }
+    public bool CollapseTools { get; set; }
     public int ChatFontSize { get; set; }
     public bool ShowRelativePaths { get; set; }
     public bool StickyUserMessages { get; set; }

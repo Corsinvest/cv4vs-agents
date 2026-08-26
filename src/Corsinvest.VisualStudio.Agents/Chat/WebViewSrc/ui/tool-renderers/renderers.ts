@@ -222,9 +222,6 @@ export class WebFetchRenderer extends ToolRenderer {
         const detail = /^https?:\/\//.test(url) ? this.urlLink(url, text) : text;
         return html`${this.nameSpan('Web Fetch')}${this.detailSpan(detail)}`;
     }
-    protected override autoOpen(): boolean {
-        return true;
-    }
     override inputText(): string {
         return String(this.host.input.prompt ?? '');
     }

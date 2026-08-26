@@ -9,8 +9,11 @@
 // row(ctx):    the entire row (chrome + content). Pick a layout building block
 //              (rowStandard / rowDiff / rowCount / rowHeaderOnly) or build your
 //              own. Default: rowStandard (header + collapsible IN/OUT body).
-// header():    the row label — name span + optional secondary detail.
+// header():    the row label — name span + optional secondary detail. Unchanged whether the body
+//              is open or folded: a title that rewrites itself on a click reads as a different row.
 // body():      the collapsible content. Default: the IN/OUT grid.
+// autoOpen():  whether that body shows without a click. Errors always do; the rest follow the
+//              "Collapse tool results" option. isOpen() turns it into the rendered state.
 //
 // Pure helpers (cleanResult/preview/diff summary/link markup/row layout) live
 // here. Only actions that touch the app go through this.host.
@@ -97,25 +100,39 @@ export abstract class ToolRenderer {
         return '';
     }
 
+    /** Is this row's body showing? Answers for every layout that has one, so the rule lives in a
+     *  single place rather than in each row*() helper.
+     *
+     *  `expanded` on the host means "the user clicked the chevron", NOT "is open": it FLIPS the
+     *  resting state. That is what lets a row which starts open be folded away — an OR would have
+     *  let the resting state win every time, leaving the chevron toggling a value nothing reads.
+     *
+     *  The resting state itself is the renderer's to decide, through the two hooks it already has:
+     *  `defaultCollapsed()` (Agent: closed whatever the options say) and `autoOpen()` (everything
+     *  else: errors, and the "Collapse tool results" option). */
+    protected isOpen(): boolean {
+        const opensAtRest = !this.defaultCollapsed() && this.autoOpen();
+        return opensAtRest !== this.host.expanded;
+    }
+
     /** Header + collapsible IN/OUT body (the common case). */
     protected rowStandard(): TemplateResult {
         const body = this.body();
         // "Something to expand into": a body, or (Agent) live sub-agent children. Not gated on the
         // pending status, so the Agent chevron appears while the sub-agent runs.
         const expandable = this.hasExpandableContent();
-        // Only defaultCollapsed rows (Agent) are collapsible: they start closed regardless of
-        // the preview setting and show a chevron (kept visible at rest) to toggle. Every other
-        // tool opens per autoOpen and shows no chevron — its body just stays open.
-        const collapsed = this.defaultCollapsed();
-        const open =
-            expandable && (collapsed ? this.host.expanded : this.autoOpen() || this.host.expanded);
         return this.chrome({
             body,
-            open,
+            open: expandable && this.isOpen(),
             // No explicit onClick: chrome's rowClick falls back to toggleExpanded when there's a chevron.
             onClick: null,
-            chevron: expandable && collapsed,
-            chevronAlwaysShown: collapsed,
+            // A chevron wherever there is a body, open or shut: it toggles, so a row that starts
+            // open needs it to close as much as one that starts shut needs it to open. Gating it on
+            // "starts closed" was enough while Agent was the only such row.
+            chevron: expandable,
+            // Agent keeps its chevron visible at rest, so a row holding a whole transcript reads as
+            // expandable before it is hovered.
+            chevronAlwaysShown: this.defaultCollapsed(),
         });
     }
 
@@ -147,14 +164,22 @@ export abstract class ToolRenderer {
     }
 
     /** Diff tools (Edit/Write/MultiEdit): body shows even while pending, the row
-     *  click opens the file at the edit, the header gets the VS/error buttons. */
+     *  click opens the file at the edit, the header gets the VS/error buttons.
+     *
+     *  Same open/toggle rule as rowStandard, so "Collapse tool results" reaches the diff too — it
+     *  is the tallest body in the transcript, and an option that folded everything except the
+     *  thing taking the most room would not be worth turning on. The row click still opens the
+     *  file: the chevron stops propagation, so the two never fight. */
     protected rowDiff(): TemplateResult {
         const fp = String(this.host.input.file_path ?? this.host.input.path ?? '');
+        // diffBody(), not hasExpandableContent(): that one asks body(), which an Edit inherits from
+        // the base (the IN/OUT grid) and never renders — it would answer about a body that isn't there.
+        const body = this.diffBody();
         return this.chrome({
-            body: this.diffBody(),
-            open: true,
+            body,
+            open: body !== null && this.isOpen(),
             onClick: () => this.host.openFileAtEdit(fp),
-            chevron: false,
+            chevron: body !== null,
         });
     }
 
@@ -165,10 +190,16 @@ export abstract class ToolRenderer {
         return this.body() !== null;
     }
 
-    /** Whether a standard body opens without a click. Default: error rows, or
-     *  when previews are on. */
+    /** Whether a standard body opens without a click: the "Collapse tool results" option, and
+     *  nothing else. Separate from previewLines, which caps a body that is already open and used
+     *  to double as this switch by being set to 0.
+     *
+     *  No exception for failures: a closed row still shows its red dot and the error button that
+     *  opens the whole output in Visual Studio — more than the three-line preview would have — so
+     *  forcing it open would only mean the option quietly stops working on the turns that went
+     *  wrong, which are the ones with the most rows to fold. */
     protected autoOpen(): boolean {
-        return this.host.status === 'error' || appState.ui.previewLines > 0;
+        return !appState.ui.collapseTools;
     }
 
     /** Whether this row starts collapsed, ignoring the preview auto-open setting.
@@ -189,9 +220,9 @@ export abstract class ToolRenderer {
         chevron: boolean;
         chevronAlwaysShown?: boolean;
     }): TemplateResult {
-        // A custom onClick wins (e.g. Edit opens the file); otherwise a chevron makes the WHOLE row
-        // the toggle target (accordion-style). The chevron button stopPropagation()s, so clicking it
-        // and clicking the row can't double-fire.
+        // What clicking the ROW does: a custom onClick wins (Edit opens the file), otherwise a
+        // chevron makes the whole row the toggle target (accordion-style). The chevron itself
+        // always toggles — see its handler — and stopPropagation()s so the two can't double-fire.
         const rowClick = opts.onClick ?? (opts.chevron ? () => this.host.toggleExpanded() : null);
         const clickable = rowClick !== null;
         const elapsed = this.host.elapsedSec;
@@ -225,8 +256,11 @@ export abstract class ToolRenderer {
                                   icon-only
                                   title=${opts.open ? 'Collapse' : 'Expand'}
                                   @click=${(e: Event) => {
+                                      // Always the toggle, never rowClick: a row with an onClick of
+                                      // its own (Edit opens the file) would otherwise have a chevron
+                                      // that opens the file instead of folding the row.
                                       e.stopPropagation();
-                                      rowClick?.();
+                                      this.host.toggleExpanded();
                                   }}
                               >
                                   ${unsafeHTML(ChevronDown16Regular)}

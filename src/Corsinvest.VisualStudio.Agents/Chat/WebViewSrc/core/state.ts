@@ -199,6 +199,7 @@ const _impl = new StoreImpl<AppState>({
     ui: {
         showCostAndDuration: false,
         previewLines: 3,
+        collapseTools: false,
         chatFontSize: 13,
         showRelativePaths: true,
         stickyUserMessages: true,

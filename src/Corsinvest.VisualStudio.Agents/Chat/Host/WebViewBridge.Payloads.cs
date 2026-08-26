@@ -30,6 +30,7 @@ internal sealed partial class WebViewBridge
         {
             ShowCostAndDuration = chat.ShowCostAndDuration,
             PreviewLines = chat.PreviewLines,
+            CollapseTools = chat.CollapseTools,
             ChatFontSize = chat.ChatFontSize,
             ShowRelativePaths = chat.ShowRelativePaths,
             StickyUserMessages = chat.StickyUserMessages,
