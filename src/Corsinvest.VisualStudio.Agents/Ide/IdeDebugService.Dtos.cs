@@ -35,6 +35,13 @@ internal sealed partial class IdeDebugService
         /// session, where nothing has bound yet and 0 would read as a failure. 0 during a session
         /// means the breakpoint will not stop anything. Only set by the breakpoint tools.</summary>
         public int? Bound { get; set; }
+
+        /// <summary>Where the breakpoint landed. For a file breakpoint that is always the line asked
+        /// for — VS rejects a line it can't use rather than moving it — but for a function breakpoint
+        /// it is the only way the caller learns which file and line the name resolved to. A null line
+        /// means unresolved, which in design mode is normal. Only set by the breakpoint tools.</summary>
+        public string File { get; set; }
+        public int? Line { get; set; }
     }
 
     /// <summary>One breakpoint in the solution (file/line OR function, plus condition/enabled).</summary>

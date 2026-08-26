@@ -43,7 +43,11 @@ internal sealed class SetFunctionBreakpointTool : McpTool<SetFunctionBreakpointA
         "session that will hit it. " +
         "A name that matches nothing is accepted just the same — it stays unresolved instead of " +
         "failing. debug_list_breakpoints reports bound once the session is running: 0 there means " +
-        "the name never matched, so check the spelling or how the type is qualified.";
+        "the name never matched, so check the spelling or how the type is qualified. " +
+        "The returned file and line say where the name resolved to, which is worth checking when the " +
+        "name is unqualified and an overload or a same-named method in another type could have " +
+        "matched. Both are null before a session is running: the name only resolves once symbols " +
+        "are loaded, so a null there is not a failure.";
 
     public override bool Idempotent => true;
 
@@ -51,6 +55,6 @@ internal sealed class SetFunctionBreakpointTool : McpTool<SetFunctionBreakpointA
     {
         var r = await IdeDebugService.Instance.SetFunctionBreakpointAsync(
             args.FunctionName, args.Condition, args.HitCount, args.HitCountType);
-        return new { ok = r.Ok, mode = r.Mode, reason = r.Reason };
+        return new { ok = r.Ok, mode = r.Mode, reason = r.Reason, file = r.File, line = r.Line };
     }
 }

@@ -278,6 +278,34 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>Where the breakpoints just created by Breakpoints.Add actually sit. Falls back to
+    /// what was requested when the collection can't be read, so a failure here never turns a
+    /// breakpoint that VS did create into a reported failure — at worst the caller loses the
+    /// warning about a moved line. Must be called on the UI thread.</summary>
+    private static (string File, int? Line) LandedAt(Breakpoints added, string requestedFile)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            // One Add can produce several breakpoints (the same file/line in more than one project,
+            // e.g. a multi-targeted or shared-source project). They share the line, so the first
+            // answers "which line" for all of them; the count is the binding's business, not ours.
+            foreach (Breakpoint bp in added)
+            {
+                // FileLine is 0 for a function breakpoint the name has not resolved yet (the normal
+                // state in design mode). 0 is not a line: report it as "unknown", not as line zero.
+                return (string.IsNullOrEmpty(bp.File) ? requestedFile : bp.File,
+                        bp.FileLine > 0 ? bp.FileLine : (int?)null);
+            }
+            return (requestedFile, null);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[debug] could not read where a breakpoint landed: {ex.Message}");
+            return (requestedFile, null);
+        }
+    }
+
     private static int CountHits(Breakpoint bp)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -354,7 +382,7 @@ internal sealed partial class IdeDebugService
             if (hitError != null) { return new DebugResult { Ok = false, Reason = hitError }; }
 
             var hasCond = !string.IsNullOrWhiteSpace(condition);
-            dbg.Breakpoints.Add(
+            var added = dbg.Breakpoints.Add(
                 Function: "",
                 File: filePath,
                 Line: line,
@@ -367,7 +395,35 @@ internal sealed partial class IdeDebugService
                 Address: "",
                 HitCount: Math.Max(0, hitCount),
                 HitCountType: hitType);
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+
+            // Report the line back so the caller can reason about the breakpoint it got rather than
+            // the one it asked for. Measured: for a file breakpoint the two always match — VS
+            // rejects a line it cannot use (see the catch) instead of moving it elsewhere.
+            var (landedFile, landedLine) = LandedAt(added, filePath);
+            return new DebugResult
+            {
+                Ok = true,
+                Mode = ModeToString(dbg.CurrentMode),
+                File = landedFile,
+                Line = landedLine,
+            };
+        }
+        // The one failure the caller can act on: VS refuses a line it cannot put a breakpoint on
+        // (blank, comment, a type declaration) instead of moving it to the next executable one.
+        // Under the generic message below it read as "the debugger is broken", when the fix is to
+        // pick another line. VS's own text is localized, so it goes to the log, not into Reason.
+        // Measured, against the obvious guess: a method's opening brace IS accepted — it carries the
+        // entry sequence point — and so is an expression-bodied member.
+        catch (System.Runtime.InteropServices.COMException ex)
+        {
+            OutputWindowLogger.Global.Warn(
+                $"[debug] breakpoint refused at {filePath}:{line}: {ex.Message}");
+            return new DebugResult
+            {
+                Ok = false,
+                Reason = $"Visual Studio will not put a breakpoint on line {line}: it has no " +
+                         "executable code. Pick a line with a statement on it.",
+            };
         }
         catch (Exception ex)
         {
@@ -396,7 +452,7 @@ internal sealed partial class IdeDebugService
             if (hitError != null) { return new DebugResult { Ok = false, Reason = hitError }; }
 
             var hasCond = !string.IsNullOrWhiteSpace(condition);
-            dbg.Breakpoints.Add(
+            var added = dbg.Breakpoints.Add(
                 Function: functionName,
                 File: "",
                 Line: 1,
@@ -409,7 +465,18 @@ internal sealed partial class IdeDebugService
                 Address: "",
                 HitCount: Math.Max(0, hitCount),
                 HitCountType: hitType);
-            return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode) };
+
+            // Which file and line the name resolved to — the caller asked by name and has no other
+            // way to learn where it landed, and an overload or a same-named method in another type
+            // is exactly the case worth seeing. Both stay null until symbols load.
+            var (landedFile, landedLine) = LandedAt(added, null);
+            return new DebugResult
+            {
+                Ok = true,
+                Mode = ModeToString(dbg.CurrentMode),
+                File = landedFile,
+                Line = landedLine,
+            };
         }
         catch (Exception ex)
         {

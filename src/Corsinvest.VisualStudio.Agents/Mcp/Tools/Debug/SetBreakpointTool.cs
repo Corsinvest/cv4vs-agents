@@ -42,9 +42,12 @@ internal sealed class SetBreakpointTool : McpTool<SetBreakpointArgs>
         "— the way to stop on the 500th iteration of a loop without a counter variable to test. " +
         "Works whether or not a debug session is running. Combine with debug_start + " +
         "debug_get_state to pause execution at this point. " +
-        "Accepting the line does not mean the debugger can stop on it: binding happens later, and a " +
-        "line with no executable code binds to nothing. debug_list_breakpoints reports bound once " +
-        "the session is running, which is where \"why did it never stop\" gets answered.";
+        "A line with no executable code (blank, comment, a type declaration) is refused, not moved: " +
+        "ok=false and the reason says so, so retry on a line that has a statement. A method's " +
+        "opening brace is fine — it carries the entry sequence point. " +
+        "Accepting the line does not mean the debugger can stop on it either: binding happens later. " +
+        "debug_list_breakpoints reports bound once the session is running, which is where " +
+        "\"why did it never stop\" gets answered.";
 
     public override bool Idempotent => true;
 
@@ -52,6 +55,6 @@ internal sealed class SetBreakpointTool : McpTool<SetBreakpointArgs>
     {
         var r = await IdeDebugService.Instance.SetBreakpointAsync(
             args.FilePath, args.Line, args.Condition, args.HitCount, args.HitCountType);
-        return new { ok = r.Ok, mode = r.Mode, reason = r.Reason };
+        return new { ok = r.Ok, mode = r.Mode, reason = r.Reason, file = r.File, line = r.Line };
     }
 }
