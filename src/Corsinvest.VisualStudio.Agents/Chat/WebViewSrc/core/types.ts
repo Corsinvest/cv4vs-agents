@@ -197,6 +197,17 @@ export type { CliStateNotification } from './generated/CliStateNotification';
 export type PermissionMode =
     'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' | (string & {});
 
+/** The mode names as values. `string & {}` in the type above means a typo still compiles, so a
+ *  comparison written by hand is unchecked — these give the compiler something to check. The
+ *  strings are the CLI's, not ours: renaming one here renames nothing on the wire. */
+export const PERMISSION_MODE = {
+    default: 'default',
+    acceptEdits: 'acceptEdits',
+    plan: 'plan',
+    auto: 'auto',
+    bypassPermissions: 'bypassPermissions',
+} as const satisfies Record<string, PermissionMode>;
+
 // FromWebView input payloads (WebView → C#) — generated from C# (Contracts.*InputDto) by
 // TypeGen. Used to type the bridge.post(...) call sites so a payload that diverges from the
 // C# DTO fails at compile time. Opposite direction of the ToWebView DTOs above.
