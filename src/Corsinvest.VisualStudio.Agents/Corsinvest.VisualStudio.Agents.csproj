@@ -120,6 +120,8 @@
          the VSIX (Private=True) since the DTOs are used at runtime. -->
     <ProjectReference Include="..\Corsinvest.VisualStudio.Agents.Contracts\Corsinvest.VisualStudio.Agents.Contracts.csproj">
       <Private>True</Private>
+      <Project>{E617149F-E368-4C8B-B430-132D2F4CD298}</Project>
+      <Name>Corsinvest.VisualStudio.Agents.Contracts</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
