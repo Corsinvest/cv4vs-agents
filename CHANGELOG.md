@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **A table has a Copy button.** Hover a markdown table and it appears over its top-right corner,
+  the way a code block's already did. It copies the markdown the model wrote — pipes, alignment row
+  and empty cells — so what you paste parses back as the same table. The DOM could not supply it:
+  a `<table>`'s text content is the cells run together, with no pipes and no line breaks, which is
+  why the fence's approach of reading the rendered element does not carry over.
+
 ## [1.6.0] - 2026-08-26
 
 The inline diff was rebuilt around the patch the CLI already sends, so it shows the file's real line
