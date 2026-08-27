@@ -599,6 +599,19 @@ export class CvPrompt extends LitElement implements CommandHost {
         ta.setSelectionRange(text.length, text.length);
     }
 
+    /**
+     * Fill the composer and submit it, exactly as pressing the button would.
+     *
+     * Through `_submit` rather than `sendPrompt`, which looks like the shorter route and is not
+     * the same one: it mints its own payload with no attachments and echoes a bubble with no IDE
+     * refs, so the turn would go without the file/selection chip that the very same text typed by
+     * hand would carry.
+     */
+    setComposerTextAndSubmit(text: string): void {
+        this.setComposerText(text);
+        this._submit();
+    }
+
     /** Clear the textarea and reset its height. */
     clear(): void {
         if (!this._ta) {

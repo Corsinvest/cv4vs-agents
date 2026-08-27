@@ -136,6 +136,7 @@
     <Compile Include="Ide\IdeContextService.Operations.cs" />
     <Compile Include="Ide\IdeContextService.Common.cs" />
     <Compile Include="Ide\IdeDiagnosticsTracker.cs" />
+    <Compile Include="Ide\IdeErrorListService.cs" />
     <Compile Include="Ide\IdeDebugService.cs" />
     <Compile Include="Ide\IdeDebugService.Dtos.cs" />
     <Compile Include="Ide\IdeDebugService.Inspection.cs" />
@@ -311,6 +312,8 @@
     <Compile Include="Editor\EditorPrompt.cs" />
     <Compile Include="Editor\EditorPromptStore.cs" />
     <Compile Include="Editor\EditorPromptsMenuCommand.cs" />
+    <Compile Include="Editor\ExplainMenuCommand.cs" />
+    <Compile Include="Editor\PromptDispatcher.cs" />
     <Compile Include="Core\Panes\PaneLauncher.cs" />
     <Compile Include="AgentsPackage.cs" />
     <Compile Include="Core\Sessions\SessionInfo.cs" />

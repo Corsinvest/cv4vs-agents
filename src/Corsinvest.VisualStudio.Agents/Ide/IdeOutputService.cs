@@ -153,6 +153,42 @@ internal sealed class IdeOutputService
         }
     }
 
+    /// <summary>The text the user is looking at in the Output window: their selection, or the last
+    /// <paramref name="tailLines"/> lines of the active pane when they selected nothing — a build
+    /// error is read without being selected first, and a menu entry that greys out unless you
+    /// highlight something would be useless exactly when it is wanted.
+    ///
+    /// Returns null when there is nothing to read. UI thread; never throws — it runs from a menu
+    /// query, where an exception would take the context menu down with it.</summary>
+    public string GetActivePaneText(int tailLines)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            var pane = GetOutputWindow()?.ActivePane;
+            if (pane == null) { return null; }
+
+            var td = GetTextDocument(pane);
+            if (td == null) { return null; }
+
+            var selected = td.Selection?.Text;
+            if (!string.IsNullOrWhiteSpace(selected)) { return selected; }
+
+            // Same EditPoint read as ReadAsync, and for the same reason: selecting all would take
+            // away the caret and highlight the user left in the pane.
+            var text = td.StartPoint.CreateEditPoint().GetText(td.EndPoint) ?? "";
+            if (string.IsNullOrWhiteSpace(text)) { return null; }
+
+            var lines = text.Replace("\r\n", "\n").TrimEnd('\n').Split('\n');
+            return string.Join("\n", lines.Length > tailLines ? lines.Skip(lines.Length - tailLines) : lines);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[ide] could not read the active output pane: {ex.Message}");
+            return null;
+        }
+    }
+
     /// <summary>Read a pane by name (case-insensitive). With no name, returns the list of
     /// available pane names instead of content. tailLines caps the returned lines; pattern keeps
     /// only the lines matching a regex.</summary>

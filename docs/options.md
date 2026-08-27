@@ -130,6 +130,7 @@ add the half line that matters before it goes.
 | Title | What the menu item reads. |
 | Prompt | What reaches the composer. The instruction alone: which file and which lines travel with it through the IDE context, and Claude reads the symbol itself with the `nav_*` tools, so pasting code in here only duplicates what the pane already points at. |
 | Needs selection | Greys the entry out when nothing is selected, the way Copilot greys "Optimize selection". Leave it off for prompts that read fine against the whole file. |
+| Send on click | Sends the turn right away, exactly as pressing the send button would — file and selection included. Off by default: the prompt waits in the composer so you can add the half line that matters. |
 
 Rows appear in the menu in the order listed, so the one you reach for most belongs at the top;
 **Restore defaults** puts back the prompts the extension ships with.

@@ -313,15 +313,18 @@ public partial class ChatPaneControl : PaneControlBase
     private string _startupSessionId;
     // Forked-at message text to pre-fill in the composer once the fork loads.
     private string _startupPrompt;
+    private bool _startupPromptSend;
 
     /// <summary>Make this pane start resumed on <paramref name="sessionId"/> rather
     /// than fresh, pre-filling the composer with <paramref name="initialPrompt"/>.
     /// Must be called before the pane's Loaded fires (PaneLauncher does this right
-    /// after creating the window, like AssignPaneId).</summary>
-    internal void SetStartupSession(string sessionId, string initialPrompt)
+    /// after creating the window, like AssignPaneId).
+    /// <paramref name="sendPrompt"/> runs it on load instead of leaving it there; a fork waits.</summary>
+    internal void SetStartupSession(string sessionId, string initialPrompt, bool sendPrompt)
     {
         _startupSessionId = sessionId;
         _startupPrompt = initialPrompt;
+        _startupPromptSend = sendPrompt;
     }
 
     public ChatPaneControl()
@@ -588,7 +591,7 @@ public partial class ChatPaneControl : PaneControlBase
         // is also what tells the two apart, a fork always brings the session it forked.
         if (!string.IsNullOrEmpty(_startupPrompt))
         {
-            SetComposerText(_startupPrompt, !restoreState, false);
+            SetComposerText(_startupPrompt, !restoreState, _startupPromptSend);
         }
 
         // Detached from the startup path on purpose: it is a network call, and the chat must open

@@ -3,12 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-using Corsinvest.VisualStudio.Agents.Core.Profiles;
 using Corsinvest.VisualStudio.Agents.Ide;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
@@ -120,25 +118,15 @@ internal static class DebugBreakService
         return dot >= 0 && dot < type.Length - 1 ? type.Substring(dot + 1) : type;
     }
 
-    /// <summary>Hands the question to a chat pane the way the editor prompts do: the last activated
-    /// one, brought forward first, or the answer arrives in a tab nobody is looking at.</summary>
+    /// <summary>Hands the question to a chat pane the way the editor prompts do.</summary>
     private static void Ask(IdeDebugService.DebugState state)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         try
         {
-            var prompt = Prompt(state);
-            var target = PaneRegistry.Instance.OfKind(PaneKind.Chat).LastOrDefault(e => e.SetComposerAction != null);
-            if (target == null)
-            {
-                // First profile = the native "Claude" that ProfileStore prepends.
-                var profile = ProfileStore.Load(forEdit: false).FirstOrDefault();
-                if (profile != null) { PaneLauncher.OpenNew(PaneKind.Chat, profile, initialPrompt: prompt); }
-                return;
-            }
-
-            target.ActivateAction?.Invoke();
-            target.SetComposerAction(prompt, true);
+            // The prompt is complete the moment the break happens — exception, file, line — so it
+            // runs rather than waiting on an Enter that has nothing left to add.
+            Editor.PromptDispatcher.Send(Prompt(state), sendImmediately: true);
         }
         catch (Exception ex)
         {
