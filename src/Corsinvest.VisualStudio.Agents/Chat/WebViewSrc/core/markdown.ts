@@ -22,6 +22,7 @@ const renderer = new marked.Renderer() as Renderer & {
     code: (token: Tokens.Code) => string;
     link: (token: Tokens.Link) => string;
     codespan: (token: Tokens.Codespan) => string;
+    table: (token: Tokens.Table) => string;
 };
 
 // Inline `code` that is a file reference and nothing else becomes a link inside the span. marked
@@ -43,6 +44,20 @@ renderer.code = function (token: Tokens.Code): string {
         `<div class="cv-md-code-wrap">` +
         `<pre><code class="hljs language-${language}">${hl ?? escapeHtml(code)}</code></pre>` +
         `<cv-copy-btn class="cv-md-copy-btn" frompre="1" title="Copy"></cv-copy-btn>` +
+        `</div>`
+    );
+};
+
+// The button carries the markdown source: unlike a fence, a table's textContent is the cells run
+// together with no pipes or newlines, so there is nothing in the DOM to copy.
+// `.call(this)`, never `.bind`: the base renderer reaches its cells through `this.parser`, which
+// marked injects on the instance it parses with, not on the one built here.
+const baseTable = renderer.table;
+renderer.table = function (this: Renderer, token: Tokens.Table): string {
+    return (
+        `<div class="cv-md-table-wrap">` +
+        baseTable.call(this, token) +
+        `<cv-copy-btn class="cv-md-table-copy-btn" text="${escapeHtml(token.raw.trim())}" title="Copy table"></cv-copy-btn>` +
         `</div>`
     );
 };
@@ -174,7 +189,8 @@ export function renderMarkdown(text: string | undefined | null): string {
         out = DOMPurify.sanitize(html, {
             // data-line-end is what makes a range select rather than just scroll. It was missing
             // here while the renderer emitted it, so "x.cs:35-48" opened at 35 and selected nothing.
-            ADD_ATTR: ['target', 'frompre', 'data-file', 'data-line', 'data-line-end'],
+            // 'text' carries the table's markdown to its copy button: dropped here, it copies nothing.
+            ADD_ATTR: ['target', 'frompre', 'text', 'data-file', 'data-line', 'data-line-end'],
             ADD_TAGS: ['cv-copy-btn'],
         });
     } catch (err) {

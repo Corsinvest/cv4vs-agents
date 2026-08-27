@@ -63,6 +63,20 @@ test('fence: il pulsante Copia resta, e legge dal pre', () => {
     assert.match(html, /<cv-copy-btn[^>]*frompre="1"/);
 });
 
+test('tabella: il pulsante Copia porta il markdown sorgente, non il DOM', () => {
+    // Pipe e riga di allineamento devono sopravvivere: e' cio' che rende il paste ri-parsabile.
+    const src = '| a | b |\n|:--|--:|\n| 1 | 2 |';
+    const html = md(src + '\n');
+    assert.match(html, /<div class="cv-md-table-wrap">/);
+    assert.match(html, /<cv-copy-btn[^>]*class="cv-md-table-copy-btn"/);
+    const text = /<cv-copy-btn[^>]*text="([^"]*)"/.exec(html)?.[1] ?? '';
+    assert.equal(text.replace(/&quot;/g, '"').replace(/&amp;/g, '&'), src);
+});
+
+test('tabella: le celle restano renderizzate da marked', () => {
+    assert.equal(links(md('| file |\n|---|\n| ClientEvents.cs:208 |\n')), 1);
+});
+
 // Gli attributi che il host legge al click. Non passano da DOMPurify qui, ma la ADD_ATTR di
 // markdown.ts deve elencarli tutti: data-line-end mancava mentre il renderer lo emetteva da sempre,
 // e l'intervallo apriva senza selezionare.

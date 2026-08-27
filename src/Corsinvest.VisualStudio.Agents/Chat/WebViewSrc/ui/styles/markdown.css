@@ -139,6 +139,26 @@
 .cv-md-code-wrap:hover .cv-md-copy-btn::part(button) {
     opacity: 1;
 }
+
+/* Same hover-reveal over a table. inline-block keeps the wrapper as wide as the table and not as
+ * the bubble, or the button lands far right of a narrow one; the background is what keeps it
+ * readable over the header row it sits on. */
+.cv-md-table-wrap {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+.cv-md-table-copy-btn::part(button) {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    opacity: 0;
+    background: var(--colorNeutralBackground1);
+    transition: opacity 0.15s;
+}
+.cv-md-table-wrap:hover .cv-md-table-copy-btn::part(button) {
+    opacity: 1;
+}
 .md blockquote {
     border-left: 3px solid var(--colorNeutralStroke1);
     padding-left: 10px;
