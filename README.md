@@ -315,8 +315,9 @@ See [Options → Profiles](docs/options.md#profiles).
   saved.
 - **Full Markdown rendering** — tables, lists, blockquotes, links, and fenced code blocks rendered
   with **syntax highlighting** (highlight.js) across all common languages.
-- **Everything is copyable** — a copy button on every message, tool row and code block, so any part
-  of the conversation can be lifted out as plain text.
+- **Everything is copyable** — a copy button on every message, tool row, code block and table, so
+  any part of the conversation can be lifted out. A table copies as markdown, pipes and alignment
+  included, so it parses back as the same table wherever you paste it.
 - **Image lightbox** and a **welcome screen** for empty chats.
 - **Cost and elapsed time, per turn** — the spinner counts the seconds while the turn runs (and
   while it is thinking); when it lands, the hover-actions row carries what the turn cost. Agent rows
