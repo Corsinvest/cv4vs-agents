@@ -28,7 +28,7 @@ Visual Studio **2022 and 2026**. Free, GPL-3.0.
 |---|---|
 | **Build** | build and rebuild, with the errors handed straight back |
 | **Diagnostics** | errors and warnings from the live language service, including the ones an edit just introduced |
-| **Debugger** | breakpoints, stepping, locals, call stack |
+| **Debugger** | breakpoints, stepping, locals, call stack — and it offers to look when you stop on an exception |
 | **Tests** | discovery and runs |
 | **Navigation** | go to definition, find references, symbol search |
 | **Editor** | active document, selection, open files |
@@ -38,6 +38,10 @@ The chat panel and the diff viewer are the easy part. Compiler diagnostics are n
 structured model behind the Error List, not as text in a buffer. Reaching them means going through
 Visual Studio's own APIs — which is what these tools do, via Roslyn's per-document language
 services and `EnvDTE` rather than a C#-only path, so they keep working in C++, F# and TypeScript.
+
+And it offers before you ask. Stop on an exception and a bar appears over that file — one press asks
+about the break, and the answer comes from the live call stack and locals rather than a guess at the
+source. Breakpoints are opt-in (you placed it, you know why you are there) and stepping never asks.
 
 ---
 
@@ -160,7 +164,7 @@ The things people keep asking for, and where they are:
 | Native diff review inside VS, not a terminal text stream | inline in the chat, click to open the file at the line |
 | Build errors passed to Claude automatically | the build tools return them as file/line/message |
 | A dockable chat panel, not a detached terminal | a real tool window — and a CLI pane too, if you want both |
-| Breakpoint and debug state visible to Claude | the debugger tools: breakpoints, stepping, locals, call stack |
+| Breakpoint and debug state visible to Claude | the debugger tools: breakpoints, stepping, locals, call stack — and a bar over the file when you stop on an exception, one press from asking about it |
 | Crash dumps, profiling, VS diagnostic tools | not yet — [open an issue](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feature_request.yml) if you need it |
 | Works with a Max subscription | it drives your own `claude.exe`, so whatever you are signed in with |
 | **Visual Studio 2022** | supported, not just 2026 |

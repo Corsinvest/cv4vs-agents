@@ -237,6 +237,8 @@
       <DependentUpon>CvLoadingOverlay.xaml</DependentUpon>
     </Compile>
     <Compile Include="Core\Panes\IPaneControl.cs" />
+    <Compile Include="Core\Panes\DebugBreakInfoBar.cs" />
+    <Compile Include="Core\Panes\DebugBreakService.cs" />
     <Compile Include="Core\Panes\PaneAttentionInfoBar.cs" />
     <Compile Include="Core\Panes\PaneAttentionService.cs" />
     <Compile Include="Core\Panes\PaneWindowBase.cs" />

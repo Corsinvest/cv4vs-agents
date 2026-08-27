@@ -425,6 +425,10 @@ public class SetComposerNotification
     /// context menu is about the file it was picked in, and asking about this code outranks the
     /// session's standing preference.</summary>
     public bool EnableIdeContext { get; set; }
+
+    /// <summary>Send the text instead of leaving it in the composer, for a prompt the user asked
+    /// for by pressing a button of its own. Otherwise it is a pre-fill they can still edit.</summary>
+    public bool Send { get; set; }
 }
 
 /// <summary>A keystroke the host claimed on the WebView's behalf (ui_host_key).
