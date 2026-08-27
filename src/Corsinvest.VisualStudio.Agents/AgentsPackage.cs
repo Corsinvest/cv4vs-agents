@@ -329,13 +329,16 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         }
     }
 
-    /// <summary>Debugger mode changed. VS keeps window layouts per mode, so panes opened at design
+    /// <summary><para>
+    /// Debugger mode changed. VS keeps window layouts per mode, so panes opened at design
     /// time are absent from the run-time layout and look as though the debugger closed them — the
     /// frames are still there, just not shown. Bring back the ones the registry knows are open.
-    ///
+    /// </para>
+    /// <para>
     /// Only ever shows what was already open: a pane the user closed stays closed, because it is
     /// not in the registry. StartOnIdle for the same reason as the solution-open restore — the
-    /// shell is mid-transition and showing a frame from inside its event freezes it.</summary>
+    /// shell is mid-transition and showing a frame from inside its event freezes it.
+    /// </para></summary>
     public int OnModeChange(DBGMODE dbgmodeNew)
     {
         try

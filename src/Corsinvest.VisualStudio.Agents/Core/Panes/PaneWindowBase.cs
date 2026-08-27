@@ -140,13 +140,11 @@ public abstract class PaneWindowBase : ToolWindowPane
 
     /// <summary>Set the pane caption from the entry's single-source <see cref="PaneEntry.Title"/>
     /// (e.g. "Chat 3 (z.ai)"), the same text the toolbar's open-panes list shows.</summary>
-    internal void SetSessionCaption(PaneEntry entry)
-    {
+    internal void SetSessionCaption(PaneEntry entry) =>
         // Sets the pane title only. The docked TAB caption can't be changed here:
         // VS derives it from the window name + instance number and ignores every
         // frame caption property (Caption/ShortCaption/Owner/Editor/OverrideCaption).
         Caption = entry.Title;
-    }
 
     public override void OnToolWindowCreated()
     {
@@ -168,13 +166,16 @@ public abstract class PaneWindowBase : ToolWindowPane
         HookFrameShow();
     }
 
-    /// <summary>Focus the input when the frame is shown. Clicking a docked pane's TAB goes through
+    /// <summary><para>
+    /// Focus the input when the frame is shown. Clicking a docked pane's TAB goes through
     /// neither path that already focuses — ActivatePane (InfoBar, toast, the toolbar's pane list)
     /// and the toolbar buttons — so focus landed on the first focusable child, the More button, and
     /// Space opened a menu instead of typing.
-    ///
+    /// </para>
+    /// <para>
     /// VSFPROPID_ViewHelper is the frame's single notify slot: read what is already there and
-    /// forward to it, so this doesn't silently displace another listener.</summary>
+    /// forward to it, so this doesn't silently displace another listener.
+    /// </para></summary>
     private void HookFrameShow()
     {
         if (Frame is not IVsWindowFrame frame) { return; }
@@ -219,9 +220,7 @@ public abstract class PaneWindowBase : ToolWindowPane
     /// <summary>Focus the input, but only if this pane is the one the user is actually looking at.
     /// OnShow also fires when a pane merely becomes visible (a dock group opening, another tab
     /// closing); focusing then would pull the caret out of whatever the user was typing in.</summary>
-    private void FocusInputIfActive()
-    {
-        _ = Application.Current?.Dispatcher.BeginInvoke(
+    private void FocusInputIfActive() => _ = Application.Current?.Dispatcher.BeginInvoke(
             new System.Action(() =>
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
@@ -236,7 +235,6 @@ public abstract class PaneWindowBase : ToolWindowPane
                 }
             }),
             System.Windows.Threading.DispatcherPriority.Background);
-    }
 
     /// <summary>Bring THIS pane to the front and focus its input. Keyed off the
     /// live pane instance, not a PaneId (VS recycles ids, so id-based lookup can
@@ -267,19 +265,19 @@ public abstract class PaneWindowBase : ToolWindowPane
         FocusInputWhenShellSettles();
     }
 
-    /// <summary>Focus the pane's input once the shell has finished activating the frame.
-    ///
+    /// <summary><para>Focus the pane's input once the shell has finished activating the frame.</para>
+    /// <para>
     /// The delay is the whole point. Focusing inline works on a pane that is already visible —
     /// Show() does no real work there — which is why this defect only ever showed on a HIDDEN pane:
     /// there the activation is real, and VS gives focus to the frame's first focusable child (the
     /// toolbar's More button) when it completes, overwriting ours. Yielding to Background puts our
     /// focus last. The same applies to any other caller that focuses around an activation.
-    ///
+    /// </para>
+    /// <para>
     /// Application.Current.Dispatcher, not this.Dispatcher: ToolWindowPane isn't a
-    /// DispatcherObject. Same UI thread either way.</summary>
-    private void FocusInputWhenShellSettles()
-    {
-        _ = Application.Current?.Dispatcher.BeginInvoke(
+    /// DispatcherObject. Same UI thread either way.
+    /// </para></summary>
+    private void FocusInputWhenShellSettles() => _ = Application.Current?.Dispatcher.BeginInvoke(
             new System.Action(() =>
             {
                 try
@@ -296,7 +294,6 @@ public abstract class PaneWindowBase : ToolWindowPane
                 }
             }),
             System.Windows.Threading.DispatcherPriority.Background);
-    }
 
     /// <summary>Wire a freshly-created instance entry to this pane: set the
     /// close/activate callbacks, add it to the registry, push the caption.

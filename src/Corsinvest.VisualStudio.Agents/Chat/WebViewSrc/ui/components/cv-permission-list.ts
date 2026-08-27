@@ -7,6 +7,7 @@ import { customElement, property, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Checkmark16Regular from '@fluentui/svg-icons/icons/checkmark_16_regular.svg';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { permissionItems, type PermissionItem } from '../../core/permission-modes';
 import type { PermissionMode } from '../../core/types';
 import './cv-popover-list';
@@ -27,8 +28,7 @@ export class CvPermissionList extends LitElement {
     @state() private _current: PermissionMode = appState.permissionMode;
     @state() private _items: PermissionItem[] = permissionItems();
 
-    private _off?: () => void;
-    private _offModels?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
 
     @query('cv-popover-list') private _list?: CvPopoverList;
 
@@ -37,21 +37,15 @@ export class CvPermissionList extends LitElement {
         return this;
     }
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._off = appState.on('permissionMode', (v) => {
+    constructor() {
+        super();
+        this._subs.on('permissionMode', (v) => {
             this._current = v;
         });
         // The available modes depend on the model (supportsAutoMode).
-        this._offModels = appState.on('models', () => {
+        this._subs.on('models', () => {
             this._items = permissionItems();
         });
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._off?.();
-        this._offModels?.();
     }
 
     override willUpdate(changed: Map<string, unknown>): void {

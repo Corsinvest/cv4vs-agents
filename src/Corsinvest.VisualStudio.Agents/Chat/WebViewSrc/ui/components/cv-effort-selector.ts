@@ -5,6 +5,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { tooltipStyles } from '../styles/shared';
 import { currentEffortLevels } from '../../core/commands/model-controls';
 import { effortLabel } from '../../core/types';
@@ -36,34 +37,18 @@ export class CvEffortSelector extends LitElement {
 
     @state() private _effort = appState.effortLevel;
     @state() private _ultracode = appState.ultracodeEnabled;
-    // The catalogue decides whether this model has effort at all.
-    @state() private _models = appState.models;
-    @state() private _current = appState.currentModel;
 
-    private _offs: Array<() => void> = [];
+    private readonly _subs = new StateSubscriptions(this);
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._offs = [
-            appState.on('effortLevel', (v) => {
-                this._effort = v;
-            }),
-            appState.on('ultracodeEnabled', (v) => {
-                this._ultracode = v;
-            }),
-            appState.on('models', (v) => {
-                this._models = v;
-            }),
-            appState.on('currentModel', (v) => {
-                this._current = v;
-            }),
-        ];
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._offs.forEach((off) => off());
-        this._offs = [];
+    constructor() {
+        super();
+        this._subs.on('effortLevel', (v) => {
+            this._effort = v;
+        });
+        this._subs.on('ultracodeEnabled', (v) => {
+            this._ultracode = v;
+        });
+        this._subs.rerenderOn('models', 'currentModel');
     }
 
     private _onClick = (): void => {
@@ -71,9 +56,6 @@ export class CvEffortSelector extends LitElement {
     };
 
     override render() {
-        // Read so the availability check re-runs when either changes.
-        void this._models;
-        void this._current;
         if (currentEffortLevels() === null) {
             return nothing;
         }

@@ -221,15 +221,12 @@ internal static class StatsAggregator
         return m;
     }
 
-    private static long ParseTimestampMs(string iso)
-    {
-        return string.IsNullOrEmpty(iso)
+    private static long ParseTimestampMs(string iso) => string.IsNullOrEmpty(iso)
             ? 0
             : DateTimeOffset.TryParse(iso, CultureInfo.InvariantCulture,
             DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dto)
             ? dto.ToUnixTimeMilliseconds()
             : 0;
-    }
 
     // yyyy-MM-dd in LOCAL time (the heatmap/day buckets are per local calendar day, like the CLI).
     private static string DateKey(long tsMs)

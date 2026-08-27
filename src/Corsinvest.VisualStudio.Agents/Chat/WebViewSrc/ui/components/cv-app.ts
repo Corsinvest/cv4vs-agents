@@ -35,6 +35,7 @@ import './cv-permission-banner';
 import './cv-spinner';
 import './cv-tool-row';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import type {
     SubagentTask,
     UiEntry,
@@ -129,6 +130,8 @@ export class CvApp extends LitElement {
     private _jumpRaf = 0;
     @query('#system-notices') private _systemNotices!: CvNoticeStack | null;
 
+    private readonly _subs = new StateSubscriptions(this);
+    /** Bridge notification handlers; the appState subscriptions live in _subs. */
     private _offs: Array<() => void> = [];
     /**
      * Currently-streaming assistant message, keyed by parent tool_use_id
@@ -206,15 +209,19 @@ export class CvApp extends LitElement {
         return this;
     }
 
+    constructor() {
+        super();
+        this._subs.on('isBusy', (v) => (this._isBusy = v));
+        this._subs.on('queuedUuids', (v) => (this._queuedUuids = new Set(v)));
+        this._subs.on('status', (v) => (this._status = v));
+        this._subs.on('pendingPermission', (v) => (this._awaitingUser = v != null));
+    }
+
     override connectedCallback(): void {
         super.connectedCallback();
         // Wired here rather than at the field: the initializer runs before `this` is usable.
         this._transcript.onRemoved = (ids) => this._dropRemovedIds(ids);
         this._transcript.onCleared = () => this._dropAllIds();
-        this._offs.push(appState.on('isBusy', (v) => (this._isBusy = v)));
-        this._offs.push(appState.on('queuedUuids', (v) => (this._queuedUuids = new Set(v))));
-        this._offs.push(appState.on('status', (v) => (this._status = v)));
-        this._offs.push(appState.on('pendingPermission', (v) => (this._awaitingUser = v != null)));
         // Global Esc-to-stop: interrupt generation regardless of focus, so stopping
         // never depends on where the caret is. Skipped when a permission/Ask prompt
         // is open — there Esc cancels the prompt (the banner handles it, with stopPropagation).

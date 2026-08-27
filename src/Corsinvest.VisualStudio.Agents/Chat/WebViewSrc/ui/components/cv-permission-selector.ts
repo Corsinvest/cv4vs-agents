@@ -5,6 +5,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { tooltipStyles } from '../styles/shared';
 import type { PermissionMode } from '../../core/types';
 import { PERMISSION_MODE } from '../../core/types';
@@ -43,26 +44,15 @@ export class CvPermissionSelector extends LitElement {
     ];
 
     @state() private _current: PermissionMode = appState.permissionMode;
-    @state() private _models = appState.models;
 
-    private _off?: () => void;
-    private _offModels?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._off = appState.on('permissionMode', (v) => {
+    constructor() {
+        super();
+        this._subs.on('permissionMode', (v) => {
             this._current = v;
         });
-        // The label's item list is model-dependent (supportsAutoMode).
-        this._offModels = appState.on('models', (v) => {
-            this._models = v;
-        });
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._off?.();
-        this._offModels?.();
+        this._subs.rerenderOn('models');
     }
 
     private _onClick = (): void => {
@@ -70,9 +60,6 @@ export class CvPermissionSelector extends LitElement {
     };
 
     override render() {
-        // _models is read so the label re-resolves when the catalogue (and thus the
-        // available modes) changes.
-        void this._models;
         // No fallback to the first item: the CLI can sit in a mode the picker doesn't list
         // (`dontAsk`, or `auto`/`bypassPermissions` once filtered out), and labelling that
         // "Manual" would state the opposite of what is in force. The raw value is ugly and true.
