@@ -17,7 +17,7 @@ import { EMPTY } from '../../core/types';
 import { makeRenderer } from '../tool-renderers';
 import { BridgeToolHost, cleanResult } from '../tool-renderers/tool-host';
 import type { ToolRowState } from '../tool-renderers/types';
-import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { renderActionsRow } from '../helpers/actions-row';
 
 // Re-export so existing consumers (e.g. cv-app) can keep importing from here.
@@ -61,7 +61,13 @@ export class CvToolRow extends LitElement implements ToolRowState {
     // Guards the one-shot lazy preview fetch (history Agent expanded with no children yet).
     private _previewRequested = false;
 
-    private _unsubSubagentTasks?: () => void;
+    // Re-render when subagentTasks changes so AgentRenderer.header() picks up the active task.
+    private readonly _subs = new StateSubscriptions(this);
+
+    constructor() {
+        super();
+        this._subs.rerenderOn('subagentTasks');
+    }
 
     get expanded(): boolean {
         return this._expanded;
@@ -76,18 +82,6 @@ export class CvToolRow extends LitElement implements ToolRowState {
 
     override createRenderRoot() {
         return this;
-    }
-
-    override connectedCallback() {
-        super.connectedCallback();
-        // Re-render when subagentTasks changes so AgentRenderer.header() picks up the active task.
-        this._unsubSubagentTasks = appState.on('subagentTasks', () => this.requestUpdate());
-    }
-
-    override disconnectedCallback() {
-        super.disconnectedCallback();
-        this._unsubSubagentTasks?.();
-        this._unsubSubagentTasks = undefined;
     }
 
     override render() {

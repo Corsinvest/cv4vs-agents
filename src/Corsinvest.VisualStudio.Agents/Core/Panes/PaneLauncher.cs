@@ -53,15 +53,18 @@ internal static class PaneLauncher
         }
     }
 
-    /// <summary>Re-show the panes the registry already knows about, without creating any. VS holds a
+    /// <summary><para>
+    /// Re-show the panes the registry already knows about, without creating any. VS holds a
     /// separate window layout for design time and run time, so panes opened while writing code are
     /// missing from the run-time one and look closed when the debugger starts — the frames are alive,
     /// they are simply not in that layout. Called on debugger mode changes, and after a solution
     /// reload to bring back what <see cref="HideExisting"/> put away.
-    ///
+    /// </para>
+    /// <para>
     /// create: false throughout: a pane the user closed is gone from the registry and must stay
     /// closed, and a frame we cannot find is not one to conjure up.
-    /// Main thread only — IVsWindowFrame is not free-threaded.</summary>
+    /// Main thread only — IVsWindowFrame is not free-threaded.
+    /// </para></summary>
     public static void ShowExisting()
     {
         ThreadHelper.ThrowIfNotOnUIThread();

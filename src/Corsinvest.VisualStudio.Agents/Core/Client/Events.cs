@@ -60,24 +60,27 @@ public sealed class AssistantMessageEventArgs
     /// other, so acting on both is safe. Null when the message replaces nothing, which is nearly
     /// always.</summary>
     public string[] Supersedes { get; set; }
-    /// <summary>Why the API call failed, when it did. An API failure doesn't arrive as an error on
+    /// <summary><para>
+    /// Why the API call failed, when it did. An API failure doesn't arrive as an error on
     /// the wire: the CLI fabricates a synthetic assistant whose TEXT is the error
     /// (`utils/messages.ts:445-457`), so without this field it reads as an ordinary answer — which
     /// is why one turn can show up twice, once as a grey-dot reply and once as the red notice the
     /// `result` raises.
-    ///
+    /// </para>
+    /// <para>
     /// A closed enum, not free text: `SDKAssistantMessageError` (`sdk.d.ts:2846`) is
     /// authentication_failed | oauth_org_not_allowed | billing_error | rate_limit | overloaded |
     /// invalid_request | model_not_found | server_error | unknown | max_output_tokens. So it says
     /// WHICH failure, not just that there was one — a notice can name the rate limit instead of
     /// saying "API error".
-    ///
+    /// </para>
+    /// <para>
     /// Measured 2026-08-06 by pointing the CLI at an invalid token: the wrapper came back with
     /// `error: "authentication_failed"`, and a normal turn carries no such field. The same frame
     /// also had `is_api_error_message: true`, which is NOT in the SDK types (0 hits in a file that
     /// declares everything else we use) — emitted without a contract, so not something to build on.
-    ///
-    /// Read and logged, not acted on: the double-rendering fix is a separate change.</summary>
+    /// </para>
+    /// <para>Read and logged, not acted on: the double-rendering fix is a separate change.</para></summary>
     public string Error { get; set; }
     /// <summary>Message time (epoch ms) parsed from the wire `timestamp`; null when absent.</summary>
     public long? Timestamp { get; set; }

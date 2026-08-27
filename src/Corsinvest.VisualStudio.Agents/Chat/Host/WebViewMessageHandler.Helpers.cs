@@ -203,13 +203,16 @@ internal sealed partial class WebViewMessageHandler
         return safe.Length > 40 ? safe.Substring(0, 40) : safe;
     }
 
-    /// <summary>Name for the temp file a tool's IN/OUT is opened from — readable in the tab, and
+    /// <summary><para>
+    /// Name for the temp file a tool's IN/OUT is opened from — readable in the tab, and
     /// carrying an extension the editor can colour.
-    ///
+    /// </para>
+    /// <para>
     /// The temp is the right thing to open here and not a stand-in for the real file: clicking the
     /// row's TITLE already goes to the file. Clicking the content asks a different question — what
     /// was written in THAT turn — and the file on disk answers it wrongly three turns later, while
-    /// a temp cannot change under you.</summary>
+    /// a temp cannot change under you.
+    /// </para></summary>
     private static string TempFileName(string toolName, string which, string filePath, string toolUseId)
     {
         // Last few chars of the tool_use_id: enough to keep two temps apart — two writes to

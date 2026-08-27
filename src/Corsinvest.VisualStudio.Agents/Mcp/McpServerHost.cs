@@ -463,9 +463,7 @@ internal sealed partial class McpServerHost
 
     private static string BuildSelectionNotification(
         string text, string filePath, string fileUrl,
-        int startLine, int startChar, int endLine, int endChar, bool isEmpty)
-    {
-        return JsonConvert.SerializeObject(new
+        int startLine, int startChar, int endLine, int endChar, bool isEmpty) => JsonConvert.SerializeObject(new
         {
             jsonrpc = "2.0",
             method = "selection_changed",
@@ -482,7 +480,6 @@ internal sealed partial class McpServerHost
                 },
             },
         }, JsonRpcDispatcher.CamelCaseSettings);
-    }
 
     private void BroadcastNotification(string json)
     {

@@ -13,15 +13,18 @@ using Task = System.Threading.Tasks.Task;
 namespace Corsinvest.VisualStudio.Agents.Menu;
 
 /// <summary>
+/// <para>
 /// View-menu entry point: one item per open pane, listed under an "Active sessions" submenu, to
 /// bring that pane forward. VS's own Window list mixes tool windows in with every open document,
 /// and the docked tab caption is stuck at "Chat 1"/"Chat 2" — VS derives it from the window name
 /// and ignores every caption property — so with several panes open this is the only place their
 /// full titles (session and profile) are visible together.
-///
+/// </para>
+/// <para>
 /// Same DynamicItemStart mechanism as <see cref="ProfilesMenuCommand"/>, minus its cache: the
 /// entries come from PaneRegistry, which is already in memory, so VS's constant polling costs
 /// nothing to serve.
+/// </para>
 /// </summary>
 internal sealed class ActiveSessionsMenuCommand : OleMenuCommand
 {

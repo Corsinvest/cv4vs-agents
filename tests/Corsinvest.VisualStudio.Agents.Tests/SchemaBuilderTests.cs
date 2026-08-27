@@ -84,11 +84,9 @@ public class SchemaBuilderTests
     }
 
     [Fact]
-    public void For_returns_the_same_schema_object_on_a_second_call()
-    {
+    public void For_returns_the_same_schema_object_on_a_second_call() =>
         // Cached per type: the schema is rebuilt for every tool listing otherwise.
         Assert.Same(SchemaBuilder.For<SampleArgs>(), SchemaBuilder.For<SampleArgs>());
-    }
 
     [Theory]
     [InlineData("FilePath", "filePath")]

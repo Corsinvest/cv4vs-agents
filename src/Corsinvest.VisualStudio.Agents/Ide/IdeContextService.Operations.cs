@@ -67,24 +67,29 @@ internal sealed partial class IdeContextService
 
     //  Build (MCP buildSolution / buildProject)
 
-    /// <summary>Wait for a build/clean kicked with WaitFor…=false, yielding the UI thread between
+    /// <summary><para>
+    /// Wait for a build/clean kicked with WaitFor…=false, yielding the UI thread between
     /// polls.
-    ///
+    /// </para>
+    /// <para>
     /// The blocking overloads (WaitForBuildToFinish: true) are a synchronous COM call that never
     /// pumps: called from the UI thread — which every DTE access has to be — they freeze the whole
     /// IDE for the length of the build. Ctrl+Shift+B doesn't, which is what gives it away as a
     /// defect rather than a constraint. The tool still can't return until the build ends (it owes
     /// the caller LastBuildInfo plus the Error List); what changes is that the user no longer waits
     /// with it.
-    ///
+    /// </para>
+    /// <para>
     /// The await is what does the work: leaving the UI thread lets VS pump again, and
     /// SwitchToMainThreadAsync takes it back for the next read of BuildState, which is itself a DTE
     /// call. 200ms is short enough to not add a visible tail to a fast build and long enough to cost
     /// nothing on a long one.
-    ///
+    /// </para>
+    /// <para>
     /// Returns false if BuildState never left vsBuildStateInProgress within the cap. Without one a
     /// wedged build (MSBuild zombie, a target that never closes) leaves the MCP call pending
-    /// forever, and the caller has no way to tell that from a build that is merely slow.</summary>
+    /// forever, and the caller has no way to tell that from a build that is merely slow.
+    /// </para></summary>
     private static async Task<bool> WaitForBuildAsync(SolutionBuild sb)
     {
         // Poll at least once before testing: BuildState can still read vsBuildStateDone on the first
@@ -218,20 +223,23 @@ internal sealed partial class IdeContextService
         }
     }
 
-    /// <summary>Ask the running build to stop and wait for it to actually stop.
-    ///
+    /// <summary><para>Ask the running build to stop and wait for it to actually stop.</para>
+    /// <para>
     /// The cancel goes through <c>IVsSolutionBuildManager</c>: <c>EnvDTE.SolutionBuild</c> can start,
     /// clean and query a build but has no way to stop one — there is no <c>Cancel</c> anywhere in
     /// EnvDTE, not on <c>SolutionBuild2</c> either. State is still read from <c>SolutionBuild</c>,
     /// which is what the rest of this file polls.
-    ///
+    /// </para>
+    /// <para>
     /// Cancelling only requests the stop: MSBuild finishes the targets already in flight before the
     /// state leaves <c>vsBuildStateInProgress</c>, so returning right after the call would report a
     /// stop that hasn't happened. Polling here is what lets the caller learn whether the IDE is free
     /// again — otherwise the next build stacks on top of one still running.
-    ///
+    /// </para>
+    /// <para>
     /// The wait is capped far below <see cref="BuildPollMaxTries"/>: a cancel that hasn't taken
-    /// within seconds is a wedged build, and reporting that is more useful than blocking on it.</summary>
+    /// within seconds is a wedged build, and reporting that is more useful than blocking on it.
+    /// </para></summary>
     public async Task<BuildResult> CancelBuildAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -389,14 +397,17 @@ internal sealed partial class IdeContextService
         return (true, match.Name, null);
     }
 
-    /// <summary>Switch the active solution configuration (Debug, Release, …), the one an
+    /// <summary><para>
+    /// Switch the active solution configuration (Debug, Release, …), the one an
     /// argument-less build compiles. Accepts either the bare name ("Release") or the name with its
     /// platform ("Release|Any CPU"); the bare form matches the first platform offered for it.
-    ///
+    /// </para>
+    /// <para>
     /// This changes the IDE for the user, not just for the call: the toolbar dropdown moves and
     /// stays moved, and their next manual build follows it. That is why it is a tool of its own
     /// rather than an argument on build_solution — a build that quietly flipped the configuration
-    /// and left it there would be a side effect nobody asked for.</summary>
+    /// and left it there would be a side effect nobody asked for.
+    /// </para></summary>
     public async Task<(bool Ok, string Configuration, string Reason)> SetConfigurationAsync(string configuration)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -489,12 +500,15 @@ internal sealed partial class IdeContextService
         return null;
     }
 
-    /// <summary>The solution's configurations as sorted "name|platform" strings, and — when
+    /// <summary><para>
+    /// The solution's configurations as sorted "name|platform" strings, and — when
     /// <paramref name="wanted"/> is given — the one matching it, by full form or by bare name.
-    ///
+    /// </para>
+    /// <para>
     /// The set is not a tidying-up: SolutionConfigurations repeats a configuration once per
     /// project that defines it, so a three-project solution offers "Debug|Any CPU" three times.
-    /// Must be called on the UI thread.</summary>
+    /// Must be called on the UI thread.
+    /// </para></summary>
     private static SortedSet<string> CollectConfigurations(SolutionBuild sb, string wanted, out SolutionConfiguration match)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -570,13 +584,16 @@ internal sealed partial class IdeContextService
         }
     }
 
-    /// <summary>Add an existing file on disk to a project, the way Solution Explorer's "Add →
+    /// <summary><para>
+    /// Add an existing file on disk to a project, the way Solution Explorer's "Add →
     /// Existing Item" does. Only for projects that list their files: an SDK-style project globs
     /// them in already, and is reported as such rather than being handed a duplicate item.
-    ///
+    /// </para>
+    /// <para>
     /// The file must exist — this includes, it does not create. Writing the file and telling the
     /// project about it are separate steps, and merging them would give two ways to write a
-    /// file.</summary>
+    /// file.
+    /// </para></summary>
     public async Task<(bool Ok, string Project, string Reason)> AddFileToProjectAsync(string projectName, string filePath)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -822,14 +839,17 @@ internal sealed partial class IdeContextService
     // no real project, but its ProjectItems may nest sub-projects, so recurse.
     private const string SolutionFolderKind = "{66A26720-8FB5-11D2-AA7E-00C04F688DDE}";
 
-    /// <summary>"Miscellaneous Files" — where VS files anything opened from outside the solution
+    /// <summary><para>
+    /// "Miscellaneous Files" — where VS files anything opened from outside the solution
     /// (decompiled sources, the temp files a diff runs on). A Project by type, but not one anybody
     /// can build or add to, so it is no use as an answer to "which project did you mean".
-    ///
+    /// </para>
+    /// <para>
     /// Both are checked because the display name is localised ("File esterni" on an Italian IDE)
     /// and the kind alone has burnt us once: vsProjectKindMisc ends 671D, one digit from
     /// vsProjectKindSolutionItems' 6720. Values read from EnvDTE.Constants rather than written
-    /// from memory.</summary>
+    /// from memory.
+    /// </para></summary>
     private const string MiscellaneousFilesKind = "{66A2671D-8FB5-11D2-AA7E-00C04F688DDE}";
     private const string MiscellaneousFilesUniqueName = "<MiscFiles>";
 

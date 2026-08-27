@@ -5,6 +5,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { iconStyles, tooltipStyles } from '../styles/shared';
 import { modelLabelShort } from '../../core/ai-models';
 
@@ -50,26 +51,15 @@ export class CvModelSelector extends LitElement {
     ];
 
     @state() private _current = appState.currentModel;
-    @state() private _models = appState.models;
 
-    private _off?: () => void;
-    private _offModels?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._off = appState.on('currentModel', (v) => {
+    constructor() {
+        super();
+        this._subs.on('currentModel', (v) => {
             this._current = v;
         });
-        // The label comes from the catalogue, so it resolves only once that has arrived.
-        this._offModels = appState.on('models', (v) => {
-            this._models = v;
-        });
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._off?.();
-        this._offModels?.();
+        this._subs.rerenderOn('models');
     }
 
     private _onClick = (): void => {
@@ -77,8 +67,6 @@ export class CvModelSelector extends LitElement {
     };
 
     override render() {
-        // Read so the label re-resolves when the catalogue lands (it maps value → displayName).
-        void this._models;
         // fluent-tooltip, not a title attribute: the native one is drawn by the OS, so it follows
         // Windows' light/dark rather than the theme VS is in — and VS has themes (Blue, third-party
         // ones) that neither of the two settings a WebView2 profile can be put in would match.

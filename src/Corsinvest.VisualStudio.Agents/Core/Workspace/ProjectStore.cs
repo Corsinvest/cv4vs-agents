@@ -98,7 +98,7 @@ internal static class ProjectStore
             : [];
 
     private static string Sanitize(string name)
-        => new(name.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray());
+        => new([.. name.Select(c => char.IsLetterOrDigit(c) ? c : '-')]);
 
     /// <summary>Lower-cased before hashing: Windows paths are case-insensitive, so K:\Source and
     /// k:\source are one project and have to reach one folder.</summary>

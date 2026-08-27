@@ -13,6 +13,7 @@ import DataPie16Regular from '@fluentui/svg-icons/icons/data_pie_16_regular.svg'
 import { iconForCommandName } from '../../core/commands/command-icons';
 import { iconStyles, tooltipStyles } from '../styles/shared';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import {
@@ -134,23 +135,16 @@ export class CvContextGauge extends LitElement {
     @state() private _usage: ContextUsageDto | null = appState.contextUsage;
     @state() private _window = appState.contextWindow;
 
-    private _offUsage?: () => void;
-    private _offWindow?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._offUsage = appState.on('contextUsage', (v) => {
+    constructor() {
+        super();
+        this._subs.on('contextUsage', (v) => {
             this._usage = v;
         });
-        this._offWindow = appState.on('contextWindow', (v) => {
+        this._subs.on('contextWindow', (v) => {
             this._window = v;
         });
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._offUsage?.();
-        this._offWindow?.();
     }
 
     /** Compact the conversation via the CLI's `/compact` command (mirrors cv-prompt._dispatch). */

@@ -16,95 +16,89 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 /// <summary>WebViewMessageHandler: Open-namespace message handlers (jump to file/edit, tool output, diff, external url, options, CLI terminal).</summary>
 internal sealed partial class WebViewMessageHandler
 {
-    private void HandleIdeFile(JObject data, int? id)
-    {
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var p = data.ToObject<Contracts.IdeFileNotification>();
-            var raw = p.FilePath ?? "";
-            var filePath = ResolveFilePath(raw);
-            if (filePath == null)
-            {
-                // Nothing was found anywhere ResolveFilePath looks, so name the path the link
-                // carried rather than one we resolved — that is what the user can act on. The
-                // reason stays open: moved, renamed, deleted, or a temp file Windows cleared out
-                // are all the same miss from here.
-                NoticeOpenFailed(raw, "not found");
-                return;
-            }
-            // endLine defaults to startLine when the WebView omits it (single-line open).
-            var endLine = p.EndLine != 0 ? p.EndLine : p.StartLine;
-            await OpenFileInEditorAsync(filePath, p.StartLine, endLine);
-        }).FileAndForget(nameof(WebViewMessageHandler));
-    }
+    private void HandleIdeFile(JObject data, int? id) => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                                                              {
+                                                                  await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                                                  var p = data.ToObject<Contracts.IdeFileNotification>();
+                                                                  var raw = p.FilePath ?? "";
+                                                                  var filePath = ResolveFilePath(raw);
+                                                                  if (filePath == null)
+                                                                  {
+                                                                      // Nothing was found anywhere ResolveFilePath looks, so name the path the link
+                                                                      // carried rather than one we resolved — that is what the user can act on. The
+                                                                      // reason stays open: moved, renamed, deleted, or a temp file Windows cleared out
+                                                                      // are all the same miss from here.
+                                                                      NoticeOpenFailed(raw, "not found");
+                                                                      return;
+                                                                  }
+                                                                  // endLine defaults to startLine when the WebView omits it (single-line open).
+                                                                  var endLine = p.EndLine != 0 ? p.EndLine : p.StartLine;
+                                                                  await OpenFileInEditorAsync(filePath, p.StartLine, endLine);
+                                                              }).FileAndForget(nameof(WebViewMessageHandler));
 
-    private void HandleToolOutput(JObject data, int? id)
-    {
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var p = data.ToObject<Contracts.ToolOutputNotification>();
-            var toolUseId = p.ToolUseId ?? "";
-            var which = p.Which ?? "out";
-            var agentId = p.AgentId;
-            var toolName = p.ToolName ?? "";
-            if (string.IsNullOrEmpty(toolUseId)) { return; }
-            // Read full content from the JSONL — the WebView only holds preview-capped text, so
-            // this gives the untruncated output. The fallback below is for the Agent ROW: it
-            // carries an agentId (it needs one to fetch its children) while its OWN result lives
-            // in the main transcript, so the sub-agent file has no match for it.
-            var paths = PaneClaudePaths;
-            string content = null;
-            // Only the IN side names a file. OUT for a Write is "File created successfully at: …",
-            // which is not the file and must not lend the temp its extension.
-            string filePath = null;
-            // The sub-agent transcript first when there is one, then the main file. Same call, and
-            // the agentId is what picks the file it reads.
-            foreach (var lookIn in string.IsNullOrEmpty(agentId) ? [null] : new[] { agentId, null })
-            {
-                if (which == "in")
-                {
-                    (content, filePath) = FindToolInput(client.WorkingDirectory, client.SessionId, toolUseId, paths, toolName, lookIn);
-                }
-                else
-                {
-                    content = FindToolResult(client.WorkingDirectory, client.SessionId, toolUseId, paths, lookIn);
-                }
-                if (!string.IsNullOrEmpty(content)) { break; }
-            }
+    private void HandleToolOutput(JObject data, int? id) => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                                                                 {
+                                                                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                                                     var p = data.ToObject<Contracts.ToolOutputNotification>();
+                                                                     var toolUseId = p.ToolUseId ?? "";
+                                                                     var which = p.Which ?? "out";
+                                                                     var agentId = p.AgentId;
+                                                                     var toolName = p.ToolName ?? "";
+                                                                     if (string.IsNullOrEmpty(toolUseId)) { return; }
+                                                                     // Read full content from the JSONL — the WebView only holds preview-capped text, so
+                                                                     // this gives the untruncated output. The fallback below is for the Agent ROW: it
+                                                                     // carries an agentId (it needs one to fetch its children) while its OWN result lives
+                                                                     // in the main transcript, so the sub-agent file has no match for it.
+                                                                     var paths = PaneClaudePaths;
+                                                                     string content = null;
+                                                                     // Only the IN side names a file. OUT for a Write is "File created successfully at: …",
+                                                                     // which is not the file and must not lend the temp its extension.
+                                                                     string filePath = null;
+                                                                     // The sub-agent transcript first when there is one, then the main file. Same call, and
+                                                                     // the agentId is what picks the file it reads.
+                                                                     foreach (var lookIn in string.IsNullOrEmpty(agentId) ? [null] : new[] { agentId, null })
+                                                                     {
+                                                                         if (which == "in")
+                                                                         {
+                                                                             (content, filePath) = FindToolInput(client.WorkingDirectory, client.SessionId, toolUseId, paths, toolName, lookIn);
+                                                                         }
+                                                                         else
+                                                                         {
+                                                                             content = FindToolResult(client.WorkingDirectory, client.SessionId, toolUseId, paths, lookIn);
+                                                                         }
+                                                                         if (!string.IsNullOrEmpty(content)) { break; }
+                                                                     }
 
-            if (string.IsNullOrEmpty(content))
-            {
-                log.Debug(() => $"[open-output] no content found for tool_use_id={toolUseId}");
-                return;
-            }
+                                                                     if (string.IsNullOrEmpty(content))
+                                                                     {
+                                                                         log.Debug(() => $"[open-output] no content found for tool_use_id={toolUseId}");
+                                                                         return;
+                                                                     }
 
-            // Strip the CLI's <tool_use_error> wrapper (protocol detail).
-            // Same regex as the WebView's `_cleanResult`.
-            var m = System.Text.RegularExpressions.Regex.Match(content,
-                                                              @"<tool_use_error>([\s\S]*?)</tool_use_error>",
-                                                              System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            if (m.Success) { content = m.Groups[1].Value.Trim(); }
-            var tmpPath = Path.Combine(Path.GetTempPath(), TempFileName(toolName, which, filePath, toolUseId));
-            // Clear the flag before rewriting: a previous open left the file read-only, and
-            // WriteAllText would throw on it.
-            try
-            {
-                if (File.Exists(tmpPath)) { File.SetAttributes(tmpPath, FileAttributes.Normal); }
-            }
-            catch (Exception ex) { log.Warn($"[open-output] could not clear read-only on {tmpPath}: {ex.Message}"); }
-            File.WriteAllText(tmpPath, content, System.Text.Encoding.UTF8);
-            // Read-only on purpose: this is a copy of what the tool wrote at that turn, and now that
-            // it carries the real extension it looks even more like the source file. Editing it
-            // would change nothing on disk, which is worth making obvious rather than discovering.
-            try { File.SetAttributes(tmpPath, FileAttributes.ReadOnly); }
-            catch (Exception ex) { log.Warn($"[open-output] could not mark {tmpPath} read-only: {ex.Message}"); }
-            VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, tmpPath,
-                Microsoft.VisualStudio.VSConstants.LOGVIEWID.TextView_guid, out _, out _, out var frame);
-            frame?.Show();
-        }).FileAndForget(nameof(WebViewMessageHandler));
-    }
+                                                                     // Strip the CLI's <tool_use_error> wrapper (protocol detail).
+                                                                     // Same regex as the WebView's `_cleanResult`.
+                                                                     var m = System.Text.RegularExpressions.Regex.Match(content,
+                                                                                                                       @"<tool_use_error>([\s\S]*?)</tool_use_error>",
+                                                                                                                       System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                                                                     if (m.Success) { content = m.Groups[1].Value.Trim(); }
+                                                                     var tmpPath = Path.Combine(Path.GetTempPath(), TempFileName(toolName, which, filePath, toolUseId));
+                                                                     // Clear the flag before rewriting: a previous open left the file read-only, and
+                                                                     // WriteAllText would throw on it.
+                                                                     try
+                                                                     {
+                                                                         if (File.Exists(tmpPath)) { File.SetAttributes(tmpPath, FileAttributes.Normal); }
+                                                                     }
+                                                                     catch (Exception ex) { log.Warn($"[open-output] could not clear read-only on {tmpPath}: {ex.Message}"); }
+                                                                     File.WriteAllText(tmpPath, content, System.Text.Encoding.UTF8);
+                                                                     // Read-only on purpose: this is a copy of what the tool wrote at that turn, and now that
+                                                                     // it carries the real extension it looks even more like the source file. Editing it
+                                                                     // would change nothing on disk, which is worth making obvious rather than discovering.
+                                                                     try { File.SetAttributes(tmpPath, FileAttributes.ReadOnly); }
+                                                                     catch (Exception ex) { log.Warn($"[open-output] could not mark {tmpPath} read-only: {ex.Message}"); }
+                                                                     VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, tmpPath,
+                                                                         Microsoft.VisualStudio.VSConstants.LOGVIEWID.TextView_guid, out _, out _, out var frame);
+                                                                     frame?.Show();
+                                                                 }).FileAndForget(nameof(WebViewMessageHandler));
 
     private void HandleDiffDialog(JObject data, int? id)
     {
@@ -138,15 +132,9 @@ internal sealed partial class WebViewMessageHandler
             leftLabel: "Original", rightLabel: "Proposed");
     }
 
-    private void HandleIdeOutputWindow(JObject data, int? id)
-    {
-        OutputWindowLogger.ActivatePane();
-    }
+    private void HandleIdeOutputWindow(JObject data, int? id) => OutputWindowLogger.ActivatePane();
 
-    private void HandleExternalUrl(JObject data, int? id)
-    {
-        ShellHelpers.OpenExternal(data.ToObject<Contracts.ExternalUrlNotification>().Url ?? "");
-    }
+    private void HandleExternalUrl(JObject data, int? id) => ShellHelpers.OpenExternal(data.ToObject<Contracts.ExternalUrlNotification>().Url ?? "");
 
     private void HandleOptions(JObject data, int? id)
     {
@@ -160,22 +148,17 @@ internal sealed partial class WebViewMessageHandler
         });
     }
 
-    private void HandleCliTerminal(JObject data, int? id)
-    {
+    private void HandleCliTerminal(JObject data, int? id) =>
         // Same as the toolbar "+" for CLI: a fresh interactive terminal pane, inheriting
         // this chat's profile.
         Core.Panes.PaneLauncher.OpenNew(PaneKind.Cli, entry.Profile);
-    }
 
-    private void HandleChatPane(JObject data, int? id)
-    {
+    private void HandleChatPane(JObject data, int? id) =>
         // Same as the toolbar "+" for Chat: a new pane on its own session, inheriting this
         // chat's profile. Distinct from /clear, which restarts the conversation in place.
         Core.Panes.PaneLauncher.OpenNew(PaneKind.Chat, entry.Profile);
-    }
 
-    private void HandleSessionHistory(JObject data, int? id)
-    {
+    private void HandleSessionHistory(JObject data, int? id) =>
         // The picker is WPF and lives in the toolbar; the entry carries the callback so the
         // command opens the very same popup as the History button.
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
@@ -183,5 +166,4 @@ internal sealed partial class WebViewMessageHandler
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             entry.ShowHistoryAction?.Invoke();
         }).FileAndForget(nameof(WebViewMessageHandler));
-    }
 }

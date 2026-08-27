@@ -266,25 +266,19 @@ internal sealed class JsonRpcDispatcher
     // Use SerializeObject(anonymous), not JObject.ToString(Formatting): VS loads its own
     // Newtonsoft.Json that may lack that overload and throw MissingMethodException.
 
-    private static string Result(JToken id, object result)
+    private static string Result(JToken id, object result) => Newtonsoft.Json.JsonConvert.SerializeObject(new
     {
-        return Newtonsoft.Json.JsonConvert.SerializeObject(new
-        {
-            jsonrpc = "2.0",
-            id,
-            result,
-        }, CamelCaseSettings);
-    }
+        jsonrpc = "2.0",
+        id,
+        result,
+    }, CamelCaseSettings);
 
-    private static string Error(JToken id, int code, string message)
+    private static string Error(JToken id, int code, string message) => Newtonsoft.Json.JsonConvert.SerializeObject(new
     {
-        return Newtonsoft.Json.JsonConvert.SerializeObject(new
-        {
-            jsonrpc = "2.0",
-            id,
-            error = new { code, message },
-        }, CamelCaseSettings);
-    }
+        jsonrpc = "2.0",
+        id,
+        error = new { code, message },
+    }, CamelCaseSettings);
 }
 
 /// <summary>Tool-side validation failure. Surfaced to the CLI as an

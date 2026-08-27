@@ -130,12 +130,10 @@ internal static class SchemaBuilder
         return generic?.GetGenericArguments()[0];
     }
 
-    private static bool IsRequired(PropertyInfo prop)
-    {
+    private static bool IsRequired(PropertyInfo prop) =>
         // Only [Required] marks a property required; value types and
         // reference types are otherwise optional (don't force every flag).
-        return prop.GetCustomAttribute<RequiredAttribute>() != null;
-    }
+        prop.GetCustomAttribute<RequiredAttribute>() != null;
 
     /// <summary>VS-friendly camelCase: <c>FilePath → filePath</c>,
     /// <c>URL → url</c>, <c>HTTPSPort → httpsPort</c> (best-effort).

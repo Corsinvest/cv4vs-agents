@@ -7,6 +7,7 @@ import { customElement, property, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Checkmark16Regular from '@fluentui/svg-icons/icons/checkmark_16_regular.svg';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { displayModels, resolveModelValue } from '../../core/ai-models';
 import type { ModelInfoDto } from '../../core/types';
 import './cv-popover-list';
@@ -27,8 +28,7 @@ export class CvModelList extends LitElement {
     @state() private _models = displayModels(appState.models);
     @state() private _current = appState.currentModel;
 
-    private _offModels?: () => void;
-    private _offCurrent?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
 
     @query('cv-popover-list') private _list?: CvPopoverList;
 
@@ -37,20 +37,14 @@ export class CvModelList extends LitElement {
         return this;
     }
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._offModels = appState.on('models', (v) => {
+    constructor() {
+        super();
+        this._subs.on('models', (v) => {
             this._models = displayModels(v);
         });
-        this._offCurrent = appState.on('currentModel', (v) => {
+        this._subs.on('currentModel', (v) => {
             this._current = v;
         });
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._offModels?.();
-        this._offCurrent?.();
     }
 
     override willUpdate(changed: Map<string, unknown>): void {

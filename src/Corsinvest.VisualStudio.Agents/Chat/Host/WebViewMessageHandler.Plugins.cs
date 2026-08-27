@@ -32,26 +32,20 @@ internal sealed partial class WebViewMessageHandler
             "plugin", p.Enabled ? "enable" : "disable", p.PluginId);
     }
 
-    private void HandleMarketplaceAdd(JObject data, int? id)
-    {
+    private void HandleMarketplaceAdd(JObject data, int? id) =>
         // Adding a marketplace only changes what's installable, not the active plugins.
         HandlePluginOp("marketplace-add", affectsActive: false,
             "plugin", "marketplace", "add", data.ToObject<Contracts.MarketplaceAddNotification>().Source);
-    }
 
-    private void HandleMarketplaceRemove(JObject data, int? id)
-    {
+    private void HandleMarketplaceRemove(JObject data, int? id) =>
         // Removing a marketplace also disables its plugins → touches active plugins.
         HandlePluginOp("marketplace-remove", affectsActive: true,
             "plugin", "marketplace", "remove", data.ToObject<Contracts.MarketplaceRemoveNotification>().Name);
-    }
 
-    private void HandleMarketplaceRefresh(JObject data, int? id)
-    {
+    private void HandleMarketplaceRefresh(JObject data, int? id) =>
         // Refresh re-fetches a marketplace's catalog; installed/active plugins are untouched.
         HandlePluginOp("marketplace-refresh", affectsActive: false,
             "plugin", "marketplace", "update", data.ToObject<Contracts.MarketplaceRefreshNotification>().Name);
-    }
 
     private void HandlePluginList(int? id)
     {
@@ -77,22 +71,19 @@ internal sealed partial class WebViewMessageHandler
         }).FileAndForget(nameof(WebViewMessageHandler));
     }
 
-    private void HandlePluginOp(string op, bool affectsActive, params string[] args)
-    {
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-        {
-            var (ok, message) = await Core.Plugins.PluginService.RunOpAsync(args);
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            bridge.Send(BridgeMessages.ToWebView.Plugins.OpResult, new Contracts.PluginOpResultNotification
-            {
-                Op = op,
-                Ok = ok,
-                Message = message,
-                AffectsActive = affectsActive && ok,
-            });
-            // Only this pane hears about it: a plugin change affects every live chat, but there is
-            // no broadcast channel yet, so the others find out on their next reload.
-            if (ok && affectsActive) { bridge.Send(BridgeMessages.ToWebView.Plugins.Changed, null); }
-        }).FileAndForget(nameof(WebViewMessageHandler));
-    }
+    private void HandlePluginOp(string op, bool affectsActive, params string[] args) => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                                                                                             {
+                                                                                                 var (ok, message) = await Core.Plugins.PluginService.RunOpAsync(args);
+                                                                                                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                                                                                 bridge.Send(BridgeMessages.ToWebView.Plugins.OpResult, new Contracts.PluginOpResultNotification
+                                                                                                 {
+                                                                                                     Op = op,
+                                                                                                     Ok = ok,
+                                                                                                     Message = message,
+                                                                                                     AffectsActive = affectsActive && ok,
+                                                                                                 });
+                                                                                                 // Only this pane hears about it: a plugin change affects every live chat, but there is
+                                                                                                 // no broadcast channel yet, so the others find out on their next reload.
+                                                                                                 if (ok && affectsActive) { bridge.Send(BridgeMessages.ToWebView.Plugins.Changed, null); }
+                                                                                             }).FileAndForget(nameof(WebViewMessageHandler));
 }

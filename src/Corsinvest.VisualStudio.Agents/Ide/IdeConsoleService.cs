@@ -14,16 +14,19 @@ using System.Threading.Tasks;
 namespace Corsinvest.VisualStudio.Agents.Ide;
 
 /// <summary>
+/// <para>
 /// The real console of a debugged console application — what the program wrote to stdout and what
 /// it is waiting to read from stdin. Not the Debug output pane: that only carries what goes through
 /// Debug.WriteLine, so a Console.WriteLine prompt, and the fact that the program is blocked on
 /// Console.ReadLine, are invisible there.
-///
+/// </para>
+/// <para>
 /// Everything here goes through AttachConsole, which is a PER-PROCESS switch: while devenv is
 /// attached to the debuggee's console it is detached from its own. That is why every call holds a
 /// lock for the whole attach → act → detach sequence, why the detach sits in a finally, and why
 /// nothing inside that sequence awaits — a continuation resuming elsewhere would leave Visual
 /// Studio without a console.
+/// </para>
 /// </summary>
 internal sealed class IdeConsoleService
 {
@@ -259,15 +262,18 @@ internal sealed class IdeConsoleService
 
     private const ushort VkReturn = 0x0D;
 
-    /// <summary>Named keys a caller can send, each with the character the console should read for
+    /// <summary><para>
+    /// Named keys a caller can send, each with the character the console should read for
     /// it. Deliberately small: the point is answering a prompt, not driving a full-screen console
     /// UI.
-    ///
+    /// </para>
+    /// <para>
     /// The character is what matters. A key record carrying only a virtual-key code and a NUL
     /// UnicodeChar is delivered and counted — WriteConsoleInput reports success — but a program
     /// blocked in Console.ReadLine never sees it, because ReadLine reads characters. The arrow keys
     /// have no character, which is why they are the ones that only work against a program reading
-    /// keys rather than lines.</summary>
+    /// keys rather than lines.
+    /// </para></summary>
     private static readonly Dictionary<string, (ushort Vk, char Ch)> KeyCodes = new(StringComparer.OrdinalIgnoreCase)
     {
         ["enter"] = (VkReturn, '\r'),

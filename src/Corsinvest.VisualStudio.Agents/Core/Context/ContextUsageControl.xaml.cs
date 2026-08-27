@@ -164,15 +164,12 @@ public partial class ContextUsageControl : UserControl
         RefreshButtons.IsEnabled = !running;
     }
 
-    private void OnIndexingCompleted()
-    {
-        _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            SetIndexing(false);
-            BuildTree();
-        });
-    }
+    private void OnIndexingCompleted() => _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                                               {
+                                                   await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                                   SetIndexing(false);
+                                                   BuildTree();
+                                               });
 
     // The panel prompt shown for intermediate nodes / before any session is picked.
     private void ShowSelectPrompt()

@@ -230,15 +230,13 @@ public partial class SessionManagerControl : UserControl
 
     /// <summary>Focus the search box. Call AFTER the popup is laid out —
     /// Focus() on a non-visible element silently fails.</summary>
-    public void FocusSearch()
-    {
+    public void FocusSearch() =>
         // Render priority: the popup is up and the TextBox visible by then.
         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Render, new Action(() =>
         {
             SearchBox.Focus();
             Keyboard.Focus(SearchBox);
         }));
-    }
 
     private void OnRow_Click(object sender, MouseButtonEventArgs e)
     {

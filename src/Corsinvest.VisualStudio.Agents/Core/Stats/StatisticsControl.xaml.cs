@@ -174,8 +174,7 @@ public partial class StatisticsControl : UserControl
         RefreshButtons.IsEnabled = !running;
     }
 
-    private void OnIndexingCompleted()
-    {
+    private void OnIndexingCompleted() =>
         // Raised on a background thread — marshal to the UI, restore the buttons, rebuild the tree
         // (new sessions may have appeared) preserving the selection, then re-read.
         _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
@@ -185,7 +184,6 @@ public partial class StatisticsControl : UserControl
             BuildTree();
             await ReloadAsync();
         });
-    }
 
     private async Task ReloadAsync()
     {

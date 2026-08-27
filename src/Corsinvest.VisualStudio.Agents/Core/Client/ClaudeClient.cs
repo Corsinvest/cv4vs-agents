@@ -307,14 +307,12 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public const string DiagBaselineHookId = "cv_diag_baseline";
     public const string DiagCheckHookId = "cv_diag_check";
 
-    private void SendInitializeHooks()
-    {
+    private void SendInitializeHooks() =>
         // `initialize` carries the model catalogue + rich slash commands (→ ModelsReceived) and the
         // fast-mode state; get_settings adds the model + Model-menu toggles. Together they seed the UI
         // WITHOUT a user turn — system/init only arrives on the first turn, too late to enable the
         // toolbar. Fired on every StartProcess (open + respawn).
         _ = StartupAsync();
-    }
 
     private async Task StartupAsync()
     {

@@ -13,13 +13,16 @@ using System.Linq;
 namespace Corsinvest.VisualStudio.Agents.Chat;
 
 /// <summary>
+/// <para>
 /// The per-tool fields the CLI writes on a tool_result, gathered in one place instead of one
 /// EmitUser parameter each — every tool that reports something of its own would otherwise widen
 /// that signature, and both callers would grow another extraction.
-///
+/// </para>
+/// <para>
 /// Built from the toolUseResult where there is one (live), or from the fields history lifted onto
 /// the message (replay): toolUseResult itself does not survive into the replay, so what the
 /// translator needs has to travel on the message.
+/// </para>
 /// </summary>
 internal sealed class ToolResultExtras
 {
@@ -71,16 +74,13 @@ internal sealed class ToolResultExtras
     /// <summary>The wire shape: each group present only when the tool reported it, and the whole
     /// object null when it reported neither — so the WebView tests for presence, never for a zero
     /// that could also mean "ran for 0ms".</summary>
-    public Contracts.ToolResultExtrasDto ToDto()
-    {
-        return AgentTotals == null && Patch == null
+    public Contracts.ToolResultExtrasDto ToDto() => AgentTotals == null && Patch == null
             ? null
             : new Contracts.ToolResultExtrasDto
             {
                 AgentTotals = AgentTotals,
                 Patch = Patch,
             };
-    }
 }
 
 /// <summary>

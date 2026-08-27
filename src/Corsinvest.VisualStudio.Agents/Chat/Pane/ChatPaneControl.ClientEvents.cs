@@ -798,20 +798,24 @@ public partial class ChatPaneControl
             SetSessionTitle(null);
         });
 
-    /// <summary>A line the CLI wrote on stderr. It reaches the chat only if the process is gone —
+    /// <summary><para>
+    /// A line the CLI wrote on stderr. It reaches the chat only if the process is gone —
     /// a CLI that is still running is warning, not failing, and rendering that as the red banner
     /// says the session broke when it didn't.
-    ///
+    /// </para>
+    /// <para>
     /// Measured 2026-08-06 on an untrusted workspace: the CLI writes "Ignoring 1 permissions.allow
     /// entry … this workspace has not been trusted", carries on, and answers the turn normally —
     /// while we showed an error over a working chat. Node's own DeprecationWarnings came out the
     /// same way. VS Code reads the child's stderr into a 2KB diagnostic tail and never surfaces it
     /// (verified in the SDK's ProcessTransport), which is why the same warning is invisible there.
-    ///
+    /// </para>
+    /// <para>
     /// Deliberately not a match on the message text: that would mean chasing the CLI's wording
     /// release by release. Whether the process survived is the CLI's own verdict on how bad the
     /// line was. Nothing is lost either way — every line is already logged as Warn by
-    /// NdjsonTransport, and a process that dies raises its own banner through OnProcessExited.</summary>
+    /// NdjsonTransport, and a process that dies raises its own banner through OnProcessExited.
+    /// </para></summary>
     private void OnClientError(object sender, string msg)
     {
         if (_client?.IsRunning == true) { return; }

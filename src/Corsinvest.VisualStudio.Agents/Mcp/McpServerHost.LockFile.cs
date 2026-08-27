@@ -62,23 +62,18 @@ internal sealed partial class McpServerHost
     /// that was already alive — which an instance field's initialiser does not, under Hot Reload.</summary>
     private static readonly object _writeGate = new();
 
-    private static string[] ResolveWorkspaceFoldersBlocking()
-    {
+    private static string[] ResolveWorkspaceFoldersBlocking() =>
         // Sync entry point for off-UI-thread callers; JTF avoids COM deadlocks in DTE.
-        return Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.Run(async () =>
+        Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.Run(async () =>
         {
             var f = await IdeContextService.Instance.GetWorkspaceFoldersAsync();
             var arr = new string[f.Count];
             for (int i = 0; i < f.Count; i++) { arr[i] = f[i]; }
             return arr;
         });
-    }
 
-    private static string ResolveIdeNameBlocking()
-    {
-        return Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.Run(
+    private static string ResolveIdeNameBlocking() => Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.Run(
             async () => await IdeContextService.Instance.GetIdeNameAsync());
-    }
 
     private void DeleteAllLockFiles()
     {

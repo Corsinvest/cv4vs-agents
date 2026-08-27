@@ -9,6 +9,7 @@ import EyeOff16Regular from '@fluentui/svg-icons/icons/eye_off_16_regular.svg';
 import Bookmark16Regular from '@fluentui/svg-icons/icons/bookmark_16_regular.svg';
 import CodeBlock16Regular from '@fluentui/svg-icons/icons/code_block_16_regular.svg';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import type { IdeContextNotification, SetSendSelectionNotification } from '../../core/types';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
@@ -120,28 +121,19 @@ export class CvIdeContextBadge extends LitElement {
      *  block while the chat is open, and the chip has to follow it. */
     @state() private _withText = appState.ui.sendSelectionText;
 
-    private _offCtx?: () => void;
-    private _offEnabled?: () => void;
-    private _offUi?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._offCtx = appState.on('ideContext', (v) => {
+    constructor() {
+        super();
+        this._subs.on('ideContext', (v) => {
             this._ctx = v;
         });
-        this._offEnabled = appState.on('ideContextEnabled', (v) => {
+        this._subs.on('ideContextEnabled', (v) => {
             this._enabled = v;
         });
-        this._offUi = appState.on('ui', (v) => {
+        this._subs.on('ui', (v) => {
             this._withText = v.sendSelectionText;
         });
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._offCtx?.();
-        this._offEnabled?.();
-        this._offUi?.();
     }
 
     private _onToggleEye = (e: Event): void => {

@@ -238,13 +238,16 @@ public class PatchHunkDto
     public string[] Lines { get; set; }
 }
 
-/// <summary>The fields only one tool family reads, grouped so adding another one touches this class
+/// <summary><para>
+/// The fields only one tool family reads, grouped so adding another one touches this class
 /// and its renderer instead of widening the notification, the entry, the host and two call sites.
 /// Null when the tool reports none — which is most of them.
-///
+/// </para>
+/// <para>
 /// agentId and fullLineCount deliberately stay OUT: the first is routing (the transcript lookup and
 /// the sub-agent fetch use it, not the renderer) and arrives at launch rather than at the end; the
-/// second is computed for every tool_result and describes `result`, like isError.</summary>
+/// second is computed for every tool_result and describes `result`, like isError.
+/// </para></summary>
 public class ToolResultExtrasDto
 {
     public AgentRunTotalsDto AgentTotals { get; set; }
@@ -572,13 +575,16 @@ public class AssistantTextNotification
     public long? Timestamp { get; set; }
 }
 
-/// <summary>Messages the CLI retracted (chat_evict_messages): they were delivered to us but are no
+/// <summary><para>
+/// Messages the CLI retracted (chat_evict_messages): they were delivered to us but are no
 /// longer part of the conversation, so the model does not have them. Leaving them on screen is what
 /// makes the transcript diverge from the model's context — the user reads a partial answer and
 /// reasons about it, while the model never saw it.
-///
+/// </para>
+/// <para>
 /// Matching is by uuid equality and nothing else, which is what makes it safe to apply blind: a
-/// uuid naming nothing on screen removes nothing.</summary>
+/// uuid naming nothing on screen removes nothing.
+/// </para></summary>
 public class EvictMessagesNotification
 {
     public string[] Uuids { get; set; }

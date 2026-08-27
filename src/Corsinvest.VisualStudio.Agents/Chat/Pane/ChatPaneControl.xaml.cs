@@ -379,7 +379,7 @@ public partial class ChatPaneControl : PaneControlBase
         if (files.Count > 0)
         {
             _bridge.Send(BridgeMessages.ToWebView.Ui.FilesDropped,
-                         new Contracts.FilesDroppedNotification { Files = files.ToArray() });
+                         new Contracts.FilesDroppedNotification { Files = [.. files] });
         }
     }
 

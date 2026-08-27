@@ -4,7 +4,6 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Chat;
-using Corsinvest.VisualStudio.Agents.Chat.Host;
 using Corsinvest.VisualStudio.Agents.Contracts;
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;

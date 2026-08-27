@@ -11,6 +11,7 @@ import { REMOTE_CONTROL_ICON } from '../../core/commands/builtin-commands';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { iconStyles, iconTriggerStyles, tooltipStyles } from '../styles/shared';
 
 /**
@@ -62,19 +63,19 @@ export class CvRemoteChip extends LitElement {
 
     @state() private accessor _status = appState.remoteControl.status;
 
-    private _unsubscribe?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._status = appState.remoteControl.status;
-        this._unsubscribe = appState.on('remoteControl', (v) => {
+    constructor() {
+        super();
+        this._subs.on('remoteControl', (v) => {
             this._status = v.status;
         });
     }
 
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._unsubscribe?.();
+    override connectedCallback(): void {
+        super.connectedCallback();
+        // Catch up on what was missed while detached: the subscription only reports changes.
+        this._status = appState.remoteControl.status;
     }
 
     private _onShowLink = (): void => {
