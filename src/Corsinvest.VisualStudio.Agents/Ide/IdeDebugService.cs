@@ -735,8 +735,12 @@ internal sealed partial class IdeDebugService
             // Match by PID first (unambiguous); otherwise by name substring (must be unique).
             Process match = null;
             int nameMatches = 0;
+            // Collected in the same pass: a miss has to say what WAS attachable, and going back for
+            // the list would mean enumerating LocalProcesses a second time.
+            var seen = new List<string>();
             foreach (Process proc in dbg.LocalProcesses)
             {
+                seen.Add($"{SafeProcessName(proc)} ({proc.ProcessID})");
                 if (pid > 0)
                 {
                     if (proc.ProcessID == pid) { match = proc; break; }
@@ -750,7 +754,18 @@ internal sealed partial class IdeDebugService
 
             if (match == null)
             {
-                return new DebugResult { Ok = false, Reason = pid > 0 ? $"No process with pid {pid}." : $"No process matching '{processName}'." };
+                // Truncated: the list is every process on the machine, which is hundreds. Enough to
+                // recognise a name that was nearly right, and debug_list_processes has the rest.
+                seen.Sort(StringComparer.OrdinalIgnoreCase);
+                var sample = seen.Count > AttachMissSample
+                    ? $"{string.Join(", ", seen.Take(AttachMissSample))} … and {seen.Count - AttachMissSample} more"
+                    : string.Join(", ", seen);
+                return new DebugResult
+                {
+                    Ok = false,
+                    Reason = (pid > 0 ? $"No process with pid {pid}." : $"No process matching '{processName}'.")
+                             + $" Attachable: {sample} — debug_list_processes has them all.",
+                };
             }
             if (pid <= 0 && nameMatches > 1)
             {
@@ -975,7 +990,13 @@ internal sealed partial class IdeDebugService
             // Item() on these COM collections throws on a missing key rather than returning null,
             // so the lookups are guarded here instead of null-checked.
             try { exGroup = groups.Item(groupName); }
-            catch (Exception) { return new DebugResult { Ok = false, Reason = $"Exception group '{groupName}' not found." }; }
+            catch (Exception)
+            {
+                // Naming the groups matters more here than elsewhere: groupName is the default set
+                // above when the caller passed none, so the bare message blamed a string the caller
+                // never wrote — and these names follow the IDE's language.
+                return new DebugResult { Ok = false, Reason = $"Exception group '{groupName}' not found. Groups: {GroupNames(groups)}" };
+            }
 
             EnvDTE90.ExceptionSetting exItem;
             try { exItem = exGroup.Item(exceptionName); }
@@ -1005,6 +1026,39 @@ internal sealed partial class IdeDebugService
             OutputWindowLogger.Global.LogException("IdeDebugService.SetExceptionBreakAsync", ex);
             return new DebugResult { Ok = false, Reason = "Failed to set exception break." };
         }
+    }
+
+    /// <summary>How many processes an attach miss names before it stops counting. The machine has
+    /// hundreds, and the point is to recognise a name that was nearly right.</summary>
+    private const int AttachMissSample = 15;
+
+    /// <summary>A process's file name, or its pid as a fallback. Process.Name is a full path — the
+    /// listing tool shortens it the same way — and a process the debugger cannot fully see throws
+    /// instead of answering.</summary>
+    private static string SafeProcessName(Process p)
+    {
+        try { return System.IO.Path.GetFileName(p.Name ?? "") is var n && !string.IsNullOrEmpty(n) ? n : $"pid {p.ProcessID}"; }
+        catch (Exception) { return "?"; }
+    }
+
+    /// <summary>The exception groups, for an error that has to name them. Best-effort: this runs
+    /// where a lookup already failed, so a group that will not report its name is skipped rather
+    /// than costing the caller the rest of the list.</summary>
+    private static string GroupNames(EnvDTE90.ExceptionGroups groups)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var names = new List<string>();
+        try
+        {
+            foreach (EnvDTE90.ExceptionSettings g in groups)
+            {
+                try { names.Add($"'{g.Name}'"); }
+                catch (Exception) { }
+            }
+        }
+        catch (Exception) { }
+        names.Sort(StringComparer.OrdinalIgnoreCase);
+        return names.Count > 0 ? string.Join(", ", names) : "none could be listed";
     }
 
 
