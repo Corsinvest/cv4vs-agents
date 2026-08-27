@@ -98,13 +98,14 @@ public static class ClaudeInstall
         if (!string.IsNullOrEmpty(localAppData)) { yield return Path.Combine(localAppData, "npm"); }
     }
 
-    /// <summary>Installed CLI version, or <c>null</c> if the binary can't be found or won't say.
-    ///
+    /// <summary><para>Installed CLI version, or <c>null</c> if the binary can't be found or won't say.</para>
+    /// <para>
     /// Asks the CLI rather than reading the npm <c>package.json</c> next to it: that manifest only
     /// exists for an npm install, so the native installer, WinGet and a hand-set
     /// <c>ClaudeExecutablePath</c> all came back "(unknown)". <c>--version</c> is a documented
     /// flag and answers whatever the layout. Costs a process start, and the one caller is the
-    /// session-info dialog, opened by hand — no reason to cache it.</summary>
+    /// session-info dialog, opened by hand — no reason to cache it.
+    /// </para></summary>
     public static string Version()
     {
         var exe = ResolveExecutable();

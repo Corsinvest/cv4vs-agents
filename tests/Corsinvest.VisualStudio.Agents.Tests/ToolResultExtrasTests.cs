@@ -48,11 +48,9 @@ public class ToolResultExtrasTests
     }
 
     [Fact]
-    public void FromToolUseResult_has_no_patch_when_the_tool_reported_none()
-    {
+    public void FromToolUseResult_has_no_patch_when_the_tool_reported_none() =>
         // A Write to a new file has nothing to diff against.
         Assert.Null(ToolResultExtras.FromToolUseResult(new JObject()).Patch);
-    }
 
     [Fact]
     public void FromToolUseResult_reads_an_agent_runs_totals()
@@ -155,11 +153,9 @@ public class ToolResultExtrasTests
     }
 
     [Fact]
-    public void ToDto_is_null_when_there_is_nothing_to_report()
-    {
+    public void ToDto_is_null_when_there_is_nothing_to_report() =>
         // So the WebView tests for presence rather than for a zero that could also mean "ran for 0ms".
         Assert.Null(new ToolResultExtras().ToDto());
-    }
 
     [Fact]
     public void ToDto_carries_whichever_group_the_tool_reported()

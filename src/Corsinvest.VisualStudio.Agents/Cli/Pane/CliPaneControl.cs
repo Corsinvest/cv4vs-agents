@@ -295,8 +295,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         Content = ClaudeInstall.BuildMissingPanel();
     }
 
-    private void OnProcessExited()
-    {
+    private void OnProcessExited() =>
         // claude.exe ended (exit/Ctrl-C/crash). The pane is only a view onto that process,
         // so auto-close it: process gone means the terminal pane goes too.
 
@@ -308,7 +307,6 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
             _log.Info("[cli] claude.exe exited — auto-closing pane");
             Pane?.ClosePane();
         }));
-    }
 
     private void OnThemeChanged(ThemeChangedEventArgs e)
     {
@@ -359,13 +357,11 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         if (_started) { _ = StartOrRestartAsync(); }
     }
 
-    private void OnLoaded(object sender, RoutedEventArgs e)
-    {
+    private void OnLoaded(object sender, RoutedEventArgs e) =>
         // Real start happens on the first Resize (needs cols/rows). Re-push the
         // caption here: RegisterInstance runs before the IVsWindowFrame is wired, so
         // the earlier OwnerCaption set may have no-op'd silently.
         RepushCaption();
-    }
 
     protected override void DisposeCore()
     {

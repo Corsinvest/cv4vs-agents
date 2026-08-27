@@ -57,15 +57,16 @@ internal sealed partial class IdeNavigationService
         return args;
     }
 
-    /// <summary>One of IFindUsagesService's two entry points, by name.
-    ///
+    /// <summary><para>One of IFindUsagesService's two entry points, by name.</para>
+    /// <para>
     /// Deliberately not pinned to an arity. It used to require exactly five parameters, and when
     /// one of the two grew a sixth the tool reported "not available in this Visual Studio" — which
     /// reads as an edition limit and sent everyone looking in the wrong place, while its sibling
     /// went on working from the same interface. If the shape ever changes for real, the invoke
     /// below fails with a message naming the mismatch, which is a better account than a probe that
     /// quietly answers no. Overloads are ordered so the widest wins: extra parameters are the ones
-    /// that get added.</summary>
+    /// that get added.
+    /// </para></summary>
     private MethodInfo FindUsagesMethod(string name)
         => _findUsagesServiceType.GetMethods()
             .Where(m => m.Name == name)

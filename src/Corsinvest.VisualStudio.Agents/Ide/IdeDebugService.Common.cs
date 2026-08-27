@@ -150,7 +150,5 @@ internal sealed partial class IdeDebugService
     /// <summary>The debugger renders string values wrapped in quotes (e.g. "boom"); strip a single
     /// surrounding pair so the model gets the bare message.</summary>
     private static string Unquote(string s)
-    {
-        return s?.Length >= 2 && s[0] == '"' && s[s.Length - 1] == '"' ? s.Substring(1, s.Length - 2) : s;
-    }
+        => s?.Length >= 2 && s[0] == '"' && s[s.Length - 1] == '"' ? s.Substring(1, s.Length - 2) : s;
 }

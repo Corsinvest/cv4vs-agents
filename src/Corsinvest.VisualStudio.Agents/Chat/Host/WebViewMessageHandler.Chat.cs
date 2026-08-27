@@ -205,12 +205,10 @@ internal sealed partial class WebViewMessageHandler
         if (!string.IsNullOrEmpty(toolUseId)) { _ = client?.DetachTaskAsync(toolUseId); }
     }
 
-    private void HandleSubagentCancelAll(JObject data, int? id)
-    {
+    private void HandleSubagentCancelAll(JObject data, int? id) =>
         // The UI knows the active taskIds; it sends one cancel per id. As a fallback,
         // a bare cancel_all maps to interrupt (stops the whole turn).
         _ = client?.InterruptAsync();
-    }
 
     private void HandleGetHistory(JObject data, int? id)
     {
@@ -243,49 +241,43 @@ internal sealed partial class WebViewMessageHandler
         }).FileAndForget(nameof(WebViewMessageHandler));
     }
 
-    private void HandleOpenDocument(JObject data, int? id)
-    {
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var p = data.ToObject<Contracts.OpenDocumentNotification>();
-            var uuid = p.Uuid ?? "";
-            var blockIdx = p.BlockIdx;
-            var sessionId = p.SessionId ?? client.SessionId;
-            if (string.IsNullOrEmpty(uuid) || blockIdx < 0) { return; }
-            var block = Sessions.ReadMessageBlock(sessionId, uuid, blockIdx);
-            if (block?.Val("type") != "document") { return; }
-            var source = block["source"] as JObject;
-            var content = source.Val("data", "");
-            var title = block.Val("title", "file");
-            var mediaType = source.Val("media_type", "text/plain");
-            // source.type (Anthropic content block): "text" carries raw UTF-8 in `data`,
-            // "base64" carries base64 (PDF and other binaries).
-            var sourceType = source.Val("type", "text");
-            WriteTempAndOpen(title, content, mediaType, sourceType == "base64");
-        }).FileAndForget(nameof(WebViewMessageHandler));
-    }
+    private void HandleOpenDocument(JObject data, int? id) => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                                                                   {
+                                                                       await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                                                       var p = data.ToObject<Contracts.OpenDocumentNotification>();
+                                                                       var uuid = p.Uuid ?? "";
+                                                                       var blockIdx = p.BlockIdx;
+                                                                       var sessionId = p.SessionId ?? client.SessionId;
+                                                                       if (string.IsNullOrEmpty(uuid) || blockIdx < 0) { return; }
+                                                                       var block = Sessions.ReadMessageBlock(sessionId, uuid, blockIdx);
+                                                                       if (block?.Val("type") != "document") { return; }
+                                                                       var source = block["source"] as JObject;
+                                                                       var content = source.Val("data", "");
+                                                                       var title = block.Val("title", "file");
+                                                                       var mediaType = source.Val("media_type", "text/plain");
+                                                                       // source.type (Anthropic content block): "text" carries raw UTF-8 in `data`,
+                                                                       // "base64" carries base64 (PDF and other binaries).
+                                                                       var sourceType = source.Val("type", "text");
+                                                                       WriteTempAndOpen(title, content, mediaType, sourceType == "base64");
+                                                                   }).FileAndForget(nameof(WebViewMessageHandler));
 
-    private void HandleOpenAttachment(JObject data, int? id)
-    {
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-        {
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var p = data.ToObject<Contracts.OpenAttachmentNotification>();
-            var name = p.Name ?? "";
-            var base64 = p.Base64 ?? "";
-            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(base64)) { return; }
-            try
-            {
-                // The composer reads every attachment as base64 (one code path), text files
-                // included — so the bytes are never written back out as text.
-                WriteTempAndOpen(name, base64, p.MediaType ?? "", isBase64: true);
-            }
-            catch (Exception ex)
-            {
-                // Nothing opens and the click looks dead otherwise — say why.
-                log.LogException($"[chat] open attachment '{name}'", ex);
-            }
-        }).FileAndForget(nameof(WebViewMessageHandler));
-    }
+    private void HandleOpenAttachment(JObject data, int? id) => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+                                                                     {
+                                                                         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                                                                         var p = data.ToObject<Contracts.OpenAttachmentNotification>();
+                                                                         var name = p.Name ?? "";
+                                                                         var base64 = p.Base64 ?? "";
+                                                                         if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(base64)) { return; }
+                                                                         try
+                                                                         {
+                                                                             // The composer reads every attachment as base64 (one code path), text files
+                                                                             // included — so the bytes are never written back out as text.
+                                                                             WriteTempAndOpen(name, base64, p.MediaType ?? "", isBase64: true);
+                                                                         }
+                                                                         catch (Exception ex)
+                                                                         {
+                                                                             // Nothing opens and the click looks dead otherwise — say why.
+                                                                             log.LogException($"[chat] open attachment '{name}'", ex);
+                                                                         }
+                                                                     }).FileAndForget(nameof(WebViewMessageHandler));
 }

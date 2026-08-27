@@ -366,13 +366,12 @@ internal sealed class GitIgnore
 
     private GitIgnore(List<Pattern> patterns)
     {
-        _excludes = patterns.Where(p => !p.Negate).ToList();
-        _negations = patterns.Where(p => p.Negate).ToList();
-        _negatedPrefixes = _negations
+        _excludes = [.. patterns.Where(p => !p.Negate)];
+        _negations = [.. patterns.Where(p => p.Negate)];
+        _negatedPrefixes = [.. _negations
             .Select(p => LiteralPrefix(p.Glob))
             .Where(s => s.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
     }
 
     /// <summary>The part of a glob before its first wildcard, trimmed to whole path segments —

@@ -248,13 +248,14 @@ internal sealed partial class IdeDebugService
         }
     }
 
-    /// <summary>How many times a breakpoint has actually been hit.
-    ///
+    /// <summary><para>How many times a breakpoint has actually been hit.</para>
+    /// <para>
     /// The breakpoint in <c>Debugger.Breakpoints</c> is the one that was *asked for*; when the
     /// debugger binds it, the hits land on the bound children it creates — one per address the
     /// location resolved to. Reading the parent's own CurrentHits therefore answers 0 for a
     /// breakpoint that has been hit five hundred times, which is worse than not reporting it at
-    /// all. Must be called on the UI thread.</summary>
+    /// all. Must be called on the UI thread.
+    /// </para></summary>
     /// <summary>How many code locations a breakpoint resolved to, or null outside a session.
     /// <para>Children is the binding: one child per address the debugger resolved. Read here rather
     /// than after Breakpoints.Add because binding is asynchronous — measured, every breakpoint reads

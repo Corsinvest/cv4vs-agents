@@ -105,14 +105,11 @@ internal static class StatsService
     /// share the same ~/.claude, hence the same .jsonl. They'd otherwise be double-counted in All
     /// and appear as duplicate tree nodes. Returns one entry per distinct config-dir: a representative
     /// profile (any of the group — same paths) and a label joining every profile name that uses it.</summary>
-    private static IEnumerable<(Profile profile, string label)> DistinctConfigs()
-    {
-        return ProfileStore.Load(forEdit: false)
+    private static IEnumerable<(Profile profile, string label)> DistinctConfigs() => ProfileStore.Load(forEdit: false)
             .GroupBy(p => ClaudePaths.ForProfile(p).ConfigId, StringComparer.OrdinalIgnoreCase)
             .Select(g => (
                 profile: g.First(),
                 label: string.Join(", ", g.Select(p => string.IsNullOrEmpty(p.Name) ? "(profile)" : p.Name))));
-    }
 
     /// <summary>Build the navigation tree (All → Profile → Folder… → Project → Day → Session),
     /// reading only the filesystem/cache — no .jsonl parse. The range hides sessions (and the days /

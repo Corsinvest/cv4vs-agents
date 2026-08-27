@@ -153,12 +153,10 @@ public partial class ProfilesControl : UserControl
         }
     }
 
-    private void OnProfileEnabledClick(object sender, RoutedEventArgs e)
-    {
+    private void OnProfileEnabledClick(object sender, RoutedEventArgs e) =>
         // The list checkbox is TwoWay-bound directly to Profile.Enabled, so the value
         // is already updated by the time this fires — just persist it.
         PersistProfiles();
-    }
 
     private void OnNameChanged(object sender, TextChangedEventArgs e)
     {

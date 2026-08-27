@@ -89,13 +89,11 @@ internal sealed partial class WebViewMessageHandler
         _ = client.SetMaxThinkingTokensAsync(p.MaxThinkingTokens, p.Display);
     }
 
-    private void HandleStop(JObject data, int? id)
-    {
+    private void HandleStop(JObject data, int? id) =>
         // Fire and forget: the WebView frees itself the moment it asks, since it can't wait on a
         // wedged CLI. InterruptAsync logs its own failure — there is nothing to roll back here,
         // unlike the model and permission handlers below.
         _ = client.InterruptAsync();
-    }
 
     private void HandleSetPermissionMode(JObject data, int? id)
     {

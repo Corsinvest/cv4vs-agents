@@ -57,13 +57,16 @@ internal sealed class IdeOutputService
         ["Build Order"] = VSConstants.OutputWindowPaneGuid.SortedBuildOutputPane_guid,
     };
 
-    /// <summary>Resolve a built-in pane by GUID. The DTE pane object carries its own Guid as a
+    /// <summary><para>
+    /// Resolve a built-in pane by GUID. The DTE pane object carries its own Guid as a
     /// string, so the match is on identity and never on the localised display name.
-    ///
+    /// </para>
+    /// <para>
     /// The IVsOutputWindow round-trip is only there for the pane that does not exist yet — VS
     /// creates them lazily, and CreatePane materialises one without bringing the window forward.
     /// Returns null for panes with no stable GUID; those are found by name. Must be called on the
-    /// UI thread.</summary>
+    /// UI thread.
+    /// </para></summary>
     private static OutputWindowPane FindWellKnownPane(OutputWindow ow, string paneName)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -120,15 +123,15 @@ internal sealed class IdeOutputService
         return match;
     }
 
-    /// <summary>Get the pane's TextDocument, the only way EnvDTE offers to read its text.
-    ///
+    /// <summary><para>Get the pane's TextDocument, the only way EnvDTE offers to read its text.</para>
+    /// <para>
     /// A pane that has never been shown answers E_FAIL here: it is listed, and it holds the text
     /// the build wrote, but the document behind it is realised together with the window. Activating
     /// the pane realises it, so the failure is retried once that way rather than reported — the
     /// alternative is a caller that cannot tell "no output" from "output you haven't looked at".
     /// Activating brings the Output window forward, which is why it is done only on that branch.
-    ///
-    /// Returns null when even the retry fails. Must be called on the UI thread.</summary>
+    /// </para>
+    /// <para>Returns null when even the retry fails. Must be called on the UI thread.</para></summary>
     private static TextDocument GetTextDocument(OutputWindowPane pane)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -153,13 +156,16 @@ internal sealed class IdeOutputService
         }
     }
 
-    /// <summary>The text the user is looking at in the Output window: their selection, or the last
+    /// <summary><para>
+    /// The text the user is looking at in the Output window: their selection, or the last
     /// <paramref name="tailLines"/> lines of the active pane when they selected nothing — a build
     /// error is read without being selected first, and a menu entry that greys out unless you
     /// highlight something would be useless exactly when it is wanted.
-    ///
+    /// </para>
+    /// <para>
     /// Returns null when there is nothing to read. UI thread; never throws — it runs from a menu
-    /// query, where an exception would take the context menu down with it.</summary>
+    /// query, where an exception would take the context menu down with it.
+    /// </para></summary>
     public string GetActivePaneText(int tailLines)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
