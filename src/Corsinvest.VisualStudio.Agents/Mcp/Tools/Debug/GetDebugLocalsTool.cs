@@ -60,6 +60,8 @@ internal sealed class GetDebugLocalsTool : McpTool<GetDebugLocalsArgs>
                 members = l.Members,
             }).ToArray(),
             truncated = r.Truncated,
+            truncatedReason = r.TruncatedReason,
+            truncationMessage = r.TruncationMessage,
         };
     }
 

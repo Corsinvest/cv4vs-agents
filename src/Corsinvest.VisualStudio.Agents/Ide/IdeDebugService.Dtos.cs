@@ -116,8 +116,16 @@ internal sealed partial class IdeDebugService
         public bool InBreak { get; set; }   // false ⇒ not paused; the model should poll debug_get_state
         public string FunctionName { get; set; }
         public LocalInfo[] Locals { get; set; } = [];
-        /// <summary>Set when a walked level hit the member cap — only possible with depth &gt; 0.</summary>
+        /// <summary>Set when the walk stopped short — a level over the member cap, or the capture
+        /// running out of time. TruncatedReason says which.</summary>
         public bool Truncated { get; set; }
+
+        /// <summary>Which limit stopped the walk: "budget" (out of time) or "maxMembers" (a level
+        /// held more than were kept). Null when nothing was cut. The two want different moves from
+        /// the caller, which one flag could not tell apart.</summary>
+        public string TruncatedReason { get; set; }
+
+        public string TruncationMessage { get; set; }
         public string Reason { get; set; }
     }
 
@@ -208,9 +216,16 @@ internal sealed partial class IdeDebugService
         public string Value { get; set; }
         public string Type { get; set; }
         public LocalInfo[] Members { get; set; } = [];
-        /// <summary>True when some level hit the member cap, so what came back is a prefix of what
-        /// is there. Without it a truncated collection reads as a complete one.</summary>
+        /// <summary>True when the walk stopped short, so what came back is a prefix of what is
+        /// there. Without it a truncated collection reads as a complete one.</summary>
         public bool Truncated { get; set; }
+
+        /// <summary>Which limit stopped the walk: "budget" (out of time) or "maxMembers" (a level
+        /// held more than were kept). Null when nothing was cut. The two want different moves from
+        /// the caller, which one flag could not tell apart.</summary>
+        public string TruncatedReason { get; set; }
+
+        public string TruncationMessage { get; set; }
         public string Reason { get; set; }
     }
 
