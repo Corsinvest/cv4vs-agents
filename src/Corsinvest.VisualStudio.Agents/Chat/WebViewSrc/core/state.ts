@@ -21,7 +21,7 @@ import type {
 } from './types';
 import { PERMISSION_MODE } from './types';
 
-interface AppState {
+export interface AppState {
     workingDirectory: string;
     currentModel: string | null;
     permissionMode: PermissionMode;

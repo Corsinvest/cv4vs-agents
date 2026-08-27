@@ -5,6 +5,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { tooltipStyles } from '../styles/shared';
 import type { PermissionMode } from '../../core/types';
 import { PERMISSION_MODE } from '../../core/types';
@@ -44,21 +45,14 @@ export class CvPermissionSelector extends LitElement {
 
     @state() private _current: PermissionMode = appState.permissionMode;
 
-    private _off?: () => void;
-    private _offModels?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._off = appState.on('permissionMode', (v) => {
+    constructor() {
+        super();
+        this._subs.on('permissionMode', (v) => {
             this._current = v;
         });
-        this._offModels = appState.on('models', () => this.requestUpdate());
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._off?.();
-        this._offModels?.();
+        this._subs.rerenderOn('models');
     }
 
     private _onClick = (): void => {

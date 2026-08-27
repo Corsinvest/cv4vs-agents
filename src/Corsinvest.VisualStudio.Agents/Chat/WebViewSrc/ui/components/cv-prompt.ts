@@ -10,6 +10,7 @@ import Send16Filled from '@fluentui/svg-icons/icons/send_16_filled.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
 import { iconUrl } from '../../core/icon-url';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import type {
@@ -361,14 +362,12 @@ export class CvPrompt extends LitElement implements CommandHost {
     @query('cv-permission-list')
     private _permissionList?: import('./cv-permission-list').CvPermissionList;
 
-    private _offBusy?: () => void;
-    private _offPerm?: () => void;
-    private _offPending?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
+
     private _offHistory?: () => void;
     private _offCleared?: () => void;
     private _offRate?: () => void;
     private _offNotice?: () => void;
-    private _offSubagentTasks?: () => void;
 
     // Input ↑/↓ prompt history (shell-style). Oldest first; the typed prompts of
     // the current conversation. Seeded from the loaded session, appended on send.
@@ -379,21 +378,27 @@ export class CvPrompt extends LitElement implements CommandHost {
     // The live draft saved when entering history, restored on ↓ past the newest.
     private _historyDraft = '';
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._offBusy = appState.on('isBusy', (v) => {
+    constructor() {
+        super();
+        this._subs.on('isBusy', (v) => {
             this._isBusy = v;
             if (!v) {
                 queueMicrotask(() => this._flushQueue());
             }
         });
-        this._offPerm = appState.on('permissionMode', (v) => {
+        this._subs.on('permissionMode', (v) => {
             this._permissionMode = v;
         });
-        this._offPending = appState.on('pendingPermission', (v) => {
+        this._subs.on('pendingPermission', (v) => {
             this._pendingPermission = v != null;
         });
+        this._subs.on('subagentTasks', (v) => {
+            this._subagentTasks = v;
+        });
+    }
 
+    override connectedCallback(): void {
+        super.connectedCallback();
         // Seed the ↑/↓ prompt history. The host loads it in the background after
         // the initial render and pushes it via chat_prompt_history. Replace, not
         // append — the history is per-session.
@@ -468,10 +473,6 @@ export class CvPrompt extends LitElement implements CommandHost {
             },
         );
 
-        this._offSubagentTasks = appState.on('subagentTasks', (v) => {
-            this._subagentTasks = v;
-        });
-
         // Close a menu-opened palette on an outside click. (The `/`-opened
         // one closes on textarea blur; this covers the searchable case, whose
         // focus lives in the menu's own search box.)
@@ -484,14 +485,10 @@ export class CvPrompt extends LitElement implements CommandHost {
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
-        this._offBusy?.();
-        this._offPerm?.();
-        this._offPending?.();
         this._offHistory?.();
         this._offCleared?.();
         this._offRate?.();
         this._offNotice?.();
-        this._offSubagentTasks?.();
         document.removeEventListener('pointerdown', this._onDocPointerDown, true);
         document.removeEventListener('keydown', this._onDocKeyDown, true);
     }

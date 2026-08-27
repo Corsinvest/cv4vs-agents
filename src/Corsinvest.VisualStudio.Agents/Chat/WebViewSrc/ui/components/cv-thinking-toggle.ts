@@ -10,6 +10,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Lightbulb16Filled from '@fluentui/svg-icons/icons/lightbulb_16_filled.svg';
 import Lightbulb16Regular from '@fluentui/svg-icons/icons/lightbulb_16_regular.svg';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { iconStyles, tooltipStyles } from '../styles/shared';
 import { ThinkingCommand } from '../../core/commands/model-controls';
 import type { CommandHost } from '../../core/commands/base';
@@ -48,24 +49,15 @@ export class CvThinkingToggle extends LitElement {
 
     @state() private _enabled = appState.thinkingEnabled;
 
-    private _offs: Array<() => void> = [];
+    private readonly _subs = new StateSubscriptions(this);
     private readonly _command = new ThinkingCommand();
 
-    override connectedCallback(): void {
-        super.connectedCallback();
-        this._offs = [
-            appState.on('thinkingEnabled', (v) => {
-                this._enabled = v;
-            }),
-            appState.on('models', () => this.requestUpdate()),
-            appState.on('currentModel', () => this.requestUpdate()),
-        ];
-    }
-
-    override disconnectedCallback(): void {
-        super.disconnectedCallback();
-        this._offs.forEach((off) => off());
-        this._offs = [];
+    constructor() {
+        super();
+        this._subs.on('thinkingEnabled', (v) => {
+            this._enabled = v;
+        });
+        this._subs.rerenderOn('models', 'currentModel');
     }
 
     private _onClick = (): void => {

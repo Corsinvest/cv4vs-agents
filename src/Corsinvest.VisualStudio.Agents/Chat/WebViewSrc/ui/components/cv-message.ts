@@ -15,6 +15,7 @@ import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { fetchChatImage, openChatDocument } from '../../core/lazy';
 import { state as appState } from '../../core/state';
+import { StateSubscriptions } from '../../core/state-subscriptions';
 import { iconUrl } from '../../core/icon-url';
 import { fileName } from '../../core/path';
 import { formatTokenCount } from '../helpers/format';
@@ -73,7 +74,7 @@ export class CvMessage extends LitElement {
     // Re-measure the truncation on width changes: text re-wraps, so the px cap and the "Show more"
     // decision must be recomputed. updated() alone fires on property change, not on resize.
     private _unobserve?: () => void;
-    private _offUi?: () => void;
+    private readonly _subs = new StateSubscriptions(this);
     // Last observed width — the observer fires on our own max-height writes too, so re-measure only
     // when the WIDTH actually changed (that's what re-wraps the text). Avoids a feedback loop.
     private _lastWidth = 0;
@@ -154,16 +155,14 @@ export class CvMessage extends LitElement {
         return this;
     }
 
-    override connectedCallback(): void {
-        super.connectedCallback();
+    constructor() {
+        super();
         // previewLines IS the cap, so a change to it changes the truncation of every bubble.
-        this._offUi = appState.on('ui', () => this._measure());
+        this._subs.on('ui', () => this._measure());
     }
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
-        this._offUi?.();
-        this._offUi = undefined;
         if (this._streamTimer) {
             clearTimeout(this._streamTimer);
             this._streamTimer = undefined;
