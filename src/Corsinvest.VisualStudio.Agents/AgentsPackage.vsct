@@ -129,6 +129,21 @@
       <Group guid="guidAgentsCommandSet" id="EditorPromptsGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="EditorPromptsSubMenu"/>
       </Group>
+      <!-- Explain, in the two windows that show a failure. A flat entry rather than the editor's
+           submenu: there is one thing to ask of a build log, and a submenu holding a single item
+           is a click spent on nothing. Same low priority, for the same reason — it is reached
+           without hunting.
+           The Output pane's context menu is IDM_VS_CTXT_RESULTSLIST, which does not read like it:
+           vsshlids.h has no IDM_VS_CTXT_OUTPUTWINDOW, and the groups inside this one are the
+           IDG_VS_RESULTSLIST* block it heads "Output Window Pane Context menu groups".
+           IDM_VS_TOOL_OUTPUTWINDOW is NOT it — that is the window's toolbar, and anchoring there
+           puts the entry somewhere the right-click never shows. -->
+      <Group guid="guidAgentsCommandSet" id="OutputContextGroup" priority="0x0050">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_RESULTSLIST"/>
+      </Group>
+      <Group guid="guidAgentsCommandSet" id="ErrorListContextGroup" priority="0x0050">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ERRORLIST"/>
+      </Group>
       <Group guid="guidAgentsCommandSet" id="HelpDocsGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="HelpSubMenu"/>
       </Group>
@@ -179,6 +194,15 @@
         <Strings>
           <ButtonText>Prompt</ButtonText>
         </Strings>
+      </Button>
+
+      <!-- DynamicVisibility so BeforeQueryStatus can grey it when there is nothing to explain.
+           The Error List placement is the CommandPlacement below: a Button carries one Parent. -->
+      <Button guid="guidAgentsCommandSet" id="ExplainCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="OutputContextGroup"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Explain in cv4vs Agents</ButtonText></Strings>
       </Button>
 
       <Button guid="guidAgentsCommandSet" id="SettingsCommandId" priority="0x0100" type="Button">
@@ -260,6 +284,13 @@
     </Bitmaps>
   </Commands>
 
+  <CommandPlacements>
+    <!-- The same command placed again, not a second one to keep in step. -->
+    <CommandPlacement guid="guidAgentsCommandSet" id="ExplainCommandId" priority="0x0100">
+      <Parent guid="guidAgentsCommandSet" id="ErrorListContextGroup"/>
+    </CommandPlacement>
+  </CommandPlacements>
+
   <Symbols>
     <GuidSymbol name="guidAgentsPackage" value="{b1c2d3e4-f5a6-7890-bcde-fa1234567890}" />
     <GuidSymbol name="guidAgentsCommandSet" value="{a2b3c4d5-e6f7-8901-cdef-ab1234567890}">
@@ -280,6 +311,8 @@
       <IDSymbol name="EditorContextGroup" value="0x1077" />
       <IDSymbol name="EditorPromptsSubMenu" value="0x1078" />
       <IDSymbol name="EditorPromptsGroup" value="0x1079" />
+      <IDSymbol name="OutputContextGroup" value="0x107A" />
+      <IDSymbol name="ErrorListContextGroup" value="0x107B" />
       <IDSymbol name="HelpDocsGroup" value="0x1080" />
       <IDSymbol name="HelpContactGroup" value="0x1090" />
       <!-- Must match PackageIds.cs — a mismatch is silent: the entry just never appears. -->
@@ -296,6 +329,7 @@
       <IDSymbol name="StatisticsCommandId" value="0x0209" />
       <IDSymbol name="UsageCommandId" value="0x020A" />
       <IDSymbol name="ContextUsageCommandId" value="0x020B" />
+      <IDSymbol name="ExplainCommandId" value="0x020C" />
       <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
            number of open panes and must not run into the fixed ids above. -->
       <IDSymbol name="ActiveSessionCommandId" value="0x0300" />

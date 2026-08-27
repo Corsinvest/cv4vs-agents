@@ -1107,7 +1107,7 @@ internal sealed partial class IdeContextService
         return result;
     }
 
-    private static string SeverityToLsp(vsBuildErrorLevel level) => level switch
+    internal static string SeverityToLsp(vsBuildErrorLevel level) => level switch
     {
         vsBuildErrorLevel.vsBuildErrorLevelHigh => "Error",
         vsBuildErrorLevel.vsBuildErrorLevelMedium => "Warning",

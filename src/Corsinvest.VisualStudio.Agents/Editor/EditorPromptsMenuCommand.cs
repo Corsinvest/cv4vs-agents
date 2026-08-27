@@ -3,13 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-using Corsinvest.VisualStudio.Agents.Core.Panes;
-using Corsinvest.VisualStudio.Agents.Core.Profiles;
 using Corsinvest.VisualStudio.Agents.Ide;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.ComponentModel.Design;
-using System.Linq;
 using Task = System.Threading.Tasks.Task;
 
 namespace Corsinvest.VisualStudio.Agents.Editor;
@@ -79,25 +76,7 @@ internal sealed class EditorPromptsMenuCommand : OleMenuCommand
         cmd.MatchedCommandId = 0;
         if (index < 0 || index >= items.Count) { return; }
 
-        Send(items[index].Prompt);
-    }
-
-    /// <summary>Delivers the prompt to a chat pane. With several open it goes to the last
-    /// activated — the one being worked in, where the first by SeqNo would just be the oldest —
-    /// and brings it forward, or the prompt lands in a tool window nobody is looking at.</summary>
-    private static void Send(string prompt)
-    {
-        var target = PaneRegistry.Instance.OfKind(PaneKind.Chat).LastOrDefault(e => e.SetComposerAction != null);
-        if (target == null)
-        {
-            // First profile = the native "Claude" that ProfileStore prepends.
-            var profile = ProfileStore.Load(forEdit: false).FirstOrDefault();
-            if (profile != null) { PaneLauncher.OpenNew(PaneKind.Chat, profile, initialPrompt: prompt); }
-            return;
-        }
-
-        target.ActivateAction?.Invoke();
-        target.SetComposerAction(prompt, false);
+        PromptDispatcher.Send(items[index].Prompt, items[index].SendImmediately);
     }
 
     private static int GetIndex(EditorPromptsMenuCommand cmd)

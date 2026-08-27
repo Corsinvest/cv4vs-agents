@@ -43,7 +43,7 @@ Root: `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\`
 
 ```
 profiles.json                       environment profiles (name, enabled, env vars)
-editor-prompts.json                 editor context-menu prompts (title, prompt, needs-selection)
+editor-prompts.json                 editor context-menu prompts (title, prompt, needs-selection, send-on-click)
 picker-ignore.gitignore             extra `@` picker ignore rules, on top of the workspace's own
 WebView2/                           WebView2 user-data (chat UI cache/storage)
 icons/                              file-type icons rasterised from VS KnownMonikers

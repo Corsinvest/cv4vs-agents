@@ -34,6 +34,7 @@ internal static class PackageIds
     public const int StatisticsCommandId = 0x0209;
     public const int UsageCommandId = 0x020A;
     public const int ContextUsageCommandId = 0x020B;
+    public const int ExplainCommandId = 0x020C;
 
     // Seeds the dynamic open-panes range, which grows with the number of open panes — its own
     // 0x0300 block, clear of the fixed ids above.

@@ -11,9 +11,9 @@
     </Grid.RowDefinitions>
 
     <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,6"
-               Text="Prompts offered when you right-click code, under &quot;cv4vs Agents&quot;. Picking one writes it into a chat pane's composer — the file and selection are sent with it, so the prompt is the instruction alone. Rows appear in the menu in this order." />
+               Text="Prompts offered when you right-click code, under &quot;cv4vs Agents&quot;. Picking one hands it to a chat pane — the file and selection are sent with it, so the prompt is the instruction alone. &quot;Send on click&quot; runs it straight away; clear it for a prompt you mean to finish typing first. Rows appear in the menu in this order." />
 
-    <!-- One grid, not the master/detail the profiles page needs: three fields per row fit in it. -->
+    <!-- One grid, not the master/detail the profiles page needs: four fields per row fit in it. -->
     <DataGrid Grid.Row="1" x:Name="PromptsGrid"
               AutoGenerateColumns="False"
               CanUserAddRows="False"
@@ -26,6 +26,8 @@
                             Binding="{Binding Prompt, UpdateSourceTrigger=PropertyChanged}" />
         <DataGridCheckBoxColumn Header="Needs selection" Width="Auto"
                                 Binding="{Binding RequiresSelection, UpdateSourceTrigger=PropertyChanged}" />
+        <DataGridCheckBoxColumn Header="Send on click" Width="Auto"
+                                Binding="{Binding SendImmediately, UpdateSourceTrigger=PropertyChanged}" />
       </DataGrid.Columns>
     </DataGrid>
 

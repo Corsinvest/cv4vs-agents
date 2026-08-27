@@ -129,10 +129,14 @@ own.
   selection) rides along with the prompt, shown as a chip you can click to jump back to it. One
   toggle turns the sharing off when you'd rather it didn't.
 - **Ask from the editor** — right-click code and the **cv4vs Agents** submenu offers Explain,
-  Review, Find bugs, Write tests, Simplify. The prompt lands in the composer rather than being
-  sent, so you can add the half line that matters; the file and selection travel with it, so the
-  prompt itself is just the instruction. The list is yours to edit in Options → Editor prompts —
-  title, text, and whether the entry needs a selection to be enabled.
+  Review, Find bugs, Write tests, Simplify. The prompt lands in the composer, so you can add the
+  half line that matters; the file and selection travel with it, so the prompt itself is just the
+  instruction. The list is yours to edit in Options → Editor prompts — title, text, whether the
+  entry needs a selection, and whether it sends on click instead of waiting.
+- **Ask about a failure** — right-click in the **Output window** or the **Error List** and pick
+  **Explain in cv4vs Agents**. In the Error List it takes the rows you selected, with their file,
+  line and project; in the Output window your selection, or the tail of the pane when you selected
+  nothing — a build error is worth asking about without highlighting it first.
 - **Jump between panes** — a toolbar list of every open pane, Chat and CLI together, each with its
   title and kind. Docked panes hide each other behind tabs; this is how you find the one you want.
 - **[Sub-agent panel](docs/chat/sub-agents.md)** — a chip shows how many sub-agents are running; click it
