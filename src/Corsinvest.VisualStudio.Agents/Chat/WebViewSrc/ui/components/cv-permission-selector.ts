@@ -43,7 +43,6 @@ export class CvPermissionSelector extends LitElement {
     ];
 
     @state() private _current: PermissionMode = appState.permissionMode;
-    @state() private _models = appState.models;
 
     private _off?: () => void;
     private _offModels?: () => void;
@@ -53,10 +52,7 @@ export class CvPermissionSelector extends LitElement {
         this._off = appState.on('permissionMode', (v) => {
             this._current = v;
         });
-        // The label's item list is model-dependent (supportsAutoMode).
-        this._offModels = appState.on('models', (v) => {
-            this._models = v;
-        });
+        this._offModels = appState.on('models', () => this.requestUpdate());
     }
 
     override disconnectedCallback(): void {
@@ -70,9 +66,6 @@ export class CvPermissionSelector extends LitElement {
     };
 
     override render() {
-        // _models is read so the label re-resolves when the catalogue (and thus the
-        // available modes) changes.
-        void this._models;
         // No fallback to the first item: the CLI can sit in a mode the picker doesn't list
         // (`dontAsk`, or `auto`/`bypassPermissions` once filtered out), and labelling that
         // "Manual" would state the opposite of what is in force. The raw value is ugly and true.

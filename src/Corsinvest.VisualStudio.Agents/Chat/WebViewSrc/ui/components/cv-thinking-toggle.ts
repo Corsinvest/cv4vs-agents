@@ -47,9 +47,6 @@ export class CvThinkingToggle extends LitElement {
     @property({ attribute: false }) host!: CommandHost;
 
     @state() private _enabled = appState.thinkingEnabled;
-    // The catalogue decides whether this model thinks at all.
-    @state() private _models = appState.models;
-    @state() private _current = appState.currentModel;
 
     private _offs: Array<() => void> = [];
     private readonly _command = new ThinkingCommand();
@@ -60,12 +57,8 @@ export class CvThinkingToggle extends LitElement {
             appState.on('thinkingEnabled', (v) => {
                 this._enabled = v;
             }),
-            appState.on('models', (v) => {
-                this._models = v;
-            }),
-            appState.on('currentModel', (v) => {
-                this._current = v;
-            }),
+            appState.on('models', () => this.requestUpdate()),
+            appState.on('currentModel', () => this.requestUpdate()),
         ];
     }
 
@@ -82,9 +75,6 @@ export class CvThinkingToggle extends LitElement {
     };
 
     override render() {
-        // Read so the availability check re-runs when either changes.
-        void this._models;
-        void this._current;
         // Hidden on models without adaptive thinking, on the same condition as the menu row.
         if (!this._command.isEnabled()) {
             return nothing;

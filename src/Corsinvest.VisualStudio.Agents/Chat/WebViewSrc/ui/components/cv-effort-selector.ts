@@ -36,9 +36,6 @@ export class CvEffortSelector extends LitElement {
 
     @state() private _effort = appState.effortLevel;
     @state() private _ultracode = appState.ultracodeEnabled;
-    // The catalogue decides whether this model has effort at all.
-    @state() private _models = appState.models;
-    @state() private _current = appState.currentModel;
 
     private _offs: Array<() => void> = [];
 
@@ -51,12 +48,8 @@ export class CvEffortSelector extends LitElement {
             appState.on('ultracodeEnabled', (v) => {
                 this._ultracode = v;
             }),
-            appState.on('models', (v) => {
-                this._models = v;
-            }),
-            appState.on('currentModel', (v) => {
-                this._current = v;
-            }),
+            appState.on('models', () => this.requestUpdate()),
+            appState.on('currentModel', () => this.requestUpdate()),
         ];
     }
 
@@ -71,9 +64,6 @@ export class CvEffortSelector extends LitElement {
     };
 
     override render() {
-        // Read so the availability check re-runs when either changes.
-        void this._models;
-        void this._current;
         if (currentEffortLevels() === null) {
             return nothing;
         }

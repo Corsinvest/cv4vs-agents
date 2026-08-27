@@ -50,7 +50,6 @@ export class CvModelSelector extends LitElement {
     ];
 
     @state() private _current = appState.currentModel;
-    @state() private _models = appState.models;
 
     private _off?: () => void;
     private _offModels?: () => void;
@@ -60,10 +59,7 @@ export class CvModelSelector extends LitElement {
         this._off = appState.on('currentModel', (v) => {
             this._current = v;
         });
-        // The label comes from the catalogue, so it resolves only once that has arrived.
-        this._offModels = appState.on('models', (v) => {
-            this._models = v;
-        });
+        this._offModels = appState.on('models', () => this.requestUpdate());
     }
 
     override disconnectedCallback(): void {
@@ -77,8 +73,6 @@ export class CvModelSelector extends LitElement {
     };
 
     override render() {
-        // Read so the label re-resolves when the catalogue lands (it maps value → displayName).
-        void this._models;
         // fluent-tooltip, not a title attribute: the native one is drawn by the OS, so it follows
         // Windows' light/dark rather than the theme VS is in — and VS has themes (Blue, third-party
         // ones) that neither of the two settings a WebView2 profile can be put in would match.
