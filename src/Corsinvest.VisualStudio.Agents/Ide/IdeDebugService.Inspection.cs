@@ -262,10 +262,9 @@ internal sealed partial class IdeDebugService
             if (frame == null) { return new LocalsResult { Ok = false, InBreak = true, Reason = "No current stack frame." }; }
 
             var locals = new List<LocalInfo>();
-            var truncated = false;
-            // One clock for both collections: the deadline is on the capture, not on each group, so
+            // One budget for both collections: the deadline is on the capture, not on each group, so
             // arguments that take their time leave less for locals rather than doubling the wait.
-            var clock = Stopwatch.StartNew();
+            var budget = new WalkBudget();
             // Arguments are a separate collection on the frame, and were missing entirely: stopped
             // in a method, its parameters are usually the first thing worth reading.
             Collect(frame.Arguments, isArgument: true);
@@ -276,7 +275,7 @@ internal sealed partial class IdeDebugService
                 if (source == null) { return; }
                 foreach (Expression e in source)
                 {
-                    if (clock.Elapsed >= WalkDeadline) { truncated = true; break; }
+                    if (budget.Expired()) { break; }
                     // Top-level statements report `args` in BOTH collections, so it arrived twice —
                     // once flagged as an argument, once not, which reads as a bug in the tool.
                     // Arguments are collected first and win: knowing a name is a parameter says
@@ -293,7 +292,7 @@ internal sealed partial class IdeDebugService
                         Value = e.Value,
                         HasMembers = hasMembers,
                         IsArgument = isArgument,
-                        Members = hasMembers && depth > 0 ? WalkMembers(e, depth, maxMembers, clock, ref truncated) : null,
+                        Members = hasMembers && depth > 0 ? WalkMembers(e, depth, maxMembers, budget, 1) : null,
                     });
                 }
             }
@@ -309,7 +308,9 @@ internal sealed partial class IdeDebugService
                 InBreak = true,
                 FunctionName = frame.FunctionName,
                 Locals = ordered,
-                Truncated = truncated,
+                Truncated = budget.Truncated,
+                TruncatedReason = budget.Reason,
+                TruncationMessage = budget.Message,
             };
         }
         catch (Exception ex)
@@ -596,7 +597,8 @@ internal sealed partial class IdeDebugService
                 };
             }
 
-            var truncated = false;
+            var budget = new WalkBudget();
+            var members = WalkMembers(root, depth, maxMembers, budget, 1);
             return new ExpandResult
             {
                 Ok = true,
@@ -604,8 +606,10 @@ internal sealed partial class IdeDebugService
                 Expression = expression,
                 Value = root.Value,
                 Type = root.Type,
-                Members = WalkMembers(root, depth, maxMembers, Stopwatch.StartNew(), ref truncated),
-                Truncated = truncated,
+                Members = members,
+                Truncated = budget.Truncated,
+                TruncatedReason = budget.Reason,
+                TruncationMessage = budget.Message,
             };
         }
         catch (Exception exc)
@@ -659,17 +663,19 @@ internal sealed partial class IdeDebugService
 
     /// <summary>One level of members, recursing while <paramref name="depth"/> is left. Sorted by
     /// name like the locals list, so two reads of the same object line up.
-    /// <para><paramref name="clock"/> is started by the caller and shared by every branch of one
+    /// <para><paramref name="budget"/> is created by the caller and shared by every branch of one
     /// capture — including a sibling walk over another collection — so the deadline applies to the
-    /// capture as a whole and a slow first group cannot spend the whole budget unnoticed.</para></summary>
-    private static LocalInfo[] WalkMembers(Expression parent, int depth, int maxMembers, Stopwatch clock, ref bool truncated)
+    /// capture as a whole and a slow first group cannot spend the whole budget unnoticed.
+    /// <paramref name="level"/> feeds the truncation message only: depth counts what is left, not
+    /// how far the walk actually got before a branch stopped early.</para></summary>
+    private static LocalInfo[] WalkMembers(Expression parent, int depth, int maxMembers, WalkBudget budget, int level)
     {
         if (depth <= 0) { return null; }
-        if (clock.Elapsed >= WalkDeadline) { truncated = true; return null; }
+        if (budget.Expired()) { return null; }
 
         var members = parent.DataMembers;
         if (members == null || members.Count == 0) { return null; }
-        if (members.Count > maxMembers) { truncated = true; }
+        if (members.Count > maxMembers) { budget.HitMemberCap = true; }
 
         var taken = new List<LocalInfo>();
         foreach (Expression m in members)
@@ -677,7 +683,8 @@ internal sealed partial class IdeDebugService
             if (taken.Count >= maxMembers) { break; }
             // Checked per member, not per level: the members of one object are exactly where a
             // single slow getter shows up, and the loop must be able to stop inside it.
-            if (clock.Elapsed >= WalkDeadline) { truncated = true; break; }
+            if (budget.Expired()) { break; }
+            budget.Visit(level);
             var hasMembers = HasRealMembers(m);
             taken.Add(new LocalInfo
             {
@@ -685,10 +692,62 @@ internal sealed partial class IdeDebugService
                 Type = m.Type,
                 Value = m.Value,
                 HasMembers = hasMembers,
-                Members = hasMembers ? WalkMembers(m, depth - 1, maxMembers, clock, ref truncated) : null,
+                Members = hasMembers ? WalkMembers(m, depth - 1, maxMembers, budget, level + 1) : null,
             });
         }
         return [.. taken.OrderBy(l => l.Name, StringComparer.Ordinal)];
+    }
+
+    /// <summary>What one capture spent, and why it stopped short. Replaces the pair
+    /// (<c>Stopwatch</c>, <c>ref bool truncated</c>) that used to be threaded through the walk:
+    /// the same state, plus what it takes to say where the walk gave up.
+    /// <para>The two ways a walk truncates need different moves from the caller — a member cap is
+    /// raised with maxMembers, an exhausted budget is not, and there the answer is to expand one
+    /// path instead of all of them — so reporting both as one flag left the model guessing which
+    /// it was looking at.</para></summary>
+    private sealed class WalkBudget
+    {
+        private readonly Stopwatch _clock = Stopwatch.StartNew();
+
+        /// <summary>Members materialised, over every level and every sibling walk of the capture.</summary>
+        public int Nodes { get; private set; }
+
+        /// <summary>Deepest level reached, 1 for the members of a root. 0 when nothing was walked.</summary>
+        public int DeepestLevel { get; private set; }
+
+        public bool HitDeadline { get; private set; }
+
+        public bool HitMemberCap { get; set; }
+
+        public bool Truncated => HitDeadline || HitMemberCap;
+
+        /// <summary>Latches: the answer is what makes the result truncated, and the walk unwinds
+        /// through levels that would each ask again.</summary>
+        public bool Expired()
+        {
+            if (_clock.Elapsed >= WalkDeadline) { HitDeadline = true; }
+            return HitDeadline;
+        }
+
+        public void Visit(int level)
+        {
+            Nodes++;
+            if (level > DeepestLevel) { DeepestLevel = level; }
+        }
+
+        /// <summary>The deadline wins when both fired: running out of time is what makes the rest of
+        /// the result unreliable, while a member cap is a choice the caller made.</summary>
+        public string Reason => HitDeadline ? "budget" : HitMemberCap ? "maxMembers" : null;
+
+        public string Message =>
+            HitDeadline
+                ? $"Stopped after {WalkDeadline.TotalSeconds:0.#}s at depth {DeepestLevel} ({Nodes} members read) — "
+                  + "reading members runs getters in the debuggee. Expand one path with "
+                  + "debug_expand(\"<expression>\") instead of walking every object."
+                : HitMemberCap
+                    ? $"Some level held more members than maxMembers kept ({Nodes} read) — raise maxMembers, "
+                      + "or expand the one object you need with debug_expand."
+                    : null;
     }
 
     /// <summary>Whether an expression has members worth expanding.

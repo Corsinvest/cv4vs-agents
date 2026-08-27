@@ -654,7 +654,9 @@ internal sealed partial class IdeContextService
             var item = FindProjectItem(proj.ProjectItems, filePath);
             if (item == null)
             {
-                return (false, proj.Name, $"'{filePath}' is not an item of '{proj.Name}'.");
+                // The project name was validated just above, so reaching here means the project is
+                // right and the file is wrong — the one case where naming the items settles it.
+                return (false, proj.Name, $"'{filePath}' is not an item of '{proj.Name}'. {ItemsHint(proj, filePath)}");
             }
             item.Remove();
             proj.Save();
@@ -689,6 +691,58 @@ internal sealed partial class IdeContextService
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         return FindProjectItem(proj.ProjectItems, filePath) != null;
+    }
+
+    /// <summary>What the project does hold, for a file that was not in it. Narrowed to the same
+    /// extension first: a project runs to hundreds of items, and a caller who got the path wrong
+    /// almost always got it wrong for a file of the kind they were after.</summary>
+    private static string ItemsHint(Project proj, string filePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var all = new List<string>();
+        CollectProjectItemPaths(proj.ProjectItems, all);
+        if (all.Count == 0) { return "The project has no file items."; }
+
+        var ext = System.IO.Path.GetExtension(filePath);
+        var pool = all.FindAll(f => string.Equals(System.IO.Path.GetExtension(f), ext, StringComparison.OrdinalIgnoreCase));
+        var sameExt = pool.Count > 0;
+        if (!sameExt) { pool = all; }
+
+        pool.Sort(StringComparer.OrdinalIgnoreCase);
+        var shown = pool.Count > ItemsHintSample ? pool.GetRange(0, ItemsHintSample) : pool;
+        var names = string.Join(", ", shown.ConvertAll(f => $"'{System.IO.Path.GetFileName(f)}'"));
+        var more = pool.Count > shown.Count ? $" … and {pool.Count - shown.Count} more" : "";
+        return sameExt
+            ? $"{ext} items in it: {names}{more}."
+            : $"It holds {all.Count} item(s), none of them {ext}: {names}{more}.";
+    }
+
+    /// <summary>How many items an ItemsHint names. A project has hundreds; this is enough to spot
+    /// the one that was nearly right.</summary>
+    private const int ItemsHintSample = 12;
+
+    /// <summary>Every file an item tree holds, flattened. Mirrors FindProjectItem's walk — same
+    /// depth guard, same tolerance for an item that will not report its files.</summary>
+    private static void CollectProjectItemPaths(ProjectItems items, List<string> into, int depth = 0)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (items == null || depth > MaxProjectDepth) { return; }
+        foreach (ProjectItem item in items)
+        {
+            try
+            {
+                for (short i = 1; i <= item.FileCount; i++)
+                {
+                    // A folder is a ProjectItem too and reports its own path: it is not something
+                    // the caller could have meant to remove by file name.
+                    var path = item.FileNames[i];
+                    if (!System.IO.Directory.Exists(path)) { into.Add(path); }
+                }
+            }
+            catch { /* an item that won't report its files has nothing to add */ }
+
+            CollectProjectItemPaths(item.ProjectItems, into, depth + 1);
+        }
     }
 
     /// <summary>Locate a ProjectItem by file path, recursing into folders. Compares the item's own
