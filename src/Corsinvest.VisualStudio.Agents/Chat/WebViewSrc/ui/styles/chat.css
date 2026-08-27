@@ -50,6 +50,15 @@
     }
 }
 
+/* On the bubble, not the cv-message host: the host is what position:sticky pins, and a pinned
+ * 85% box would leave the scrolling answer visible past its edge. :where() keeps the specificity
+ * at the bare .cv-message.user, so the stuck query below can override it. */
+:where(.cv-exchange > cv-message[msg-role="user"]) .cv-message.user {
+    max-width: 85%;
+    margin-left: auto;
+    transition: max-width 0.12s ease;
+}
+
 .cv-message.user {
     display: block;
     align-self: stretch;
@@ -145,10 +154,20 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child {
     margin-top: -12px;
     z-index: 2;
     background: var(--colorNeutralBackground1);
+    /* Carries the pinned state to the bubble below: being stuck is not a selector on the element
+     * itself, only a query its descendants can ask. */
+    container-type: scroll-state;
 }
 body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-message.user {
     background: var(--colorNeutralBackground3);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+/* Pinned, the bubble is the exchange's header rather than a message in the flow, so it takes the
+ * full column back — an 85% header would leave the scrolling answer visible past its edge. */
+@container scroll-state(stuck: top) {
+    .cv-message.user {
+        max-width: 100%;
+    }
 }
 /* Clip + fade the TEXT (.md is a plain block, so max-height clips cleanly with no scrollbar).
  * The "Show more" button flows BELOW .md, still inside the bubble, so it's always visible below
@@ -665,6 +684,11 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 cv-message:hover .cv-msg-actions,
 cv-message:focus-within .cv-msg-actions {
     opacity: 1;
+}
+/* Follows the bubble to the right edge, since the row is a sibling of the box and not inside it. */
+cv-message[msg-role="user"] .cv-msg-actions {
+    justify-content: flex-end;
+    margin-right: 2px;
 }
 /* Light-DOM twin of iconTriggerStyles (shared.ts), for the chat's own fluent-buttons: message rows
  * (Fork) and tool header actions (chevron/error/open-diff/expand). */
