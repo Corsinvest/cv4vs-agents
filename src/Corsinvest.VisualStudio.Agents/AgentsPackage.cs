@@ -67,6 +67,9 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     private uint _debuggerEventsCookie;
     private IVsDebugger _debugger;
 
+    // A field, not a local: the sink is COM, and a collected one silently stops delivering.
+    private EnvDTE.DebuggerEvents _dteDebuggerEvents;
+
     // Solution reload watch. VS models a reload as close-then-open and no event tells the two apart
     // from a plain close, so the close is deferred and the panes are kept until we know which it was.
     private System.Threading.Timer _reloadWatch;
@@ -303,6 +306,29 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         });
     }
 
+    /// <summary>Break mode, with the reason attached. Deferred off the event: reading the location
+    /// goes back through a debugger still settling into the break.</summary>
+    private void OnEnterBreakMode(EnvDTE.dbgEventReason reason, ref EnvDTE.dbgExecutionAction action)
+    {
+        try
+        {
+            var notify = AgentsOptions.General.NotifyOnDebugBreak;
+            if (notify == DebugBreakNotify.Never) { return; }
+            if (reason == EnvDTE.dbgEventReason.dbgEventReasonStep) { return; }
+
+            var notifyOnBreakpoint = notify == DebugBreakNotify.ExceptionsAndBreakpoints;
+            _ = JoinableTaskFactory.RunAsync(async () =>
+            {
+                try { await DebugBreakService.NotifyBreakAsync(notifyOnBreakpoint); }
+                catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.OnEnterBreakMode.Notify", ex); }
+            });
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Pkg.OnEnterBreakMode", ex);
+        }
+    }
+
     /// <summary>Debugger mode changed. VS keeps window layouts per mode, so panes opened at design
     /// time are absent from the run-time layout and look as though the debugger closed them — the
     /// frames are still there, just not shown. Bring back the ones the registry knows are open.
@@ -314,6 +340,9 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     {
         try
         {
+            // Left break mode: whatever the break InfoBar was pointing at is over.
+            if (dbgmodeNew != DBGMODE.DBGMODE_Break) { DebugBreakService.Clear(); }
+
             if (Core.Panes.PaneRegistry.Instance.Entries.Count == 0) { return VSConstants.S_OK; }
             _ = JoinableTaskFactory.StartOnIdle(() =>
             {
@@ -406,6 +435,22 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         _debugger = await GetServiceAsync(typeof(SVsShellDebugger)) as IVsDebugger;
         _debugger?.AdviseDebuggerEvents(this, out _debuggerEventsCookie);
 
+        // Only DTE reports why the debugger stopped: OnModeChange above sees a step, a breakpoint
+        // and a thrown exception all as DBGMODE_Break. Best effort — without it the panes still
+        // follow the layout, there is just never a break offer.
+        try
+        {
+            if (await GetServiceAsync(typeof(EnvDTE.DTE)) is EnvDTE.DTE dte && dte.Events != null)
+            {
+                _dteDebuggerEvents = dte.Events.DebuggerEvents;
+                _dteDebuggerEvents.OnEnterBreakMode += OnEnterBreakMode;
+            }
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Pkg.AdviseDteDebuggerEvents", ex);
+        }
+
         // Prime from current state: VS may already have a solution — or, in Open Folder mode, a
         // folder — open before our package activates, so we'd miss OnAfterOpenSolution/
         // OnAfterOpenFolder. VSPROPID_IsSolutionOpen is documented as tracking a .sln file
@@ -435,6 +480,11 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             {
                 _debugger?.UnadviseDebuggerEvents(_debuggerEventsCookie);
                 _debuggerEventsCookie = 0;
+            }
+            if (_dteDebuggerEvents != null)
+            {
+                _dteDebuggerEvents.OnEnterBreakMode -= OnEnterBreakMode;
+                _dteDebuggerEvents = null;
             }
             _reloadWatch?.Dispose();
             _reloadWatch = null;

@@ -95,6 +95,9 @@ own.
 - **[70+ MCP tools](docs/mcp-tools.md)** — Visual Studio's own navigation, references, rename,
   diagnostics, build and the **live debugger** (breakpoints, stepping, locals, evaluate) handed to
   the agent. Not text search over source: the IDE's semantic, running view of your program.
+- **[It offers when you break](docs/options.md#asking-about-a-break)** — stop on an exception and a
+  bar appears over that file: one press asks about the break, and the agent reads the live stack and
+  locals rather than guessing from the source. Breakpoints are opt-in, steps never ask.
 - **[Review changes in VS's own diff](docs/chat/diff.md)** — every Edit/Write shows as an inline diff,
   and opens in Visual Studio's native, **editable** side-by-side diff: **save (Ctrl+S) to accept** or
   **close to reject**, the CLI applies it only if you saved.
@@ -154,7 +157,7 @@ own.
 - **[Restore panes on solution open](docs/options.md#general)** *(opt-in)* — reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
-- **[Tune it to your taste](docs/options.md)** — 26 options across General, Chat and Debug: what
+- **[Tune it to your taste](docs/options.md)** — 27 options across General, Chat and Debug: what
   the chat shows, how diffs render, which keys send, the starting permission mode, autosave,
   file checkpoints, upload and `@`-picker filters, log verbosity.
 - **[It tells you when it needs you](#pane-attention-notifications)** — with several panes working
