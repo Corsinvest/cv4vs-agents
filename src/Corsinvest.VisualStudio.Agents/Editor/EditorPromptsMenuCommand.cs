@@ -97,7 +97,7 @@ internal sealed class EditorPromptsMenuCommand : OleMenuCommand
         }
 
         target.ActivateAction?.Invoke();
-        target.SetComposerAction(prompt);
+        target.SetComposerAction(prompt, false);
     }
 
     private static int GetIndex(EditorPromptsMenuCommand cmd)

@@ -11,8 +11,35 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | Restore panes on solution open | bool | `false` | Reopen the panes (with their sessions) that were open for a solution when it is reopened. |
+| Offer to ask when the debugger pauses | `Never` / `Exceptions only` / `Exceptions and breakpoints` | `Exceptions only` | Show an InfoBar over the file the debugger stopped in, with an "Ask cv4vs Agents" button that asks a chat pane about the break. See [Asking about a break](#asking-about-a-break). |
 | Default new session | `Chat` / `CLI` | `Chat` | Which kind the "New" button creates by default (the dropdown still lets you pick the other). |
 | Claude executable path | file path | *(empty)* | Override auto-detection with a specific `claude.exe` (browse with `…`). Empty = auto-detect via PATH / native installer / npm. Must be the real `.exe` — `.cmd`/`.bat`/`.ps1` shims can't be launched. |
+
+### Asking about a break
+
+When the debugger stops, an InfoBar appears over the file it stopped in:
+
+> ⚠ Debugger paused on `DivideByZeroException` at `Calcolatrice.cs:13`.  **[Ask cv4vs Agents]**
+
+Pressing the button activates the last chat pane you used and asks it about the break. Nothing is
+sent until you press it, and the bar goes away on its own when execution resumes.
+
+The message names neither the file nor the exception type. Both are right there, but the debug
+[MCP tools](mcp-tools.md#debug) read them live and read more besides — the call stack, the locals,
+any expression — so naming a type up front would only anchor the answer on the outermost exception
+when the cause is usually an `InnerException` two levels down. What the message does say is to
+leave the debugger where it is: those same tools can step and continue, and you are standing in
+that break looking at it.
+
+Which pauses are worth an offer differs by kind, which is why the setting has three values rather
+than a checkbox:
+
+- **Exceptions** are a surprise, and the default.
+- **Breakpoints** are not — you placed it and know why you are there — so they are opt-in.
+- **Steps** never raise a bar at any setting: one per F10 is noise.
+
+A break landing where the previous one did is skipped too, so a breakpoint inside a loop raises one
+bar rather than one per iteration.
 
 ## Chat
 

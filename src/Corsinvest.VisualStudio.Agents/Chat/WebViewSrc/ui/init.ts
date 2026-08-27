@@ -148,7 +148,12 @@ function wireBridgeHandlers(): void {
         }
         const input = document.querySelector('cv-prompt') as
             import('./components/cv-prompt').CvPrompt | null;
-        input?.setComposerText(data?.text ?? '');
+        const text = data?.text ?? '';
+        if (data?.send && text) {
+            input?.sendPrompt(text, true);
+        } else {
+            input?.setComposerText(text);
+        }
     });
 
     // A key the composition control dropped, claimed by the pane on our behalf — see host-keys.ts.
