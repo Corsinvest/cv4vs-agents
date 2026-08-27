@@ -2,21 +2,21 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-// Che marked chiami i renderer giusti: la meta' che i test su funzioni pure non possono vedere.
-// I casi limite di COSA sia un riferimento stanno in codespan-link.test.ts e file-links.test.ts.
+// That marked calls the right renderers: the half that tests over pure functions cannot see.
+// The edge cases of WHAT counts as a reference live in codespan-link.test.ts and file-links.test.ts.
 //
-// LIMITE, da sapere prima di aggiungere test qui: renderMarkdown chiude con DOMPurify, che ha
-// bisogno di un `window` e sotto node --test non ce l'ha — `sanitize is not a function`, e la
-// funzione degrada al suo ramo di errore. Quindi qui si testa il TOKENIZER, cioe' quali token
-// marked produce e con quale renderer, non l'HTML finale. Per quello servirebbe jsdom (~10MB di
-// devDependency) per verificare una sanificazione che e' di DOMPurify, non nostra.
+// LIMIT, worth knowing before adding tests here: renderMarkdown ends with DOMPurify, which needs a
+// `window` and does not have one under node --test — `sanitize is not a function`, and the function
+// degrades to its error branch. So what is tested here is the TOKENIZER, i.e. which tokens marked
+// produces and with which renderer, not the final HTML. That would take jsdom (~10MB of
+// devDependency) to verify a sanitisation that is DOMPurify's, not ours.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { marked } from 'marked';
-import { closeOpenMarkdown } from '../core/markdown.ts'; // importa anche renderer ed estensione
+import { closeOpenMarkdown } from '../core/markdown.ts'; // also pulls in renderer and extension
 
-/** L'HTML di marked, prima di DOMPurify. */
+/** marked's HTML, before DOMPurify. */
 function md(text: string): string {
     return marked.parse(text, { async: false }) as string;
 }
@@ -25,46 +25,46 @@ function links(html: string): number {
     return (html.match(/class="cv-file-link"/g) ?? []).length;
 }
 
-// I tre percorsi che producono un link, uno per renderer.
+// The three paths that produce a link, one per renderer.
 
-test('prosa: lestensione fileLink intercetta un riferimento nudo', () => {
-    const html = md('vedi ClientEvents.cs:208 per il resto');
+test('prose: the fileLink extension catches a bare reference', () => {
+    const html = md('see ClientEvents.cs:208 for the rest');
     assert.equal(links(html), 1);
     assert.match(html, /data-file="ClientEvents\.cs"/);
 });
 
-test('inline code: il renderer codespan intercetta un riferimento in backtick', () => {
-    // La forma che il modello usa quasi sempre: 33 volte contro 2 su 25 sessioni reali.
-    const html = md('vedi `ClientEvents.cs:208` per il resto');
+test('inline code: the codespan renderer catches a backticked reference', () => {
+    // The form the model uses almost always: 33 times against 2 over 25 real sessions.
+    const html = md('see `ClientEvents.cs:208` for the rest');
     assert.equal(links(html), 1);
-    assert.match(html, /<code>/, 'il link vive DENTRO il code span, non al suo posto');
+    assert.match(html, /<code>/, 'the link lives INSIDE the code span, not in its place');
 });
 
-test('link markdown: il renderer link usa lhref e tiene la label', () => {
+test('markdown link: the link renderer uses the href and keeps the label', () => {
     const html = md('[McpServerHost.cs:192](src/Mcp/McpServerHost.cs:192)');
     assert.equal(links(html), 1);
     assert.match(html, /data-file="src\/Mcp\/McpServerHost\.cs"/);
     assert.match(html, />McpServerHost\.cs:192</);
 });
 
-// Il fence: la regola che NON deve cadere insieme a quella del code span.
+// The fence: the rule that must NOT fall together with the code span one.
 
-test('fence: un riferimento in un blocco di codice resta testo', () => {
+test('fence: a reference inside a code block stays text', () => {
     assert.equal(links(md('```\ncat ClientEvents.cs:208\n```')), 0);
 });
 
-test('fence: nemmeno con un linguaggio dichiarato', () => {
+test('fence: not even with a declared language', () => {
     assert.equal(links(md('```bash\nvim Foo.cs:12\n```')), 0);
 });
 
-test('fence: il pulsante Copia resta, e legge dal pre', () => {
-    // Un link dentro il blocco romperebbe la copia: cv-copy-btn prende il testo dal <pre> fratello.
+test('fence: the Copy button stays, and reads from the pre', () => {
+    // A link inside the block would break the copy: cv-copy-btn takes its text from the sibling <pre>.
     const html = md('```\nFoo.cs:12\n```');
     assert.match(html, /<cv-copy-btn[^>]*frompre="1"/);
 });
 
-test('tabella: il pulsante Copia porta il markdown sorgente, non il DOM', () => {
-    // Pipe e riga di allineamento devono sopravvivere: e' cio' che rende il paste ri-parsabile.
+test('table: the Copy button carries the markdown source, not the DOM', () => {
+    // Pipes and the alignment row must survive: that is what makes the paste re-parsable.
     const src = '| a | b |\n|:--|--:|\n| 1 | 2 |';
     const html = md(src + '\n');
     assert.match(html, /<div class="cv-md-table-wrap">/);
@@ -73,44 +73,44 @@ test('tabella: il pulsante Copia porta il markdown sorgente, non il DOM', () => 
     assert.equal(text.replace(/&quot;/g, '"').replace(/&amp;/g, '&'), src);
 });
 
-test('tabella: le celle restano renderizzate da marked', () => {
+test('table: the cells stay rendered by marked', () => {
     assert.equal(links(md('| file |\n|---|\n| ClientEvents.cs:208 |\n')), 1);
 });
 
-// Gli attributi che il host legge al click. Non passano da DOMPurify qui, ma la ADD_ATTR di
-// markdown.ts deve elencarli tutti: data-line-end mancava mentre il renderer lo emetteva da sempre,
-// e l'intervallo apriva senza selezionare.
+// The attributes the host reads on click. They do not go through DOMPurify here, but markdown.ts's
+// ADD_ATTR must list them all: data-line-end was missing while the renderer had always emitted it,
+// and a range opened without selecting.
 
-test('un intervallo emette data-line-end, in prosa e in backtick', () => {
-    for (const src of ['guarda StatsService.cs:35-48', 'guarda `StatsService.cs:35-48`']) {
+test('a range emits data-line-end, in prose and in backticks', () => {
+    for (const src of ['look at StatsService.cs:35-48', 'look at `StatsService.cs:35-48`']) {
         const html = md(src);
         assert.match(html, /data-line="35"/, src);
         assert.match(html, /data-line-end="48"/, src);
     }
 });
 
-test('una lista di righe diventa un link per riga, in entrambe le forme', () => {
-    assert.equal(links(md('AgentsPackage.cs:124,185,202 tre punti')), 3);
+test('a list of lines becomes one link per line, in both forms', () => {
+    assert.equal(links(md('AgentsPackage.cs:124,185,202 three spots')), 3);
     assert.equal(links(md('`AgentsPackage.cs:124,185,202`')), 3);
 });
 
-test('un href http resta un link esterno, non un file', () => {
+test('an http href stays an external link, not a file', () => {
     const html = md('[doc](https://example.com/a.cs:12)');
     assert.equal(links(html), 0);
     assert.match(html, /href="https:\/\/example\.com/);
 });
 
-test('un code span che non e un riferimento resta un code span', () => {
-    const html = md('esegui `npm run build` adesso');
+test('a code span that is not a reference stays a code span', () => {
+    const html = md('run `npm run build` now');
     assert.equal(links(html), 0);
     assert.match(html, /<code>npm run build<\/code>/);
 });
 
-// La ADD_ATTR di DOMPurify. Non possiamo eseguire sanitize qui (serve un window), ma il modo in cui
-// quel bug si manifesta e' un attributo emesso dai renderer e non elencato nella allow-list: il
-// confronto fra i due insiemi lo prende senza bisogno di un DOM.
+// DOMPurify's ADD_ATTR. We cannot run sanitize here (it needs a window), but the way that bug shows
+// up is an attribute emitted by the renderers and not listed in the allow-list: comparing the two
+// sets catches it without needing a DOM.
 
-test('ogni attributo emesso dai renderer e nella ADD_ATTR di DOMPurify', () => {
+test('every attribute the renderers emit is in DOMPurify ADD_ATTR', () => {
     const src = new URL('../core/markdown.ts', import.meta.url);
     const allowed = new Set(
         (readFileSync(src, 'utf8').match(/ADD_ATTR:\s*\[([^\]]*)\]/)?.[1] ?? '')
@@ -118,73 +118,70 @@ test('ogni attributo emesso dai renderer e nella ADD_ATTR di DOMPurify', () => {
             .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
             .filter(Boolean),
     );
-    // Sempre permessi da DOMPurify, non serve dichiararli.
+    // Always allowed by DOMPurify, no need to declare them.
     const builtin = new Set(['class', 'href', 'title', 'rel', 'src', 'alt', 'id', 'style']);
 
-    // Un markdown che passa da TUTTI i renderer che emettono attributi nostri.
+    // A markdown that goes through EVERY renderer emitting attributes of ours.
     const html = md(
-        'prosa Foo.cs:12-20 e `Bar.ts:34` e [x](src/Baz.cs:5)\n\n```ts\nconst a = 1;\n```',
+        'prose Foo.cs:12-20 and `Bar.ts:34` and [x](src/Baz.cs:5)\n\n```ts\nconst a = 1;\n```',
     );
     const emitted = new Set([...html.matchAll(/\s([a-z-]+)="/g)].map((m) => m[1]));
     const missing = [...emitted].filter((a) => !allowed.has(a) && !builtin.has(a));
-    assert.deepEqual(missing, [], `attributi che DOMPurify butterebbe via: ${missing.join(', ')}`);
+    assert.deepEqual(missing, [], `attributes DOMPurify would drop: ${missing.join(', ')}`);
 });
 
-// closeOpenMarkdown: il percorso dello streaming, che gira a OGNI token. Chiude i costrutti aperti
-// perche' un chunk parziale renda in modo stabile invece di ribaltare il layout a meta' risposta.
+// closeOpenMarkdown: the streaming path, which runs on EVERY token. It closes open constructs so a
+// partial chunk renders stably instead of flipping the layout halfway through a response.
 
-test('streaming: una fence aperta viene chiusa', () => {
-    assert.equal(
-        closeOpenMarkdown('testo\n```ts\nconst a = 1;'),
-        'testo\n```ts\nconst a = 1;\n```',
-    );
+test('streaming: an open fence gets closed', () => {
+    assert.equal(closeOpenMarkdown('text\n```ts\nconst a = 1;'), 'text\n```ts\nconst a = 1;\n```');
 });
 
-test('streaming: una fence gia chiusa non viene toccata', () => {
-    const t = 'testo\n```ts\nconst a = 1;\n```\ncoda';
+test('streaming: an already closed fence is left alone', () => {
+    const t = 'text\n```ts\nconst a = 1;\n```\ntail';
     assert.equal(closeOpenMarkdown(t), t);
 });
 
-test('streaming: un backtick spaiato sullultima riga viene chiuso', () => {
-    assert.equal(closeOpenMarkdown('vedi `Foo.cs:12'), 'vedi `Foo.cs:12`');
+test('streaming: an unpaired backtick on the last line gets closed', () => {
+    assert.equal(closeOpenMarkdown('see `Foo.cs:12'), 'see `Foo.cs:12`');
 });
 
-test('streaming: un backtick pari resta com e', () => {
-    const t = 'vedi `Foo.cs:12` qui';
+test('streaming: an even number of backticks stays as it is', () => {
+    const t = 'see `Foo.cs:12` here';
     assert.equal(closeOpenMarkdown(t), t);
 });
 
-test('streaming: i backtick dentro una fence aperta sono letterali', () => {
-    // Dentro un blocco i backtick non sono inline code: chiudere la fence basta, aggiungere anche
-    // un backtick spaiato romperebbe il blocco.
-    assert.equal(closeOpenMarkdown('```\nusa `x`'), '```\nusa `x`\n```');
+test('streaming: backticks inside an open fence are literal', () => {
+    // Inside a block backticks are not inline code: closing the fence is enough, adding an unpaired
+    // backtick too would break the block.
+    assert.equal(closeOpenMarkdown('```\nuse `x`'), '```\nuse `x`\n```');
 });
 
-test('streaming: un backtick spaiato su una riga PRECEDENTE non viene toccato', () => {
-    // Solo l'ultima riga e' in costruzione; una precedente e' gia' come il modello l'ha scritta.
-    const t = 'riga con ` spaiato\nriga finita';
+test('streaming: an unpaired backtick on a PREVIOUS line is left alone', () => {
+    // Only the last line is under construction; a previous one is already as the model wrote it.
+    const t = 'line with an unpaired `\nfinished line';
     assert.equal(closeOpenMarkdown(t), t);
 });
 
-test('streaming: testo vuoto resta vuoto', () => {
+test('streaming: empty text stays empty', () => {
     assert.equal(closeOpenMarkdown(''), '');
 });
 
-test('streaming: un riferimento a meta non linka, completo si', () => {
-    // Il caso che conta a ogni token: il testo cresce sotto il render. Il nome senza riga non
-    // qualifica (troppo rumoroso), quindi il link compare quando il ref e' davvero finito — e non
-    // lampeggia mentre i numeri arrivano una cifra per volta.
-    assert.equal(links(md(closeOpenMarkdown('vedi `Foo.cs'))), 0, 'senza riga: nessun link');
-    assert.equal(links(md(closeOpenMarkdown('vedi `Foo.cs:12`'))), 1, 'completo: link');
+test('streaming: a half-written reference does not link, a complete one does', () => {
+    // The case that matters on every token: the text grows under the render. A name without a line
+    // does not qualify (too noisy), so the link appears once the ref is really finished — and does
+    // not flicker while the digits arrive one at a time.
+    assert.equal(links(md(closeOpenMarkdown('see `Foo.cs'))), 0, 'no line: no link');
+    assert.equal(links(md(closeOpenMarkdown('see `Foo.cs:12`'))), 1, 'complete: link');
 });
 
-test('streaming: le cifre che arrivano una per volta spostano solo la riga, non il link', () => {
-    // "Foo.cs:1" e' gia' un riferimento valido (riga 1), quindi il link c'e' da subito e la riga si
-    // aggiorna man mano. Meglio cosi' che un link che appare e sparisce: la bolla non si muove.
+test('streaming: digits arriving one at a time move only the line, not the link', () => {
+    // "Foo.cs:1" is already a valid reference (line 1), so the link is there from the start and the
+    // line updates as it goes. Better that than a link appearing and vanishing: the bubble stays put.
     for (const [src, line] of [
-        ['vedi `Foo.cs:1`', '1'],
-        ['vedi `Foo.cs:12`', '12'],
-        ['vedi `Foo.cs:123`', '123'],
+        ['see `Foo.cs:1`', '1'],
+        ['see `Foo.cs:12`', '12'],
+        ['see `Foo.cs:123`', '123'],
     ] as const) {
         const html = md(closeOpenMarkdown(src));
         assert.equal(links(html), 1, src);

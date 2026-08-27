@@ -26,7 +26,7 @@ function toolEntry(id: number, toolUseId: string): UiToolEntry {
 /** What cv-app uses to decide two children are the same row. */
 const childKey = (e: UiEntry): string => (e.kind === 'tool' ? e.toolUseId : `t${e.id}`);
 
-test('append: nuovo array, entry esistenti mantengono il riferimento', () => {
+test('append: new array, existing entries keep their reference', () => {
     const t = new Transcript();
     const a = userEntry(1);
     t.append(a);
@@ -34,12 +34,12 @@ test('append: nuovo array, entry esistenti mantengono il riferimento', () => {
 
     t.append(userEntry(2));
 
-    assert.notEqual(t.entries, first, 'entries deve essere un array nuovo');
-    assert.equal(t.entries[0], a, 'la entry esistente mantiene il riferimento');
+    assert.notEqual(t.entries, first, 'entries must be a new array');
+    assert.equal(t.entries[0], a, 'the existing entry keeps its reference');
     assert.equal(t.entries.length, 2);
 });
 
-test('find: ritorna la entry per id, null se assente', () => {
+test('find: returns the entry by id, null when absent', () => {
     const t = new Transcript();
     const a = userEntry(7);
     t.append(a);
@@ -48,32 +48,32 @@ test('find: ritorna la entry per id, null se assente', () => {
     assert.equal(t.find(99), null);
 });
 
-test('clear: svuota entries e index', () => {
+test('clear: empties entries and index', () => {
     const t = new Transcript();
     t.append(userEntry(1));
 
     t.clear();
 
     assert.equal(t.entries.length, 0);
-    assert.equal(t.find(1), null, 'index deve essere svuotato con le entries');
+    assert.equal(t.find(1), null, 'the index must be emptied along with the entries');
 });
 
-test('update: sostituisce la entry, gli altri rami restano invariati', () => {
+test('update: replaces the entry, the other branches stay untouched', () => {
     const t = new Transcript();
     const a = userEntry(1, 'a');
     const b = userEntry(2, 'b');
     t.append(a);
     t.append(b);
 
-    const ok = t.update<UiUserEntry>(1, (e) => ({ ...e, text: 'nuovo' }));
+    const ok = t.update<UiUserEntry>(1, (e) => ({ ...e, text: 'new' }));
 
     assert.equal(ok, true);
-    assert.notEqual(t.entries[0], a, 'la entry aggiornata ha un riferimento nuovo');
-    assert.equal((t.entries[0] as UiUserEntry).text, 'nuovo');
-    assert.equal(t.entries[1], b, 'i rami non toccati mantengono il riferimento');
+    assert.notEqual(t.entries[0], a, 'the updated entry has a new reference');
+    assert.equal((t.entries[0] as UiUserEntry).text, 'new');
+    assert.equal(t.entries[1], b, 'untouched branches keep their reference');
 });
 
-test('update: id assente ritorna false senza lanciare', () => {
+test('update: a missing id returns false without throwing', () => {
     const t = new Transcript();
 
     assert.equal(
@@ -82,7 +82,7 @@ test('update: id assente ritorna false senza lanciare', () => {
     );
 });
 
-test('appendText: concatena e ricrea solo quella entry', () => {
+test('appendText: concatenates and recreates only that entry', () => {
     const t = new Transcript();
     const a = userEntry(1, 'ab');
     const b = userEntry(2, 'x');
@@ -91,16 +91,16 @@ test('appendText: concatena e ricrea solo quella entry', () => {
 
     assert.equal(t.appendText(1, 'cd'), true);
     assert.equal((t.entries[0] as UiUserEntry).text, 'abcd');
-    assert.equal(t.entries[1], b, 'gli altri rami restano invariati');
+    assert.equal(t.entries[1], b, 'the other branches stay untouched');
 });
 
-test('appendText: id assente ritorna false', () => {
+test('appendText: a missing id returns false', () => {
     const t = new Transcript();
 
     assert.equal(t.appendText(9, 'x'), false);
 });
 
-test('appendChild: parent, children e items nuovi; fratelli invariati', () => {
+test('appendChild: new parent, children and items; siblings untouched', () => {
     const t = new Transcript();
     const parent = toolEntry(1, 'tool-1');
     const sibling = userEntry(2);
@@ -111,16 +111,16 @@ test('appendChild: parent, children e items nuovi; fratelli invariati', () => {
 
     assert.equal(ok, true);
     const p = t.entries[0] as UiToolEntry;
-    assert.notEqual(p, parent, 'il parent ha un riferimento nuovo');
-    assert.notEqual(p.children, parent.children, 'anche il blocco children');
+    assert.notEqual(p, parent, 'the parent has a new reference');
+    assert.notEqual(p.children, parent.children, 'and so does the children block');
     assert.equal(p.children?.items.length, 1);
-    assert.equal(t.entries[1], sibling, 'il fratello mantiene il riferimento');
+    assert.equal(t.entries[1], sibling, 'the sibling keeps its reference');
 });
 
 // If the ring dropped a child by mutating items in place, the parent's children block would stay
 // identical by ===: cv-tool-row would not be updated and its ChildParts would point at removed
 // nodes.
-test('appendChild: il ring che scarta un figlio ricrea comunque il blocco children', () => {
+test('appendChild: the ring dropping a child still recreates the children block', () => {
     const t = new Transcript();
     t.append(toolEntry(1, 'tool-1'));
     for (let i = 2; i <= 4; i++) {
@@ -131,9 +131,9 @@ test('appendChild: il ring che scarta un figlio ricrea comunque il blocco childr
     t.appendChild('tool-1', userEntry(5), childKey);
 
     const after = (t.entries[0] as UiToolEntry).children;
-    assert.notEqual(after, before, 'il blocco children deve avere identita nuova');
-    assert.notEqual(after?.items, before?.items, 'e cosi items');
-    assert.equal(after?.items.length, 3, 'restano gli ultimi 3');
+    assert.notEqual(after, before, 'the children block must have a new identity');
+    assert.notEqual(after?.items, before?.items, 'and so must items');
+    assert.equal(after?.items.length, 3, 'the last 3 are kept');
     assert.equal(after?.hasMore, true);
     assert.deepEqual(
         after?.items.map((e) => e.id),
@@ -141,7 +141,7 @@ test('appendChild: il ring che scarta un figlio ricrea comunque il blocco childr
     );
 });
 
-test('appendChild: showAll tiene tutto e fa upsert invece di duplicare', () => {
+test('appendChild: showAll keeps everything and upserts instead of duplicating', () => {
     const t = new Transcript();
     t.append(toolEntry(1, 'tool-1'));
     t.update<UiToolEntry>(1, (e) => ({
@@ -153,48 +153,52 @@ test('appendChild: showAll tiene tutto e fa upsert invece di duplicare', () => {
     }
 
     // re-emitting the same child: updates in place, does not duplicate
-    t.appendChild('tool-1', userEntry(3, 'aggiornato'), childKey);
+    t.appendChild('tool-1', userEntry(3, 'updated'), childKey);
 
     const p = t.entries[0] as UiToolEntry;
-    assert.equal(p.children?.items.length, 4, 'showAll tiene tutto, upsert non duplica');
-    assert.equal((p.children?.items[1] as UiUserEntry).text, 'aggiornato');
+    assert.equal(
+        p.children?.items.length,
+        4,
+        'showAll keeps everything, upsert does not duplicate',
+    );
+    assert.equal((p.children?.items[1] as UiUserEntry).text, 'updated');
 });
 
-test('appendChild: parent inesistente ritorna false', () => {
+test('appendChild: a missing parent returns false', () => {
     const t = new Transcript();
 
     assert.equal(t.appendChild('nope', userEntry(1), childKey), false);
 });
 
-test('replaceAll: sostituisce l albero e ricostruisce l index da zero', () => {
+test('replaceAll: replaces the tree and rebuilds the index from scratch', () => {
     const t = new Transcript();
     t.append(userEntry(1));
     t.append(toolEntry(2, 'tool-2'));
     t.appendChild('tool-2', userEntry(3), childKey);
 
-    t.replaceAll([userEntry(10), toolEntry(11, 'nuovo')]);
+    t.replaceAll([userEntry(10), toolEntry(11, 'new')]);
 
     assert.equal(t.entries.length, 2);
-    assert.equal(t.find(1), null, 'gli id vecchi non devono sopravvivere');
-    assert.equal(t.find(3), null, 'nemmeno quelli annidati');
+    assert.equal(t.find(1), null, 'the old ids must not survive');
+    assert.equal(t.find(3), null, 'nor the nested ones');
     assert.equal(t.find(10)?.id, 10);
 });
 
-test('replaceAll: indicizza anche i figli annidati gia presenti', () => {
+test('replaceAll: indexes nested children that are already there', () => {
     const parent = toolEntry(1, 'p');
     parent.children = { items: [userEntry(2)], hasMore: false, showAll: false };
     const t = new Transcript();
 
     t.replaceAll([parent]);
 
-    assert.equal(t.find(2)?.id, 2, 'i figli arrivati da history devono essere indicizzati');
+    assert.equal(t.find(2)?.id, 2, 'children coming from history must be indexed');
     assert.equal(
         t.update<UiUserEntry>(2, (e) => ({ ...e, text: 'x' })),
         true,
     );
 });
 
-test('prepend: mette in testa e mantiene l index coerente', () => {
+test('prepend: puts entries at the head and keeps the index consistent', () => {
     const t = new Transcript();
     t.append(userEntry(5));
 
@@ -205,10 +209,10 @@ test('prepend: mette in testa e mantiene l index coerente', () => {
         [1, 2, 5],
     );
     assert.equal(t.find(1)?.id, 1);
-    assert.equal(t.find(5)?.id, 5, 'anche gli id preesistenti restano risolvibili');
+    assert.equal(t.find(5)?.id, 5, 'pre-existing ids stay resolvable too');
 });
 
-test('updateMany: aggiorna N entry in un colpo', () => {
+test('updateMany: updates N entries in one go', () => {
     const t = new Transcript();
     t.append(userEntry(1, 'a'));
     t.append(userEntry(2, 'b'));
@@ -221,7 +225,7 @@ test('updateMany: aggiorna N entry in un colpo', () => {
     assert.equal((t.entries[1] as UiUserEntry).text, 'b!');
 });
 
-test('findToolByAgentId: trova la riga Agent che ha lanciato il sub-agent', () => {
+test('findToolByAgentId: finds the Agent row that launched the sub-agent', () => {
     const t = new Transcript();
     const row = toolEntry(1, 'tool-1');
     row.agentId = 'agent-42';
@@ -234,7 +238,7 @@ test('findToolByAgentId: trova la riga Agent che ha lanciato il sub-agent', () =
 // "Show all" on an Agent still running: the fetch replaces children.items with the whole history,
 // but those children never go through appendChild. Without a reindex they stay out of the index,
 // the live event arriving right after does not find them and the update hits the wrong branch.
-test('update: sostituire children.items indicizza i figli arrivati da fuori', () => {
+test('update: replacing children.items indexes the children arriving from outside', () => {
     const t = new Transcript();
     t.append(toolEntry(1, 'agent'));
     t.appendChild('agent', userEntry(2), childKey);
@@ -250,28 +254,28 @@ test('update: sostituire children.items indicizza i figli arrivati da fuori', ()
     }));
 
     // the agent is still working: an event arrives for a child of the replaced list
-    assert.equal(t.find(11)?.id, 11, 'i figli sostituiti devono essere raggiungibili');
+    assert.equal(t.find(11)?.id, 11, 'the replaced children must be reachable');
     assert.equal(
-        t.update<UiUserEntry>(11, (e) => ({ ...e, text: 'aggiornato' })),
+        t.update<UiUserEntry>(11, (e) => ({ ...e, text: 'updated' })),
         true,
-        'update deve raggiungere un figlio arrivato dalla sostituzione',
+        'update must reach a child that came in with the replacement',
     );
     assert.equal(t.findTool('inner')?.id, 12);
-    assert.equal(t.find(2), null, 'il figlio rimpiazzato non deve piu risolvere');
+    assert.equal(t.find(2), null, 'the replaced child must no longer resolve');
 });
 
-test('appendChild annidato: l index risolve un figlio di figlio', () => {
+test('nested appendChild: the index resolves a child of a child', () => {
     const t = new Transcript();
     t.append(toolEntry(1, 'outer'));
     t.appendChild('outer', toolEntry(2, 'inner'), childKey);
-    t.appendChild('inner', userEntry(3, 'profondo'), childKey);
+    t.appendChild('inner', userEntry(3, 'deep'), childKey);
 
     assert.equal(t.find(3)?.id, 3);
     assert.equal(t.findTool('inner')?.id, 2);
     assert.equal(
         t.update<UiUserEntry>(3, (e) => ({ ...e, text: 'x' })),
         true,
-        'update deve raggiungere un figlio di secondo livello',
+        'update must reach a second-level child',
     );
 });
 
@@ -279,7 +283,7 @@ function assistantEntry(id: number, uuid?: string): UiAssistantEntry {
     return { kind: 'text', id, role: 'assistant', text: 'a', uuid };
 }
 
-test('removeByUuid: toglie solo le entry nominate', () => {
+test('removeByUuid: removes only the named entries', () => {
     const t = new Transcript();
     t.append(assistantEntry(1, 'u1'));
     t.append(assistantEntry(2, 'u2'));
@@ -292,19 +296,19 @@ test('removeByUuid: toglie solo le entry nominate', () => {
     );
 });
 
-test('removeByUuid: uuid sconosciuti sono un no-op, e ripeterlo non cambia nulla', () => {
+test('removeByUuid: unknown uuids are a no-op, and repeating it changes nothing', () => {
     const t = new Transcript();
     t.append(assistantEntry(1, 'u1'));
     const before = t.entries;
 
-    assert.equal(t.removeByUuid(['mai-visto']), 0, 'un uuid ignoto non rimuove niente');
-    assert.equal(t.entries, before, 'senza rimozioni l array non viene ricreato');
+    assert.equal(t.removeByUuid(['never-seen']), 0, 'an unknown uuid removes nothing');
+    assert.equal(t.entries, before, 'with no removals the array is not recreated');
 
     assert.equal(t.removeByUuid(['u1']), 1);
-    assert.equal(t.removeByUuid(['u1']), 0, 'la seconda volta non ha piu niente da togliere');
+    assert.equal(t.removeByUuid(['u1']), 0, 'the second time there is nothing left to remove');
 });
 
-test('removeByUuid: una entry senza uuid non viene mai toccata', () => {
+test('removeByUuid: an entry without a uuid is never touched', () => {
     const t = new Transcript();
     t.append(assistantEntry(1));
     t.append(userEntry(2));
@@ -313,20 +317,20 @@ test('removeByUuid: una entry senza uuid non viene mai toccata', () => {
     assert.equal(t.entries.length, 2);
 });
 
-test('removeByUuid: rimuovere una entry non scolla le altre dall index', () => {
+test('removeByUuid: removing an entry does not detach the others from the index', () => {
     const t = new Transcript();
     t.append(assistantEntry(1, 'u1'));
     t.append(toolEntry(2, 'outer'));
     t.appendChild('outer', userEntry(3), childKey);
 
     assert.equal(t.removeByUuid(['u1']), 1);
-    // La rimozione ricostruisce l index: se lo facesse a meta, i figli della entry SOPRAVVISSUTA
-    // resterebbero indicizzati sul percorso vecchio e un evento per loro finirebbe altrove.
-    assert.equal(t.find(3)?.id, 3, 'il figlio di una entry rimasta deve ancora risolvere');
+    // The removal rebuilds the index: doing it halfway would leave the children of the SURVIVING
+    // entry indexed on the old path, and an event for them would land elsewhere.
+    assert.equal(t.find(3)?.id, 3, 'the child of a surviving entry must still resolve');
     assert.equal(t.findTool('outer')?.id, 2);
 });
 
-test('removeByUuid: onRemoved riceve anche i figli della entry rimossa', () => {
+test('removeByUuid: onRemoved also receives the children of the removed entry', () => {
     const t = new Transcript();
     const seen: number[][] = [];
     t.onRemoved = (ids) => seen.push([...ids]);
@@ -336,10 +340,10 @@ test('removeByUuid: onRemoved riceve anche i figli della entry rimossa', () => {
     t.appendChild('outer', userEntry(3), childKey);
 
     t.removeByUuid(['u1']);
-    assert.deepEqual(seen, [[1]], 'una entry senza figli riporta solo se stessa');
+    assert.deepEqual(seen, [[1]], 'an entry without children reports only itself');
 
-    // Chi ha messo in mappa l id di una riga annidata resta appeso quanto chi ha messo il padre:
-    // l evento deve nominare l intero sottoalbero, non la sola radice.
+    // Whoever mapped the id of a nested row is left dangling just like whoever mapped the parent:
+    // the event must name the whole subtree, not just the root.
     seen.length = 0;
     const t2 = new Transcript();
     t2.onRemoved = (ids) => seen.push([...ids]);
@@ -351,63 +355,63 @@ test('removeByUuid: onRemoved riceve anche i figli della entry rimossa', () => {
     assert.deepEqual(seen, [[10, 11, 12]]);
 });
 
-test('removeByUuid: senza rimozioni onRemoved non scatta', () => {
+test('removeByUuid: with no removals onRemoved does not fire', () => {
     const t = new Transcript();
     let calls = 0;
     t.onRemoved = () => calls++;
     t.append(assistantEntry(1, 'u1'));
 
-    t.removeByUuid(['altro']);
+    t.removeByUuid(['other']);
     assert.equal(calls, 0);
 });
 
-test('removeByUuid: raggiunge anche una entry annidata in un sub-agent', () => {
+test('removeByUuid: reaches an entry nested inside a sub-agent too', () => {
     const t = new Transcript();
     const removed: number[][] = [];
     t.onRemoved = (ids) => removed.push([...ids]);
 
     t.append(toolEntry(1, 'agent'));
-    t.appendChild('agent', assistantEntry(2, 'dentro'), childKey);
+    t.appendChild('agent', assistantEntry(2, 'inside'), childKey);
     t.appendChild('agent', userEntry(3), childKey);
 
-    assert.equal(t.removeByUuid(['dentro']), 1);
-    assert.equal(t.find(2), null, 'la entry annidata deve sparire');
-    assert.equal(t.find(3)?.id, 3, 'i fratelli restano');
-    assert.equal(t.findTool('agent')?.id, 1, 'il parent resta');
+    assert.equal(t.removeByUuid(['inside']), 1);
+    assert.equal(t.find(2), null, 'the nested entry must disappear');
+    assert.equal(t.find(3)?.id, 3, 'the siblings stay');
+    assert.equal(t.findTool('agent')?.id, 1, 'the parent stays');
     assert.deepEqual(removed, [[2]]);
 });
 
-test('removeByUuid: un ramo senza rimozioni mantiene la sua identita', () => {
+test('removeByUuid: a branch with no removals keeps its identity', () => {
     const t = new Transcript();
     t.append(assistantEntry(1, 'u1'));
-    t.append(toolEntry(2, 'intatto'));
-    t.appendChild('intatto', userEntry(3), childKey);
+    t.append(toolEntry(2, 'untouched'));
+    t.appendChild('untouched', userEntry(3), childKey);
     const before = t.entries[1];
 
     t.removeByUuid(['u1']);
 
-    // Se il prune ricreasse anche i rami non toccati, Lit rirenderizzerebbe l intero sottoalbero
-    // del sub-agent a ogni retraction.
-    assert.equal(t.entries[0], before, 'il ramo non toccato mantiene il riferimento');
+    // If the prune recreated the untouched branches too, Lit would re-render the sub-agent's whole
+    // subtree on every retraction.
+    assert.equal(t.entries[0], before, 'the untouched branch keeps its reference');
 });
 
-test('moveToEnd: la bolla accodata scende in fondo', () => {
+test('moveToEnd: the queued bubble moves to the bottom', () => {
     const t = new Transcript();
-    t.append({ ...userEntry(1), uuid: 'chiesto' });
-    t.append({ ...userEntry(2, 'in coda'), uuid: 'in-coda' });
-    t.append(assistantEntry(3, 'risposta'));
+    t.append({ ...userEntry(1), uuid: 'asked' });
+    t.append({ ...userEntry(2, 'queued'), uuid: 'queued' });
+    t.append(assistantEntry(3, 'answer'));
 
-    assert.equal(t.moveToEnd('in-coda'), true);
+    assert.equal(t.moveToEnd('queued'), true);
 
-    // Senza lo spostamento buildGroups aprirebbe l exchange su 2 e la risposta a 1 finirebbe
-    // sotto la domanda sbagliata.
+    // Without the move buildGroups would open the exchange on 2 and the answer to 1 would land
+    // under the wrong question.
     assert.deepEqual(
         t.entries.map((e) => e.id),
         [1, 3, 2],
     );
 });
 
-test('moveToEnd: index coerente dopo lo spostamento', () => {
+test('moveToEnd: index stays consistent after the move', () => {
     const t = new Transcript();
     t.append({ ...userEntry(1), uuid: 'a' });
     t.append(toolEntry(2, 'agent'));
@@ -415,17 +419,17 @@ test('moveToEnd: index coerente dopo lo spostamento', () => {
 
     t.moveToEnd('a');
 
-    assert.equal(t.find(1)?.id, 1, 'la entry spostata resta raggiungibile');
-    assert.equal(t.find(3)?.id, 3, 'i figli scalati di posizione restano indicizzati');
+    assert.equal(t.find(1)?.id, 1, 'the moved entry stays reachable');
+    assert.equal(t.find(3)?.id, 3, 'children shifted in position stay indexed');
 });
 
-test('moveToEnd: uuid assente o gia in fondo non tocca nulla', () => {
+test('moveToEnd: a missing uuid or one already last touches nothing', () => {
     const t = new Transcript();
     t.append({ ...userEntry(1), uuid: 'a' });
     t.append({ ...userEntry(2), uuid: 'b' });
     const before = t.entries;
 
-    assert.equal(t.moveToEnd('mai-visto'), false);
-    assert.equal(t.moveToEnd('b'), false, 'gia ultima');
-    assert.equal(t.entries, before, 'nessun nuovo array, Lit non rirenderizza');
+    assert.equal(t.moveToEnd('never-seen'), false);
+    assert.equal(t.moveToEnd('b'), false, 'already last');
+    assert.equal(t.entries, before, 'no new array, Lit does not re-render');
 });
