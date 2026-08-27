@@ -17,5 +17,9 @@ public sealed class EditorPrompt
     /// <summary>Greyed out without a selection, the way Copilot greys "Optimize selection".</summary>
     public bool RequiresSelection { get; set; }
 
+    /// <summary>Sends the turn on click instead of leaving the text in the composer. Off for a
+    /// prompt written as an opening line the user means to finish typing first.</summary>
+    public bool SendImmediately { get; set; }
+
     public EditorPrompt Clone() => (EditorPrompt)MemberwiseClone();
 }

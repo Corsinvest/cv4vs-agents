@@ -150,7 +150,7 @@ function wireBridgeHandlers(): void {
             import('./components/cv-prompt').CvPrompt | null;
         const text = data?.text ?? '';
         if (data?.send && text) {
-            input?.sendPrompt(text, true);
+            input?.setComposerTextAndSubmit(text);
         } else {
             input?.setComposerText(text);
         }
