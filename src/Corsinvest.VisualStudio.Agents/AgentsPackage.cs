@@ -59,6 +59,7 @@ namespace Corsinvest.VisualStudio.Agents;
 [ProvideToolWindow(typeof(Core.Stats.StatisticsWindow), Style = VsDockStyle.MDI)]
 [ProvideToolWindow(typeof(Core.Usage.UsageWindow), Style = VsDockStyle.MDI)]
 [ProvideToolWindow(typeof(Core.Context.ContextWindow), Style = VsDockStyle.MDI)]
+[ProvideToolWindow(typeof(Core.FileHistory.FileHistoryWindow), Style = VsDockStyle.MDI)]
 [Guid(PackageGuids.AgentsPackageString)]
 public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolutionEvents7, IVsSolutionLoadEvents, IVsDebuggerEvents
 {

@@ -44,7 +44,8 @@ Messages that changed no file are not listed at all — there would be nothing t
 
 Under `~/.claude/file-history/<session-id>/`, one folder per session, holding whole files rather
 than diffs. They belong to the CLI, are private to their session, and **are not cleaned up**: they
-stay until you delete the folder.
+stay until the folder is deleted. **[File history](../file-history.md)** shows what they cost across
+every session, and deletes the ones you no longer want.
 
 That is the reason the feature can be turned off. **Keep file checkpoints (Rewind)**
 (**[Options → Chat → Files](../options.md#chat)**, on by default) decides whether the CLI takes
