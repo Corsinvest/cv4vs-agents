@@ -78,7 +78,9 @@ Chat sessions, CLI settings, plugins and skills belong to `claude.exe` and live 
 `file-history/` holds **whole files**, not diffs — one copy per file per turn that edited it — and
 the CLI never removes them. Deleting a session's folder only costs you the ability to
 [rewind](chat/rewind.md) that session; turning **Keep file checkpoints** off
-([Options → Chat](options.md#chat)) stops new ones being written at all.
+([Options → Chat](options.md#chat)) stops new ones being written at all. The
+**[File history](file-history.md)** tab measures what they occupy, per project and per session, and
+deletes them from there — backups whose transcript is already gone included.
 
 We **read** the session `.jsonl` files directly (that's how history, resume, rename and the
 usage stats work) and write only a `custom-title` entry when you rename a session. Because

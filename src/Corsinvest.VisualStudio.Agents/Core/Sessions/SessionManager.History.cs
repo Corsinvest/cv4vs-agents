@@ -575,6 +575,50 @@ internal sealed partial class SessionManager
         return result;
     }
 
+    /// <summary>Every file the session ever backed up, with the LATEST copy of each — what the
+    /// Storage pane lists for a session it is not rewinding to any particular point.
+    /// <para>The opposite keep-rule from the overload above, and deliberately so: a rewind wants the
+    /// copy that predates the edit, while an archive wants the newest state that was preserved. So
+    /// this one overwrites as it goes rather than keeping the first hit.</para>
+    /// <para>Reads the whole transcript rather than the tail. The snapshot records are cumulative in
+    /// practice, but that is the CLI's behaviour and not its contract — a session whose early edits
+    /// stopped being repeated would silently lose files from the list. One pass over one file, for a
+    /// panel the user opened on purpose, is worth not depending on that.</para></summary>
+    public List<FileBackupInfo> ReadAllFileBackups(string sessionId)
+    {
+        var result = new List<FileBackupInfo>();
+        if (!IsSafePathToken(sessionId)) { return result; }
+        var path = FileFor(sessionId);
+        if (!File.Exists(path)) { return result; }
+        try
+        {
+            var found = new Dictionary<string, FileBackupInfo>(StringComparer.OrdinalIgnoreCase);
+            foreach (var line in File.ReadLines(path, Encoding.UTF8))
+            {
+                if (string.IsNullOrWhiteSpace(line) || !IsType(line, "file-history-snapshot")) { continue; }
+                JObject obj; try { obj = JObject.Parse(line); } catch { continue; }
+                if (obj["snapshot"]?["trackedFileBackups"] is not JObject backups) { continue; }
+                foreach (var kv in backups)
+                {
+                    var b = kv.Value as JObject;
+                    var name = b?.Val("backupFileName", (string)null);
+                    // A null name records a file that did not exist yet — there is no copy on disk
+                    // to list or diff, so it is not an archive entry.
+                    if (name == null) { continue; }
+                    found[kv.Key] = new FileBackupInfo
+                    {
+                        Path = kv.Key,
+                        BackupFileName = name,
+                        Version = b.Val("version", 0),
+                    };
+                }
+            }
+            result.AddRange(found.Values);
+        }
+        catch (Exception ex) { log.LogException("SessionManager.ReadAllFileBackups", ex); }
+        return result;
+    }
+
     /// <summary>Read the compaction summary that follows the compact_boundary with the given uuid:
     /// the next .jsonl line, flagged isCompactSummary with a string content. "" if absent.</summary>
     public string ReadCompactSummary(string sessionId, string boundaryUuid)
