@@ -241,6 +241,12 @@
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Context usage</ButtonText></Strings>
       </Button>
+      <Button guid="guidAgentsCommandSet" id="FileHistoryCommandId" priority="0x0400" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="AnalyticsGroup"/>
+        <Icon guid="ImageCatalogGuid" id="HardDrive"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings><ButtonText>File history</ButtonText></Strings>
+      </Button>
 
       <Button guid="guidAgentsCommandSet" id="DocumentationCommandId" priority="0x0100" type="Button">
         <Parent guid="guidAgentsCommandSet" id="HelpDocsGroup"/>
@@ -330,6 +336,7 @@
       <IDSymbol name="UsageCommandId" value="0x020A" />
       <IDSymbol name="ContextUsageCommandId" value="0x020B" />
       <IDSymbol name="ExplainCommandId" value="0x020C" />
+      <IDSymbol name="FileHistoryCommandId" value="0x020D" />
       <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
            number of open panes and must not run into the fixed ids above. -->
       <IDSymbol name="ActiveSessionCommandId" value="0x0300" />

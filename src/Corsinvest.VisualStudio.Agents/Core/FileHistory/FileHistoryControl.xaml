@@ -1,0 +1,365 @@
+<UserControl x:Class="Corsinvest.VisualStudio.Agents.Core.FileHistory.FileHistoryControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
+             xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
+             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+             xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog"
+             xmlns:fh="clr-namespace:Corsinvest.VisualStudio.Agents.Core.FileHistory"
+             toolkit:Themes.UseVsTheme="True">
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <!-- The file list's context menu opens in its own popup, outside this control's visual
+             tree, where UseVsTheme cannot reach it — without these it comes up white on a dark
+             IDE. Shared with the pane toolbar. -->
+        <ResourceDictionary Source="/Corsinvest.VisualStudio.Agents;component/Themes/MenuStyles.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+
+    <fh:FileHistoryIconConverter x:Key="NodeIconConverter" />
+
+    <!-- Summary tile: bordered block, large value over an uppercase label (as in Statistics). -->
+    <Style x:Key="TileStyle" TargetType="Border">
+      <Setter Property="BorderBrush"
+              Value="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBorderBrushKey}}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="Margin" Value="0,0,10,0" />
+    </Style>
+    <Style x:Key="TileValueStyle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="20" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style x:Key="TileLabelStyle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Opacity" Value="0.7" />
+      <Setter Property="Margin" Value="0,2,0,0" />
+    </Style>
+    <Style x:Key="SectionHeadStyle" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Opacity" Value="0.7" />
+      <Setter Property="Margin" Value="0,12,0,6" />
+    </Style>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <!-- Columns: backup tree | draggable splitter | the selected session's files. -->
+  <Grid Margin="14">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="290" MinWidth="180" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <!-- Column 0: a small icon toolbar over the tree. -->
+    <Grid Grid.Row="0" Grid.Column="0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <!-- Same flat-button toolbar as Statistics / Context usage: a WPF ToolBar drags in a grip and
+           an overflow chevron that don't theme cleanly. -->
+      <StackPanel x:Name="TreeToolbar" Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,4">
+        <StackPanel.Resources>
+          <Style x:Key="ToolBtn" TargetType="Button">
+            <Setter Property="Width" Value="22" />
+            <Setter Property="Height" Value="22" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,2,0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                  <Border x:Name="bd" Background="{TemplateBinding Background}"
+                          BorderBrush="{TemplateBinding BorderBrush}"
+                          BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter TargetName="bd" Property="Background"
+                              Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarMouseOverBackgroundBeginBrushKey}}" />
+                      <Setter TargetName="bd" Property="BorderBrush"
+                              Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarBorderBrushKey}}" />
+                    </Trigger>
+                    <Trigger Property="IsEnabled" Value="False">
+                      <Setter TargetName="bd" Property="Opacity" Value="0.4" />
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+        </StackPanel.Resources>
+
+        <!-- Refresh re-enumerates the folders. There is no Recreate twin here: nothing is indexed,
+             so there is no stale cache a second button could rebuild. -->
+        <Button x:Name="RefreshButton" Style="{StaticResource ToolBtn}" Click="OnRefreshClick"
+                ToolTip="Refresh — re-read the backup folders">
+          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
+        </Button>
+        <Button x:Name="DeleteButton" Style="{StaticResource ToolBtn}" Click="OnDeleteClick"
+                IsEnabled="False" ToolTip="Delete the checked sessions' backups">
+          <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.DeleteFolder}" />
+        </Button>
+      </StackPanel>
+
+      <!-- Column headers for the tree below. A TreeView has no columns of its own, so these are
+           buttons over a Grid whose widths match the item template's — the ordering lives here
+           rather than in a toolbar combo because a click also has to say WHICH way, and an arrow
+           on the sorted column says it where the reader is already looking.
+           Sorting, never filtering: a 7/30-day filter would hide exactly the old sessions this
+           pane exists to find. -->
+      <Grid Grid.Row="1" Margin="1,0,1,2">
+        <Grid.Resources>
+          <Style x:Key="HeadBtn" TargetType="Button">
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Foreground"
+                    Value="{DynamicResource {x:Static vsui:EnvironmentColors.GridHeadingTextBrushKey}}" />
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                  <Border x:Name="bd" Background="{TemplateBinding Background}"
+                          Padding="{TemplateBinding Padding}">
+                    <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter TargetName="bd" Property="Background"
+                              Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarMouseOverBackgroundBeginBrushKey}}" />
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+          <Style x:Key="HeadText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+          </Style>
+        </Grid.Resources>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="52" />
+          <ColumnDefinition Width="66" />
+        </Grid.ColumnDefinitions>
+        <Button Grid.Column="0" Style="{StaticResource HeadBtn}" Click="OnSortByName"
+                ToolTip="Sort by name">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Name" Style="{StaticResource HeadText}" />
+            <TextBlock x:Name="NameArrow" Style="{StaticResource HeadText}" Margin="4,0,0,0" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="1" Style="{StaticResource HeadBtn}" Click="OnSortByDate"
+                ToolTip="Sort by date">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Date" Style="{StaticResource HeadText}" />
+            <TextBlock x:Name="DateArrow" Style="{StaticResource HeadText}" Margin="4,0,0,0" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="2" Style="{StaticResource HeadBtn}" Click="OnSortBySize"
+                ToolTip="Sort by size">
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <TextBlock Text="Size" Style="{StaticResource HeadText}" />
+            <TextBlock x:Name="SizeArrow" Style="{StaticResource HeadText}" Margin="4,0,0,0" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <TreeView x:Name="Tree" Grid.Row="2"
+                BorderThickness="1"
+                Background="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
+                Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}"
+                BorderBrush="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                SelectedItemChanged="OnNodeSelected">
+        <TreeView.ItemContainerStyle>
+          <Style TargetType="TreeViewItem">
+            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+            <Setter Property="Foreground"
+                    Value="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}" />
+          </Style>
+        </TreeView.ItemContainerStyle>
+        <TreeView.Resources>
+          <HierarchicalDataTemplate DataType="{x:Type fh:FileHistoryTreeNode}"
+                                    ItemsSource="{Binding Children}">
+            <!-- Three columns, matching the header above: the checkbox and the icon sit INSIDE the
+                 name column, so the two fixed-width ones stay put whatever the indent level and
+                 line up with their headers. A TreeView has no columns of its own, and this is as
+                 close as one gets without templating a whole TreeListView.
+                 The date is a column rather than part of the label: appended there it shifted with
+                 the length of every name before it. -->
+            <Grid ToolTip="{Binding Tooltip}" MinWidth="240">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="52" />
+                <ColumnDefinition Width="66" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <CheckBox Margin="0,0,6,0" VerticalAlignment="Center"
+                          IsThreeState="True"
+                          IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                          IsEnabled="{Binding CanDelete}"
+                          Checked="OnCheckChanged" Unchecked="OnCheckChanged" />
+                <imaging:CrispImage Width="16" Height="16" Margin="0,0,6,0"
+                                    VerticalAlignment="Center"
+                                    Moniker="{Binding Converter={StaticResource NodeIconConverter}}" />
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <TextBlock Grid.Column="1" Text="{Binding LastWriteText}" VerticalAlignment="Center"
+                         Margin="10,0,0,0" Opacity="0.7" FontSize="11" />
+              <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center"
+                         Margin="6,0,0,0" TextAlignment="Right" Opacity="0.7"
+                         FontFamily="Consolas" FontSize="11" />
+            </Grid>
+          </HierarchicalDataTemplate>
+        </TreeView.Resources>
+      </TreeView>
+    </Grid>
+
+    <GridSplitter Grid.Row="0" Grid.Column="1" Width="6" HorizontalAlignment="Center"
+                  VerticalAlignment="Stretch" Background="Transparent" />
+
+    <!-- Column 2: tiles + the selected session's files. -->
+    <Grid Grid.Row="0" Grid.Column="2" Margin="10,0,0,0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <!-- Built in code-behind so the tiles follow the theme down the live visual tree, like the
+           Context usage panel. -->
+      <StackPanel x:Name="TilesPanel" Grid.Row="0" Orientation="Horizontal" />
+
+      <TextBlock x:Name="FilesHead" Grid.Row="1" Style="{StaticResource SectionHeadStyle}"
+                 Text="FILES" />
+
+      <Grid Grid.Row="2">
+        <TextBlock x:Name="MessageText" Opacity="0.7" TextWrapping="Wrap" Margin="2,4,0,0"
+                   Text="Select a session to see the files it backed up." />
+
+        <!-- DataGrid rather than ListView: a ListViewItem keeps the SYSTEM template, which paints
+             its selection with the Windows highlight while the text stays the theme's, and comes
+             out unreadable on a dark theme.
+             The options pages get away with a bare DataGrid because VS themes the Options dialog
+             around them; a tool window paints nothing for us, and UseVsTheme does not reach a
+             DataGrid — so the surfaces are bound here, from the same EnvironmentColors the rest of
+             the pane uses. Read-only: nothing in this grid is editable. -->
+        <DataGrid x:Name="FilesList" Visibility="Collapsed"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  IsReadOnly="True"
+                  SelectionMode="Single"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  RowBackground="Transparent"
+                  AlternatingRowBackground="Transparent"
+                  Background="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBackgroundBrushKey}}"
+                  Foreground="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}"
+                  BorderBrush="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBorderBrushKey}}"
+                  HorizontalGridLinesBrush="{DynamicResource {x:Static vsui:EnvironmentColors.GridLineBrushKey}}"
+                  MouseDoubleClick="OnFileDoubleClick">
+          <DataGrid.ColumnHeaderStyle>
+            <Style TargetType="DataGridColumnHeader">
+              <Setter Property="Background"
+                      Value="{DynamicResource {x:Static vsui:EnvironmentColors.GridHeadingBackgroundBrushKey}}" />
+              <Setter Property="Foreground"
+                      Value="{DynamicResource {x:Static vsui:EnvironmentColors.GridHeadingTextBrushKey}}" />
+              <Setter Property="BorderBrush"
+                      Value="{DynamicResource {x:Static vsui:EnvironmentColors.GridLineBrushKey}}" />
+              <Setter Property="BorderThickness" Value="0,0,1,1" />
+              <Setter Property="Padding" Value="8,4" />
+              <Setter Property="HorizontalContentAlignment" Value="Left" />
+            </Style>
+          </DataGrid.ColumnHeaderStyle>
+          <!-- The cell keeps the row's colours: the stock DataGridCell brings its own selected
+               background and black text, which is the light-on-light bug one level down. -->
+          <DataGrid.CellStyle>
+            <Style TargetType="DataGridCell">
+              <Setter Property="Background" Value="Transparent" />
+              <Setter Property="BorderThickness" Value="0" />
+              <Setter Property="Foreground"
+                      Value="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowTextBrushKey}}" />
+              <Setter Property="Padding" Value="8,3" />
+              <Setter Property="Template">
+                <Setter.Value>
+                  <ControlTemplate TargetType="DataGridCell">
+                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                      <ContentPresenter VerticalAlignment="Center" />
+                    </Border>
+                  </ControlTemplate>
+                </Setter.Value>
+              </Setter>
+              <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                  <Setter Property="Background"
+                          Value="{DynamicResource {x:Static vsui:EnvironmentColors.SystemHighlightBrushKey}}" />
+                  <Setter Property="Foreground"
+                          Value="{DynamicResource {x:Static vsui:EnvironmentColors.SystemHighlightTextBrushKey}}" />
+                </Trigger>
+              </Style.Triggers>
+            </Style>
+          </DataGrid.CellStyle>
+          <DataGrid.ContextMenu>
+            <ContextMenu>
+              <MenuItem Header="Compare with the current file" Click="OnCompareClick">
+                <MenuItem.Icon>
+                  <imaging:CrispImage Width="16" Height="16"
+                                      Moniker="{x:Static catalog:KnownMonikers.CompareFiles}" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <!-- "Save a copy as", not "Restore": this writes a file and leaves the conversation
+                   alone, and a name promising a rewind would be a lie. -->
+              <MenuItem Header="Save a copy as…" Click="OnSaveCopyClick">
+                <MenuItem.Icon>
+                  <imaging:CrispImage Width="16" Height="16"
+                                      Moniker="{x:Static catalog:KnownMonikers.SaveAs}" />
+                </MenuItem.Icon>
+              </MenuItem>
+              <Separator />
+              <MenuItem Header="Open the backup folder" Click="OnOpenFolderClick">
+                <MenuItem.Icon>
+                  <imaging:CrispImage Width="16" Height="16"
+                                      Moniker="{x:Static catalog:KnownMonikers.OpenFolder}" />
+                </MenuItem.Icon>
+              </MenuItem>
+            </ContextMenu>
+          </DataGrid.ContextMenu>
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="File" Width="*" Binding="{Binding DisplayPath}" />
+            <DataGridTextColumn Header="Ver." Width="52" Binding="{Binding Version}" />
+            <DataGridTextColumn Header="Size" Width="80" Binding="{Binding SizeText}" />
+            <DataGridTextColumn Header="Backed up" Width="130" Binding="{Binding BackupTimeText}" />
+          </DataGrid.Columns>
+        </DataGrid>
+      </Grid>
+    </Grid>
+
+    <!-- Status bar: what is checked, and why something isn't checkable. -->
+    <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,8,0,0" Padding="0,6,0,0"
+            BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource {x:Static vsui:EnvironmentColors.ToolWindowBorderBrushKey}}">
+      <StackPanel Orientation="Horizontal">
+        <TextBlock x:Name="StatusText" Opacity="0.7" FontSize="11" VerticalAlignment="Center" />
+        <TextBlock x:Name="LiveText" Opacity="0.7" FontSize="11" VerticalAlignment="Center"
+                   Margin="12,0,0,0" Visibility="Collapsed" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

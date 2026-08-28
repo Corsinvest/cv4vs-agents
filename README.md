@@ -153,6 +153,9 @@ own.
   - **[Context usage](docs/context-usage.md)** — for any historical session, how it fills the model's
     context window: a memory-map, category table and expandable trees (memory files, agents, skills,
     MCP tools), fetched read-only by resuming the session.
+  - **[File history](docs/file-history.md)** — what the CLI's file backups cost on disk, per project
+    and per session, with a diff against the file as it is now and a way to delete the ones you no
+    longer want (orphaned ones included).
 - **[Plugin manager](docs/chat/plugins.md)** — install from a marketplace, enable/disable what you have,
   add marketplaces — from Installed / Available / Marketplaces tabs, without leaving the chat.
 - **Talk to it** — dictate the prompt instead of typing it: a mic button in the composer transcribes
