@@ -148,6 +148,13 @@
     display: inline-block;
     max-width: 100%;
 }
+
+/* The scroll lives on this inner level, never on the wrapper: the wrapper is what positions the
+ * copy button, and a button anchored to a scrolling box slides away with the columns. */
+.cv-md-table-scroll {
+    overflow-x: auto;
+    max-width: 100%;
+}
 .cv-md-table-copy-btn::part(button) {
     position: absolute;
     top: 4px;
@@ -165,11 +172,23 @@
     margin: 4px 0;
     color: var(--colorNeutralForeground3);
 }
+/* max-content is what makes the scroll above reachable at all: bounded by the bubble a table never
+ * overflows, it compresses — at 12 columns the headers wrapped letter by letter, three lines tall,
+ * with nothing to scroll because nothing stuck out. Columns take the width they need instead, and
+ * the overflow becomes real. A narrow table is unaffected: max-content is smaller than the bubble. */
 .md table {
     border-collapse: collapse;
     margin: 0.6em 0;
     font-size: var(--fontSizeBase200);
     border: 1px solid var(--colorNeutralStroke1);
+    width: max-content;
+    max-width: none;
+}
+
+/* Headers on one line: they are the shortest text in the table, so wrapping them buys no width
+ * while costing every row's height. Cells still wrap — a long path has to break somewhere. */
+.md th {
+    white-space: nowrap;
 }
 .md th,
 .md td {

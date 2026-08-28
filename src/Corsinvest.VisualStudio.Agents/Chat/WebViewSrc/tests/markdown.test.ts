@@ -77,6 +77,24 @@ test('table: the cells stay rendered by marked', () => {
     assert.equal(links(md('| file |\n|---|\n| ClientEvents.cs:208 |\n')), 1);
 });
 
+test('table: a scroll level wraps the table, inside the button wrap', () => {
+    // Measured in the chat: a table never overflows the bubble, it compresses — at 12 columns every
+    // header wraps letter by letter (144px tall against 29). Hence two levels: the outer one stays
+    // the positioning context so the copy button holds still, the inner one takes the overflow.
+    // A single level and the button scrolls away with the columns.
+    const html = md('| a | b |\n|---|---|\n| 1 | 2 |\n');
+    assert.match(
+        html,
+        /<div class="cv-md-table-wrap"><div class="cv-md-table-scroll"><table/,
+        'the scroll level goes INSIDE the wrap and around the table',
+    );
+    assert.match(
+        html,
+        /<\/table>\s*<\/div><cv-copy-btn/,
+        'the button is the scroll level sibling, not its child',
+    );
+});
+
 // The attributes the host reads on click. They do not go through DOMPurify here, but markdown.ts's
 // ADD_ATTR must list them all: data-line-end was missing while the renderer had always emitted it,
 // and a range opened without selecting.
