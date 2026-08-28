@@ -10,17 +10,17 @@ function marked(segs: { text: string; changed: boolean }[]): string {
     return segs.map((s) => (s.changed ? `«${s.text}»` : s.text)).join('');
 }
 
-test('similarity: righe identiche = 1, righe estranee = 0', () => {
+test('similarity: identical lines = 1, unrelated lines = 0', () => {
     assert.equal(similarity('const x = 1', 'const x = 1'), 1);
     assert.equal(similarity('aaa bbb', 'xxx yyy'), 0);
 });
 
-test('similarity: ignora le righe vuote invece di dividere per zero', () => {
+test('similarity: ignores empty lines instead of dividing by zero', () => {
     assert.equal(similarity('', 'x'), 0);
     assert.equal(similarity('x', ''), 0);
 });
 
-test('buildRows: una parola cambiata marca solo quella', () => {
+test('buildRows: one changed word marks only that word', () => {
     const oldStr = 'the only reason that note can be trusted\ncoda\n';
     const newStr = 'the only reason the note can be trusted\ncoda\n';
 
@@ -33,33 +33,33 @@ test('buildRows: una parola cambiata marca solo quella', () => {
     assert.equal(marked(ins.segs), 'the only reason «the» note can be trusted');
 });
 
-test('buildRows: righe estranee non vengono word-diffate', () => {
+test('buildRows: unrelated lines are not word-diffed', () => {
     const oldStr = 'alpha beta gamma\n';
-    const newStr = 'nulla in comune qui\n';
+    const newStr = 'nothing in common here\n';
 
     const rows = buildRows(oldStr, newStr, 'f.cs', 3, false);
     const del = rows.find((r) => r.kind === 'del');
     const ins = rows.find((r) => r.kind === 'ins');
 
-    // Un solo segmento non marcato: senza somiglianza il word-diff direbbe
-    // "tutto cambiato", che non informa.
+    // A single unmarked segment: with no similarity the word-diff would say
+    // "everything changed", which tells nothing.
     assert.deepEqual(del?.segs, [{ text: 'alpha beta gamma', changed: false }]);
-    assert.deepEqual(ins?.segs, [{ text: 'nulla in comune qui', changed: false }]);
+    assert.deepEqual(ins?.segs, [{ text: 'nothing in common here', changed: false }]);
 });
 
-test('buildRows: blocco 2 rimosse -> 1 aggiunta non accoppia a caso', () => {
-    const oldStr = 'prima riga uguale\nseconda riga diversa\nctx\n';
-    const newStr = 'prima riga uguale modificata\nctx\n';
+test('buildRows: a block of 2 removed -> 1 added does not pair at random', () => {
+    const oldStr = 'first line same\nsecond line different\nctx\n';
+    const newStr = 'first line same edited\nctx\n';
 
     const rows = buildRows(oldStr, newStr, 'f.cs', 3, false);
     const dels = rows.filter((r) => r.kind === 'del');
 
     assert.equal(dels.length, 2);
-    // La seconda '-' non ha una '+' con cui accoppiarsi: resta intera.
-    assert.deepEqual(dels[1].segs, [{ text: 'seconda riga diversa', changed: false }]);
+    // The second '-' has no '+' to pair with: it stays whole.
+    assert.deepEqual(dels[1].segs, [{ text: 'second line different', changed: false }]);
 });
 
-test('buildRows: i numeri di riga avanzano sui lati giusti', () => {
+test('buildRows: line numbers advance on the right sides', () => {
     const oldStr = 'a\nb\nc\n';
     const newStr = 'a\nB\nc\n';
 
@@ -76,38 +76,38 @@ test('buildRows: i numeri di riga avanzano sui lati giusti', () => {
     assert.equal(ctx[0]?.newNo, 1);
 });
 
-test('editRangeFromHunks: le righe aggiunte, non tutto lo hunk', () => {
-    // 3 righe di contesto attorno a una aggiunta: il salto deve puntare alla '+',
-    // non allo hunk intero, o l'editor selezionerebbe righe non toccate.
+test('editRangeFromHunks: the added lines, not the whole hunk', () => {
+    // 3 context lines around one addition: the jump must point at the '+',
+    // not at the whole hunk, or the editor would select untouched lines.
     const range = editRangeFromHunks([
         {
             oldStart: 46,
             oldLines: 4,
             newStart: 46,
             newLines: 5,
-            lines: ['     a', '     b', '+        nuova', '     c', '     d'],
+            lines: ['     a', '     b', '+        added', '     c', '     d'],
         },
     ]);
 
     assert.deepEqual(range, [48, 48]);
 });
 
-test('editRangeFromHunks: le righe tolte non fanno avanzare il contatore', () => {
+test('editRangeFromHunks: removed lines do not advance the counter', () => {
     const range = editRangeFromHunks([
         {
             oldStart: 10,
             oldLines: 4,
             newStart: 10,
             newLines: 3,
-            lines: ['     a', '-        via', '+        prima', '+        seconda', '     b'],
+            lines: ['     a', '-        gone', '+        first', '+        second', '     b'],
         },
     ]);
 
-    // 'a' e' 10, la '-' non conta, le due '+' sono 11 e 12
+    // 'a' is 10, the '-' does not count, the two '+' are 11 and 12
     assert.deepEqual(range, [11, 12]);
 });
 
-test('editRangeFromHunks: uno hunk di solo contesto ricade sul suo intervallo', () => {
+test('editRangeFromHunks: a context-only hunk falls back to its own range', () => {
     const range = editRangeFromHunks([
         {
             oldStart: 7,
@@ -121,28 +121,28 @@ test('editRangeFromHunks: uno hunk di solo contesto ricade sul suo intervallo', 
     assert.deepEqual(range, [7, 9]);
 });
 
-test('editRangeFromHunks: senza hunk non c e nessun punto dove saltare', () => {
+test('editRangeFromHunks: with no hunks there is nowhere to jump', () => {
     assert.deepEqual(editRangeFromHunks([]), [0, 0]);
     assert.deepEqual(editRangeFromHunks(null), [0, 0]);
 });
 
-test('editRangeFromHunks: solo il primo hunk decide il salto', () => {
+test('editRangeFromHunks: only the first hunk decides the jump', () => {
     const range = editRangeFromHunks([
-        { oldStart: 5, oldLines: 1, newStart: 5, newLines: 1, lines: ['+        prima'] },
-        { oldStart: 99, oldLines: 1, newStart: 99, newLines: 1, lines: ['+        seconda'] },
+        { oldStart: 5, oldLines: 1, newStart: 5, newLines: 1, lines: ['+        first'] },
+        { oldStart: 99, oldLines: 1, newStart: 99, newLines: 1, lines: ['+        second'] },
     ]);
 
     assert.deepEqual(range, [5, 5]);
 });
 
-test('rowsFromHunks: i numeri sono quelli del CLI, non ricontati da 1', () => {
+test('rowsFromHunks: the numbers come from the CLI, not recounted from 1', () => {
     const rows = rowsFromHunks([
         {
             oldStart: 46,
             oldLines: 4,
             newStart: 46,
             newLines: 3,
-            lines: ['     contesto', '-        return;', '     }', '     coda'],
+            lines: ['     context', '-        return;', '     }', '     tail'],
         },
     ]);
 
@@ -153,12 +153,12 @@ test('rowsFromHunks: i numeri sono quelli del CLI, non ricontati da 1', () => {
     assert.equal(ctx[0]?.newNo, 46);
     assert.equal(del?.oldNo, 47);
     assert.equal(del?.newNo, null);
-    // dopo una riga tolta i due lati divergono: old avanza, new no
+    // after a removed line the two sides diverge: old advances, new does not
     assert.equal(ctx[1]?.oldNo, 48);
     assert.equal(ctx[1]?.newNo, 47);
 });
 
-test('rowsFromHunks: piu hunk restano separati dai loro marcatori', () => {
+test('rowsFromHunks: several hunks stay separated by their markers', () => {
     const rows = rowsFromHunks([
         { oldStart: 10, oldLines: 1, newStart: 10, newLines: 1, lines: ['-a', '+A'] },
         { oldStart: 90, oldLines: 1, newStart: 90, newLines: 1, lines: ['-b', '+B'] },
@@ -170,22 +170,22 @@ test('rowsFromHunks: piu hunk restano separati dai loro marcatori', () => {
     assert.equal(hunks[1].oldNo, 90);
 });
 
-test('rowsFromHunks: nessun hunk non produce righe', () => {
+test('rowsFromHunks: no hunks produces no rows', () => {
     assert.deepEqual(rowsFromHunks([]), []);
     assert.deepEqual(rowsFromHunks(null), []);
 });
 
-test('rowsFromHunks: il word-diff intra-riga vale anche sugli hunk del CLI', () => {
+test('rowsFromHunks: the intra-line word-diff applies to CLI hunks too', () => {
     const rows = rowsFromHunks([
         {
             oldStart: 5,
             oldLines: 1,
             newStart: 5,
             newLines: 1,
-            lines: ['-la sola ragione che quella nota', '+la sola ragione che la nota'],
+            lines: ['-the only reason that note', '+the only reason the note'],
         },
     ]);
 
     const del = rows.find((r) => r.kind === 'del');
-    assert.ok(del?.segs.some((s) => s.changed && s.text.includes('quella')));
+    assert.ok(del?.segs.some((s) => s.changed && s.text.includes('that')));
 });

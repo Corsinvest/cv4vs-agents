@@ -20,7 +20,7 @@ const bot = (id: number): UiAssistantEntry => ({
     text: `a${id}`,
 });
 
-test('ogni messaggio utente apre un nuovo scambio', () => {
+test('every user message opens a new exchange', () => {
     const groups = buildGroups([user(1), bot(2), user(3), bot(4)]);
 
     assert.equal(groups.length, 2);
@@ -34,7 +34,7 @@ test('ogni messaggio utente apre un nuovo scambio', () => {
     );
 });
 
-test('le entry prima del primo utente vanno in un gruppo di testa', () => {
+test('entries before the first user go into a leading group', () => {
     const groups = buildGroups([bot(1), user(2), bot(3)]);
 
     assert.equal(groups.length, 2);
@@ -48,14 +48,14 @@ test('le entry prima del primo utente vanno in un gruppo di testa', () => {
     );
 });
 
-test('lista vuota produce zero gruppi', () => {
+test('an empty list produces zero groups', () => {
     assert.deepEqual(buildGroups([]), []);
 });
 
-test('un messaggio ancora in coda non apre uno scambio', () => {
-    // Il turno 1 sta ancora rispondendo (bot(4) arriva dopo) quando l utente scrive il secondo
-    // prompt: finche resta in coda deve stare nel gruppo del turno che gira, o la sua <section>
-    // finirebbe li e l intestazione del turno in corso si sbloccherebbe a meta risposta.
+test('a message still queued does not open an exchange', () => {
+    // Turn 1 is still answering (bot(4) arrives later) when the user types the second prompt:
+    // while it stays queued it must live in the running turn's group, or its <section> would end
+    // there and the running turn's header would unstick halfway through the answer.
     const groups = buildGroups([user(1), bot(2), user(3, 'q'), bot(4)], new Set(['q']));
 
     assert.equal(groups.length, 1);
@@ -65,15 +65,15 @@ test('un messaggio ancora in coda non apre uno scambio', () => {
     );
 });
 
-test('lo stesso messaggio apre lo scambio appena esce dalla coda', () => {
+test('the same message opens the exchange as soon as it leaves the queue', () => {
     const entries = [user(1), bot(2), user(3, 'q')];
 
     assert.equal(buildGroups(entries, new Set(['q'])).length, 1);
     assert.equal(buildGroups(entries, new Set()).length, 2);
 });
 
-test('la coda trattiene solo il suo uuid, non ogni utente', () => {
-    // 'b' e in coda, 'a' no: 'a' apre il suo scambio, 'b' resta nel gruppo che trova.
+test('the queue holds back only its own uuid, not every user message', () => {
+    // 'b' is queued, 'a' is not: 'a' opens its own exchange, 'b' stays in the group it finds.
     const groups = buildGroups([user(1, 'z'), user(2, 'b'), user(3, 'a')], new Set(['b']));
 
     assert.equal(groups.length, 2);

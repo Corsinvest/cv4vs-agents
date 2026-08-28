@@ -40,21 +40,21 @@ class FakeHost implements ReactiveControllerHost {
     }
 }
 
-/** Quante callback lo store tiene vive per una chiave: l'unica misura che vede una
- *  sottoscrizione rimasta appesa, che contare le chiamate non rivelerebbe. */
+/** How many callbacks the store keeps alive for a key: the only measure that sees a
+ *  subscription left dangling, which counting the calls would not reveal. */
 function liveListeners(key: string): number {
     const subs = (appState as unknown as { _subs?: Map<string, Set<unknown>> })._subs;
     return subs?.get(key)?.size ?? 0;
 }
 
-test('il controller si registra sull host alla costruzione', () => {
+test('the controller registers on the host at construction', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
 
     assert.deepEqual(host.controllers, [subs]);
 });
 
-test('nessuna sottoscrizione è viva prima del connect', () => {
+test('no subscription is live before connect', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
     const seen: string[] = [];
@@ -65,7 +65,7 @@ test('nessuna sottoscrizione è viva prima del connect', () => {
     assert.deepEqual(seen, []);
 });
 
-test('dopo il connect la callback riceve i cambi', () => {
+test('after connect the callback receives the changes', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
     const seen: string[] = [];
@@ -78,7 +78,7 @@ test('dopo il connect la callback riceve i cambi', () => {
     assert.deepEqual(seen, ['k:/one', 'k:/two']);
 });
 
-test('il disconnect stacca tutto', () => {
+test('disconnect detaches everything', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
     const seen: string[] = [];
@@ -92,7 +92,7 @@ test('il disconnect stacca tutto', () => {
     assert.deepEqual(seen, ['k:/live']);
 });
 
-test('un host rimosso e reinserito torna a ricevere i cambi', () => {
+test('a host removed and re-inserted receives changes again', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
     const seen: string[] = [];
@@ -108,16 +108,16 @@ test('un host rimosso e reinserito torna a ricevere i cambi', () => {
     assert.deepEqual(seen, ['k:/first', 'k:/second']);
 });
 
-// Il caso che perderebbe memoria: due connect di fila senza disconnect in mezzo. Lit chiama
-// hostConnected a ogni connectedCallback, e addController lo chiama subito se l'host è già
-// connesso. Se il secondo giro sovrascrivesse la lista di unsubscribe, il primo resterebbe
-// appeso — invisibile contando le chiamate, perché lo store tiene i listener in un Set che
-// deduplica la stessa funzione. Va misurato lo store, non la callback: dopo il disconnect
-// deve tornare esattamente al numero di partenza.
-test('un connect ripetuto non lascia sottoscrizioni appese nello store', () => {
+// The leaking case: two connects in a row with no disconnect in between. Lit calls
+// hostConnected on every connectedCallback, and addController calls it right away if the host is
+// already connected. If the second round overwrote the unsubscribe list, the first would stay
+// dangling - invisible when counting calls, because the store keeps listeners in a Set that
+// deduplicates the same function. The store is what must be measured, not the callback: after the
+// disconnect it must be back to exactly the starting count.
+test('a repeated connect leaves no dangling subscriptions in the store', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
-    // Una chiusura nuova a ogni giro: due sottoscrizioni distinte, che un Set non può fondere.
+    // A fresh closure each time: two distinct subscriptions, which a Set cannot merge.
     subs.on('workingDirectory', (v) => void v);
     subs.on('workingDirectory', (v) => void v);
     const before = liveListeners('workingDirectory');
@@ -129,7 +129,7 @@ test('un connect ripetuto non lascia sottoscrizioni appese nello store', () => {
     assert.equal(liveListeners('workingDirectory'), before);
 });
 
-test('un connect ripetuto non fa scattare la callback due volte', () => {
+test('a repeated connect does not fire the callback twice', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
     const seen: string[] = [];
@@ -142,7 +142,7 @@ test('un connect ripetuto non fa scattare la callback due volte', () => {
     assert.deepEqual(seen, ['k:/once']);
 });
 
-test('rerenderOn chiede un update per ogni chiave, senza leggere il valore', () => {
+test('rerenderOn asks for an update per key, without reading the value', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
     subs.rerenderOn('currentModel', 'permissionMode');
@@ -154,7 +154,7 @@ test('rerenderOn chiede un update per ogni chiave, senza leggere il valore', () 
     assert.equal(host.updateCount, 2);
 });
 
-test('rerenderOn smette di chiedere update dopo il disconnect', () => {
+test('rerenderOn stops asking for updates after disconnect', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
     subs.rerenderOn('currentModel');
@@ -167,7 +167,7 @@ test('rerenderOn smette di chiedere update dopo il disconnect', () => {
     assert.equal(host.updateCount, 1);
 });
 
-test('due host indipendenti non si disturbano', () => {
+test('two independent hosts do not interfere', () => {
     const a = new FakeHost();
     const b = new FakeHost();
     const subsA = new StateSubscriptions(a);
@@ -185,11 +185,11 @@ test('due host indipendenti non si disturbano', () => {
     assert.equal(b.updateCount, 2);
 });
 
-// Tutte le chiamate a on() dei componenti stanno nel constructor, quindi prima del primo
-// connect. Se una arrivasse dopo, resterebbe muta fino al reinserimento nel DOM: il
-// controller sottoscrive solo in hostConnected. Fissato qui perché è il limite del
-// contratto, non un dettaglio implementativo.
-test('on() dopo il connect non ha effetto fino al reinserimento', () => {
+// Every on() call in the components sits in the constructor, so before the first connect. One
+// arriving later would stay mute until re-insertion in the DOM: the controller subscribes only in
+// hostConnected. Pinned here because it is the boundary of the contract, not an implementation
+// detail.
+test('on() after connect has no effect until re-insertion', () => {
     const host = new FakeHost();
     const subs = new StateSubscriptions(host);
     host.connect();
@@ -198,7 +198,7 @@ test('on() dopo il connect non ha effetto fino al reinserimento', () => {
     subs.on('workingDirectory', (v) => seen.push(v));
     appState.workingDirectory = 'k:/late-subscription';
 
-    assert.deepEqual(seen, [], 'una on() tardiva non parte da sola');
+    assert.deepEqual(seen, [], 'a late on() does not start on its own');
 
     host.disconnect();
     host.connect();
