@@ -2,18 +2,18 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-// Cosa fa un `code span` inline: linka quando il contenuto E' un riferimento, resta testo quando
-// contiene anche altro. La regola vale o non vale sul contenuto intero — non ci sono link parziali.
+// What an inline `code span` does: it links when the content IS a reference, it stays text when
+// it also contains anything else. The rule holds on the whole content — there are no partial links.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderCodespanInner as render } from '../core/codespan-link.ts';
 import { parseFileRef } from '../core/file-links.ts';
 import { escapeHtml } from '../core/html.ts';
 
-// Le dipendenze vere, non finte: la regola vale solo se combacia con il parser che gira davvero.
+// The real dependencies, not fakes: the rule only holds if it matches the parser that actually runs.
 const renderCodespanInner = (text: string) => render(text, { parseFileRef, escapeHtml });
 
-/** Quanti link a file nel frammento reso. */
+/** How many file links in the rendered fragment. */
 function links(html: string): number {
     return (html.match(/class="cv-file-link"/g) ?? []).length;
 }
@@ -22,31 +22,35 @@ function fileOf(html: string): string | null {
     return html.match(/data-file="([^"]*)"/)?.[1] ?? null;
 }
 
-// Linka: il contenuto e' il riferimento e nient'altro.
+// Links: the content is the reference and nothing else.
 
-test('un riferimento con riga diventa link', () => {
+test('a reference with a line becomes a link', () => {
     const html = renderCodespanInner('ClientEvents.cs:208');
     assert.equal(links(html), 1);
     assert.equal(fileOf(html), 'ClientEvents.cs');
     assert.match(html, /data-line="208"/);
 });
 
-test('la label tiene quello che era scritto', () => {
+test('the label keeps what was written', () => {
     assert.match(renderCodespanInner('ClientEvents.cs:208'), />ClientEvents\.cs:208</);
 });
 
-test('un percorso relativo linka', () => {
+test('a relative path links', () => {
     const html = renderCodespanInner('Core/Stats/StatsService.cs:45');
     assert.equal(fileOf(html), 'Core/Stats/StatsService.cs');
 });
 
-test('un intervallo porta la riga finale nel data-line-end', () => {
+test('a range carries the end line in data-line-end', () => {
     const html = renderCodespanInner('StatsService.cs:35-48');
     assert.match(html, /data-line="35" data-line-end="48"/);
-    assert.match(html, />StatsService\.cs:35-48</, 'la label non va normalizzata alla prima riga');
+    assert.match(
+        html,
+        />StatsService\.cs:35-48</,
+        'the label must not be normalized to the first line',
+    );
 });
 
-test('una lista di righe da un link per riga, il primo col nome del file', () => {
+test('a line list gives one link per line, the first with the file name', () => {
     const html = renderCodespanInner('AgentsPackage.cs:124,185,202');
     assert.equal(links(html), 3);
     assert.match(html, />AgentsPackage\.cs:124</);
@@ -54,75 +58,75 @@ test('una lista di righe da un link per riga, il primo col nome del file', () =>
     assert.match(html, />202</);
 });
 
-test('la forma GitHub linka e tiene la sua scrittura', () => {
+test('the GitHub form links and keeps its own spelling', () => {
     const html = renderCodespanInner('ClaudeInstall.cs#L103');
     assert.equal(links(html), 1);
     assert.match(html, /data-line="103"/);
     assert.match(html, />ClaudeInstall\.cs#L103</);
 });
 
-test('le parentesi tonde linkano', () => {
+test('parentheses link', () => {
     const html = renderCodespanInner('foo.cs(339)');
     assert.equal(links(html), 1);
     assert.match(html, /data-line="339"/);
 });
 
-test('un percorso con cartella linka anche senza riga, aperto in cima', () => {
+test('a path with a folder links even without a line, opened at the top', () => {
     const html = renderCodespanInner('docs/file-links.md');
     assert.equal(links(html), 1);
     assert.match(html, /data-line="0"/);
 });
 
-// Non linka: c'e' dell'altro oltre al riferimento, o non e' un riferimento.
+// Does not link: there is something else besides the reference, or it is not a reference.
 
-test('un comando che contiene un riferimento resta testo', () => {
+test('a command containing a reference stays text', () => {
     assert.equal(links(renderCodespanInner('cat Foo.cs:12')), 0);
 });
 
-test('un riferimento seguito da altro resta testo', () => {
-    assert.equal(links(renderCodespanInner('Foo.cs:12 e poi')), 0);
+test('a reference followed by something else stays text', () => {
+    assert.equal(links(renderCodespanInner('Foo.cs:12 and then')), 0);
 });
 
-test('due riferimenti in uno span restano testo', () => {
-    // Ambiguo: lo span e' una citazione doppia o un frammento? Non si indovina.
+test('two references in one span stay text', () => {
+    // Ambiguous: is the span a double citation or a fragment? No guessing.
     assert.equal(links(renderCodespanInner('a.cs:1 b.ts:2')), 0);
 });
 
-test('una versione non e un file', () => {
+test('a version is not a file', () => {
     assert.equal(links(renderCodespanInner('1.5.0')), 0);
     assert.equal(links(renderCodespanInner('v2.1.237')), 0);
 });
 
-test('un orario, un host e un prezzo non sono file', () => {
+test('a time, a host and a price are not files', () => {
     assert.equal(links(renderCodespanInner('10:30')), 0);
     assert.equal(links(renderCodespanInner('localhost.net:4040')), 0);
     assert.equal(links(renderCodespanInner('19.99:2')), 0);
 });
 
-test('un identificatore di codice qualunque resta testo', () => {
+test('any code identifier stays text', () => {
     assert.equal(links(renderCodespanInner('appState.ideContext')), 0);
     assert.equal(links(renderCodespanInner('const x = 1')), 0);
 });
 
-test('un nome nudo senza riga ne cartella resta testo', () => {
-    // Stessa soglia della prosa: "README.md" da solo e' troppo rumoroso per linkare.
+test('a bare name with neither line nor folder stays text', () => {
+    // Same threshold as prose: "README.md" on its own is too noisy to link.
     assert.equal(links(renderCodespanInner('README.md')), 0);
 });
 
-test('testo vuoto non lancia', () => {
+test('empty text does not throw', () => {
     assert.equal(renderCodespanInner(''), '');
 });
 
-// L'HTML prodotto deve restare sicuro: il contenuto viene dal modello.
+// The produced HTML must stay safe: the content comes from the model.
 
-test('il testo non linkato e escapato', () => {
+test('unlinked text is escaped', () => {
     const html = renderCodespanInner('<script>alert(1)</script>');
     assert.doesNotMatch(html, /<script/);
     assert.match(html, /&lt;script&gt;/);
 });
 
-test('il percorso finisce escapato dentro lattributo', () => {
-    // Un nome con virgolette romperebbe data-file="..." se non fosse escapato.
+test('the path ends up escaped inside the attribute', () => {
+    // A name with quotes would break data-file="..." if it were not escaped.
     const html = renderCodespanInner('a"b.cs:1');
     assert.doesNotMatch(html, /data-file="a"b/);
 });

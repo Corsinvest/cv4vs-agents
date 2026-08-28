@@ -52,11 +52,15 @@ renderer.code = function (token: Tokens.Code): string {
 // together with no pipes or newlines, so there is nothing in the DOM to copy.
 // `.call(this)`, never `.bind`: the base renderer reaches its cells through `this.parser`, which
 // marked injects on the instance it parses with, not on the one built here.
+// Two nested divs, not one: the inner takes the horizontal scroll a wide table needs, the outer
+// stays the positioning context so the copy button does not scroll away with the columns.
 const baseTable = renderer.table;
 renderer.table = function (this: Renderer, token: Tokens.Table): string {
     return (
         `<div class="cv-md-table-wrap">` +
+        `<div class="cv-md-table-scroll">` +
         baseTable.call(this, token) +
+        `</div>` +
         `<cv-copy-btn class="cv-md-table-copy-btn" text="${escapeHtml(token.raw.trim())}" title="Copy table"></cv-copy-btn>` +
         `</div>`
     );
