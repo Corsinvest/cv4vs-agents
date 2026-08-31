@@ -6,13 +6,124 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-08-28
+
+Three places the IDE knew something and the chat did not: stopping on an exception now raises a bar
+over the line it happened on, right-clicking a build failure offers to ask about it, and the file
+copies the CLI takes before every edit — which nothing has ever cleaned up — finally have a window
+that says what they cost and deletes them. The transcript learned to fold: tool rows close, a table
+copies as markdown and scrolls when it is wide, and the user's own message sits to the right so a
+glance tells question from answer. Underneath, the host half got its first 192 unit tests, and four
+MCP tools stopped answering with a bare failure where they could name what would have worked.
+
 ### Added
 
+- **File history — see what the file backups cost, and delete them.** Before overwriting a file the
+  CLI copies it whole into `~/.claude/file-history/<session>/`, and nothing ever removes those
+  copies: they outlive the session and the transcript alike. On the machine this was built on that
+  was 33 folders and 46 MB, six of them orphans whose transcript is long gone. A tool window under
+  **Analytics** shows a config-dir → project → session tree with size and date on every row, the
+  files a session preserved, a diff against the file as it is now, and a delete that says how many
+  copies and megabytes go — and that your project files are untouched. Sorting is in the column
+  headers rather than a combo, because a click also has to say which way. A session an open pane is
+  driving cannot be deleted: its checkbox is disabled and the status bar says why, since deleting
+  the copies a live rewind restores from would break it half-way. The restore command is
+  **Save a copy as…**, not Restore — it writes a file and leaves the conversation alone.
+- **A bar over the file when the debugger stops, one press from asking.** Stopping on an exception
+  used to raise nothing, so a question typed mid-session got answered from the source instead of the
+  running program. The break now raises an InfoBar on the frame of the file it happened in — where
+  you are looking, not the top of the shell — and its button asks the last chat pane. The press is
+  the consent; nothing starts a turn on its own. Which pauses are worth an offer differs by kind,
+  so it is three values rather than a checkbox: exceptions are a surprise (the default), breakpoints
+  are not — you placed it — and steps never ask.
+- **Ask about a build failure from where you are reading it.** Right-clicking the Output window or
+  the Error List offers **Explain in cv4vs Agents**. The Error List sends the rows you selected with
+  their severity, file, line and project; the Output window sends your selection, or the tail of the
+  active pane when you selected nothing. Unlike the editor prompts the text rides in the prompt
+  itself: neither window is part of the IDE context a chat pane sends, so a bare instruction would
+  reach the agent with nothing to explain. Editor prompts gain a **Send on click** column, off by
+  default, so the prompt still lands in the composer for the half line that matters.
+- **Tool rows can be folded away.** A long session reads as how Claude got somewhere rather than
+  what it did — every row shows its body, and diffs are the tallest thing in a transcript.
+  **Options → Chat → Collapse tool results** starts every row closed, off by default because it
+  changes how the whole transcript looks. It is a separate option rather than a meaning bolted onto
+  *Preview lines*: setting that to 0 used to do this, which made "I want short bodies" and "I want
+  them closed" the same switch. *Preview lines* now caps an open body and nothing else.
 - **A table has a Copy button.** Hover a markdown table and it appears over its top-right corner,
   the way a code block's already did. It copies the markdown the model wrote — pipes, alignment row
   and empty cells — so what you paste parses back as the same table. The DOM could not supply it:
   a `<table>`'s text content is the cells run together, with no pipes and no line breaks, which is
   why the fence's approach of reading the rendered element does not carry over.
+- **A truncated locals or expand walk says why it stopped.** The walk had a time budget already but
+  reported both ways it can truncate through one bool — and the two want different moves: a member
+  cap is raised with `maxMembers`, an exhausted budget is not, and there the answer is to expand one
+  path instead of all of them. `debug_get_locals` and `debug_expand` now carry `truncatedReason`
+  ("budget" | "maxMembers") and `truncationMessage` next to `truncated`.
+- **Three MCP errors name the valid alternatives.** Listing what would have worked is already the
+  norm across the tools; an audit found three paths that named the bad value and stopped there.
+  Setting an exception breakpoint enumerates the groups, `debug_attach` lists process names and pids
+  (capped, pointing at `debug_list_processes`), and removing a file from a project lists the files
+  it actually holds, narrowed to the same extension first.
+
+### Changed
+
+- **The user's message sits to the right.** It takes 85% of the column and hugs the right edge, so a
+  glance down a long transcript tells what was asked from what was answered without a second colour.
+  The assistant's answer keeps the full width: it carries code, diffs and tool rows, and narrowing
+  it would only cost legibility. Pinned, that bubble is the exchange's header rather than a message
+  in the flow, so it takes the full column back — via `stuck: top`, which needs Chrome 133+; an
+  older WebView2 keeps the 85% bubble, which is a fine thing to fall back to.
+- **A wide table scrolls instead of squeezing itself unreadable.** Bounded by the bubble a table
+  never overflows — it compresses: measured at 12 columns, every header wrapped letter by letter,
+  144px tall against 29. Nothing was cut, and none of it could be read. Narrow tables are untouched.
+- **Both breakpoint tools report where the breakpoint landed.** For a file breakpoint that is the
+  line you asked for, but for a function breakpoint it is the only way to learn which file and line
+  the name resolved to — which matters when the name is unqualified and an overload could have
+  matched.
+
+### Fixed
+
+- **A breakpoint refused for a line with no executable code says so.** It came back as a bare
+  "Failed to set breakpoint", leaving no way to tell a bad line from a broken debugger and no hint
+  that one line down would work. Verified in the experimental instance: a blank line and a class
+  declaration are refused, a statement, an expression-bodied member and — against the obvious guess
+  — a method's opening brace are accepted.
+- **An edit header always shows both change counts.** A deletions-only edit rendered as "-20" with
+  no "+0". Each side was behind a truthiness check, so a zero disappeared instead of being shown —
+  and it was information: it told the reader the file had not grown at all.
+- **The permission picker keeps the mode you are in.** The gate for `auto` answered "show it"
+  whenever the model catalogue had not arrived; if the model then turned out not to support it, the
+  row vanished from a menu already being read — worst exactly when `auto` was the active mode. The
+  fallback now keeps it only when it is already active.
+- **A tool row that starts open can be closed.** The chevron was gated on "starts collapsed", which
+  was enough while the Agent row was the only one that ever did. It also ran the *row's* click
+  handler, so on an Edit, clicking the chevron opened the file instead of folding the diff.
+
+### Internal
+
+- **192 unit tests for the host half.** The WebView side has had tests for a while; the host had
+  none, and the gate was a green build plus a manual pass — which catches a broken pane and catches
+  nothing when a parser quietly returns a slightly wrong answer. The suites cover the `.jsonl` scan
+  and its readers, `StatsAggregator`, the path helpers, the meta filter, the MCP schema builder and
+  the content-block translator. Each was checked by putting the defect in and watching it get
+  caught. The rule worth the most is the one CLAUDE.md states and nothing enforced: the scan matches
+  on strings, so it must read a pretty-printed writer the same as the CLI's compact output.
+- **A ReactiveController holds the appState subscriptions.** Thirteen components each kept their own
+  bookkeeping for the same thing in two dialects that had grown side by side; `cv-prompt` had
+  reached eight fields and eight `?.()` calls in `disconnectedCallback`, and nothing was ever
+  unsubscribed on its own. Seven components lose `disconnectedCallback` entirely. Four composer
+  controls also kept an `@state()` copy of `appState.models` that no render ever read — it existed
+  only to make Lit re-render, which `requestUpdate()` says directly.
+- **The permission mode names are declared once.** They were bare string literals in six files, and
+  `PermissionMode` ends in `(string & {})` — deliberately, so a mode the CLI adds later travels as
+  its own string — which made every hand-written comparison unchecked: a typo compiled.
+- **The WebView tests speak English, like the rest of the repo.** Comments, test names and assertion
+  messages: a stack trace that reads half in one language is worse than either. 177 tests, same
+  count green before and after.
+- **The menu chrome for context menus is shared.** A `ContextMenu` opens in its own popup where
+  `Themes.UseVsTheme` never reaches it, so it comes up white on a dark IDE. `PaneToolbar` had solved
+  this inline with a comment saying it was itself a copy; those styles now live in
+  `Themes/MenuStyles.xaml` and both controls merge them.
 
 ## [1.6.0] - 2026-08-26
 
