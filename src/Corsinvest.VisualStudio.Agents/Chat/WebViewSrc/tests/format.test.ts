@@ -65,6 +65,14 @@ test('formatDuration: the decimal shows only below one second', () => {
     assert.equal(formatDuration(45_000), '45s');
 });
 
+test('formatDuration: zero exactly is whole, not "0.0s"', () => {
+    assert.equal(formatDuration(0), '0s');
+    assert.equal(formatDurationSec(0), '0s');
+    // The boundary the case above guards stays put.
+    assert.equal(formatDuration(1), '0.0s');
+    assert.equal(formatDuration(100), '0.1s');
+});
+
 test('formatDuration: past the minute it switches to "Nm Ns"', () => {
     assert.equal(formatDuration(60_000), '1m 0s');
     assert.equal(formatDuration(83_000), '1m 23s');

@@ -56,7 +56,9 @@ export function formatAbsolute(ms: number): string {
  *  second never shows a pointless ".0". Not localized on purpose: these sit inside dense metric
  *  rows where "1m 23s" has to stay short and predictable, unlike the prose of formatTimeAgo. */
 export function formatDuration(ms: number): string {
-    if (ms < 1000) {
+    // The decimal tells brief durations apart, and zero is not one of them: the spinner opens on
+    // this value, where a ".0" would show once and never again.
+    if (ms > 0 && ms < 1000) {
         return `${(ms / 1000).toFixed(1)}s`;
     }
     const s = Math.round(ms / 1000);

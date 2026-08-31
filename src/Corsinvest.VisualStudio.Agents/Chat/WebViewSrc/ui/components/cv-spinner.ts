@@ -155,12 +155,11 @@ export class CvSpinner extends LitElement {
             text-align: center;
             color: var(--colorBrandBackground);
         }
-        /* The min-width reserves room for the longest verb, so the elapsed time doesn't jitter
-           left and right as the word changes. Only worth it while a word is actually there. */
+        /* No min-width: reserving room for the longest verb only earns its keep while the words
+           rotate. Turning SHOW_RANDOM_VERBS back on wants it back. */
         .text {
             font-size: 12px;
             opacity: 0.8;
-            min-width: 120px;
         }
         .elapsed,
         .tokens {
@@ -274,12 +273,9 @@ export class CvSpinner extends LitElement {
     }
 
     override render() {
-        // Hidden for the first second: a turn that ends instantly would flash a "0s" that
-        // reads as an error rather than as timing.
-        const elapsed =
-            this._elapsedSec > 0
-                ? html`<span class="elapsed">${formatDurationSec(this._elapsedSec)}</span>`
-                : nothing;
+        // From zero: with no verb beside it the row would otherwise be a lone glyph for its first
+        // second, which reads as a broken font rather than as work in progress.
+        const elapsed = html`<span class="elapsed">${formatDurationSec(this._elapsedSec)}</span>`;
         // A known status always speaks; the random verb only when the flag lets it.
         const label = CvSpinner.STATUS_LABELS[this.status] || (SHOW_RANDOM_VERBS ? this._verb : '');
         // ~4 chars per token, the ratio the CLI's own spinner uses. An estimate: the exact figure
