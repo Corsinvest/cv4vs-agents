@@ -104,12 +104,15 @@ internal static class ConPty
             var flags = EXTENDED_STARTUPINFO_PRESENT;
             try
             {
-                // Also when env is empty but something has to be dropped: removing an inherited
-                // variable needs a block of our own just as much as overlaying one does.
-                var hasDrop = dropEnv != null && dropEnv.Any();
-                if ((env != null && env.Count > 0) || hasDrop)
+                // Materialised once: the caller's IEnumerable is read here to decide whether a block
+                // is needed at all and again to build it, and a lazy sequence must not answer those
+                // two differently.
+                var drop = dropEnv?.ToArray();
+                // A block is also needed when env is empty but something has to be dropped: removing
+                // an inherited variable takes an environment of our own just as overlaying one does.
+                if ((env != null && env.Count > 0) || drop?.Length > 0)
                 {
-                    envBlock = BuildEnvironmentBlock(env ?? new Dictionary<string, string>(), dropEnv);
+                    envBlock = BuildEnvironmentBlock(env ?? new Dictionary<string, string>(), drop);
                     flags |= CREATE_UNICODE_ENVIRONMENT;
                 }
 
