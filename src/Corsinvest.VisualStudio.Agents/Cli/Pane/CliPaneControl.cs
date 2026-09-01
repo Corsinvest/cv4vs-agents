@@ -235,7 +235,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
             env["FORCE_CODE_TERMINAL"] = "1";
             if (ssePort > 0) { env["CLAUDE_CODE_SSE_PORT"] = ssePort.ToString(); }
             env["CLAUDE_CODE_ENTRYPOINT"] = "claude-vscode";
-            _process.Start(cmd, Entry.WorkingDirectory, cols, rows, env);
+            _process.Start(cmd, Entry.WorkingDirectory, cols, rows, env, ClaudeInstall.InheritedSessionEnvVars);
 
             // Re-apply theme after Start: the control resets its palette on new connection.
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();

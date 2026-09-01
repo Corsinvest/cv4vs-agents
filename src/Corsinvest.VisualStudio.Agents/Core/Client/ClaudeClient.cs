@@ -245,7 +245,8 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // Off leaves the variable unset rather than setting it false — that is what "not asked for"
         // looks like to the CLI, and it keeps the profile's own env the only other voice.
         if (options.FileCheckpoints) { env["CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"] = "true"; }
-        _transport.Start(ClaudeInstall.ResolveExecutable(), args, options.WorkingDirectory, env);
+        _transport.Start(ClaudeInstall.ResolveExecutable(), args, options.WorkingDirectory, env,
+                         ClaudeInstall.InheritedSessionEnvVars);
 
         ProcessStarted?.Invoke(this, new ProcessStartedEventArgs
         {
