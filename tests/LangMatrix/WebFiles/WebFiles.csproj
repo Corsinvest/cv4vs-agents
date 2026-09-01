@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="shapes.ts" />
+    <None Include="shapes.js" />
+    <None Include="queries.sql" />
+    <None Include="MainWindow.xaml" />
+  </ItemGroup>
+</Project>
