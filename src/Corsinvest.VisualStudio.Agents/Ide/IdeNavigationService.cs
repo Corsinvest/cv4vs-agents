@@ -58,6 +58,17 @@ internal sealed partial class IdeNavigationService
 
     // Shared reflection handles, resolved once (feature-detection). Null ⇒ unsupported.
 
+    /// <summary><para>Guards every EnsureXxxProbed in the partials. They all follow the same
+    /// shape — set the "probed" flag, then do the work, then set "available" — which reads as
+    /// run-once but is not safe against a second caller: two nav tools invoked in parallel had the
+    /// second see probed=true while the first was still resolving, and answer "not available in
+    /// this Visual Studio" for a service that works. Two calls to the same tool, seconds apart,
+    /// disagreeing.</para>
+    /// <para>One lock for all of them: probing is a handful of reflection lookups that happen once
+    /// per session, so there is nothing to gain from finer grain, and the base probe is shared by
+    /// every feature anyway.</para></summary>
+    private readonly object _probeGate = new();
+
     private bool _probed;
     private bool _available;
     private object _workspace;                       // VisualStudioWorkspace (as object)
@@ -69,36 +80,39 @@ internal sealed partial class IdeNavigationService
     /// missing, so a reshaped future Roslyn can't crash us. Runs once.</summary>
     private bool EnsureProbed()
     {
-        if (_probed) { return _available; }
-        _probed = true;
-        try
+        lock (_probeGate)
         {
-            // Resolve types by scanning loaded assemblies — Type.GetType("…, AsmName")
-            // doesn't bind these VS/Roslyn assemblies (partial assembly name).
-            // `step` names the last thing probed, logged once if a future VS reshapes things.
-            string step = "workspaceType";
-            var compModel = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
-            var workspaceType = VsReflection.FindType("Microsoft.VisualStudio.LanguageServices.VisualStudioWorkspace");
-            if (compModel == null || workspaceType == null) { return ProbeFailed(step); }
+            if (_probed) { return _available; }
+            _probed = true;
+            try
+            {
+                // Resolve types by scanning loaded assemblies — Type.GetType("…, AsmName")
+                // doesn't bind these VS/Roslyn assemblies (partial assembly name).
+                // `step` names the last thing probed, logged once if a future VS reshapes things.
+                string step = "workspaceType";
+                var compModel = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+                var workspaceType = VsReflection.FindType("Microsoft.VisualStudio.LanguageServices.VisualStudioWorkspace");
+                if (compModel == null || workspaceType == null) { return ProbeFailed(step); }
 
-            step = "VisualStudioWorkspace instance";
-            var getCompService = typeof(IComponentModel).GetMethod("GetService").MakeGenericMethod(workspaceType);
-            _workspace = getCompService.Invoke(compModel, null);
-            if (_workspace == null) { return ProbeFailed(step); }
+                step = "VisualStudioWorkspace instance";
+                var getCompService = typeof(IComponentModel).GetMethod("GetService").MakeGenericMethod(workspaceType);
+                _workspace = getCompService.Invoke(compModel, null);
+                if (_workspace == null) { return ProbeFailed(step); }
 
-            step = "LanguageServices.GetService<T>";
-            var languageServicesType = VsReflection.FindType("Microsoft.CodeAnalysis.Host.LanguageServices");
-            _getServiceGeneric = languageServicesType?.GetMethods()
-                .FirstOrDefault(m => m.Name == "GetService" && m.IsGenericMethod && m.GetParameters().Length == 0);
-            if (_getServiceGeneric == null) { return ProbeFailed(step); }
+                step = "LanguageServices.GetService<T>";
+                var languageServicesType = VsReflection.FindType("Microsoft.CodeAnalysis.Host.LanguageServices");
+                _getServiceGeneric = languageServicesType?.GetMethods()
+                    .FirstOrDefault(m => m.Name == "GetService" && m.IsGenericMethod && m.GetParameters().Length == 0);
+                if (_getServiceGeneric == null) { return ProbeFailed(step); }
 
-            _available = true;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureProbed", ex);
-            return false;
+                _available = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureProbed", ex);
+                return false;
+            }
         }
     }
 
