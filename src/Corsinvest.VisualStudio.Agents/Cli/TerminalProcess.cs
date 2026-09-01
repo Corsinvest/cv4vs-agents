@@ -49,10 +49,11 @@ internal sealed class TerminalProcess : IDisposable
     /// <summary>
     /// Launch <paramref name="command"/> in a fresh ConPTY and begin streaming its output.
     /// A non-empty <paramref name="env"/> gives the child a per-process environment (see
-    /// <see cref="ConPty.Create"/>). Throws if already started or disposed.
+    /// <see cref="ConPty.Create"/>), from which <paramref name="dropEnv"/> is removed first.
+    /// Throws if already started or disposed.
     /// </summary>
     public void Start(string command, string workingDirectory, short cols, short rows,
-        IReadOnlyDictionary<string, string> env)
+        IReadOnlyDictionary<string, string> env, IEnumerable<string> dropEnv = null)
     {
         lock (_gate)
         {
@@ -62,7 +63,7 @@ internal sealed class TerminalProcess : IDisposable
             _stop = new CancellationTokenSource();
             _decoder = Encoding.UTF8.GetDecoder();
             _flush = new Timer(OnFlush, null, Timeout.Infinite, Timeout.Infinite);
-            _session = ConPty.Create(command, workingDirectory, cols, rows, env);
+            _session = ConPty.Create(command, workingDirectory, cols, rows, env, dropEnv);
 
             _reader = new Thread(ReadLoop)
             {
