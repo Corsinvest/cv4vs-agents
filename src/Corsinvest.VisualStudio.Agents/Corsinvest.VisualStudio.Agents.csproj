@@ -191,6 +191,7 @@
     <Compile Include="Mcp\Tools\Nav\GetDocumentSymbolsTool.cs" />
     <Compile Include="Mcp\Tools\Nav\RenameSymbolTool.cs" />
     <Compile Include="Mcp\Tools\Nav\SearchWorkspaceSymbolsTool.cs" />
+    <Compile Include="Mcp\Tools\Nav\GetLanguageCoverageTool.cs" />
     <Compile Include="Mcp\Tools\Debug\StartDebugTool.cs" />
     <Compile Include="Mcp\Tools\Debug\StartNoDebuggerTool.cs" />
     <Compile Include="Mcp\Tools\Debug\StopDebugTool.cs" />
