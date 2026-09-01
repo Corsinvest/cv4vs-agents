@@ -461,38 +461,44 @@ public partial class ChatPaneControl
         => Dispatcher.Invoke(() => _bridge.Send(BridgeMessages.ToWebView.Chat.ToolPermissionCancel,
             new Contracts.ToolPermissionCancelNotification { ToolUseId = e.ToolUseId }));
 
+    // These three fire once per streamed token, and they are the reason they use BeginInvoke where
+    // every other handler here uses Invoke. Invoke is synchronous: it parks the NDJSON reader thread
+    // until the UI thread has run the delegate, so the reader stopped reading stdout on every token.
+    // While VS is busy with a build or IntelliSense, that backs up into claude.exe's pipe and the
+    // CLI itself blocks on write — the chat stutters exactly when the IDE is under load, which
+    // reads as the model being slow. Posting and moving on costs the reader nothing.
+    //
+    // Ordering against the Invoke handlers is preserved: every client event comes from the one
+    // reader thread, and both Invoke and BeginInvoke queue on the same dispatcher at Normal
+    // priority, which is FIFO. Delta N and the tool_use after it still arrive in that order.
     private void OnAssistantTextDelta(object sender, AssistantTextDeltaEventArgs e)
-        => Dispatcher.Invoke(() =>
-        {
-            _bridge.Send(BridgeMessages.ToWebView.Chat.AssistantTextDelta, new Contracts.AssistantTextDeltaNotification
+        => Dispatcher.BeginInvoke(new Action(()
+            => _bridge?.Send(BridgeMessages.ToWebView.Chat.AssistantTextDelta, new Contracts.AssistantTextDeltaNotification
             {
                 Text = e.Delta,
                 Index = e.Index,
                 ParentToolUseId = e.ParentToolUseId,
-            });
-        });
+            })));
 
     private void OnAssistantThinkingDelta(object sender, AssistantThinkingDeltaEventArgs e)
-        => Dispatcher.Invoke(() =>
-            _bridge.Send(BridgeMessages.ToWebView.Chat.ThinkingDelta, new Contracts.ThinkingDeltaNotification
+        => Dispatcher.BeginInvoke(new Action(()
+            => _bridge?.Send(BridgeMessages.ToWebView.Chat.ThinkingDelta, new Contracts.ThinkingDeltaNotification
             {
                 Uuid = "",                      // stream deltas have no message uuid yet; keyed by parentToolUseId
                 Text = e.Delta,
                 EstimatedTokens = e.EstimatedTokens,
                 ParentToolUseId = e.ParentToolUseId,
-            }));
+            })));
 
     private void OnToolProgress(object sender, ToolProgressEventArgs e)
-        => Dispatcher.Invoke(() =>
-        {
-            _bridge.Send(BridgeMessages.ToWebView.Chat.ToolProgress, new Contracts.ToolProgressNotification
+        => Dispatcher.BeginInvoke(new Action(()
+            => _bridge?.Send(BridgeMessages.ToWebView.Chat.ToolProgress, new Contracts.ToolProgressNotification
             {
                 ToolUseId = e.ToolUseId,
                 ToolName = e.ToolName,
                 ElapsedSeconds = e.ElapsedSeconds,
                 ParentToolUseId = e.ParentToolUseId,
-            });
-        });
+            })));
 
     private void OnSystemMessage(object sender, JObject obj)
         => Dispatcher.Invoke(() =>
