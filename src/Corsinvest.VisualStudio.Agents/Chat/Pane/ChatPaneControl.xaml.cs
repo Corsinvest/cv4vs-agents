@@ -103,19 +103,15 @@ public partial class ChatPaneControl : PaneControlBase
         // Clear first, on the click itself: the read below is off-thread now, and the transcript
         // would otherwise sit there showing the old session while the new one loads.
         _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
-        // Two picks in a row are two reads in flight, and they finish in whatever order the file
-        // sizes decide — not in click order.
+        // Two picks in a row are two reads in flight, finishing in whatever order the file sizes
+        // decide rather than in click order.
         var generation = ++_loadGeneration;
-        // Stays void: IPaneControl declares it so, both callers are event handlers that cannot
-        // await, and the toolbar focuses the composer on the next line — a caller awaiting the
-        // disk read would just delay the caret for no one's benefit.
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
             try
             {
-                // Reached from the toolbar's History dropdown — a click handler, so the UI thread.
-                // ReadSessionState is disk + JSON parse (~200ms on a big session): off-thread, or VS
-                // freezes while it runs.
+                // Off-thread: this runs on the click that opened the History dropdown, and the read
+                // is disk + JSON parse (~200ms on a big session).
                 var (mode, page, info) = await Task.Run(() => ReadSessionState(sessionId));
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 // Superseded by a later pick, or the pane torn down while we read (DisposeCore nulls
@@ -130,8 +126,8 @@ public partial class ChatPaneControl : PaneControlBase
             }
             catch (Exception ex)
             {
-                // The transcript is already cleared by now, so a swallowed failure would leave the
-                // pane blank with nothing said about why.
+                // The transcript is already cleared: swallowed, this leaves a blank pane and no
+                // reason for it.
                 _log.LogException($"[chat] load session {sessionId}", ex);
             }
         });
@@ -538,13 +534,11 @@ public partial class ChatPaneControl : PaneControlBase
         {
             try
             {
-                // Same disk + parse cost as LoadSession, same reason to keep it off the UI thread.
                 var page = await Task.Run(() => Sessions.ReadHistoryRaw(sid, SessionManager.HistoryBatchSize, -1, out _));
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 if (generation != _loadGeneration || _bridge == null) { return; }
-                // Re-check: the read gave a turn time to start, and the guard above exists precisely
-                // because clearing mid-turn drops a reply that is not in the .jsonl yet. Checking
-                // only before the await would let exactly that through.
+                // Re-checked, not just checked above: the read gave a turn time to start, and that
+                // is exactly what the guard is for.
                 if (_turnInFlight)
                 {
                     _log.Debug(() => $"[chat] turn started while reading {sid} — transcript left alone");
