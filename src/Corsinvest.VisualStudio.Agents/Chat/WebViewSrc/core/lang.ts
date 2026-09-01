@@ -4,9 +4,9 @@
  */
 import hljs from 'highlight.js';
 
-// Language alias maps for highlight.js. Used by the markdown code block renderer (fence label →
-// language), the diff renderer (file extension → language for the patch header) and Write's body
-// (the file's own extension).
+// Language aliases for highlight.js, and the two ways in: `resolveLang` for a fence label,
+// `langForFile` for a path. Used by the markdown code block renderer, the diff preview and its
+// patch header, and Write's body.
 //
 // Only entries that hljs does NOT recognise natively. hljs already covers:
 // bash/sh/zsh, json/jsonc/json5, xml/html/xhtml/plist/svg, dockerfile,
@@ -14,13 +14,20 @@ import hljs from 'highlight.js';
 // See https://github.com/highlightjs/highlight.js/blob/main/SUPPORTED_LANGUAGES.md
 
 /**
- * Map fence label / extension to a hljs-supported language.
+ * Map a fence label, a file extension, or a whole filename to a hljs-supported language.
  * Add an entry here when authors hit a "no highlighting" fence in the wild.
+ *
+ * One map rather than two: the keys never collide — extensions on one side, extensionless
+ * filenames on the other — and splitting them meant every caller had to know which of the two to
+ * ask, so most asked neither. Not exported for the same reason: `langForFile` and `resolveLang`
+ * are the two questions worth asking, and a caller reaching past them into the table is a caller
+ * about to get a dotfile or a suffixed name wrong.
  */
-export const ALIASES: Record<string, string> = {
+const LANGS: Record<string, string> = {
     // .NET project / build / config (XML)
     csproj: 'xml',
     vbproj: 'xml',
+    vcxproj: 'xml',
     fsproj: 'xml',
     sqlproj: 'xml',
     shproj: 'xml',
@@ -34,6 +41,7 @@ export const ALIASES: Record<string, string> = {
     ruleset: 'xml',
     manifest: 'xml',
     appxmanifest: 'xml',
+    vsixmanifest: 'xml',
     slnx: 'xml',
     vsct: 'xml',
 
@@ -78,27 +86,71 @@ export const ALIASES: Record<string, string> = {
     // Plain text fallbacks
     gitignore: 'plaintext',
     gitattributes: 'plaintext',
+    dockerignore: 'plaintext',
+    npmignore: 'plaintext',
+    prettierignore: 'plaintext',
+    eslintignore: 'plaintext',
     log: 'plaintext',
     txt: 'plaintext',
-};
 
-/**
- * Special filenames without an extension → language. Used by the diff
- * renderer to compute the patch header path so hljs picks the right
- * language for files like `Dockerfile` or `Makefile`.
- */
-export const FILE_NAME_LANGS: Record<string, string> = {
+    // Whole filenames, for files that carry no extension at all. `containerfile` is up with the
+    // container entries above — it reads as an extension too, and one entry serves both.
+    // Taken from GitHub Linguist's `filenames`, keeping the ones a .NET/web/Windows repo actually
+    // holds: its full list runs to 130 names, most of them ecosystems nobody opens in this IDE.
     dockerfile: 'dockerfile',
-    containerfile: 'dockerfile',
     makefile: 'makefile',
     gnumakefile: 'makefile',
+    bsdmakefile: 'makefile',
+    kbuild: 'makefile',
     rakefile: 'ruby',
     gemfile: 'ruby',
     podfile: 'ruby',
+    brewfile: 'ruby',
+    fastfile: 'ruby',
+    appfile: 'ruby',
+    guardfile: 'ruby',
+    capfile: 'ruby',
     cmakelists: 'cmake',
     jenkinsfile: 'groovy',
     vagrantfile: 'ruby',
+    justfile: 'makefile',
+    procfile: 'yaml',
+    caddyfile: 'nginx',
+    codeowners: 'plaintext',
+    pkgbuild: 'bash',
+    gradlew: 'bash',
+    bash_profile: 'bash',
+    bash_aliases: 'bash',
+    bash_logout: 'bash',
+    cshrc: 'bash',
+    kshrc: 'bash',
+    profile: 'bash',
+    pylintrc: 'ini',
+    browserslist: 'plaintext',
 };
+
+/**
+ * The keys of LANGS that are whole filenames rather than extensions — the ones a suffix can be
+ * appended to (`Dockerfile.prod`) and still name the same kind of file. Kept apart because the map
+ * holds both kinds and a stem lookup against all of it would read `env.config` as an `env` file.
+ */
+const WHOLE_FILE_NAMES = new Set([
+    'dockerfile',
+    'containerfile',
+    'makefile',
+    'gnumakefile',
+    'bsdmakefile',
+    'rakefile',
+    'gemfile',
+    'podfile',
+    'brewfile',
+    'cmakelists',
+    'jenkinsfile',
+    'vagrantfile',
+    'justfile',
+    'procfile',
+    'caddyfile',
+]);
 
 /**
  * Resolve a fence label or extension to a hljs language name.
@@ -107,7 +159,45 @@ export const FILE_NAME_LANGS: Record<string, string> = {
  */
 export function resolveLang(label: string | undefined | null): string {
     const lc = (label ?? '').toLowerCase();
-    return ALIASES[lc] || lc;
+    return LANGS[lc] || lc;
+}
+
+/**
+ * The hljs language for a file path — the question every caller actually has, asked once here
+ * instead of four times as "what is the extension?".
+ *
+ * Three shapes, in the order that makes them unambiguous:
+ *  - a whole filename (`Dockerfile`, `Makefile`) — has no extension to find;
+ *  - a dotfile (`.gitignore`, `.editorconfig`) — where `lastIndexOf('.')` is 0, so the name IS
+ *    the key, with the leading dot dropped;
+ *  - an extension (`Foo.csproj`).
+ *
+ * Filename first: `.editorconfig` read as an extension would answer `ini` and lose the name, and
+ * a file called `Dockerfile.prod` should be a Dockerfile, not a `prod`.
+ *
+ * Returns '' when there is nothing to go on, which highlightCode treats as "render it plain".
+ */
+export function langForFile(filePath: string | undefined | null): string {
+    const base = (filePath ?? '').split(/[\\/]/).pop()?.toLowerCase() ?? '';
+    if (!base) {
+        return '';
+    }
+    const byName = LANGS[base] ?? LANGS[base.replace(/^\./, '')];
+    if (byName) {
+        return byName;
+    }
+    const dot = base.lastIndexOf('.');
+    // A suffixed filename — `Dockerfile.prod`, `Makefile.am` — is still that file, so the stem is
+    // worth a look before the suffix is taken for an extension. Only against the names, though:
+    // `env` and `config` are both keys, and reading `env.config` by its stem would answer for the
+    // wrong half of it.
+    if (dot > 0 && WHOLE_FILE_NAMES.has(base.slice(0, dot))) {
+        return LANGS[base.slice(0, dot)];
+    }
+    // dot === 0 is a dotfile the map does not know: its name is not an extension, so there is
+    // nothing left to try.
+    const ext = dot > 0 ? base.slice(dot + 1) : '';
+    return ext ? (LANGS[ext] ?? ext) : '';
 }
 
 // Bounded like the markdown one, and for the same reason: the callers are Lit render() bodies, so

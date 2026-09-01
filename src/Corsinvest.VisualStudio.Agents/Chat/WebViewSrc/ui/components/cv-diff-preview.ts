@@ -7,7 +7,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { buildRows, rowsFromHunks, type Row, type Seg } from '../../core/diff-rows';
 import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
-import { highlightCode } from '../../core/lang';
+import { highlightCode, langForFile } from '../../core/lang';
 import { markRanges, rangesOf } from '../../core/mark-ranges';
 
 /** Unchanged lines kept around each change — what git and GitHub show. */
@@ -88,11 +88,9 @@ export class CvDiffPreview extends LitElement {
         // can reach, and the full diff is one click away in Visual Studio.
         const shown = rows.slice(0, VISIBLE_ROWS);
         const more = rows.length - shown.length;
-        // Extension only, like Write's renderer (renderers.ts): highlightCode resolves a fence
-        // label or extension, not a full path, so the path itself would never match.
-        const name = this.filePath.split(/[\\/]/).pop() ?? '';
-        const dot = name.lastIndexOf('.');
-        const lang = dot > 0 ? name.slice(dot + 1) : '';
+        // langForFile, not the extension: an extensionless name is a language too — a Dockerfile
+        // went unhighlighted here for as long as this read the extension itself.
+        const lang = langForFile(this.filePath);
         return html`<div
             class="cv-diff-preview-wrap ${fromCli ? '' : 'no-gutter'}"
             data-action="diff-expand"
