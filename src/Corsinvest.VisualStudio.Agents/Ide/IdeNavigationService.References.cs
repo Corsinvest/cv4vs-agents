@@ -6,6 +6,7 @@
 using Corsinvest.VisualStudio.Agents.Helpers;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -75,45 +76,48 @@ internal sealed partial class IdeNavigationService
 
     private bool EnsureRefsProbed()
     {
-        if (_refsProbed) { return _refsAvailable; }
-        _refsProbed = true;
-        if (!EnsureProbed()) { return false; } // shares workspace + GetService<T> handles
-        try
+        lock (_probeGate)
         {
-            string step = "IFindUsagesService";
-            _findUsagesServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.FindUsages.IFindUsagesService");
-            if (_findUsagesServiceType == null) { return ProbeFailed(step); }
+            if (_refsProbed) { return _refsAvailable; }
+            _refsProbed = true;
+            if (!EnsureProbed()) { return false; } // shares workspace + GetService<T> handles
+            try
+            {
+                string step = "IFindUsagesService";
+                _findUsagesServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.FindUsages.IFindUsagesService");
+                if (_findUsagesServiceType == null) { return ProbeFailed(step); }
 
-            step = "FindReferencesAsync";
-            _findReferencesAsync = FindUsagesMethod("FindReferencesAsync");
-            if (_findReferencesAsync == null) { return ProbeFailed(step); }
+                step = "FindReferencesAsync";
+                _findReferencesAsync = FindUsagesMethod("FindReferencesAsync");
+                if (_findReferencesAsync == null) { return ProbeFailed(step); }
 
-            // Sibling method, same shape — powers goToImplementation. Optional: if a future VS
-            // drops it we just disable implementations, references still work.
-            _findImplementationsAsync = FindUsagesMethod("FindImplementationsAsync");
+                // Sibling method, same shape — powers goToImplementation. Optional: if a future VS
+                // drops it we just disable implementations, references still work.
+                _findImplementationsAsync = FindUsagesMethod("FindImplementationsAsync");
 
-            step = "BufferedFindUsagesContext";
-            _bufferedContextType = VsReflection.FindType("Microsoft.CodeAnalysis.FindUsages.BufferedFindUsagesContext");
-            if (_bufferedContextType == null) { return ProbeFailed(step); }
+                step = "BufferedFindUsagesContext";
+                _bufferedContextType = VsReflection.FindType("Microsoft.CodeAnalysis.FindUsages.BufferedFindUsagesContext");
+                if (_bufferedContextType == null) { return ProbeFailed(step); }
 
-            step = "OptionsProvider<ClassificationOptions>";
-            _optionsProviderType = VsReflection.FindType("Microsoft.CodeAnalysis.OptionsProvider`1");
-            var classOptionsType = VsReflection.FindType("Microsoft.CodeAnalysis.Classification.ClassificationOptions");
-            if (_optionsProviderType == null || classOptionsType == null) { return ProbeFailed(step); }
-            _optionsProviderType = _optionsProviderType.MakeGenericType(classOptionsType);
+                step = "OptionsProvider<ClassificationOptions>";
+                _optionsProviderType = VsReflection.FindType("Microsoft.CodeAnalysis.OptionsProvider`1");
+                var classOptionsType = VsReflection.FindType("Microsoft.CodeAnalysis.Classification.ClassificationOptions");
+                if (_optionsProviderType == null || classOptionsType == null) { return ProbeFailed(step); }
+                _optionsProviderType = _optionsProviderType.MakeGenericType(classOptionsType);
 
-            step = "ClassificationOptions.Default";
-            _classificationOptionsDefault = classOptionsType
-                .GetField("Default", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
-            if (_classificationOptionsDefault == null) { return ProbeFailed(step); }
+                step = "ClassificationOptions.Default";
+                _classificationOptionsDefault = classOptionsType
+                    .GetField("Default", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
+                if (_classificationOptionsDefault == null) { return ProbeFailed(step); }
 
-            _refsAvailable = true;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureRefsProbed", ex);
-            return false;
+                _refsAvailable = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureRefsProbed", ex);
+                return false;
+            }
         }
     }
 
@@ -121,25 +125,29 @@ internal sealed partial class IdeNavigationService
     /// 1-based <paramref name="line"/> of <paramref name="filePath"/>. Multi-language; never
     /// throws (degrades to Supported=false). The file must be in the open solution.</summary>
     public Task<NavResult> GetReferencesAsync(string filePath, int line, string symbolName, CancellationToken ct)
-        => RunFindUsagesAsync(() => _findReferencesAsync, "references", filePath, line, symbolName, ct);
+        => RunFindUsagesAsync(() => _findReferencesAsync, "references", wantsDefinitions: false,
+                              filePath, line, symbolName, ct);
 
     /// <summary>Find all implementations of the symbol on that line — concrete classes/members that
     /// implement an interface, or override a virtual/abstract member (Go To Implementation).
     /// Different from references (callers) and definition (declaration). Multi-language; never
     /// throws. Uses the sibling FindImplementationsAsync of the same IFindUsagesService.</summary>
     public Task<NavResult> GetImplementationsAsync(string filePath, int line, string symbolName, CancellationToken ct)
-        => RunFindUsagesAsync(() => _findImplementationsAsync, "implementations", filePath, line, symbolName, ct);
+        => RunFindUsagesAsync(() => _findImplementationsAsync, "implementations", wantsDefinitions: true,
+                              filePath, line, symbolName, ct);
 
-    /// <summary>Shared driver for the two IFindUsagesService entry points (FindReferencesAsync /
-    /// FindImplementationsAsync): both stream SourceReferenceItems into the buffered context, which
-    /// we then read back. <paramref name="kind"/> only flavours the messages.
+    /// <summary>Shared driver for the two IFindUsagesService entry points. <paramref name="kind"/>
+    /// flavours the messages; <paramref name="wantsDefinitions"/> picks which of the buffered
+    /// context's two builders holds the answer — see <see cref="ReadBufferedResults"/>, where
+    /// getting that wrong cost go-to-implementation every result it ever had.
     /// <para>The method arrives as a function, not as a MethodInfo, because the field it comes from
     /// is filled by the probe below. Passed directly it was read at the call site — before the probe
     /// had run — so the very first find-references of a session saw null and answered "the internal
     /// API has moved", then worked ever after. A one-off failure that read like a version problem
     /// and cleared itself on retry, which is the worst way for it to look.</para></summary>
     private async Task<NavResult> RunFindUsagesAsync(
-        Func<MethodInfo> getFindMethod, string kind, string filePath, int line, string symbolName, CancellationToken ct)
+        Func<MethodInfo> getFindMethod, string kind, bool wantsDefinitions,
+        string filePath, int line, string symbolName, CancellationToken ct)
     {
         // Probe first: it is what fills the field getFindMethod reads.
         var probed = EnsureRefsProbed();
@@ -179,7 +187,7 @@ internal sealed partial class IdeNavigationService
             var task = (Task)findMethod.Invoke(service, args);
             await task.ConfigureAwait(false);
 
-            var locations = ReadBufferedReferences(context);
+            var locations = ReadBufferedResults(context, wantsDefinitions);
             return new NavResult
             {
                 Supported = true,
@@ -195,34 +203,62 @@ internal sealed partial class IdeNavigationService
         }
     }
 
-    /// <summary>Read the buffered SourceReferenceItem list out of BufferedFindUsagesContext's
-    /// private state (_state.References) and map each SourceSpan to file/line/col.</summary>
-    private static NavLocation[] ReadBufferedReferences(object context)
+    /// <summary><para>
+    /// Read the results out of BufferedFindUsagesContext's private state and map each span to
+    /// file/line/col.
+    /// </para>
+    /// <para>
+    /// The context buffers the two searches into two separate builders, and which one holds the
+    /// answer depends on which method was called: <c>FindReferencesAsync</c> streams
+    /// SourceReferenceItems through OnReferencesFoundAsync into <c>_state.References</c>, while
+    /// <c>FindImplementationsAsync</c> streams DefinitionItems through OnDefinitionFoundAsync into
+    /// <c>_state.Definitions</c>. Reading References for both is why go-to-implementation used to
+    /// answer "none found" for every symbol in every language — an empty list, reported as a
+    /// successful search.
+    /// </para></summary>
+    private static NavLocation[] ReadBufferedResults(object context, bool definitions)
     {
         var state = VsReflection.GetField(context, "_state", BindingFlags.NonPublic | BindingFlags.Instance);
         if (state == null) { return []; }
-        var builder = VsReflection.GetField(state, "References"); // ImmutableArray<SourceReferenceItem>.Builder
-        if (builder is not IEnumerable items) { return []; }
+        var builder = VsReflection.GetField(state, definitions ? "Definitions" : "References");
+        if (builder is not System.Collections.IEnumerable items) { return []; }
 
-        var result = new System.Collections.Generic.List<NavLocation>();
+        var result = new List<NavLocation>();
         foreach (var item in items.Cast<object>())
         {
-            // SourceReferenceItem.SourceSpan : DocumentSpan(Document, TextSpan)
-            var span = VsReflection.GetPropOrNull(item, "SourceSpan");
-            if (span == null) { continue; }
-            var doc = VsReflection.GetProp(span, "Document");
-            var filePath = (string)VsReflection.GetPropOrNull(doc, "FilePath");
-            if (string.IsNullOrEmpty(filePath)) { continue; }
-            var textSpan = VsReflection.GetProp(span, "SourceSpan");
-            var start = VsReflection.GetProp<int>(textSpan, "Start");
-            var (lineNo, colNo, preview) = FileOffsetToLineCol(filePath, start);
-            result.Add(new NavLocation { FilePath = filePath, Line = lineNo, Column = colNo, Preview = preview });
+            // SourceReferenceItem carries one SourceSpan; DefinitionItem carries SourceSpans, an
+            // array — one symbol can be declared in several places (a partial class, a C++ header
+            // and its .cpp), and all of them are answers.
+            foreach (var span in SpansOf(item, definitions))
+            {
+                var doc = VsReflection.GetPropOrNull(span, "Document");
+                var filePath = (string)VsReflection.GetPropOrNull(doc, "FilePath");
+                if (string.IsNullOrEmpty(filePath)) { continue; }
+                var textSpan = VsReflection.GetProp(span, "SourceSpan");
+                var start = VsReflection.GetProp<int>(textSpan, "Start");
+                var (lineNo, colNo, preview) = FileOffsetToLineCol(filePath, start);
+                result.Add(new NavLocation { FilePath = filePath, Line = lineNo, Column = colNo, Preview = preview });
+            }
         }
-        // Roslyn collects references in parallel, so the order is nondeterministic;
-        // sort for a stable result the model can compare across calls.
+        // Roslyn collects in parallel, so the order is nondeterministic; sort for a stable result
+        // the model can compare across calls.
         return [.. result
             .OrderBy(l => l.FilePath, StringComparer.OrdinalIgnoreCase)
             .ThenBy(l => l.Line).ThenBy(l => l.Column)];
+    }
+
+    /// <summary>The DocumentSpan(s) of one buffered item: DefinitionItem.SourceSpans (plural, and
+    /// empty for a symbol that only exists in metadata) or SourceReferenceItem.SourceSpan.</summary>
+    private static IEnumerable<object> SpansOf(object item, bool definitions)
+    {
+        if (!definitions)
+        {
+            var span = VsReflection.GetPropOrNull(item, "SourceSpan");
+            return span == null ? [] : [span];
+        }
+        return VsReflection.GetPropOrNull(item, "SourceSpans") is System.Collections.IEnumerable spans
+            ? spans.Cast<object>()
+            : [];
     }
 
     /// <summary>RealProxy that satisfies the single-method internal interface

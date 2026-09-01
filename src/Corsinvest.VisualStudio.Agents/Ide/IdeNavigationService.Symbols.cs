@@ -40,27 +40,30 @@ internal sealed partial class IdeNavigationService
 
     private bool EnsureSymbolsProbed()
     {
-        if (_symbolsProbed) { return _symbolsAvailable; }
-        _symbolsProbed = true;
-        if (!EnsureProbed()) { return false; }
-        try
+        lock (_probeGate)
         {
-            string step = "INavigationBarItemService";
-            _navBarServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.NavigationBar.INavigationBarItemService");
-            if (_navBarServiceType == null) { return ProbeFailed(step); }
+            if (_symbolsProbed) { return _symbolsAvailable; }
+            _symbolsProbed = true;
+            if (!EnsureProbed()) { return false; }
+            try
+            {
+                string step = "INavigationBarItemService";
+                _navBarServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.NavigationBar.INavigationBarItemService");
+                if (_navBarServiceType == null) { return ProbeFailed(step); }
 
-            step = "GetItemsAsync";
-            _getNavBarItemsAsync = _navBarServiceType.GetMethods()
-                .FirstOrDefault(m => m.Name == "GetItemsAsync" && m.GetParameters().Length == 4);
-            if (_getNavBarItemsAsync == null) { return ProbeFailed(step); }
+                step = "GetItemsAsync";
+                _getNavBarItemsAsync = _navBarServiceType.GetMethods()
+                    .FirstOrDefault(m => m.Name == "GetItemsAsync" && m.GetParameters().Length == 4);
+                if (_getNavBarItemsAsync == null) { return ProbeFailed(step); }
 
-            _symbolsAvailable = true;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureSymbolsProbed", ex);
-            return false;
+                _symbolsAvailable = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureSymbolsProbed", ex);
+                return false;
+            }
         }
     }
 
