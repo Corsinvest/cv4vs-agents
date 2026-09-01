@@ -29,7 +29,9 @@ internal sealed class SearchWorkspaceSymbolsTool : McpTool<SearchWorkspaceSymbol
         "its container and the declaration line itself. Returns up to 50 hits, each with name, " +
         "kind, file, 1-based line, container_name and preview, ordered by file then line. " +
         "Returns supported=false where no project provides NavigateTo — fall back to Grep then, " +
-        "which searches text and will also match usages and comments. This is the way in when " +
+        "which searches text and will also match usages and comments. Where only some projects " +
+        "provide it the search still answers, and reason names the ones it could not cover, so no " +
+        "results there means 'not in the projects searched' rather than 'nowhere'. This is the way in when " +
         "the file is unknown: from a hit, nav_go_to_definition, nav_find_references and " +
         "nav_get_document_symbols all take the file and line it returns.";
 
@@ -43,6 +45,9 @@ internal sealed class SearchWorkspaceSymbolsTool : McpTool<SearchWorkspaceSymbol
         return new
         {
             supported = true,
+            // Null unless part of the solution could not be searched — see SkippedReason. Without
+            // it an empty result reads as "no such symbol" rather than "none where I could look".
+            reason = r.Reason,
             results = r.Hits.Select(h => new
             {
                 name = h.Name,

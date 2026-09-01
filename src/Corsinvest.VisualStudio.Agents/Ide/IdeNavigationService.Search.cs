@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Helpers;
+using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -50,40 +51,43 @@ internal sealed partial class IdeNavigationService
 
     private bool EnsureSearchProbed()
     {
-        if (_searchProbed) { return _searchAvailable; }
-        _searchProbed = true;
-        if (!EnsureProbed()) { return false; }
-        try
+        lock (_probeGate)
         {
-            string step = "INavigateToSearchService";
-            _navigateToServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.NavigateTo.INavigateToSearchService");
-            if (_navigateToServiceType == null) { return ProbeFailed(step); }
+            if (_searchProbed) { return _searchAvailable; }
+            _searchProbed = true;
+            if (!EnsureProbed()) { return false; }
+            try
+            {
+                string step = "INavigateToSearchService";
+                _navigateToServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.NavigateTo.INavigateToSearchService");
+                if (_navigateToServiceType == null) { return ProbeFailed(step); }
 
-            step = "INavigateToSearchResult";
-            _searchResultType = VsReflection.FindType("Microsoft.CodeAnalysis.NavigateTo.INavigateToSearchResult");
-            if (_searchResultType == null) { return ProbeFailed(step); }
+                step = "INavigateToSearchResult";
+                _searchResultType = VsReflection.FindType("Microsoft.CodeAnalysis.NavigateTo.INavigateToSearchResult");
+                if (_searchResultType == null) { return ProbeFailed(step); }
 
-            step = "Project/Document types";
-            _projectType = VsReflection.FindType("Microsoft.CodeAnalysis.Project");
-            _documentType = VsReflection.FindType("Microsoft.CodeAnalysis.Document");
-            if (_projectType == null || _documentType == null) { return ProbeFailed(step); }
+                step = "Project/Document types";
+                _projectType = VsReflection.FindType("Microsoft.CodeAnalysis.Project");
+                _documentType = VsReflection.FindType("Microsoft.CodeAnalysis.Document");
+                if (_projectType == null || _documentType == null) { return ProbeFailed(step); }
 
-            // One call covers the whole solution. Roslyn 5.x: SearchProjectsAsync(solution,
-            // projects, priorityDocuments, searchPattern, kinds, activeDocument, onResultsFound,
-            // onProjectCompleted, ct). Matched by name only — the arguments are mapped by
-            // parameter type in BuildSearchArguments, so a reordering doesn't silently misfire.
-            step = "SearchProjectsAsync";
-            _searchProjectsAsync = _navigateToServiceType.GetMethods()
-                .FirstOrDefault(m => m.Name == "SearchProjectsAsync");
-            if (_searchProjectsAsync == null) { return ProbeFailed(step); }
+                // One call covers the whole solution. Roslyn 5.x: SearchProjectsAsync(solution,
+                // projects, priorityDocuments, searchPattern, kinds, activeDocument, onResultsFound,
+                // onProjectCompleted, ct). Matched by name only — the arguments are mapped by
+                // parameter type in BuildSearchArguments, so a reordering doesn't silently misfire.
+                step = "SearchProjectsAsync";
+                _searchProjectsAsync = _navigateToServiceType.GetMethods()
+                    .FirstOrDefault(m => m.Name == "SearchProjectsAsync");
+                if (_searchProjectsAsync == null) { return ProbeFailed(step); }
 
-            _searchAvailable = true;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureSearchProbed", ex);
-            return false;
+                _searchAvailable = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureSearchProbed", ex);
+                return false;
+            }
         }
     }
 
@@ -108,15 +112,22 @@ internal sealed partial class IdeNavigationService
             // The service is registered per language, so group the projects by the instance that
             // serves them: one call per service covers every project of that language at once.
             var byService = new Dictionary<object, List<object>>();
+
+            // Names of the projects actually searched, to compare against the solution's own list
+            // below. A project drops out for either of two reasons — its language registers no
+            // NavigateTo provider, or (the C++ case) it is not a Roslyn project at all, so it never
+            // appears in this loop to begin with.
+            var searchedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var project in projects)
             {
                 var langServices = VsReflection.GetPropOrNull(project, "Services")
                                    ?? VsReflection.GetPropOrNull(project, "LanguageServices");
-                if (langServices == null) { continue; }
+                var svc = langServices == null
+                    ? null
+                    : _getServiceGeneric.MakeGenericMethod(_navigateToServiceType).Invoke(langServices, null);
+                if (svc == null) { continue; }
 
-                var svc = _getServiceGeneric.MakeGenericMethod(_navigateToServiceType).Invoke(langServices, null);
-                if (svc == null) { continue; } // language has no NavigateTo provider
-
+                if (VsReflection.GetPropOrNull(project, "Name") is string name) { searchedNames.Add(name); }
                 if (!byService.TryGetValue(svc, out var list))
                 {
                     list = [];
@@ -144,7 +155,12 @@ internal sealed partial class IdeNavigationService
                 .ThenBy(h => h.Line)
                 .Take(MaxHits)
                 .ToArray();
-            return new SearchResult { Supported = true, Hits = ordered };
+            return new SearchResult
+            {
+                Supported = true,
+                Hits = ordered,
+                Reason = await SkippedReasonAsync(searchedNames).ConfigureAwait(false),
+            };
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -153,6 +169,46 @@ internal sealed partial class IdeNavigationService
             return new SearchResult { Supported = false, Reason = "Search failed (internal API changed?)." };
         }
     }
+
+    /// <summary><para>Names the projects of the solution that the search did not cover, or null
+    /// when it covered them all.</para>
+    /// <para>The comparison has to be against the solution's own project list, read through DTE:
+    /// a C++ project is not in the Roslyn workspace at all, so iterating
+    /// <c>CurrentSolution.Projects</c> never sees it — it is missing rather than skipped, and
+    /// counting only what that loop rejected would report nothing while half the solution went
+    /// unsearched.</para>
+    /// <para>Kept to a handful of names: a solution can hold dozens of C++ projects, and the point
+    /// is that part of it was not searched, not which twenty.</para></summary>
+    private static async Task<string> SkippedReasonAsync(HashSet<string> searchedNames)
+    {
+        List<string> missing;
+        try
+        {
+            // Reuses the IDE-context walk rather than iterating DTE here: that one already recurses
+            // into solution folders — where these probe projects live, and a flat pass over
+            // Solution.Projects would miss them — and already drops the Miscellaneous Files node,
+            // which is a Project by type but nobody's code (it surfaced as "File esterni" on an
+            // Italian IDE the first time this was written without the filter).
+            var structure = await IdeContextService.Instance.GetProjectStructureAsync().ConfigureAwait(false);
+            missing = [.. structure.Projects
+                .Select(p => p.Name)
+                .Where(n => !string.IsNullOrEmpty(n) && !searchedNames.Contains(n))];
+        }
+        catch (Exception ex)
+        {
+            // Best effort: a DTE hiccup must not cost the caller the hits it already has.
+            OutputWindowLogger.Global.Warn($"[nav] could not list the solution's projects: {ex.Message}");
+            return null;
+        }
+
+        if (missing.Count == 0) { return null; }
+        const int MaxNamed = 3;
+        var named = string.Join(", ", missing.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).Take(MaxNamed));
+        var rest = missing.Count > MaxNamed ? $" and {missing.Count - MaxNamed} more" : "";
+        return $"Not searched: {named}{rest} — no symbol search for those projects' language "
+             + "(C++ and other non-Roslyn projects). Use text search to cover them.";
+    }
+
 
     // Encapsulates the brittle reflection call so a signature mismatch stays isolated: on failure
     // the caller keeps whatever the callback already collected.

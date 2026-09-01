@@ -224,6 +224,7 @@ internal sealed partial class McpServerHost
         yield return new Tools.GetDocumentSymbolsTool();
         yield return new Tools.RenameSymbolTool();
         yield return new Tools.SearchWorkspaceSymbolsTool();
+        yield return new Tools.GetLanguageCoverageTool();
         yield return new Tools.StartDebugTool();
         yield return new Tools.StartNoDebuggerTool();
         yield return new Tools.StopDebugTool();
