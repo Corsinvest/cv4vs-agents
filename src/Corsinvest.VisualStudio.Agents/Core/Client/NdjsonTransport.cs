@@ -60,8 +60,7 @@ internal sealed class NdjsonTransport : IDisposable
     }
 
     /// <param name="dropEnv">Inherited variables to remove before <paramref name="extraEnv"/> goes
-    /// on. The child starts from a copy of OUR environment, which is not always a clean slate —
-    /// see the caller for what has to go and why.</param>
+    /// on — see <see cref="ClaudeInstall.InheritedSessionEnvVars"/> for which, and why.</param>
     public void Start(string exePath, string arguments, string workingDirectory,
         System.Collections.Generic.IReadOnlyDictionary<string, string> extraEnv,
         System.Collections.Generic.IEnumerable<string> dropEnv = null)
@@ -84,9 +83,8 @@ internal sealed class NdjsonTransport : IDisposable
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
         };
-        // Drop first, then overlay: a key the caller sets must survive its own drop list.
-        // EnvironmentVariables starts as a copy of ours and is case-insensitive on Windows,
-        // so an inherited variable is removed whatever case it arrived in.
+        // Drop first, then overlay: a key the caller sets must survive its own drop list. The
+        // collection is case-insensitive, so an inherited variable goes whatever case it arrived in.
         if (dropEnv != null)
         {
             foreach (var key in dropEnv) { psi.EnvironmentVariables.Remove(key); }

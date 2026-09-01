@@ -29,14 +29,11 @@ public static class ClaudeInstall
     /// <summary>Anthropic setup/quickstart page — shown when the binary can't be found.</summary>
     public const string DocsUrl = "https://code.claude.com/docs/en/setup";
 
-    /// <summary>Session-identity variables to strip from a CLI we launch. A child starts from a
-    /// copy of OUR environment, and ours is not always clean: start Visual Studio from inside a
-    /// Claude Code session — which is how anyone working on this extension starts it — and VS
-    /// inherits that session's identity, then hands it to every claude.exe it spawns. The child
-    /// would read the markers of a conversation it has no part in.
+    /// <summary>Session-identity variables to strip from a CLI we launch. Start Visual Studio from
+    /// inside a Claude Code session and VS inherits that session's identity, then hands it to every
+    /// claude.exe it spawns — the child reads the markers of a conversation it has no part in.
     /// <para>Shared by both launch paths. <c>CLAUDE_CODE_ENTRYPOINT</c> is deliberately absent:
-    /// both paths assign it straight after, and dropping it first would only be noise.</para>
-    /// </summary>
+    /// both assign it straight after, so dropping it first would only be noise.</para></summary>
     public static readonly string[] InheritedSessionEnvVars =
     [
         "CLAUDECODE",

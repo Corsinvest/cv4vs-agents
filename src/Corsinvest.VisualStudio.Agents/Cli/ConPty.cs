@@ -104,12 +104,11 @@ internal static class ConPty
             var flags = EXTENDED_STARTUPINFO_PRESENT;
             try
             {
-                // Materialised once: the caller's IEnumerable is read here to decide whether a block
-                // is needed at all and again to build it, and a lazy sequence must not answer those
-                // two differently.
+                // Materialised once — read below to decide whether a block is needed, and again to
+                // build it; a lazy sequence must not answer those two differently.
                 var drop = dropEnv?.ToArray();
-                // A block is also needed when env is empty but something has to be dropped: removing
-                // an inherited variable takes an environment of our own just as overlaying one does.
+                // Dropping an inherited variable takes an environment of our own just as overlaying
+                // one does, so an empty env with something to drop still needs a block.
                 if ((env != null && env.Count > 0) || drop?.Length > 0)
                 {
                     envBlock = BuildEnvironmentBlock(env ?? new Dictionary<string, string>(), drop);
