@@ -308,7 +308,7 @@ internal sealed partial class IdeNavigationService
     /// Miscellaneous Files node — a flat pass over DTE's Solution.Projects gets both of those
     /// wrong, as an earlier attempt at this in Search.cs found out by reporting "File esterni".
     /// </para></summary>
-    private static (ForeignFiles[] Outside, ForeignFiles[] Uncovered) WalkSolution(
+    private (ForeignFiles[] Outside, ForeignFiles[] Uncovered) WalkSolution(
         System.Collections.Generic.Dictionary<string, string> inWorkspace)
     {
         try
@@ -360,7 +360,7 @@ internal sealed partial class IdeNavigationService
     /// <summary>Source files by extension. With a <paramref name="language"/> only the ones that
     /// language does not answer for are counted; with null every source file is, which is the case
     /// for a project no language service reaches at all.</summary>
-    private static System.Collections.Generic.Dictionary<string, int> CountExtensions(
+    private System.Collections.Generic.Dictionary<string, int> CountExtensions(
         System.Collections.Generic.List<string> files, string language)
     {
         var counts = new System.Collections.Generic.Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -378,36 +378,100 @@ internal sealed partial class IdeNavigationService
         return counts;
     }
 
-    /// <summary>Whether a project of <paramref name="language"/> is the one that answers for files
-    /// with this extension. Deliberately a short list rather than IFileExtensionRegistryService:
-    /// the question is not "which language is this file" but "does THIS project's service cover
-    /// it", and everything outside the list is the answer we are looking for anyway.</summary>
-    private static bool SpeaksFor(string language, string extension) => language switch
+    /// <summary><para>Whether a project of <paramref name="language"/> is the one that answers for
+    /// files with this extension — asked of Roslyn, which maps a content type back to the language
+    /// name it uses, rather than kept as a table here.</para>
+    /// <para><c>IContentTypeLanguageService</c> is the reverse of what the name suggests: it is a
+    /// per-language service, so asking the language for its content type and comparing is how the
+    /// mapping is read in that direction. A language that does not register one (or a file VS has
+    /// no content type for) answers true — an unknown pairing is not evidence of a gap, and
+    /// over-reporting would be the worse mistake here.</para></summary>
+    private bool SpeaksFor(string language, string extension)
     {
-        "C#" => extension.Equals(".cs", StringComparison.OrdinalIgnoreCase)
-                || extension.Equals(".csx", StringComparison.OrdinalIgnoreCase),
-        "Visual Basic" => extension.Equals(".vb", StringComparison.OrdinalIgnoreCase),
-        "F#" => extension.Equals(".fs", StringComparison.OrdinalIgnoreCase)
-                || extension.Equals(".fsi", StringComparison.OrdinalIgnoreCase)
-                || extension.Equals(".fsx", StringComparison.OrdinalIgnoreCase),
-        "TypeScript" => extension.Equals(".ts", StringComparison.OrdinalIgnoreCase)
-                        || extension.Equals(".tsx", StringComparison.OrdinalIgnoreCase)
-                        || extension.Equals(".js", StringComparison.OrdinalIgnoreCase)
-                        || extension.Equals(".jsx", StringComparison.OrdinalIgnoreCase),
-        // An unknown language: say yes, so a language we have not met is not reported as a gap.
-        _ => true,
-    };
+        try
+        {
+            var model = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+            var registry = model?.GetService<Microsoft.VisualStudio.Utilities.IFileExtensionRegistryService>();
+            var fileContentType = registry?.GetContentTypeForExtension(extension.TrimStart('.'));
+            if (fileContentType == null) { return true; }
 
-    /// <summary>Extensions worth reporting as uncovered — code, not assets.</summary>
+            var languageContentType = ContentTypeOf(language);
+            return languageContentType == null || fileContentType.IsOfType(languageContentType);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Debug(() => $"[nav] content type for '{language}'/'{extension}': {ex.Message}");
+            return true;
+        }
+    }
+
+    /// <summary>The editor content type a Roslyn language name corresponds to, or null when this VS
+    /// does not say. Read from the language's own <c>IContentTypeLanguageService</c> — which exists
+    /// for exactly this and is cached per language, since the answer cannot change while VS runs.
+    /// </summary>
+    private string ContentTypeOf(string language)
+    {
+        if (_contentTypeByLanguage.TryGetValue(language, out var cached)) { return cached; }
+
+        string name = null;
+        try
+        {
+            var serviceType = VsReflection.FindType("Microsoft.CodeAnalysis.Editor.IContentTypeLanguageService");
+            var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
+            foreach (var project in ((IEnumerable)VsReflection.GetProp(solution, "Projects")).Cast<object>())
+            {
+                if (VsReflection.GetPropOrNull(project, "Language") as string != language) { continue; }
+                var services = VsReflection.GetPropOrNull(project, "Services")
+                               ?? VsReflection.GetPropOrNull(project, "LanguageServices");
+                if (serviceType == null || services == null) { break; }
+
+                var service = _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null);
+                var contentType = service == null ? null : VsReflection.Invoke(service, "GetDefaultContentType");
+                name = VsReflection.GetPropOrNull(contentType, "TypeName") as string;
+                break;
+            }
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Debug(() => $"[nav] no content type for language '{language}': {ex.Message}");
+        }
+
+        _contentTypeByLanguage[language] = name;
+        return name;
+    }
+
+    private readonly System.Collections.Generic.Dictionary<string, string> _contentTypeByLanguage =
+        new(StringComparer.Ordinal);
+
+    /// <summary><para>Whether this is a file VS treats as code — asked of the editor, which knows,
+    /// rather than kept as a list of our own.</para>
+    /// <para>An extension VS has a content type for is one some editor claims; one it does not is
+    /// an asset. The content-type hierarchy answers the rest: everything textual derives from
+    /// "text", and code from "code", so a `.png` and a `.dll` fall out without being enumerated.
+    /// Same reasoning as IconCacheService (extension → icon via IVsImageService2) and MimeTypes
+    /// (extension → MIME via urlmon): the platform already keeps this in sync with whatever the
+    /// user has installed, and a sixth extension list in this codebase would go stale the day
+    /// someone adds a language — see the extension-lists entry in docs/internal/TODO.md.</para>
+    /// <para>Best effort: if the registry cannot be reached, everything counts. Over-reporting a
+    /// `.json` as uncovered is a smaller lie than silently dropping a language we do not know.
+    /// </para></summary>
     private static bool IsSourceExtension(string extension)
     {
-        string[] source =
-        [
-            ".cs", ".vb", ".fs", ".fsi", ".fsx", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
-            ".cpp", ".cc", ".cxx", ".c", ".h", ".hpp", ".hxx", ".ipp",
-            ".py", ".sql", ".xaml", ".razor", ".cshtml", ".vbhtml", ".css", ".scss", ".less",
-        ];
-        return source.Contains(extension, StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var model = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+            var registry = model?.GetService<Microsoft.VisualStudio.Utilities.IFileExtensionRegistryService>();
+            if (registry == null) { return true; }
+
+            var contentType = registry.GetContentTypeForExtension(extension.TrimStart('.'));
+            // "text" is what every editable file derives from; the unknown content type does not.
+            return contentType != null && contentType.IsOfType("text");
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Debug(() => $"[nav] content type for '{extension}': {ex.Message}");
+            return true;
+        }
     }
 
     /// <summary>1-based line/column for a byte offset into a file on disk, plus the trimmed source
