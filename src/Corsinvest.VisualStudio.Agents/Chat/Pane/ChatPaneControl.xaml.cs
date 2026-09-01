@@ -103,6 +103,9 @@ public partial class ChatPaneControl : PaneControlBase
         // Clear first, on the click itself: the read below is off-thread now, and the transcript
         // would otherwise sit there showing the old session while the new one loads.
         _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
+        // Two picks in a row are two reads in flight, and they finish in whatever order the file
+        // sizes decide — not in click order.
+        var generation = ++_loadGeneration;
         // Stays void: IPaneControl declares it so, both callers are event handlers that cannot
         // await, and the toolbar focuses the composer on the next line — a caller awaiting the
         // disk read would just delay the caret for no one's benefit.
@@ -115,6 +118,9 @@ public partial class ChatPaneControl : PaneControlBase
                 // freezes while it runs.
                 var (mode, page, info) = await Task.Run(() => ReadSessionState(sessionId));
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                // Superseded by a later pick, or the pane torn down while we read (DisposeCore nulls
+                // the bridge) — either way nobody is looking at this session any more.
+                if (generation != _loadGeneration || _bridge == null) { return; }
                 SendHistoryPage(page, sessionId);
                 SetSessionTitle(info?.CustomTitle ?? info?.AiTitle ?? info?.LastPrompt);
                 // Pass the session's own mode so the respawned CLI runs on what
@@ -328,6 +334,8 @@ public partial class ChatPaneControl : PaneControlBase
     // True between the CLI's first status for a turn and its `result`. Keeps Options → Apply from
     // re-rendering the transcript mid-turn, which would drop the reply still being streamed.
     private bool _turnInFlight;
+    // Bumped by every transcript load, so a read that outlives its pick can tell and drop its answer.
+    private int _loadGeneration;
 
     // When set (by PaneLauncher before the pane loads), this pane opens ON this
     // session instead of a fresh one — used to land a fork in its own pane.
@@ -523,6 +531,9 @@ public partial class ChatPaneControl : PaneControlBase
 
         // Reload the transcript into the WebView only; do NOT call ResumeSessionAsync — re-rendering
         // UI options needs no respawn, and respawning here is not safe.
+        // Same generation counter as LoadSession: a session picked while this read is in flight
+        // must win, or the options re-render paints the previous session over the chosen one.
+        var generation = ++_loadGeneration;
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
             try
@@ -530,6 +541,7 @@ public partial class ChatPaneControl : PaneControlBase
                 // Same disk + parse cost as LoadSession, same reason to keep it off the UI thread.
                 var page = await Task.Run(() => Sessions.ReadHistoryRaw(sid, SessionManager.HistoryBatchSize, -1, out _));
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (generation != _loadGeneration || _bridge == null) { return; }
                 // Re-check: the read gave a turn time to start, and the guard above exists precisely
                 // because clearing mid-turn drops a reply that is not in the .jsonl yet. Checking
                 // only before the await would let exactly that through.
@@ -538,7 +550,7 @@ public partial class ChatPaneControl : PaneControlBase
                     _log.Debug(() => $"[chat] turn started while reading {sid} — transcript left alone");
                     return;
                 }
-                _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
+                _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
                 SendHistoryPage(page, sid);
             }
             catch (Exception ex)
