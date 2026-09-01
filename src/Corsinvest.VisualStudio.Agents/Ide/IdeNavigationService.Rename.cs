@@ -54,32 +54,35 @@ internal sealed partial class IdeNavigationService
     /// (overloads/strings/comments/file) — we use its default (all off).</summary>
     private bool EnsureRenameProbed()
     {
-        if (_renameProbed) { return _renameAvailable; }
-        _renameProbed = true;
-        if (!EnsureProbed()) { return false; }
-        try
+        lock (_probeGate)
         {
-            string step = "IEditorInlineRenameService";
-            _inlineRenameServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.Editor.IEditorInlineRenameService");
-            if (_inlineRenameServiceType == null) { return ProbeFailed(step); }
+            if (_renameProbed) { return _renameAvailable; }
+            _renameProbed = true;
+            if (!EnsureProbed()) { return false; }
+            try
+            {
+                string step = "IEditorInlineRenameService";
+                _inlineRenameServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.Editor.IEditorInlineRenameService");
+                if (_inlineRenameServiceType == null) { return ProbeFailed(step); }
 
-            step = "GetRenameInfoAsync";
-            _getRenameInfoAsync = _inlineRenameServiceType.GetMethods()
-                .FirstOrDefault(m => m.Name == "GetRenameInfoAsync" && m.GetParameters().Length == 3);
-            if (_getRenameInfoAsync == null) { return ProbeFailed(step); }
+                step = "GetRenameInfoAsync";
+                _getRenameInfoAsync = _inlineRenameServiceType.GetMethods()
+                    .FirstOrDefault(m => m.Name == "GetRenameInfoAsync" && m.GetParameters().Length == 3);
+                if (_getRenameInfoAsync == null) { return ProbeFailed(step); }
 
-            step = "SymbolRenameOptions";
-            var optionsType = VsReflection.FindType("Microsoft.CodeAnalysis.Rename.SymbolRenameOptions");
-            if (optionsType == null) { return ProbeFailed(step); }
-            _symbolRenameOptionsDefault = VsReflection.CreateInstance(optionsType); // struct, all flags false
+                step = "SymbolRenameOptions";
+                var optionsType = VsReflection.FindType("Microsoft.CodeAnalysis.Rename.SymbolRenameOptions");
+                if (optionsType == null) { return ProbeFailed(step); }
+                _symbolRenameOptionsDefault = VsReflection.CreateInstance(optionsType); // struct, all flags false
 
-            _renameAvailable = true;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureRenameProbed", ex);
-            return false;
+                _renameAvailable = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureRenameProbed", ex);
+                return false;
+            }
         }
     }
 

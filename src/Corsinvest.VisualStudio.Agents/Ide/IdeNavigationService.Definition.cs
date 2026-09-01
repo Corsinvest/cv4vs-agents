@@ -44,27 +44,30 @@ internal sealed partial class IdeNavigationService
 
     private bool EnsureDefProbed()
     {
-        if (_defProbed) { return _defAvailable; }
-        _defProbed = true;
-        if (!EnsureProbed()) { return false; }
-        try
+        lock (_probeGate)
         {
-            string step = "INavigableItemsService";
-            _navigableItemsServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.Navigation.INavigableItemsService");
-            if (_navigableItemsServiceType == null) { return ProbeFailed(step); }
+            if (_defProbed) { return _defAvailable; }
+            _defProbed = true;
+            if (!EnsureProbed()) { return false; }
+            try
+            {
+                string step = "INavigableItemsService";
+                _navigableItemsServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.Navigation.INavigableItemsService");
+                if (_navigableItemsServiceType == null) { return ProbeFailed(step); }
 
-            step = "GetNavigableItemsAsync";
-            _getNavigableItemsAsync = _navigableItemsServiceType.GetMethods()
-                .FirstOrDefault(m => m.Name == "GetNavigableItemsAsync" && m.GetParameters().Length == 3);
-            if (_getNavigableItemsAsync == null) { return ProbeFailed(step); }
+                step = "GetNavigableItemsAsync";
+                _getNavigableItemsAsync = _navigableItemsServiceType.GetMethods()
+                    .FirstOrDefault(m => m.Name == "GetNavigableItemsAsync" && m.GetParameters().Length == 3);
+                if (_getNavigableItemsAsync == null) { return ProbeFailed(step); }
 
-            _defAvailable = true;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureDefProbed", ex);
-            return false;
+                _defAvailable = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                OutputWindowLogger.Global.LogException("IdeNavigationService.EnsureDefProbed", ex);
+                return false;
+            }
         }
     }
 
