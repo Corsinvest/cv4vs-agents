@@ -461,38 +461,38 @@ public partial class ChatPaneControl
         => Dispatcher.Invoke(() => _bridge.Send(BridgeMessages.ToWebView.Chat.ToolPermissionCancel,
             new Contracts.ToolPermissionCancelNotification { ToolUseId = e.ToolUseId }));
 
+    // BeginInvoke, not Invoke like the rest: these three fire once per streamed token, and a
+    // synchronous marshal parks the NDJSON reader until the UI thread answers — under a build that
+    // backs up into claude.exe's pipe. Order still holds: one reader thread, one dispatcher queue,
+    // same priority.
     private void OnAssistantTextDelta(object sender, AssistantTextDeltaEventArgs e)
-        => Dispatcher.Invoke(() =>
-        {
-            _bridge.Send(BridgeMessages.ToWebView.Chat.AssistantTextDelta, new Contracts.AssistantTextDeltaNotification
+        => Dispatcher.BeginInvoke(new Action(()
+            => _bridge?.Send(BridgeMessages.ToWebView.Chat.AssistantTextDelta, new Contracts.AssistantTextDeltaNotification
             {
                 Text = e.Delta,
                 Index = e.Index,
                 ParentToolUseId = e.ParentToolUseId,
-            });
-        });
+            })));
 
     private void OnAssistantThinkingDelta(object sender, AssistantThinkingDeltaEventArgs e)
-        => Dispatcher.Invoke(() =>
-            _bridge.Send(BridgeMessages.ToWebView.Chat.ThinkingDelta, new Contracts.ThinkingDeltaNotification
+        => Dispatcher.BeginInvoke(new Action(()
+            => _bridge?.Send(BridgeMessages.ToWebView.Chat.ThinkingDelta, new Contracts.ThinkingDeltaNotification
             {
                 Uuid = "",                      // stream deltas have no message uuid yet; keyed by parentToolUseId
                 Text = e.Delta,
                 EstimatedTokens = e.EstimatedTokens,
                 ParentToolUseId = e.ParentToolUseId,
-            }));
+            })));
 
     private void OnToolProgress(object sender, ToolProgressEventArgs e)
-        => Dispatcher.Invoke(() =>
-        {
-            _bridge.Send(BridgeMessages.ToWebView.Chat.ToolProgress, new Contracts.ToolProgressNotification
+        => Dispatcher.BeginInvoke(new Action(()
+            => _bridge?.Send(BridgeMessages.ToWebView.Chat.ToolProgress, new Contracts.ToolProgressNotification
             {
                 ToolUseId = e.ToolUseId,
                 ToolName = e.ToolName,
                 ElapsedSeconds = e.ElapsedSeconds,
                 ParentToolUseId = e.ParentToolUseId,
-            });
-        });
+            })));
 
     private void OnSystemMessage(object sender, JObject obj)
         => Dispatcher.Invoke(() =>

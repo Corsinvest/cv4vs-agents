@@ -100,14 +100,37 @@ public partial class ChatPaneControl : PaneControlBase
     public override void LoadSession(string sessionId)
     {
         if (string.IsNullOrEmpty(sessionId) || _client == null) { return; }
+        // Clear first, on the click itself: the read below is off-thread now, and the transcript
+        // would otherwise sit there showing the old session while the new one loads.
         _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
-        var (mode, page, info) = ReadSessionState(sessionId);
-        SendHistoryPage(page, sessionId);
-        SetSessionTitle(info?.CustomTitle ?? info?.AiTitle ?? info?.LastPrompt);
-        // Pass the session's own mode so the respawned CLI runs on what
-        // the selector shows (not the client's leftover state). Model isn't
-        // passed: --resume re-emits the session's own model via init.
-        _ = _client.ResumeSessionAsync(sessionId, mode);
+        // Two picks in a row are two reads in flight, finishing in whatever order the file sizes
+        // decide rather than in click order.
+        var generation = ++_loadGeneration;
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            try
+            {
+                // Off-thread: this runs on the click that opened the History dropdown, and the read
+                // is disk + JSON parse (~200ms on a big session).
+                var (mode, page, info) = await Task.Run(() => ReadSessionState(sessionId));
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                // Superseded by a later pick, or the pane torn down while we read (DisposeCore nulls
+                // the bridge) — either way nobody is looking at this session any more.
+                if (generation != _loadGeneration || _bridge == null) { return; }
+                SendHistoryPage(page, sessionId);
+                SetSessionTitle(info?.CustomTitle ?? info?.AiTitle ?? info?.LastPrompt);
+                // Pass the session's own mode so the respawned CLI runs on what
+                // the selector shows (not the client's leftover state). Model isn't
+                // passed: --resume re-emits the session's own model via init.
+                _ = _client.ResumeSessionAsync(sessionId, mode);
+            }
+            catch (Exception ex)
+            {
+                // The transcript is already cleared: swallowed, this leaves a blank pane and no
+                // reason for it.
+                _log.LogException($"[chat] load session {sessionId}", ex);
+            }
+        });
     }
 
     /// <summary>Read a session once: its permission mode (the CLI doesn't restore this from
@@ -307,6 +330,8 @@ public partial class ChatPaneControl : PaneControlBase
     // True between the CLI's first status for a turn and its `result`. Keeps Options → Apply from
     // re-rendering the transcript mid-turn, which would drop the reply still being streamed.
     private bool _turnInFlight;
+    // Bumped by every transcript load, so a read that outlives its pick can tell and drop its answer.
+    private int _loadGeneration;
 
     // When set (by PaneLauncher before the pane loads), this pane opens ON this
     // session instead of a fresh one — used to land a fork in its own pane.
@@ -502,9 +527,31 @@ public partial class ChatPaneControl : PaneControlBase
 
         // Reload the transcript into the WebView only; do NOT call ResumeSessionAsync — re-rendering
         // UI options needs no respawn, and respawning here is not safe.
-        _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
-        var page = Sessions.ReadHistoryRaw(sid, SessionManager.HistoryBatchSize, -1, out _);
-        SendHistoryPage(page, sid);
+        // Same generation counter as LoadSession: a session picked while this read is in flight
+        // must win, or the options re-render paints the previous session over the chosen one.
+        var generation = ++_loadGeneration;
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            try
+            {
+                var page = await Task.Run(() => Sessions.ReadHistoryRaw(sid, SessionManager.HistoryBatchSize, -1, out _));
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                if (generation != _loadGeneration || _bridge == null) { return; }
+                // Re-checked, not just checked above: the read gave a turn time to start, and that
+                // is exactly what the guard is for.
+                if (_turnInFlight)
+                {
+                    _log.Debug(() => $"[chat] turn started while reading {sid} — transcript left alone");
+                    return;
+                }
+                _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
+                SendHistoryPage(page, sid);
+            }
+            catch (Exception ex)
+            {
+                _log.LogException($"[chat] options re-render {sid}", ex);
+            }
+        });
     }
 
     private async Task InitAsync()

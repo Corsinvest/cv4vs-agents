@@ -29,6 +29,21 @@ public static class ClaudeInstall
     /// <summary>Anthropic setup/quickstart page — shown when the binary can't be found.</summary>
     public const string DocsUrl = "https://code.claude.com/docs/en/setup";
 
+    /// <summary>Session-identity variables to strip from a CLI we launch. Start Visual Studio from
+    /// inside a Claude Code session and VS inherits that session's identity, then hands it to every
+    /// claude.exe it spawns — the child reads the markers of a conversation it has no part in.
+    /// <para>Shared by both launch paths. <c>CLAUDE_CODE_ENTRYPOINT</c> is deliberately absent:
+    /// both assign it straight after, so dropping it first would only be noise.</para></summary>
+    public static readonly string[] InheritedSessionEnvVars =
+    [
+        "CLAUDECODE",
+        "CLAUDE_CODE_SESSION_ID",
+        "CLAUDE_CODE_BRIDGE_SESSION_ID",
+        "CLAUDE_CODE_MESSAGING_SOCKET",
+        "CLAUDE_CODE_MESSAGING_TOKEN",
+        "CLAUDE_PID",
+    ];
+
     /// <summary>Resolve the real <c>claude.exe</c>, or <c>null</c> if not installed. Covers every
     /// current install method: the native installer and WinGet put <c>claude.exe</c> on PATH (found
     /// by the PATH scan); npm exposes only shims on PATH, so its real binary is picked up by the

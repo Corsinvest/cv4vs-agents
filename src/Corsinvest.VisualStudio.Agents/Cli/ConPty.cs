@@ -76,7 +76,7 @@ internal static class ConPty
     /// CLI/z.ai) coexist without a shared-env race. The returned session owns all handles.
     /// </summary>
     public static Session Create(string command, string workingDirectory, short cols, short rows,
-        IReadOnlyDictionary<string, string> env)
+        IReadOnlyDictionary<string, string> env, IEnumerable<string> dropEnv = null)
     {
         var (inRead, inWrite, outRead, outWrite) = CreatePipes();
 
@@ -104,9 +104,14 @@ internal static class ConPty
             var flags = EXTENDED_STARTUPINFO_PRESENT;
             try
             {
-                if (env != null && env.Count > 0)
+                // Materialised once — read below to decide whether a block is needed, and again to
+                // build it; a lazy sequence must not answer those two differently.
+                var drop = dropEnv?.ToArray();
+                // Dropping an inherited variable takes an environment of our own just as overlaying
+                // one does, so an empty env with something to drop still needs a block.
+                if ((env != null && env.Count > 0) || drop?.Length > 0)
                 {
-                    envBlock = BuildEnvironmentBlock(env);
+                    envBlock = BuildEnvironmentBlock(env ?? new Dictionary<string, string>(), drop);
                     flags |= CREATE_UNICODE_ENVIRONMENT;
                 }
 
@@ -206,15 +211,18 @@ internal static class ConPty
     /// <summary>Builds the UTF-16, double-null-terminated environment block CreateProcessW expects.
     /// Windows REPLACES the whole environment when lpEnvironment is set, so we start from the parent's
     /// full env and overlay the caller's keys — otherwise the child loses PATH/SystemRoot/… and won't
-    /// launch. Keys are sorted so the block is byte-for-byte reproducible across launches. The caller
-    /// owns the returned pointer (Marshal.FreeHGlobal).</summary>
-    private static IntPtr BuildEnvironmentBlock(IReadOnlyDictionary<string, string> overlay)
+    /// launch. <paramref name="drop"/> is removed from the inherited set first, so an overlay key
+    /// survives its own drop list. Keys are sorted so the block is byte-for-byte reproducible across
+    /// launches. The caller owns the returned pointer (Marshal.FreeHGlobal).</summary>
+    private static IntPtr BuildEnvironmentBlock(IReadOnlyDictionary<string, string> overlay,
+                                                IEnumerable<string> drop)
     {
         var vars = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (DictionaryEntry e in Environment.GetEnvironmentVariables())
         {
             vars[(string)e.Key] = (string)e.Value;
         }
+        if (drop != null) { foreach (var key in drop) { vars.Remove(key); } }
         foreach (var kv in overlay) { vars[kv.Key] = kv.Value; }
 
         var block = new StringBuilder();
