@@ -100,14 +100,35 @@ public partial class ChatPaneControl : PaneControlBase
     public override void LoadSession(string sessionId)
     {
         if (string.IsNullOrEmpty(sessionId) || _client == null) { return; }
+        // Clear first, on the click itself: the read below is off-thread now, and the transcript
+        // would otherwise sit there showing the old session while the new one loads.
         _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
-        var (mode, page, info) = ReadSessionState(sessionId);
-        SendHistoryPage(page, sessionId);
-        SetSessionTitle(info?.CustomTitle ?? info?.AiTitle ?? info?.LastPrompt);
-        // Pass the session's own mode so the respawned CLI runs on what
-        // the selector shows (not the client's leftover state). Model isn't
-        // passed: --resume re-emits the session's own model via init.
-        _ = _client.ResumeSessionAsync(sessionId, mode);
+        // Stays void: IPaneControl declares it so, both callers are event handlers that cannot
+        // await, and the toolbar focuses the composer on the next line — a caller awaiting the
+        // disk read would just delay the caret for no one's benefit.
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            try
+            {
+                // Reached from the toolbar's History dropdown — a click handler, so the UI thread.
+                // ReadSessionState is disk + JSON parse (~200ms on a big session): off-thread, or VS
+                // freezes while it runs.
+                var (mode, page, info) = await Task.Run(() => ReadSessionState(sessionId));
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                SendHistoryPage(page, sessionId);
+                SetSessionTitle(info?.CustomTitle ?? info?.AiTitle ?? info?.LastPrompt);
+                // Pass the session's own mode so the respawned CLI runs on what
+                // the selector shows (not the client's leftover state). Model isn't
+                // passed: --resume re-emits the session's own model via init.
+                _ = _client.ResumeSessionAsync(sessionId, mode);
+            }
+            catch (Exception ex)
+            {
+                // The transcript is already cleared by now, so a swallowed failure would leave the
+                // pane blank with nothing said about why.
+                _log.LogException($"[chat] load session {sessionId}", ex);
+            }
+        });
     }
 
     /// <summary>Read a session once: its permission mode (the CLI doesn't restore this from
@@ -502,9 +523,29 @@ public partial class ChatPaneControl : PaneControlBase
 
         // Reload the transcript into the WebView only; do NOT call ResumeSessionAsync — re-rendering
         // UI options needs no respawn, and respawning here is not safe.
-        _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
-        var page = Sessions.ReadHistoryRaw(sid, SessionManager.HistoryBatchSize, -1, out _);
-        SendHistoryPage(page, sid);
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            try
+            {
+                // Same disk + parse cost as LoadSession, same reason to keep it off the UI thread.
+                var page = await Task.Run(() => Sessions.ReadHistoryRaw(sid, SessionManager.HistoryBatchSize, -1, out _));
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                // Re-check: the read gave a turn time to start, and the guard above exists precisely
+                // because clearing mid-turn drops a reply that is not in the .jsonl yet. Checking
+                // only before the await would let exactly that through.
+                if (_turnInFlight)
+                {
+                    _log.Debug(() => $"[chat] turn started while reading {sid} — transcript left alone");
+                    return;
+                }
+                _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
+                SendHistoryPage(page, sid);
+            }
+            catch (Exception ex)
+            {
+                _log.LogException($"[chat] options re-render {sid}", ex);
+            }
+        });
     }
 
     private async Task InitAsync()
