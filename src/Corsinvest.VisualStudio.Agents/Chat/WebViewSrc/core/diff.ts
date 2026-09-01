@@ -6,7 +6,7 @@
 // (inline preview) and diff-stats.ts (+N/-M counts).
 
 import { createPatch } from 'diff';
-import { ALIASES, FILE_NAME_LANGS } from './lang';
+import { langForFile } from './lang';
 import { normPath } from './path';
 
 /**
@@ -15,15 +15,17 @@ import { normPath } from './path';
  */
 export function patchPathFor(filePath: string | undefined | null): string {
     const path = normPath(filePath) || 'file';
+    const lang = langForFile(path);
+    if (!lang) {
+        return path;
+    }
+    // Swap the extension when there is one, append when there is not: `Foo.csproj` becomes
+    // `Foo.xml`, `Dockerfile` becomes `Dockerfile.dockerfile`. A dotfile appends too — `.gitignore`
+    // has no extension to replace, and `.gitignore.plaintext` is a name hljs can read.
     const baseName = path.split('/').pop() ?? path;
     const dot = baseName.lastIndexOf('.');
-    if (dot <= 0) {
-        const alias = FILE_NAME_LANGS[baseName.toLowerCase()];
-        return alias ? `${path}.${alias}` : path;
-    }
-    const ext = baseName.slice(dot + 1).toLowerCase();
-    const alias = ALIASES[ext];
-    return alias ? path.slice(0, path.length - ext.length) + alias : path;
+    const stem = dot > 0 ? path.slice(0, path.length - (baseName.length - dot)) : path;
+    return `${stem}.${lang}`;
 }
 
 /**

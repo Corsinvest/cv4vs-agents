@@ -7,6 +7,7 @@
 // registered in index.ts. No name-switching anywhere else.
 
 import { html, nothing, type TemplateResult } from 'lit';
+import { langForFile } from '../../core/lang';
 import { fileName } from '../../core/path';
 import { displayPathUi } from '../paths';
 import { truncate } from '../helpers/format';
@@ -100,13 +101,8 @@ export class WriteRenderer extends ToolRenderer {
         });
     }
     override highlightAs(): string {
-        const name =
-            String(this.host.input.file_path ?? '')
-                .split(/[\\/]/)
-                .pop() ?? '';
-        const dot = name.lastIndexOf('.');
-        // Extension only when there is one: an extensionless name is not its own language.
-        return dot > 0 ? name.slice(dot + 1) : '';
+        // An extensionless name IS its own language when the map knows it — Dockerfile, Makefile.
+        return langForFile(String(this.host.input.file_path ?? ''));
     }
 }
 
