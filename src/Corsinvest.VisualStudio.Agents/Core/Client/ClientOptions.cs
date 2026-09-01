@@ -27,9 +27,12 @@ public sealed class ClientOptions
     /// in place, which is why the option says it applies to the next chat.</para></summary>
     public bool FileCheckpoints { get; set; } = true;
 
-    /// <summary>Loopback port of the IDE's MCP server. When &gt; 0 it is passed as
-    /// <c>CLAUDE_CODE_SSE_PORT</c> so the CLI connects to THIS server instead of
-    /// scanning the lock dir — deterministic with multiple VS instances open.</summary>
+    /// <summary>Loopback port of the IDE's MCP server. Carried here, but NOT read by this client:
+    /// a stream-json session reaches the IDE tools through the in-process SDK MCP server, so it
+    /// needs no port (see the launch args in <see cref="ClaudeClient"/> — no <c>--ide</c> there).
+    /// <para>The CLI pane, which does run <c>claude --ide</c>, sets <c>CLAUDE_CODE_SSE_PORT</c>
+    /// itself from <c>McpServerHost.Instance</c> straight into its ConPTY env block; it does not
+    /// come through here either.</para></summary>
     public int SsePort { get; set; }
 
     /// <summary>The pane's environment profile Env (null = none, native Claude). Merged into
