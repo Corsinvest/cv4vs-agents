@@ -20,15 +20,19 @@ internal sealed partial class WebViewMessageHandler
         // reflect the submitted message back); the host only forwards to the CLI.
         var p = data.ToObject<Contracts.SendPromptNotification>();
         log.Debug(() => $"[{BridgeMessages.FromWebView.Cli.SendPrompt}] text len={(p.Text ?? "").Length} sessionId={client.SessionId ?? "(none)"} running={client.IsRunning}");
-        // attachments stays a raw JArray: BuildContentBlocks turns it into CLI blocks.
-        var blocks = WebViewBridge.BuildContentBlocks(BuildIdeContextBlock() + (p.Text ?? ""),
-                                                     data["attachments"] as JArray);
+        // attachments stays a raw JArray: BuildContentBlocks turns it into CLI blocks. The IDE
+        // context goes in as its own block, never glued to the prompt — see BuildContentBlocks.
+        var blocks = WebViewBridge.BuildContentBlocks(p.Text ?? "",
+                                                     data["attachments"] as JArray,
+                                                     BuildIdeContextBlock());
         client.SendPrompt(blocks, p.Uuid ?? "");
     }
 
-    /// <summary>The `&lt;ide_*&gt;` block that goes in front of the prompt, or "" when there is no
-    /// editor context to report. Composed here rather than in the composer so the selected code
-    /// never crosses the bridge — the WebView only needs the file and the lines for its chip.</summary>
+    /// <summary>The `&lt;ide_*&gt;` block sent ahead of the prompt, or "" when there is no editor
+    /// context to report. Composed here rather than in the composer so the selected code never
+    /// crosses the bridge — the WebView only needs the file and the lines for its chip.
+    /// <para>Goes in its own content block, never glued to the prompt — see
+    /// <see cref="WebViewBridge.BuildContentBlocks"/> for why that matters.</para></summary>
     private string BuildIdeContextBlock()
     {
         if (entry?.Options.SendSelection == false) { return ""; }
@@ -37,13 +41,15 @@ internal sealed partial class WebViewMessageHandler
         if (!ctx.HasSelection)
         {
             return $"<ide_opened_file>The user opened the file {ctx.FilePath} in the IDE. " +
-                   "This may or may not be related to the current task.</ide_opened_file>\n";
+                   "This may or may not be related to the current task.</ide_opened_file>";
         }
         var head = $"<ide_selection>The user selected the lines {ctx.StartLine} to {ctx.EndLine} " +
                    $"from {ctx.FilePath}";
-        const string tail = "This may or may not be related to the current task.</ide_selection>\n";
+        const string tail = "This may or may not be related to the current task.</ide_selection>";
         // With the text, the shape is the VS Code webview's — what the CLI's readers expect.
-        // Without, the tag ends on the path rather than trailing a colon over nothing.
+        // Without, the tag ends on the path rather than trailing a colon over nothing: sending the
+        // code costs tokens on every message carrying a selection, and this option exists to name
+        // the file and the lines and stop there.
         return Options.AgentsOptions.Chat.SendSelectionText
             ? $"{head}:\n{ctx.SelectedText ?? ""}\n\n{tail}"
             : $"{head}. {tail}";

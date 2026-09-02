@@ -88,9 +88,19 @@ internal sealed partial class WebViewBridge
     }
 
 
-    public static JArray BuildContentBlocks(string text, JArray attachments)
+    /// <summary>The content blocks for one user turn: the IDE context (when there is any), then the
+    /// attachments, then the user's own text — LAST and in a block of its own.
+    /// <para>The split is load-bearing, not tidiness. The CLI decides a message is a slash command
+    /// by looking at whether its text block starts with "/", so anything glued in front of the
+    /// prompt hides the command: "/config" becomes an ordinary sentence, the CLI never runs it, and
+    /// the model answers it in prose instead. Same shape the VS Code webview sends.</para></summary>
+    public static JArray BuildContentBlocks(string text, JArray attachments, string ideContext = null)
     {
         var blocks = new JArray();
+        if (!string.IsNullOrEmpty(ideContext))
+        {
+            blocks.Add(new JObject { ["type"] = "text", ["text"] = ideContext });
+        }
         if (attachments != null)
         {
             foreach (var att in attachments)
