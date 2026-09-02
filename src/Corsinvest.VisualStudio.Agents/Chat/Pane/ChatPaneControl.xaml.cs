@@ -584,6 +584,11 @@ public partial class ChatPaneControl : PaneControlBase
         // Everything below talks to the WebView and the client, so it belongs on the UI thread.
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
+        // Closed while the read above was in flight (DisposeCore nulls the bridge). Bail rather
+        // than guard each call below with ?.: the tail of this method starts a claude.exe, and it
+        // would start one for a pane nobody can see.
+        if (_bridge == null) { _log.Debug(() => "load: pane closed mid-read — init abandoned"); return; }
+
         _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
         _log.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode})");
 
