@@ -5,6 +5,7 @@
 
 using Corsinvest.VisualStudio.Agents.Ide;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
@@ -39,15 +40,18 @@ internal sealed class ListTestsTool : McpTool<ListTestsArgs>
             IdeTestService.IsAvailable(out var reason);
             return new { supported = false, reason };
         }
-        // An empty list is not an answer on its own: it reads as "this solution has no tests" when
-        // it usually means discovery has not finished. Say which, rather than let it be guessed —
-        // discovery runs asynchronously after a build, so an empty answer can simply be an early
-        // one, and asking again a moment later is the first thing worth trying.
-        return tests.Count == 0
-            ? new { supported = true, count = 0, tests, note = "The Test Explorer has discovered "
-                  + "nothing yet. Discovery runs in the background after a build, so try again in "
-                  + "a moment; failing that, build the solution, or run test_run, which discovers "
-                  + "first." }
-            : (object)new { supported = true, count = tests.Count, tests };
+        if (tests.Count > 0) { return new { supported = true, count = tests.Count, tests }; }
+
+        // An empty list is not an answer on its own: unfiltered, it reads as "this solution has no
+        // tests" when it usually means discovery has not finished — it runs in the background after
+        // a build, so an early answer is empty. Under a filter, though, empty is a real answer, and
+        // blaming discovery there sends the caller chasing a problem that is not theirs.
+        var filtered = args?.Filter?.Any(f => !string.IsNullOrWhiteSpace(f)) == true;
+        return new { supported = true, count = 0, tests, note = filtered
+            ? "No discovered test matches that filter. It matches against the fully-qualified name, "
+            + "so try a shorter fragment, or call test_list with no filter to see what is there."
+            : "The Test Explorer has discovered nothing yet. Discovery runs in the background after "
+            + "a build, so try again in a moment; failing that, build the solution, or run test_run, "
+            + "which discovers first." };
     }
 }
