@@ -112,6 +112,13 @@ per-day/per-model charts.
 A companion **Usage** tab shows each profile's live plan and rate-limit windows, and a **Context
 usage** tab breaks down how any historical session fills the model's context window.
 
+![File history document-tab](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/file-history-document.png)
+
+Before overwriting a file, Claude Code copies it — and nothing ever prunes those copies: they outlive
+the session and the transcript alike, quietly reaching tens of megabytes. The **File history** tab
+shows what they cost per project and per session, diffs any backup against the file as it is now, and
+deletes the ones you no longer want, orphans included. Your project files are never touched.
+
 All aggregated locally. No telemetry.
 
 ---
