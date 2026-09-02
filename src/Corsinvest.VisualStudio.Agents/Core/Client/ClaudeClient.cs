@@ -26,6 +26,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
     // disposed instance. Readers that then USE it must copy it to a local first: the field can
     // change between two reads of it.
     private volatile NdjsonTransport _transport;
+    // Volatile for the same reason as the transport: Dispose runs on the UI thread while the read
+    // loop and the MCP workers are still live, and they must see it on their next check.
+    private volatile bool _disposed;
     private readonly ConcurrentDictionary<string, TaskCompletionSource<JObject>> _pending = new();
     private int _requestCounter;
 
@@ -172,6 +175,11 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     private void StartProcess(ClientOptions options)
     {
+        // Disposed clients start nothing. The transport refuses to Start once disposed, but the
+        // rotation below hands us a FRESH one that knows nothing of it — so without this a caller
+        // holding a dead client (the pane keeps its reference through teardown) would launch a
+        // claude.exe for a pane that is already gone.
+        if (_disposed) { _log.Debug(() => "=== start refused: client disposed"); return; }
         if (_transport.IsRunning) { return; }
 
         // Transport instances are not reusable after Dispose — rotate to a fresh one and
@@ -295,6 +303,12 @@ internal sealed partial class ClaudeClient : IClaudeClient
                 _log.Warn($"[client] SDK MCP server '{name}' registration failed: {JsonExtensions.ToIndentedString(errors)}");
             }
         }
+        // Closing a pane faults whatever it had in flight (RejectPendingRequests). That is the
+        // teardown working, not a failure to report as one.
+        catch (Exception ex) when (_disposed)
+        {
+            _log.Debug(() => $"[client] SDK MCP registration abandoned: {ex.GetType().Name}");
+        }
         catch (Exception ex)
         {
             _log.LogException("ClaudeClient.RegisterSdkMcpServer", ex);
@@ -393,6 +407,12 @@ internal sealed partial class ClaudeClient : IClaudeClient
                 SpinnerVerbs = ParseSpinnerVerbs(eff?["spinnerVerbs"] as JObject),
                 FastModeState = fastModeState,
             });
+        }
+        // Same as the MCP registration above: a pane closed mid-startup faults these, and that is
+        // the teardown doing its job.
+        catch (Exception ex) when (_disposed)
+        {
+            _log.Debug(() => $"[client] startup abandoned: {ex.GetType().Name}");
         }
         catch (Exception ex)
         {
@@ -837,6 +857,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     public void SendPrompt(JArray contentBlocks, string uuid)
     {
+        // EnsureRunning already refuses to respawn a disposed client, which would leave the write
+        // below going to a dead transport.
+        if (_disposed) { _log.Debug(() => "=== prompt dropped: client disposed"); return; }
         EnsureRunning();
         // CLI rejects an empty content[]; fall back to a single empty-text block.
         var content = contentBlocks?.Count > 0
@@ -905,6 +928,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     public void Dispose()
     {
+        _disposed = true;
         _transport.DisposeIntentional();
         RejectPendingRequests("ClaudeClient disposed");
     }

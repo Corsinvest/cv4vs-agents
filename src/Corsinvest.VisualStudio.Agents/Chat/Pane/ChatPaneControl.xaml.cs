@@ -114,9 +114,9 @@ public partial class ChatPaneControl : PaneControlBase
                 // is disk + JSON parse (~200ms on a big session).
                 var (mode, page, info) = await Task.Run(() => ReadSessionState(sessionId));
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                // Superseded by a later pick, or the pane torn down while we read (DisposeCore nulls
-                // the bridge) — either way nobody is looking at this session any more.
-                if (generation != _loadGeneration || _bridge == null) { return; }
+                // Superseded by a later pick, or the pane torn down while we read — either way
+                // nobody is looking at this session any more.
+                if (generation != _loadGeneration || _disposed) { return; }
                 SendHistoryPage(page, sessionId);
                 SetSessionTitle(info?.CustomTitle ?? info?.AiTitle ?? info?.LastPrompt);
                 // Pass the session's own mode so the respawned CLI runs on what
@@ -461,6 +461,10 @@ public partial class ChatPaneControl : PaneControlBase
         _client?.Dispose();
         // Last: the bridge tears down the WebView2, and anything above may still post to it.
         _bridge?.Dispose();
+        // Nulled so the `_bridge?.` sends elsewhere no-op, NOT as the teardown signal: this only
+        // happens at the end of DisposeCore, while `_disposed` is already true on entry. Work that
+        // resumes after an await asks that one — a null bridge also means "the WebView has not been
+        // built yet", which is a different thing (see ShowFind, HandleEscape).
         _bridge = null;
     }
 
@@ -536,7 +540,7 @@ public partial class ChatPaneControl : PaneControlBase
             {
                 var page = await Task.Run(() => Sessions.ReadHistoryRaw(sid, SessionManager.HistoryBatchSize, -1, out _));
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                if (generation != _loadGeneration || _bridge == null) { return; }
+                if (generation != _loadGeneration || _disposed) { return; }
                 // Re-checked, not just checked above: the read gave a turn time to start, and that
                 // is exactly what the guard is for.
                 if (_turnInFlight)
@@ -544,7 +548,7 @@ public partial class ChatPaneControl : PaneControlBase
                     _log.Debug(() => $"[chat] turn started while reading {sid} — transcript left alone");
                     return;
                 }
-                _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
+                _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
                 SendHistoryPage(page, sid);
             }
             catch (Exception ex)
@@ -584,10 +588,10 @@ public partial class ChatPaneControl : PaneControlBase
         // Everything below talks to the WebView and the client, so it belongs on the UI thread.
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-        // Closed while the read above was in flight (DisposeCore nulls the bridge). Bail rather
-        // than guard each call below with ?.: the tail of this method starts a claude.exe, and it
-        // would start one for a pane nobody can see.
-        if (_bridge == null) { _log.Debug(() => "load: pane closed mid-read — init abandoned"); return; }
+        // Closed while the read above was in flight. Bail rather than guard each call below with
+        // ?.: the tail of this method starts a claude.exe, and it would start one for a pane
+        // nobody can see.
+        if (_disposed) { _log.Debug(() => "load: pane closed mid-read — init abandoned"); return; }
 
         _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
         _log.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode})");
