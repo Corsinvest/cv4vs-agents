@@ -59,6 +59,39 @@ internal static class VsReflection
     public static object GetPropOrNull(object obj, string name)
         => obj?.GetType().GetProperty(name)?.GetValue(obj);
 
+    /// <summary>Property read off an object whose concrete type declares the name more than once.
+    /// <para><see cref="GetPropOrNull"/> throws AmbiguousMatchException there, and VS hands out
+    /// plenty of such objects: one implementation wearing several interfaces that share member
+    /// names. Pass <paramref name="declaring"/> — the interface the contract actually belongs to —
+    /// and the choice never arises; an implementation that later grows another face cannot break
+    /// the read. Without it, an ambiguous name falls back to the first match, since the faces of
+    /// one object agree on the value.</para>
+    /// Returns null for a missing member as well as for a null value, like GetPropOrNull.</summary>
+    public static object GetPropSafe(object obj, string name, Type declaring = null)
+    {
+        if (obj == null) { return null; }
+        try { return (declaring ?? obj.GetType()).GetProperty(name)?.GetValue(obj); }
+        catch (AmbiguousMatchException)
+        {
+            return obj.GetType().GetProperties().FirstOrDefault(p => p.Name == name)?.GetValue(obj);
+        }
+    }
+
+    /// <summary>Invoke an async method declared by <paramref name="declaring"/> rather than by the
+    /// object's concrete type, and await it. Same reason as <see cref="GetPropSafe"/>: resolving a
+    /// method on an implementation that wears several interfaces is ambiguous, while the interface
+    /// that declares it is unambiguous and is the contract being relied on.
+    /// <para>Returns null when the method is not there. Unlike <see cref="InvokeAsync"/> it does not
+    /// swallow what the call itself throws — a service failing is the caller's to interpret.</para></summary>
+    public static async Task<object> InvokeAsyncOn(Type declaring, object obj, string method, params object[] args)
+    {
+        var mi = declaring?.GetMethod(method);
+        if (mi == null) { return null; }
+        var task = (Task)mi.Invoke(obj, args);
+        await task.ConfigureAwait(true);
+        return task.GetType().GetProperty("Result")?.GetValue(task);
+    }
+
     /// <summary>Indexer read: GetProperty("Item", indexTypes).GetValue(obj, index).</summary>
     public static object GetIndexer(object obj, params object[] index)
     {
