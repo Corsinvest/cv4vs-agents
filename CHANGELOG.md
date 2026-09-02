@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Tests over MCP — four tools onto the IDE's own Test Explorer** (issue #192). The agent could
+  build the solution, read diagnostics, walk the symbol graph and drive the debugger, but to run a
+  test it had to leave Visual Studio and shell out to `dotnet test`: a different build from the one
+  the IDE just made, a different configuration from the one it is on, and console text to scrape
+  instead of results. `test_list` gives the tests the Test Explorer has discovered — its own tree,
+  with project, class and source; `test_run` runs them and waits; `test_get_results` returns the
+  outcome per test, failures first, each with its assertion message and stack trace, so a red test
+  can be opened at its line rather than hunted for. `test_run_with_debugger` runs them under the
+  IDE's debugger, which is the one thing no external runner can offer: execution stops where a test
+  fails and `debug_get_locals` / `debug_get_callstack` read the state there.
+  - **Every framework the IDE supports, not only .NET.** Going through the Test Explorer means going
+    through its adapters: xUnit, NUnit, MSTest, GoogleTest, Boost, CppUnitTest. Verified on a
+    solution holding a C++/C project and a C# one — 16 tests from two adapters, counted and reported
+    together.
+  - There is no `test_cancel`: the underlying calls take a cancellation token, so a run is abandoned
+    by the caller rather than stopped by a second tool.
+  - The docs had advertised "Tests: discovery and runs" since 1.0.0 with no such tool in the code.
+    They are now true.
+
 ## [1.7.0] - 2026-08-28
 
 Three places the IDE knew something and the chat did not: stopping on an exception now raises a bar
