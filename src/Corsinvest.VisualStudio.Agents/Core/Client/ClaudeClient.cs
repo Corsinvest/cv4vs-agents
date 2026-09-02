@@ -303,6 +303,12 @@ internal sealed partial class ClaudeClient : IClaudeClient
                 _log.Warn($"[client] SDK MCP server '{name}' registration failed: {JsonExtensions.ToIndentedString(errors)}");
             }
         }
+        // Closing a pane faults whatever it had in flight (RejectPendingRequests). That is the
+        // teardown working, not a failure to report as one.
+        catch (Exception ex) when (_disposed)
+        {
+            _log.Debug(() => $"[client] SDK MCP registration abandoned: {ex.GetType().Name}");
+        }
         catch (Exception ex)
         {
             _log.LogException("ClaudeClient.RegisterSdkMcpServer", ex);
@@ -401,6 +407,12 @@ internal sealed partial class ClaudeClient : IClaudeClient
                 SpinnerVerbs = ParseSpinnerVerbs(eff?["spinnerVerbs"] as JObject),
                 FastModeState = fastModeState,
             });
+        }
+        // Same as the MCP registration above: a pane closed mid-startup faults these, and that is
+        // the teardown doing its job.
+        catch (Exception ex) when (_disposed)
+        {
+            _log.Debug(() => $"[client] startup abandoned: {ex.GetType().Name}");
         }
         catch (Exception ex)
         {

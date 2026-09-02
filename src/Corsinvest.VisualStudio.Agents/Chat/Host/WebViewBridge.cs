@@ -420,7 +420,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         {
             var json = JsonConvert.SerializeObject(new { type, id, error = message }, _jsonSettings);
             log.Trace(() => $"[bridge → web] {type} ERROR#{id} {message}");
-            webView.CoreWebView2?.PostWebMessageAsJson(json);
+            Post(json);
         }
         catch (Exception ex) { log.LogException($"WebViewBridge.SendError[{type}]", ex); }
     }
@@ -459,13 +459,29 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             {
                 log.Trace(() => $"[bridge → web] {type} {StringHelpers.Truncate(json)}");
             }
-            // CoreWebView2 is thread-affine (UI thread). Callers on a background thread
-            // (e.g. a CLI-event handler continuation) would otherwise throw. Marshal the
-            // actual post to the dispatcher; skip the hop when we're already on it.
-            if (dispatcher.CheckAccess()) { webView.CoreWebView2?.PostWebMessageAsJson(json); }
-            else { dispatcher.BeginInvoke(new Action(() => webView.CoreWebView2?.PostWebMessageAsJson(json))); }
+            Post(json);
         }
         catch (Exception ex) { log.LogException($"WebViewBridge.SendDirect[{type}]", ex); }
+    }
+
+    /// <summary>Hand one serialized envelope to the page. CoreWebView2 is thread-affine (UI
+    /// thread), so a caller on a background thread — a CLI-event continuation, say — is marshalled
+    /// rather than left to throw; already on it, we post straight through.
+    /// <para>The `?.` is not enough on its own: once the control is disposed the GETTER throws
+    /// ObjectDisposedException rather than returning null, and a message queued a moment before the
+    /// pane closed runs after it. That is an ordinary end-of-life race, not a fault, so it is
+    /// swallowed here — including inside the dispatched branch, which the caller's try/catch does
+    /// not cover.</para></summary>
+    private void Post(string json)
+    {
+        if (dispatcher.CheckAccess()) { TryPost(json); }
+        else { dispatcher.BeginInvoke(new Action(() => TryPost(json))); }
+    }
+
+    private void TryPost(string json)
+    {
+        try { webView.CoreWebView2?.PostWebMessageAsJson(json); }
+        catch (ObjectDisposedException) { /* pane closed under a message already in flight */ }
     }
 
     private static bool IsNoisyChannel(string type)
