@@ -46,14 +46,29 @@ internal sealed class GetTestResultsTool : McpTool<GetTestResultsArgs>
         // into "not passed" — the two mean different things to whoever reads this.
         var failed = results.Count(r => r.Failed);
         var skipped = results.Count(r => string.Equals(r.Outcome, "Skipped", System.StringComparison.OrdinalIgnoreCase));
-        return new
+
+        if (results.Count > 0)
         {
-            supported = true,
-            total = results.Count,
-            passed = results.Count - failed - skipped,
-            failed,
-            skipped,
-            results,
-        };
+            return new
+            {
+                supported = true,
+                total = results.Count,
+                passed = results.Count - failed - skipped,
+                failed,
+                skipped,
+                results,
+            };
+        }
+
+        // Nothing at all is the one count that does not speak for itself: with failedOnly it is the
+        // good news, without it means no run has happened or the filter matched nothing. Say which,
+        // because the three read identically as a bare zero.
+        var note = (args?.FailedOnly ?? false) ? "No failures among the tests that match."
+            : args?.Filter?.Any(f => !string.IsNullOrWhiteSpace(f)) == true
+                ? "No results for that filter — either no test matches it, or the matching ones "
+                + "have not been run yet. test_list shows what is discovered."
+                : "No results yet: run test_run first, or run the tests from the IDE.";
+
+        return new { supported = true, total = 0, passed = 0, failed = 0, skipped = 0, results, note };
     }
 }
