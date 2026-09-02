@@ -34,6 +34,11 @@ internal static class IdeTestService
     private const string Ns = "Microsoft.VisualStudio.TestWindow.Extensibility.";
     private const string MsgNs = "Microsoft.VisualStudio.TestWindow.Messages.";
 
+    // A null query is never handed to the service: it dereferences it inside ToSearchQuery, and the
+    // NullReferenceException that comes back names nothing the caller can act on.
+    private const string QueryFailed =
+        "Could not build the test query — this version of Visual Studio shapes TestQuery differently.";
+
     private static readonly object _probeGate = new();
     private static bool _probed;
     private static bool _available;
@@ -125,9 +130,16 @@ internal static class IdeTestService
         // test. Values go in together — the query ORs them, which is what several filters mean.
         var propertyType = VsReflection.FindType(Ns + "TestPropertyType");
         var matchKind = VsReflection.FindType(Ns + "FilterMatchKind");
-        var ctor = _testQueryType.GetConstructors()
+        // NonPublic as well: that constructor is `internal`, so GetConstructors() alone finds
+        // nothing and the query silently comes back null — which the service then dereferences.
+        var ctor = _testQueryType.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                                  .FirstOrDefault(c => c.GetParameters().Length == 3);
-        return ctor?.Invoke([
+        if (ctor == null)
+        {
+            OutputWindowLogger.Global.Warn($"[test] {QueryFailed} — no 3-argument TestQuery constructor.");
+            return null;
+        }
+        return ctor.Invoke([
             Enum.Parse(propertyType, "FullyQualifiedName"),
             list,
             Enum.Parse(matchKind, "Contains"),
@@ -143,7 +155,10 @@ internal static class IdeTestService
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
         if (!IsAvailable(out _)) { return null; }
 
-        var nodes = await CallAsync("IVsTestService", "GetTestsAsync", BuildQuery(filters), ct);
+        var query = BuildQuery(filters);
+        if (query == null) { return null; }
+
+        var nodes = await CallAsync("IVsTestService", "GetTestsAsync", query, ct);
         return ((IEnumerable)nodes ?? Array.Empty<object>())
             .Cast<object>()
             // A node is a group (project, namespace, class) or a test; only the leaves are tests.
@@ -204,8 +219,14 @@ internal static class IdeTestService
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
         if (!IsAvailable(out var reason)) { return new TestRunOutcome { Supported = false, Message = reason }; }
 
+        var query = BuildQuery(filters);
+        if (query == null)
+        {
+            return new TestRunOutcome { Supported = false, Message = QueryFailed };
+        }
+
         var method = debug ? "DebugTestsAsync" : "RunTestsAsync";
-        var started = await CallAsync("IVsTestService", method, BuildQuery(filters), ct);
+        var started = await CallAsync("IVsTestService", method, query, ct);
         // The service answers bool: false is "the run did not start" (nothing matched the filter, a
         // build failed, a run already going) — not "tests failed", which the results tell.
         return new TestRunOutcome { Supported = true, Started = started as bool? ?? false };
@@ -221,9 +242,12 @@ internal static class IdeTestService
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(ct);
         if (!IsAvailable(out _)) { return null; }
 
+        var query = BuildQuery(filters);
+        if (query == null) { return null; }
+
         // The details hang off IVsTestServiceInternal, which the same object implements — its own
         // interface because it carries the per-test failures the public one does not expose.
-        var nodes = await CallAsync("IVsTestService", "GetTestsAsync", BuildQuery(filters), ct);
+        var nodes = await CallAsync("IVsTestService", "GetTestsAsync", query, ct);
         var results = new List<TestOutcome>();
 
         foreach (var node in ((IEnumerable)nodes ?? Array.Empty<object>()).Cast<object>())

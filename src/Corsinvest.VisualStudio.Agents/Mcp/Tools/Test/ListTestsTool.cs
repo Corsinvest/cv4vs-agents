@@ -40,14 +40,14 @@ internal sealed class ListTestsTool : McpTool<ListTestsArgs>
             return new { supported = false, reason };
         }
         // An empty list is not an answer on its own: it reads as "this solution has no tests" when
-        // it usually means discovery has not run. Say which, rather than let it be guessed — and
-        // say the part that a build alone does not fix: the Test Explorer only fills its store once
-        // its window has been opened in this session, so until then it answers nothing.
+        // it usually means discovery has not finished. Say which, rather than let it be guessed —
+        // discovery runs asynchronously after a build, so an empty answer can simply be an early
+        // one, and asking again a moment later is the first thing worth trying.
         return tests.Count == 0
             ? new { supported = true, count = 0, tests, note = "The Test Explorer has discovered "
-                  + "nothing yet. Open Test > Test Explorer in the IDE once — it does not populate "
-                  + "until its window has been opened — then build the solution, or run test_run, "
-                  + "which discovers first." }
+                  + "nothing yet. Discovery runs in the background after a build, so try again in "
+                  + "a moment; failing that, build the solution, or run test_run, which discovers "
+                  + "first." }
             : (object)new { supported = true, count = tests.Count, tests };
     }
 }
