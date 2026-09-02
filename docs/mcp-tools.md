@@ -2,10 +2,10 @@
 
 The extension runs an in-process **[MCP](https://modelcontextprotocol.io/) server** that hands
 Visual Studio's own understanding of your code to the agent: navigation, references, rename,
-diagnostics, build and the live debugger. Not a text search over source files — the IDE's semantic,
-running view of your program.
+diagnostics, build, the tests it has discovered and the live debugger. Not a text search over source
+files — the IDE's semantic, running view of your program.
 
-The 70+ tools below are exposed automatically; there is nothing to configure. They are prefixed
+The 77 tools below are exposed automatically; there is nothing to configure. They are prefixed
 `mcp__vs__` on the wire, and appear in the CLI's `/mcp` listing.
 
 **Language-agnostic by design.** Tools are wired through Roslyn's per-document language services
@@ -111,6 +111,22 @@ user left open.
 | `build_project` | Build a single project (by name) in the active configuration and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until done. Reports errors only unless severity says otherwise; the message says how many items were left out, and 'configuration' says which one it built — solution_set_configuration changes it. ok/failedProjects/message are the outcome; 'errors' is the Error List, which the IDE updates a moment later and which can hold entries from a debug session as well as from the build — ide_read_output('Build') has the compiler's own log when the two disagree. The name is a project name, not a path — ide_get_project_structure lists them. build_solution builds everything instead. |
 | `build_solution` | Build the entire solution and return whether it succeeded plus what the Error List holds (file, line, description, severity). Blocks until the build ends. Reports errors only unless severity says otherwise; the message says how many items were left out. Prefer this to a dotnet build in the shell: it goes through the open IDE, so there is no path to resolve and no clash with a debug session. Builds whichever configuration the IDE has active and reports it back as 'configuration' — solution_set_configuration changes it. ok/failedProjects/message are the outcome; 'errors' is the Error List, which the IDE updates a moment later and which can hold entries from a debug session as well as from the build. ide_read_output('Build') has the compiler's own log when the two disagree. build_project builds one project instead. |
 
+## Tests
+
+These go through the IDE's own Test Explorer, so they see whatever it sees: the same tests, found by
+the same adapters, on the build and the active configuration the IDE already has. That means every
+framework the installed workloads support — xUnit, NUnit, MSTest, GoogleTest, Boost, CppUnitTest —
+and not only .NET. Nothing is rebuilt and nothing is re-discovered.
+
+| Tool | What it does |
+|---|---|
+| `test_list` | List the tests the IDE's Test Explorer has discovered, with their project, class and the assembly they came from. This is the Test Explorer's own tree — the same tests it would run, found by the same adapters, so it covers every framework the IDE supports (xUnit, NUnit, MSTest, GoogleTest, Boost, CppUnitTest…) and not just .NET. Nothing is rebuilt and nothing is re-discovered. An empty list on a solution that has tests usually means the Test Explorer has not discovered them yet — build the solution, or open the window once. |
+| `test_run` | Run tests through the IDE's Test Explorer, on the build and the active configuration the IDE already has — no separate restore, no second opinion about which configuration is current. Blocks until the run ends, then says whether it ran; test_get_results has the per-test outcome, including the failures with their message and stack trace. Covers every framework the IDE supports, not only .NET. Use test_run_with_debugger instead to stop on a failure and inspect it with the debug_* tools. |
+| `test_run_with_debugger` | Run tests under the IDE's debugger, so execution stops where one fails and the debug_* tools can read the state there — debug_get_locals, debug_get_callstack, debug_evaluate. This is the part no test runner outside the IDE can offer. Set the breakpoints you want first (debug_set_breakpoint) and filter down to the failing test, otherwise the whole suite runs under a debugger for nothing. test_run is the plain, faster version. |
+| `test_get_results` | The last test run's outcome, per test: name, project, duration, and for a failure its assertion message and stack trace — the stack carries the file and line, so a failure can be opened straight away instead of being hunted for. Failures are listed first. Reports what the Test Explorer holds now, so run test_run first, or read the results of a run started from the IDE. |
+
+There is no `test_cancel`: a run is cancelled by the caller abandoning it, not by a second tool.
+
 ## Solution
 
 | Tool | What it does |
@@ -213,6 +229,12 @@ diagnostics, references and definitions come from the language service, not from
 Build with `mcp__vs__build_solution` (or `build_project` for one project) — not msbuild or
 dotnet build from the shell. It uses the open IDE, so no path to resolve and no clash with a
 debug session, and it returns structured errors.
+
+## Tests
+Run tests with `mcp__vs__test_run` — not dotnet test from the shell. It goes through the Test
+Explorer, so it uses the build the IDE already has and the configuration it is actually on, and
+`mcp__vs__test_get_results` gives the failures with their message and stack rather than console
+text to scrape. Works for C++ and every other framework the IDE supports, not only .NET.
 
 ## Debugging
 Do not call `mcp__vs__debug_start` / `debug_stop` without asking: they take over the IDE.
