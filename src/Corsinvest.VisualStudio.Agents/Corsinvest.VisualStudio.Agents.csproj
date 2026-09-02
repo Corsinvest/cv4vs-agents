@@ -144,6 +144,7 @@
     <Compile Include="Ide\IdeConsoleService.cs" />
     <Compile Include="Ide\IdeOutputService.cs" />
     <Compile Include="Ide\IdeNavigationService.cs" />
+    <Compile Include="Ide\IdeTestService.cs" />
     <Compile Include="Ide\IdeNavigationService.Definition.cs" />
     <Compile Include="Ide\IdeNavigationService.References.cs" />
     <Compile Include="Ide\IdeNavigationService.Symbols.cs" />
@@ -172,6 +173,9 @@
     <Compile Include="Mcp\Tools\Document\ReadDocumentBufferTool.cs" />
     <Compile Include="Mcp\Tools\Ide\GetVisualStudioVersionTool.cs" />
     <Compile Include="Mcp\Tools\Ide\GetVisualStudioEditionTool.cs" />
+    <Compile Include="Mcp\Tools\Test\ListTestsTool.cs" />
+    <Compile Include="Mcp\Tools\Test\RunTestsTool.cs" />
+    <Compile Include="Mcp\Tools\Test\GetTestResultsTool.cs" />
     <Compile Include="Mcp\Tools\Build\BuildSolutionTool.cs" />
     <Compile Include="Mcp\Tools\Build\BuildProjectTool.cs" />
     <Compile Include="Mcp\Tools\Build\CleanSolutionTool.cs" />

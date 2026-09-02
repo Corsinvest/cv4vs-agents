@@ -15,7 +15,7 @@
 drive the IDE itself: build the solution, read the errors, step the debugger, follow references
 through the symbol graph, run the tests.
 
-**70+ MCP tools**, in process — so the agent reads the live state Visual Studio already
+**77 MCP tools**, in process — so the agent reads the live state Visual Studio already
 holds, not the files on disk.
 
 Visual Studio **2022 and 2026**. Free, GPL-3.0.
@@ -29,7 +29,7 @@ Visual Studio **2022 and 2026**. Free, GPL-3.0.
 | **Build** | build and rebuild, with the errors handed straight back |
 | **Diagnostics** | errors and warnings from the live language service, including the ones an edit just introduced |
 | **Debugger** | breakpoints, stepping, locals, call stack — and it offers to look when you stop on an exception |
-| **Tests** | discovery and runs |
+| **Tests** | the Test Explorer's own tests: list, run, read the failures with their message and stack — and run them under the debugger |
 | **Navigation** | go to definition, find references, symbol search |
 | **Editor** | active document, selection, open files |
 | **Solution** | projects, structure, references |
