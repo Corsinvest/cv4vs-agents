@@ -168,6 +168,52 @@ public class HistoryReaderTests
         Assert.Equal(new[] { "first question", "second question", "third question" }, prompts);
     }
 
+    /// <summary>The host puts the editor-context tag in a block of ITS OWN, ahead of the prompt.
+    /// Reading only the first text block found the tag, stripped it to nothing, and dropped the
+    /// turn — so ↑/↓ recalled nothing for any message sent with a file open.</summary>
+    [Fact]
+    public void ReadUserPrompts_keeps_a_prompt_whose_first_block_is_the_editor_context()
+    {
+        using var fx = SessionFixture.Compact(
+        [
+            Jsonl.UserPromptBlocks("u1", null,
+                                   "<ide_opened_file>Foo.cs</ide_opened_file>",
+                                   "the real question"),
+            Jsonl.Assistant("a1", "an answer", "u1"),
+        ]);
+
+        Assert.Equal(new[] { "the real question" }, fx.Manager().ReadUserPrompts(fx.SessionId));
+    }
+
+    /// <summary>The other shape: tag and prompt share one block. Stripping already handled this,
+    /// and it must keep working now that the block is chosen by what survives the strip.</summary>
+    [Fact]
+    public void ReadUserPrompts_keeps_a_prompt_that_shares_its_block_with_the_editor_context()
+    {
+        using var fx = SessionFixture.Compact(
+        [
+            Jsonl.UserPromptBlocks("u1", null,
+                                   "<ide_opened_file>Foo.cs</ide_opened_file>\nthe real question"),
+            Jsonl.Assistant("a1", "an answer", "u1"),
+        ]);
+
+        Assert.Equal(new[] { "the real question" }, fx.Manager().ReadUserPrompts(fx.SessionId));
+    }
+
+    /// <summary>A block holding nothing BUT the tag is not a turn, and must stay filtered — the
+    /// fix widens which block is read, not what counts as a prompt.</summary>
+    [Fact]
+    public void ReadUserPrompts_still_drops_a_turn_that_is_only_editor_context()
+    {
+        using var fx = SessionFixture.Compact(
+        [
+            Jsonl.UserPromptBlocks("u1", null, "<ide_opened_file>Foo.cs</ide_opened_file>"),
+            Jsonl.Assistant("a1", "an answer", "u1"),
+        ]);
+
+        Assert.Empty(fx.Manager().ReadUserPrompts(fx.SessionId));
+    }
+
     [Fact]
     public void ReadUserPrompts_reads_a_pretty_printed_transcript_the_same_way()
     {

@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Corsinvest.VisualStudio.Agents.Tests;
@@ -106,6 +107,22 @@ internal static class Jsonl
         ["parentUuid"] = parent,
         ["timestamp"] = "2026-08-26T10:00:00.000Z",
         ["message"] = new JObject { ["role"] = "user", ["content"] = text },
+    };
+
+    /// <summary>A user turn whose content is a BLOCK ARRAY, which is the shape the host sends: the
+    /// editor-context tag goes in a block of its own ahead of the prompt. Pass the blocks' texts in
+    /// send order.</summary>
+    public static JObject UserPromptBlocks(string uuid, string parent, params string[] texts) => new()
+    {
+        ["type"] = "user",
+        ["uuid"] = uuid,
+        ["parentUuid"] = parent,
+        ["timestamp"] = "2026-08-26T10:00:00.000Z",
+        ["message"] = new JObject
+        {
+            ["role"] = "user",
+            ["content"] = new JArray(texts.Select(t => new JObject { ["type"] = "text", ["text"] = t })),
+        },
     };
 
     public static JObject Assistant(string uuid, string text, string parent = null) => new()

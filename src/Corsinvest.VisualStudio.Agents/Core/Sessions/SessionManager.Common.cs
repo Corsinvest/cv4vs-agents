@@ -58,9 +58,15 @@ internal sealed partial class SessionManager
             string text = null;
             if (content is JArray arr)
             {
+                // NOT simply the first text block: the editor-context block cv-prompt prepends is
+                // one, so stopping there yields the tag, which the strip below empties out — and
+                // the prompt drops out of the ↑/↓ history. Take the first block that still holds
+                // something once the tag is gone.
                 foreach (var item in arr)
                 {
-                    if (item.Val("type") == "text") { text = item.Val("text"); break; }
+                    if (item.Val("type") != "text") { continue; }
+                    var candidate = Chat.MetaInjection.StripIdeContext(item.Val("text") ?? "").TrimStart();
+                    if (!string.IsNullOrWhiteSpace(candidate)) { text = candidate; break; }
                 }
             }
             else if (content?.Type == JTokenType.String)
@@ -68,8 +74,8 @@ internal sealed partial class SessionManager
                 text = (string)content;
             }
             if (string.IsNullOrWhiteSpace(text)) { return null; }
-            // Drop the editor-context block cv-prompt prepends, so a real prompt sent with IDE
-            // context is not mistaken for a "<"-tag meta line and discarded.
+            // Bare-string content carries the tag inline rather than in a block of its own, so it
+            // still needs stripping here; the array branch above has already done its own.
             text = Chat.MetaInjection.StripIdeContext(text).TrimStart();
             if (string.IsNullOrWhiteSpace(text)) { return null; }
             return text.StartsWith("<") || text.StartsWith("[Request interrupted") ? null : text;
