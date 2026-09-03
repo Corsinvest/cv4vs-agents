@@ -97,10 +97,10 @@ export class WriteRenderer extends ToolRenderer {
         return this.ioGrid(this.inputText(), {
             showOut: this.host.status === 'error',
             inLabel: '',
-            highlightAs: this.highlightAs(),
+            highlightInputAs: this.highlightInputAs(),
         });
     }
-    override highlightAs(): string {
+    override highlightInputAs(): string {
         // An extensionless name IS its own language when the map knows it — Dockerfile, Makefile.
         return langForFile(String(this.host.input.file_path ?? ''));
     }
@@ -183,7 +183,7 @@ export class ShellRenderer extends ToolRenderer {
     }
     /** A command is code, and the thing that gets re-read most — pipes, redirections, quoting.
      *  Both shells are hljs natives, so the language is what tells the two renderers apart. */
-    override highlightAs(): string {
+    override highlightInputAs(): string {
         return 'bash';
     }
     /** The command is never clipped, unlike the output it produces: half a pipeline says nothing,
@@ -205,7 +205,7 @@ export class ShellRenderer extends ToolRenderer {
 
 export class PowerShellRenderer extends ShellRenderer {
     override readonly name = 'PowerShell';
-    override highlightAs(): string {
+    override highlightInputAs(): string {
         return 'powershell';
     }
 }
@@ -334,12 +334,224 @@ export class ExitWorktreeRenderer extends HeaderOnlyRenderer {
     }
 }
 
-export class BashOutputRenderer extends HeaderOnlyRenderer {
-    readonly name = 'BashOutput';
+/** TaskOutput, and BashOutput which is its former name — the CLI still maps the old one onto it,
+ *  so a transcript from either era lands here. The id field was renamed along with the tool. */
+export class TaskOutputRenderer extends HeaderOnlyRenderer {
+    readonly name: string = 'TaskOutput';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        return html`${this.nameSpan('Task Output')}${this.detailSpan(
+            String(i.task_id ?? i.bash_id ?? ''),
+        )}`;
+    }
+}
+
+export class BashOutputRenderer extends TaskOutputRenderer {
+    override readonly name = 'BashOutput';
     override header(): TemplateResult {
         return html`${this.nameSpan('Bash Output')}${this.detailSpan(
             String(this.host.input.bash_id ?? ''),
         )}`;
+    }
+}
+
+/** The task tools: one line each, since what matters is which task and what happened to it.
+ *  Subject for the ones that carry it, id for the ones that only point at a task. */
+export class TaskCreateRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TaskCreate';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Create Task')}${this.detailSpan(
+            truncate(String(this.host.input.subject ?? ''), 80),
+        )}`;
+    }
+}
+
+export class TaskUpdateRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TaskUpdate';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        // Status is the update worth seeing at a glance; the subject says which task it was.
+        const what = [i.status, i.subject].filter(Boolean).map(String).join(' · ');
+        return html`${this.nameSpan('Update Task')}${this.detailSpan(
+            truncate(what || String(i.taskId ?? ''), 80),
+        )}`;
+    }
+}
+
+export class TaskGetRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TaskGet';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Get Task')}${this.detailSpan(
+            String(this.host.input.taskId ?? ''),
+        )}`;
+    }
+}
+
+export class TaskListRenderer extends ToolRenderer {
+    readonly name = 'TaskList';
+    /** A count, like Grep and Glob: the list itself is the result, and it is long. */
+    override row(): TemplateResult {
+        return this.rowCount('tasks', 'No tasks');
+    }
+    override header(): TemplateResult {
+        const s = String(this.host.input.status ?? '');
+        return html`${this.nameSpan('List Tasks')}${this.detailSpan(s ? `status: ${s}` : '')}`;
+    }
+}
+
+export class TaskStopRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TaskStop';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        return html`${this.nameSpan('Stop Task')}${this.detailSpan(
+            String(i.task_id ?? i.shell_id ?? ''),
+        )}`;
+    }
+}
+
+/** The team tools, and the message that travels between their agents. */
+export class TeamCreateRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TeamCreate';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Create Team')}${this.detailSpan(
+            truncate(String(this.host.input.team_name ?? ''), 80),
+        )}`;
+    }
+}
+
+export class TeamDeleteRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TeamDelete';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Delete Team')}${this.detailSpan(
+            String(this.host.input.name ?? ''),
+        )}`;
+    }
+}
+
+export class SendMessageRenderer extends ToolRenderer {
+    readonly name = 'SendMessage';
+    /** Recipient in the header, the message itself in the body — it is prose, and the point. */
+    override header(): TemplateResult {
+        const i = this.host.input;
+        const to = String(i.to ?? '');
+        const summary = truncate(String(i.summary ?? ''), 60);
+        return html`${this.nameSpan('Send Message')}${this.detailSpan(
+            [to, summary].filter(Boolean).join(' · '),
+        )}`;
+    }
+    override inputText(): string {
+        return String(this.host.input.message ?? '');
+    }
+}
+
+/** Brief, whose wire name is still the older SendUserMessage. */
+export class BriefRenderer extends ToolRenderer {
+    readonly name: string = 'Brief';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Brief')}${this.detailSpan(
+            truncate(String(this.host.input.message ?? ''), 80),
+        )}`;
+    }
+    override inputText(): string {
+        return String(this.host.input.message ?? '');
+    }
+}
+
+/** The scheduled-job tools. */
+export class CronCreateRenderer extends HeaderOnlyRenderer {
+    readonly name = 'CronCreate';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        // The schedule is the identity of a cron job; the prompt says what it will do.
+        const what = [i.cron, truncate(String(i.prompt ?? ''), 60)].filter(Boolean).join(' · ');
+        return html`${this.nameSpan('Create Schedule')}${this.detailSpan(what)}`;
+    }
+}
+
+export class CronDeleteRenderer extends HeaderOnlyRenderer {
+    readonly name = 'CronDelete';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Delete Schedule')}${this.detailSpan(
+            String(this.host.input.id ?? ''),
+        )}`;
+    }
+}
+
+export class CronListRenderer extends ToolRenderer {
+    readonly name = 'CronList';
+    override row(): TemplateResult {
+        return this.rowCount('schedules', 'No schedules');
+    }
+    override header(): TemplateResult {
+        return html`${this.nameSpan('List Schedules')}`;
+    }
+}
+
+export class SleepRenderer extends HeaderOnlyRenderer {
+    readonly name = 'Sleep';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        const s = i.seconds ?? i.duration ?? i.ms;
+        return html`${this.nameSpan('Sleep')}${this.detailSpan(s != null ? String(s) : '')}`;
+    }
+}
+
+export class RemoteTriggerRenderer extends HeaderOnlyRenderer {
+    readonly name = 'RemoteTrigger';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        return html`${this.nameSpan('Remote Trigger')}${this.detailSpan(
+            [i.action, i.trigger_id].filter(Boolean).map(String).join(' · '),
+        )}`;
+    }
+}
+
+export class ConfigRenderer extends HeaderOnlyRenderer {
+    readonly name = 'Config';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        const setting = String(i.setting ?? '');
+        // Reads and writes are the same tool; a value is what tells them apart.
+        const detail = i.value != null ? `${setting} = ${String(i.value)}` : setting;
+        return html`${this.nameSpan('Config')}${this.detailSpan(truncate(detail, 80))}`;
+    }
+}
+
+export class LspRenderer extends HeaderOnlyRenderer {
+    readonly name = 'LSP';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        const fp = String(i.filePath ?? '');
+        const line = i.line != null ? Number(i.line) : null;
+        const where = fp
+            ? this.fileLink(
+                  fp,
+                  html`${displayPathUi(fp)}${line != null ? `:${line + 1}` : ''}`,
+                  line != null ? line + 1 : 0,
+              )
+            : '';
+        const op = String(i.operation ?? '');
+        return html`${this.nameSpan(op ? `LSP ${op}` : 'LSP')}${this.detailSpan(where)}`;
+    }
+}
+
+export class ReplRenderer extends ToolRenderer {
+    readonly name = 'REPL';
+    /** Code, so it is highlighted and never clipped — the same call ShellRenderer makes. */
+    override highlightInputAs(): string {
+        return 'javascript';
+    }
+    protected override clipsInput(): ClipMode {
+        return 'never';
+    }
+    override header(): TemplateResult {
+        return html`${this.nameSpan('REPL')}${this.detailSpan(
+            truncate(this.inputText().split('\n')[0] ?? '', 60),
+        )}`;
+    }
+    override inputText(): string {
+        const i = this.host.input;
+        return String(i.code ?? i.script ?? i.input ?? '');
     }
 }
 
@@ -397,9 +609,9 @@ export class KillShellRenderer extends HeaderOnlyRenderer {
 }
 
 export class ReadMcpResourceRenderer extends HeaderOnlyRenderer {
-    readonly name = 'ReadMcpResource';
+    readonly name = 'ReadMcpResourceTool';
     override header(): TemplateResult {
-        return html`${this.nameSpan('ReadMcpResource')}`;
+        return html`${this.nameSpan('Read MCP Resource')}`;
     }
 }
 
@@ -660,4 +872,52 @@ function answerText(q: AskQuestion, answered: string): string {
         return chosen.join(', ');
     }
     return questionAnswer(q, answered) || '—';
+}
+
+/** Catch-all for unknown tools: best-effort header + standard IN/OUT body. */
+export class DefaultToolRenderer extends ToolRenderer {
+    readonly name = '';
+}
+
+/** Fallback for any mcp__server__tool, whichever server provides it. */
+export class McpToolRenderer extends ToolRenderer {
+    readonly name = '';
+    /** JSON on both sides by protocol, which is why this is the one renderer that colours its OUT
+     *  cell. A server answering prose matches nothing and hljs leaves it as plain text. */
+    override highlightInputAs(): string {
+        return 'json';
+    }
+    override highlightOutputAs(): string {
+        return 'json';
+    }
+    /** Never clipped, for the reason a shell command isn't: a preview cut at three lines of
+     *  indented JSON ends on an unclosed brace, which reads as broken rather than as a preview.
+     *  The cells scroll inside their height cap, so a long result costs the row nothing. */
+    protected override clipsInput(): ClipMode {
+        return 'never';
+    }
+    protected override clipsOutput(): ClipMode {
+        return 'never';
+    }
+    /** Indented: a result arrives as one long line, unreadable without scrolling sideways.
+     *  Anything that is not JSON falls through untouched. */
+    override outputText(): string {
+        const raw = super.outputText();
+        try {
+            return JSON.stringify(JSON.parse(raw), null, 2);
+        } catch {
+            return raw;
+        }
+    }
+    /** Named for what it is, like every other row names what it does — 'Read', 'Web Search'. The
+     *  server used to be the name, which read as a label nobody could place: nothing said the call
+     *  went to an MCP server at all. It is the detail now, next to the tool it provides. */
+    override header(): TemplateResult {
+        const parts = this.host.name.slice('mcp__'.length).split('__');
+        const server = parts[0] ?? '';
+        const tool = parts.slice(1).join('__');
+        return html`${this.nameSpan('MCP Tool')}${this.detailSpan(
+            tool ? `${server} · ${tool}` : server,
+        )}`;
+    }
 }

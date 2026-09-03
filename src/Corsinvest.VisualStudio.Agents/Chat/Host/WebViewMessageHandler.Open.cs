@@ -81,6 +81,8 @@ internal sealed partial class WebViewMessageHandler
                                                                                                                        @"<tool_use_error>([\s\S]*?)</tool_use_error>",
                                                                                                                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                                                                      if (m.Success) { content = m.Groups[1].Value.Trim(); }
+                                                                     // The IN side is already indented by ProjectInput; this is the OUT side.
+                                                                     content = TryIndentJson(content);
                                                                      var tmpPath = Path.Combine(Path.GetTempPath(), TempFileName(toolName, which, filePath, toolUseId));
                                                                      // Clear the flag before rewriting: a previous open left the file read-only, and
                                                                      // WriteAllText would throw on it.
