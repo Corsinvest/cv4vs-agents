@@ -1099,8 +1099,8 @@ export class CvPrompt extends LitElement implements CommandHost {
     /** Echo the submitted message into the chat as a user bubble, mirroring what
      *  the host used to do server-side. Attachment chips are lazy (uuid+blockIdx):
      *  they resolve from the JSONL on click, matching the history-replay format so
-     *  there's a single rendering path. blockIdx is the send-order index, matching
-     *  the content[] block the host writes. */
+     *  there's a single rendering path. blockIdx must match the content[] block the
+     *  host writes, which is send order shifted past any block the host prepends. */
     private _echoUserMessage(
         payload: {
             text: string;
@@ -1114,16 +1114,22 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
         const images: UserImageDto[] = [];
         const files: UserFileDto[] = [];
+        // The host puts the IDE context in a block of its own, ahead of the attachments
+        // (BuildContentBlocks), so the first attachment is block 1 whenever there is one. Getting
+        // this wrong is silent until a click: the fetch asks for a block that holds the tag's text
+        // and comes back "image block not found", while a message sent with no file open works,
+        // both indexes being 0 there.
+        const base = ideRefs.length > 0 ? 1 : 0;
         payload.attachments.forEach((att, i) => {
             if (att.isImage) {
                 images.push({
                     uuid: payload.uuid,
-                    blockIdx: i,
+                    blockIdx: base + i,
                     mediaType: att.mediaType,
                     preview: att.preview ?? null,
                 });
             } else {
-                files.push({ name: att.name, uuid: payload.uuid, blockIdx: i });
+                files.push({ name: att.name, uuid: payload.uuid, blockIdx: base + i });
             }
         });
         const msg: UserTextEcho = {
