@@ -7,7 +7,6 @@
 // catch-all default for anything else. Same idea as the VS Code extension's
 // b0(toolName) dispatcher.
 
-import { html, type TemplateResult } from 'lit';
 import { ToolRenderer } from './base';
 import type { ToolHost } from './types';
 import {
@@ -28,31 +27,33 @@ import {
     EnterWorktreeRenderer,
     ExitWorktreeRenderer,
     BashOutputRenderer,
+    TaskOutputRenderer,
+    TaskCreateRenderer,
+    TaskUpdateRenderer,
+    TaskGetRenderer,
+    TaskListRenderer,
+    TaskStopRenderer,
+    TeamCreateRenderer,
+    TeamDeleteRenderer,
+    SendMessageRenderer,
+    BriefRenderer,
+    CronCreateRenderer,
+    CronDeleteRenderer,
+    CronListRenderer,
+    SleepRenderer,
+    RemoteTriggerRenderer,
+    ConfigRenderer,
+    LspRenderer,
+    ReplRenderer,
     EnterPlanModeRenderer,
     ExitPlanModeRenderer,
     KillShellRenderer,
     ReadMcpResourceRenderer,
     TodoWriteRenderer,
     AskUserQuestionRenderer,
+    DefaultToolRenderer,
+    McpToolRenderer,
 } from './renderers';
-
-/** Catch-all for unknown tools: best-effort header + standard IN/OUT body. */
-class DefaultToolRenderer extends ToolRenderer {
-    readonly name = '';
-}
-
-/** mcp__server__tool: header "Server [tool]" + standard IN/OUT body. */
-class McpToolRenderer extends ToolRenderer {
-    readonly name = '';
-    override header(): TemplateResult {
-        const parts = this.host.name.slice('mcp__'.length).split('__');
-        const server = parts[0] ?? '';
-        const tool = parts.slice(1).join('__');
-        const human = server.charAt(0).toUpperCase() + server.slice(1);
-        const label = tool ? `${human} [${tool}]` : human;
-        return html`${this.nameSpan(label)}${this.detailSpan(this.detailText())}`;
-    }
-}
 
 type RendererCtor = new (host: ToolHost) => ToolRenderer;
 
@@ -75,9 +76,31 @@ const BY_NAME: Record<string, RendererCtor> = {
     EnterWorktree: EnterWorktreeRenderer,
     ExitWorktree: ExitWorktreeRenderer,
     BashOutput: BashOutputRenderer,
+    TaskOutput: TaskOutputRenderer,
+    TaskCreate: TaskCreateRenderer,
+    TaskUpdate: TaskUpdateRenderer,
+    TaskGet: TaskGetRenderer,
+    TaskList: TaskListRenderer,
+    TaskStop: TaskStopRenderer,
+    TeamCreate: TeamCreateRenderer,
+    TeamDelete: TeamDeleteRenderer,
+    SendMessage: SendMessageRenderer,
+    // Brief goes out under its older name; both appear across transcripts.
+    Brief: BriefRenderer,
+    SendUserMessage: BriefRenderer,
+    CronCreate: CronCreateRenderer,
+    CronDelete: CronDeleteRenderer,
+    CronList: CronListRenderer,
+    Sleep: SleepRenderer,
+    RemoteTrigger: RemoteTriggerRenderer,
+    Config: ConfigRenderer,
+    LSP: LspRenderer,
+    REPL: ReplRenderer,
     EnterPlanMode: EnterPlanModeRenderer,
     ExitPlanMode: ExitPlanModeRenderer,
     KillShell: KillShellRenderer,
+    // The CLI's own name carries the suffix; the bare one only ever appears in old transcripts.
+    ReadMcpResourceTool: ReadMcpResourceRenderer,
     ReadMcpResource: ReadMcpResourceRenderer,
     TodoWrite: TodoWriteRenderer,
     AskUserQuestion: AskUserQuestionRenderer,

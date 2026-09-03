@@ -9,6 +9,7 @@ using Corsinvest.VisualStudio.Agents.Options;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio.Shell;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
@@ -203,6 +204,18 @@ internal sealed partial class WebViewMessageHandler
         return safe.Length > 40 ? safe.Substring(0, 40) : safe;
     }
 
+    /// <summary>Indent <paramref name="content"/> when it is JSON, untouched when it is not: a
+    /// tool that answers prose reads worse reflowed. Parsing is the only way to tell — a result is
+    /// a string either way.</summary>
+    private static string TryIndentJson(string content)
+    {
+        var trimmed = content?.TrimStart();
+        // Cheap reject before parsing: skips an exception on the commoner plain-text result.
+        if (string.IsNullOrEmpty(trimmed) || (trimmed[0] != '{' && trimmed[0] != '[')) { return content; }
+        try { return JToken.Parse(trimmed).ToIndentedString(); }
+        catch (JsonException) { return content; }
+    }
+
     /// <summary><para>
     /// Name for the temp file a tool's IN/OUT is opened from — readable in the tab, and
     /// carrying an extension the editor can colour.
@@ -235,18 +248,21 @@ internal sealed partial class WebViewMessageHandler
             }
         }
 
-        // A shell tool's IN is the command — script, so give it the script's extension, with
-        // PowerShell told apart from Bash: .ps1 is what VS colours, and calling it .sh on Windows
-        // highlights it as the wrong language. Its OUT is stdout, which is text and nothing else,
-        // so it stays .txt like every other result.
-        var fallbackExt = which == "in"
-            ? toolName switch
-            {
-                "PowerShell" => ".ps1",
-                "Bash" => ".sh",
-                _ => ".txt",
-            }
-            : ".txt";
+        // An MCP tool is JSON on BOTH sides, unlike the shell tools below, where only the IN has
+        // a language and stdout is text.
+        var fallbackExt = toolName != null && toolName.StartsWith("mcp__", StringComparison.Ordinal)
+            ? ".json"
+            // A shell tool's IN is the command — script, so give it the script's extension, with
+            // PowerShell told apart from Bash: .ps1 is what VS colours, and calling it .sh on
+            // Windows highlights it as the wrong language.
+            : which == "in"
+                ? toolName switch
+                {
+                    "PowerShell" => ".ps1",
+                    "Bash" => ".sh",
+                    _ => ".txt",
+                }
+                : ".txt";
         var who = SanitizeFileName(string.IsNullOrEmpty(toolName) ? AppConstants.AppId : toolName);
         return $"{who}_{side}_{id}{fallbackExt}";
     }
