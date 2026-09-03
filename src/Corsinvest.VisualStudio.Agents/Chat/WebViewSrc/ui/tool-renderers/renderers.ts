@@ -97,10 +97,10 @@ export class WriteRenderer extends ToolRenderer {
         return this.ioGrid(this.inputText(), {
             showOut: this.host.status === 'error',
             inLabel: '',
-            highlightAs: this.highlightAs(),
+            highlightInputAs: this.highlightInputAs(),
         });
     }
-    override highlightAs(): string {
+    override highlightInputAs(): string {
         // An extensionless name IS its own language when the map knows it — Dockerfile, Makefile.
         return langForFile(String(this.host.input.file_path ?? ''));
     }
@@ -183,7 +183,7 @@ export class ShellRenderer extends ToolRenderer {
     }
     /** A command is code, and the thing that gets re-read most — pipes, redirections, quoting.
      *  Both shells are hljs natives, so the language is what tells the two renderers apart. */
-    override highlightAs(): string {
+    override highlightInputAs(): string {
         return 'bash';
     }
     /** The command is never clipped, unlike the output it produces: half a pipeline says nothing,
@@ -205,7 +205,7 @@ export class ShellRenderer extends ToolRenderer {
 
 export class PowerShellRenderer extends ShellRenderer {
     override readonly name = 'PowerShell';
-    override highlightAs(): string {
+    override highlightInputAs(): string {
         return 'powershell';
     }
 }
@@ -397,9 +397,9 @@ export class KillShellRenderer extends HeaderOnlyRenderer {
 }
 
 export class ReadMcpResourceRenderer extends HeaderOnlyRenderer {
-    readonly name = 'ReadMcpResource';
+    readonly name = 'ReadMcpResourceTool';
     override header(): TemplateResult {
-        return html`${this.nameSpan('ReadMcpResource')}`;
+        return html`${this.nameSpan('Read MCP Resource')}`;
     }
 }
 
@@ -660,4 +660,52 @@ function answerText(q: AskQuestion, answered: string): string {
         return chosen.join(', ');
     }
     return questionAnswer(q, answered) || '—';
+}
+
+/** Catch-all for unknown tools: best-effort header + standard IN/OUT body. */
+export class DefaultToolRenderer extends ToolRenderer {
+    readonly name = '';
+}
+
+/** Fallback for any mcp__server__tool, whichever server provides it. */
+export class McpToolRenderer extends ToolRenderer {
+    readonly name = '';
+    /** JSON on both sides by protocol, which is why this is the one renderer that colours its OUT
+     *  cell. A server answering prose matches nothing and hljs leaves it as plain text. */
+    override highlightInputAs(): string {
+        return 'json';
+    }
+    override highlightOutputAs(): string {
+        return 'json';
+    }
+    /** Never clipped, for the reason a shell command isn't: a preview cut at three lines of
+     *  indented JSON ends on an unclosed brace, which reads as broken rather than as a preview.
+     *  The cells scroll inside their height cap, so a long result costs the row nothing. */
+    protected override clipsInput(): ClipMode {
+        return 'never';
+    }
+    protected override clipsOutput(): ClipMode {
+        return 'never';
+    }
+    /** Indented: a result arrives as one long line, unreadable without scrolling sideways.
+     *  Anything that is not JSON falls through untouched. */
+    override outputText(): string {
+        const raw = super.outputText();
+        try {
+            return JSON.stringify(JSON.parse(raw), null, 2);
+        } catch {
+            return raw;
+        }
+    }
+    /** Named for what it is, like every other row names what it does — 'Read', 'Web Search'. The
+     *  server used to be the name, which read as a label nobody could place: nothing said the call
+     *  went to an MCP server at all. It is the detail now, next to the tool it provides. */
+    override header(): TemplateResult {
+        const parts = this.host.name.slice('mcp__'.length).split('__');
+        const server = parts[0] ?? '';
+        const tool = parts.slice(1).join('__');
+        return html`${this.nameSpan('MCP Tool')}${this.detailSpan(
+            tool ? `${server} · ${tool}` : server,
+        )}`;
+    }
 }
