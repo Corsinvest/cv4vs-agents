@@ -75,6 +75,12 @@ jobs:
       - name: Build
         run: msbuild cv4vs-agents.sln -t:Build -p:Configuration=Release -p:DeployExtension=false -v:minimal
 
+      # Also in the quality workflow, and worth the second run: a release is published to the
+      # Marketplace and cannot be taken back, while this costs a second. After the build — the test
+      # project references the built DLL, not the sources.
+      - name: Unit tests
+        run: dotnet test tests/Corsinvest.VisualStudio.Agents.Tests/Corsinvest.VisualStudio.Agents.Tests.csproj -c Release --no-build -v minimal
+
       # Same gate as the quality workflow: a VSIX missing part of the WebView installs cleanly and
       # breaks at runtime, and a release is the worst place to discover that. Compare the package
       # against dist\ rather than a list of names, so a new WebView file cannot slip out unnoticed.

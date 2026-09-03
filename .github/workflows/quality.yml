@@ -96,6 +96,12 @@ jobs:
       # someone changed a DTO without regenerating -- the TS side would keep compiling against the
       # old shape and mismatch the wire at runtime. Same gate the WebView job applies to
       # bridge-messages.ts.
+      # After the build, never before: the test project takes a <Reference> on the built DLL rather
+      # than a ProjectReference, so running it first would test whatever bin/Release held — or fail
+      # to resolve at all. Same Configuration for the same reason.
+      - name: Unit tests
+        run: dotnet test tests/Corsinvest.VisualStudio.Agents.Tests/Corsinvest.VisualStudio.Agents.Tests.csproj -c Release --no-build -v minimal
+
       - name: Generated DTOs are up to date
         shell: pwsh
         run: |
