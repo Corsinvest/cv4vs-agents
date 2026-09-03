@@ -334,11 +334,77 @@ export class ExitWorktreeRenderer extends HeaderOnlyRenderer {
     }
 }
 
-export class BashOutputRenderer extends HeaderOnlyRenderer {
-    readonly name = 'BashOutput';
+/** TaskOutput, and BashOutput which is its former name — the CLI still maps the old one onto it,
+ *  so a transcript from either era lands here. The id field was renamed along with the tool. */
+export class TaskOutputRenderer extends HeaderOnlyRenderer {
+    readonly name: string = 'TaskOutput';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        return html`${this.nameSpan('Task Output')}${this.detailSpan(
+            String(i.task_id ?? i.bash_id ?? ''),
+        )}`;
+    }
+}
+
+export class BashOutputRenderer extends TaskOutputRenderer {
+    override readonly name = 'BashOutput';
     override header(): TemplateResult {
         return html`${this.nameSpan('Bash Output')}${this.detailSpan(
             String(this.host.input.bash_id ?? ''),
+        )}`;
+    }
+}
+
+/** The task tools: one line each, since what matters is which task and what happened to it.
+ *  Subject for the ones that carry it, id for the ones that only point at a task. */
+export class TaskCreateRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TaskCreate';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Create Task')}${this.detailSpan(
+            truncate(String(this.host.input.subject ?? ''), 80),
+        )}`;
+    }
+}
+
+export class TaskUpdateRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TaskUpdate';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        // Status is the update worth seeing at a glance; the subject says which task it was.
+        const what = [i.status, i.subject].filter(Boolean).map(String).join(' · ');
+        return html`${this.nameSpan('Update Task')}${this.detailSpan(
+            truncate(what || String(i.taskId ?? ''), 80),
+        )}`;
+    }
+}
+
+export class TaskGetRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TaskGet';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Get Task')}${this.detailSpan(
+            String(this.host.input.taskId ?? ''),
+        )}`;
+    }
+}
+
+export class TaskListRenderer extends ToolRenderer {
+    readonly name = 'TaskList';
+    /** A count, like Grep and Glob: the list itself is the result, and it is long. */
+    override row(): TemplateResult {
+        return this.rowCount('tasks', 'No tasks');
+    }
+    override header(): TemplateResult {
+        const s = String(this.host.input.status ?? '');
+        return html`${this.nameSpan('List Tasks')}${this.detailSpan(s ? `status: ${s}` : '')}`;
+    }
+}
+
+export class TaskStopRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TaskStop';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        return html`${this.nameSpan('Stop Task')}${this.detailSpan(
+            String(i.task_id ?? i.shell_id ?? ''),
         )}`;
     }
 }
