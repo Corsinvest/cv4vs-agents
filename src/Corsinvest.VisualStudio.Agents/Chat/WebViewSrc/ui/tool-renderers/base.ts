@@ -58,20 +58,33 @@ export abstract class ToolRenderer {
 
     /** Body content. Default: the IN/OUT grid. null = no body. */
     body(): TemplateResult | null {
-        return this.ioGrid(this.inputText(), { highlightAs: this.highlightAs() });
+        return this.ioGrid(this.inputText(), { highlightInputAs: this.highlightInputAs() });
     }
 
-    /** Highlight language for the IN cell, '' for none — the OUT cell is never highlighted.
+    /** Highlight language for the IN cell, '' for none.
      *  Default: no colouring, most tool input being a JSON dump rather than a language.
      *  Mutually exclusive with a markdown body: ioGrid renders prose before it ever reaches
      *  the highlighter. */
-    highlightAs(): string {
+    highlightInputAs(): string {
+        return '';
+    }
+
+    /** Highlight language for the OUT cell. '' for none, and that stays right for almost every
+     *  tool: output is logs and dumps, where colouring would guess at a structure that isn't
+     *  there. Overridden only by a renderer that KNOWS the shape of what comes back. */
+    highlightOutputAs(): string {
         return '';
     }
 
     /** Clip mode for the IN cell. Default: whatever the row does with its output. A tool whose
      *  input is the thing the user re-reads (a shell command) overrides this to 'never'. */
     protected clipsInput(): ClipMode {
+        return this.host.clipsOutput ? 'always' : 'preview';
+    }
+
+    /** Clip mode for the OUT cell — the counterpart to clipsInput, and the only way to reach
+     *  'never' for output: a renderer whose result breaks when cut overrides it. */
+    protected clipsOutput(): ClipMode {
         return this.host.clipsOutput ? 'always' : 'preview';
     }
 
@@ -98,6 +111,12 @@ export abstract class ToolRenderer {
             }
         }
         return '';
+    }
+
+    /** Text for the OUT cell — the counterpart to inputText, where a renderer that knows its
+     *  output's shape reformats it. */
+    outputText(): string {
+        return cleanResult(this.host.result, this.host.status === 'error');
     }
 
     /** Is this row's body showing? Answers for every layout that has one, so the rule lives in a
@@ -372,11 +391,11 @@ export abstract class ToolRenderer {
             showOut?: boolean;
             inLabel?: string;
             markdown?: boolean;
-            highlightAs?: string;
+            highlightInputAs?: string;
         } = {},
     ): TemplateResult {
-        const { showOut = true, inLabel = 'IN', markdown = false, highlightAs = '' } = opts;
-        const outText = showOut ? cleanResult(this.host.result, this.host.status === 'error') : '';
+        const { showOut = true, inLabel = 'IN', markdown = false, highlightInputAs = '' } = opts;
+        const outText = showOut ? this.outputText() : '';
         if (!inText && !outText) {
             return html`${nothing}`;
         }
@@ -434,7 +453,7 @@ export abstract class ToolRenderer {
                                       ${copyBtn(inText, 'in')}
                                   </div>
                                   <div class="cv-tool-body-cell">
-                                      ${cell(inText, this.clipsInput(), highlightAs)}
+                                      ${cell(inText, this.clipsInput(), highlightInputAs)}
                                   </div>
                               </div>`
                             : nothing
@@ -453,13 +472,10 @@ export abstract class ToolRenderer {
                                       ${copyBtn(outText, 'out')}
                                   </div>
                                   <div class="cv-tool-body-cell">
-                                      <!-- Never highlighted, whatever the IN cell asked for: tool
-                                           output is logs and dumps, where colouring guesses at
-                                           structure that isn't there. -->
                                       ${cell(
                                           outText,
-                                          this.host.clipsOutput ? 'always' : 'preview',
-                                          '',
+                                          this.clipsOutput(),
+                                          this.highlightOutputAs(),
                                           'cv-tool-body-result',
                                       )}
                                   </div>
