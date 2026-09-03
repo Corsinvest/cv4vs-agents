@@ -40,10 +40,28 @@ servers, and symptoms that look like bugs in the code. `tools\extension.ps1` is 
 (remove every copy, then install into the Exp hives); `-Uninstall` clears them and refreshes the
 hives, which deleting the folder alone does not — VS keeps serving the cached menu entries.
 
-**No test project.** The gate is a green MSBuild plus manual verification in the Exp instance
-(F5 → `devenv /rootsuffix Exp`). A green build proves less than it looks: XAML `x:Class`, `.vsct`
-ids and the manifest fail at *runtime*, not compile time — a mismatched `.vsct` id gives a silent
-no-op menu entry.
+**Unit tests exist, and cover less than the extension does.** `tests/Corsinvest.VisualStudio.Agents.Tests`
+holds ~195 xUnit tests over the pure logic — the JSONL readers, the content-block translator, meta
+injection, stats, schema building. Run them:
+
+```powershell
+dotnet test tests\Corsinvest.VisualStudio.Agents.Tests\Corsinvest.VisualStudio.Agents.Tests.csproj
+```
+
+**Build first, then test — that order IS the gate.** The project takes a `<Reference>` on the built
+`Corsinvest.VisualStudio.Agents.dll`, not a `ProjectReference` (a legacy VSIX resolves its
+dependencies through packages.config, and the modern SDK rebuilding it buries the run in CS0246).
+So `dotnet test` after editing a `.cs` and nothing else tests the PREVIOUS build — silently, and it
+will look like your change is covered when nothing ran it.
+
+Everything else — WPF, the WebView, the MCP surface, anything touching the VS shell — is verified by
+hand in the Exp instance (F5 → `devenv /rootsuffix Exp`). A green build proves less than it looks:
+XAML `x:Class`, `.vsct` ids and the manifest fail at *runtime*, not compile time — a mismatched
+`.vsct` id gives a silent no-op menu entry. **CI does not run the tests**, so a red suite reaches
+master unless someone ran it.
+
+`tests/LangMatrix` is not a test project: four throwaway libraries the solution loads but never
+builds, so the `nav_*` tools can be pointed at a real file in each language.
 
 ## Traps
 
