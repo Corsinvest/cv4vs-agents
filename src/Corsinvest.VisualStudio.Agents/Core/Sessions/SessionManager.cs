@@ -253,8 +253,9 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
         // (optionally alongside image/document blocks). A tool_result-only turn is NOT a prompt.
         if (content is JArray blocks)
         {
-            var textBlock = blocks.FirstOrDefault(b => b?["type"]?.Value<string>() == "text");
-            return textBlock != null && IsRealText(textBlock.Val("text", ""));
+            // ANY text block, not the first: the editor-context tag the host prepends is one, and
+            // taking it would call a real prompt meta — the page would then anchor somewhere else.
+            return blocks.Any(b => b?["type"]?.Value<string>() == "text" && IsRealText(b.Val("text", "")));
         }
 
         return false;
