@@ -5,6 +5,8 @@ backups occupy on disk, which files each session preserved, and a way to delete 
 longer want. It opens as a document-tab in the editor area, next to [Statistics](statistics.md),
 [Usage](usage.md) and [Context usage](context-usage.md).
 
+![File history document-tab](images/file-history-document.png)
+
 ## What it reads
 
 Before overwriting a file, the CLI copies it into `~/.claude/file-history/<session>/`. Those copies

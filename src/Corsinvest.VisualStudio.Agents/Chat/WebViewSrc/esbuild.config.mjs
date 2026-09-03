@@ -15,7 +15,7 @@ const watch = process.argv.includes('--watch');
 const dev = watch || process.argv.includes('--dev');
 
 // Hot-reload without a full MSBuild: the running extension serves the WebView (virtual host
-// cv4vs.local) from the WebView2/ folder NEXT TO its loaded assembly. In the experimental VS
+// cv4vs.invalid) from the WebView2/ folder NEXT TO its loaded assembly. In the experimental VS
 // (F5, /rootsuffix Exp) that assembly lives under
 // %LOCALAPPDATA%\Microsoft\VisualStudio\<ver>Exp\Extensions\...\WebView2 — NOT bin/<Config>.
 // A bare `npm run build` only writes dist/, so a freshly opened chat pane would load the stale
