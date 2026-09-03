@@ -6,26 +6,118 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-09-02
+
+The agent can run your tests without leaving Visual Studio: four tools onto the Test Explorer, which
+means its adapters and the build the IDE already has — and a failing test can be stopped in under
+the debugger, where the locals and the call stack are readable. The navigation tools had been the
+weak half of that promise: go-to-implementation answered "none found" for every symbol in every
+language, a solution with C++ in it reported "no results" for names that were right there, and when
+a tool did decline there was no way to tell whether to retry, use another one, or fall back to
+searching text. All three are fixed, and a new tool answers the last question up front. In the chat,
+slash commands work again — `/config`, `/context` and the rest had started being answered in prose
+instead of being run — the transcript no longer stutters while Visual Studio is busy, and picking a
+session from History no longer freezes the IDE while it loads.
+
 ### Added
 
-- **Tests over MCP — four tools onto the IDE's own Test Explorer** (issue #192). The agent could
-  build the solution, read diagnostics, walk the symbol graph and drive the debugger, but to run a
-  test it had to leave Visual Studio and shell out to `dotnet test`: a different build from the one
-  the IDE just made, a different configuration from the one it is on, and console text to scrape
-  instead of results. `test_list` gives the tests the Test Explorer has discovered — its own tree,
-  with project, class and source; `test_run` runs them and waits; `test_get_results` returns the
-  outcome per test, failures first, each with its assertion message and stack trace, so a red test
-  can be opened at its line rather than hunted for. `test_run_with_debugger` runs them under the
-  IDE's debugger, which is the one thing no external runner can offer: execution stops where a test
-  fails and `debug_get_locals` / `debug_get_callstack` read the state there.
-  - **Every framework the IDE supports, not only .NET.** Going through the Test Explorer means going
-    through its adapters: xUnit, NUnit, MSTest, GoogleTest, Boost, CppUnitTest. Verified on a
-    solution holding a C++/C project and a C# one — 16 tests from two adapters, counted and reported
-    together.
-  - There is no `test_cancel`: the underlying calls take a cancellation token, so a run is abandoned
-    by the caller rather than stopped by a second tool.
+- **Run your tests from the chat, through the Test Explorer** (issue #192). The agent could build
+  the solution, read the Error List and drive the debugger, but running a test meant shelling out to
+  `dotnet test` — a different build from the one the IDE just made, a different configuration from
+  the one you are on, and console text to read back instead of results. Four tools now go through
+  Visual Studio's own Test Explorer: `test_list` for what it has discovered, with project, class and
+  source; `test_run` to run them; `test_get_results` for the outcome of each, failures first, with
+  the assertion message and stack trace, so a red test can be opened at its line rather than hunted
+  for. `test_run_with_debugger` runs them under the debugger, which is the thing no external runner
+  offers: execution stops where the test fails and the debug tools read the state there.
+  - **Every framework the IDE supports, not only .NET** — xUnit, NUnit, MSTest, GoogleTest, Boost,
+    CppUnitTest, because the discovery is the Test Explorer's, not ours. Verified on a solution
+    holding a C++ project and a C# one: 16 tests from two adapters, run and reported together.
   - The docs had advertised "Tests: discovery and runs" since 1.0.0 with no such tool in the code.
     They are now true.
+- **`nav_get_language_coverage` — which languages the navigation tools can actually answer for.**
+  When a `nav_*` tool declines, there are three quite different reasons and the message could not
+  tell them apart: that language is missing the service, the project is outside the language
+  workspace entirely, or the file's extension is not the one its project's language covers. The
+  difference decides what to do next, and working it out by hand took a round of trial calls. One
+  tool now reports it: per language, which of the five navigation services it provides; the projects
+  the workspace never saw at all — C++ ones are, and nothing changes that; and, per project, the
+  files whose extension its own language does not cover. That last one is the case nothing else
+  reveals: a C# project full of TypeScript reports every tool as available and answers for none of
+  those files. On this solution it also turned up fourteen `.xaml` files nobody had noticed.
+
+### Fixed
+
+- **Slash commands run again.** `/config`, `/context` and the rest had stopped being executed and
+  were reaching the model as ordinary sentences, which it answered in prose. The editor context —
+  the file and lines you are looking at — was being glued to the front of the message, and the CLI
+  decides something is a command by whether the text starts with `/`; with a tag in front, it never
+  did. Nothing about the commands changed, which is why they used to work: the context tag simply
+  started being there more often. It now travels alongside your message rather than in front of it.
+- **Go-to-implementation finds implementations.** `nav_go_to_implementation` answered "No
+  implementations found" for every symbol in every language, while reporting itself as supported —
+  so the agent read "there are none" and stopped looking, which is worse than an error. It was
+  reading the results of the wrong search. On this solution the same call now returns the 73 classes
+  implementing `IMcpTool`, where it returned nothing before.
+- **Symbol search says which projects it could not look in.** Searching a name across a solution
+  that is partly C++ came back "no results" — indistinguishable from a name that exists nowhere,
+  when in fact the C++ projects had simply not been searched. The answer now names them, so a miss
+  can be told from a gap.
+- **Two navigation tools used at once no longer disagree about what this Visual Studio supports.**
+  Asked in parallel, one could answer normally while the other declined the same service as
+  unavailable. Used one at a time it never showed, which is why it had been there from the start.
+- **The chat no longer stutters while Visual Studio is busy.** During a build, a solution load or
+  heavy IntelliSense, the reply arrived in visible jerks — and it read as the model being slow, when
+  what was actually happening is that reading the reply was waiting on the busy UI. It no longer
+  waits.
+- **Picking a session from History no longer freezes the IDE.** Loading a transcript read the file
+  on the UI thread — around 200ms on a large session, with Visual Studio frozen for all of it. It
+  now loads in the background, and picking a second session while the first is still loading gives
+  you the one you picked last: previously the larger transcript could finish later and paint itself
+  over your choice.
+- **A CLI launched from Visual Studio no longer inherits another session's identity.** Start Visual
+  Studio from inside a Claude Code session — which is how anyone working on this extension starts
+  it — and the panes it opens picked up that session's markers, presenting themselves as part of a
+  conversation they have no part in. Both launch paths now start clean.
+- **The spinner says something from the first frame.** A turn used to open as a single small glyph
+  with no word and no counter beside it, and on a turn that starts with tool calls it stayed that
+  way for as long as the tools ran — a lone character changing shape reads as a broken font, not as
+  work in progress. The elapsed counter now shows from zero.
+- **A Dockerfile in a diff is highlighted as a Dockerfile.** Files whose name has no extension —
+  Dockerfile, Makefile, `.gitignore`, `.editorconfig` — rendered as plain text in the diff preview
+  and in the body of a Write, even though the extension knew what they were. Also filled in the gaps
+  that showed up alongside: `.vcxproj`, `.vsixmanifest`, the rest of the ignore-file family, and the
+  names a .NET or web repository really holds — CODEOWNERS, Procfile, the shell dotfiles.
+- **Closing a chat pane no longer logs errors.** Three exceptions were written to the Output window
+  on every close, all of them the shutdown working exactly as designed — noise in the one place you
+  look when something is genuinely wrong. Closing a pane could also, in the wrong moment, start a
+  `claude.exe` for a pane that was already gone.
+- **Listing tests with a filter returns the matching tests.** Any filtered `test_list` failed
+  outright; only the unfiltered call worked, which is why 16 tests listed fine while a search for
+  one came back empty. An empty result now also says which kind of empty it is — nothing discovered
+  yet, nothing matching the filter, or no run yet — instead of sending you after a problem that was
+  not yours.
+
+### Internal
+
+- **The navigation tools ask Visual Studio which files are code, instead of keeping a list of
+  extensions.** `nav_get_language_coverage` arrived with two hardcoded extension tables, which would
+  have made six such lists in this codebase — each one a place to forget when a language is added.
+  Visual Studio can answer both questions itself: which extensions are text rather than assets, and
+  which of them a given language owns. A language you install now works without anyone editing this
+  file. Both questions fail open, so an extension VS cannot place is reported as uncovered rather
+  than silently dropped.
+- **The chat pane uses the base class's teardown flag** instead of the one it had reinvented, which
+  was set later and also meant "the WebView is not built yet" — two questions on one field, which is
+  what let work resuming mid-shutdown see a pane that looked alive.
+- **Reflection helpers that name the interface they mean.** Visual Studio hands out objects wearing
+  several interfaces that share member names, and asking for a member without saying which interface
+  throws on exactly those.
+- **Four throwaway projects to measure which languages the navigation tools cover** — the C++, VB
+  and mixed-content cases that turned "the tool declined" into three distinct causes a tool could
+  report.
+- **The tool table matches the server again.** `nav_get_language_coverage` and
+  `debug_enable_breakpoint` were exposed and not listed; `mcp-tools.md` documented 75 of the 77.
 
 ## [1.7.0] - 2026-08-28
 
