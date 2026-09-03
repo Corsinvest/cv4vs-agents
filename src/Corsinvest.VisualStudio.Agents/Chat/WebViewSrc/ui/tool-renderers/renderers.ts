@@ -409,6 +409,152 @@ export class TaskStopRenderer extends HeaderOnlyRenderer {
     }
 }
 
+/** The team tools, and the message that travels between their agents. */
+export class TeamCreateRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TeamCreate';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Create Team')}${this.detailSpan(
+            truncate(String(this.host.input.team_name ?? ''), 80),
+        )}`;
+    }
+}
+
+export class TeamDeleteRenderer extends HeaderOnlyRenderer {
+    readonly name = 'TeamDelete';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Delete Team')}${this.detailSpan(
+            String(this.host.input.name ?? ''),
+        )}`;
+    }
+}
+
+export class SendMessageRenderer extends ToolRenderer {
+    readonly name = 'SendMessage';
+    /** Recipient in the header, the message itself in the body — it is prose, and the point. */
+    override header(): TemplateResult {
+        const i = this.host.input;
+        const to = String(i.to ?? '');
+        const summary = truncate(String(i.summary ?? ''), 60);
+        return html`${this.nameSpan('Send Message')}${this.detailSpan(
+            [to, summary].filter(Boolean).join(' · '),
+        )}`;
+    }
+    override inputText(): string {
+        return String(this.host.input.message ?? '');
+    }
+}
+
+/** Brief, whose wire name is still the older SendUserMessage. */
+export class BriefRenderer extends ToolRenderer {
+    readonly name: string = 'Brief';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Brief')}${this.detailSpan(
+            truncate(String(this.host.input.message ?? ''), 80),
+        )}`;
+    }
+    override inputText(): string {
+        return String(this.host.input.message ?? '');
+    }
+}
+
+/** The scheduled-job tools. */
+export class CronCreateRenderer extends HeaderOnlyRenderer {
+    readonly name = 'CronCreate';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        // The schedule is the identity of a cron job; the prompt says what it will do.
+        const what = [i.cron, truncate(String(i.prompt ?? ''), 60)].filter(Boolean).join(' · ');
+        return html`${this.nameSpan('Create Schedule')}${this.detailSpan(what)}`;
+    }
+}
+
+export class CronDeleteRenderer extends HeaderOnlyRenderer {
+    readonly name = 'CronDelete';
+    override header(): TemplateResult {
+        return html`${this.nameSpan('Delete Schedule')}${this.detailSpan(
+            String(this.host.input.id ?? ''),
+        )}`;
+    }
+}
+
+export class CronListRenderer extends ToolRenderer {
+    readonly name = 'CronList';
+    override row(): TemplateResult {
+        return this.rowCount('schedules', 'No schedules');
+    }
+    override header(): TemplateResult {
+        return html`${this.nameSpan('List Schedules')}`;
+    }
+}
+
+export class SleepRenderer extends HeaderOnlyRenderer {
+    readonly name = 'Sleep';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        const s = i.seconds ?? i.duration ?? i.ms;
+        return html`${this.nameSpan('Sleep')}${this.detailSpan(s != null ? String(s) : '')}`;
+    }
+}
+
+export class RemoteTriggerRenderer extends HeaderOnlyRenderer {
+    readonly name = 'RemoteTrigger';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        return html`${this.nameSpan('Remote Trigger')}${this.detailSpan(
+            [i.action, i.trigger_id].filter(Boolean).map(String).join(' · '),
+        )}`;
+    }
+}
+
+export class ConfigRenderer extends HeaderOnlyRenderer {
+    readonly name = 'Config';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        const setting = String(i.setting ?? '');
+        // Reads and writes are the same tool; a value is what tells them apart.
+        const detail = i.value != null ? `${setting} = ${String(i.value)}` : setting;
+        return html`${this.nameSpan('Config')}${this.detailSpan(truncate(detail, 80))}`;
+    }
+}
+
+export class LspRenderer extends HeaderOnlyRenderer {
+    readonly name = 'LSP';
+    override header(): TemplateResult {
+        const i = this.host.input;
+        const fp = String(i.filePath ?? '');
+        const line = i.line != null ? Number(i.line) : null;
+        const where = fp
+            ? this.fileLink(
+                  fp,
+                  html`${displayPathUi(fp)}${line != null ? `:${line + 1}` : ''}`,
+                  line != null ? line + 1 : 0,
+              )
+            : '';
+        const op = String(i.operation ?? '');
+        return html`${this.nameSpan(op ? `LSP ${op}` : 'LSP')}${this.detailSpan(where)}`;
+    }
+}
+
+export class ReplRenderer extends ToolRenderer {
+    readonly name = 'REPL';
+    /** Code, so it is highlighted and never clipped — the same call ShellRenderer makes. */
+    override highlightInputAs(): string {
+        return 'javascript';
+    }
+    protected override clipsInput(): ClipMode {
+        return 'never';
+    }
+    override header(): TemplateResult {
+        return html`${this.nameSpan('REPL')}${this.detailSpan(
+            truncate(this.inputText().split('\n')[0] ?? '', 60),
+        )}`;
+    }
+    override inputText(): string {
+        const i = this.host.input;
+        return String(i.code ?? i.script ?? i.input ?? '');
+    }
+}
+
 export class EnterPlanModeRenderer extends HeaderOnlyRenderer {
     readonly name = 'EnterPlanMode';
     override label(): string {
