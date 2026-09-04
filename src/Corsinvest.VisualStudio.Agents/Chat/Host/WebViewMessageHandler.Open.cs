@@ -109,7 +109,7 @@ internal sealed partial class WebViewMessageHandler
         if (string.IsNullOrEmpty(toolUseId)) { return; }
 
         // The sub-agent transcript first when there is one, then the main file — same order and
-        // same reason as HandleOpenToolIo: an Agent row carries an agentId while its own tool_use
+        // same reason as HandleToolOutput: an Agent row carries an agentId while its own tool_use
         // lives in the main transcript, so neither file alone answers for every row.
         var agentId = p.AgentId ?? "";
         JObject input = null;

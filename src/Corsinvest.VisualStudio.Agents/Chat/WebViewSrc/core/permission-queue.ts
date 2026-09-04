@@ -8,10 +8,8 @@
  *
  * The CLI can have several `can_use_tool` in flight at once — a turn firing parallel tools, or a
  * sub-agent asking while the main thread does — and the client tracks them all, keyed by
- * tool_use_id (`ClaudeClient._toolRequestIds`, a ConcurrentDictionary). The banner used to hold
- * one: a second request overwrote the first, which then vanished from screen while the CLI still
- * waited for an answer that could no longer be given, hanging that tool until the turn was
- * interrupted.
+ * tool_use_id (`ClaudeClient._toolRequestIds`, a ConcurrentDictionary). Holding only one would
+ * drop a request the CLI still waits for, hanging that tool until the turn is interrupted.
  *
  * Kept out of the component because it is state, not rendering, and this way it can be tested
  * without a DOM. The component owns what a request LOOKS like; this owns which one is up.

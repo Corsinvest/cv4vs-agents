@@ -123,8 +123,7 @@ public static class ClaudeInstall
     /// Asks the CLI rather than reading the npm <c>package.json</c> next to it: that manifest only
     /// exists for an npm install, so the native installer, WinGet and a hand-set
     /// <c>ClaudeExecutablePath</c> all came back "(unknown)". <c>--version</c> is a documented
-    /// flag and answers whatever the layout. Costs a process start, and the one caller is the
-    /// session-info dialog, opened by hand — no reason to cache it.
+    /// flag and answers whatever the layout. Costs a process start; not cached.
     /// </para></summary>
     public static string Version()
     {

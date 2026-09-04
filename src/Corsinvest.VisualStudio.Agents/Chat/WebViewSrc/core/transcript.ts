@@ -35,11 +35,10 @@ export class Transcript {
     /**
      * Called with the ids that just left the tree, subtrees included.
      *
-     * Entries used to be add-only, so anything keyed on an id outside this class stayed valid for
-     * as long as the session did. Retraction broke that: an id can now disappear mid-session, and a
-     * key left behind means either events written into an entry that is gone or a Map that never
-     * shrinks. Rather than expect every caller to remember the cleanup, the removal announces
-     * itself — this class still knows nothing about who listens or what they keyed.
+     * Retraction means an id can disappear mid-session, and a key left behind outside this class
+     * is either events written into an entry that is gone or a Map that never shrinks. Rather than
+     * expect every caller to remember the cleanup, the removal announces itself — this class still
+     * knows nothing about who listens or what they keyed.
      */
     onRemoved?: (ids: readonly number[]) => void;
 

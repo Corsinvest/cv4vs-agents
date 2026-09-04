@@ -18,8 +18,6 @@ namespace Corsinvest.VisualStudio.Agents.Core.Plugins;
 /// control_request return "Unsupported control request subtype" — only <c>reload_plugins</c> is
 /// accepted), so every plugin action spawns its own process. Success is detected by exit code 0
 /// (✔); failure by exit code 1 (✘) — the CLI never emits JSON on error.
-/// Analogous to <see cref="Sessions.SessionManager"/>: a static service reading data from outside
-/// the protocol.
 /// </summary>
 internal static class PluginService
 {

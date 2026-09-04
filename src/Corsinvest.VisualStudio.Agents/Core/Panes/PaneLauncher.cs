@@ -18,8 +18,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 /// <summary>
 /// Spawns multi-instance session panes (CLI / Chat). The per-pane toolbar
 /// and the entry-point command call <see cref="OpenNew"/> to create a fresh
-/// pane; there is no separate launcher window anymore. Callers work in terms
-/// of <see cref="PaneKind"/>; the Type mapping stays here.
+/// pane. Callers work in terms of <see cref="PaneKind"/>; the Type mapping stays here.
 /// </summary>
 internal static class PaneLauncher
 {

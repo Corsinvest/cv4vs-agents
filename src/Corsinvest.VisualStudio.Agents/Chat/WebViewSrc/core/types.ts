@@ -465,7 +465,7 @@ export interface AskQuestion {
 }
 
 /** A tool row's nested children (the Agent tool's transcript today; the mechanism is generic).
- *  Memoria-minima: at most the 3 most-recent items are kept; expand fetches more lazily. */
+ *  Memory-minimal: at most the 3 most-recent items are kept; expand fetches more lazily. */
 export interface ToolChildren {
     /** The kept child rows/messages (≤3 collapsed, the full list once "Show all" fetched). */
     items: UiEntry[];
