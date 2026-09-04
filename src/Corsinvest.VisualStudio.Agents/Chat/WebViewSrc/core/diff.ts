@@ -2,10 +2,9 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-// Patch text construction for diffs. Pure, no DOM — consumed by diff-rows.ts
+// Patch path naming for diffs. Pure, no DOM — consumed by diff-rows.ts
 // (inline preview) and diff-stats.ts (+N/-M counts).
 
-import { createPatch } from 'diff';
 import { langForFile } from './lang';
 import { normPath } from './path';
 
@@ -26,23 +25,4 @@ export function patchPathFor(filePath: string | undefined | null): string {
     const dot = baseName.lastIndexOf('.');
     const stem = dot > 0 ? path.slice(0, path.length - (baseName.length - dot)) : path;
     return `${stem}.${lang}`;
-}
-
-/**
- * Build a unified patch via jsdiff. `context` = lines around each hunk
- * (`Number.MAX_SAFE_INTEGER` for the whole file). `ignoreWhitespace` is
- * passed in by callers so core/ stays free of the state import.
- */
-export function buildPatch(
-    oldStr: string | undefined | null,
-    newStr: string | undefined | null,
-    filePath: string | undefined | null,
-    context: number,
-    ignoreWhitespace = false,
-): string {
-    return createPatch(patchPathFor(filePath), oldStr ?? '', newStr ?? '', '', '', {
-        context,
-        ignoreWhitespace,
-        stripTrailingCr: true,
-    });
 }

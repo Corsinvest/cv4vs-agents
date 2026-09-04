@@ -27,7 +27,7 @@ export interface PermissionItem {
     icon: string;
 }
 
-export const PERMISSION_ITEMS: PermissionItem[] = [
+const PERMISSION_ITEMS: PermissionItem[] = [
     // Descriptions say what happens to your files and what still gets asked — that's what
     // you need to choose. No "Claude will": the subject is obvious in a chat with it, and
     // the spare width is better spent on the limits of each mode (verified in the CLI:
@@ -94,9 +94,4 @@ export function permissionItems(): PermissionItem[] {
         }
         return true;
     });
-}
-
-/** User-facing label for a mode (falls back to the raw value if unknown). */
-export function permissionLabel(mode: PermissionMode): string {
-    return PERMISSION_ITEMS.find((it) => it.value === mode)?.label ?? mode;
 }
