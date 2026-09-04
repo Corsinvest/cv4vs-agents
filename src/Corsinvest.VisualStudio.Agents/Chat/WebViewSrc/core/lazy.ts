@@ -30,9 +30,9 @@ import type {
 import type { PluginListResponse } from './generated/PluginListResponse';
 import type { MarketplaceListResponse } from './generated/MarketplaceListResponse';
 
-/** Request image bytes for a stripped chat block. The bridge correlates the response by id,
- *  so concurrent calls no longer need manual dedup — each awaits its own response. Rejects on
- *  timeout or an error-response (e.g. block not found), which the caller renders as a failure. */
+/** Request image bytes for a stripped chat block. The bridge correlates by id, so concurrent
+ *  calls each await their own response. Rejects on timeout or an error-response (e.g. block
+ *  not found), which the caller renders as a failure. */
 export function fetchChatImage(uuid: string, blockIdx: number): Promise<GetImageResponse> {
     return bridge.sendRequest(GetImageReq, { uuid, blockIdx });
 }

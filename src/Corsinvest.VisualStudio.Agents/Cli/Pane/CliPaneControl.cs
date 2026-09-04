@@ -41,9 +41,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
     public override void FocusInput() => FocusTerminal();
 
     // No editable title for the CLI pane: the interactive terminal doesn't expose its live
-    // session id (raw ConPTY, not stream-json), so there's nothing to track/rename. The base's
-    // SupportsTitleEditing default is false, but state it explicitly for clarity; SessionTitle
-    // stays null (SetSessionTitle is never called) and RenameSession keeps the base no-op.
+    // session id (raw ConPTY, not stream-json), so there's nothing to track/rename.
     public override bool SupportsTitleEditing => false;
 
     /// <summary>No kind-specific "More" actions for the terminal pane.</summary>

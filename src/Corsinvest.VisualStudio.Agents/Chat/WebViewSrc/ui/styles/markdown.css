@@ -102,8 +102,7 @@
     word-break: normal;
 }
 /* vs2015/vs hljs themes have unreadable add/del backgrounds (#144212 / #600
- * on dark, and inverted addition/deletion on light). Override with the same
- * palette used by the diff2html tool diffs for visual consistency. */
+ * on dark, and inverted addition/deletion on light). */
 .md pre code .hljs-addition {
     display: inline-block;
     width: 100%;

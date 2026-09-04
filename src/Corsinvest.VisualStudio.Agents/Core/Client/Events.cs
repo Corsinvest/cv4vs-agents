@@ -75,12 +75,9 @@ public sealed class AssistantMessageEventArgs
     /// saying "API error".
     /// </para>
     /// <para>
-    /// Measured 2026-08-06 by pointing the CLI at an invalid token: the wrapper came back with
-    /// `error: "authentication_failed"`, and a normal turn carries no such field. The same frame
-    /// also had `is_api_error_message: true`, which is NOT in the SDK types (0 hits in a file that
-    /// declares everything else we use) — emitted without a contract, so not something to build on.
-    /// </para>
-    /// <para>Read and logged, not acted on: the double-rendering fix is a separate change.</para></summary>
+    /// The frame also carries `is_api_error_message`, which is NOT in the SDK types — emitted
+    /// without a contract, so not something to build on.
+    /// </para></summary>
     public string Error { get; set; }
     /// <summary>Message time (epoch ms) parsed from the wire `timestamp`; null when absent.</summary>
     public long? Timestamp { get; set; }
