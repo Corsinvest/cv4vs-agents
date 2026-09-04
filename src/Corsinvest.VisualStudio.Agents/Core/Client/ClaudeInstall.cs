@@ -42,6 +42,11 @@ public static class ClaudeInstall
         "CLAUDE_CODE_MESSAGING_SOCKET",
         "CLAUDE_CODE_MESSAGING_TOKEN",
         "CLAUDE_PID",
+        // Inherited, this one turns transcript saving off — no .jsonl, so no history, no --resume.
+        // The CLI only says so in its TUI, which the chat pane never shows.
+        "CLAUDE_CODE_CHILD_SESSION",
+        "TRACEPARENT",
+        "TRACESTATE",
     ];
 
     /// <summary>Resolve the real <c>claude.exe</c>, or <c>null</c> if not installed. Covers every
