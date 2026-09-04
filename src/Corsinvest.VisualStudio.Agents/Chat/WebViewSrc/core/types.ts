@@ -23,10 +23,12 @@ export type Theme = 'dark' | 'light';
 /** Reasoning effort level union ('low'|'medium'|'high'|'xhigh'), generated from C#. */
 export type { EffortLevelDto } from './generated/EffortLevelDto';
 
-/** Slider levels (low→max) and their labels, matching the VS Code extension. */
+/** Slider levels (low→max) and their labels, matching the VS Code extension. Exported only for
+ *  the type below to read: unexported, it is a value nothing consumes and no-unused-vars rejects
+ *  it. */
 export const EFFORT_SLIDER_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type EffortSliderLevel = (typeof EFFORT_SLIDER_LEVELS)[number];
-export const EFFORT_LEVEL_LABELS: Readonly<Record<EffortSliderLevel, string>> = {
+const EFFORT_LEVEL_LABELS: Readonly<Record<EffortSliderLevel, string>> = {
     low: 'Low',
     medium: 'Medium',
     high: 'High',
@@ -41,7 +43,7 @@ export const EFFORT_LEVEL_LABELS: Readonly<Record<EffortSliderLevel, string>> = 
 export const ULTRACODE_VALUE = 'ultracode';
 
 /** Display text for ultracode, capitalised like every other effort label. */
-export const ULTRACODE_LABEL = 'Ultracode';
+const ULTRACODE_LABEL = 'Ultracode';
 
 /** The one place that turns effort state into display text, so the composer chip and the menu's
  *  slider can never word it differently. `ultracode` is required, not defaulted: the flag is what

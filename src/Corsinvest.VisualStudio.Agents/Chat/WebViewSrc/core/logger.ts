@@ -5,7 +5,7 @@
 // WebView logging entry point. Level gate + independent perf-timing gate,
 // both driven by the host's `init` payload (see ui/init.ts).
 
-export enum LogLevel {
+enum LogLevel {
     None = 0,
     Error = 1,
     Warn = 2,
