@@ -27,7 +27,7 @@ export class SlashCommand extends ChatCommand {
     readonly section: CommandSection = 'slash';
     override readonly aliases: readonly string[];
     // CLI slash commands arrive from `initialize` without an icon; supply a
-    // hand-curated one by name when we have it (e.g. /compact → broom).
+    // hand-curated one by name when we have it (e.g. /clear → broom).
     override readonly icon?: string;
     constructor(
         readonly name: string,

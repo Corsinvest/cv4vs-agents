@@ -91,11 +91,10 @@ public class CliStateDto
     // bypass mode, so the selector must not offer it.
     public bool? BypassPermissionsDisabled { get; set; }
     // From init.fast_mode_state (off|cooldown|on). The webview derives only the on/off toggle
-    // (on = state != "off"); cooldown is not currently surfaced distinctly. Replaces the
-    // always-null FastMode bool from get_settings.
+    // (on = state != "off"); cooldown is not currently surfaced distinctly.
     public string FastModeState { get; set; }
     // Custom spinner verbs from get_settings.effective.spinnerVerbs (null unless set in settings.json).
-    // CLI state, not a VS Option — moved here from VsOptionsDto.
+    // CLI state, not a VS Option.
     public SpinnerVerbsConfigDto SpinnerVerbsConfig { get; set; }
 }
 

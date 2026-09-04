@@ -234,8 +234,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.HidePanesOnClose", ex); }
         }).FileAndForget(nameof(AgentsPackage));
 
-    /// <summary>No solution came back in time: the close was a real one. Close every pane, which is
-    /// what OnBeforeCloseSolution used to do inline.</summary>
+    /// <summary>No solution came back in time: the close was a real one. Close every pane.</summary>
     private void OnReloadWatchElapsed()
         => JoinableTaskFactory.RunAsync(async () =>
         {
