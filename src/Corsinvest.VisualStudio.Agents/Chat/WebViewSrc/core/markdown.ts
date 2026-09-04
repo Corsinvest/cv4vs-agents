@@ -191,9 +191,8 @@ export function renderMarkdown(text: string | undefined | null): string {
     try {
         const html = marked.parse(normalized, { async: false }) as string;
         out = DOMPurify.sanitize(html, {
-            // data-line-end is what makes a range select rather than just scroll. It was missing
-            // here while the renderer emitted it, so "x.cs:35-48" opened at 35 and selected nothing.
-            // 'text' carries the table's markdown to its copy button: dropped here, it copies nothing.
+            // data-line-end is what makes a range select rather than just scroll; 'text' carries
+            // the table's markdown to its copy button. Dropped here, each silently stops working.
             ADD_ATTR: ['target', 'frompre', 'text', 'data-file', 'data-line', 'data-line-end'],
             ADD_TAGS: ['cv-copy-btn'],
         });

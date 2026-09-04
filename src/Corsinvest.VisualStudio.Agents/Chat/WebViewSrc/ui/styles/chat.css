@@ -75,8 +75,8 @@
     position: relative;
 }
 /* Container above a user bubble for parsed <ide_*> refs (cv-message renders the
- * cv-attach-chip IDE chips into it). Lives here (not prompt.css) since cv-message
- * is light DOM and the composer moved to Shadow DOM. */
+ * cv-attach-chip IDE chips into it). Here rather than with the composer: cv-message
+ * is light DOM. */
 .cv-ide-chips {
     display: flex;
     flex-wrap: wrap;
@@ -342,9 +342,6 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 .cv-tool-actions-error svg path {
     fill: var(--colorPaletteRedForeground1);
 }
-/* "Open diff in Visual Studio" icon: tinted purple to echo the slash-cmd band
- * ("special action" colour). The SVG is a solid fill (reads well at 14px), so tint
- * the fill; clear the generic `fill: currentColor` on this one. */
 /* A tool row's nested children (Agent / Skill transcript today).
  * No rule down the side: the indent already says "these belong to the row above". */
 .cv-children {
@@ -359,7 +356,6 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     max-height: 320px;
     overflow-y: auto;
 }
-/* "…" marker above the collapsed list = "there are earlier tools". */
 .cv-children-more {
     color: var(--colorNeutralForeground4);
     font-size: 14px;
@@ -640,12 +636,9 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     position: relative;
     min-width: 0;
 }
-/* The label's line, with the copy button at the far end. margin-left on the
- * button rather than space-between: a labelless row (Write: the body IS the
- * file) has only the button, and space-between would leave it on the left.
- * The button is taller than the 10px label, so the row keeps the label's
- * height and lets it overflow — otherwise every tool row grows by the
- * difference. */
+/* margin-left on the button rather than space-between: a labelless row (Write: the body IS
+ * the file) has only the button, and space-between would leave it on the left. The fixed
+ * height is the label's: the taller button overflows it, or every tool row grows. */
 .cv-tool-body-head {
     display: flex;
     align-items: center;
@@ -718,8 +711,7 @@ cv-message[msg-role="user"] .cv-msg-actions {
 }
 /* Turn cost/tokens/duration, pushed to the far end of the actions row: what you can DO with the
  * answer stays on the left where the pointer already is, what the turn COST reads on the right. */
-/* The $ ↑ ↓ tok s markers: dimmed and light, they only say which number is which. Foreground3 (the
- * timestamp's grey) was losing the arrow glyphs entirely at this size. */
+/* The $ ↑ ↓ tok s markers: dimmed and light, they only say which number is which. */
 .cv-turn-metrics {
     margin-left: auto;
     padding-right: 4px;

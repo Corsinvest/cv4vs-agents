@@ -245,14 +245,14 @@ internal static class BridgeMessages
             public const string FilesDropped = "ui_files_dropped";
         }
 
-        /// <summary>Plugin-manager results + the global "plugins changed" broadcast.</summary>
+        /// <summary>Plugin-manager results + the "plugins changed" notice.</summary>
         public static class Plugins
         {
             public const string ListResult = "plugins_list_result";
             public const string MarketplaceListResult = "marketplace_list_result";
             public const string OpResult = "plugin_op_result";
-            /// <summary>Broadcast to ALL live chats when an op touched active plugins → each
-            /// prompt shows a non-dismissable "reload to apply" banner.</summary>
+            /// <summary>An op touched active plugins → the prompt shows a non-dismissable
+            /// "reload to apply" banner. Sent to the pane that ran the op, not broadcast.</summary>
             public const string Changed = "plugins_changed";
         }
     }

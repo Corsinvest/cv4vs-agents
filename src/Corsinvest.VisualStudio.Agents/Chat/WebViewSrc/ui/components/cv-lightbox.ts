@@ -75,7 +75,7 @@ export class CvLightbox extends CvDialogBase {
 
     @property({ attribute: false }) req: LightboxRequest | null = null;
 
-    /** Backdrop dismiss: our `.cv-lightbox-frame` fills the dialog and absorbs
+    /** Backdrop dismiss: our `.frame` fills the dialog and absorbs
      *  Fluent's own backdrop clicks, so re-check at the frame level. */
     private _onFrameClick = (e: MouseEvent): void => {
         if (e.target === e.currentTarget) {

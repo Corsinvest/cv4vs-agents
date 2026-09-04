@@ -128,7 +128,7 @@ public abstract class PaneControlBase : UserControl, IPaneControl
         => Task.FromResult<IEnumerable<(string Label, string Value)>>([]);
 
     /// <summary>Free-form sections appended below the aligned rows, each already formatted.
-    /// Separate from <see cref="ExtraSessionInfo"/> because these are not label/value: the chat's
+    /// Separate from <see cref="ExtraSessionInfoAsync"/> because these are not label/value: the chat's
     /// WebView report is a block of its own with its own inner layout, and forcing it through the
     /// column alignment above would only mangle it.
     /// <para>Async because a pane may have to ask something that answers on the UI thread — see
@@ -139,7 +139,7 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     /// <summary>Read-only session info (id, session file, workdir, CLI) for debug and bug reports.
     /// Built from <see cref="Entry"/>, which both pane kinds keep current — so the terminal gets the
     /// same dialog as the chat, with no duplicated code — plus whatever
-    /// <see cref="ExtraSessionInfo"/> adds for the kind.
+    /// <see cref="ExtraSessionInfoAsync"/> adds for the kind.
     /// <para>Async all the way to the dialog: what the chat pane contributes comes back from the
     /// WebView, which delivers on this very thread. Blocking on it here — even with a deadline —
     /// deadlocks until that deadline and yields "(unknown)" rather than the answer.</para></summary>

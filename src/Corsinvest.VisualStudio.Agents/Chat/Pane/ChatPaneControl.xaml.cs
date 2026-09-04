@@ -362,7 +362,7 @@ public partial class ChatPaneControl : PaneControlBase
         WebView.HostFilesDropped += OnHostFilesDropped;
         // Clicking into the chat is the user answering the attention notice, so take it down.
         // Composition rendering is what makes this possible: the control lives in the WPF tree,
-        // so mouse events reach us. The HwndHost version had to be told from JS instead.
+        // so mouse events reach us.
         WebView.PreviewMouseDown += OnWebViewClicked;
     }
 

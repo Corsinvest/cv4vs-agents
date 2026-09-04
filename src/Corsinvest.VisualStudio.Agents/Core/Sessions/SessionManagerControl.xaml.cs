@@ -20,8 +20,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Sessions;
 
 /// <summary>
 /// Reusable session browser: lists JSONL sessions for a workdir with search,
-/// click-to-select, and hover rename/delete. Shared by the toolbar history
-/// picker and (future) Manage Sessions dialog / chat session switcher.
+/// click-to-select, and hover rename/delete. Used by the toolbar history picker.
 /// </summary>
 public partial class SessionManagerControl : UserControl
 {
@@ -362,7 +361,7 @@ public partial class SessionManagerControl : UserControl
     }
 
     /// <summary>Walk up the logical tree to the Popup hosting this control, or null when the
-    /// control is shown some other way (e.g. a future docked Manage Sessions dialog).</summary>
+    /// control is shown some other way.</summary>
     private System.Windows.Controls.Primitives.Popup FindAncestorPopup()
     {
         DependencyObject d = this;
