@@ -18,7 +18,7 @@
  */
 
 /** The queue only ever needs the id — the component keeps the full request. */
-export interface Identified {
+interface Identified {
     id: string;
 }
 
