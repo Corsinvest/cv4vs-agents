@@ -35,6 +35,14 @@ internal sealed class ChatWebView : WebView2CompositionControl
     public ChatWebView()
     {
         AllowDrop = true;
+        // Never let the control reach 0x0: WebView2CompositionControl's private SizeChanged
+        // handler passes the size straight to Direct3D11CaptureFramePool.Recreate, which throws
+        // E_INVALIDARG on zero and takes devenv down with it — the throw is inside WPF layout, so
+        // nothing of ours can catch it (WebView2Feedback#5485, open through 1.0.3967.48). VS hands
+        // the pane a 0x0 pass when an auto-hidden window is expanded. 1 DIP stays >= 1px at every
+        // scale, and a 1px sliver of a collapsed pane is invisible.
+        MinWidth = 1;
+        MinHeight = 1;
     }
 
     // Preview, and Handled either way, or the drop tunnels on to VS and opens the file in an editor.
