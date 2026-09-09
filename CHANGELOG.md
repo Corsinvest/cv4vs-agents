@@ -6,6 +6,82 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-09-08
+
+A crash that took Visual Studio down with it: expanding an auto-hidden chat pane could kill
+`devenv.exe` outright, and the fix is two lines guarding against a WebView2 SDK bug that is still
+open upstream. The transcript reads better too — an MCP call now says it is one instead of naming
+the server where every other row names the action, its arguments and result are formatted JSON on
+both sides, and the twenty CLI tools that used to fall through to a raw name over an input dump each
+have a renderer. Three things that broke only when a message was sent with a file open in the editor
+— a dead attachment click, ↑/↓ recalling nothing, history paging from the wrong place — turn out to
+be the same off-by-one and are fixed together.
+
+### Added
+
+- **An MCP call says it is one, and both its cells are readable JSON.** The row for
+  `mcp__server__tool` read `Vs [build_solution]` — the server, where every other row names the
+  action (`Read`, `Grep`, `Web Search`), so nothing on screen said the call went to an MCP server at
+  all. It reads `MCP Tool` · `vs · build_solution` now, which also fills a detail that used to come
+  up empty: the fallback looks for `query`/`url`/`path`, and MCP tools rarely carry those. Both
+  cells are JSON by protocol — arguments in, serialised result out — so both are highlighted and the
+  result is indented instead of arriving as one line that scrolls sideways. Clicking a cell used to
+  open a `.txt` holding that same single line; it is now an indented `.json` on both sides.
+- **A renderer for every CLI tool** (23 → 43). Twenty were falling through to the default renderer,
+  which prints the raw tool name over its input JSON: the task tools (TaskCreate, TaskUpdate,
+  TaskGet, TaskList, TaskStop, TaskOutput), the teams and their messages (TeamCreate, TeamDelete,
+  SendMessage, Brief), the scheduled jobs (CronCreate, CronDelete, CronList), plus Sleep,
+  RemoteTrigger, Config, LSP and REPL. The task rows are the ones that fill a transcript whenever
+  sub-agents run, which is what started this. Three carry more than a header: SendMessage and Brief
+  put the message itself in the body, REPL highlights its code and never clips it, LSP links to the
+  file and line it asked about. Nothing lands on the default renderer now, which leaves it for what
+  it is for — a tool this build has never heard of.
+
+### Fixed
+
+- **Expanding an auto-hidden chat pane could crash Visual Studio** (issue #208). Not the pane: the
+  whole IDE, with an unhandled `ArgumentException` on the UI thread.
+  `WebView2CompositionControl` passes its size straight from a private `SizeChanged` handler to
+  `Direct3D11CaptureFramePool.Recreate`, which throws on 0×0 — and VS docking hands the pane exactly
+  that when an auto-hidden window is expanded, the content being re-added to the visual tree before
+  the flyout is sized. The throw happens inside WPF layout, so nothing in the extension is in a
+  position to catch it. The control now has a 1 DIP minimum, which stays ≥ 1px at every scale and is
+  invisible in practice. The SDK bug is
+  [WebView2Feedback#5485](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5485), open since
+  January 2026; the guard is worth keeping regardless, since Visual Studio loads its own
+  `WebView2.Wpf` copy rather than the one the VSIX ships.
+- **Three things that only broke with a file open in the editor** (PR #203). The host puts the
+  editor-context tag in a content block of its own, ahead of everything else, and three places
+  downstream assumed the user's content came first — which is why they looked intermittent.
+  **Clicking an attachment did nothing**: the fetch asked for the block holding the tag and got
+  `image block not found`. **↑/↓ recalled nothing**: stripping the tag from the first text block
+  left an empty string, so the prompt never entered the history — on one measured session, 72% of
+  user messages carry that tag. **History paged from the wrong place**: a real turn read as a meta
+  injection, and the pagination anchors on that.
+- **Sessions started from a Claude Code terminal saved nothing.** Launch Visual Studio from inside a
+  Claude Code session and every `claude.exe` the extension spawns inherited that session's identity.
+  One of the inherited markers turns transcript saving off: no `.jsonl`, so no history, no
+  `--resume`, and nothing in the statistics. The CLI does say so, but only in its own TUI, which the
+  chat pane never shows — so the failure was silent. Three more variables are now stripped at
+  launch, matching what the VS Code extension removes.
+
+### Internal
+
+- **CI runs the unit tests.** The suite existed and nothing ran it, so a red suite could reach
+  master unnoticed — 195 tests, under a second, in both workflows. It runs *after* the build and
+  with `-c Release --no-build`, which is not a preference: the test project references the built DLL
+  rather than the project, so running it first tests whatever `bin/` happened to hold.
+- Eight WebView dependencies moved to their current patch or minor. `dompurify` is the one that
+  earned it — it sanitises the markdown the chat renders. TypeScript 7, `@types/node` 26 and
+  Fluent 3.1.3 are deliberately held back.
+- Seven exports nothing outside their own file reads are closed, two of them dead code. An open
+  export is a contract to the rest of the WebView, and it invites callers past the function that
+  knows the edge cases.
+- A pass over the comments across CSS, TypeScript and C#, dropping the ones that no longer describe
+  the code — among them three lines above a rule that does not exist, a claim of "no shadow DOM in
+  our components" against 33 shadow to 8 light, and a "broadcast to ALL live chats" that the only
+  emitter contradicts.
+
 ## [1.8.0] - 2026-09-02
 
 The agent can run your tests without leaving Visual Studio: four tools onto the Test Explorer, which
