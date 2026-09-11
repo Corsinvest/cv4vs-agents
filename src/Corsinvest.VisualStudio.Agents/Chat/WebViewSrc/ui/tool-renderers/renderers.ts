@@ -7,6 +7,8 @@
 // registered in index.ts. No name-switching anywhere else.
 
 import { html, nothing, type TemplateResult } from 'lit';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { renderMarkdown } from '../../core/markdown';
 import { langForFile } from '../../core/lang';
 import { fileName } from '../../core/path';
 import { displayPathUi } from '../paths';
@@ -872,6 +874,96 @@ function answerText(q: AskQuestion, answered: string): string {
         return chosen.join(', ');
     }
     return questionAnswer(q, answered) || '—';
+}
+
+interface Finding {
+    file?: string;
+    line?: number;
+    summary?: string;
+    short_summary?: string;
+    failure_scenario?: string;
+    category?: string;
+    verdict?: 'CONFIRMED' | 'PLAUSIBLE' | string;
+    outcome?: 'fixed' | 'skipped' | 'no_change_needed' | string;
+}
+
+/** A code review's findings. The one tool whose input is the whole point: it performs nothing,
+ *  it carries a verified list from the model to the UI (its result only echoes that list back).
+ *  So the row reads from the input, which arrives with the call instead of one turn later.
+ *
+ *  The body is the list itself, like TodoWrite's and Ask's — NOT the IN/OUT grid. That grid's
+ *  cells cap their height and scroll inside the row, which is right for a prompt or a log the
+ *  user glances at, and wrong here: a review IS the row, so it gets as tall as it needs and the
+ *  chat scrolls, rather than hiding half the findings behind a scrollbar the moment it opens.
+ *  The findings themselves are still markdown — that is what turns the bare "path/x.cs:42" into
+ *  the link that opens the file, so the reference is written plain, never as [label](href). */
+export class ReportFindingsRenderer extends ToolRenderer {
+    readonly name = 'ReportFindings';
+
+    private findings(): Finding[] {
+        const f = (this.host.input as { findings?: unknown }).findings;
+        return Array.isArray(f) ? (f as Finding[]) : [];
+    }
+
+    /** "3 findings · high", and what a --fix run settled once there is one. Deliberately not the
+     *  first finding (the shape Ask uses for its first question): they are ordered by severity but
+     *  rank equally, and lifting one into the header would read as it being THE result.
+     *
+     *  The level stays when fixes are reported: it says how wide the sweep was, which is what tells
+     *  the user whether an empty-looking review means "clean" or "barely looked". */
+    override header(): TemplateResult {
+        const items = this.findings();
+        const n = items.length;
+        const fixed = items.filter((f) => f.outcome === 'fixed').length;
+        const parts = [
+            n === 0 ? 'No findings' : n === 1 ? '1 finding' : `${n} findings`,
+            String(this.host.input.level ?? ''),
+            fixed > 0 ? `${fixed} fixed` : '',
+        ].filter(Boolean);
+        return html`${this.nameSpan('Report Findings')}${this.detailSpan(parts.join(' · '))}`;
+    }
+
+    /** ❌/⚠️/✅ carry the severity: markdown has no way to colour a glyph, and these read in a
+     *  prose cell where the monochrome ✓/○ of the todo list would not. Once a --fix run has been
+     *  through, `outcome` replaces the category — the question is no longer "is this a bug" but
+     *  "did you deal with it" — and a fixed finding drops its failure scenario, having none left.
+     *
+     *  Only an explicit CONFIRMED earns ❌. An inline-only review runs no verify pass and reports
+     *  every finding without a verdict at all, so treating absent as confirmed would dress its
+     *  guesses up as verified defects — the one error the glyph must not make. */
+    override inputText(): string {
+        return this.findings()
+            .map((f) => {
+                const fixed = f.outcome === 'fixed' || f.outcome === 'no_change_needed';
+                const icon = fixed ? '✅' : f.verdict === 'CONFIRMED' ? '❌' : '⚠️';
+                const tag = f.outcome ?? f.category ?? '';
+                const title = f.short_summary || f.summary || '';
+                // Struck through once settled, so a skimmed list separates what is left to do.
+                const head = fixed ? `~~${title}~~` : `**${title}**`;
+                const where = f.file ? (f.line ? `${f.file}:${f.line}` : f.file) : '';
+                return [
+                    `${icon} ${tag ? `\`${tag}\` ` : ''}${head}`,
+                    where,
+                    fixed ? '' : (f.failure_scenario ?? ''),
+                ]
+                    .filter(Boolean)
+                    .join('\n');
+            })
+            .join('\n\n');
+    }
+
+    /** A clean review is a one-line row: `findings: []` is the good outcome and says everything
+     *  the header already shows. */
+    override body(): TemplateResult | null {
+        const text = this.inputText();
+        return text
+            ? html`<div class="cv-tool-body">
+                  <div class="md" @click=${this.onMarkdownClick}>
+                      ${unsafeHTML(renderMarkdown(text))}
+                  </div>
+              </div>`
+            : null;
+    }
 }
 
 /** Catch-all for unknown tools: best-effort header + standard IN/OUT body. */
