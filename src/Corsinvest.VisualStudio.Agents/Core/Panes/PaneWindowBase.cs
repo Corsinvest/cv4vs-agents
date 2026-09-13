@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Helpers;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -25,6 +26,9 @@ public abstract class PaneWindowBase : ToolWindowPane
 
     /// <summary>The shared toolbar mounted above <see cref="PaneControl"/>.</summary>
     private PaneToolbar _toolbar;
+
+    /// <summary>Which kind of session this window hosts; picks the glyph on its tab icon.</summary>
+    protected abstract PaneKind Kind { get; }
 
     protected PaneWindowBase() : base(null)
     {
@@ -51,6 +55,7 @@ public abstract class PaneWindowBase : ToolWindowPane
             dock.Children.Add(PaneControl);
             _toolbar.Attach(PaneControl);
             Content = dock;
+            BitmapImageMoniker = ToolWindowIcons.WithAdorner(ToolWindowIcons.TabGlyph(Kind));
 
             OutputWindowLogger.Global.Perf(() => $"{GetType().Name}: ctor done");
         }

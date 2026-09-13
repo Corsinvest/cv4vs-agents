@@ -44,6 +44,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   header would otherwise inherit — the chevron next to it already worked around this with an
   explicit ancestor binding; the header text now does the same. No shipped feature used `CvExpander`
   yet, so nothing already on screen changes; found while building on it.
+- **A crowded tab group no longer shows our windows as blank tabs.** When a group runs out of room,
+  Visual Studio hides the captions and draws each tab's icon instead — and none of the extension's
+  windows had one. Each now shows the mascot, drawn from vector art so it stays sharp at any scale,
+  with a small glyph in the corner saying which window it is: a speech bubble for a chat, a console
+  for the CLI, and for Statistics, Usage, Context usage and File history the glyph their menu entry
+  already carries.
 
 ## [1.9.0] - 2026-09-08
 

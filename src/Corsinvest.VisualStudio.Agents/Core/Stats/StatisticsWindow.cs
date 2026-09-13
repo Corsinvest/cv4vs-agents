@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Helpers;
+using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.Runtime.InteropServices;
@@ -21,6 +23,8 @@ public sealed class StatisticsWindow : ToolWindowPane
     {
         Caption = "Statistics";
         Content = new StatisticsControl();
+        // The glyph of its menu entry in AgentsPackage.vsct.
+        BitmapImageMoniker = ToolWindowIcons.WithAdorner(KnownMonikers.Statistics);
     }
 
     /// <summary>Show the Statistics window, creating it on first use.</summary>

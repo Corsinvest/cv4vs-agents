@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  SPDX-FileCopyrightText: Copyright Corsinvest Srl
+  SPDX-License-Identifier: GPL-3.0-only
+-->
+<!--
+  The extension's own image monikers. Visual Studio finds this file by its place at the VSIX root.
+  The Guid and IDs must match PackageMonikers in PackageGuids.cs: a mismatch draws an empty image and
+  reports nothing (ImageManifestTests holds the two together).
+-->
+<ImageManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+               xmlns="http://schemas.microsoft.com/VisualStudio/ImageManifestSchema/2014">
+  <Symbols>
+    <String Name="Resources" Value="/Corsinvest.VisualStudio.Agents;component/Resources" />
+    <Guid Name="AgentsImages" Value="{830694c8-24d3-49d1-81d2-773cf7a798d1}" />
+    <ID Name="Logo" Value="1" />
+    <ID Name="ChatGlyph" Value="2" />
+  </Symbols>
+  <Images>
+    <!-- Brand colours: left on, the image service inverts their lightness on a dark theme. -->
+    <Image Guid="$(AgentsImages)" ID="$(Logo)" AllowColorInversion="false">
+      <Source Uri="$(Resources)/logo-icon.xaml" />
+    </Image>
+    <!-- Its contrast is drawn for the purple it sits on, which inverting for the theme would undo. -->
+    <Image Guid="$(AgentsImages)" ID="$(ChatGlyph)" AllowColorInversion="false">
+      <Source Uri="$(Resources)/chat-glyph.xaml" />
+    </Image>
+  </Images>
+  <ImageLists />
+</ImageManifest>

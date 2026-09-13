@@ -45,3 +45,18 @@ internal static class PackageIds
     // 0x0400, clear of the panes range that grows under it.
     public const int EditorPromptCommandId = 0x0400;
 }
+
+/// <summary>Images declared in Monikers.imagemanifest. The Guid and ids must match that file: a mismatch
+/// draws an empty image and says nothing. Kept as primitive constants so ImageManifestTests can hold the
+/// two together without loading the imaging interop assembly.</summary>
+internal static class PackageMonikers
+{
+    public const string ImagesGuidString = "830694c8-24d3-49d1-81d2-773cf7a798d1";
+    public static readonly Guid Images = new(ImagesGuidString);
+
+    public const int LogoId = 1;
+    public const int ChatGlyphId = 2;
+
+    public static Microsoft.VisualStudio.Imaging.Interop.ImageMoniker Logo => new() { Guid = Images, Id = LogoId };
+    public static Microsoft.VisualStudio.Imaging.Interop.ImageMoniker ChatGlyph => new() { Guid = Images, Id = ChatGlyphId };
+}
