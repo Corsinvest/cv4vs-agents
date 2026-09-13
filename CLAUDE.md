@@ -60,7 +60,7 @@ XAML `x:Class`, `.vsct` ids and the manifest fail at *runtime*, not compile time
 `.vsct` id gives a silent no-op menu entry. **CI does not run the tests**, so a red suite reaches
 master unless someone ran it.
 
-`tests/LangMatrix` is not a test project: four throwaway libraries the solution loads but never
+`tests/LangMatrix` is not a test project: five throwaway libraries the solution loads but never
 builds, so the `nav_*` tools can be pointed at a real file in each language.
 
 ## Traps
