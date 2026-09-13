@@ -71,6 +71,9 @@ export interface ToolHost extends ToolRowState {
     openDiffInVs(): void;
     /** Open this tool's IN or OUT content in a temp file in VS. */
     openOutput(which: 'in' | 'out'): void;
+    /** Open this ExitPlanMode's plan in VS. The host picks what: the plan file while the request
+     *  is pending (edits there are what gets approved), a read-only snapshot once answered. */
+    openPlan(): void;
     /** Open this tool's full error output in VS (resolved by toolUseId). */
     openError(): void;
 }

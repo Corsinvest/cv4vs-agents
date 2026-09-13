@@ -214,6 +214,16 @@ public class ToolPermissionCancelNotification
     public string ToolUseId { get; set; }
 }
 
+/// <summary>A pending plan was saved in the editor (chat_plan_updated): show the new text on the
+/// banner whose tool_use matches. Edited says whether it differs from the plan the CLI sent — decided
+/// by the host with the rule it answers by, so the banner and the approval never disagree.</summary>
+public class PlanUpdatedNotification
+{
+    public string ToolUseId { get; set; }
+    public string Plan { get; set; }
+    public bool Edited { get; set; }
+}
+
 /// <summary>What an Agent run cost, from the totals the CLI writes on its tool_result. Absent while
 /// it runs, and for an INTERRUPTED run — there the CLI reports no figures at all, so the row shows
 /// none rather than a number that would understate what it spent.</summary>

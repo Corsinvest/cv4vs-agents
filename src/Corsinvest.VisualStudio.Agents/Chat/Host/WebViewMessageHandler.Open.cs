@@ -83,24 +83,32 @@ internal sealed partial class WebViewMessageHandler
                                                                      if (m.Success) { content = m.Groups[1].Value.Trim(); }
                                                                      // The IN side is already indented by ProjectInput; this is the OUT side.
                                                                      content = TryIndentJson(content);
-                                                                     var tmpPath = Path.Combine(Path.GetTempPath(), TempFileName(toolName, which, filePath, toolUseId));
-                                                                     // Clear the flag before rewriting: a previous open left the file read-only, and
-                                                                     // WriteAllText would throw on it.
-                                                                     try
-                                                                     {
-                                                                         if (File.Exists(tmpPath)) { File.SetAttributes(tmpPath, FileAttributes.Normal); }
-                                                                     }
-                                                                     catch (Exception ex) { log.Warn($"[open-output] could not clear read-only on {tmpPath}: {ex.Message}"); }
-                                                                     File.WriteAllText(tmpPath, content, System.Text.Encoding.UTF8);
-                                                                     // Read-only on purpose: this is a copy of what the tool wrote at that turn, and now that
-                                                                     // it carries the real extension it looks even more like the source file. Editing it
-                                                                     // would change nothing on disk, which is worth making obvious rather than discovering.
-                                                                     try { File.SetAttributes(tmpPath, FileAttributes.ReadOnly); }
-                                                                     catch (Exception ex) { log.Warn($"[open-output] could not mark {tmpPath} read-only: {ex.Message}"); }
-                                                                     VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, tmpPath,
-                                                                         Microsoft.VisualStudio.VSConstants.LOGVIEWID.TextView_guid, out _, out _, out var frame);
-                                                                     frame?.Show();
+                                                                     OpenReadOnlyTemp(TempFileName(toolName, which, filePath, toolUseId), content);
                                                                  }).FileAndForget(nameof(WebViewMessageHandler));
+
+    /// <summary>Write <paramref name="content"/> to a temp file named <paramref name="name"/>, mark it
+    /// read-only and open it in the editor.</summary>
+    private void OpenReadOnlyTemp(string name, string content)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var tmpPath = Path.Combine(Path.GetTempPath(), name);
+        // Clear the flag before rewriting: a previous open left the file read-only, and
+        // WriteAllText would throw on it.
+        try
+        {
+            if (File.Exists(tmpPath)) { File.SetAttributes(tmpPath, FileAttributes.Normal); }
+        }
+        catch (Exception ex) { log.Warn($"[open-output] could not clear read-only on {tmpPath}: {ex.Message}"); }
+        File.WriteAllText(tmpPath, content, System.Text.Encoding.UTF8);
+        // Read-only on purpose: this is a copy of what a tool call carried at that turn, and with the
+        // real extension it looks even more like the source file. Editing it would change nothing on
+        // disk, which is worth making obvious rather than discovering.
+        try { File.SetAttributes(tmpPath, FileAttributes.ReadOnly); }
+        catch (Exception ex) { log.Warn($"[open-output] could not mark {tmpPath} read-only: {ex.Message}"); }
+        VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, tmpPath,
+            Microsoft.VisualStudio.VSConstants.LOGVIEWID.TextView_guid, out _, out _, out var frame);
+        frame?.Show();
+    }
 
     private void HandleDiffDialog(JObject data, int? id)
     {

@@ -173,13 +173,15 @@ internal sealed partial class ClaudeClient
             case ClientMessages.ControlSubtype.CanUseTool:
                 {
                     var toolUseId = req.Val("tool_use_id", "");
-                    if (!string.IsNullOrEmpty(toolUseId)) { _toolRequestIds[toolUseId] = rid; }
+                    var toolName = req.Val("tool_name", "");
+                    var input = req["input"] as JObject;
+                    if (!string.IsNullOrEmpty(toolUseId)) { _toolRequestIds[toolUseId] = new PendingToolRequest(rid, toolName, input); }
                     ToolPermissionRequested?.Invoke(this, new ToolPermissionRequestEventArgs
                     {
                         RequestId = rid,
                         ToolUseId = toolUseId,
-                        ToolName = req.Val("tool_name", ""),
-                        Input = req["input"] as JObject,
+                        ToolName = toolName,
+                        Input = input,
                         BlockedPath = req.Val("blocked_path"),
                         PermissionSuggestions = req["permission_suggestions"] as JArray,
                     });
@@ -229,7 +231,7 @@ internal sealed partial class ClaudeClient
         if (string.IsNullOrEmpty(rid)) { return; }
         // The permission banner is keyed by tool_use_id in the WebView; map the cancelled
         // request_id back to it (the same map RespondToToolPermission uses to answer).
-        var toolUseId = _toolRequestIds.FirstOrDefault(kv => kv.Value == rid).Key;
+        var toolUseId = _toolRequestIds.FirstOrDefault(kv => kv.Value.RequestId == rid).Key;
         if (!string.IsNullOrEmpty(toolUseId))
         {
             _toolRequestIds.TryRemove(toolUseId, out _);

@@ -9,12 +9,14 @@ import LockClosed16Regular from '@fluentui/svg-icons/icons/lock_closed_16_regula
 import QuestionCircle16Regular from '@fluentui/svg-icons/icons/question_circle_16_regular.svg';
 import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import ClipboardBulletListLtr16Regular from '@fluentui/svg-icons/icons/clipboard_bullet_list_ltr_16_regular.svg';
+import Open16Regular from '@fluentui/svg-icons/icons/open_16_regular.svg';
 import { iconStyles } from '../styles/shared';
 import { renderMarkdown } from '../../core/markdown';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { state as appState } from '../../core/state';
 import { PermissionQueue } from '../../core/permission-queue';
+import { hasPlanToOpen } from '../../core/plan';
 import { PERMISSION_MODE } from '../../core/types';
 import type {
     ToolResultNotification,
@@ -22,6 +24,8 @@ import type {
     ToolPermissionCancelNotification,
     RespondPermissionNotification,
     SetPermissionModeNotification,
+    PlanUpdatedNotification,
+    OpenPlanNotification,
     PermissionMode,
     AskQuestion,
 } from '../../core/types';
@@ -37,6 +41,9 @@ interface ToolPermission {
     /** CLI permission_suggestions (PermissionUpdate[]) — each yields an extra
      *  "allow … for this session/project" button. Echoed back as updatedPermissions. */
     permissionSuggestions?: PermissionSuggestion[];
+    /** ExitPlanMode only: the plan file was saved in the editor and differs from what the CLI sent.
+     *  Decided by the host (chat_plan_updated); kept on the request so it follows it through the queue. */
+    planEdited?: boolean;
 }
 
 /** A CLI permission_suggestion (PermissionUpdate). We render a button per entry
@@ -171,6 +178,12 @@ export class CvPermissionBanner extends LitElement {
             }
             #plan-body > :last-child {
                 margin-bottom: 0;
+            }
+            /* The text below is the editor's, not what Claude sent: approving it approves the edit. */
+            #plan-edited {
+                font-size: var(--fontSizeBase200);
+                color: var(--colorNeutralForeground3);
+                margin: 0 0 4px;
             }
             /* Short single-line command shown inline: an expander would cost a click for one line. */
             #permission-detail-inline {
@@ -536,6 +549,27 @@ export class CvPermissionBanner extends LitElement {
                 },
             ),
         );
+        // A pending plan was saved in the editor: show the new text. By id, on whichever request it
+        // is — the plan may be waiting behind another — and an id already answered is a no-op.
+        this._offs.push(
+            bridge.onNotification<PlanUpdatedNotification>(
+                Msg.toWebView.chat.planUpdated,
+                (dto) => {
+                    if (!dto?.toolUseId) {
+                        return;
+                    }
+                    const onScreen = this._queue.update(dto.toolUseId, (r) => ({
+                        ...r,
+                        input: { ...r.input, plan: dto.plan },
+                        planEdited: dto.edited,
+                    }));
+                    // Not _show(): that resets focus and the per-request state mid-answer.
+                    if (onScreen) {
+                        this._pending = this._queue.current;
+                    }
+                },
+            ),
+        );
         // Session gone: everything waiting belonged to it, and none of it can be answered now.
         this._offs.push(bridge.onNotification(Msg.toWebView.chat.cleared, () => this._clearAll()));
         // The CLI died. Nothing on screen can be answered any more — there is no process left to
@@ -603,6 +637,12 @@ export class CvPermissionBanner extends LitElement {
         // Numbered actions, least-destructive first: Yes, [suggestion], No, focus the
         // deny field. The last number doesn't confirm — it jumps to the textarea.
         const actions = this._numberedActions();
+        // Enter on a header button (the plan's "Open in editor") belongs to that button: falling
+        // through would confirm the default choice — accepting the plan in auto-accept — and the
+        // preventDefault would swallow the keypress the button clicks on.
+        if (e.key === 'Enter' && this._activeInShadow()?.closest('#permission-header')) {
+            return;
+        }
         // Enter confirms the focused choice, defaulting to the first (Yes).
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -615,6 +655,20 @@ export class CvPermissionBanner extends LitElement {
             e.preventDefault();
             actions[idx]();
         }
+    };
+
+    /** Open the plan in the editor; the host picks the file itself while this request is pending.
+     *  Focus goes back to the first choice, so Enter on returning from the editor answers instead
+     *  of reopening the file. */
+    private _onOpenPlan = (): void => {
+        const p = this._pending;
+        if (!p) {
+            return;
+        }
+        bridge.sendNotification<OpenPlanNotification>(Msg.fromWebView.open.plan, {
+            toolUseId: p.id,
+        });
+        this.focusFirst();
     };
 
     /** Ordered keyboard actions (1..n): Yes, the suggestion (if any), No, then
@@ -1182,7 +1236,31 @@ export class CvPermissionBanner extends LitElement {
                 <div id="permission-header">
                     ${unsafeHTML(ClipboardBulletListLtr16Regular)}
                     <span id="permission-title">Accept this plan?</span>
+                    ${
+                        // No plan injected (the model left plan mode without writing one): nothing
+                        // to open, and a button would only lead to an error notice.
+                        hasPlanToOpen(p.input)
+                            ? html`<span class="tabs-spacer"></span>
+                                  <fluent-button
+                                      class="close plan-open"
+                                      appearance="transparent"
+                                      icon-only
+                                      title="Open in editor"
+                                      aria-label="Open in editor"
+                                      @click=${this._onOpenPlan}
+                                  >
+                                      ${unsafeHTML(Open16Regular)}
+                                  </fluent-button>`
+                            : nothing
+                    }
                 </div>
+                ${
+                    p.planEdited
+                        ? html`<div id="plan-edited">
+                              Edited in the editor — this version is what gets approved
+                          </div>`
+                        : nothing
+                }
                 ${
                     plan
                         ? html`<div id="plan-body">${unsafeHTML(renderMarkdown(plan))}</div>`

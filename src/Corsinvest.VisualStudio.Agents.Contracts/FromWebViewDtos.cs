@@ -169,6 +169,16 @@ public class DiffDialogNotification
     public string AgentId { get; set; }
 }
 
+/// <summary>Open an ExitPlanMode's plan (open_plan). Only the ids travel: whether the request is
+/// still pending decides between the live plan file and a snapshot, and the path comes from the
+/// CLI's own request, so both are the host's to know. AgentId names the sub-agent transcript the
+/// snapshot is looked up in, and is empty for the session's own tools.</summary>
+public class OpenPlanNotification
+{
+    public string ToolUseId { get; set; }
+    public string AgentId { get; set; }
+}
+
 /// <summary>Hot-swap the permission mode (cli_set_permission_mode).</summary>
 public class SetPermissionModeNotification
 {
