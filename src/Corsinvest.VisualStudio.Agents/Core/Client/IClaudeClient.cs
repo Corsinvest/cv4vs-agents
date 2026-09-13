@@ -105,6 +105,18 @@ public interface IClaudeClient : IDisposable
     /// or unknown).</summary>
     bool RespondToToolPermission(string toolUseId, ToolPermissionResponse response);
 
+    /// <summary>The tool and input of a can_use_tool still waiting for its answer — the CLI's own
+    /// copy, as it asked. False once it is answered or cancelled, or its process is gone.</summary>
+    bool TryGetPendingToolRequest(string toolUseId, out string toolName, out JObject input);
+
+    /// <summary>The pending ExitPlanMode whose plan file is <paramref name="planFilePath"/>, if any.
+    /// Lets a save in the editor find its request without the caller tracking requests itself.</summary>
+    bool TryFindPendingPlan(string planFilePath, out string toolUseId, out JObject input);
+
+    /// <summary>True while an ExitPlanMode waits for its answer: a cheap early-out for a listener
+    /// that hears every save in the IDE.</summary>
+    bool HasPendingPlan { get; }
+
     /// <summary>Responds to a HookCallback event (raw payload, since hook response shape depends on event).</summary>
     void RespondToHookCallback(string requestId, object response);
 

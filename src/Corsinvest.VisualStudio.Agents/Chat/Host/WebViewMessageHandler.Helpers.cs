@@ -260,6 +260,8 @@ internal sealed partial class WebViewMessageHandler
                 {
                     "PowerShell" => ".ps1",
                     "Bash" => ".sh",
+                    // A plan is markdown: .md gets it the Markdown editor instead of plain text.
+                    Core.Client.PlanApproval.ToolName => ".md",
                     _ => ".txt",
                 }
                 : ".txt";

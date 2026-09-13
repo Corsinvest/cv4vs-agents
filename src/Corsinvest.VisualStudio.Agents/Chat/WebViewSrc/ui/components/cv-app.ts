@@ -656,7 +656,13 @@ export class CvApp extends LitElement {
                                 data: {
                                     id: data.id,
                                     name: data.name,
-                                    input: (data.input ?? {}) as Record<string, unknown>,
+                                    // Merge, don't replace: the two copies need not agree on what the
+                                    // CLI injected (ExitPlanMode's plan/planFilePath), and a key one of
+                                    // them carries must survive whichever lands second.
+                                    input: {
+                                        ...((e.data?.input ?? {}) as Record<string, unknown>),
+                                        ...((data.input ?? {}) as Record<string, unknown>),
+                                    },
                                 },
                             })),
                         );

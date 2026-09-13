@@ -32,8 +32,15 @@ internal sealed partial class ClaudeClient : IClaudeClient
     private readonly ConcurrentDictionary<string, TaskCompletionSource<JObject>> _pending = new();
     private int _requestCounter;
 
-    // Track the control request_id associated to a tool_use_id so we can respond later.
-    private readonly ConcurrentDictionary<string, string> _toolRequestIds = new();
+    // The pending can_use_tool per tool_use_id: the control request_id to answer, plus the tool and
+    // the input the CLI asked about. That input is the CLI's own copy — ExitPlanMode's planFilePath
+    // and plan snapshot are read from here, never from what the WebView sends back.
+    private readonly ConcurrentDictionary<string, PendingToolRequest> _toolRequestIds = new();
+
+    // A struct value lives inside the dictionary, so a request costs no allocation. Not readonly: a
+    // readonly record struct's positional properties are init-only, which needs IsExternalInit, and
+    // net48 has none.
+    private record struct PendingToolRequest(string RequestId, string ToolName, JObject Input);
 
     // Last options used — replayed on auto-restart when the process dies.
     private ClientOptions _lastOptions;
@@ -188,6 +195,10 @@ internal sealed partial class ClaudeClient : IClaudeClient
         try { _transport.Dispose(); } catch { }
         _transport = new NdjsonTransport(_log);
         AttachTransportEvents();
+        // The old process's permission requests died with it, but on a respawn (new session, resume,
+        // fork) its late Exited was just detached above, so nothing else would drop them — and a
+        // stale plan would still be found by path, and answered to a process that never asked.
+        _toolRequestIds.Clear();
         // A new process has no bridge: the CLI reports nothing about Remote Control after
         // --resume, so nothing else would clear this.
         BridgeEpoch = null;
@@ -893,11 +904,12 @@ internal sealed partial class ClaudeClient : IClaudeClient
     {
         // Resolve+consume the request_id tracked at can_use_tool; keying by
         // tool_use_id keeps concurrent prompts from clobbering each other.
-        if (string.IsNullOrEmpty(toolUseId) || !_toolRequestIds.TryRemove(toolUseId, out var requestId))
+        if (string.IsNullOrEmpty(toolUseId) || !_toolRequestIds.TryRemove(toolUseId, out var pending))
         {
             _log.Warn($"[client] permission for unknown/stale tool_use_id={toolUseId} — ignored");
             return false;
         }
+        var requestId = pending.RequestId;
 
         object payload;
         if (response.Allow)
@@ -923,6 +935,38 @@ internal sealed partial class ClaudeClient : IClaudeClient
         SendControlResponse(requestId, success: true, response: payload);
         return true;
     }
+
+    public bool TryGetPendingToolRequest(string toolUseId, out string toolName, out JObject input)
+    {
+        if (!string.IsNullOrEmpty(toolUseId) && _toolRequestIds.TryGetValue(toolUseId, out var pending))
+        {
+            toolName = pending.ToolName;
+            input = pending.Input;
+            return true;
+        }
+        toolName = null;
+        input = null;
+        return false;
+    }
+
+    public bool TryFindPendingPlan(string planFilePath, out string toolUseId, out JObject input)
+    {
+        foreach (var kv in _toolRequestIds)
+        {
+            if (kv.Value.ToolName == PlanApproval.ToolName
+                && PlanApproval.SamePath(PlanApproval.PlanFilePathOf(kv.Value.Input), planFilePath))
+            {
+                toolUseId = kv.Key;
+                input = kv.Value.Input;
+                return true;
+            }
+        }
+        toolUseId = null;
+        input = null;
+        return false;
+    }
+
+    public bool HasPendingPlan => _toolRequestIds.Any(kv => kv.Value.ToolName == PlanApproval.ToolName);
 
     public void RespondToHookCallback(string requestId, object response)
         => SendControlResponse(requestId, success: true, response: response);

@@ -84,6 +84,25 @@ export class PermissionQueue<T extends Identified> {
         return this._current;
     }
 
+    /**
+     * Replace request `id` with `fn(request)` wherever it sits. Returns true only when the one on
+     * screen changed — the caller re-renders then; a waiting one shows its new version when its
+     * turn comes.
+     *
+     * An unknown id is a no-op: an update can land after its request was answered, the answer's
+     * own save being the usual way.
+     */
+    update(id: string, fn: (req: T) => T): boolean {
+        if (this._current?.id === id) {
+            this._current = fn(this._current);
+            return true;
+        }
+        if (this._waiting.some((q) => q.id === id)) {
+            this._waiting = this._waiting.map((q) => (q.id === id ? fn(q) : q));
+        }
+        return false;
+    }
+
     /** Session gone: everything waiting belonged to it and none of it can be answered now. */
     clear(): void {
         this._current = null;

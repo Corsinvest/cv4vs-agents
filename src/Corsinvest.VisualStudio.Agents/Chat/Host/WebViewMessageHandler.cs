@@ -131,6 +131,10 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
                 HandleDiffDialog(data, id);
                 break;
 
+            case BridgeMessages.FromWebView.Open.Plan:
+                HandleOpenPlan(data, id);
+                break;
+
             case BridgeMessages.FromWebView.Cli.SetPermissionMode:
                 HandleSetPermissionMode(data, id);
                 break;
@@ -232,6 +236,9 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
     public void Dispose()
     {
         if (_statsIndexHooked) { Core.Stats.StatsService.IndexingCompleted -= OnStatsIndexingCompleted; }
+        // The RDT holds the listener, and through it this handler and the bridge: left advised, a
+        // closed pane would stay alive and keep hearing every save in the IDE.
+        DisposePlanSaveListener();
     }
 
 }
