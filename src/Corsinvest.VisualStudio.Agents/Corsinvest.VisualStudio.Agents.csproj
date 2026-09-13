@@ -391,6 +391,7 @@
     <Compile Include="Helpers\MimeTypes.cs" />
     <Compile Include="Helpers\Win32Focus.cs" />
     <Compile Include="Helpers\WindowChrome.cs" />
+    <Compile Include="Helpers\ToolWindowIcons.cs" />
     <Compile Include="Chat\VsThemeReader.cs" />
     <Compile Include="PackageGuids.cs" />
     <Compile Include="Chat\Pane\ChatPaneWindow.cs" />
@@ -499,6 +500,14 @@
          <Resource>, not <Content>, to be embedded in the assembly. -->
     <Resource Include="Resources\plugin-logo.png" />
     <Resource Include="Resources\corsinvest-logo.png" />
+    <!-- Tab icon source for Monikers.imagemanifest: loose XAML, which the image service loads by URI. -->
+    <Resource Include="Resources\logo-icon.xaml" />
+    <Resource Include="Resources\chat-glyph.xaml" />
+    <!-- At the VSIX root, where Visual Studio looks for image manifests. -->
+    <Content Include="Monikers.imagemanifest">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <IncludeInVSIX>true</IncludeInVSIX>
+    </Content>
     <Content Include="..\..\LICENSE">
       <Link>LICENSE</Link>
       <IncludeInVSIX>true</IncludeInVSIX>

@@ -21,6 +21,8 @@ public sealed class ChatPaneWindow : PaneWindowBase, IOleCommandTarget
 {
     protected override PaneControlBase CreateControl() => new ChatPaneControl();
 
+    protected override PaneKind Kind => PaneKind.Chat;
+
     // VS turns keystrokes into commands and routes them down the IOleCommandTarget chain (the
     // active pane is asked first). We claim two and hand them to the chat's WebView instead of
     // letting VS act on them; everything else falls through unchanged (F5/build/Ctrl+S stay VS):

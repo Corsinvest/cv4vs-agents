@@ -26,6 +26,8 @@ public sealed class CliPaneWindow : PaneWindowBase
 
     protected override PaneControlBase CreateControl() => new CliPaneControl();
 
+    protected override PaneKind Kind => PaneKind.Cli;
+
     /// <summary>Forward to the hosted control so the launcher can point the terminal at a session
     /// before it starts (workspace restore). Content is a DockPanel, not the control — go through the
     /// protected PaneControl (LoadSession is on IPaneControl, so no cast needed).</summary>

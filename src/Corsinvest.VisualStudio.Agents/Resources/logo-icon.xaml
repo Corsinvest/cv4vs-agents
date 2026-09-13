@@ -1,0 +1,16 @@
+<!--
+  SPDX-FileCopyrightText: Copyright Corsinvest Srl
+  SPDX-License-Identifier: GPL-3.0-only
+-->
+<!--
+  The mascot as an image-manifest source (Monikers.imagemanifest). The image service loads a source with
+  Application.LoadComponent and rasterises only a FrameworkElement or a BitmapSource, so the DrawingImage
+  from Themes/Icons.xaml is wrapped in an Image rather than named directly.
+  A loose Resource, not a Page: the form Visual Studio ships its own XAML icons in.
+-->
+<Viewbox Width="16" Height="16" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+  <Viewbox.Resources>
+    <ResourceDictionary Source="/Corsinvest.VisualStudio.Agents;component/Themes/Icons.xaml" />
+  </Viewbox.Resources>
+  <Image Width="500" Height="500" Source="{StaticResource MascotImage}" />
+</Viewbox>

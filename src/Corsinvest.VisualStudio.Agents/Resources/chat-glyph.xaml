@@ -1,0 +1,15 @@
+<!--
+  SPDX-FileCopyrightText: Copyright Corsinvest Srl
+  SPDX-License-Identifier: GPL-3.0-only
+-->
+<!--
+  The chat pane's tab-icon glyph (Monikers.imagemanifest). A solid bubble rather than VS's Comment icon:
+  that one is an outline, and at the 9px it is drawn at over the mascot the outline disappears into the
+  purple. White fill for the mascot behind it, a dark edge for a light tab around it.
+-->
+<Viewbox Width="16" Height="16" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+  <Canvas Width="16" Height="16">
+    <Path Fill="#FFFFFF" Stroke="#1E1E1E" StrokeThickness="1.5" StrokeLineJoin="Round"
+          Data="M 3.5,1.75 H 12.5 A 2.75,2.75 0 0 1 15.25,4.5 V 8.5 A 2.75,2.75 0 0 1 12.5,11.25 H 8.25 L 4,14.75 V 11.25 H 3.5 A 2.75,2.75 0 0 1 0.75,8.5 V 4.5 A 2.75,2.75 0 0 1 3.5,1.75 Z" />
+  </Canvas>
+</Viewbox>
