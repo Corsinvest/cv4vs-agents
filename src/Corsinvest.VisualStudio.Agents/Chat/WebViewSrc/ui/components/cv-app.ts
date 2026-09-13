@@ -12,7 +12,7 @@ import { Msg } from '../../core/bridge-messages';
 import { fetchSubagent, fetchContextUsage, fetchCompactSummary } from '../../core/lazy';
 import { Transcript } from '../../core/transcript';
 import { clearMarkdownCache } from '../../core/markdown';
-import { buildGroups } from '../../core/exchanges';
+import { buildGroups, isHiddenToolCall } from '../../core/exchanges';
 import { openRewindDialog } from '../../core/dialog-host';
 import { cleanMessageOnlyText, parseIdeContextTags } from '../../core/ide';
 import './cv-notice-stack';
@@ -85,6 +85,8 @@ let _entryIdSeq = 0;
 /** Notice key for the "CLI process exited" row, so a restart clears exactly that one. */
 const CLI_EXITED_KEY = 'cli-exited';
 const REMOTE_CONTROL_ERROR_KEY = 'remote-control-error';
+/** Older pages _fillIfUnscrollable may pull in on its own before waiting for the user to ask. */
+const AUTO_FILL_MAX_PAGES = 3;
 
 /**
  * Root component. Owns the chat entry list and wires the bridge messages
@@ -123,6 +125,18 @@ export class CvApp extends LitElement {
     /** A permission/Ask prompt is awaiting the user → hide the "waiting" spinner
      *  (Claude isn't working, it's waiting for the user to choose). */
     @state() private _awaitingUser = appState.pendingPermission != null;
+    /** Chat → Hide tool calls, mirrored so a flip re-renders (appState.ui is read, not observed).
+     *  Hidden rows keep their place in the DOM: the transcript renders without keys, so taking one
+     *  out of the list would hand its element — open/closed state included — to the next row. */
+    @state() private _hideToolCalls = !!appState.ui.hideToolCalls;
+    /** The call whose permission prompt is open. Its row stays visible while tool calls are hidden:
+     *  it is where what the prompt asks to run is spelled out. */
+    @state() private _pendingToolUseId: string | null = appState.pendingPermission?.id ?? null;
+    /** Pages _fillIfUnscrollable has pulled in since the user last asked for more — see there. */
+    private _autoFillPages = 0;
+    /** Observers of history pages still settling (_prependWithAnchor), so a tool-call flip can stop
+     *  them re-applying a scroll position the flip has just moved. */
+    private readonly _prependObservers = new Set<ResizeObserver>();
 
     @query('#messages') private _messagesEl!: HTMLDivElement;
     /** Whether the "jump to the latest" button is showing — see _updateJump for the hysteresis. */
@@ -214,7 +228,17 @@ export class CvApp extends LitElement {
         this._subs.on('isBusy', (v) => (this._isBusy = v));
         this._subs.on('queuedUuids', (v) => (this._queuedUuids = new Set(v)));
         this._subs.on('status', (v) => (this._status = v));
-        this._subs.on('pendingPermission', (v) => (this._awaitingUser = v != null));
+        this._subs.on('pendingPermission', (v) => {
+            this._awaitingUser = v != null;
+            this._pendingToolUseId = v?.id ?? null;
+        });
+        // 'ui' fires on every Options → Apply and twice at start-up: only a change to this one flag
+        // is news here.
+        this._subs.on('ui', (v) => {
+            if (!!v.hideToolCalls !== this._hideToolCalls) {
+                this._onHideToolCallsChanged(!!v.hideToolCalls);
+            }
+        });
     }
 
     override connectedCallback(): void {
@@ -738,6 +762,10 @@ export class CvApp extends LitElement {
                     // Land at the bottom, sustained for a few frames: a whole page of transcript
                     // just went in, and images (the one thing rendered async) settle after it.
                     this._scrollToBottom('instant', 6);
+                    // A new page is a fresh start for the automatic top-up, which a page of hidden
+                    // tool rows can need before there is anything to scroll.
+                    this._autoFillPages = 0;
+                    this._fillIfUnscrollable();
                 },
             ),
         );
@@ -905,11 +933,15 @@ export class CvApp extends LitElement {
         // Scroll listener drives lazy loading of older messages. Attached
         // imperatively to keep a single subscription tied to the host lifecycle.
         this._messagesEl?.addEventListener('scroll', this._onMessagesScroll, { passive: true });
+        // A list too short to scroll fires no scroll event: the wheel is what is left to hear the
+        // user asking for older history (_onMessagesWheel).
+        this._messagesEl?.addEventListener('wheel', this._onMessagesWheel, { passive: true });
     }
 
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         this._messagesEl?.removeEventListener('scroll', this._onMessagesScroll);
+        this._messagesEl?.removeEventListener('wheel', this._onMessagesWheel);
         if (this._jumpRaf !== 0) {
             cancelAnimationFrame(this._jumpRaf);
             this._jumpRaf = 0;
@@ -1085,20 +1117,46 @@ export class CvApp extends LitElement {
         // button has to follow every one of them. This listener is already passive — a second one
         // for the same event is what we are avoiding.
         this._queueJumpUpdate();
-        if (!appState.hasMoreHistory || appState.loadingOlder) {
+        if (!this._canLoadOlder() || el.scrollTop > 200) {
             return;
         }
-        if (!appState.currentSessionId || appState.oldestLoadedOffset < 0) {
+        this._loadOlder();
+    };
+
+    /** A wheel turned up over a list too short to scroll, which fires no scroll event: with tool
+     *  calls hidden a whole page can come down to a few lines, and older history would be out of
+     *  reach. Any upward turn is the user asking for more, so it also lifts the auto-fill cap. */
+    private _onMessagesWheel = (e: WheelEvent): void => {
+        const el = this._messagesEl;
+        if (!el || e.deltaY >= 0) {
             return;
         }
-        if (el.scrollTop > 200) {
+        this._autoFillPages = 0;
+        if (el.scrollHeight <= el.clientHeight) {
+            this._loadOlder();
+        }
+    };
+
+    /** Older content exists, there is a session to ask about, and no fetch is in flight. */
+    private _canLoadOlder(): boolean {
+        return (
+            appState.hasMoreHistory &&
+            !appState.loadingOlder &&
+            !!appState.currentSessionId &&
+            appState.oldestLoadedOffset >= 0
+        );
+    }
+
+    /** Fetch the page before the oldest one held, and prepend it anchored. */
+    private _loadOlder(): void {
+        const sessionId = appState.currentSessionId;
+        if (!sessionId || !this._canLoadOlder()) {
             return;
         }
         appState.loadingOlder = true;
-        const reqSession = appState.currentSessionId;
         bridge
             .sendRequest(GetHistoryReq, {
-                sessionId: appState.currentSessionId,
+                sessionId,
                 beforeOffset: appState.oldestLoadedOffset,
             })
             .then((data) => {
@@ -1114,11 +1172,45 @@ export class CvApp extends LitElement {
                 this._prependWithAnchor(out);
             })
             .catch(() => {
-                if (appState.currentSessionId === reqSession) {
+                if (appState.currentSessionId === sessionId) {
                     appState.loadingOlder = false;
                 }
             });
-    };
+    }
+
+    /**
+     * Pull in older pages while the list is too short to scroll. With tool calls hidden a page can
+     * come down to a handful of lines, and a scroller with nothing to scroll never fires the event
+     * that would ask for more.
+     *
+     * Measured two frames after Lit's update, not at it: a block the browser has not laid out yet
+     * still counts as its contain-intrinsic-size estimate (chat.css), and that would make a short
+     * list read as a long one.
+     *
+     * Capped, or a session that is tool calls end to end would be read back to its first line in
+     * one go. Turning the wheel up resets the count (_onMessagesWheel).
+     */
+    private _fillIfUnscrollable(): void {
+        if (this._autoFillPages >= AUTO_FILL_MAX_PAGES || !this._canLoadOlder()) {
+            return;
+        }
+        void this.updateComplete.then(() =>
+            requestAnimationFrame(() =>
+                requestAnimationFrame(() => {
+                    const el = this._messagesEl;
+                    // 0 while WebView2 is suspended — nothing measured then is real.
+                    if (!el || el.clientHeight === 0 || el.scrollHeight > el.clientHeight) {
+                        return;
+                    }
+                    if (this._autoFillPages >= AUTO_FILL_MAX_PAGES || !this._canLoadOlder()) {
+                        return;
+                    }
+                    this._autoFillPages++;
+                    this._loadOlder();
+                }),
+            ),
+        );
+    }
 
     // Generic over the concrete text-entry type: call sites pass the type argument explicitly
     // (e.g. _addText<UiAssistantEntry>({role:'assistant', …})) so `Omit` works on a single member
@@ -1573,6 +1665,87 @@ export class CvApp extends LitElement {
         return el.scrollHeight - el.scrollTop - el.clientHeight <= threshold;
     }
 
+    /**
+     * Flip the tool-call filter without moving what the user is reading. At the bottom that means
+     * staying there. Further up, a row the flip never hides — a message or a thinking block — is
+     * held where it was painted, so the same element is there to measure afterwards. Not a user
+     * bubble while it is pinned: it stays at the top whatever moves under it.
+     *
+     * The list is laid out for real meanwhile (the `anchoring` class), or the blocks' size estimates
+     * would shift it again the moment they are measured; the anchor is read first, off the layout
+     * the user is actually looking at.
+     */
+    private _onHideToolCallsChanged(hide: boolean): void {
+        const el = this._messagesEl;
+        // 0 while WebView2 is suspended: there is no reading position to keep.
+        if (!el || el.clientHeight === 0) {
+            this._hideToolCalls = hide;
+            return;
+        }
+        // A history page still settling re-applies its distance from the bottom whenever a block
+        // resizes — which the flip is about to make every block do — and would undo the flip. Only
+        // its observer goes: its timer still hands back scroll-behavior and the class.
+        for (const ro of this._prependObservers) {
+            ro.disconnect();
+        }
+        if (this._isNearBottom()) {
+            this._hideToolCalls = hide;
+            this._scrollToBottom('instant');
+        } else {
+            const { top, bottom } = el.getBoundingClientRect();
+            // A pinned bubble has moved down from its resting place, which chat.css's
+            // `margin-top: -12px` puts 12px above the top of its section.
+            const pinned = (m: HTMLElement): boolean =>
+                getComputedStyle(m).position === 'sticky' &&
+                m.getBoundingClientRect().top -
+                    (m.parentElement?.getBoundingClientRect().top ?? 0) >
+                    -11.5;
+            const selector = [
+                ':scope > .cv-exchange > cv-message',
+                ':scope > .cv-exchange > .cv-response > cv-message',
+                ':scope > .cv-exchange > .cv-response > cv-thinking',
+            ].join(', ');
+            const candidates = [...el.querySelectorAll<HTMLElement>(selector)].filter(
+                (m) => !pinned(m),
+            );
+            // On screen, held where it was painted. A view of tool rows alone has none: then the
+            // next one below lands at the top edge, or failing that the last one above ends there.
+            let anchor = candidates.find((m) => {
+                const r = m.getBoundingClientRect();
+                return r.bottom > top && r.top < bottom;
+            });
+            let before = anchor?.getBoundingClientRect().top ?? 0;
+            if (!anchor) {
+                anchor = candidates.find((m) => m.getBoundingClientRect().top >= bottom);
+                before = top;
+            }
+            if (!anchor) {
+                anchor = [...candidates]
+                    .reverse()
+                    .find((m) => m.getBoundingClientRect().bottom <= top);
+                before = top - (anchor?.getBoundingClientRect().height ?? 0);
+            }
+            el.classList.add('anchoring');
+            const prevBehavior = el.style.scrollBehavior;
+            el.style.scrollBehavior = 'auto';
+            this._hideToolCalls = hide;
+            void this.updateComplete.then(() => {
+                if (anchor?.isConnected) {
+                    el.scrollTop += anchor.getBoundingClientRect().top - before;
+                }
+                requestAnimationFrame(() => {
+                    el.style.scrollBehavior = prevBehavior;
+                    // A history page still settling owns the class until its own timer lets go.
+                    if (!appState.loadingOlder && this._prependObservers.size === 0) {
+                        el.classList.remove('anchoring');
+                    }
+                });
+            });
+        }
+        this._autoFillPages = 0;
+        this._fillIfUnscrollable();
+    }
+
     /** Shared history-page processing for both the unprompted load (chat_history_loaded) and
      *  the scroll-up response (getHistory): replay the events to UiEntry and update the paging
      *  state (currentSessionId / oldestLoadedOffset / hasMoreHistory). Returns the replayed list;
@@ -1659,12 +1832,18 @@ export class CvApp extends LitElement {
             for (const block of el.querySelectorAll('.cv-response')) {
                 ro.observe(block);
             }
+            // Registered so a tool-call flip can switch it off (_onHideToolCallsChanged).
+            this._prependObservers.add(ro);
             window.setTimeout(() => {
                 ro.disconnect();
+                this._prependObservers.delete(ro);
                 el.style.scrollBehavior = prevBehavior;
                 el.classList.remove('anchoring');
             }, 1500);
             appState.loadingOlder = false;
+            // A page of hidden tool rows can prepend next to nothing: keep going while the list
+            // still has nothing to scroll.
+            this._fillIfUnscrollable();
         });
     }
 
@@ -1716,9 +1895,10 @@ export class CvApp extends LitElement {
         });
     }
 
-    private renderEntry(e: UiEntry) {
+    /** `hidden` only ever reaches a tool row: the one kind the "hide tool calls" filter touches. */
+    private renderEntry(e: UiEntry, hidden = false) {
         return e.kind === 'tool'
-            ? this.renderToolRow(e)
+            ? this.renderToolRow(e, hidden)
             : e.role === 'thinking'
               ? html`<cv-thinking
                     .text=${e.text}
@@ -1745,12 +1925,22 @@ export class CvApp extends LitElement {
         }
         const leadUsers = group.slice(0, i);
         const response = group.slice(i);
-        return html`<section class="cv-exchange">
+        // Hidden in place, never left out of the list — see _hideToolCalls.
+        const hides = (e: UiEntry): boolean =>
+            this._hideToolCalls && isHiddenToolCall(e, this._pendingToolUseId);
+        // A response with nothing left to show is hidden too, or it would keep its size estimate
+        // (content-visibility, chat.css); so is an exchange with no user message heading it, since
+        // a history page can start on a group of tool rows alone.
+        const responseHidden = response.length > 0 && response.every(hides);
+        return html`<section
+            class="cv-exchange"
+            ?hidden=${leadUsers.length === 0 && responseHidden}
+        >
             ${leadUsers.map((e) => this.renderEntry(e))}
             ${
                 response.length > 0
-                    ? html`<div class="cv-response">
-                          ${response.map((e) => this.renderEntry(e))}
+                    ? html`<div class="cv-response" ?hidden=${responseHidden}>
+                          ${response.map((e) => this.renderEntry(e, hides(e)))}
                           ${this.renderResponseActions(group)}
                       </div>`
                     : nothing
@@ -1893,8 +2083,9 @@ export class CvApp extends LitElement {
         ></cv-message>`;
     }
 
-    private renderToolRow(e: UiToolEntry) {
+    private renderToolRow(e: UiToolEntry, hidden = false) {
         return html`<cv-tool-row
+            ?hidden=${hidden}
             .data=${e.data}
             .status=${e.status}
             .result=${e.result}

@@ -60,6 +60,11 @@ public class AgentsChatPage : AgentsOptionsPage
     [Description("Start every tool row closed, so a long session reads as what Claude did rather than how it got there. The chevron opens one when you want it, and a failed tool stays open either way. Separate from Preview lines, which decides how much of an OPEN row is shown.")]
     public bool CollapseTools { get; set; }
 
+    [Category("Display")]
+    [DisplayName("Hide tool calls")]
+    [Description("Hide the tool rows — commands, file reads and edits, searches, MCP calls, sub-agents — so the transcript reads as your messages and Claude's replies. What you took part in stays: your answers to questions, plan decisions, the task list, and a call waiting for your approval. Thinking blocks stay too. The filter button next to Session History on the chat toolbar flips this same setting, for every open chat.")]
+    public bool HideToolCalls { get; set; }
+
     [Category("File links")]
     [DisplayName("Extra linkable extensions")]
     [Description("Extensions to also turn into clickable links when Claude mentions a file in prose (e.g. `render.wgsl:20`), on top of the ~270 built-in ones. Needed only for a language we don't ship yet — a markdown link written by the model is always linked, whatever its extension. Click `…` to edit one entry per line, without the leading dot.")]

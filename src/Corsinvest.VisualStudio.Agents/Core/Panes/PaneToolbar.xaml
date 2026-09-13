@@ -13,8 +13,8 @@
         <ResourceDictionary Source="/Corsinvest.VisualStudio.Agents;component/Themes/MenuStyles.xaml" />
       </ResourceDictionary.MergedDictionaries>
 
-    <!-- Flat VS command-bar button. -->
-    <Style x:Key="CommandBarButton" TargetType="Button">
+    <!-- Flat VS command-bar button. On ButtonBase so the toggle below can build on it. -->
+    <Style x:Key="CommandBarButton" TargetType="ButtonBase">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarTextActiveBrushKey}}" />
       <Setter Property="BorderBrush" Value="Transparent" />
@@ -23,7 +23,7 @@
       <Setter Property="SnapsToDevicePixels" Value="True" />
       <Setter Property="Template">
         <Setter.Value>
-          <ControlTemplate TargetType="Button">
+          <ControlTemplate TargetType="ButtonBase">
             <Border x:Name="border" Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}"
@@ -48,6 +48,52 @@
         </Setter.Value>
       </Setter>
     </Style>
+
+    <!-- The same flat button, holding a state. Its own template: the one above sets the border's
+         background on hover and press, which would wipe the checked highlight while the pointer is
+         over the button. Later triggers win, so checked overrides hover and checked+hover is last. -->
+    <Style x:Key="CommandBarToggleButton" TargetType="ToggleButton" BasedOn="{StaticResource CommandBarButton}">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ToggleButton">
+            <Border x:Name="border" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="border" Property="Background"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarHoverBrushKey}}" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="border" Property="Background"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarMouseDownBackgroundBeginBrushKey}}" />
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="border" Property="Background"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarSelectedBrushKey}}" />
+                <Setter TargetName="border" Property="BorderBrush"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarSelectedBorderBrushKey}}" />
+              </Trigger>
+              <MultiTrigger>
+                <MultiTrigger.Conditions>
+                  <Condition Property="IsChecked" Value="True" />
+                  <Condition Property="IsMouseOver" Value="True" />
+                </MultiTrigger.Conditions>
+                <Setter TargetName="border" Property="Background"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarHoverOverSelectedBrushKey}}" />
+              </MultiTrigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Foreground"
+                        Value="{DynamicResource {x:Static vsui:EnvironmentColors.CommandBarTextInactiveBrushKey}}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
     </ResourceDictionary>
   </UserControl.Resources>
 
@@ -55,11 +101,12 @@
           BorderThickness="0,0,0,1">
     <DockPanel LastChildFill="True" Margin="4,3">
 
-      <!-- Right-pinned group: Session History, New Session, More (⋯).
+      <!-- Right-pinned group: Session History, Hide tool calls, New Session, More (⋯).
            In a DockPanel docked Right, the first-declared sits furthest
-           right — so the visual left-to-right order is History, New Session,
-           More. These act on THIS pane's conversation (distinct from the
-           left 'New' which opens a new pane). -->
+           right — so the visual left-to-right order is History, Hide tool calls,
+           New Session, More. These act on THIS pane's conversation (distinct from
+           the left 'New' which opens a new pane); Hide tool calls is the exception,
+           a view setting shared by every chat. -->
 
       <!-- More (⋯) kebab — furthest right. -->
       <Button x:Name="BtnMore" DockPanel.Dock="Right"
@@ -87,6 +134,14 @@
               Style="{StaticResource CommandBarButton}" ToolTip="New Session" Click="OnNewSession_Click">
         <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.AddComment}" />
       </Button>
+
+      <!-- Hide tool calls — chat panes only (collapsed on the CLI, which has no rows). One setting
+           for every open chat, the same as Tools → Options → Chat → Hide tool calls. -->
+      <ToggleButton x:Name="BtnToolCalls" DockPanel.Dock="Right" Visibility="Collapsed"
+                    Style="{StaticResource CommandBarToggleButton}" ToolTip="Hide tool calls"
+                    Click="OnToolCalls_Click">
+        <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Filter}" />
+      </ToggleButton>
 
       <!-- Session History (this pane). -->
       <Button x:Name="BtnSessionHistory" DockPanel.Dock="Right"

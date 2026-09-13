@@ -617,6 +617,10 @@ public class VsOptionsDto
     public bool ShowCostAndDuration { get; set; }
     public int PreviewLines { get; set; }
     public bool CollapseTools { get; set; }
+
+    /// <summary>Chat → Hide tool calls: tool rows are hidden, except the ones the user took part in.
+    /// Also pushed on its own, when a chat toolbar's toggle flips it.</summary>
+    public bool HideToolCalls { get; set; }
     public int ChatFontSize { get; set; }
     public bool ShowRelativePaths { get; set; }
     public bool StickyUserMessages { get; set; }

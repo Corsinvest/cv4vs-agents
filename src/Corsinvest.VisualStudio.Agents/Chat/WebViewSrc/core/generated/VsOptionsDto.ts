@@ -7,6 +7,7 @@ export interface VsOptionsDto {
     showCostAndDuration: boolean;
     previewLines: number;
     collapseTools: boolean;
+    hideToolCalls: boolean;
     chatFontSize: number;
     showRelativePaths: boolean;
     stickyUserMessages: boolean;
