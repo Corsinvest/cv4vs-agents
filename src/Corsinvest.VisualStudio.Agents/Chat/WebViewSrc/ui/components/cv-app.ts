@@ -1751,7 +1751,7 @@ export class CvApp extends LitElement {
                 response.length > 0
                     ? html`<div class="cv-response">
                           ${response.map((e) => this.renderEntry(e))}
-                          ${this.renderResponseActions(response)}
+                          ${this.renderResponseActions(group)}
                       </div>`
                     : nothing
             }
@@ -1763,6 +1763,12 @@ export class CvApp extends LitElement {
     // Nothing while the last assistant block still streams, or with no copyable text (e.g. a bare
     // tool-only response). A slash-result-only exchange (a command with no assistant reply) still
     // gets the row — its output is worth copying.
+    //
+    // Takes the WHOLE exchange (buildGroups' own array), not renderExchange's local `response`
+    // slice: that slice is a fresh array on every render, so keying the cache on it never hit —
+    // every pass rebuilt the join. The full group is stable across renders (buildGroups keeps it
+    // unless the transcript changes), and filtering by role here picks out the same blocks either
+    // way, since a lead user entry never matches assistant/slash-result.
     private renderResponseActions(group: UiEntry[]) {
         const blocks = group.filter(
             (e): e is UiAssistantEntry | UiSlashResultEntry =>
