@@ -58,6 +58,21 @@ public interface IPaneControl
     /// the JSONL) and refresh <see cref="SessionTitle"/>. No-op if no session.</summary>
     void RenameSession(string newTitle);
 
+    /// <summary>Whether this pane has a transcript whose tool calls can be hidden — i.e. whether the
+    /// toolbar shows the toggle. Chat: true. CLI: false — a terminal has no rows to hide.</summary>
+    bool SupportsHidingToolCalls { get; }
+
+    /// <summary>Whether tool calls are hidden. A global chat setting, not a per-pane one: every chat
+    /// pane reports the same value.</summary>
+    bool ToolCallsHidden { get; }
+
+    /// <summary>Hide or show tool calls — persisted, and applied to every open chat pane.</summary>
+    void SetToolCallsHidden(bool hidden);
+
+    /// <summary>Fires (on the UI thread) when <see cref="ToolCallsHidden"/> changes, whether from
+    /// any pane's toggle or from Tools → Options.</summary>
+    event EventHandler ToolCallsHiddenChanged;
+
     /// <summary>Start a FRESH conversation in THIS pane (not a new pane).
     /// Chat: ClaudeClient.NewSessionAsync; CLI: respawn with no --resume.</summary>
     void NewSession();
