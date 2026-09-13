@@ -16,10 +16,15 @@
         <ControlTemplate TargetType="{x:Type controls:CvExpander}">
           <StackPanel>
             <!-- Header row: a clickable toggle with the rotating chevron + the header content. -->
+            <!-- Foreground set explicitly (not left to inheritance): ToggleButton's own default style
+                 sets Foreground to an OS system colour, which wins over an inherited value and would
+                 leave the header text that colour in every VS theme — same reason the Chevron below
+                 binds to the ancestor directly instead of relying on inheritance. -->
             <ToggleButton x:Name="Toggle"
                           IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
                           Focusable="False" HorizontalContentAlignment="Stretch"
-                          Background="Transparent" BorderThickness="0" Padding="0,2">
+                          Background="Transparent" BorderThickness="0" Padding="0,2"
+                          Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type controls:CvExpander}}}">
               <ToggleButton.Template>
                 <ControlTemplate TargetType="ToggleButton">
                   <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
