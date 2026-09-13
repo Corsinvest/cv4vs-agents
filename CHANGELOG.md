@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Usage tab's "Resets in" was off by your offset from UTC.** Reset times reach the extension
+  with an offset, but reading them turned each into a local time without one, which the tab then took
+  for UTC: east of Greenwich a window seemed to reset hours late, west of it hours early. The chat's
+  Account & Usage dialog read the same string as local time and happened to be right. Reset times now
+  keep their offset.
+
 ## [1.9.0] - 2026-09-08
 
 A crash that took Visual Studio down with it: expanding an auto-hidden chat pane could kill

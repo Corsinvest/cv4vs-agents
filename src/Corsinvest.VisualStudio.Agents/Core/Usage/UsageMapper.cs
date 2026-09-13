@@ -46,7 +46,7 @@ internal static class UsageMapper
                     {
                         Name = name,
                         Utilization = Math.Max(0, Math.Min(100, w.Val("utilization", 0))),
-                        ResetsAt = w.Val("resets_at"),
+                        ResetsAt = ReadIso(w, "resets_at"),
                     });
                 }
             }
@@ -60,6 +60,17 @@ internal static class UsageMapper
         }
         return dto;
     }
+
+    // An ISO time as the views take it. The transport reads every line with JObject.Parse, which turns
+    // such a string into a Date token whose plain string form is local time with no offset — and
+    // ResetsIn below parses that as UTC. Round-tripping the token keeps the offset.
+    private static string ReadIso(JObject o, string key) => (o[key] as JValue)?.Value switch
+    {
+        string s => s,
+        DateTimeOffset dto => dto.ToString("o", CultureInfo.InvariantCulture),
+        DateTime dt => dt.ToString("o", CultureInfo.InvariantCulture),
+        _ => null,
+    };
 
     private static UsageBehaviorsDto BuildBehaviors(JObject period)
     {
