@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The response actions row's copy text was rebuilt on every render, on every exchange.** Its
+  cache was keyed on `renderExchange`'s local `response` slice — a fresh array each pass — so it
+  never actually hit. Keyed on the stable group `buildGroups` produces instead, which only changes
+  identity when the transcript itself does.
+
 ## [1.9.0] - 2026-09-08
 
 A crash that took Visual Studio down with it: expanding an auto-hidden chat pane could kill
