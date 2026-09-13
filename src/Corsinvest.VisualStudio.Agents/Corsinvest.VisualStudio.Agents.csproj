@@ -290,6 +290,16 @@
     </Compile>
     <Compile Include="Core\Usage\UsageMapper.cs" />
     <Compile Include="Core\Usage\UsageProbe.cs" />
+    <Compile Include="Core\Usage\UsagePopupControl.xaml.cs">
+      <DependentUpon>UsagePopupControl.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Core\Usage\UsageSnapshot.cs" />
+    <Compile Include="Core\Usage\UsageStatusBarHost.cs" />
+    <Compile Include="Core\Usage\UsageStatusBarItem.xaml.cs">
+      <DependentUpon>UsageStatusBarItem.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Core\Usage\UsageStatusFormat.cs" />
+    <Compile Include="Core\Usage\UsageStatusService.cs" />
     <Compile Include="Core\Usage\UsageWindow.cs" />
     <Compile Include="Core\Usage\UsageControl.xaml.cs">
       <DependentUpon>UsageControl.xaml</DependentUpon>
@@ -427,6 +437,12 @@
     <Page Include="Core\Usage\UsageControl.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="Core\Usage\UsagePopupControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Core\Usage\UsageStatusBarItem.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Core\Context\ContextUsageControl.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -437,6 +453,9 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Themes\MenuStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Themes\Icons.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Core\Controls\CvLoadingOverlay.xaml">

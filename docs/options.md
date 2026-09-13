@@ -14,6 +14,8 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 | Offer to ask when the debugger pauses | `Never` / `Exceptions only` / `Exceptions and breakpoints` | `Exceptions only` | Show an InfoBar over the file the debugger stopped in, with an "Ask cv4vs Agents" button that asks a chat pane about the break. See [Asking about a break](#asking-about-a-break). |
 | Default new session | `Chat` / `CLI` | `Chat` | Which kind the "New" button creates by default (the dropdown still lets you pick the other). |
 | Claude executable path | file path | *(empty)* | Override auto-detection with a specific `claude.exe` (browse with `…`). Empty = auto-detect via PATH / native installer / npm. Must be the real `.exe` — `.cmd`/`.bat`/`.ps1` shims can't be launched. |
+| Show plan usage in the status bar | bool | `true` | The Claude plan's session (5h) and weekly (7d) usage in Visual Studio's status bar, for the profile of the pane you last used; click it for every limit and when each resets. See [Usage → Status bar](usage.md#status-bar). |
+| Status bar usage refresh (minutes) | int | `15` | How often the status bar refreshes usage while no chat pane on that profile is open, by starting a short-lived `claude.exe` — only while Visual Studio is in front. `0` = never in the background; open chat panes, and opening the popup, still refresh it. |
 
 ### Asking about a break
 
