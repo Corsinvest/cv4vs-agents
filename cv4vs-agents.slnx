@@ -24,6 +24,9 @@
     <Project Path="tests/LangMatrix/CsLib/CsLib.csproj">
       <Build Project="false" />
     </Project>
+    <Project Path="tests/LangMatrix/FsLib/FsLib.fsproj">
+      <Build Project="false" />
+    </Project>
     <Project Path="tests/LangMatrix/VbLib/VbLib.vbproj">
       <Build Project="false" />
     </Project>
