@@ -287,7 +287,7 @@ function Invoke-Install {
     }
     if (-not (Test-Path $Path)) {
         Write-Host "VSIX not found: $Path" -ForegroundColor Red
-        Write-Host "Build it first:  msbuild cv4vs-agents.sln -t:Build -p:Configuration=Release" -ForegroundColor Yellow
+        Write-Host "Build it first:  msbuild cv4vs-agents.slnx -t:Build -p:Configuration=Release" -ForegroundColor Yellow
         exit 1
     }
     $Path = (Resolve-Path $Path).Path
