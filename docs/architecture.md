@@ -35,7 +35,7 @@ Everything builds from a single solution; the WebView build is hooked into MSBui
 
 ```powershell
 # Build the VSIX (also runs the WebView build via the BuildWebViewSrc MSBuild target)
-msbuild cv4vs-agents.sln /t:Build /p:Configuration=Debug
+msbuild cv4vs-agents.slnx /t:Build /p:Configuration=Debug
 # F5 in Visual Studio launches a second (experimental) VS instance with the extension loaded.
 ```
 
