@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   for UTC: east of Greenwich a window seemed to reset hours late, west of it hours early. The chat's
   Account & Usage dialog read the same string as local time and happened to be right. Reset times now
   keep their offset.
+- **A weekly limit scoped to one model was shown nowhere.** The CLI lists it — *Weekly Fable*, say —
+  only in its newer `limits` list, which neither the Usage tab nor the chat's Account & Usage dialog
+  read. Both show it now, after the session and weekly windows.
 
 ## [1.9.0] - 2026-09-08
 
