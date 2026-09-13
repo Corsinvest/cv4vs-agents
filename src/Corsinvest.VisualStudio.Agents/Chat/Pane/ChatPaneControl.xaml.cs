@@ -413,6 +413,10 @@ public partial class ChatPaneControl : PaneControlBase
     {
         _log = OutputWindowLogger.For("chat", () => Entry?.PaneId ?? 0);
         InitializeComponent();
+        // Upgrades WebView's logger from OutputWindowLogger.Global (set at its own XAML-driven,
+        // parameterless construction) to this pane's tagged one, so its window-tracking lines
+        // read [chat#N] like everything else this pane logs.
+        WebView.Log = _log;
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         WebView.HostKeyPressed += OnHostKeyPressed;
@@ -514,6 +518,9 @@ public partial class ChatPaneControl : PaneControlBase
         WebView.HostKeyPressed -= OnHostKeyPressed;
         WebView.HostFilesDropped -= OnHostFilesDropped;
         WebView.PreviewMouseDown -= OnWebViewClicked;
+        // Before the bridge disposes the control: the main window's HwndSource outlives every
+        // pane, and would otherwise keep WebView's window-tracking hook (and WebView itself) alive.
+        WebView.ReleaseWindowTracking();
         IdeContextService.Instance.ContextChanged -= OnEditorContextChanged;
         _handler?.Dispose();
         // Detach the client events before disposing: an event still in flight (a final
