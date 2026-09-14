@@ -130,6 +130,8 @@
     </VSCTCompile>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Chat\Host\WebViewMessageHandler.Plan.cs" />
+    <Compile Include="Core\Client\PlanApproval.cs" />
     <Compile Include="Mcp\IMcpTool.cs" />
     <Compile Include="Mcp\JsonRpcDispatcher.cs" />
     <Compile Include="Ide\IdeContextService.cs" />

@@ -74,6 +74,10 @@ internal static class BridgeMessages
             public const string ToolOutput = "open_tool_output";
             public const string ExternalUrl = "open_external_url";
             public const string DiffDialog = "open_diff_dialog";
+            /// <summary>Open an ExitPlanMode's plan in the editor. The host picks what: the plan file
+            /// itself while the request waits for its answer (editing it changes what gets approved),
+            /// a read-only copy of that call's plan once it is answered.</summary>
+            public const string Plan = "open_plan";
             /// <summary>Open the extension's Tools → Options page (General config).</summary>
             public const string Options = "open_options";
             /// <summary>Open a fresh interactive CLI pane (same as the toolbar "+" for CLI).</summary>
@@ -179,6 +183,9 @@ internal static class BridgeMessages
             public const string ToolPermission = "chat_tool_permission";
             // CLI cancelled a pending permission (interrupt/superseded) → dismiss its banner.
             public const string ToolPermissionCancel = "chat_tool_permission_cancel";
+            /// <summary>A pending ExitPlanMode's plan file was saved in the editor → the banner shows
+            /// the new text. Keyed by tool_use_id; one for a request already answered is a no-op.</summary>
+            public const string PlanUpdated = "chat_plan_updated";
             public const string ToolResult = "chat_tool_result";
             public const string ExchangeEnded = "chat_exchange_ended";
             public const string Compacted = "chat_compacted";

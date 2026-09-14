@@ -8,8 +8,10 @@
 
 import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import Open16Regular from '@fluentui/svg-icons/icons/open_16_regular.svg';
 import { renderMarkdown } from '../../core/markdown';
 import { langForFile } from '../../core/lang';
+import { hasPlanToOpen } from '../../core/plan';
 import { fileName } from '../../core/path';
 import { displayPathUi } from '../paths';
 import { truncate } from '../helpers/format';
@@ -582,6 +584,30 @@ export class ExitPlanModeRenderer extends ToolRenderer {
     }
     override header(): TemplateResult {
         return html`${this.nameSpan("Claude's Plan")}`;
+    }
+    /** Reopen the plan. The host picks what: the file while this request waits for its answer
+     *  (editable — what the banner will approve), that call's own plan read-only once answered. */
+    protected override renderHeaderActions(): TemplateResult | typeof nothing {
+        // A call that carries no plan (the model left plan mode without writing one) has nothing
+        // to open: a button there would only lead to an error notice.
+        if (!hasPlanToOpen(this.host.input)) {
+            return nothing;
+        }
+        return html`<fluent-button
+            class="trigger"
+            appearance="subtle"
+            shape="rounded"
+            size="small"
+            icon-only
+            title="Open plan in editor"
+            aria-label="Open plan in editor"
+            @click=${(e: Event) => {
+                e.stopPropagation();
+                this.host.openPlan();
+            }}
+        >
+            ${unsafeHTML(Open16Regular)}
+        </fluent-button>`;
     }
     /** What the user decided, in the Ask answer's shape: a chip for the question, the
      *  choice next to it. The plan itself was read in the banner and is in the approved-plan

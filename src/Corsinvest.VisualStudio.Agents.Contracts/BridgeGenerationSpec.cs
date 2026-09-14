@@ -109,6 +109,7 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.Uuid)).Null();
         AddInterface<ToolPermissionNotification>().Member(x => nameof(x.ParentToolUseId)).Null();
         AddInterface<ToolPermissionCancelNotification>();
+        AddInterface<PlanUpdatedNotification>();
         AddInterface<HistoryEventDto>();
         AddInterface<GetHistoryResponse>().Member(x => nameof(x.SessionId)).Null();
         AddInterface<HistoryLoadedNotification>().Member(x => nameof(x.SessionId)).Null();
@@ -203,6 +204,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<OpenDocumentNotification>().Member(x => nameof(x.SessionId)).Optional();
         AddInterface<OpenAttachmentNotification>();
         AddInterface<DiffDialogNotification>();
+        // The banner has no container transcript to name → agentId omitted there.
+        AddInterface<OpenPlanNotification>().Member(x => nameof(x.AgentId)).Optional();
         AddInterface<SetPermissionModeNotification>();
         AddInterface<SetModelNotification>();
         AddInterface<ForkNotification>().Member(x => nameof(x.SessionId)).Optional();
