@@ -1,9 +1,9 @@
 # LangMatrix — language coverage probes
 
-Four throwaway projects whose only job is to be *loaded* by Visual Studio, so the `nav_*` MCP tools
+Five throwaway projects whose only job is to be *loaded* by Visual Studio, so the `nav_*` MCP tools
 can be pointed at a real file in every language the IDE supports and the answer written down.
 
-They are **not built**: the solution gives each one an `ActiveCfg` but no `Build.0`, so MSBuild and
+They are **not built**: each project's slnx entry sets `<Build Project="false" />`, so MSBuild and
 CI skip them while VS still loads them and lets IntelliSense index their contents. That is all the
 probes need — the tools ask the language service, not the compiler.
 
@@ -11,6 +11,7 @@ probes need — the tools ask the language service, not the compiler.
 |---|---|---|
 | `CppLib` | `shapes.h`, `shapes.cpp`, `main.cpp` | C++ (vcxproj, `NativeDesktop` workload) |
 | `CsLib` | `Shapes.cs`, `Program.cs` | C# — the known-good control |
+| `FsLib` | `Shapes.fsi`, `Shapes.fs`, `Program.fs` | F# — `.fsi` signature file paired with its `.fs` implementation |
 | `VbLib` | `Shapes.vb` | VB |
 | `WebFiles` | `shapes.ts`, `shapes.js`, `queries.sql`, `MainWindow.xaml` | files carried by a project so they belong to the solution |
 
