@@ -32,7 +32,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '..', '..', '..');
 const webviewDir = resolve(repo, 'src', 'Corsinvest.VisualStudio.Agents', 'Chat', 'WebViewSrc');
 const probeDir = resolve(repo, 'tools', 'cli-probe');
-const sln = resolve(repo, 'cv4vs-agents.sln');
+const sln = resolve(repo, 'cv4vs-agents.slnx');
 
 function run(cmd, args, opts = {}) {
     console.log(`\n$ ${cmd} ${args.join(' ')}`);
