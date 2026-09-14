@@ -38,6 +38,13 @@ internal sealed partial class IdeNavigationService
     private Type _navBarServiceType;                 // internal INavigationBarItemService
     private MethodInfo _getNavBarItemsAsync;         // on the service
 
+    // Roslyn declares the same interface name twice, in two layers, and a language may register
+    // only one of them: C#/VB both, F# and TypeScript only the editor one (measured — F# answers
+    // there with items while the Features layer has no service at all). Asking Features alone is
+    // what made those two report "this language has no navigation-bar service".
+    private Type _editorNavBarServiceType;           // Microsoft.CodeAnalysis.Editor.INavigationBarItemService
+    private MethodInfo _getEditorNavBarItemsAsync;   // same call, plus an ITextVersion
+
     private bool EnsureSymbolsProbed()
     {
         lock (_probeGate)
@@ -55,6 +62,12 @@ internal sealed partial class IdeNavigationService
                 _getNavBarItemsAsync = _navBarServiceType.GetMethods()
                     .FirstOrDefault(m => m.Name == "GetItemsAsync" && m.GetParameters().Length == 4);
                 if (_getNavBarItemsAsync == null) { return ProbeFailed(step); }
+
+                // The editor-layer twin is a bonus, not a requirement: without it we simply keep
+                // answering for the languages the Features layer covers.
+                _editorNavBarServiceType = VsReflection.FindType("Microsoft.CodeAnalysis.Editor.INavigationBarItemService");
+                _getEditorNavBarItemsAsync = _editorNavBarServiceType?.GetMethods()
+                    .FirstOrDefault(m => m.Name == "GetItemsAsync" && m.GetParameters().Length == 5);
 
                 _symbolsAvailable = true;
                 return true;
@@ -81,13 +94,8 @@ internal sealed partial class IdeNavigationService
             var document = ResolveDocument(filePath);
             if (document == null) { return new SymbolsResult { Supported = false, Reason = "No language document for this file (language not supported)." }; }
 
-            var service = GetLanguageService(document, _navBarServiceType);
-            if (service == null) { return new SymbolsResult { Supported = false, Reason = "This language has no navigation-bar service." }; }
-
-            // GetItemsAsync(document, supportsCodeGeneration:false, frozenPartialSemantics:false, ct)
-            var task = (Task)_getNavBarItemsAsync.Invoke(service, [document, false, false, ct]);
-            await task.ConfigureAwait(false);
-            var items = (IEnumerable)VsReflection.GetProp(task, "Result");
+            var items = await GetNavBarItemsAsync(document, ct).ConfigureAwait(false);
+            if (items == null) { return new SymbolsResult { Supported = false, Reason = "This language has no navigation-bar service." }; }
 
             // Read the document text once to turn span starts into 1-based line numbers.
             var text = await GetTextAsync(document, ct).ConfigureAwait(false);
@@ -104,6 +112,69 @@ internal sealed partial class IdeNavigationService
         }
     }
 
+    /// <summary>The file's nav-bar items, from whichever layer this language registers: the
+    /// Features one first (C#/VB), then the editor one (F#, TypeScript). Null when neither
+    /// answers — which is the only case that is really "not supported".</summary>
+    private async Task<IEnumerable> GetNavBarItemsAsync(object document, CancellationToken ct)
+    {
+        var service = GetLanguageService(document, _navBarServiceType);
+        if (service != null)
+        {
+            // GetItemsAsync(document, supportsCodeGeneration:false, frozenPartialSemantics:false, ct)
+            var task = (Task)_getNavBarItemsAsync.Invoke(service, [document, false, false, ct]);
+            await task.ConfigureAwait(false);
+            return (IEnumerable)VsReflection.GetProp(task, "Result");
+        }
+
+        if (_editorNavBarServiceType == null || _getEditorNavBarItemsAsync == null) { return null; }
+        var editorService = GetLanguageService(document, _editorNavBarServiceType);
+        if (editorService == null) { return null; }
+
+        // The overload takes the ITextVersion its spans are relative to, which only exists for a
+        // file open in an editor buffer — and these tools read closed files. It serves callers that
+        // re-map spans onto a buffer that has moved on since; a one-shot read never does, and the
+        // items come back carrying a version of their own. So pass what we have, null included,
+        // rather than open the document to manufacture one.
+        var textVersion = await GetTextVersionAsync(document, ct).ConfigureAwait(false);
+
+        try
+        {
+            var editorTask = (Task)_getEditorNavBarItemsAsync.Invoke(
+                editorService, [document, false, false, textVersion, ct]);
+            await editorTask.ConfigureAwait(false);
+            return (IEnumerable)VsReflection.GetProp(editorTask, "Result");
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn(
+                $"[nav] editor-layer navigation bar failed: {ex.InnerException?.GetType().Name ?? ex.GetType().Name}");
+            return null;
+        }
+    }
+
+    /// <summary>The ITextVersion behind a Roslyn document, via its text container's buffer.
+    /// Null when the document is not backed by an editor buffer.</summary>
+    private static async Task<object> GetTextVersionAsync(object document, CancellationToken ct)
+    {
+        try
+        {
+            var text = await VsReflection.InvokeAsync(document, "GetTextAsync", ct);   // SourceText
+            var container = VsReflection.GetProp(text, "Container");
+            // Microsoft.CodeAnalysis.Text.Extensions.TryGetTextBuffer(container) — an extension
+            // method on the editor side, so it is reached by name rather than on the instance.
+            var extensions = VsReflection.FindType("Microsoft.CodeAnalysis.Text.Extensions");
+            var tryGet = extensions?.GetMethod("TryGetTextBuffer");
+            var buffer = tryGet?.Invoke(null, [container]);
+            var snapshot = buffer == null ? null : VsReflection.GetProp(buffer, "CurrentSnapshot");
+            return snapshot == null ? null : VsReflection.GetProp(snapshot, "Version");
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeNavigationService.GetTextVersionAsync", ex);
+            return null;
+        }
+    }
+
     /// <summary>Map a RoslynNavigationBarItem (Text + ChildItems; SymbolItem carries a
     /// Location with InDocumentInfo.navigationSpan) to our DocSymbol tree. Sorts children by
     /// line/name at every level (the recursion orders the whole tree).</summary>
@@ -111,31 +182,32 @@ internal sealed partial class IdeNavigationService
     {
         try
         {
-            var name = (string)VsReflection.GetField(item, "Text");
+            var name = (string)Member(item, "Text");
             int line = 0;
 
-            // SymbolItem.Location.InDocumentInfo = (spans, navigationSpan); take navigationSpan.Start.
+            // The two layers carry the position differently, and which one answered depends on the
+            // language: RoslynNavigationBarItem (Features — C#/VB) keeps it in
+            // Location.InDocumentInfo, SimpleNavigationBarItem (editor — F#, TypeScript) in Spans.
+            // Everything else — Text, Glyph, ChildItems — is named the same on both.
             var loc = VsReflection.GetField(item, "Location");
-            if (loc != null)
+            var inDoc = loc == null ? null : VsReflection.GetField(loc, "InDocumentInfo"); // nullable tuple
+            var navSpan = inDoc == null ? null : VsReflection.GetField(inDoc, "Item2");    // navigationSpan
+            if (navSpan == null)
             {
-                var inDoc = VsReflection.GetField(loc, "InDocumentInfo"); // nullable tuple
-                if (inDoc != null)
-                {
-                    var navSpan = VsReflection.GetField(inDoc, "Item2"); // navigationSpan (TextSpan)
-                    if (navSpan != null)
-                    {
-                        var start = VsReflection.GetProp<int>(navSpan, "Start");
-                        line = OffsetToLine(sourceText, start);
-                    }
-                }
+                var spans = VsReflection.GetProp(item, "Spans") as IEnumerable;
+                navSpan = spans?.Cast<object>().FirstOrDefault();
+            }
+            if (navSpan != null)
+            {
+                line = OffsetToLine(sourceText, VsReflection.GetProp<int>(navSpan, "Start"));
             }
 
             // Glyph (enum) names the kind, e.g. "ClassPublic", "MethodProtected" — strip the
             // trailing accessibility so we report just "Class"/"Method"/… (any language).
-            var glyph = VsReflection.GetField(item, "Glyph");
+            var glyph = Member(item, "Glyph");
             var kind = NormalizeGlyph(glyph?.ToString());
 
-            var childItems = VsReflection.GetField(item, "ChildItems") as IEnumerable;
+            var childItems = Member(item, "ChildItems") as IEnumerable;
             var children = childItems == null
                 ? []
                 : childItems.Cast<object>().Select(c => MapNavBarItem(c, sourceText)).Where(s => s != null)
@@ -147,6 +219,11 @@ internal sealed partial class IdeNavigationService
         }
         catch { return null; }
     }
+
+    /// <summary>A member by name, field or property: the Features layer declares Text/Glyph/
+    /// ChildItems as fields, the editor layer as properties, and the mapper reads both shapes.</summary>
+    private static object Member(object obj, string name)
+        => VsReflection.GetField(obj, name) ?? VsReflection.GetProp(obj, name);
 
     private static readonly string[] _accessibilitySuffixes =
         { "Public", "Private", "Protected", "Internal", "ProtectedAndInternal", "ProtectedOrInternal", "Friend" };
