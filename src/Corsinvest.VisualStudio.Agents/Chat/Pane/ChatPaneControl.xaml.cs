@@ -24,6 +24,12 @@ public partial class ChatPaneControl : PaneControlBase
 {
     public override bool SupportsTitleEditing => true;
 
+    public override bool SupportsHidingToolCalls => true;
+
+    public override bool ToolCallsHidden => AgentsOptions.Chat.HideToolCalls;
+
+    public override void SetToolCallsHidden(bool hidden) => AgentsOptions.SetHideToolCalls(hidden);
+
     /// <summary>New instance per call, keyed on the pane's current working directory (constant for
     /// the pane's lifetime). These callers read one session at a time, so the scan cache a
     /// long-lived instance would keep buys them nothing.</summary>
@@ -364,6 +370,11 @@ public partial class ChatPaneControl : PaneControlBase
         // Composition rendering is what makes this possible: the control lives in the WPF tree,
         // so mouse events reach us.
         WebView.PreviewMouseDown += OnWebViewClicked;
+        // Here, not in OnLoaded with OnOptionsApplied: a pane that is never shown, or whose WebView
+        // fails to start, still has a toolbar whose toggle has to follow the setting — whether a
+        // toolbar or Tools → Options changed it.
+        AgentsOptions.ToolCallsVisibilityChanged += OnToolCallsVisibilityChanged;
+        AgentsOptions.Applied += RaiseToolCallsHiddenChanged;
     }
 
     /// <summary>The user clicked into this pane: whatever InfoBar or toast was calling them here
@@ -450,6 +461,8 @@ public partial class ChatPaneControl : PaneControlBase
     {
         VSColorTheme.ThemeChanged -= OnVsThemeChanged;
         AgentsOptions.Applied -= OnOptionsApplied;
+        AgentsOptions.ToolCallsVisibilityChanged -= OnToolCallsVisibilityChanged;
+        AgentsOptions.Applied -= RaiseToolCallsHiddenChanged;
         WebView.HostKeyPressed -= OnHostKeyPressed;
         WebView.HostFilesDropped -= OnHostFilesDropped;
         WebView.PreviewMouseDown -= OnWebViewClicked;
@@ -488,6 +501,14 @@ public partial class ChatPaneControl : PaneControlBase
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         try { _bridge?.InjectTheme(VsThemeReader.IsDark()); } catch (Exception ex) { _log.LogException("SendTheme", ex); }
+    }
+
+    /// <summary>A chat toolbar flipped Hide tool calls. Only the setting goes out: the WebView hides
+    /// or shows the rows it already holds, so unlike Options → Apply there is nothing to re-read.</summary>
+    private void OnToolCallsVisibilityChanged()
+    {
+        _bridge?.Send(BridgeMessages.ToWebView.Ui.VsSettings, PaneVsOptions());
+        RaiseToolCallsHiddenChanged();
     }
 
     /// <summary>Options → Apply. Send vs_settings (updates state.ui: font size, sticky, …)
