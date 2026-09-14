@@ -109,16 +109,10 @@ internal sealed partial class WebViewMessageHandler
             // WPF Usage tab render the same DTO — no re-parsing on the client.
             var raw = await client.GetUsageAsync();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var acct = client.Account;
-            var account = acct == null ? null : new Contracts.AccountDto
-            {
-                Email = acct.Email,
-                Organization = acct.Organization,
-                SubscriptionType = acct.SubscriptionType,
-                ApiProvider = acct.ApiProvider,
-            };
-            bridge.SendResponse(BridgeMessages.ToWebView.Chat.Usage, usageReqId,
-                Core.Usage.UsageMapper.Build(raw, account));
+            var usage = Core.Usage.UsageMapper.Build(raw, Core.Usage.UsageMapper.ToAccountDto(client.Account));
+            bridge.SendResponse(BridgeMessages.ToWebView.Chat.Usage, usageReqId, usage);
+            // A fresh answer for the status bar too — but not a failed one, which Build turns into "no limits".
+            if (raw != null) { Core.Usage.UsageStatusService.Instance.OnUsageFetched(entry, usage); }
         }).FileAndForget(nameof(WebViewMessageHandler));
     }
 

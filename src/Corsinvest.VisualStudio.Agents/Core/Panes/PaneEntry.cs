@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Contracts;
 using Corsinvest.VisualStudio.Agents.Core.Profiles;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 
@@ -101,6 +103,11 @@ public sealed class PaneEntry
     /// debugger-break offer; the flag sends it outright. Chat panes only — the CLI pane has no
     /// composer of ours to fill.</summary>
     internal Action<string, bool> SetComposerAction { get; set; }
+
+    /// <summary>Asks this pane's own claude.exe for plan usage, so the status bar needn't start one.
+    /// Chat panes only. Answers null while the CLI hasn't finished init, or when get_usage failed —
+    /// never a usage without limits in place of an error.</summary>
+    internal Func<Task<UsageDto>> FetchUsageAction { get; set; }
 
     /// <summary>The single-source display title, used by BOTH the pane caption and the toolbar's
     /// open-panes list: e.g. "Chat 3 (Claude)". Computed once in the ctor (all inputs immutable).

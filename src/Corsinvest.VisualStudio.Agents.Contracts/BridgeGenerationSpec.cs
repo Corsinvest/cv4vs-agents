@@ -123,7 +123,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<AccountDto>();
         // Usage (get_usage), decoded once in HandleGetUsage into this typed shape.
         AddInterface<RateWindowDto>()
-            .Member(x => nameof(x.ResetsAt)).Null();
+            .Member(x => nameof(x.ResetsAt)).Null()
+            .Member(x => nameof(x.Severity)).Null();
         AddInterface<UsageInsightDto>();
         AddInterface<UsageAttributionDto>();
         AddInterface<UsageBehaviorsDto>();
