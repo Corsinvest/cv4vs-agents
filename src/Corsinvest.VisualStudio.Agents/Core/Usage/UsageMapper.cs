@@ -18,7 +18,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 /// rather than throwing. Mirrors the WebView dialog's wording (cv-usage-dialog) so both views match.</summary>
 internal static class UsageMapper
 {
-    // The rate-limit windows and their labels, same wording as the WebView dialog.
+    // The per-key windows older CLIs report, and their labels, same wording as the WebView dialog.
     private static readonly (string Key, string Name)[] KnownWindows =
     {
         ("five_hour", "Session (5hr)"),
@@ -37,20 +37,13 @@ internal static class UsageMapper
         if (raw?["rate_limits"] is JObject limits)
         {
             dto.RateLimitsAvailable = raw.Val("rate_limits_available", true);
-            var windows = new List<RateWindowDto>();
-            foreach (var (key, name) in KnownWindows)
-            {
-                if (limits[key] is JObject w)
-                {
-                    windows.Add(new RateWindowDto
-                    {
-                        Name = name,
-                        Utilization = Math.Max(0, Math.Min(100, w.Val("utilization", 0))),
-                        ResetsAt = w.Val("resets_at"),
-                    });
-                }
-            }
-            dto.Windows = [.. windows];
+            // The normalized list is what the CLI's own /usage draws, and the only place a weekly limit
+            // scoped to one model appears. Older CLIs send just the per-key windows.
+            var windows = limits["limits"] is JArray list ? FromLimitsList(list) : FromKnownWindows(limits);
+            dto.Windows = [.. windows
+                .OrderBy(w => KindOrder(w.Kind))
+                .ThenBy(w => w.Window.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(w => w.Window)];
         }
 
         if (raw?["behaviors"] is JObject behaviors)
@@ -60,6 +53,68 @@ internal static class UsageMapper
         }
         return dto;
     }
+
+    private static IEnumerable<(string Kind, RateWindowDto Window)> FromLimitsList(JArray list)
+        => list.OfType<JObject>().Select(limit =>
+        {
+            var kind = limit.Val("kind", "");
+            // scope is a JSON null on the unscoped windows, and a null token can't be indexed into.
+            var model = ((limit["scope"] as JObject)?["model"] as JObject)?.Val("display_name");
+            return (kind, new RateWindowDto
+            {
+                Name = LimitName(kind, model),
+                Utilization = Clamp(limit.Val("percent", 0)),
+                ResetsAt = ReadIso(limit, "resets_at"),
+            });
+        });
+
+    private static IEnumerable<(string Kind, RateWindowDto Window)> FromKnownWindows(JObject limits)
+    {
+        foreach (var (key, name) in KnownWindows)
+        {
+            if (limits[key] is JObject w)
+            {
+                yield return (key, new RateWindowDto
+                {
+                    Name = name,
+                    Utilization = Clamp(w.Val("utilization", 0)),
+                    ResetsAt = ReadIso(w, "resets_at"),
+                });
+            }
+        }
+    }
+
+    // The list's labels, worded like the per-key ones; a scoped weekly is named after its model.
+    private static string LimitName(string kind, string model) => kind switch
+    {
+        "session" => "Session (5hr)",
+        "weekly_all" => "Weekly (7 day)",
+        "weekly_scoped" => string.IsNullOrEmpty(model) ? "Weekly (one model)" : "Weekly " + model,
+        _ => string.IsNullOrEmpty(kind) ? "Limit" : char.ToUpperInvariant(kind[0]) + kind.Substring(1).Replace('_', ' '),
+    };
+
+    // Session first, then the weekly limit, then the per-model ones, then anything newer — in either
+    // shape's names.
+    private static int KindOrder(string kind) => kind switch
+    {
+        "session" or "five_hour" => 0,
+        "weekly_all" or "seven_day" => 1,
+        "weekly_scoped" or "seven_day_opus" or "seven_day_sonnet" => 2,
+        _ => 3,
+    };
+
+    private static int Clamp(int percent) => Math.Max(0, Math.Min(100, percent));
+
+    // An ISO time as the views take it. The transport reads every line with JObject.Parse, which turns
+    // such a string into a Date token whose plain string form is local time with no offset — and
+    // ResetsIn below parses that as UTC. Round-tripping the token keeps the offset.
+    private static string ReadIso(JObject o, string key) => (o[key] as JValue)?.Value switch
+    {
+        string s => s,
+        DateTimeOffset dto => dto.ToString("o", CultureInfo.InvariantCulture),
+        DateTime dt => dt.ToString("o", CultureInfo.InvariantCulture),
+        _ => null,
+    };
 
     private static UsageBehaviorsDto BuildBehaviors(JObject period)
     {

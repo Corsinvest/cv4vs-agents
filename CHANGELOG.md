@@ -8,6 +8,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **The Usage tab's "Resets in" was off by your offset from UTC.** Reset times reach the extension
+  with an offset, but reading them turned each into a local time without one, which the tab then took
+  for UTC: east of Greenwich a window seemed to reset hours late, west of it hours early. The chat's
+  Account & Usage dialog read the same string as local time and happened to be right. Reset times now
+  keep their offset.
+- **A weekly limit scoped to one model was shown nowhere.** The CLI lists it — *Weekly Fable*, say —
+  only in its newer `limits` list, which neither the Usage tab nor the chat's Account & Usage dialog
+  read. Both show it now, after the session and weekly windows.
+- **The response actions row's copy text was rebuilt on every render, on every exchange.** Its
+  cache was keyed on `renderExchange`'s local `response` slice — a fresh array each pass — so it
+  never actually hit. Keyed on the stable group `buildGroups` produces instead, which only changes
+  identity when the transcript itself does.
 - **`CvExpander`'s header stayed the same colour in every theme.** Its default WPF `ToggleButton`
   style sets `Foreground` to an OS system colour, which wins over the ambient VS theme brush the
   header would otherwise inherit — the chevron next to it already worked around this with an

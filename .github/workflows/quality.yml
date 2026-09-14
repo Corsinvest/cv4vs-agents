@@ -85,12 +85,12 @@ jobs:
         run: dotnet tool install -g dotnet-typegen
 
       - name: Restore
-        run: msbuild cv4vs-agents.sln -t:Restore -p:Configuration=Release -v:minimal
+        run: msbuild cv4vs-agents.slnx -t:Restore -p:Configuration=Release -v:minimal
 
       # Release also runs the version guard in Directory.Build.targets: the build fails if
       # Directory.Build.props, the manifest and AssemblyInfo have drifted apart.
       - name: Build
-        run: msbuild cv4vs-agents.sln -t:Build -p:Configuration=Release -p:DeployExtension=false -v:minimal
+        run: msbuild cv4vs-agents.slnx -t:Build -p:Configuration=Release -p:DeployExtension=false -v:minimal
 
       # The build just regenerated these from the C# DTOs. If they differ from what is committed,
       # someone changed a DTO without regenerating -- the TS side would keep compiling against the
