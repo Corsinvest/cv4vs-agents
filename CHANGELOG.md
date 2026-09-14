@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   cache was keyed on `renderExchange`'s local `response` slice — a fresh array each pass — so it
   never actually hit. Keyed on the stable group `buildGroups` produces instead, which only changes
   identity when the transcript itself does.
+- **`CvExpander`'s header stayed the same colour in every theme.** Its default WPF `ToggleButton`
+  style sets `Foreground` to an OS system colour, which wins over the ambient VS theme brush the
+  header would otherwise inherit — the chevron next to it already worked around this with an
+  explicit ancestor binding; the header text now does the same. No shipped feature used `CvExpander`
+  yet, so nothing already on screen changes; found while building on it.
 
 ## [1.9.0] - 2026-09-08
 
