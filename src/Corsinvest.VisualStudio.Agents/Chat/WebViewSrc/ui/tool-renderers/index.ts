@@ -51,6 +51,7 @@ import {
     ReadMcpResourceRenderer,
     TodoWriteRenderer,
     AskUserQuestionRenderer,
+    ReportFindingsRenderer,
     DefaultToolRenderer,
     McpToolRenderer,
 } from './renderers';
@@ -71,6 +72,7 @@ const BY_NAME: Record<string, RendererCtor> = {
     PowerShell: PowerShellRenderer,
     WebFetch: WebFetchRenderer,
     Agent: AgentRenderer,
+    Task: AgentRenderer,
     Skill: SkillRenderer,
     ToolSearch: ToolSearchRenderer,
     EnterWorktree: EnterWorktreeRenderer,
@@ -85,7 +87,6 @@ const BY_NAME: Record<string, RendererCtor> = {
     TeamCreate: TeamCreateRenderer,
     TeamDelete: TeamDeleteRenderer,
     SendMessage: SendMessageRenderer,
-    // Brief goes out under its older name; both appear across transcripts.
     Brief: BriefRenderer,
     SendUserMessage: BriefRenderer,
     CronCreate: CronCreateRenderer,
@@ -99,11 +100,11 @@ const BY_NAME: Record<string, RendererCtor> = {
     EnterPlanMode: EnterPlanModeRenderer,
     ExitPlanMode: ExitPlanModeRenderer,
     KillShell: KillShellRenderer,
-    // The CLI's own name carries the suffix; the bare one only ever appears in old transcripts.
     ReadMcpResourceTool: ReadMcpResourceRenderer,
     ReadMcpResource: ReadMcpResourceRenderer,
     TodoWrite: TodoWriteRenderer,
     AskUserQuestion: AskUserQuestionRenderer,
+    ReportFindings: ReportFindingsRenderer,
 };
 
 export function makeRenderer(name: string | undefined | null, host: ToolHost): ToolRenderer {
