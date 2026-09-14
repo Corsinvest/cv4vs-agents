@@ -210,12 +210,14 @@ internal sealed class ChatWebView : WebView2CompositionControl
         var controller = Controller;
         if (controller == null || source.Handle == IntPtr.Zero) { return; }
 
+        var reparented = false;
         try
         {
             if (controller.ParentWindow != source.Handle)
             {
                 controller.ParentWindow = source.Handle;
                 SyncBounds(controller, source);
+                reparented = true;
                 Log.Debug(() => $"[webview] controller parent -> 0x{source.Handle.ToInt64():X}");
             }
         }
@@ -226,6 +228,18 @@ internal sealed class ChatWebView : WebView2CompositionControl
         }
 
         WatchSource(source);
+
+        // Re-parenting moves the controller, not Win32 keyboard focus: the composition control has
+        // no HWND of its own for Windows to hand focus back to, so whichever real HWND the new
+        // parent last focused (the code editor, say) keeps taking keystrokes even though the
+        // composer's caret still blinks. Only for a control the user was actually typing into —
+        // otherwise a background pane silently reparenting (auto-hide, another pane docking) would
+        // steal focus from whatever the user IS using.
+        if (reparented && IsKeyboardFocusWithin)
+        {
+            try { controller.MoveFocus(CoreWebView2MoveFocusReason.Programmatic); }
+            catch (Exception ex) { Log.LogException("ChatWebView.FollowWindow.MoveFocus", ex); }
+        }
     }
 
     /// <summary>Recompute Bounds against the window the control was just re-parented to. Done by
