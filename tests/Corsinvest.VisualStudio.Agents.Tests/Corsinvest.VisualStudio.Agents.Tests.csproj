@@ -60,4 +60,9 @@
     </Reference>
   </ItemGroup>
 
+  <!-- The image manifest the VSIX ships, which ImageManifestTests checks against the built assembly. -->
+  <ItemGroup>
+    <None Include="..\..\src\Corsinvest.VisualStudio.Agents\Monikers.imagemanifest" Link="Monikers.imagemanifest" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
