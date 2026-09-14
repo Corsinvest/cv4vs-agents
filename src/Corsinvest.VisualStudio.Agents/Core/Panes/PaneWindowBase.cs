@@ -89,6 +89,10 @@ public abstract class PaneWindowBase : ToolWindowPane
     /// <summary>Build the hosted control (ChatPaneControl / CliPaneControl).</summary>
     protected abstract PaneControlBase CreateControl();
 
+    /// <summary>The hosted pane's entry, for code that starts from the window: the status bar maps the
+    /// active frame back to a profile through it. Null until PaneLauncher has injected it.</summary>
+    internal PaneEntry Entry => PaneControl?.Entry;
+
     /// <summary>True when this pane's frame is VS's active window frame (the user is looking at it).
     /// VS hands out distinct COM proxies for the same window, so ReferenceEquals is unreliable —
     /// compare the hosted DocView object instead.</summary>

@@ -6,6 +6,7 @@
 using Corsinvest.VisualStudio.Agents.Contracts;
 using Corsinvest.VisualStudio.Agents.Core.Client;
 using Corsinvest.VisualStudio.Agents.Core.Profiles;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,9 +16,10 @@ namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 /// <summary>Fetches a profile's live usage with a throwaway claude.exe: start it with the profile's
 /// env, send get_usage, map the result, then dispose it. The Usage tab has no live pane of its own,
 /// so each profile gets its own short-lived process. No IDE MCP server (SsePort=0) — usage doesn't
-/// use the bridge. We do NOT wait for system/init: that arrives only after a real user turn (the CLI
-/// only emits it once a prompt is sent), and get_usage is a plain control_request that works as soon
-/// as the transport is up — so we send it directly without spending a turn.</summary>
+/// use the bridge — and none of the user's either: connecting them would be most of what the process
+/// spends its short life on. We do NOT wait for system/init: that arrives only after a real user turn
+/// (the CLI only emits it once a prompt is sent), and get_usage is a plain control_request that works
+/// as soon as the transport is up — so we send it directly without spending a turn.</summary>
 internal static class UsageProbe
 {
     private static readonly TimeSpan StartTimeout = TimeSpan.FromSeconds(15);
@@ -26,6 +28,15 @@ internal static class UsageProbe
     /// timeout/cancel; the caller shows "unavailable". workingDirectory falls back to the user
     /// profile folder (get_usage is account-scoped, not project-scoped).</summary>
     public static async Task<UsageDto> FetchAsync(Profile profile, string workingDirectory, CancellationToken ct)
+    {
+        var (raw, account) = await FetchRawAsync(profile, workingDirectory, ct);
+        return UsageMapper.Build(raw, account);
+    }
+
+    /// <summary>The same fetch before mapping. <c>Raw</c> is null when the CLI answered get_usage with an
+    /// error: the Usage tab shows that as "no limits", but the status bar must not mistake it for an
+    /// account that has none.</summary>
+    public static async Task<(JObject Raw, AccountDto Account)> FetchRawAsync(Profile profile, string workingDirectory, CancellationToken ct)
     {
         var client = new ClaudeClient();
         try
@@ -38,6 +49,7 @@ internal static class UsageProbe
                 WorkingDirectory = wd,
                 Env = profile?.Env,
                 SsePort = 0, // no in-process IDE MCP server: usage doesn't use the bridge
+                NoMcpServers = true,
             });
 
             // StartupAsync sends `initialize` on its own; its control_response carries the account
@@ -46,8 +58,7 @@ internal static class UsageProbe
             await WaitForAccountAsync(client, ct);
 
             var raw = await client.GetUsageAsync(); // null on error
-            var account = ToAccountDto(client.Account);
-            return UsageMapper.Build(raw, account);
+            return (raw, UsageMapper.ToAccountDto(client.Account));
         }
         catch (Exception ex)
         {
@@ -72,15 +83,4 @@ internal static class UsageProbe
             await Task.Delay(100, ct);
         }
     }
-
-    private static AccountDto ToAccountDto(AccountInfo a)
-        => a == null
-            ? null
-            : new AccountDto
-            {
-                Email = a.Email,
-                Organization = a.Organization,
-                SubscriptionType = a.SubscriptionType,
-                ApiProvider = a.ApiProvider,
-            };
 }

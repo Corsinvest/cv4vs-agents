@@ -13,6 +13,14 @@ public class RateWindowDto
     public string Name { get; set; }
     public int Utilization { get; set; }
     public string ResetsAt { get; set; }
+
+    /// <summary>"session", "weekly" or "weekly_scoped" (one model), whichever payload shape the window
+    /// came from; a kind this build doesn't know passes through as the CLI wrote it. What a client
+    /// matches on to find a window, instead of the label.</summary>
+    public string Kind { get; set; }
+
+    /// <summary>The CLI's own verdict on the window ("normal", …); null when it gave none.</summary>
+    public string Severity { get; set; }
 }
 
 /// <summary>An insight in the "what's contributing to your limits usage?" section — the ready-to-show

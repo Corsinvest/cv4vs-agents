@@ -7,4 +7,6 @@ export interface RateWindowDto {
     name: string;
     utilization: number;
     resetsAt: string | null;
+    kind: string;
+    severity: string | null;
 }
