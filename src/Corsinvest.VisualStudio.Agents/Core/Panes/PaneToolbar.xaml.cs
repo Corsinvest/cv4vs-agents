@@ -261,6 +261,9 @@ public partial class PaneToolbar : UserControl
         BtnToolCalls.Visibility = _pane.SupportsHidingToolCalls ? Visibility.Visible : Visibility.Collapsed;
         var hidden = _pane.ToolCallsHidden;
         BtnToolCalls.IsChecked = hidden;
+        // The glyph names the shape of the view, not what is filtered out: a flat list of messages
+        // while the tool rows are hidden, the nested one that shows them again.
+        ImgToolCalls.Moniker = hidden ? KnownMonikers.FlatList : KnownMonikers.TreeList;
         BtnToolCalls.ToolTip = hidden ? "Show tool calls" : "Hide tool calls";
     }
 
