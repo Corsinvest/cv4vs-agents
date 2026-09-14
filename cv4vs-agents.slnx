@@ -1,0 +1,34 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <File Path="CHANGELOG.md" />
+    <File Path="CLAUDE.md" />
+    <File Path="CODE_OF_CONDUCT.md" />
+    <Project Path="src/Corsinvest.VisualStudio.Agents.Contracts/Corsinvest.VisualStudio.Agents.Contracts.csproj" />
+    <Project Path="src/Corsinvest.VisualStudio.Agents/Corsinvest.VisualStudio.Agents.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Corsinvest.VisualStudio.Agents.Tests/Corsinvest.VisualStudio.Agents.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/LangMatrix/">
+    <File Path="tests/LangMatrix/README.md" />
+    <Project Path="tests/LangMatrix/CppLib/CppLib.vcxproj">
+      <BuildType Project="Debug" />
+      <Platform Project="x64" />
+      <Build Project="false" />
+    </Project>
+    <Project Path="tests/LangMatrix/CsLib/CsLib.csproj">
+      <Build Project="false" />
+    </Project>
+    <Project Path="tests/LangMatrix/VbLib/VbLib.vbproj">
+      <Build Project="false" />
+    </Project>
+    <Project Path="tests/LangMatrix/WebFiles/WebFiles.csproj">
+      <Build Project="false" />
+    </Project>
+  </Folder>
+</Solution>
