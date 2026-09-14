@@ -16,6 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **A weekly limit scoped to one model was shown nowhere.** The CLI lists it — *Weekly Fable*, say —
   only in its newer `limits` list, which neither the Usage tab nor the chat's Account & Usage dialog
   read. Both show it now, after the session and weekly windows.
+- **The response actions row's copy text was rebuilt on every render, on every exchange.** Its
+  cache was keyed on `renderExchange`'s local `response` slice — a fresh array each pass — so it
+  never actually hit. Keyed on the stable group `buildGroups` produces instead, which only changes
+  identity when the transcript itself does.
 
 ## [1.9.0] - 2026-09-08
 
