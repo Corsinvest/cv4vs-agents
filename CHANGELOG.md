@@ -6,50 +6,56 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-09-14
+
+Your plan limits are now visible at a glance in the status bar, without opening anything. The chat
+can hide everything Claude did and leave just the conversation, and a plan can be opened full-size
+in the editor — and edited there before you approve it. Tool windows have icons again when a tab
+group gets crowded, and the Usage tab's reset times are no longer hours off.
+
 ### Added
 
 - **Plan usage in the status bar.** `Claude: 5h 44% · 7d 10%` at the right of Visual Studio's status
-  bar, each figure with a thin bar that turns amber and then red as its window fills, for the profile
-  of the pane you last worked in. Click it for every limit — per-model weeklies too — with when each
-  resets, the account, and when the numbers were fetched. A chat pane on that profile keeps it current
-  from its own process after each turn; only with none open does a short-lived `claude.exe` refresh
-  it, every 15 minutes while Visual Studio is in front (Options → General; `0` turns that off). The
-  idea comes from [vsix-copilot-status-extension](https://github.com/3rikF/vsix-copilot-status-extension).
-- **Hide tool calls.** A filter button on the chat toolbar, between Session History and New Session,
-  takes the tool rows out of the transcript — the commands, reads, edits, searches, MCP calls and
-  sub-agents — and leaves the conversation: your messages and Claude's replies. What you took part in
-  stays: answers to questions, plan decisions, the task list, and a call waiting for your approval.
-  It is one setting for every open chat, remembered across restarts and also under
-  **Options → Chat → Hide tool calls**. Turned off from the toolbar, the rows come back as they were,
-  open or closed, with no reload; changed in Options, like any other setting there, it reloads each
-  idle chat from its session. Scrolling up still reaches older history when a page of hidden rows
-  leaves too little to scroll.
+  bar, each figure with a thin bar that turns amber and then red as the window fills. Click it for
+  every limit — per-model weeklies included — when each one resets, and which account they belong to.
+  It follows the pane you last worked in, and stays current on its own. How often it refreshes when
+  no chat is open is under **Options → General**; `0` turns that off. The idea comes from
+  [vsix-copilot-status-extension](https://github.com/3rikF/vsix-copilot-status-extension).
+- **Hide tool calls.** A button on the chat toolbar, between Session History and New Session, that
+  takes out everything Claude did — the commands, file reads and edits, searches, MCP calls and
+  sub-agents — and leaves the conversation: your messages and its replies. What you took part in
+  stays: answers to questions, plan decisions, the task list, and anything waiting for your approval.
+  The button's own icon says which way the transcript reads, and the setting is shared by every open
+  chat and remembered across restarts (also under **Options → Chat**).
+- **Open a plan in the editor.** Long plans no longer have to be read through the banner's small
+  scrolling box: "Open in editor" opens the plan as a normal document, full-size, in Visual Studio's
+  Markdown editor. While the plan is still waiting for your answer you can edit it there and save —
+  the banner picks up the change, and approving sends what you wrote.
+- **Code review findings read as a list** instead of arriving as raw data in the transcript.
 
 ### Fixed
 
-- **The Usage tab's "Resets in" was off by your offset from UTC.** Reset times reach the extension
-  with an offset, but reading them turned each into a local time without one, which the tab then took
-  for UTC: east of Greenwich a window seemed to reset hours late, west of it hours early. The chat's
-  Account & Usage dialog read the same string as local time and happened to be right. Reset times now
-  keep their offset.
-- **A weekly limit scoped to one model was shown nowhere.** The CLI lists it — *Weekly Fable*, say —
-  only in its newer `limits` list, which neither the Usage tab nor the chat's Account & Usage dialog
-  read. Both show it now, after the session and weekly windows.
-- **The response actions row's copy text was rebuilt on every render, on every exchange.** Its
-  cache was keyed on `renderExchange`'s local `response` slice — a fresh array each pass — so it
-  never actually hit. Keyed on the stable group `buildGroups` produces instead, which only changes
-  identity when the transcript itself does.
-- **`CvExpander`'s header stayed the same colour in every theme.** Its default WPF `ToggleButton`
-  style sets `Foreground` to an OS system colour, which wins over the ambient VS theme brush the
-  header would otherwise inherit — the chevron next to it already worked around this with an
-  explicit ancestor binding; the header text now does the same. No shipped feature used `CvExpander`
-  yet, so nothing already on screen changes; found while building on it.
-- **A crowded tab group no longer shows our windows as blank tabs.** When a group runs out of room,
-  Visual Studio hides the captions and draws each tab's icon instead — and none of the extension's
-  windows had one. Each now shows the mascot, drawn from vector art so it stays sharp at any scale,
-  with a small glyph in the corner saying which window it is: a speech bubble for a chat, a console
-  for the CLI, and for Statistics, Usage, Context usage and File history the glyph their menu entry
-  already carries.
+- **The Usage tab's "Resets in" was off by your distance from UTC** — east of Greenwich a window
+  looked like it reset hours later than it does, west of it hours earlier. The chat's Account &
+  Usage dialog was already right.
+- **A weekly limit for a single model was shown nowhere.** A *Weekly Fable* window, say, reported by
+  the CLI but missing from both the Usage tab and the chat's Account & Usage dialog. Both list it
+  now, after the session and weekly windows.
+- **A crowded tab group no longer shows the extension's windows as blank tabs.** When Visual Studio
+  runs out of room it hides the tab captions and draws only the icons, and ours had none. Each window
+  now shows the mascot with a small glyph saying which one it is — a speech bubble for a chat, a
+  console for the CLI, and for Statistics, Usage, Context usage and File history the same glyph as
+  their menu entry.
+- **Collapsible section headers ignored the colour theme**, staying the same shade whichever theme
+  was in use.
+- **Copying a reply rebuilt its text on every redraw**, work that showed up as the transcript grew.
+
+### Internal
+
+- The solution moved to the `.slnx` format: a fifth of the lines, readable, and far less prone to
+  conflicts when two changes touch it.
+- `tools/extension.ps1` could not see a Visual Studio Insiders or Preview instance, so on a machine
+  with only one of those `-Reinstall` removed the installed copy and then failed to put it back.
 
 ## [1.9.0] - 2026-09-08
 
