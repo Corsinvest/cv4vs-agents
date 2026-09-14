@@ -115,6 +115,9 @@ the session title.
   one the VSIX ships). The chat pane now follows the window it's actually hosted in: it re-points the
   controller whenever that changes, and moves it onto the main window first if the one it's leaving
   is about to close — the case a pane opened while already floating hits the moment it's docked.
+  Re-docking a pane that had focus also reclaims it: re-pointing the controller moves the browser,
+  not Win32 keyboard focus, so without this the code editor (if one was open) kept the keystrokes
+  while the composer's caret just sat there blinking.
 
 ### Changed
 
