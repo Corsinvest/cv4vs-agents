@@ -40,3 +40,32 @@ export function buildGroups(
     }
     return groups;
 }
+
+/**
+ * Tool rows that stay on screen when tool calls are hidden: each is something the user took part in
+ * or that is addressed to them, not the work in between — their answers (AskUserQuestion), the plan
+ * they approved or sent back (ExitPlanMode), the task list (TodoWrite, and the TaskCreate/TaskUpdate
+ * that replaced it), and prose the model sends them (Brief, still SendUserMessage on the wire).
+ */
+const KEPT_WHEN_TOOL_CALLS_HIDDEN: ReadonlySet<string> = new Set([
+    'AskUserQuestion',
+    'ExitPlanMode',
+    'TodoWrite',
+    'TaskCreate',
+    'TaskUpdate',
+    'Brief',
+    'SendUserMessage',
+]);
+
+/**
+ * Whether the "hide tool calls" filter hides this entry. Only tool rows ever are, and not the kinds
+ * kept above, nor the call awaiting the user's approval: its row is where what they are approving —
+ * the edit, the command — is spelled out.
+ */
+export function isHiddenToolCall(e: UiEntry, pendingToolUseId?: string | null): boolean {
+    return (
+        e.kind === 'tool' &&
+        !KEPT_WHEN_TOOL_CALLS_HIDDEN.has(e.data.name) &&
+        e.toolUseId !== pendingToolUseId
+    );
+}

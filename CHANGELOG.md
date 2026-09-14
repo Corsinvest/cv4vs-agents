@@ -15,6 +15,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   from its own process after each turn; only with none open does a short-lived `claude.exe` refresh
   it, every 15 minutes while Visual Studio is in front (Options → General; `0` turns that off). The
   idea comes from [vsix-copilot-status-extension](https://github.com/3rikF/vsix-copilot-status-extension).
+- **Hide tool calls.** A filter button on the chat toolbar, between Session History and New Session,
+  takes the tool rows out of the transcript — the commands, reads, edits, searches, MCP calls and
+  sub-agents — and leaves the conversation: your messages and Claude's replies. What you took part in
+  stays: answers to questions, plan decisions, the task list, and a call waiting for your approval.
+  It is one setting for every open chat, remembered across restarts and also under
+  **Options → Chat → Hide tool calls**. Turned off from the toolbar, the rows come back as they were,
+  open or closed, with no reload; changed in Options, like any other setting there, it reloads each
+  idle chat from its session. Scrolling up still reaches older history when a page of hidden rows
+  leaves too little to scroll.
 
 ### Fixed
 
