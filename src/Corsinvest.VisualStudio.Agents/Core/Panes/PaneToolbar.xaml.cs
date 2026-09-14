@@ -153,9 +153,8 @@ public partial class PaneToolbar : UserControl
                 {
                     Width = 16,
                     Height = 16,
-                    Moniker = entry.Kind == PaneKind.Cli
-                                ? KnownMonikers.Console
-                                : KnownMonikers.Comment,
+                    // The same glyph the pane's tab icon carries.
+                    Moniker = ToolWindowIcons.KindGlyph(entry.Kind),
                 },
             };
 

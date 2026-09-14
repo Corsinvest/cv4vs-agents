@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Helpers;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
@@ -21,6 +23,8 @@ public sealed class ContextWindow : ToolWindowPane
     {
         Caption = "Context usage";
         Content = new ContextUsageControl();
+        // The glyph of its menu entry in AgentsPackage.vsct.
+        BitmapImageMoniker = ToolWindowIcons.WithAdorner(KnownMonikers.DoughnutChart);
     }
 
     /// <summary>Show the Context usage window, creating it on first use.</summary>
