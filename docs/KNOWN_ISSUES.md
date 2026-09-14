@@ -37,3 +37,19 @@ you switch tabs, while the working directory is fixed when the pane starts.
 
 **Workaround:** none needed — the home directory is a reasonable fallback for a
 loose file. Low priority.
+
+---
+
+## The status bar item depends on Visual Studio's own layout
+
+The plan-usage item in the status bar is placed by finding the bar inside the
+main window's WPF tree.
+
+**Why:** Visual Studio's status bar API takes text only. An element with an
+icon, bars and a popup has to be inserted into the window itself, and that tree
+is Visual Studio's internal layout — free to change between releases.
+
+**Workaround:** if a release moves it, the item simply doesn't appear and the
+Output window says `[usage-status] Visual Studio's status bar was not found`
+(Options → Debug → Log level `Warn` or higher). Nothing else is affected, and the
+same numbers stay under **View → cv4vs Agents → Usage**.

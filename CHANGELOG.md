@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **Plan usage in the status bar.** `Claude: 5h 44% · 7d 10%` at the right of Visual Studio's status
+  bar, each figure with a thin bar that turns amber and then red as its window fills, for the profile
+  of the pane you last worked in. Click it for every limit — per-model weeklies too — with when each
+  resets, the account, and when the numbers were fetched. A chat pane on that profile keeps it current
+  from its own process after each turn; only with none open does a short-lived `claude.exe` refresh
+  it, every 15 minutes while Visual Studio is in front (Options → General; `0` turns that off). The
+  idea comes from [vsix-copilot-status-extension](https://github.com/3rikF/vsix-copilot-status-extension).
 - **Hide tool calls.** A filter button on the chat toolbar, between Session History and New Session,
   takes the tool rows out of the transcript — the commands, reads, edits, searches, MCP calls and
   sub-agents — and leaves the conversation: your messages and Claude's replies. What you took part in

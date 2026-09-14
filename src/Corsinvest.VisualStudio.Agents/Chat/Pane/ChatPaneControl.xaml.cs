@@ -727,6 +727,15 @@ public partial class ChatPaneControl : PaneControlBase
         };
         AttachClientEvents(_client);
         _handler = new WebViewMessageHandler(_bridge, _client, Entry, _log);
+        // The status bar reads usage from this pane's process instead of starting one of its own. Null
+        // before init has answered, or when get_usage fails: an error must not read as "no limits".
+        Entry.FetchUsageAction = async () =>
+        {
+            var client = _client;
+            if (client?.Account == null) { return null; }
+            var raw = await client.GetUsageAsync();
+            return raw == null ? null : Core.Usage.UsageMapper.Build(raw, Core.Usage.UsageMapper.ToAccountDto(client.Account));
+        };
         _bridge.MessageReceived -= OnBridgeMessage;
         _bridge.MessageReceived += OnBridgeMessage;
     }

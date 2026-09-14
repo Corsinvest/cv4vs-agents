@@ -1,0 +1,87 @@
+<!--
+  SPDX-FileCopyrightText: Copyright Corsinvest Srl
+  SPDX-License-Identifier: GPL-3.0-only
+-->
+<!--
+  The mascot as vector art, traced from Resources/plugin-logo.png on the same 500×500 grid, so it stays
+  sharp at any size and DPI where the PNG blurs at 16px. Merge the dictionary to use it:
+
+    <ResourceDictionary Source="/Corsinvest.VisualStudio.Agents;component/Themes/Icons.xaml" />
+
+  MascotImage is the full-colour logo, for an Image. MascotGeometry is the bare silhouette (eyes cut out),
+  for anything that needs a single-colour version.
+
+  The gradient stops and the shade's edges were sampled from the PNG's pixels; at icon sizes the shade is
+  what keeps it looking like the logo rather than a flat blob.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    mc:Ignorable="po">
+
+  <!-- Body (round top corners, tighter bottom ones), the arms as one bar through it, four legs, and the
+       eyes excluded. -->
+  <CombinedGeometry x:Key="MascotGeometry" GeometryCombineMode="Exclude" po:Freeze="True">
+    <CombinedGeometry.Geometry1>
+      <GeometryGroup FillRule="Nonzero">
+        <PathGeometry Figures="M 93,98 H 408 A 30,30 0 0 1 438,128 V 343 A 10,10 0 0 1 428,353 H 73 A 10,10 0 0 1 63,343 V 128 A 30,30 0 0 1 93,98 Z" />
+        <RectangleGeometry Rect="6,228,488,64" RadiusX="12" RadiusY="12" />
+        <RectangleGeometry Rect="95,340,31,77" RadiusX="8" RadiusY="8" />
+        <RectangleGeometry Rect="157,340,31,77" RadiusX="8" RadiusY="8" />
+        <RectangleGeometry Rect="311,340,31,77" RadiusX="8" RadiusY="8" />
+        <RectangleGeometry Rect="374,340,31,77" RadiusX="8" RadiusY="8" />
+      </GeometryGroup>
+    </CombinedGeometry.Geometry1>
+    <CombinedGeometry.Geometry2>
+      <GeometryGroup>
+        <RectangleGeometry Rect="126,167,31,61" />
+        <RectangleGeometry Rect="343,167,31,61" />
+      </GeometryGroup>
+    </CombinedGeometry.Geometry2>
+  </CombinedGeometry>
+
+  <!-- The darker fold from the top-left corner down across the body, clipped to the silhouette so it
+       neither spills past the edge nor paints over an eye. -->
+  <CombinedGeometry x:Key="MascotShadeGeometry" GeometryCombineMode="Intersect"
+                    Geometry2="{StaticResource MascotGeometry}" po:Freeze="True">
+    <CombinedGeometry.Geometry1>
+      <PathGeometry Figures="M 63,98 L 125,98 L 225,353 L 193,353 L 63,223 Z" />
+    </CombinedGeometry.Geometry1>
+  </CombinedGeometry>
+
+  <LinearGradientBrush x:Key="MascotBrush" StartPoint="0.35,0" EndPoint="0.65,1" po:Freeze="True">
+    <GradientStop Offset="0" Color="#F07AE8" />
+    <GradientStop Offset="0.5" Color="#A852F0" />
+    <GradientStop Offset="1" Color="#5A47E6" />
+  </LinearGradientBrush>
+
+  <LinearGradientBrush x:Key="MascotShadeBrush" StartPoint="0,0" EndPoint="0,1" po:Freeze="True">
+    <GradientStop Offset="0" Color="#5A22A8" />
+    <GradientStop Offset="1" Color="#7C3FDD" />
+  </LinearGradientBrush>
+
+  <DrawingImage x:Key="MascotImage" po:Freeze="True">
+    <DrawingImage.Drawing>
+      <DrawingGroup>
+        <!-- An empty 500×500 frame, so the image has the logo's square proportions and centres alike. -->
+        <GeometryDrawing Brush="Transparent">
+          <GeometryDrawing.Geometry>
+            <RectangleGeometry Rect="0,0,500,500" />
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+        <!-- White eyes, as in the logo: through the cut-outs a dark status bar would otherwise show. -->
+        <GeometryDrawing Brush="White">
+          <GeometryDrawing.Geometry>
+            <GeometryGroup>
+              <RectangleGeometry Rect="126,167,31,61" />
+              <RectangleGeometry Rect="343,167,31,61" />
+            </GeometryGroup>
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="{StaticResource MascotBrush}" Geometry="{StaticResource MascotGeometry}" />
+        <GeometryDrawing Brush="{StaticResource MascotShadeBrush}" Geometry="{StaticResource MascotShadeGeometry}" />
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+</ResourceDictionary>
