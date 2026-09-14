@@ -16,6 +16,7 @@ import type {
     ExternalUrlNotification,
     DiffDialogNotification,
     ToolOutputNotification,
+    OpenPlanNotification,
     AgentRunTotalsDto,
 } from '../../core/types';
 
@@ -144,6 +145,15 @@ export class BridgeToolHost implements ToolHost {
             // Lets the host project the IN to the tool's main field (Agent→prompt,
             // Bash→command) instead of dumping the whole input JSON.
             toolName: this.name,
+        });
+    }
+
+    openPlan(): void {
+        // Ids only: whether the request is still pending — and so whether the live file or a
+        // snapshot opens — is the host's to know, and the path comes from the CLI's own request.
+        bridge.sendNotification<OpenPlanNotification>(Msg.fromWebView.open.plan, {
+            toolUseId: this.toolUseId,
+            agentId: this.containerAgentId,
         });
     }
 

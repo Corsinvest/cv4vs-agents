@@ -58,8 +58,8 @@ internal sealed partial class WebViewMessageHandler
     private void HandleRespondPermission(JObject data, int? id)
     {
         var p = data.ToObject<Contracts.RespondPermissionNotification>();
-        // Correlate by tool_use_id so concurrent prompts each answer their own request.
-        client.RespondToToolPermission(p.ToolUseId ?? "", new ToolPermissionResponse
+        var toolUseId = p.ToolUseId ?? "";
+        var response = new ToolPermissionResponse
         {
             Allow = p.Allowed,
             // Free-text "tell Claude what to do instead" → the deny message.
@@ -70,8 +70,18 @@ internal sealed partial class WebViewMessageHandler
             // When the user picks "allow … for this session", the WebView
             // sends back the chosen permission_suggestion(s) to apply.
             UpdatedPermissions = data["updatedPermissions"] as JArray,
-        });
-        Ide.IdeContextService.Instance.CloseDiffFor(p.ToolUseId ?? "");
+        };
+        // A plan with a file is answered with what the editor holds, which means reading it.
+        if (client.TryGetPendingToolRequest(toolUseId, out var toolName, out var input)
+            && toolName == PlanApproval.ToolName
+            && PlanApproval.PlanFilePathOf(input) != null)
+        {
+            RespondToPlan(toolUseId, input, response);
+            return;
+        }
+        // Correlate by tool_use_id so concurrent prompts each answer their own request.
+        client.RespondToToolPermission(toolUseId, response);
+        Ide.IdeContextService.Instance.CloseDiffFor(toolUseId);
     }
 
     private void HandleSetSendSelection(JObject data, int? id)

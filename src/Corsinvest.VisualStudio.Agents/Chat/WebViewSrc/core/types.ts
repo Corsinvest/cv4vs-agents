@@ -143,6 +143,9 @@ export type { ToolPermissionNotification } from './generated/ToolPermissionNotif
 /** The CLI cancelled a pending permission (chat_tool_permission_cancel) — dismiss its banner.
  *  Generated from C# by TypeGen — re-exported here. */
 export type { ToolPermissionCancelNotification } from './generated/ToolPermissionCancelNotification';
+/** A pending plan was saved in the editor (chat_plan_updated) — the banner shows the new text.
+ *  Generated from C# by TypeGen — re-exported here. */
+export type { PlanUpdatedNotification } from './generated/PlanUpdatedNotification';
 
 /** History page as replayed typed events / sub-agent transcript (chat_history /
  *  subagent_loaded). `HistoryEventDto.data` is opaque (a DTO), cast by `type`.
@@ -231,6 +234,7 @@ export interface RewindPoint {
     timestamp?: number;
 }
 export type { ToolOutputNotification } from './generated/ToolOutputNotification';
+export type { OpenPlanNotification } from './generated/OpenPlanNotification';
 export type { GetSubagentRequest } from './generated/GetSubagentRequest';
 export type { SubagentCancelNotification } from './generated/SubagentCancelNotification';
 export type { SubagentDetachNotification } from './generated/SubagentDetachNotification';

@@ -95,6 +95,54 @@ test('clear: throws everything away, the waiting ones included', () => {
     assert.equal(q.size, 0);
 });
 
+test('update: replaces the one on screen with a new object and says so', () => {
+    const q = new PermissionQueue<{ id: string; v?: number }>();
+    q.push({ id: 'a', v: 1 });
+    const before = q.current;
+
+    assert.equal(
+        q.update('a', (r) => ({ ...r, v: 2 })),
+        true,
+    );
+    assert.equal(q.current?.v, 2);
+    // The banner re-renders by reference: patching the old object would change nothing on screen.
+    assert.notEqual(q.current, before);
+});
+
+test('update: a waiting one changes where it sits, without surfacing', () => {
+    const q = new PermissionQueue<{ id: string; v?: number }>();
+    q.push({ id: 'a' });
+    q.push({ id: 'b', v: 1 });
+    q.push({ id: 'c' });
+
+    assert.equal(
+        q.update('b', (r) => ({ ...r, v: 2 })),
+        false,
+        'the one on screen did not change',
+    );
+    assert.equal(q.current?.id, 'a');
+    assert.deepEqual(
+        q.waiting.map((r) => r.id),
+        ['b', 'c'],
+        'order kept',
+    );
+    assert.equal(q.next()?.v, 2, 'shows the new version when its turn comes');
+});
+
+test('update: an unknown id touches nothing', () => {
+    const q = new PermissionQueue<{ id: string; v?: number }>();
+    q.push({ id: 'a', v: 1 });
+    const before = q.current;
+
+    // A save can land after its request was answered: that must not resurrect or alter anything.
+    assert.equal(
+        q.update('never-seen', (r) => ({ ...r, v: 9 })),
+        false,
+    );
+    assert.equal(q.current, before);
+    assert.equal(q.size, 1);
+});
+
 test('after clear the queue restarts clean', () => {
     const q = new PermissionQueue();
     q.push(req('a'));
