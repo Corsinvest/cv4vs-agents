@@ -28,7 +28,7 @@ resolve and no clash with a debug session holding the assembly, and the errors c
 file/line/message. Otherwise:
 
 ```powershell
-msbuild cv4vs-agents.sln /t:Build /p:Configuration=Debug   # WebView build is hooked into MSBuild
+msbuild cv4vs-agents.slnx /t:Build /p:Configuration=Debug   # WebView build is hooked into MSBuild
 ```
 
 WebView (`src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/`): `npm run build` / `dev` /

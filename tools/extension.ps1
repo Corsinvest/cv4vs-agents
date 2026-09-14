@@ -93,6 +93,9 @@ $Editions = @(
 )
 
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+# Every -products lookup below passes -prerelease too: without it vswhere silently omits Insiders/
+# Preview instances, so -Install/-Reinstall find "no Visual Studio installation" on a machine whose
+# only instance is one of those -- right after -Uninstall has already removed the old copy.
 $hiveRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\VisualStudio'
 
 # Hive folders are named <version>_<instanceId>[Exp] — "17.0_456b4614Exp" names no product a human
@@ -104,7 +107,7 @@ function Get-InstanceName {
     if ($null -eq $script:instanceNames) {
         $script:instanceNames = @{}
         if (Test-Path $vswhere) {
-            foreach ($i in (& $vswhere -products $Editions -format json 2>$null | ConvertFrom-Json)) {
+            foreach ($i in (& $vswhere -products $Editions -prerelease -format json 2>$null | ConvertFrom-Json)) {
                 $script:instanceNames[$i.instanceId] = $i.displayName
             }
         }
@@ -186,7 +189,7 @@ function Update-VisualStudioConfiguration {
         return
     }
 
-    foreach ($devenv in (& $vswhere -products $Editions -property productPath -format value 2>$null)) {
+    foreach ($devenv in (& $vswhere -products $Editions -prerelease -property productPath -format value 2>$null)) {
         if (-not (Test-Path $devenv)) { continue }
         Write-Host "refreshing $(Split-Path (Split-Path (Split-Path $devenv -Parent) -Parent) -Parent | Split-Path -Leaf)..."
 
@@ -234,7 +237,7 @@ function Show-Status {
         # Compare instance ids, not hive names: a hive is <version>_<id>[Exp] and only the id is
         # known here. Find-InstalledCopies has already filtered to the right Normal/Exp set.
         $installedIds = $copies.Hive | ForEach-Object { ($_ -replace '^\d+\.\d+_', '') -replace 'Exp$', '' }
-        foreach ($i in (& $vswhere -products $Editions -format json 2>$null | ConvertFrom-Json)) {
+        foreach ($i in (& $vswhere -products $Editions -prerelease -format json 2>$null | ConvertFrom-Json)) {
             if ($installedIds -notcontains $i.instanceId) {
                 Write-Host "`n  $($i.displayName): not installed" -ForegroundColor DarkYellow
             }
@@ -287,7 +290,7 @@ function Invoke-Install {
     }
     if (-not (Test-Path $Path)) {
         Write-Host "VSIX not found: $Path" -ForegroundColor Red
-        Write-Host "Build it first:  msbuild cv4vs-agents.sln -t:Build -p:Configuration=Release" -ForegroundColor Yellow
+        Write-Host "Build it first:  msbuild cv4vs-agents.slnx -t:Build -p:Configuration=Release" -ForegroundColor Yellow
         exit 1
     }
     $Path = (Resolve-Path $Path).Path
@@ -297,7 +300,7 @@ function Invoke-Install {
         exit 1
     }
 
-    $instances = & $vswhere -products $Editions -format json 2>$null | ConvertFrom-Json
+    $instances = & $vswhere -products $Editions -prerelease -format json 2>$null | ConvertFrom-Json
     if (-not $instances) {
         Write-Host "No Visual Studio installation found." -ForegroundColor Red
         exit 1
