@@ -146,6 +146,11 @@ own.
 - **[Any Anthropic-compatible provider](docs/options.md#profiles)** — profiles inject per-pane
   environment variables (z.ai/GLM, MiniMax, DeepSeek, OpenRouter, Ollama…); the IDE tools keep
   working.
+- **[Plan usage in the status bar](docs/usage.md#status-bar)** — `Claude: 5h 44% · 7d 10%` beside the
+  notification bell, each figure with a bar that turns amber and then red as its window fills, for the
+  profile you're working in. Click it for every limit and when each resets. A chat pane keeps it
+  current from its own process; without one, a short-lived CLI refreshes it at most every 15 minutes —
+  or never, if you set it so.
 - **Analytics tabs** — full-window views under **View → cv4vs Agents**, all reading the local session
   files with no telemetry:
   - **[Statistics](docs/statistics.md)** — a navigable tree (All → Profile → Folder → Project →
@@ -165,7 +170,7 @@ own.
 - **[Restore panes on solution open](docs/options.md#general)** *(opt-in)* — reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
-- **[Tune it to your taste](docs/options.md)** — 27 options across General, Chat and Debug: what
+- **[Tune it to your taste](docs/options.md)** — 29 options across General, Chat and Debug: what
   the chat shows, how diffs render, which keys send, the starting permission mode, autosave,
   file checkpoints, upload and `@`-picker filters, log verbosity.
 - **[It tells you when it needs you](#pane-attention-notifications)** — with several panes working

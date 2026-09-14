@@ -364,6 +364,8 @@ public partial class ChatPaneControl
                 // the failure family, so it's the fallback rather than nothing.
                 ErrorKind = !string.IsNullOrEmpty(e.TerminalReason) ? e.TerminalReason : e.Subtype ?? "",
             });
+            // The turn moved this profile's plan usage; the status bar re-reads it from this pane's process.
+            Core.Usage.UsageStatusService.Instance.OnTurnEnded(Entry);
             MaybeGenerateTitle();
             // Refresh the toolbar title from disk: catches the ai-title once written
             // and any later refinement. The scan returns custom-title first, so a
@@ -710,6 +712,8 @@ public partial class ChatPaneControl
         => Dispatcher.Invoke(() =>
         {
             var info = e.Info;
+            // Ahead of the banner logic's early return: an "allowed" event still carries figures the status bar shows.
+            Core.Usage.UsageStatusService.Instance.OnRateLimit(Entry, info);
             var status = info?.Status ?? "";
             var type = info?.RateLimitType ?? "";
             var key = status + ":" + type;

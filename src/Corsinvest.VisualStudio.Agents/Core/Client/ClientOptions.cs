@@ -39,4 +39,9 @@ public sealed class ClientOptions
     /// the transport's env in <see cref="ClaudeClient"/>, with our required keys applied after
     /// so a profile can never override them.</summary>
     public IReadOnlyDictionary<string, string> Env { get; set; }
+
+    /// <summary>Launch without the user's MCP servers (<c>--strict-mcp-config</c> with no config of its
+    /// own). For a process that only answers a control request, like the usage probes, where connecting
+    /// every configured server would cost more than the answer.</summary>
+    public bool NoMcpServers { get; set; }
 }

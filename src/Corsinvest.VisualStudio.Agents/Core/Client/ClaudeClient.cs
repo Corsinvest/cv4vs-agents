@@ -202,6 +202,8 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // --setting-sources: headless mode loads NO settings by default; re-enable so the user's
         // ~/.claude/settings.json permissions.allow/deny apply (else CLI asks can_use_tool for every tool).
         args += " --setting-sources user,project,local";
+        // With no --mcp-config beside it this loads no MCP servers at all.
+        if (options.NoMcpServers) { args += " --strict-mcp-config"; }
         // Auto-approve our in-process IDE MCP tools so Claude can call them without a
         // permission prompt (acceptEdits does NOT auto-approve MCP tools — per SDK docs).
         if (!string.IsNullOrEmpty(SdkMcpServerName))

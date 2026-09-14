@@ -70,4 +70,14 @@ public class AgentsGeneralPage : AgentsOptionsPage
     [Description("Full path to claude.exe, to override auto-detection (PATH, native installer, npm). Leave empty to auto-detect. Must be the real claude.exe — .cmd/.bat/.ps1 shims cannot be launched.")]
     [Editor(typeof(ExeFileNameEditor), typeof(UITypeEditor))]
     public string ClaudeExecutablePath { get; set; } = "";
+
+    [DisplayName("Show plan usage in the status bar")]
+    [Description("Show the Claude plan's session (5h) and weekly (7d) usage in Visual Studio's status bar, for the profile of the pane you last used. Click it for every limit, when each resets, and the account.")]
+    public bool ShowUsageInStatusBar { get; set; } = true;
+
+    // Only the background probe follows this: a chat pane on the profile refreshes the numbers after its
+    // own turns whatever the value, and costs no extra process doing it.
+    [DisplayName("Status bar usage refresh (minutes)")]
+    [Description("How often the status bar refreshes plan usage while no chat pane on that profile is open, by starting a short-lived claude.exe — only while Visual Studio is in front. 0 = never in the background: open chat panes, and opening the status bar popup, still refresh it.")]
+    public int UsageRefreshMinutes { get; set; } = 15;
 }

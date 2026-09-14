@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Contracts;
+using Corsinvest.VisualStudio.Agents.Core.Client;
 using Corsinvest.VisualStudio.Agents.Helpers;
 using Newtonsoft.Json.Linq;
 using System;
@@ -18,6 +19,12 @@ namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 /// rather than throwing. Mirrors the WebView dialog's wording (cv-usage-dialog) so both views match.</summary>
 internal static class UsageMapper
 {
+    /// <summary>The window kinds <see cref="RateWindowDto.Kind"/> carries, whichever payload shape they
+    /// came from — what a client matches a window by, instead of its label.</summary>
+    public const string SessionKind = "session";
+    public const string WeeklyKind = "weekly";
+    public const string WeeklyScopedKind = "weekly_scoped";
+
     // The per-key windows older CLIs report, and their labels, same wording as the WebView dialog.
     private static readonly (string Key, string Name)[] KnownWindows =
     {
@@ -42,8 +49,7 @@ internal static class UsageMapper
             var windows = limits["limits"] is JArray list ? FromLimitsList(list) : FromKnownWindows(limits);
             dto.Windows = [.. windows
                 .OrderBy(w => KindOrder(w.Kind))
-                .ThenBy(w => w.Window.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(w => w.Window)];
+                .ThenBy(w => w.Name, StringComparer.OrdinalIgnoreCase)];
         }
 
         if (raw?["behaviors"] is JObject behaviors)
@@ -54,54 +60,80 @@ internal static class UsageMapper
         return dto;
     }
 
-    private static IEnumerable<(string Kind, RateWindowDto Window)> FromLimitsList(JArray list)
+    /// <summary>The account from init as the DTO the views take. Null when init carried none, as for an
+    /// API-key or third-party session.</summary>
+    public static AccountDto ToAccountDto(AccountInfo account)
+        => account == null
+            ? null
+            : new AccountDto
+            {
+                Email = account.Email,
+                Organization = account.Organization,
+                SubscriptionType = account.SubscriptionType,
+                ApiProvider = account.ApiProvider,
+            };
+
+    /// <summary>One vocabulary for both payload shapes and for rate_limit_event's rateLimitType: the
+    /// per-key names map onto the list's kinds. A kind this build doesn't know passes through.</summary>
+    public static string NormalizeKind(string kind) => kind switch
+    {
+        "session" or "five_hour" => SessionKind,
+        "weekly_all" or "seven_day" => WeeklyKind,
+        "weekly_scoped" or "seven_day_opus" or "seven_day_sonnet" => WeeklyScopedKind,
+        _ => kind ?? "",
+    };
+
+    /// <summary>The label for a normalized window kind; a scoped weekly is named after its model when
+    /// the CLI gave one.</summary>
+    public static string WindowName(string kind, string model = null) => kind switch
+    {
+        SessionKind => "Session (5hr)",
+        WeeklyKind => "Weekly (7 day)",
+        WeeklyScopedKind => string.IsNullOrEmpty(model) ? "Weekly (one model)" : "Weekly " + model,
+        _ => string.IsNullOrEmpty(kind) ? "Limit" : char.ToUpperInvariant(kind[0]) + kind.Substring(1).Replace('_', ' '),
+    };
+
+    /// <summary>Session first, then the weekly limit, then the per-model ones, then anything newer.</summary>
+    public static int KindOrder(string kind) => kind switch
+    {
+        SessionKind => 0,
+        WeeklyKind => 1,
+        WeeklyScopedKind => 2,
+        _ => 3,
+    };
+
+    private static IEnumerable<RateWindowDto> FromLimitsList(JArray list)
         => list.OfType<JObject>().Select(limit =>
         {
-            var kind = limit.Val("kind", "");
+            var kind = NormalizeKind(limit.Val("kind", ""));
             // scope is a JSON null on the unscoped windows, and a null token can't be indexed into.
             var model = ((limit["scope"] as JObject)?["model"] as JObject)?.Val("display_name");
-            return (kind, new RateWindowDto
+            return new RateWindowDto
             {
-                Name = LimitName(kind, model),
+                Kind = kind,
+                Name = WindowName(kind, model),
                 Utilization = Clamp(limit.Val("percent", 0)),
                 ResetsAt = ReadIso(limit, "resets_at"),
-            });
+                Severity = limit.Val("severity"),
+            };
         });
 
-    private static IEnumerable<(string Kind, RateWindowDto Window)> FromKnownWindows(JObject limits)
+    private static IEnumerable<RateWindowDto> FromKnownWindows(JObject limits)
     {
         foreach (var (key, name) in KnownWindows)
         {
             if (limits[key] is JObject w)
             {
-                yield return (key, new RateWindowDto
+                yield return new RateWindowDto
                 {
+                    Kind = NormalizeKind(key),
                     Name = name,
                     Utilization = Clamp(w.Val("utilization", 0)),
                     ResetsAt = ReadIso(w, "resets_at"),
-                });
+                };
             }
         }
     }
-
-    // The list's labels, worded like the per-key ones; a scoped weekly is named after its model.
-    private static string LimitName(string kind, string model) => kind switch
-    {
-        "session" => "Session (5hr)",
-        "weekly_all" => "Weekly (7 day)",
-        "weekly_scoped" => string.IsNullOrEmpty(model) ? "Weekly (one model)" : "Weekly " + model,
-        _ => string.IsNullOrEmpty(kind) ? "Limit" : char.ToUpperInvariant(kind[0]) + kind.Substring(1).Replace('_', ' '),
-    };
-
-    // Session first, then the weekly limit, then the per-model ones, then anything newer — in either
-    // shape's names.
-    private static int KindOrder(string kind) => kind switch
-    {
-        "session" or "five_hour" => 0,
-        "weekly_all" or "seven_day" => 1,
-        "weekly_scoped" or "seven_day_opus" or "seven_day_sonnet" => 2,
-        _ => 3,
-    };
 
     private static int Clamp(int percent) => Math.Max(0, Math.Min(100, percent));
 

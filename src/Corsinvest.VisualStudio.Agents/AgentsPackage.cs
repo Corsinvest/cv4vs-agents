@@ -469,6 +469,14 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             // won't fire for it, so run the pane restore here too. This is the common F5/reopen path.
             RestorePanesDeferred();
         }
+
+        // Plan usage in the status bar: the one piece of UI up before any pane. At shell idle, like the
+        // pane restore — building UI inside package load freezes VS.
+        _ = JoinableTaskFactory.StartOnIdle(() =>
+        {
+            try { Core.Usage.UsageStatusBarHost.Initialize(); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.UsageStatusBar", ex); }
+        });
     }
 
     protected override void Dispose(bool disposing)
@@ -494,6 +502,8 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             _reloadWatch = null;
             _hidePanesTimer?.Dispose();
             _hidePanesTimer = null;
+            try { Core.Usage.UsageStatusBarHost.Shutdown(); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.UsageStatusBar.Shutdown", ex); }
             Mcp.McpServerHost.Instance.Stop();
             AgentsOptions.Applied -= ProfilesMenuCommand.InvalidateCache;
             // Unadvise the selection sink (MS pattern: at package dispose) — without it the

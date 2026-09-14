@@ -110,7 +110,9 @@ Folder → Project → Days/Sessions) drives summary tiles, a GitHub-style activ
 per-day/per-model charts.
 
 A companion **Usage** tab shows each profile's live plan and rate-limit windows, and a **Context
-usage** tab breaks down how any historical session fills the model's context window.
+usage** tab breaks down how any historical session fills the model's context window. The plan's
+session and weekly figures also sit in Visual Studio's status bar, one click from every limit and
+when each resets.
 
 ![File history document-tab](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/file-history-document.png)
 
