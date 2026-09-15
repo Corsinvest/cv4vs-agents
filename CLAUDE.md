@@ -34,6 +34,10 @@ msbuild cv4vs-agents.slnx /t:Build /p:Configuration=Debug   # WebView build is h
 WebView (`src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/`): `npm run build` / `dev` /
 `typecheck` / `lint`.
 
+**The startup project is `Corsinvest.VisualStudio.Agents`, and no file in git holds that.** VS keeps
+it in the per-user `.vs/…/.suo`, and `.slnx` has no field for it — so adding a project can silently
+leave F5 launching something else, and the fix is to set it back, not to look for a file to commit.
+
 **Installs stack up.** VS keys extensions by `Identity Id`, so a build with a changed identity —
 or a changed display name — installs *alongside* the old one: duplicate menu entries, two MCP
 servers, and symptoms that look like bugs in the code. `tools\extension.ps1` is the test cycle

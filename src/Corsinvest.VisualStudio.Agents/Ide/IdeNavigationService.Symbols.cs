@@ -92,7 +92,25 @@ internal sealed partial class IdeNavigationService
         try
         {
             var document = ResolveDocument(filePath);
-            if (document == null) { return new SymbolsResult { Supported = false, Reason = "No language document for this file (language not supported)." }; }
+
+            // A file Roslyn does not have is not necessarily one the IDE cannot outline: a .vcxproj
+            // registers no Roslyn project at all, yet DTE's code model answers for it.
+            if (document == null)
+            {
+                var codeModelSymbols = await GetCodeModelSymbolsAsync(filePath, ct).ConfigureAwait(false);
+                return codeModelSymbols == null
+                    ? new SymbolsResult
+                    {
+                        Supported = false,
+                        Reason = "No language document for this file (language not supported)."
+                    }
+                    : new SymbolsResult
+                    {
+                        Supported = true,
+                        Symbols = codeModelSymbols,
+                        Reason = codeModelSymbols.Length > 0 ? null : "No symbols found.",
+                    };
+            }
 
             var items = await GetNavBarItemsAsync(document, ct).ConfigureAwait(false);
             if (items == null) { return new SymbolsResult { Supported = false, Reason = "This language has no navigation-bar service." }; }
