@@ -1411,11 +1411,17 @@ export class CvApp extends LitElement {
      * Read before the mutation: moving the bubble is what changes the height, so asking afterwards
      * measures the layout the answer is supposed to decide about.
      */
-    private _onQueuedSent = (e: CustomEvent<{ uuid: string }>): void => {
-        const uuid = e.detail?.uuid;
-        if (uuid) {
+    private _onQueuedSent = (e: CustomEvent<{ uuids: string[] }>): void => {
+        // A list, not one: Alt+Enter groups entries that leave as a single message, and moving
+        // only the first would strand the rest of the group further up the transcript.
+        const uuids = e.detail?.uuids ?? [];
+        if (uuids.length > 0) {
             const atBottom = this._isNearBottom();
-            this._mutate(() => this._transcript.moveToEnd(uuid));
+            this._mutate(() => {
+                for (const uuid of uuids) {
+                    this._transcript.moveToEnd(uuid);
+                }
+            });
             if (atBottom) {
                 queueMicrotask(() => this._scrollToBottom());
             }

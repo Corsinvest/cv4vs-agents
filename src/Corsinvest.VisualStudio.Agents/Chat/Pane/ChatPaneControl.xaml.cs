@@ -253,6 +253,22 @@ public partial class ChatPaneControl : PaneControlBase
         return true;
     }
 
+    /// <summary>Handle Alt+Enter, invoked by ChatPaneWindow when it intercepts the Properties
+    /// command from VS. The composer reads it as "queue this with the previous message"; it never
+    /// reached the page on its own because VS turns the chord into a command before WPF sees it.
+    /// <para>Claimed whenever this pane has focus, not conditionally: whether there is anything to
+    /// group with is known only inside the page, and asking across the bridge would make Exec
+    /// wait on a round trip. Properties has nothing to say about a conversation anyway, and a key
+    /// that works or opens a tool window depending on invisible state is worse than one that
+    /// always does the same thing. Returns false if the WebView isn't ready — then VS keeps
+    /// it.</para></summary>
+    internal bool HandleAltEnter()
+    {
+        if (_bridge == null) { return false; }
+        OnHostKeyPressed(new Contracts.HostKeyNotification { Key = "Enter", Alt = true });
+        return true;
+    }
+
     /// <summary>Only while the transport is up: a dead client keeps the exited process's id, which
     /// would show as a live PID pointing at nothing (or at whatever reused the number).</summary>
     protected override int CliProcessId => _client is { IsRunning: true } c ? c.Pid : 0;

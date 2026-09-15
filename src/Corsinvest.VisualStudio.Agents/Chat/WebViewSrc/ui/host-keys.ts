@@ -47,7 +47,40 @@ export function applyHostKey(e: HostKeyNotification): void {
         case 'End':
             moveCaret(e.key === 'Home', e.ctrl, e.shift);
             break;
+        case 'Enter':
+            // Alt+Enter only: VS reads it as Properties, so unlike the others here it never got
+            // to the browser at all rather than arriving and doing the wrong thing. Replayed as a
+            // real event on the focused field, so the composer's own handler decides — it knows
+            // whether there is a queue to group with, this does not.
+            if (e.alt) {
+                replayAltEnter();
+            }
+            break;
     }
+}
+
+/** Alt+Enter as the page would have seen it, replayed on the composer's textarea.
+ *  <para>Not on the focused field, the way the other host keys work: VS consumed the chord as its
+ *  Properties command, so by the time this arrives the focus is no longer where it was and
+ *  focusedField() answers null. The composer is the only thing that has ever wanted this key, so
+ *  it is addressed directly — through a real event rather than a method call, because the rule for
+ *  when grouping applies lives in cv-prompt's handler and should stay in one place.</para> */
+function replayAltEnter(): void {
+    const prompt = document.querySelector('cv-prompt');
+    const ta = prompt?.shadowRoot?.querySelector('textarea');
+    if (!ta) {
+        return;
+    }
+    ta.focus();
+    ta.dispatchEvent(
+        new KeyboardEvent('keydown', {
+            key: 'Enter',
+            altKey: true,
+            bubbles: true,
+            composed: true,
+            cancelable: true,
+        }),
+    );
 }
 
 /**
