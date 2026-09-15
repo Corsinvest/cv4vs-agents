@@ -6,6 +6,8 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Delete16Regular from '@fluentui/svg-icons/icons/delete_16_regular.svg';
+import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
+import Edit16Regular from '@fluentui/svg-icons/icons/edit_16_regular.svg';
 import TextBulletList16Regular from '@fluentui/svg-icons/icons/text_bullet_list_16_regular.svg';
 import { cleanMessageOnlyText } from '../../core/ide';
 import { iconStyles } from '../styles/shared';
@@ -24,8 +26,13 @@ export interface QueuedMessage {
 
 /** The row above the composer while messages are waiting to be sent. Stop drops the whole queue
  *  but stops the running turn with it, which is not what you want when it is one message you
- *  regret — so the bin here empties the queue on its own, and the list takes them out one at a
- *  time.
+ *  regret — so the bin in the list's head empties the queue on its own, and each item takes itself
+ *  out.
+ *
+ *  Two symbols for those two, a few pixels apart: the bin keeps the bulk action, which is
+ *  irreversible, while removing one entry from a volatile queue destroys nothing — and the cross is
+ *  already what "remove this" looks like everywhere else. With the same glyph in both places the
+ *  only difference would be position.
  *
  *  The row renders nothing when the queue is empty, so it costs no space the rest of the time —
  *  the toolbar below is already full. It is a count at any length: a single message used to have
@@ -61,7 +68,7 @@ export class CvQueueRow extends LitElement {
             /* Triggers are <fluent-button> — keep them pure (layout only). */
             .count-btn,
             .clear-btn,
-            .drop-btn {
+            .item-btn {
                 flex-shrink: 0;
             }
             /* Cut to icon width, like every other icon trigger in the composer: at Fluent's width
@@ -79,7 +86,7 @@ export class CvQueueRow extends LitElement {
             }
             .count-btn svg,
             .clear-btn svg,
-            .drop-btn svg {
+            .item-btn svg {
                 width: 16px;
                 height: 16px;
                 display: block;
@@ -95,9 +102,11 @@ export class CvQueueRow extends LitElement {
                 right: -9px;
             }
             /* Red on the glyph, not the button: it keeps the Fluent component pure, and grey
-               would read as disabled. Same treatment as the Stop squares on the sub-agent chip. */
+               would read as disabled. Same treatment as the Stop squares on the sub-agent chip.
+               Only what removes something — the pencil beside it edits, and red would read as a
+               warning about the wrong button. */
             .clear-btn svg,
-            .drop-btn svg {
+            .remove-btn svg {
                 color: var(--colorStatusDangerForeground1, #d13438);
             }
 
@@ -123,6 +132,10 @@ export class CvQueueRow extends LitElement {
                 display: none;
             }
             .head {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
                 font-size: 1.1em;
                 font-weight: var(--fontWeightSemibold);
                 margin-bottom: 10px;
@@ -133,8 +146,28 @@ export class CvQueueRow extends LitElement {
                 display: flex;
                 align-items: flex-start;
                 gap: 8px;
-                padding: 6px 0;
+                padding: 6px 4px;
                 border-bottom: 1px solid var(--colorNeutralStroke3);
+                border-radius: 3px;
+                cursor: pointer;
+            }
+            .item:hover {
+                background: var(--colorNeutralBackground1Hover);
+            }
+            /* Same three rules the chat's other hover actions run on (chat.css): a reserved height
+               so revealing never shifts the row, :focus-within because a keyboard user never
+               hovers, and opacity rather than display so the buttons stay in the tab order. */
+            .item-actions {
+                display: flex;
+                flex-shrink: 0;
+                gap: 2px;
+                min-height: 24px;
+                opacity: 0;
+                transition: opacity 0.1s ease;
+            }
+            .item:hover .item-actions,
+            .item:focus-within .item-actions {
+                opacity: 1;
             }
             .item:last-child {
                 border-bottom: none;
@@ -253,6 +286,32 @@ export class CvQueueRow extends LitElement {
         );
     }
 
+    /** Hand the message back to the composer to be fixed. The list closes with it: what you are
+     *  editing is down there now, and a popover over the composer would be in the way. */
+    private _edit(uuid: string): void {
+        this.dispatchEvent(
+            new CustomEvent('edit-queued', { detail: { uuid }, bubbles: true, composed: true }),
+        );
+        this._open = false;
+    }
+
+    /** The item is the click target, so its buttons have to stop the event reaching it — pressing
+     *  remove would otherwise open the editor on the entry it is deleting. */
+    private _onAction(e: Event, run: () => void): void {
+        e.stopPropagation();
+        run();
+    }
+
+    /** Enter and Space on a focused item. The item is a div, so unlike the fluent-button it
+     *  replaced it does not get these for free. */
+    private _onItemKey(e: KeyboardEvent, uuid: string): void {
+        if (e.key !== 'Enter' && e.key !== ' ') {
+            return;
+        }
+        e.preventDefault();
+        this._edit(uuid);
+    }
+
     private _clear = (): void => {
         this.dispatchEvent(new CustomEvent('clear-queue', { bubbles: true, composed: true }));
     };
@@ -297,28 +356,49 @@ export class CvQueueRow extends LitElement {
                         ></fluent-counter-badge>
                     </span>
                 </fluent-button>
-                ${this._renderClear()}
             </div>
             <div class="popover" ?hidden=${!this._open}>
-                <div class="head">Not sent yet (${n})</div>
+                <div class="head">
+                    <span>Not sent yet (${n})</span>
+                    ${this._renderClear()}
+                </div>
                 ${this.messages.map(
                     (m, i) =>
-                        html`<div class="item">
+                        html`<div
+                            class="item"
+                            role="button"
+                            tabindex="0"
+                            title="Edit in the composer"
+                            @click=${() => this._edit(m.uuid)}
+                            @keydown=${(e: KeyboardEvent) => this._onItemKey(e, m.uuid)}
+                        >
                             <span class="ord">${i + 1}</span>
                             <div class="item-body">
                                 ${CvQueueRow._renderItemText(m.text)}
                                 ${CvQueueRow._renderFiles(m.attachments)}
                             </div>
-                            <fluent-button
-                                class="drop-btn"
-                                appearance="subtle"
-                                size="small"
-                                icon-only
-                                title="Remove from queue"
-                                aria-label="Remove from queue"
-                                @click=${() => this._drop(m.uuid)}
-                                >${unsafeHTML(Delete16Regular)}</fluent-button
-                            >
+                            <span class="item-actions">
+                                <fluent-button
+                                    class="item-btn"
+                                    appearance="subtle"
+                                    size="small"
+                                    icon-only
+                                    title="Edit in the composer"
+                                    aria-label="Edit in the composer"
+                                    @click=${(e: Event) => this._onAction(e, () => this._edit(m.uuid))}
+                                    >${unsafeHTML(Edit16Regular)}</fluent-button
+                                >
+                                <fluent-button
+                                    class="item-btn remove-btn"
+                                    appearance="subtle"
+                                    size="small"
+                                    icon-only
+                                    title="Remove from queue"
+                                    aria-label="Remove from queue"
+                                    @click=${(e: Event) => this._onAction(e, () => this._drop(m.uuid))}
+                                    >${unsafeHTML(Dismiss16Regular)}</fluent-button
+                                >
+                            </span>
                         </div>`,
                 )}
             </div>`;
