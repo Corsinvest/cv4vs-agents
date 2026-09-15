@@ -106,7 +106,7 @@ internal sealed partial class IdeNavigationService
 
         try
         {
-            var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
+            var solution = CurrentSolution;
             var projects = ((IEnumerable)VsReflection.GetProp(solution, "Projects")).Cast<object>().ToList();
 
             // The service is registered per language, so group the projects by the instance that
