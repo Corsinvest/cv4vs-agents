@@ -102,6 +102,10 @@ own.
 - **[Review changes in VS's own diff](docs/chat/diff.md)** — every Edit/Write shows as an inline diff,
   and opens in Visual Studio's native, **editable** side-by-side diff: **save (Ctrl+S) to accept** or
   **close to reject**, the CLI applies it only if you saved.
+- **Edit the plan before you approve it** — a long plan doesn't have to be read through the banner's
+  small scrolling box: **Open in editor** shows it as a normal document in VS's Markdown editor,
+  full-size. While it is still waiting on your answer you can change it there and save — the banner
+  picks the change up, and approving sends what *you* wrote, not what was proposed.
 - **[Take the files back](docs/chat/rewind.md)** — `/rewind` restores them to the state before any
   message of the session, and leaves the conversation where it is. Pick a message and it says what
   would change — files, lines added and removed — before you commit to it; click a file and its copy
@@ -140,6 +144,10 @@ own.
   nothing — a build error is worth asking about without highlighting it first.
 - **Jump between panes** — a toolbar list of every open pane, Chat and CLI together, each with its
   title and kind. Docked panes hide each other behind tabs; this is how you find the one you want.
+- **Code review findings as a list** — `/code-review` reports its findings as a readable list —
+  severity first, each with its file and line as a link that opens there — instead of the raw call
+  data. The row grows to fit them, so nothing hides behind an inner scrollbar; after a `--fix` run it
+  also says what each finding became.
 - **[Sub-agent panel](docs/chat/sub-agents.md)** — a chip shows how many sub-agents are running; click it
   for a live list with per-agent Stop and Stop-all, so a fan-out never gets away from you.
   Background/async agents are tracked too: the turn is "finished" only once they are.
@@ -170,7 +178,7 @@ own.
 - **[Restore panes on solution open](docs/options.md#general)** *(opt-in)* — reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
-- **[Tune it to your taste](docs/options.md)** — 29 options across General, Chat and Debug: what
+- **[Tune it to your taste](docs/options.md)** — 33 options across General, Chat and Debug: what
   the chat shows, how diffs render, which keys send, the starting permission mode, autosave,
   file checkpoints, upload and `@`-picker filters, log verbosity.
 - **[It tells you when it needs you](#pane-attention-notifications)** — with several panes working
