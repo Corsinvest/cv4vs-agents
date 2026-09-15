@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -139,20 +140,35 @@ internal sealed partial class IdeNavigationService
         return docId == null ? null : VsReflection.Invoke(solution, "GetDocument", [docId.GetType()], [docId]);
     }
 
+    /// <summary>The projects of the current solution. C++ is not among them: a .vcxproj produces
+    /// no Compilation and so registers no Roslyn project at all.</summary>
+    private IEnumerable<object> Projects
+        => ((IEnumerable)VsReflection.GetProp(CurrentSolution, "Projects")).Cast<object>();
+
+    /// <summary>A project's LanguageServices, under either of the two names Roslyn has given that
+    /// property — which is the whole reason this is a method and not a read.</summary>
+    private static object LanguageServicesOf(object project)
+        => VsReflection.GetPropOrNull(project, "Services")
+           ?? VsReflection.GetPropOrNull(project, "LanguageServices");
+
+    /// <summary>services.GetService&lt;serviceType&gt;(), the generic bound per call. Null when
+    /// either side is missing, so callers can treat "no services" and "service not registered"
+    /// alike.</summary>
+    private object GetServiceFrom(object services, Type serviceType)
+        => services == null || serviceType == null
+            ? null
+            : _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null);
+
     /// <summary>document.Project.Services.GetService&lt;serviceType&gt;() — the per-language
     /// service hop. Null if this language doesn't register the service.</summary>
     private object GetLanguageService(object document, Type serviceType)
-    {
-        var project = VsReflection.GetProp(document, "Project");
-        var services = VsReflection.GetProp(project, "Services"); // LanguageServices
-        return _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null);
-    }
+        => GetServiceFrom(LanguageServicesOf(VsReflection.GetProp(document, "Project")), serviceType);
 
     /// <summary>Byte offset of <paramref name="symbolName"/> on the given 1-based line, or
     /// -1 if not present. Uses the public SourceText API.</summary>
     private static async Task<int> ResolveOffsetAsync(object document, int line, string symbolName, CancellationToken ct)
     {
-        var text = await VsReflection.InvokeAsync(document, "GetTextAsync", ct); // SourceText
+        var text = await GetTextAsync(document, ct).ConfigureAwait(false); // SourceText
 
         var lines = VsReflection.GetProp(text, "Lines"); // TextLineCollection
         var lineCount = VsReflection.GetProp<int>(lines, "Count");
@@ -263,11 +279,10 @@ internal sealed partial class IdeNavigationService
 
         try
         {
-            var byLanguage = new System.Collections.Generic.Dictionary<string, LanguageCoverage>(StringComparer.Ordinal);
-            var inWorkspace = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var byLanguage = new Dictionary<string, LanguageCoverage>(StringComparer.Ordinal);
+            var inWorkspace = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            var solution = CurrentSolution;
-            foreach (var project in ((IEnumerable)VsReflection.GetProp(solution, "Projects")).Cast<object>())
+            foreach (var project in Projects)
             {
                 var language = VsReflection.GetPropOrNull(project, "Language") as string ?? "?";
                 if (VsReflection.GetPropOrNull(project, "Name") is string name) { inWorkspace[name] = language; }
@@ -278,13 +293,10 @@ internal sealed partial class IdeNavigationService
 
                     // Ask once per language, not once per project: the services are registered
                     // per language, so every project of one answers identically.
-                    var services = VsReflection.GetPropOrNull(project, "Services")
-                                   ?? VsReflection.GetPropOrNull(project, "LanguageServices");
+                    var services = LanguageServicesOf(project);
                     foreach (var (serviceName, serviceType) in wanted)
                     {
-                        coverage.Services[serviceName] = serviceType != null
-                            && services != null
-                            && _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null) != null;
+                        coverage.Services[serviceName] = GetServiceFrom(services, serviceType) != null;
                     }
                 }
                 coverage.ProjectCount++;
@@ -422,15 +434,11 @@ internal sealed partial class IdeNavigationService
         try
         {
             var serviceType = VsReflection.FindType("Microsoft.CodeAnalysis.Editor.IContentTypeLanguageService");
-            var solution = CurrentSolution;
-            foreach (var project in ((IEnumerable)VsReflection.GetProp(solution, "Projects")).Cast<object>())
+            foreach (var project in Projects)
             {
                 if (VsReflection.GetPropOrNull(project, "Language") as string != language) { continue; }
-                var services = VsReflection.GetPropOrNull(project, "Services")
-                               ?? VsReflection.GetPropOrNull(project, "LanguageServices");
-                if (serviceType == null || services == null) { break; }
 
-                var service = _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null);
+                var service = GetServiceFrom(LanguageServicesOf(project), serviceType);
                 var contentType = service == null ? null : VsReflection.Invoke(service, "GetDefaultContentType");
                 name = VsReflection.GetPropOrNull(contentType, "TypeName") as string;
                 break;

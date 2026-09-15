@@ -176,7 +176,7 @@ internal sealed partial class IdeNavigationService
     {
         try
         {
-            var text = await VsReflection.InvokeAsync(document, "GetTextAsync", ct);   // SourceText
+            var text = await GetTextAsync(document, ct).ConfigureAwait(false);   // SourceText
             var container = VsReflection.GetProp(text, "Container");
             // Microsoft.CodeAnalysis.Text.Extensions.TryGetTextBuffer(container) — an extension
             // method on the editor side, so it is reached by name rather than on the instance.
