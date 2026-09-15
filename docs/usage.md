@@ -25,6 +25,8 @@ providers (z.ai/GLM, Bedrock, Vertex, gateway) don't get it — the link wouldn'
 The same numbers without opening anything: an item at the right of Visual Studio's status bar, beside
 the notification bell.
 
+![The status bar item and the popup it opens](images/plan-usage-status-bar.png)
+
 `Claude: 5h 44% · 7d 10%` — the profile, then the session (5-hour) and weekly (7-day) windows, each with
 a thin bar under it. A bar turns amber at 75% and red at 90%, or sooner when the CLI itself flags the
 window. The tooltip lists every window with its reset time.
