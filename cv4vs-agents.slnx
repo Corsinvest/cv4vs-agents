@@ -9,14 +9,14 @@
     <File Path="CLAUDE.md" />
     <File Path="CODE_OF_CONDUCT.md" />
     <Project Path="src/Corsinvest.VisualStudio.Agents.Contracts/Corsinvest.VisualStudio.Agents.Contracts.csproj" />
-    <Project Path="src/Corsinvest.VisualStudio.Agents/Corsinvest.VisualStudio.Agents.csproj" />
+    <Project Path="src/Corsinvest.VisualStudio.Agents/Corsinvest.VisualStudio.Agents.csproj" Id="d1e2f3a4-b5c6-7890-defa-ab1234567890" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Corsinvest.VisualStudio.Agents.Tests/Corsinvest.VisualStudio.Agents.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/LangMatrix/">
     <File Path="tests/LangMatrix/README.md" />
-    <Project Path="tests/LangMatrix/CppLib/CppLib.vcxproj">
+    <Project Path="tests/LangMatrix/CppLib/CppLib.vcxproj" Id="a1b2c3d4-1111-4444-9999-000000000001">
       <BuildType Project="Debug" />
       <Platform Project="x64" />
       <Build Project="false" />

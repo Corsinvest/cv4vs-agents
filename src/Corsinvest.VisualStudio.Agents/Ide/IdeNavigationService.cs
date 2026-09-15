@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -122,32 +123,52 @@ internal sealed partial class IdeNavigationService
         return false;
     }
 
+    /// <summary>The snapshot every feature starts from. A property rather than a field: the
+    /// workspace hands out a new immutable Solution on every edit, so a cached one would go
+    /// stale.</summary>
+    private object CurrentSolution => VsReflection.GetProp(_workspace, "CurrentSolution");
+
     /// <summary>workspace.CurrentSolution → the Document object for <paramref name="filePath"/>,
     /// or null if the file isn't a Roslyn document in the open solution. Shared resolution used
     /// by every feature.</summary>
     private object ResolveDocument(string filePath)
     {
-        var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
+        var solution = CurrentSolution;
         var docIds = (IEnumerable)VsReflection.Invoke(solution, "GetDocumentIdsWithFilePath",
             [typeof(string)], [filePath]);
         var docId = docIds?.Cast<object>().FirstOrDefault();
         return docId == null ? null : VsReflection.Invoke(solution, "GetDocument", [docId.GetType()], [docId]);
     }
 
+    /// <summary>The projects of the current solution. C++ is not among them: a .vcxproj produces
+    /// no Compilation and so registers no Roslyn project at all.</summary>
+    private IEnumerable<object> Projects
+        => ((IEnumerable)VsReflection.GetProp(CurrentSolution, "Projects")).Cast<object>();
+
+    /// <summary>A project's LanguageServices, under either of the two names Roslyn has given that
+    /// property — which is the whole reason this is a method and not a read.</summary>
+    private static object LanguageServicesOf(object project)
+        => VsReflection.GetPropOrNull(project, "Services")
+           ?? VsReflection.GetPropOrNull(project, "LanguageServices");
+
+    /// <summary>services.GetService&lt;serviceType&gt;(), the generic bound per call. Null when
+    /// either side is missing, so callers can treat "no services" and "service not registered"
+    /// alike.</summary>
+    private object GetServiceFrom(object services, Type serviceType)
+        => services == null || serviceType == null
+            ? null
+            : _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null);
+
     /// <summary>document.Project.Services.GetService&lt;serviceType&gt;() — the per-language
     /// service hop. Null if this language doesn't register the service.</summary>
     private object GetLanguageService(object document, Type serviceType)
-    {
-        var project = VsReflection.GetProp(document, "Project");
-        var services = VsReflection.GetProp(project, "Services"); // LanguageServices
-        return _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null);
-    }
+        => GetServiceFrom(LanguageServicesOf(VsReflection.GetProp(document, "Project")), serviceType);
 
     /// <summary>Byte offset of <paramref name="symbolName"/> on the given 1-based line, or
     /// -1 if not present. Uses the public SourceText API.</summary>
     private static async Task<int> ResolveOffsetAsync(object document, int line, string symbolName, CancellationToken ct)
     {
-        var text = await VsReflection.InvokeAsync(document, "GetTextAsync", ct); // SourceText
+        var text = await GetTextAsync(document, ct).ConfigureAwait(false); // SourceText
 
         var lines = VsReflection.GetProp(text, "Lines"); // TextLineCollection
         var lineCount = VsReflection.GetProp<int>(lines, "Count");
@@ -213,9 +234,10 @@ internal sealed partial class IdeNavigationService
         public string Reason { get; set; }
         public LanguageCoverage[] Languages { get; set; } = [];
         /// <summary>Projects of the solution that are in no Roslyn workspace at all — C++ and the
-        /// like. Their languages cannot be reached through any of the services below, whatever
-        /// those answer. Carries the extensions too: the project name alone says a project is out
-        /// of reach without saying what is in it.</summary>
+        /// like. None of the services below can be asked about them, whatever those answer;
+        /// get_document_symbols is the one tool that still answers, through the project system.
+        /// Carries the extensions too: the project name alone says a project is out of reach
+        /// without saying what is in it.</summary>
         public ForeignFiles[] ProjectsOutsideWorkspace { get; set; } = [];
 
         /// <summary>Source files inside covered projects that their language does not answer for.
@@ -247,22 +269,25 @@ internal sealed partial class IdeNavigationService
         EnsureRenameProbed();
         EnsureSearchProbed();
 
-        var wanted = new (string Name, Type Type)[]
+        // A feature can be served by more than one interface, and the report has to ask for all of
+        // them: document symbols answers from the Features layer for C#/VB and from the editor one
+        // for F# and TypeScript, so asking only the first reported those two as uncovered while the
+        // tool itself was returning their outline.
+        var wanted = new (string Name, Type[] Types)[]
         {
-            ("go_to_definition", _navigableItemsServiceType),
-            ("find_references / go_to_implementation", _findUsagesServiceType),
-            ("get_document_symbols", _navBarServiceType),
-            ("rename_symbol", _inlineRenameServiceType),
-            ("search_workspace_symbols", _navigateToServiceType),
+            ("go_to_definition", [_navigableItemsServiceType]),
+            ("find_references / go_to_implementation", [_findUsagesServiceType]),
+            ("get_document_symbols", [_navBarServiceType, _editorNavBarServiceType]),
+            ("rename_symbol", [_inlineRenameServiceType]),
+            ("search_workspace_symbols", [_navigateToServiceType]),
         };
 
         try
         {
-            var byLanguage = new System.Collections.Generic.Dictionary<string, LanguageCoverage>(StringComparer.Ordinal);
-            var inWorkspace = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var byLanguage = new Dictionary<string, LanguageCoverage>(StringComparer.Ordinal);
+            var inWorkspace = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
-            foreach (var project in ((IEnumerable)VsReflection.GetProp(solution, "Projects")).Cast<object>())
+            foreach (var project in Projects)
             {
                 var language = VsReflection.GetPropOrNull(project, "Language") as string ?? "?";
                 if (VsReflection.GetPropOrNull(project, "Name") is string name) { inWorkspace[name] = language; }
@@ -273,13 +298,11 @@ internal sealed partial class IdeNavigationService
 
                     // Ask once per language, not once per project: the services are registered
                     // per language, so every project of one answers identically.
-                    var services = VsReflection.GetPropOrNull(project, "Services")
-                                   ?? VsReflection.GetPropOrNull(project, "LanguageServices");
-                    foreach (var (serviceName, serviceType) in wanted)
+                    var services = LanguageServicesOf(project);
+                    foreach (var (serviceName, serviceTypes) in wanted)
                     {
-                        coverage.Services[serviceName] = serviceType != null
-                            && services != null
-                            && _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null) != null;
+                        coverage.Services[serviceName] =
+                            serviceTypes.Any(t => GetServiceFrom(services, t) != null);
                     }
                 }
                 coverage.ProjectCount++;
@@ -417,15 +440,11 @@ internal sealed partial class IdeNavigationService
         try
         {
             var serviceType = VsReflection.FindType("Microsoft.CodeAnalysis.Editor.IContentTypeLanguageService");
-            var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
-            foreach (var project in ((IEnumerable)VsReflection.GetProp(solution, "Projects")).Cast<object>())
+            foreach (var project in Projects)
             {
                 if (VsReflection.GetPropOrNull(project, "Language") as string != language) { continue; }
-                var services = VsReflection.GetPropOrNull(project, "Services")
-                               ?? VsReflection.GetPropOrNull(project, "LanguageServices");
-                if (serviceType == null || services == null) { break; }
 
-                var service = _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null);
+                var service = GetServiceFrom(LanguageServicesOf(project), serviceType);
                 var contentType = service == null ? null : VsReflection.Invoke(service, "GetDefaultContentType");
                 name = VsReflection.GetPropOrNull(contentType, "TypeName") as string;
                 break;
@@ -474,13 +493,42 @@ internal sealed partial class IdeNavigationService
         }
     }
 
+    /// <summary><para>File contents for the duration of one tool call, so a result list does not
+    /// re-read the same file once per hit — find-references answering fifty times out of one file
+    /// read it fifty times and walked it from the top each time.</para>
+    /// <para>Deliberately not static: it lives as long as the call that created it, because a file
+    /// edited between two calls has to be read again. Null means "no caching", which is what a
+    /// caller outside a result loop gets.</para></summary>
+    private sealed class FileTextCache
+    {
+        private readonly Dictionary<string, string> _byPath = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The file's text, or null if it cannot be read. A failed read is cached too:
+        /// a missing file will not appear mid-call, and retrying it per hit costs the same as
+        /// reading it.</summary>
+        public string Read(string filePath)
+        {
+            if (_byPath.TryGetValue(filePath, out var cached)) { return cached; }
+            string content;
+            try { content = System.IO.File.ReadAllText(filePath); }
+            catch { content = null; }
+            _byPath[filePath] = content;
+            return content;
+        }
+    }
+
     /// <summary>1-based line/column for a byte offset into a file on disk, plus the trimmed source
-    /// line. Used when the hit is in a file we don't hold a SourceText for.</summary>
-    private static (int line, int col, string preview) FileOffsetToLineCol(string filePath, int offset)
+    /// line. Used when the hit is in a file we don't hold a SourceText for. The cache is required
+    /// rather than optional: every caller maps a list, and one that forgot it would quietly re-read
+    /// the same file per hit.</summary>
+    private static (int line, int col, string preview) FileOffsetToLineCol(
+        string filePath, int offset, FileTextCache cache)
     {
         try
         {
-            var content = System.IO.File.ReadAllText(filePath);
+            var content = cache.Read(filePath);
+            if (content == null) { return (0, 0, null); }
+
             int line = 1, col = 1;
             for (int i = 0; i < offset && i < content.Length; i++)
             {

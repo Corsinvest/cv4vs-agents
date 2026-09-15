@@ -150,6 +150,7 @@
     <Compile Include="Ide\IdeNavigationService.Definition.cs" />
     <Compile Include="Ide\IdeNavigationService.References.cs" />
     <Compile Include="Ide\IdeNavigationService.Symbols.cs" />
+    <Compile Include="Ide\IdeNavigationService.SymbolsCodeModel.cs" />
     <Compile Include="Ide\IdeNavigationService.Rename.cs" />
     <Compile Include="Ide\IdeNavigationService.Search.cs" />
     <Compile Include="Ide\IdeDiffViewer.cs" />
