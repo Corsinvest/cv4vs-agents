@@ -315,6 +315,10 @@ internal sealed partial class IdeNavigationService
     private sealed class HitCollector(int maxHits)
     {
         private readonly List<SymbolHit> _hits = [];
+
+        // One collector spans the whole search, batches included, and hits cluster by file — so
+        // the cache belongs here rather than per batch.
+        private readonly FileTextCache _fileText = new();
         private CancellationTokenSource _stopWhenFull;
 
         public IReadOnlyList<SymbolHit> Hits => _hits;
@@ -339,7 +343,7 @@ internal sealed partial class IdeNavigationService
             foreach (var item in results)
             {
                 if (IsFull) { break; }
-                var hit = MapNavigateToResult(item);
+                var hit = MapNavigateToResult(item, _fileText);
                 if (hit != null) { _hits.Add(hit); }
             }
             if (IsFull) { _stopWhenFull?.Cancel(); }
@@ -347,53 +351,35 @@ internal sealed partial class IdeNavigationService
         }
     }
 
-    /// <summary>Read a property that the concrete type may implement explicitly. Roslyn returns
-    /// results as a private nested type whose members exist only on the interface, so a lookup on
-    /// <c>GetType()</c> finds nothing and silently yields null.</summary>
-    private static object ReadThroughInterfaces(object obj, string name)
-    {
-        if (obj == null) { return null; }
-
-        var direct = obj.GetType().GetProperty(name);
-        if (direct != null) { return direct.GetValue(obj); }
-
-        foreach (var iface in obj.GetType().GetInterfaces())
-        {
-            var prop = iface.GetProperty(name);
-            if (prop != null) { return prop.GetValue(obj); }
-        }
-        return null;
-    }
-
     // Map one INavigateToSearchResult (internal) to our SymbolHit.
-    private static SymbolHit MapNavigateToResult(object item)
+    private static SymbolHit MapNavigateToResult(object item, FileTextCache fileText)
     {
         try
         {
-            var name = (string)ReadThroughInterfaces(item, "Name");
+            var name = (string)VsReflection.GetPropThroughInterfaces(item, "Name");
             if (string.IsNullOrEmpty(name)) { return null; }
 
-            var kind = (string)ReadThroughInterfaces(item, "Kind");
+            var kind = (string)VsReflection.GetPropThroughInterfaces(item, "Kind");
 
             // AdditionalInformation is the container as VS shows it ("in ClienteRepository
             // (project X)") — already localized by the language service, so it is taken as is.
-            var container = (string)ReadThroughInterfaces(item, "AdditionalInformation");
+            var container = (string)VsReflection.GetPropThroughInterfaces(item, "AdditionalInformation");
 
             // NavigableItem carries the position: Document.FilePath + SourceSpan.Start.
-            var navItem = ReadThroughInterfaces(item, "NavigableItem");
+            var navItem = VsReflection.GetPropThroughInterfaces(item, "NavigableItem");
             if (navItem == null) { return null; }
 
-            var doc = ReadThroughInterfaces(navItem, "Document");
-            var filePath = (string)ReadThroughInterfaces(doc, "FilePath");
+            var doc = VsReflection.GetPropThroughInterfaces(navItem, "Document");
+            var filePath = (string)VsReflection.GetPropThroughInterfaces(doc, "FilePath");
             if (string.IsNullOrEmpty(filePath)) { return null; }
 
-            var span = ReadThroughInterfaces(navItem, "SourceSpan");
+            var span = VsReflection.GetPropThroughInterfaces(navItem, "SourceSpan");
             var line = 0;
             string preview = null;
             if (span != null)
             {
                 var start = VsReflection.GetProp<int>(span, "Start");
-                (line, _, preview) = FileOffsetToLineCol(filePath, start);
+                (line, _, preview) = FileOffsetToLineCol(filePath, start, fileText);
             }
 
             return new SymbolHit

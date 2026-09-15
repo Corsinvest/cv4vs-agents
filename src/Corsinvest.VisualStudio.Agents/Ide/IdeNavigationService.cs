@@ -487,13 +487,42 @@ internal sealed partial class IdeNavigationService
         }
     }
 
+    /// <summary><para>File contents for the duration of one tool call, so a result list does not
+    /// re-read the same file once per hit — find-references answering fifty times out of one file
+    /// read it fifty times and walked it from the top each time.</para>
+    /// <para>Deliberately not static: it lives as long as the call that created it, because a file
+    /// edited between two calls has to be read again. Null means "no caching", which is what a
+    /// caller outside a result loop gets.</para></summary>
+    private sealed class FileTextCache
+    {
+        private readonly Dictionary<string, string> _byPath = new(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>The file's text, or null if it cannot be read. A failed read is cached too:
+        /// a missing file will not appear mid-call, and retrying it per hit costs the same as
+        /// reading it.</summary>
+        public string Read(string filePath)
+        {
+            if (_byPath.TryGetValue(filePath, out var cached)) { return cached; }
+            string content;
+            try { content = System.IO.File.ReadAllText(filePath); }
+            catch { content = null; }
+            _byPath[filePath] = content;
+            return content;
+        }
+    }
+
     /// <summary>1-based line/column for a byte offset into a file on disk, plus the trimmed source
-    /// line. Used when the hit is in a file we don't hold a SourceText for.</summary>
-    private static (int line, int col, string preview) FileOffsetToLineCol(string filePath, int offset)
+    /// line. Used when the hit is in a file we don't hold a SourceText for. The cache is required
+    /// rather than optional: every caller maps a list, and one that forgot it would quietly re-read
+    /// the same file per hit.</summary>
+    private static (int line, int col, string preview) FileOffsetToLineCol(
+        string filePath, int offset, FileTextCache cache)
     {
         try
         {
-            var content = System.IO.File.ReadAllText(filePath);
+            var content = cache.Read(filePath);
+            if (content == null) { return (0, 0, null); }
+
             int line = 1, col = 1;
             for (int i = 0; i < offset && i < content.Length; i++)
             {

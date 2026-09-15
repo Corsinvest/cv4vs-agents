@@ -77,6 +77,38 @@ internal static class VsReflection
         }
     }
 
+    // Property lookups for GetPropThroughInterfaces, keyed by concrete type and name. That one is
+    // called per result inside a loop, and its slow path walks every interface the type wears —
+    // while the objects in one loop are all the same type and the names are constants, so from the
+    // second item on this is a dictionary hit. Misses are cached too (null value).
+    private static readonly ConcurrentDictionary<(Type, string), PropertyInfo> _interfacePropCache = new();
+
+    /// <summary><para>Read a property that the concrete type may implement explicitly: a lookup on
+    /// GetType() finds nothing there, so the interfaces are searched too. Roslyn hands out results
+    /// as private nested types whose members exist only on the interface, and the plain read
+    /// silently yields null on those.</para>
+    /// <para>Cached per (type, name) — this is the one reflection path here that runs per item
+    /// rather than once per call.</para></summary>
+    public static object GetPropThroughInterfaces(object obj, string name)
+    {
+        if (obj == null) { return null; }
+        var prop = _interfacePropCache.GetOrAdd((obj.GetType(), name), static key => FindProp(key.Item1, key.Item2));
+        return prop?.GetValue(obj);
+    }
+
+    private static PropertyInfo FindProp(Type type, string name)
+    {
+        var direct = type.GetProperty(name);
+        if (direct != null) { return direct; }
+
+        foreach (var iface in type.GetInterfaces())
+        {
+            var prop = iface.GetProperty(name);
+            if (prop != null) { return prop; }
+        }
+        return null;
+    }
+
     /// <summary>Invoke an async method declared by <paramref name="declaring"/> rather than by the
     /// object's concrete type, and await it. Same reason as <see cref="GetPropSafe"/>: resolving a
     /// method on an implementation that wears several interfaces is ambiguous, while the interface
