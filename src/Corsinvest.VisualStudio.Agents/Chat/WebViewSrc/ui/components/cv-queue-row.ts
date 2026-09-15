@@ -7,7 +7,6 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Delete16Regular from '@fluentui/svg-icons/icons/delete_16_regular.svg';
 import TextBulletList16Regular from '@fluentui/svg-icons/icons/text_bullet_list_16_regular.svg';
-import Attach16Regular from '@fluentui/svg-icons/icons/attach_16_regular.svg';
 import { cleanMessageOnlyText } from '../../core/ide';
 import { iconStyles } from '../styles/shared';
 import { iconUrl } from '../../core/icon-url';
@@ -29,9 +28,9 @@ export interface QueuedMessage {
  *  time.
  *
  *  The row renders nothing when the queue is empty, so it costs no space the rest of the time —
- *  the toolbar below is already full. With a single message its text sits in the row, and the bin
- *  has a visible target; past that the text no longer fits, so a count opens the list instead. The
- *  bin keeps its place through both, which is what lets you hit it without looking.
+ *  the toolbar below is already full. It is a count at any length: a single message used to have
+ *  its text inline instead, truncated to whatever the label and the buttons left over, where it
+ *  could be neither read in full nor copied. The list is the one place the messages are shown.
  *
  *  Shadow DOM + static styles, and the popover shares this root so it can be positioned against
  *  the trigger — same reason as cv-subagent-chip, which this follows throughout. */
@@ -56,33 +55,8 @@ export class CvQueueRow extends LitElement {
                 font-size: 0.85em;
                 color: var(--colorNeutralForeground3);
             }
-            /* The single-message text: one line, ellipsised. The bubble above still holds the
-               whole thing, so this only has to be enough to recognise which one it is. */
-            .text {
-                flex: 1;
-                min-width: 0;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                font-size: 0.85em;
-                color: var(--colorNeutralForeground3);
-            }
             .spacer {
                 flex: 1;
-            }
-            /* Sits between the text and the buttons, so it must not be what gives way when the
-               text is long — the text has the ellipsis for that. */
-            .file-count {
-                display: inline-flex;
-                align-items: center;
-                gap: 2px;
-                flex-shrink: 0;
-                font-size: 0.85em;
-                color: var(--colorNeutralForeground3);
-            }
-            .file-count svg {
-                width: 14px;
-                height: 14px;
             }
             /* Triggers are <fluent-button> — keep them pure (layout only). */
             .count-btn,
@@ -227,9 +201,9 @@ export class CvQueueRow extends LitElement {
     };
 
     override willUpdate(): void {
-        // Taking the second-to-last one out drops the row back to its single-message form, where
-        // there is no trigger to close the list — so it has to close itself.
-        if (this._open && this.messages.length < 2) {
+        // An empty queue renders nothing at all, trigger included, so the list has to close itself
+        // — there would be no way left to dismiss it.
+        if (this._open && this.messages.length === 0) {
             this._open = false;
         }
     }
@@ -251,19 +225,6 @@ export class CvQueueRow extends LitElement {
     private static _renderItemText(text: string) {
         const shown = CvQueueRow._shown(text);
         return html`<div class="item-text" title=${shown}>${shown}</div>`;
-    }
-
-    /** The single-message row has only the width left over by the label and the two buttons, so
-     *  what fits there is a paperclip and a number — enough to say the message is not text alone.
-     *  The names are in the title, and in the chips once there is a list to hold them. */
-    private static _renderFileCount(files?: Attachment[]) {
-        if (!files?.length) {
-            return nothing;
-        }
-        const names = files.map((f) => f.name).join('\n');
-        return html`<span class="file-count" title=${names}>
-            ${unsafeHTML(Attach16Regular)}${files.length > 1 ? files.length : nothing}
-        </span>`;
     }
 
     /** What the message carries, as the chips the composer and the sent bubble already use.
@@ -296,14 +257,14 @@ export class CvQueueRow extends LitElement {
         this.dispatchEvent(new CustomEvent('clear-queue', { bubbles: true, composed: true }));
     };
 
-    private _renderClear(count: number) {
+    private _renderClear() {
         return html`<fluent-button
             class="clear-btn"
             appearance="subtle"
             size="small"
             icon-only
-            title=${count === 1 ? 'Remove from queue' : 'Clear queue'}
-            aria-label=${count === 1 ? 'Remove from queue' : 'Clear queue'}
+            title="Clear queue"
+            aria-label="Clear queue"
             @click=${this._clear}
             >${unsafeHTML(Delete16Regular)}</fluent-button
         >`;
@@ -317,33 +278,26 @@ export class CvQueueRow extends LitElement {
 
         return html`<div class="row">
                 <span class="label">Queued</span>
-                ${
-                    n === 1
-                        ? html`<span class="text" title=${CvQueueRow._shown(this.messages[0].text)}
-                                  >${CvQueueRow._shown(this.messages[0].text)}</span
-                              >
-                              ${CvQueueRow._renderFileCount(this.messages[0].attachments)}`
-                        : html`<span class="spacer"></span>
-                              <fluent-button
-                                  class="count-btn"
-                                  appearance="subtle"
-                                  size="small"
-                                  icon-only
-                                  aria-label=${`${n} queued messages`}
-                                  aria-expanded=${this._open}
-                                  @click=${this._toggle}
-                              >
-                                  <span class="icon-wrap">
-                                      ${unsafeHTML(TextBulletList16Regular)}
-                                      <fluent-counter-badge
-                                          class="count"
-                                          count=${n}
-                                          size="small"
-                                      ></fluent-counter-badge>
-                                  </span>
-                              </fluent-button>`
-                }
-                ${this._renderClear(n)}
+                <span class="spacer"></span>
+                <fluent-button
+                    class="count-btn"
+                    appearance="subtle"
+                    size="small"
+                    icon-only
+                    aria-label=${`${n} queued message${n === 1 ? '' : 's'}`}
+                    aria-expanded=${this._open}
+                    @click=${this._toggle}
+                >
+                    <span class="icon-wrap">
+                        ${unsafeHTML(TextBulletList16Regular)}
+                        <fluent-counter-badge
+                            class="count"
+                            count=${n}
+                            size="small"
+                        ></fluent-counter-badge>
+                    </span>
+                </fluent-button>
+                ${this._renderClear()}
             </div>
             <div class="popover" ?hidden=${!this._open}>
                 <div class="head">Not sent yet (${n})</div>
