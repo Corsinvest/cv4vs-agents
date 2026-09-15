@@ -450,8 +450,8 @@ public class SetComposerNotification
 /// instead. The pane claims those and forwards them here for the page to act on.</para></summary>
 public class HostKeyNotification
 {
-    /// <summary>DOM <c>KeyboardEvent.key</c> name ("Home", "End", …), not the WPF enum, so the
-    /// page compares against the same strings a real key event would carry.</summary>
+    /// <summary>DOM <c>KeyboardEvent.key</c> name ("Home", "End", "Enter"), not the WPF enum, so
+    /// the page compares against the same strings a real key event would carry.</summary>
     public string Key { get; set; } = "";
 
     public bool Ctrl { get; set; }
