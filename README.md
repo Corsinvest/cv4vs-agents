@@ -7,7 +7,8 @@
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Visual Studio](https://img.shields.io/badge/Visual%20Studio-2022%20%7C%202026-5C2D91.svg)](https://visualstudio.microsoft.com/)
-[![Marketplace](https://img.shields.io/badge/marketplace-cv4vs%20Agents-5C2D91.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
+[![Marketplace](https://vsmarketplacebadges.dev/version-short/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
+[![Installs](https://vsmarketplacebadges.dev/installs-short/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
 [![Self-hosting](https://img.shields.io/badge/self--hosting-since%202026--07--27-brightgreen.svg)](#why)
 
 A Visual Studio 2022 / 2026 extension that brings the **Claude Code** CLI inside the IDE — a rich
