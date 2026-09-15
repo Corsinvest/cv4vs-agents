@@ -80,6 +80,12 @@ Under the message box, a row for the turn itself: **thinking**, **effort**, **mo
 **permission mode**, each a click away. Which model is answering, and what it may do without asking,
 are the two things that change a turn the most — they belong in sight, not three levels down a menu.
 
+One button on the toolbar takes out everything Claude *did* — the commands, file reads and edits,
+searches, MCP calls and sub-agents — and leaves the conversation. What you took part in stays:
+answers to questions, plan decisions, the task list, anything waiting on your approval. And a plan
+too long for the banner's small box opens in the editor as a normal document, where you can edit it
+before approving — the banner sends what you wrote.
+
 **CLI** — the real `claude.exe` in an embedded terminal, connected to the IDE over the same channel
 the official VS Code extension uses.
 
@@ -113,6 +119,8 @@ A companion **Usage** tab shows each profile's live plan and rate-limit windows,
 usage** tab breaks down how any historical session fills the model's context window. The plan's
 session and weekly figures also sit in Visual Studio's status bar, one click from every limit and
 when each resets.
+
+![The status bar item and the popup it opens](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/plan-usage-status-bar.png)
 
 ![File history document-tab](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/file-history-document.png)
 

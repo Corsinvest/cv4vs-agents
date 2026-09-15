@@ -7,8 +7,9 @@
 
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 [![Visual Studio](https://img.shields.io/badge/Visual%20Studio-2022%20%7C%202026-5C2D91.svg)](https://visualstudio.microsoft.com/)
-[![Marketplace](https://img.shields.io/badge/marketplace-cv4vs%20Agents-5C2D91.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
-[![Self-hosting](https://img.shields.io/badge/self--hosting-since%202026--07--27-brightgreen.svg)](#why)
+[![Marketplace](https://vsmarketplacebadges.dev/version-short/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
+[![Installs](https://vsmarketplacebadges.dev/installs-short/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
+[![Self-hosting](https://img.shields.io/badge/self--hosting-since%202026--07--27-brightgreen.svg)](docs/diary.md)
 
 A Visual Studio 2022 / 2026 extension that brings the **Claude Code** CLI inside the IDE — a rich
 chat experience plus an interactive terminal, both wired into Visual Studio's editor,
@@ -102,6 +103,10 @@ own.
 - **[Review changes in VS's own diff](docs/chat/diff.md)** — every Edit/Write shows as an inline diff,
   and opens in Visual Studio's native, **editable** side-by-side diff: **save (Ctrl+S) to accept** or
   **close to reject**, the CLI applies it only if you saved.
+- **Edit the plan before you approve it** — a long plan doesn't have to be read through the banner's
+  small scrolling box: **Open in editor** shows it as a normal document in VS's Markdown editor,
+  full-size. While it is still waiting on your answer you can change it there and save — the banner
+  picks the change up, and approving sends what *you* wrote, not what was proposed.
 - **[Take the files back](docs/chat/rewind.md)** — `/rewind` restores them to the state before any
   message of the session, and leaves the conversation where it is. Pick a message and it says what
   would change — files, lines added and removed — before you commit to it; click a file and its copy
@@ -140,6 +145,10 @@ own.
   nothing — a build error is worth asking about without highlighting it first.
 - **Jump between panes** — a toolbar list of every open pane, Chat and CLI together, each with its
   title and kind. Docked panes hide each other behind tabs; this is how you find the one you want.
+- **Code review findings as a list** — `/code-review` reports its findings as a readable list —
+  severity first, each with its file and line as a link that opens there — instead of the raw call
+  data. The row grows to fit them, so nothing hides behind an inner scrollbar; after a `--fix` run it
+  also says what each finding became.
 - **[Sub-agent panel](docs/chat/sub-agents.md)** — a chip shows how many sub-agents are running; click it
   for a live list with per-agent Stop and Stop-all, so a fan-out never gets away from you.
   Background/async agents are tracked too: the turn is "finished" only once they are.
@@ -170,7 +179,7 @@ own.
 - **[Restore panes on solution open](docs/options.md#general)** *(opt-in)* — reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
-- **[Tune it to your taste](docs/options.md)** — 29 options across General, Chat and Debug: what
+- **[Tune it to your taste](docs/options.md)** — 33 options across General, Chat and Debug: what
   the chat shows, how diffs render, which keys send, the starting permission mode, autosave,
   file checkpoints, upload and `@`-picker filters, log verbosity.
 - **[It tells you when it needs you](#pane-attention-notifications)** — with several panes working
@@ -236,22 +245,9 @@ it was a genuinely fun little adventure: watching it sometimes deny things about
 turn around and build them. That's just part of the LLM game. The code here was written with
 Claude's help.
 
-**Since 27 July 2026 the extension is self-hosting.** It is developed inside itself: no VS Code, no
-external terminal, no other editor — the Chat and CLI panes in the screenshots above are the ones
-writing the next version. Which is also the toughest test there is: every rough edge turns up in the
-day's work, not in a bug report.
-
-**On 10 August 2026 it debugged itself.** Claude hit a bug, set a breakpoint through the extension's
-own MCP tools — in the very Visual Studio instance hosting the pane it was typing into — stepped
-through the live process, read the locals, found it, fixed it. The debugger was inspecting the
-program that was running the debugger. It worked, which was somehow the surprising part. I mostly
-watched. Almost as good as me 😏
-
-**On 11 August 2026 it left the desk.** The CLI had Remote Control, VS Code had it, Visual Studio
-didn't — so a session started here stayed where it started, and this is where I work. Now it
-doesn't: I scanned the QR and kept the session going from my phone while setting up the
-[Fiera di Santa Maria](https://www.fieradisantamaria.it) in Calcinatello, the village fair I help
-run every summer. The projects keep moving. I don't have to be at the keyboard for all of it.
+**And it keeps a diary.** Self-hosting since 27 July 2026, it debugged itself, it left the desk, it
+changed how I work, and in September it stopped being only mine —
+[the days that were not in the plan](docs/diary.md).
 
 — *Daniele Corsini (Frank Lupo)*
 
