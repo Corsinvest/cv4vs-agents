@@ -122,12 +122,17 @@ internal sealed partial class IdeNavigationService
         return false;
     }
 
+    /// <summary>The snapshot every feature starts from. A property rather than a field: the
+    /// workspace hands out a new immutable Solution on every edit, so a cached one would go
+    /// stale.</summary>
+    private object CurrentSolution => VsReflection.GetProp(_workspace, "CurrentSolution");
+
     /// <summary>workspace.CurrentSolution → the Document object for <paramref name="filePath"/>,
     /// or null if the file isn't a Roslyn document in the open solution. Shared resolution used
     /// by every feature.</summary>
     private object ResolveDocument(string filePath)
     {
-        var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
+        var solution = CurrentSolution;
         var docIds = (IEnumerable)VsReflection.Invoke(solution, "GetDocumentIdsWithFilePath",
             [typeof(string)], [filePath]);
         var docId = docIds?.Cast<object>().FirstOrDefault();
@@ -261,7 +266,7 @@ internal sealed partial class IdeNavigationService
             var byLanguage = new System.Collections.Generic.Dictionary<string, LanguageCoverage>(StringComparer.Ordinal);
             var inWorkspace = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
+            var solution = CurrentSolution;
             foreach (var project in ((IEnumerable)VsReflection.GetProp(solution, "Projects")).Cast<object>())
             {
                 var language = VsReflection.GetPropOrNull(project, "Language") as string ?? "?";
@@ -417,7 +422,7 @@ internal sealed partial class IdeNavigationService
         try
         {
             var serviceType = VsReflection.FindType("Microsoft.CodeAnalysis.Editor.IContentTypeLanguageService");
-            var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
+            var solution = CurrentSolution;
             foreach (var project in ((IEnumerable)VsReflection.GetProp(solution, "Projects")).Cast<object>())
             {
                 if (VsReflection.GetPropOrNull(project, "Language") as string != language) { continue; }
