@@ -14,28 +14,30 @@ dropping it, or sending two of them as a single message.
 
 ![The queue list, with an entry's actions showing](images/chat/queued-messages.png)
 
-## The row above the composer
+## Where it lives
 
-It is there only while something is waiting, so it takes no space the rest of the time: a count of
-what is queued, which opens the list.
+A chip in the composer's toolbar, next to the sub-agent one, counting what is waiting. It is there
+only while something is — with an empty queue it takes no room at all.
 
 ## The list
 
-Click the count and every message that has not been sent yet is there, in the order it will go out.
+Click the chip and every message that has not been sent yet is there, in the order it will go out.
 That order is the one thing the greyed-out bubbles do not show at a glance — and by the time a turn
 has been running for a while, those bubbles have usually scrolled out of view, which makes this the
-only place left to read what is about to be sent.
+only place left to read what is about to be sent. A long message is clipped to the row; its full
+text is in the tooltip.
 
 Each entry carries two actions, shown when the pointer is over it:
 
 | | |
 |---|---|
 | **pencil** | bring the message back into the composer |
-| **cross** | drop that one message |
+| **bin** | delete that one message |
 
-The whole row is the pencil's target too — the icon is there to say so. At the top of the list, a
-**bin empties the queue**; it is the one action that is not reversible, which is why it keeps a
-glyph of its own rather than sharing the cross.
+The whole row is the pencil's target too — the icon is there to say so. At the top of the list,
+**Clear all** empties the queue. It is spelled out rather than given an icon on purpose: it sits a
+few pixels from the rows' own bins and takes everything instead of one, and position alone is a thin
+thing to tell those two apart.
 
 ## Fixing a queued message
 
@@ -53,8 +55,9 @@ after it would go while yours, no longer queued, arrived last.
 If the turn ends mid-edit nothing is sent, and the bar stays: with the turn over it is the only
 thing saying the queue is still there and still waiting on you.
 
-**Cancel** puts the entry back as it was. Not Esc — that stops the turn and clears the queue with
-it, as it always has.
+The **cross** on that bar puts the entry back as it was. Not Esc — that stops the turn and clears
+the queue with it, as it always has. A cross there and a bin in the list are deliberate: one closes
+what you opened, the other deletes something.
 
 ## Sending two messages as one
 
@@ -66,7 +69,8 @@ the list, each with its own pencil and cross, joined by a rule down their left �
 together, as a single message, with the attachments of both.
 
 Plain Enter queues as it always did. Alt+Enter needs something already in the queue to join, so with
-an empty queue it stays what it has always been: a newline.
+an empty queue it stays what it has always been: a newline — and the composer says so, offering the
+shortcut only once there is an entry to join.
 
 ## Why not just Stop
 

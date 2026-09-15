@@ -36,6 +36,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **The queue moved into the composer's toolbar.** It was a row of its own above the box, holding a
+  label and a count; it is now a chip beside the sub-agent one, and gives that line back.
 - **Searches and reference lists come back faster on large results.** Finding every use of a symbol
   read the same source file from disk once per result — fifty references in one file meant reading
   it fifty times. Each file is now read once per search. Same results, same order.

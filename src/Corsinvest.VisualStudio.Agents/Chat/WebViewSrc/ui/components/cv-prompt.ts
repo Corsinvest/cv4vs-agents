@@ -6,6 +6,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { iconStyles, tooltipStyles } from '../styles/shared';
+import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import Send16Filled from '@fluentui/svg-icons/icons/send_16_filled.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
 import { iconUrl } from '../../core/icon-url';
@@ -44,7 +45,7 @@ import './cv-attach-chip';
 import './cv-context-gauge';
 import './cv-ide-context-badge';
 import './cv-subagent-chip';
-import './cv-queue-row';
+import './cv-queue-chip';
 import './cv-effort-selector';
 import './cv-thinking-toggle';
 import './cv-remote-chip';
@@ -182,6 +183,20 @@ export class CvPrompt extends LitElement implements CommandHost {
                 font-size: 0.85em;
                 color: var(--colorNeutralForeground3);
                 border-left: 2px solid var(--colorBrandStroke1, #0f6cbd);
+            }
+            /* Cut to icon width, like the composer's other icon triggers. */
+            .editing-cancel {
+                flex-shrink: 0;
+                padding: 3px;
+                min-width: 0;
+            }
+            /* Red like the list's bins: a cross closes where a bin deletes, but both are the
+               "get out of this" button, and one red glyph per bar reads as that at a glance. */
+            .editing-cancel svg {
+                width: 16px;
+                height: 16px;
+                display: block;
+                color: var(--colorStatusDangerForeground1, #d13438);
             }
             /* A bare column: the border belongs to #field, not here. position:relative because the
                popovers (@, commands, model, permission) anchor to it. */
@@ -1039,7 +1054,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._echoUserMessage(payload, ideRefs);
             if (this._isBusy) {
                 // Already running → enqueue. Drained when isBusy flips to false.
-                this._setQueue([...this._queue, this._withGroup(payload, opts)]);
+                this._setQueue(this._queueWithGroup(payload, opts));
             } else {
                 this._dispatch(payload);
             }
@@ -1317,19 +1332,23 @@ export class CvPrompt extends LitElement implements CommandHost {
     /** Tag a new entry into the last one's group, starting one if the last entry has none. The
      *  head has to be tagged too, or the filter that drains the group would find only the entry
      *  that asked to join it. */
-    private _withGroup(
+    private _queueWithGroup(
         payload: { text: string; attachments: Attachment[]; uuid: string },
         opts?: { groupWithPrevious?: boolean },
-    ): (typeof this._queue)[number] {
+    ): typeof this._queue {
         const last = this._queue[this._queue.length - 1];
         if (!opts?.groupWithPrevious || !last) {
-            return payload;
+            return [...this._queue, payload];
         }
+        // The head of a new group has to be tagged as well, or the filter that drains a group
+        // would find only the entry that asked to join it and send half of what was grouped.
+        // Both writes happen in this one returned array: tagging the head in a separate _setQueue
+        // was lost to the spread that rebuilt the queue around it a moment later.
         const groupId = last.groupId ?? crypto.randomUUID();
-        if (!last.groupId) {
-            this._setQueue(this._queue.map((q) => (q.uuid === last.uuid ? { ...q, groupId } : q)));
-        }
-        return { ...payload, groupId };
+        return [
+            ...this._queue.map((q) => (q.uuid === last.uuid ? { ...q, groupId } : q)),
+            { ...payload, groupId },
+        ];
     }
 
     /** A group leaves as ONE message: texts joined, attachments concatenated, a single dispatch.
@@ -1729,8 +1748,18 @@ export class CvPrompt extends LitElement implements CommandHost {
                 >Editing a queued
                 message${waiting > 0 ? ` · ${waiting} waiting behind it` : ''}</span
             >
-            <fluent-button appearance="subtle" size="small" @click=${this._cancelEdit}
-                >Cancel</fluent-button
+            <!-- A cross, like the one that takes an entry out of the list: the word was the only
+                 button here spelled out, and this closes the edit rather than destroying anything —
+                 the entry is still in the queue, untouched. -->
+            <fluent-button
+                class="editing-cancel"
+                appearance="subtle"
+                size="small"
+                icon-only
+                title="Stop editing"
+                aria-label="Stop editing"
+                @click=${this._cancelEdit}
+                >${unsafeHTML(Dismiss16Regular)}</fluent-button
             >
         </div>`;
     }
@@ -1751,12 +1780,6 @@ export class CvPrompt extends LitElement implements CommandHost {
                 @drop=${this._onDrop}
             >
                 <cv-notice-stack @notice-dismissed=${this._onNoticeDismissed}></cv-notice-stack>
-                <cv-queue-row
-                    .messages=${this._queue}
-                    @drop-queued=${this._onDropQueued}
-                    @clear-queue=${this._onClearQueue}
-                    @edit-queued=${this._onEditQueued}
-                ></cv-queue-row>
                 ${this._renderEditingBar()}
                 <!-- Everything that travels with this message, and the one border that says so. -->
                 <div id="field">
@@ -1766,7 +1789,14 @@ export class CvPrompt extends LitElement implements CommandHost {
                             id="input"
                             placeholder=${
                                 this._isBusy
-                                    ? 'Queue another message… (Esc to stop)'
+                                    ? // Alt+Enter only once there is something to join, which is
+                                      // the same guard the key handler has — and the only moment
+                                      // it is worth the room. Esc gives way to it there: that one
+                                      // is learnt in the first turn, this one is discovered by
+                                      // nobody.
+                                      this._queue.length > 0
+                                        ? 'Queue another message…  Alt+Enter joins the last'
+                                        : 'Queue another message… (Esc to stop)'
                                     : // @ and / are the two things nobody discovers on their own, so they
                                       // lead; the send key follows because it's configurable (Ctrl+Enter).
                                       `Send a message…  @ for files, / for commands  ·  ${
@@ -1843,6 +1873,15 @@ export class CvPrompt extends LitElement implements CommandHost {
                             @recording-end=${this._onMicEnd}
                         ></cv-mic-button>
                         <cv-subagent-chip .tasks=${this._subagentTasks}></cv-subagent-chip>
+                        <!-- Beside the sub-agent chip, which answers the same kind of question:
+                             something is pending, click for the list. It renders nothing with an
+                             empty queue, so it costs no room the rest of the time. -->
+                        <cv-queue-chip
+                            .messages=${this._queue}
+                            @drop-queued=${this._onDropQueued}
+                            @clear-queue=${this._onClearQueue}
+                            @edit-queued=${this._onEditQueued}
+                        ></cv-queue-chip>
                         <!-- Before the file chip, not after: that one is the only item here that
                              resizes (it absorbs the row's spare width), so anything past it moves
                              on every editor change. -->
