@@ -234,9 +234,10 @@ internal sealed partial class IdeNavigationService
         public string Reason { get; set; }
         public LanguageCoverage[] Languages { get; set; } = [];
         /// <summary>Projects of the solution that are in no Roslyn workspace at all — C++ and the
-        /// like. Their languages cannot be reached through any of the services below, whatever
-        /// those answer. Carries the extensions too: the project name alone says a project is out
-        /// of reach without saying what is in it.</summary>
+        /// like. None of the services below can be asked about them, whatever those answer;
+        /// get_document_symbols is the one tool that still answers, through the project system.
+        /// Carries the extensions too: the project name alone says a project is out of reach
+        /// without saying what is in it.</summary>
         public ForeignFiles[] ProjectsOutsideWorkspace { get; set; } = [];
 
         /// <summary>Source files inside covered projects that their language does not answer for.
@@ -268,13 +269,17 @@ internal sealed partial class IdeNavigationService
         EnsureRenameProbed();
         EnsureSearchProbed();
 
-        var wanted = new (string Name, Type Type)[]
+        // A feature can be served by more than one interface, and the report has to ask for all of
+        // them: document symbols answers from the Features layer for C#/VB and from the editor one
+        // for F# and TypeScript, so asking only the first reported those two as uncovered while the
+        // tool itself was returning their outline.
+        var wanted = new (string Name, Type[] Types)[]
         {
-            ("go_to_definition", _navigableItemsServiceType),
-            ("find_references / go_to_implementation", _findUsagesServiceType),
-            ("get_document_symbols", _navBarServiceType),
-            ("rename_symbol", _inlineRenameServiceType),
-            ("search_workspace_symbols", _navigateToServiceType),
+            ("go_to_definition", [_navigableItemsServiceType]),
+            ("find_references / go_to_implementation", [_findUsagesServiceType]),
+            ("get_document_symbols", [_navBarServiceType, _editorNavBarServiceType]),
+            ("rename_symbol", [_inlineRenameServiceType]),
+            ("search_workspace_symbols", [_navigateToServiceType]),
         };
 
         try
@@ -294,9 +299,10 @@ internal sealed partial class IdeNavigationService
                     // Ask once per language, not once per project: the services are registered
                     // per language, so every project of one answers identically.
                     var services = LanguageServicesOf(project);
-                    foreach (var (serviceName, serviceType) in wanted)
+                    foreach (var (serviceName, serviceTypes) in wanted)
                     {
-                        coverage.Services[serviceName] = GetServiceFrom(services, serviceType) != null;
+                        coverage.Services[serviceName] =
+                            serviceTypes.Any(t => GetServiceFrom(services, t) != null);
                     }
                 }
                 coverage.ProjectCount++;
