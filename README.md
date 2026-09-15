@@ -9,7 +9,7 @@
 [![Visual Studio](https://img.shields.io/badge/Visual%20Studio-2022%20%7C%202026-5C2D91.svg)](https://visualstudio.microsoft.com/)
 [![Marketplace](https://vsmarketplacebadges.dev/version-short/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
 [![Installs](https://vsmarketplacebadges.dev/installs-short/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
-[![Self-hosting](https://img.shields.io/badge/self--hosting-since%202026--07--27-brightgreen.svg)](#why)
+[![Self-hosting](https://img.shields.io/badge/self--hosting-since%202026--07--27-brightgreen.svg)](docs/diary.md)
 
 A Visual Studio 2022 / 2026 extension that brings the **Claude Code** CLI inside the IDE — a rich
 chat experience plus an interactive terminal, both wired into Visual Studio's editor,
@@ -245,22 +245,9 @@ it was a genuinely fun little adventure: watching it sometimes deny things about
 turn around and build them. That's just part of the LLM game. The code here was written with
 Claude's help.
 
-**Since 27 July 2026 the extension is self-hosting.** It is developed inside itself: no VS Code, no
-external terminal, no other editor — the Chat and CLI panes in the screenshots above are the ones
-writing the next version. Which is also the toughest test there is: every rough edge turns up in the
-day's work, not in a bug report.
-
-**On 10 August 2026 it debugged itself.** Claude hit a bug, set a breakpoint through the extension's
-own MCP tools — in the very Visual Studio instance hosting the pane it was typing into — stepped
-through the live process, read the locals, found it, fixed it. The debugger was inspecting the
-program that was running the debugger. It worked, which was somehow the surprising part. I mostly
-watched. Almost as good as me 😏
-
-**On 11 August 2026 it left the desk.** The CLI had Remote Control, VS Code had it, Visual Studio
-didn't — so a session started here stayed where it started, and this is where I work. Now it
-doesn't: I scanned the QR and kept the session going from my phone while setting up the
-[Fiera di Santa Maria](https://www.fieradisantamaria.it) in Calcinatello, the village fair I help
-run every summer. The projects keep moving. I don't have to be at the keyboard for all of it.
+**And it keeps a diary.** Self-hosting since 27 July 2026, it debugged itself, it left the desk, it
+changed how I work, and in September it stopped being only mine —
+[the days that were not in the plan](docs/diary.md).
 
 — *Daniele Corsini (Frank Lupo)*
 
