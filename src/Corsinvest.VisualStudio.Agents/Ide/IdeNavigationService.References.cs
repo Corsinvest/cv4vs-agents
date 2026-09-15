@@ -223,6 +223,7 @@ internal sealed partial class IdeNavigationService
         if (builder is not System.Collections.IEnumerable items) { return []; }
 
         var result = new List<NavLocation>();
+        var cache = new FileTextCache();
         foreach (var item in items.Cast<object>())
         {
             // SourceReferenceItem carries one SourceSpan; DefinitionItem carries SourceSpans, an
@@ -235,7 +236,7 @@ internal sealed partial class IdeNavigationService
                 if (string.IsNullOrEmpty(filePath)) { continue; }
                 var textSpan = VsReflection.GetProp(span, "SourceSpan");
                 var start = VsReflection.GetProp<int>(textSpan, "Start");
-                var (lineNo, colNo, preview) = FileOffsetToLineCol(filePath, start);
+                var (lineNo, colNo, preview) = FileOffsetToLineCol(filePath, start, cache);
                 result.Add(new NavLocation { FilePath = filePath, Line = lineNo, Column = colNo, Preview = preview });
             }
         }

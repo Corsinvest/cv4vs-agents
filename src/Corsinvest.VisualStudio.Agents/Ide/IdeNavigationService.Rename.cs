@@ -105,7 +105,7 @@ internal sealed partial class IdeNavigationService
 
         try
         {
-            var solution = VsReflection.GetProp(_workspace, "CurrentSolution");
+            var solution = CurrentSolution;
             var document = ResolveDocument(filePath);
             if (document == null) { return new RenameResult { Supported = false, Reason = "No language document for this file (language not supported)." }; }
 

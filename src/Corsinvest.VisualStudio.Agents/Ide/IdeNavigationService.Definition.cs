@@ -178,6 +178,7 @@ internal sealed partial class IdeNavigationService
     private static NavLocation[] ItemsToLocations(IEnumerable items)
     {
         var result = new System.Collections.Generic.List<NavLocation>();
+        var cache = new FileTextCache();
         var seen = 0;
         foreach (var item in items.Cast<object>())
         {
@@ -189,7 +190,7 @@ internal sealed partial class IdeNavigationService
             var sourceSpan = VsReflection.GetProp(item, "SourceSpan"); // TextSpan
             var spanStart = VsReflection.GetProp<int>(sourceSpan, "Start");
 
-            var (lineNo, colNo, preview) = FileOffsetToLineCol(filePath, spanStart);
+            var (lineNo, colNo, preview) = FileOffsetToLineCol(filePath, spanStart, cache);
             result.Add(new NavLocation { FilePath = filePath, Line = lineNo, Column = colNo, Preview = preview });
         }
         // Tells "the service found nothing" apart from "we dropped what it found".

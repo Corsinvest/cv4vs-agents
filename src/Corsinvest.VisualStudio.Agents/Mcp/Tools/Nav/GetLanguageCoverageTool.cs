@@ -20,9 +20,13 @@ internal sealed class GetLanguageCoverageTool : McpTool<NoArgs>
         "each language: how many projects it has, and which of go_to_definition, find_references, " +
         "get_document_symbols, rename_symbol and search_workspace_symbols it provides. Also lists " +
         "the solution's projects that are outside the language workspace altogether, with what they " +
-        "contain — C++ ones are, and no nav_* tool reaches them however the services answer — and, per project, the source " +
+        "contain — C++ ones are, and only get_document_symbols reaches them, through the project " +
+        "system rather than the language services — and, per project, the source " +
         "files whose extension its own language does not answer for, which is how a .csproj full of " +
         "TypeScript reports every tool as available and still answers for none of those files. " +
+        "One caveat this cannot measure: TypeScript and JavaScript answer get_document_symbols only " +
+        "while the file is open in an editor, since a .ts declared <None> in a csproj is no " +
+        "workspace document until a buffer exists for it. " +
         "Ask this once when a nav_* " +
         "tool returns supported=false and you want to know whether to retry, use another tool, or " +
         "fall back to text search for the rest of the session.";
@@ -48,6 +52,9 @@ internal sealed class GetLanguageCoverageTool : McpTool<NoArgs>
                     {
                         project = p.Project,
                         by_extension = p.ByExtension,
+                        // Said per project rather than only in the description: a reader looking at
+                        // this list is deciding whether to stop asking, and for one tool it is wrong.
+                        tools = new { get_document_symbols = true },
                     }).ToArray(),
                     uncovered_files = r.UncoveredFiles.Select(u => new
                     {

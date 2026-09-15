@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The file outline now works in six languages instead of two.** Asking Claude for the structure of
+  a file — its classes, methods and properties — used to answer only for C# and Visual Basic;
+  anywhere else it said the language was not supported. It now answers for F#, C++ (headers
+  included) and, while the file is open in an editor, TypeScript and JavaScript. Nothing changed for
+  C# and Visual Basic.
+- **The language report no longer sends you away from features that work.** The tool that says which
+  languages Claude can navigate was still describing the situation from before the fix, so it
+  reported F# and C++ as out of reach for the file outline while the outline was being returned for
+  them. A report like that reads as authoritative, and the wrong answer is the one that makes Claude
+  stop trying.
+
+### Changed
+
+- **Searches and reference lists come back faster on large results.** Finding every use of a symbol
+  read the same source file from disk once per result — fifty references in one file meant reading
+  it fifty times. Each file is now read once per search. Same results, same order.
+
 ## [1.10.0] - 2026-09-14
 
 Your plan limits are now visible at a glance in the status bar, without opening anything. The chat
