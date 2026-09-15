@@ -6,7 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Fix a queued message instead of retyping it.** Clicking one in the queue brings its text and
+  attachments back into the composer; change it and it goes back to its own place in the line. Until
+  then it holds that place and the queue waits there, so nothing jumps ahead of it — and if the turn
+  ends while you are still editing, nothing is sent at all.
+- **Send two queued messages as one.** Three messages that correct one another were no use arriving
+  a turn apart: Claude answered the first without having seen the rest. **Alt+Enter** now queues a
+  message *into* the one before it, and they leave together as a single message. Plain Enter queues
+  as before.
+
 ### Fixed
+
+- **A single queued message could not be read in full.** With one message waiting, its text sat
+  truncated in the row with no way to see the rest or copy it — while two or more opened a list that
+  showed everything. There is now always a list.
 
 - **The file outline now works in six languages instead of two.** Asking Claude for the structure of
   a file — its classes, methods and properties — used to answer only for C# and Visual Basic;
