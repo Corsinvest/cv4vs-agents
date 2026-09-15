@@ -66,6 +66,20 @@ export class CvPopoverList extends LitElement {
                 font-family: var(--fontFamilyBase);
                 font-size: var(--fontSizeBase200);
             }
+            /* The optional header band, in a section heading's key. Centred rather than
+               baseline-aligned: unlike a section it may hold a button, which a baseline leaves
+               sitting low against the text. */
+            .header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 6px 4px 4px 8px;
+                color: var(--colorNeutralForeground3);
+                font-family: var(--fontFamilyBase);
+                font-size: var(--fontSizeBase200);
+                font-weight: var(--fontWeightSemibold);
+            }
             .section {
                 display: flex;
                 align-items: baseline;
@@ -107,6 +121,19 @@ export class CvPopoverList extends LitElement {
             .row.selected {
                 background: var(--colorBrandBackground);
                 color: var(--colorNeutralForegroundOnBrand);
+            }
+            /* subtleActive: the cursor without the brand fill — see the property. */
+            :host([subtleactive]) .row.selected {
+                background: var(--colorNeutralBackground1Hover);
+                color: var(--colorNeutralForeground2Hover);
+            }
+            /* isGrouped: rows handled as one. A rule down the left rather than merging them —
+               they stay separate rows, each keeping its own actions. */
+            .row.grouped {
+                border-left: 2px solid var(--colorBrandStroke1);
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0;
+                padding-left: 6px;
             }
             .row.disabled {
                 cursor: default;
@@ -244,6 +271,19 @@ export class CvPopoverList extends LitElement {
         `,
     ];
 
+    /** Optional band above the list, supplied by the caller. A TemplateResult rather than a string
+     *  because what goes there is not always only a title — the queue puts its clear button beside
+     *  the count. Like renderRow: the caller says what, this owns where. */
+    @property({ attribute: false }) header?: TemplateResult;
+    /** Mark the cursor row with the hover tint instead of the brand fill. For a list you act ON
+     *  rather than pick FROM: the fill announces "this is what Enter takes", which is wrong for a
+     *  row that carries its own buttons — and a solid blue behind them leaves a red one no longer
+     *  reading as a warning. */
+    @property({ type: Boolean }) subtleActive = false;
+    /** Which items belong together, when some of them do. Rows answering true get a rule down
+     *  their left, saying they are handled as one — the queue's Alt+Enter groups leave as a single
+     *  message. The caller knows what "together" means; this only draws it. */
+    @property({ attribute: false }) isGrouped?: (item: unknown) => boolean;
     /** All items to SHOW (including non-navigable ones, e.g. disabled models). */
     @property({ attribute: false }) items: unknown[] = [];
     /** Render-prop for a row's content (the shell — selected state, click — is ours). */
@@ -385,9 +425,12 @@ export class CvPopoverList extends LitElement {
     private _row(item: unknown, navIndex: number): TemplateResult {
         const navigable = navIndex >= 0;
         const selected = navigable && navIndex === this._activeIdx;
-        const cls = ['row', navigable ? 'navigable' : 'disabled', selected ? 'selected' : ''].join(
-            ' ',
-        );
+        const cls = [
+            'row',
+            navigable ? 'navigable' : 'disabled',
+            selected ? 'selected' : '',
+            this.isGrouped?.(item) ? 'grouped' : '',
+        ].join(' ');
         return html`
             <div
                 class=${cls}
@@ -438,6 +481,7 @@ export class CvPopoverList extends LitElement {
             : this.items.length === 0;
         return html`
             <div class="popover">
+                ${this.header ? html`<div class="header">${this.header}</div>` : nothing}
                 ${
                     this.searchable
                         ? html`<fluent-text-input

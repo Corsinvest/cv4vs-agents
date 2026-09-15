@@ -84,7 +84,9 @@ internal sealed class ChatWebView : WebView2CompositionControl
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
         var mods = Keyboard.Modifiers;
-        // Alt+Home/End is browser navigation (back/forward), not ours to take.
+        // Alt+Home/End is browser navigation (back/forward), not ours to take. Alt+Enter never
+        // reaches here at all — VS turns it into the Properties command first, so it is claimed
+        // in ChatPaneWindow alongside Esc and Ctrl+F.
         if ((mods & ModifierKeys.Alt) != 0 || !ClaimedKeys.TryGetValue(e.Key, out var domKey))
         {
             base.OnPreviewKeyDown(e);

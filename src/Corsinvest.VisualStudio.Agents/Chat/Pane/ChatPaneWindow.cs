@@ -30,14 +30,21 @@ public sealed class ChatPaneWindow : PaneWindowBase, IOleCommandTarget
     //  - Esc: VSStd97 cmdID 289 — claim it so VS doesn't move focus to an open editor;
     //    forward to the WebView (stop generation / close a menu). 289 verified by debugging
     //    QueryStatus; the named enum value didn't match, so pin the literal.
+    //  - Alt+Enter (PropSheetOrProperties): the composer's "queue this with the previous message".
+    //    It has to be taken here rather than in ChatWebView's key handler, where the other claimed
+    //    keys live: VS turns it into this command before WPF sees the keystroke at all, so the page
+    //    only ever got the Properties window.
     private static readonly Guid VsStd97 = VSConstants.GUID_VSStandardCommandSet97;
     private const uint CmdidFind = (uint)VSConstants.VSStd97CmdID.Find;
     private const uint CmdidCancel = 289;
+    private const uint CmdidPropSheetOrProperties = (uint)VSConstants.VSStd97CmdID.PropSheetOrProperties;
 
     int IOleCommandTarget.QueryStatus(ref Guid pguidCmdGroup, uint cCmds, OLECMD[] prgCmds, IntPtr pCmdText)
     {
         if (cCmds == 1 && pguidCmdGroup == VsStd97
-            && (prgCmds[0].cmdID == CmdidFind || prgCmds[0].cmdID == CmdidCancel))
+            && (prgCmds[0].cmdID == CmdidFind
+                || prgCmds[0].cmdID == CmdidCancel
+                || prgCmds[0].cmdID == CmdidPropSheetOrProperties))
         {
             prgCmds[0].cmdf = (uint)(OLECMDF.OLECMDF_SUPPORTED | OLECMDF.OLECMDF_ENABLED);
             return VSConstants.S_OK;
@@ -51,6 +58,9 @@ public sealed class ChatPaneWindow : PaneWindowBase, IOleCommandTarget
         {
             if (nCmdID == CmdidFind && ctl.ShowFind()) { return VSConstants.S_OK; }
             if (nCmdID == CmdidCancel && ctl.HandleEscape()) { return VSConstants.S_OK; }
+            // False when the page has nothing to group with — an empty queue, or no turn running.
+            // Falling through then leaves Alt+Enter as VS's Properties, rather than swallowing it.
+            if (nCmdID == CmdidPropSheetOrProperties && ctl.HandleAltEnter()) { return VSConstants.S_OK; }
         }
         return (int)Constants.OLECMDERR_E_NOTSUPPORTED;
     }

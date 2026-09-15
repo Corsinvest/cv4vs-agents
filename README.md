@@ -121,8 +121,10 @@ own.
   (Web Speech, no extra install); click to pause, click to resume. The markdown is spoken as plain
   prose — no "asterisk asterisk", no code blocks recited.
 - **[Keep writing while it answers](docs/queued-messages.md)** — the next message waits for the turn
-  to end instead of for you. A row above the composer lists what is still queued, in the order it
-  will go out, and takes one back out — without stopping the turn to do it.
+  to end instead of for you. A chip in the composer's toolbar counts what is still queued and opens
+  the list, in the order it will go out: delete one, or click it to bring it back into the composer
+  and fix it — without stopping the turn to do either. **Alt+Enter** queues a message *into* the one
+  before it, so two that correct each other leave as a single message rather than as two turns.
 - **The same sessions as VS Code and the terminal** — no separate database: it reads and writes the
   CLI's own session store, so a conversation started in the VS Code extension or in a terminal shows
   up here, and vice versa. Resume, fork and rename all work on those shared files, so you can switch
