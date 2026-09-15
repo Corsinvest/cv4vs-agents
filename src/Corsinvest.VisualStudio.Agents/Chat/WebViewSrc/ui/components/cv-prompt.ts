@@ -171,6 +171,18 @@ export class CvPrompt extends LitElement implements CommandHost {
             .notice {
                 margin-bottom: 6px;
             }
+            /* Between the queue row and the field, where the message it names came from. The
+               accent stripe is what separates it at a glance from the notices above. */
+            .editing-bar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 3px 4px 3px 8px;
+                font-size: 0.85em;
+                color: var(--colorNeutralForeground3);
+                border-left: 2px solid var(--colorBrandStroke1, #0f6cbd);
+            }
             /* A bare column: the border belongs to #field, not here. position:relative because the
                popovers (@, commands, model, permission) anchor to it. */
             #box {
@@ -317,6 +329,9 @@ export class CvPrompt extends LitElement implements CommandHost {
     @state() private _attachments: Attachment[] = [];
     @state() private _dragOver = false;
     @state() private _queue: Array<{ text: string; attachments: Attachment[]; uuid: string }> = [];
+    /** The queued entry open in the composer, or null. The text alone cannot say whether it is a
+     *  new message or a recalled one, and the queue payload already carries the uuid. */
+    @state() private _editingUuid: string | null = null;
     @state() private _atOpen = false;
     @state() private _atItems: AtItemDto[] = [];
     // Command palette (typing `/`, or the attach menu's "Slash command" item). `_cmdQuery` is the
@@ -987,15 +1002,29 @@ export class CvPrompt extends LitElement implements CommandHost {
                       : { filePath: ctx.filePath },
               ];
         const payload = { text, attachments: this._attachments, uuid };
-        // Echo the user bubble locally now (stream-json doesn't reflect the
-        // submitted message back). Same path for live and queued messages, so
-        // a queued one shows up immediately instead of waiting for the flush.
-        this._echoUserMessage(payload, ideRefs);
-        if (this._isBusy) {
-            // Already running → enqueue. Drained when isBusy flips to false.
-            this._setQueue([...this._queue, payload]);
+        const editing = this._editingUuid;
+        if (editing) {
+            // Replace in place, keeping the entry's own uuid: it never left the queue, so its
+            // position is kept and its bubble — already in the transcript — stays the right one.
+            // Re-echoing would put a second bubble up for the same message.
+            this._editingUuid = null;
+            this._setQueue(
+                this._queue.map((q) => (q.uuid === editing ? { ...payload, uuid: editing } : q)),
+            );
+            // The turn may have ended while this was being edited: nothing drains the queue then,
+            // because the flush already ran and found the entry blocked.
+            this._flushQueue();
         } else {
-            this._dispatch(payload);
+            // Echo the user bubble locally now (stream-json doesn't reflect the
+            // submitted message back). Same path for live and queued messages, so
+            // a queued one shows up immediately instead of waiting for the flush.
+            this._echoUserMessage(payload, ideRefs);
+            if (this._isBusy) {
+                // Already running → enqueue. Drained when isBusy flips to false.
+                this._setQueue([...this._queue, payload]);
+            } else {
+                this._dispatch(payload);
+            }
         }
         // Append to the ↑/↓ history (skip a consecutive duplicate, shell-style).
         if (text && this._promptHistory[this._promptHistory.length - 1] !== text) {
@@ -1173,6 +1202,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
         const uuids = this._queue.map((q) => q.uuid);
         this._setQueue([]);
+        this._editingUuid = null;
         this.dispatchEvent(
             new CustomEvent('queued-dropped', { detail: { uuids }, bubbles: true, composed: true }),
         );
@@ -1186,6 +1216,12 @@ export class CvPrompt extends LitElement implements CommandHost {
             return;
         }
         this._setQueue(this._queue.filter((q) => q.uuid !== uuid));
+        // Deleting the entry being edited leaves nothing to replace on submit, and an indicator
+        // pointing at something that is gone. The queue was stopped on it, so it needs releasing.
+        if (uuid === this._editingUuid) {
+            this._editingUuid = null;
+            this._flushQueue();
+        }
         this.dispatchEvent(
             new CustomEvent('queued-dropped', {
                 detail: { uuids: [uuid] },
@@ -1199,11 +1235,43 @@ export class CvPrompt extends LitElement implements CommandHost {
         this.dropQueue();
     };
 
+    /** Bring a queued message back into the composer to be fixed.
+     *  <para>The entry is NOT removed: it holds its place and stops the queue there. Taking it out
+     *  would let a turn ending mid-edit send whatever follows, and your message — no longer queued —
+     *  would arrive last or not at all.</para> */
+    private _onEditQueued = (e: CustomEvent<{ uuid: string }>): void => {
+        const entry = this._queue.find((q) => q.uuid === e.detail.uuid);
+        if (!entry) {
+            return;
+        }
+        this._editingUuid = entry.uuid;
+        this._attachments = [...(entry.attachments ?? [])];
+        // A draft already in the box stays below: the queued message came first in time.
+        const draft = this._ta?.value ?? '';
+        this.setComposerText(draft ? `${entry.text}\n${draft}` : entry.text);
+    };
+
+    /** Leave the entry as it was. Not on Esc: that stops the turn and empties the queue with it
+     *  (cv-app), which has always been so and is not for this to change. */
+    private _cancelEdit = (): void => {
+        this._editingUuid = null;
+        this._attachments = [];
+        this.setComposerText('');
+        // The flush that would have sent this entry already ran and found it blocked; nothing else
+        // will call it until the next turn ends, so the queue would sit there.
+        this._flushQueue();
+    };
+
     private _flushQueue(): void {
         if (this._isBusy || this._queue.length === 0) {
             return;
         }
         const [next, ...rest] = this._queue;
+        // A recalled entry holds its place and the queue waits on it. Skipping ahead would reorder
+        // what was queued — recall the second of three and the third goes out before it.
+        if (next.uuid === this._editingUuid) {
+            return;
+        }
         this._setQueue(rest);
         this._dispatch(next);
         // The state above unfades the bubble; this says WHICH one left, so cv-app can move it below
@@ -1586,6 +1654,25 @@ export class CvPrompt extends LitElement implements CommandHost {
         `;
     }
 
+    /** Says the composer holds a queued message rather than a new one, and how many are held up
+     *  behind it — the queue stops at the entry being edited, and with the turn over this is the
+     *  only thing left saying the queue is still there and still waiting. */
+    private _renderEditingBar() {
+        if (!this._editingUuid) {
+            return nothing;
+        }
+        const waiting = this._queue.length - 1;
+        return html`<div class="editing-bar">
+            <span
+                >Editing a queued
+                message${waiting > 0 ? ` · ${waiting} waiting behind it` : ''}</span
+            >
+            <fluent-button appearance="subtle" size="small" @click=${this._cancelEdit}
+                >Cancel</fluent-button
+            >
+        </div>`;
+    }
+
     override render() {
         // While a permission/question prompt is pending, hide the composer — the user answers it
         // in the overlay above; typing the next message isn't allowed until then. Hide via CSS
@@ -1606,7 +1693,9 @@ export class CvPrompt extends LitElement implements CommandHost {
                     .messages=${this._queue}
                     @drop-queued=${this._onDropQueued}
                     @clear-queue=${this._onClearQueue}
+                    @edit-queued=${this._onEditQueued}
                 ></cv-queue-row>
+                ${this._renderEditingBar()}
                 <!-- Everything that travels with this message, and the one border that says so. -->
                 <div id="field">
                     ${this._renderChips()}
