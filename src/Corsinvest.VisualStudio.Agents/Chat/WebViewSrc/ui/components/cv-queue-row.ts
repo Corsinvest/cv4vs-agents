@@ -22,6 +22,9 @@ export interface QueuedMessage {
      *  simply did not say so, and the list could not tell a prompt with a screenshot from one
      *  without. */
     attachments?: Attachment[];
+    /** Entries sharing this leave as one message (Alt+Enter). They stay separate rows — each keeps
+     *  its own edit and remove — so the rule down their left is what says they travel together. */
+    groupId?: string;
 }
 
 /** The row above the composer while messages are waiting to be sent. Stop drops the whole queue
@@ -153,6 +156,12 @@ export class CvQueueRow extends LitElement {
             }
             .item:hover {
                 background: var(--colorNeutralBackground1Hover);
+            }
+            /* Grouped entries leave as one message but stay separate rows, each with its own
+               actions — so the link has to be drawn rather than implied by merging them. */
+            .item[data-grouped] {
+                border-left: 2px solid var(--colorBrandStroke1, #0f6cbd);
+                padding-left: 6px;
             }
             /* Same three rules the chat's other hover actions run on (chat.css): a reserved height
                so revealing never shifts the row, :focus-within because a keyboard user never
@@ -366,6 +375,7 @@ export class CvQueueRow extends LitElement {
                     (m, i) =>
                         html`<div
                             class="item"
+                            ?data-grouped=${!!m.groupId}
                             role="button"
                             tabindex="0"
                             title="Edit in the composer"

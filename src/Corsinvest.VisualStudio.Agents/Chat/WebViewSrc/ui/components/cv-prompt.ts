@@ -328,7 +328,14 @@ export class CvPrompt extends LitElement implements CommandHost {
     @state() private _hasText = false;
     @state() private _attachments: Attachment[] = [];
     @state() private _dragOver = false;
-    @state() private _queue: Array<{ text: string; attachments: Attachment[]; uuid: string }> = [];
+    @state() private _queue: Array<{
+        text: string;
+        attachments: Attachment[];
+        uuid: string;
+        /** Entries sharing this leave as one message — Alt+Enter sets it. Absent means "on its
+         *  own", which is every entry queued with Enter. */
+        groupId?: string;
+    }> = [];
     /** The queued entry open in the composer, or null. The text alone cannot say whether it is a
      *  new message or a recalled one, and the queue payload already carries the uuid. */
     @state() private _editingUuid: string | null = null;
@@ -880,6 +887,17 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._cyclePermissionMode();
             return;
         }
+        // Alt+Enter appends to the last queued entry's group rather than opening a new one, for
+        // messages that correct each other and are no use arriving a turn apart. It is the only
+        // combination free in both configurations: useCtrlEnterToSend swaps Enter and Shift+Enter,
+        // so either of those would mean opposite things for two users. With no turn running or an
+        // empty queue there is nothing to group with, and it stays the newline it has always been.
+        if (e.key === 'Enter' && e.altKey && this._isBusy && this._queue.length > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            this._submit({ groupWithPrevious: true });
+            return;
+        }
         // Submit on Enter (or Ctrl/Cmd+Enter when useCtrlEnterToSend).
         if (e.key === 'Enter' && !e.altKey) {
             const ctrlOrMeta = e.ctrlKey || e.metaKey;
@@ -980,7 +998,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
     };
 
-    private _submit(): void {
+    private _submit(opts?: { groupWithPrevious?: boolean }): void {
         const text = this._ta.value.trim();
         if (!text && this._attachments.length === 0) {
             return;
@@ -1021,7 +1039,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._echoUserMessage(payload, ideRefs);
             if (this._isBusy) {
                 // Already running → enqueue. Drained when isBusy flips to false.
-                this._setQueue([...this._queue, payload]);
+                this._setQueue([...this._queue, this._withGroup(payload, opts)]);
             } else {
                 this._dispatch(payload);
             }
@@ -1238,16 +1256,22 @@ export class CvPrompt extends LitElement implements CommandHost {
     /** Bring a queued message back into the composer to be fixed.
      *  <para>The entry is NOT removed: it holds its place and stops the queue there. Taking it out
      *  would let a turn ending mid-edit send whatever follows, and your message — no longer queued —
-     *  would arrive last or not at all.</para> */
+     *  would arrive last or not at all.</para>
+     *  <para>Opening a second entry while one is open reads as cancelling the first: its unsaved
+     *  edits go, the queue stops at the new one instead. No prompt — the entry itself is untouched
+     *  in the queue, so what is lost is only what had just been typed over it.</para> */
     private _onEditQueued = (e: CustomEvent<{ uuid: string }>): void => {
         const entry = this._queue.find((q) => q.uuid === e.detail.uuid);
         if (!entry) {
             return;
         }
+        // What is in the box is only a draft worth keeping if it is something being typed. While
+        // another entry is open it is that entry's own text, and treating it as a draft would
+        // stack the two — click twice and the message is in there twice.
+        const draft = this._editingUuid ? '' : (this._ta?.value ?? '');
         this._editingUuid = entry.uuid;
         this._attachments = [...(entry.attachments ?? [])];
-        // A draft already in the box stays below: the queued message came first in time.
-        const draft = this._ta?.value ?? '';
+        // A real draft stays below: the queued message came first in time.
         this.setComposerText(draft ? `${entry.text}\n${draft}` : entry.text);
     };
 
@@ -1266,23 +1290,61 @@ export class CvPrompt extends LitElement implements CommandHost {
         if (this._isBusy || this._queue.length === 0) {
             return;
         }
-        const [next, ...rest] = this._queue;
+        const [next] = this._queue;
+        // Alt+Enter groups entries that go out as one message; the whole group leaves together.
+        const group = next.groupId ? this._queue.filter((q) => q.groupId === next.groupId) : [next];
         // A recalled entry holds its place and the queue waits on it. Skipping ahead would reorder
-        // what was queued — recall the second of three and the third goes out before it.
-        if (next.uuid === this._editingUuid) {
+        // what was queued — recall the second of three and the third goes out before it. For a
+        // group it matters more: it leaves as ONE message, so sending it a part short would send
+        // something incomplete rather than something partial.
+        if (group.some((q) => q.uuid === this._editingUuid)) {
             return;
         }
-        this._setQueue(rest);
-        this._dispatch(next);
-        // The state above unfades the bubble; this says WHICH one left, so cv-app can move it below
-        // the reply it had been sitting above.
+        this._setQueue(this._queue.filter((q) => !group.includes(q)));
+        this._dispatchGroup(group);
+        // The state above unfades the bubbles; this says WHICH ones left, so cv-app can move them
+        // below the reply they had been sitting above — all of them, in order, or a group would
+        // leave its tail stranded further up.
         this.dispatchEvent(
             new CustomEvent('queued-sent', {
-                detail: { uuid: next.uuid },
+                detail: { uuids: group.map((q) => q.uuid) },
                 bubbles: true,
                 composed: true,
             }),
         );
+    }
+
+    /** Tag a new entry into the last one's group, starting one if the last entry has none. The
+     *  head has to be tagged too, or the filter that drains the group would find only the entry
+     *  that asked to join it. */
+    private _withGroup(
+        payload: { text: string; attachments: Attachment[]; uuid: string },
+        opts?: { groupWithPrevious?: boolean },
+    ): (typeof this._queue)[number] {
+        const last = this._queue[this._queue.length - 1];
+        if (!opts?.groupWithPrevious || !last) {
+            return payload;
+        }
+        const groupId = last.groupId ?? crypto.randomUUID();
+        if (!last.groupId) {
+            this._setQueue(this._queue.map((q) => (q.uuid === last.uuid ? { ...q, groupId } : q)));
+        }
+        return { ...payload, groupId };
+    }
+
+    /** A group leaves as ONE message: texts joined, attachments concatenated, a single dispatch.
+     *  Merging here rather than host-side is what keeps the IDE context block single —
+     *  BuildIdeContextBlock runs once per send, so two sends would carry it twice. */
+    private _dispatchGroup(group: typeof this._queue): void {
+        if (group.length === 1) {
+            this._dispatch(group[0]);
+            return;
+        }
+        this._dispatch({
+            text: group.map((q) => q.text).join('\n\n'),
+            attachments: group.flatMap((q) => q.attachments ?? []),
+            uuid: group[0].uuid,
+        });
     }
 
     private _addAttachment(att: Attachment): void {
