@@ -106,6 +106,8 @@ internal sealed partial class IdeNavigationService
 
         try
         {
+            // The snapshot is read once: the search below is handed the same one the projects came
+            // from, and an edit mid-search must not swap it underneath.
             var solution = CurrentSolution;
             var projects = ((IEnumerable)VsReflection.GetProp(solution, "Projects")).Cast<object>().ToList();
 
@@ -120,11 +122,7 @@ internal sealed partial class IdeNavigationService
             var searchedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var project in projects)
             {
-                var langServices = VsReflection.GetPropOrNull(project, "Services")
-                                   ?? VsReflection.GetPropOrNull(project, "LanguageServices");
-                var svc = langServices == null
-                    ? null
-                    : _getServiceGeneric.MakeGenericMethod(_navigateToServiceType).Invoke(langServices, null);
+                var svc = GetServiceFrom(LanguageServicesOf(project), _navigateToServiceType);
                 if (svc == null) { continue; }
 
                 if (VsReflection.GetPropOrNull(project, "Name") is string name) { searchedNames.Add(name); }
