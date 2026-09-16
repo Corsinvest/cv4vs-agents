@@ -696,16 +696,28 @@ internal sealed partial class IdeDebugService
             var list = new List<ProcessInfo>();
             foreach (Process proc in dbg.LocalProcesses)
             {
-                var name = proc.Name ?? "";
+                // Process.Name is a full path. The filter still runs over it, so a folder narrows
+                // the list too, but what comes back as Name is the file alone — the same shape
+                // debug_list_debugged_processes reports, since the two get cross-referenced.
+                var path = proc.Name ?? "";
                 if (!string.IsNullOrEmpty(nameFilter)
-                    && name.IndexOf(nameFilter, StringComparison.OrdinalIgnoreCase) < 0)
+                    && path.IndexOf(nameFilter, StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     continue;
                 }
-                list.Add(new ProcessInfo { Pid = proc.ProcessID, Name = name });
+                // Process2 or nothing: IsBeingDebugged is the one thing here that cannot be found
+                // out by trying, since attaching to a process already under a debugger fails with
+                // a message about the attach rather than about the state.
+                list.Add(new ProcessInfo
+                {
+                    Pid = proc.ProcessID,
+                    Name = System.IO.Path.GetFileName(path) is var n && !string.IsNullOrEmpty(n) ? n : $"pid {proc.ProcessID}",
+                    Path = path,
+                    BeingDebugged = SafeIsBeingDebugged(proc),
+                });
             }
             var ordered = list
-                .OrderBy(p => System.IO.Path.GetFileName(p.Name), StringComparer.OrdinalIgnoreCase)
+                .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(p => p.Pid)
                 .ToArray();
             return new ProcessesResult { Ok = true, Processes = ordered };
@@ -715,6 +727,164 @@ internal sealed partial class IdeDebugService
             OutputWindowLogger.Global.LogException("IdeDebugService.ListProcessesAsync", ex);
             return new ProcessesResult { Ok = false, Reason = "Failed to list processes." };
         }
+    }
+
+    /// <summary>The processes THIS session is debugging, as opposed to everything attachable.
+    /// Needed because the inspection tools act on one process and never name it: with a web app and
+    /// its worker both under the debugger, the call stack belongs to one of them and nothing else
+    /// says which.</summary>
+    public async Task<DebuggedProcessesResult> ListDebuggedProcessesAsync()
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new DebuggedProcessesResult { Ok = false, Reason = "Debugger not available." }; }
+            if (dbg.CurrentMode == dbgDebugMode.dbgDesignMode)
+            {
+                return new DebuggedProcessesResult { Ok = false, Reason = "No debug session is running — debug_start begins one." };
+            }
+
+            var currentPid = SafeCurrentProcessId(dbg);
+            var list = new List<DebuggedProcessInfo>();
+            foreach (Process proc in dbg.DebuggedProcesses)
+            {
+                var p2 = proc as EnvDTE80.Process2;
+                list.Add(new DebuggedProcessInfo
+                {
+                    Pid = proc.ProcessID,
+                    Name = SafeProcessName(proc),
+                    ThreadCount = SafeThreadCount(p2),
+                    IsCurrent = currentPid != 0 && proc.ProcessID == currentPid,
+                    Transport = SafeTransportName(p2),
+                    UserName = SafeUserName(p2),
+                });
+            }
+
+            // Current first, for the same reason debug_list_threads does it: a boolean buried in one
+            // of several lookalike rows has to be hunted for, position says it before the field does.
+            return new DebuggedProcessesResult
+            {
+                Ok = true,
+                Processes = [.. list.OrderByDescending(p => p.IsCurrent).ThenBy(p => p.Pid)],
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.ListDebuggedProcessesAsync", ex);
+            return new DebuggedProcessesResult { Ok = false, Reason = "Failed to list the debugged processes." };
+        }
+    }
+
+    /// <summary>The modules loaded into the debugged process, with their symbol state. This is what
+    /// answers "why does my breakpoint not bind" — an unbound breakpoint is nearly always a module
+    /// whose symbols the debugger never loaded.</summary>
+    public async Task<ModulesResult> ListModulesAsync(bool userCodeOnly)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            var dbg = GetDebugger();
+            if (dbg == null) { return new ModulesResult { Ok = false, Reason = "Debugger not available." }; }
+            if (dbg.CurrentMode == dbgDebugMode.dbgDesignMode)
+            {
+                return new ModulesResult { Ok = false, Reason = "No debug session is running — debug_start begins one." };
+            }
+
+            // Modules hang off Process3, not off the debugger. An engine that predates it answers
+            // nothing here, which is not the same as "no modules".
+            if (dbg.CurrentProcess is not EnvDTE90.Process3 proc)
+            {
+                return new ModulesResult
+                {
+                    Ok = false,
+                    Supported = false,
+                    InBreak = dbg.CurrentMode == dbgDebugMode.dbgBreakMode,
+                    Reason = "This debug engine does not expose the loaded modules.",
+                };
+            }
+
+            var list = new List<ModuleInfo>();
+            foreach (EnvDTE90.Module m in proc.Modules)
+            {
+                var info = ReadModule(m);
+                if (info == null) { continue; }
+                if (userCodeOnly && !info.UserCode) { continue; }
+                list.Add(info);
+            }
+
+            return new ModulesResult
+            {
+                Ok = true,
+                InBreak = dbg.CurrentMode == dbgDebugMode.dbgBreakMode,
+                // User code first: the framework and the runtime are the bulk of the list and
+                // almost never the answer.
+                Modules = [.. list.OrderByDescending(m => m.UserCode).ThenBy(m => m.Name, StringComparer.OrdinalIgnoreCase)],
+            };
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("IdeDebugService.ListModulesAsync", ex);
+            return new ModulesResult { Ok = false, Reason = "Failed to list the modules." };
+        }
+    }
+
+    /// <summary>One module's fields, or null when it will not answer. Each property is read
+    /// separately: a module mid-unload throws on some and not on others, and the name alone is
+    /// still worth a row.</summary>
+    private static ModuleInfo ReadModule(EnvDTE90.Module m)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        string name;
+        try { name = m.Name; }
+        catch (Exception) { return null; }
+        if (string.IsNullOrEmpty(name)) { return null; }
+
+        var info = new ModuleInfo { Name = name };
+        // Read one at a time rather than in one try: a module mid-unload throws on some properties
+        // and answers others, and a row with the name and half the fields still says more than none.
+        try { info.Path = m.Path; } catch (Exception) { }
+        try { info.Version = m.Version; } catch (Exception) { }
+        try { info.SymbolFile = m.SymbolFile; } catch (Exception) { }
+        try { info.UserCode = m.UserCode; } catch (Exception) { }
+        try { info.Optimized = m.Optimized; } catch (Exception) { }
+        try { info.Is64Bit = m.Is64bit; } catch (Exception) { }
+        info.SymbolsLoaded = !string.IsNullOrEmpty(info.SymbolFile);
+        return info;
+    }
+
+    /// <summary>The pid of the process the inspection tools read, or 0 when the debugger will not
+    /// name one.</summary>
+    private static int SafeCurrentProcessId(Debugger dbg)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try { return dbg.CurrentProcess?.ProcessID ?? 0; }
+        catch (Exception) { return 0; }
+    }
+
+    /// <summary>How many threads a debugged process has, or 0 when it will not say.</summary>
+    private static int SafeThreadCount(EnvDTE80.Process2 p)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try { return p?.Threads?.Count ?? 0; }
+        catch (Exception) { return 0; }
+    }
+
+    /// <summary>A debugged process's transport name, or null. Local sessions all report "Default";
+    /// it earns its place when the session is remote.</summary>
+    private static string SafeTransportName(EnvDTE80.Process2 p)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try { return p?.Transport?.Name; }
+        catch (Exception) { return null; }
+    }
+
+    /// <summary>The user a debugged process runs as, or null when it will not say.</summary>
+    private static string SafeUserName(EnvDTE80.Process2 p)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try { return p?.UserName; }
+        catch (Exception) { return null; }
     }
 
     /// <summary>Attach the debugger to a local process by PID (preferred) or by name substring.
@@ -1037,8 +1207,19 @@ internal sealed partial class IdeDebugService
     /// instead of answering.</summary>
     private static string SafeProcessName(Process p)
     {
+        ThreadHelper.ThrowIfNotOnUIThread();
         try { return System.IO.Path.GetFileName(p.Name ?? "") is var n && !string.IsNullOrEmpty(n) ? n : $"pid {p.ProcessID}"; }
         catch (Exception) { return "?"; }
+    }
+
+    /// <summary>Whether a process is already under a debugger. Best-effort like
+    /// <see cref="SafeProcessName"/>: a process the debugger cannot fully see throws on the
+    /// property rather than answering false.</summary>
+    private static bool SafeIsBeingDebugged(Process p)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try { return p is EnvDTE80.Process2 p2 && p2.IsBeingDebugged; }
+        catch (Exception) { return false; }
     }
 
     /// <summary>The exception groups, for an error that has to name them. Best-effort: this runs
