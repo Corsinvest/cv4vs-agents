@@ -81,7 +81,12 @@ internal sealed partial class IdeDebugService
     public sealed class ProcessInfo
     {
         public int Pid { get; set; }
+        /// <summary>The file name alone, matching what DebuggedProcessInfo reports: the two
+        /// listings get cross-referenced, and a full path in one of them breaks the match.</summary>
         public string Name { get; set; }
+        /// <summary>The full path Name was taken from — what tells two same-named processes apart.
+        /// Empty for a process that would not give one up.</summary>
+        public string Path { get; set; }
         public bool BeingDebugged { get; set; }
     }
 
@@ -244,5 +249,58 @@ internal sealed partial class IdeDebugService
         public string Group { get; set; }
         public string Name { get; set; }
         public bool BreakWhenThrown { get; set; }
+    }
+
+    /// <summary>A process the current session is debugging. Richer than <see cref="ProcessInfo"/>,
+    /// which describes something merely attachable: these are live, so they carry the thread count
+    /// and the transport the session came in over.</summary>
+    public sealed class DebuggedProcessInfo
+    {
+        public int Pid { get; set; }
+        public string Name { get; set; }
+        public int ThreadCount { get; set; }
+        /// <summary>Which one the inspection tools read. They all act on a single process and never
+        /// say which — this is what shows there are others.</summary>
+        public bool IsCurrent { get; set; }
+        /// <summary>Null on a debugger that doesn't implement Process2 (nothing local does, but the
+        /// cast is still a cast).</summary>
+        public string Transport { get; set; }
+        public string UserName { get; set; }
+    }
+
+    public sealed class DebuggedProcessesResult
+    {
+        public bool Ok { get; set; }
+        public DebuggedProcessInfo[] Processes { get; set; } = [];
+        public string Reason { get; set; }
+    }
+
+    /// <summary>One module loaded into the debugged process. SymbolFile/SymbolsLoaded are the
+    /// point: a breakpoint that will not bind is almost always a module whose symbols never
+    /// arrived.</summary>
+    public sealed class ModuleInfo
+    {
+        public string Name { get; set; }
+        public string Path { get; set; }
+        public string Version { get; set; }
+        /// <summary>Empty when the debugger loaded no symbols for this module.</summary>
+        public string SymbolFile { get; set; }
+        public bool SymbolsLoaded { get; set; }
+        /// <summary>The debugger's own "My Code" classification — what the user wrote, as opposed to
+        /// the framework and the runtime.</summary>
+        public bool UserCode { get; set; }
+        public bool Optimized { get; set; }
+        public bool Is64Bit { get; set; }
+    }
+
+    public sealed class ModulesResult
+    {
+        public bool Ok { get; set; }
+        public bool InBreak { get; set; }
+        public ModuleInfo[] Modules { get; set; } = [];
+        /// <summary>Set when the debug engine does not implement Process3 — the modules are simply
+        /// not reachable there, which is a different answer from "there are none".</summary>
+        public bool Supported { get; set; } = true;
+        public string Reason { get; set; }
     }
 }
