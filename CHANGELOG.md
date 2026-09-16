@@ -19,6 +19,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **The plan usage in the status bar outlived the panes it was reporting on.** Close every chat and
+  it stayed, showing whichever profile had been open last — and kept starting a background process
+  every fifteen minutes to refresh numbers for a session that had ended. It now appears with the
+  first pane and goes with the last; closing the only pane on the profile being shown moves it to one
+  that still has a pane.
 - **A single queued message could not be read in full.** With one message waiting, its text sat
   truncated in the row with no way to see the rest or copy it — while two or more opened a list that
   showed everything. There is now always a list.
