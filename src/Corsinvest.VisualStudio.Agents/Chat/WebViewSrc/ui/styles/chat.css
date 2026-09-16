@@ -228,6 +228,9 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     flex-direction: row; /* override .cv-message's column */
     align-items: flex-start;
     gap: 6px;
+    /* Mirrors .md (markdown.css): the row holds no text of its own, but the dot
+     * sizes its box in lh and must match the line it sits next to. */
+    line-height: 1.6;
 }
 .cv-message.assistant .md > :first-child {
     margin-top: 0;
@@ -276,13 +279,15 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     color: var(--colorNeutralForeground3);
 }
 
-/* The dot is a box one text-line tall (18px) that centers a crisp 7px circle
- * (its ::before). The box height lines the circle up with the first text line
- * even when the detail wraps; the circle itself is the original solid 7×7
- * (border-radius, not a fuzzy gradient — so it isn't visually larger). */
+/* The dot is a box one text-line tall that centers a crisp 7px circle (its
+ * ::before). The box height lines the circle up with the first text line even
+ * when the detail wraps; the circle itself is the original solid 7×7
+ * (border-radius, not a fuzzy gradient — so it isn't visually larger).
+ * In lh, not a fixed 18px: the same dot also flags an assistant reply, whose
+ * text is taller. */
 .cv-tool-row-dot {
     width: 7px;
-    height: 18px;
+    height: 1lh;
     flex-shrink: 0;
     display: flex;
     align-items: center;
