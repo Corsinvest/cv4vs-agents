@@ -210,6 +210,8 @@
     <Compile Include="Mcp\Tools\Debug\ClearBreakpointsTool.cs" />
     <Compile Include="Mcp\Tools\Debug\ListBreakpointsTool.cs" />
     <Compile Include="Mcp\Tools\Debug\BreakDebugTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\ListDebuggedProcessesTool.cs" />
+    <Compile Include="Mcp\Tools\Debug\ListModulesTool.cs" />
     <Compile Include="Mcp\Tools\Debug\ListProcessesTool.cs" />
     <Compile Include="Mcp\Tools\Debug\AttachDebugTool.cs" />
     <Compile Include="Mcp\Tools\Debug\ContinueDebugTool.cs" />

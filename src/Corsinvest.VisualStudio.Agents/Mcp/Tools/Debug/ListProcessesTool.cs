@@ -21,8 +21,14 @@ internal sealed class ListProcessesTool : McpTool<ListProcessesArgs>
 {
     public override string Name => "debug_list_processes";
     public override string Description =>
-        "List local processes the debugger can attach to (pid + name). Optionally filter by a " +
-        "name substring. Use this to find the process to pass to debug_attach.";
+        "List local processes the debugger can attach to: pid, name (the file alone), path (the " +
+        "full one, which is what tells two same-named processes apart) and whether something is " +
+        "already debugging them. Optionally filter by a substring, matched against the full path — " +
+        "so a folder narrows the list as well as a name. Use this to find the process to pass to " +
+        "debug_attach: beingDebugged=true is why an attach would be refused, and is worth checking " +
+        "first, since the refusal talks about the attach rather than about the state. For the " +
+        "processes THIS session is debugging, use debug_list_debugged_processes — name has the " +
+        "same shape in both, so the two listings can be matched up.";
 
     public override bool ReadOnly => true;
     public override bool Idempotent => true;
@@ -34,7 +40,13 @@ internal sealed class ListProcessesTool : McpTool<ListProcessesArgs>
         return new
         {
             ok = true,
-            processes = r.Processes.Select(p => new { pid = p.Pid, name = p.Name }).ToArray(),
+            processes = r.Processes.Select(p => new
+            {
+                pid = p.Pid,
+                name = p.Name,
+                path = p.Path,
+                beingDebugged = p.BeingDebugged,
+            }).ToArray(),
         };
     }
 }

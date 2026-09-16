@@ -241,6 +241,8 @@ internal sealed partial class McpServerHost
         yield return new Tools.ListBreakpointsTool();
         yield return new Tools.BreakDebugTool();
         yield return new Tools.ListProcessesTool();
+        yield return new Tools.ListDebuggedProcessesTool();
+        yield return new Tools.ListModulesTool();
         yield return new Tools.AttachDebugTool();
         yield return new Tools.ContinueDebugTool();
         yield return new Tools.StepDebugTool();
