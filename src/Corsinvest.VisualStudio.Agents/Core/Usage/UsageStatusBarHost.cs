@@ -44,15 +44,33 @@ internal static class UsageStatusBarHost
     private static CancellationTokenSource _attachCts;
     private static bool _initialized;
 
-    /// <summary>Show the item if Options want it, and follow later changes to that option.</summary>
+    /// <summary>Show the item if Options want it and a session is open, and follow later changes to
+    /// both.</summary>
     public static void Initialize()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (_initialized) { return; }
         _initialized = true;
         AgentsOptions.Applied += OnOptionsApplied;
+        // The item reports what the open sessions are spending, so it comes and goes with them.
+        Panes.PaneRegistry.Instance.FirstSessionStarted += OnSessionsChanged;
+        Panes.PaneRegistry.Instance.LastSessionEnded += OnSessionsChanged;
+        // Every close, not just the last: the shown profile may have been that pane's.
+        Panes.PaneRegistry.Instance.SessionClosed += OnSessionClosed;
         Sync();
     }
+
+    private static void OnSessionsChanged() => ThreadHelper.JoinableTaskFactory.Run(async () =>
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        Sync();
+    });
+
+    private static void OnSessionClosed() => ThreadHelper.JoinableTaskFactory.Run(async () =>
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        UsageStatusService.Instance.OnPaneClosed();
+    });
 
     /// <summary>Package teardown: remove the item and stop refreshing.</summary>
     public static void Shutdown()
@@ -61,6 +79,9 @@ internal static class UsageStatusBarHost
         if (!_initialized) { return; }
         _initialized = false;
         AgentsOptions.Applied -= OnOptionsApplied;
+        Panes.PaneRegistry.Instance.FirstSessionStarted -= OnSessionsChanged;
+        Panes.PaneRegistry.Instance.LastSessionEnded -= OnSessionsChanged;
+        Panes.PaneRegistry.Instance.SessionClosed -= OnSessionClosed;
         Detach();
     }
 
@@ -81,7 +102,11 @@ internal static class UsageStatusBarHost
     private static void Sync()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        if (AgentsOptions.General.ShowUsageInStatusBar) { Attach(); }
+        // No pane, nothing being spent — and nothing worth starting a claude.exe for every quarter
+        // of an hour. The item followed the active pane's profile but had no answer for there being
+        // none, so it stayed on whichever pane closed last.
+        var anySession = Panes.PaneRegistry.Instance.Entries.Count > 0;
+        if (AgentsOptions.General.ShowUsageInStatusBar && anySession) { Attach(); }
         else { Detach(); }
     }
 
