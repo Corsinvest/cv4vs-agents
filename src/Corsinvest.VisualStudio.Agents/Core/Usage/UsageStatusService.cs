@@ -212,6 +212,23 @@ internal sealed class UsageStatusService
         Changed?.Invoke();
     }
 
+    /// <summary>A pane closed. Only Track moves the shown profile, and it fires when one of our panes
+    /// becomes the active frame — closing one raises nothing, so a profile whose last pane has just
+    /// gone would stay on the bar with no session behind it. Move to a profile that still has one;
+    /// with none left the host takes the item away and this does not matter.</summary>
+    public void OnPaneClosed()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (!_started || _current == null) { return; }
+        var live = PaneRegistry.Instance.Entries;
+        if (live.Any(e => string.Equals(e.Profile?.Name, _current.Name, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+        // The most recent one, matching what Track would have shown had it been focused.
+        if (live.LastOrDefault()?.Profile is Profile profile) { SetCurrent(profile); }
+    }
+
     // Only our own panes move the status bar to another profile; focus going to the editor or anything
     // else leaves it on the last pane's.
     private void Track(IVsWindowFrame frame)

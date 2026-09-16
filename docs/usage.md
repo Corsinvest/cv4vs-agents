@@ -44,9 +44,15 @@ your credentials, nothing is estimated here:
 
 - A **chat pane** on that profile answers from its own running `claude.exe`, after each turn (at most
   once a minute) and whenever a rate-limit event arrives. No extra process.
-- With **no such pane** open, a short-lived `claude.exe` — started without your MCP servers — refreshes
-  the numbers only when they are older than *Status bar usage refresh (minutes)* (15 by default) while
-  Visual Studio is in front, when the popup opens on numbers more than two minutes old, or on
-  **Refresh**. Set the option to `0` and none is ever started in the background.
+- A pane that has **not run a turn yet** has nothing to answer with, so a short-lived `claude.exe` —
+  started without your MCP servers — fills in: when the numbers are older than *Status bar usage
+  refresh (minutes)* (15 by default) while Visual Studio is in front, when the popup opens on numbers
+  more than two minutes old, or on **Refresh**. Set the option to `0` and none is ever started in the
+  background.
 
-*Show plan usage in the status bar* turns the item off — see [Options](options.md#general).
+**It comes and goes with the panes.** With none open the item is not there — nothing is being spent,
+so there is nothing to watch — and it returns with the first one. Close the only pane on the profile
+being shown and it moves to one that still has a pane, rather than sitting on a session that ended.
+
+*Show plan usage in the status bar* turns the item off altogether — see
+[Options](options.md#general).
