@@ -470,8 +470,10 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             RestorePanesDeferred();
         }
 
-        // Plan usage in the status bar: the one piece of UI up before any pane. At shell idle, like the
-        // pane restore — building UI inside package load freezes VS.
+        // Plan usage in the status bar. At shell idle, like the pane restore — building UI inside
+        // package load freezes VS. Either order works: with no pane yet the item stays away and the
+        // registry's FirstSessionStarted brings it in, and a restore that got there first is already
+        // counted when Sync runs.
         _ = JoinableTaskFactory.StartOnIdle(() =>
         {
             try { Core.Usage.UsageStatusBarHost.Initialize(); }

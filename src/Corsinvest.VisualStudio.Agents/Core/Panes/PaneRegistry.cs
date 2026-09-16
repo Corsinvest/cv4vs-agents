@@ -33,6 +33,11 @@ public sealed class PaneRegistry
     /// <summary>Fired when the last session closes (back to empty); the package stops MCP.</summary>
     public event Action LastSessionEnded;
 
+    /// <summary>Fired for every close, the last one included. <see cref="LastSessionEnded"/> answers
+    /// "is anything still open"; this one answers "what is open now" — the status bar shows one
+    /// profile and has to leave a profile whose panes have all gone, even with others still up.</summary>
+    public event Action SessionClosed;
+
     /// <summary>Append a freshly-created entry, notify, and raise lifecycle events.
     /// No dedupe: every RegisterInstance mints a distinct entry (unique <see cref="PaneEntry.SeqNo"/>),
     /// removed by exact instance. Identity must NOT key off PaneId — VS recycles
@@ -56,6 +61,7 @@ public sealed class PaneRegistry
     {
         if (entry == null || !Entries.Contains(entry)) { return; }
         Entries.Remove(entry);
+        SessionClosed?.Invoke();
         if (Entries.Count == 0)
         {
             OutputWindowLogger.Global.Info("[registry] last session ended — MCP server will stop");
