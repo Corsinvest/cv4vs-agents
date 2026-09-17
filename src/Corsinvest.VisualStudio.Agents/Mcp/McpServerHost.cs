@@ -449,14 +449,14 @@ internal sealed partial class McpServerHost
             }
             else
             {
-                var startLine = Math.Max(0, ctx.StartLine - 1);
-                var endLine = Math.Max(0, ctx.EndLine - 1);
+                // Same conversion as the live push at OnEditorContextChanged: VS gives 1-based
+                // lines, LSP/MCP wants 0-based; columns are already 0-based.
                 json = BuildSelectionNotification(
                     text: ctx.SelectedText ?? string.Empty,
                     filePath: ctx.FilePath,
                     fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
-                    startLine: startLine, startChar: 0,
-                    endLine: endLine, endChar: 0,
+                    startLine: Math.Max(0, ctx.StartLine - 1), startChar: Math.Max(0, ctx.StartColumn),
+                    endLine: Math.Max(0, ctx.EndLine - 1), endChar: Math.Max(0, ctx.EndColumn),
                     isEmpty: !ctx.HasSelection);
             }
             if (ws.State != WebSocketState.Open) { return; }
