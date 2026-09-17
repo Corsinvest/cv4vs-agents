@@ -53,7 +53,7 @@ internal sealed partial class WebViewMessageHandler
             var agentId = p.AgentId ?? "";
             foreach (var lookIn in string.IsNullOrEmpty(agentId) ? [null] : new[] { agentId, null })
             {
-                input = FindToolInputRaw(client.WorkingDirectory, client.SessionId, toolUseId, PaneClaudePaths, lookIn);
+                input = FindToolInputRaw(entry.WorkingDirectory, client.SessionId, toolUseId, PaneClaudePaths, lookIn);
                 if (input != null) { break; }
             }
         }

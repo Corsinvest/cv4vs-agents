@@ -77,7 +77,7 @@ internal sealed partial class WebViewMessageHandler
         var sessionId = client.SessionId;
 
         var backup = Sessions.ReadFileBackups(sessionId, uuid)
-            .FirstOrDefault(b => PathsMatch(b.Path, wanted, client.WorkingDirectory));
+            .FirstOrDefault(b => PathsMatch(b.Path, wanted, entry.WorkingDirectory));
 
         // No backup at all, or one recorded as null: either way the file did not exist before this
         // message, and rewinding DELETES it rather than restoring anything. The CLI only copies a

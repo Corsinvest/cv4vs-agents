@@ -401,21 +401,21 @@ internal sealed partial class WebViewMessageHandler
         else if (stripped.StartsWith("file://", System.StringComparison.OrdinalIgnoreCase)) { stripped = stripped.Substring(7); }
         var normalized = stripped.Replace('/', Path.DirectorySeparatorChar);
         if (Path.IsPathRooted(normalized) && File.Exists(normalized)) { return normalized; }
-        var combined = Path.Combine(client.WorkingDirectory ?? string.Empty, normalized);
+        var combined = Path.Combine(entry.WorkingDirectory ?? string.Empty, normalized);
         if (File.Exists(combined)) { return combined; }
         if (File.Exists(normalized)) { return normalized; }
         // Bare name (a "X.cs:20" link carries just the file name): search the workspace by name.
         // The model almost always means a file under the working directory (see the chat file-link
         // design), so a recursive search of the workdir resolves it. First unique match wins; a
         // deeper path in the link (Core/Stats/X.cs) already resolved above via the workdir-combine.
-        var wd = client.WorkingDirectory;
+        var wd = entry.WorkingDirectory;
         var name = Path.GetFileName(normalized);
         if (!string.IsNullOrEmpty(wd) && !string.IsNullOrEmpty(name) && Directory.Exists(wd))
         {
             var found = FindFileByNameUnderRoot(wd, name);
             if (found != null) { return found; }
         }
-        log.Debug(() => $"[OpenFile] Path not found. raw='{filePath}' normalized='{normalized}' combined='{combined}' workingDir='{client.WorkingDirectory}'");
+        log.Debug(() => $"[OpenFile] Path not found. raw='{filePath}' normalized='{normalized}' combined='{combined}' workingDir='{entry.WorkingDirectory}'");
         return null;
     }
 
