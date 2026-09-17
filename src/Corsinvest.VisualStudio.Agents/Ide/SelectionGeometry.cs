@@ -31,6 +31,7 @@ internal static class SelectionGeometry
         return true;
     }
 
+    /// <summary>The same rule over a string already in hand.</summary>
     internal static bool IsEffectivelyEmpty(string text)
         => string.IsNullOrEmpty(text) || IsEffectivelyEmpty(text.Length, i => text[i]);
 
@@ -43,10 +44,10 @@ internal static class SelectionGeometry
         var endIdx = LineIndexOf(lineStartOffsets, endOffset);
 
         // Dragging to the START of a line leaves the end offset on a line the selection holds no
-        // character of; reporting it would hand the model one line more than was selected.
-        // endIdx > startIdx is what leaves a bare caret alone — it cannot span lines. Deliberately
-        // not gated on isEmpty: that says "not worth reporting" (whitespace, one character), and a
-        // whitespace-only drag across lines still must not name a line it holds nothing of.
+        // character of; reporting it would hand the model one line more than was selected. A bare
+        // caret is excluded by the span alone — it cannot reach past its own line — and never by
+        // what the text turned out to be: a drag over blank lines overshoots exactly like a drag
+        // over code.
         if (endIdx > startIdx && endOffset == lineStartOffsets[endIdx]) { endIdx--; }
 
         var startCol = Math.Max(0, startOffset - lineStartOffsets[startIdx]);

@@ -71,6 +71,9 @@ internal sealed class EditorSelectionState
         return true;
     }
 
+    /// <summary>Stop listening. Idempotent, and the flag outlives the unsubscribe: the instance
+    /// stays in the view's property bag, so anything that meets this view again gets it back and
+    /// must find it inert rather than half-attached.</summary>
     internal void Detach()
     {
         if (_detached) { return; }
@@ -81,7 +84,13 @@ internal sealed class EditorSelectionState
             View.GotAggregateFocus -= OnGotFocus;
             View.Closed -= OnClosed;
         }
-        catch { /* view already torn down */ }
+        catch (Exception ex)
+        {
+            // Unsubscribing from a view being torn down: the events are gone either way, so
+            // tracking is unaffected — but a throw here would mean the teardown is not what we
+            // think it is.
+            OutputWindowLogger.Global.Warn($"[ide-context] detach from a torn-down view: {ex.Message}");
+        }
     }
 
     // The firing state goes with the event: the listener owns several views and must know which
