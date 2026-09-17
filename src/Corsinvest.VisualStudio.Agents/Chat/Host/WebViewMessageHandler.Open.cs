@@ -50,6 +50,7 @@ internal sealed partial class WebViewMessageHandler
                                                                      // carries an agentId (it needs one to fetch its children) while its OWN result lives
                                                                      // in the main transcript, so the sub-agent file has no match for it.
                                                                      var paths = PaneClaudePaths;
+                                                                     var workDir = entry.WorkingDirectory;
                                                                      string content = null;
                                                                      // Only the IN side names a file. OUT for a Write is "File created successfully at: …",
                                                                      // which is not the file and must not lend the temp its extension.
@@ -60,11 +61,11 @@ internal sealed partial class WebViewMessageHandler
                                                                      {
                                                                          if (which == "in")
                                                                          {
-                                                                             (content, filePath) = FindToolInput(client.WorkingDirectory, client.SessionId, toolUseId, paths, toolName, lookIn);
+                                                                             (content, filePath) = FindToolInput(workDir, client.SessionId, toolUseId, paths, toolName, lookIn);
                                                                          }
                                                                          else
                                                                          {
-                                                                             content = FindToolResult(client.WorkingDirectory, client.SessionId, toolUseId, paths, lookIn);
+                                                                             content = FindToolResult(workDir, client.SessionId, toolUseId, paths, lookIn);
                                                                          }
                                                                          if (!string.IsNullOrEmpty(content)) { break; }
                                                                      }
@@ -123,7 +124,7 @@ internal sealed partial class WebViewMessageHandler
         JObject input = null;
         foreach (var lookIn in string.IsNullOrEmpty(agentId) ? [null] : new[] { agentId, null })
         {
-            input = FindToolInputRaw(client.WorkingDirectory, client.SessionId, toolUseId,
+            input = FindToolInputRaw(entry.WorkingDirectory, client.SessionId, toolUseId,
                                      PaneClaudePaths, lookIn);
             if (input != null) { break; }
         }

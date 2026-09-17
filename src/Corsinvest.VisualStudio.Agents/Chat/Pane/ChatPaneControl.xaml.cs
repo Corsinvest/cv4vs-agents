@@ -42,8 +42,7 @@ public partial class ChatPaneControl : PaneControlBase
     private void RefreshTitleFromDisk()
     {
         var sid = _client?.SessionId;
-        var wd = _client?.WorkingDirectory;
-        if (string.IsNullOrEmpty(sid) || string.IsNullOrEmpty(wd)) { return; }
+        if (string.IsNullOrEmpty(sid)) { return; }
         var title = Sessions.ScanTitle(sid);
         if (!string.IsNullOrWhiteSpace(title)) { SetSessionTitle(title); }
     }
@@ -51,8 +50,7 @@ public partial class ChatPaneControl : PaneControlBase
     public override void RenameSession(string newTitle)
     {
         var sid = _client?.SessionId;
-        var wd = _client?.WorkingDirectory;
-        if (string.IsNullOrEmpty(sid) || string.IsNullOrEmpty(wd) || string.IsNullOrWhiteSpace(newTitle)) { return; }
+        if (string.IsNullOrEmpty(sid) || string.IsNullOrWhiteSpace(newTitle)) { return; }
 
         // Show it straight away — the write below is the slow part, and it can't fail in a way
         // the user could act on.

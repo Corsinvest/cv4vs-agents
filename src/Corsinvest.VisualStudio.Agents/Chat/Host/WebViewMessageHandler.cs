@@ -30,8 +30,12 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
 
     /// <summary>Build a SessionManager keyed on this session's config-dir and working directory.
     /// New instance per call: these are single-session reads, so the scan cache a long-lived
-    /// instance would keep is of no use to them.</summary>
-    private SessionManager Sessions => new(PaneClaudePaths, client.WorkingDirectory, log);
+    /// instance would keep is of no use to them.
+    /// <para>The pane's directory, not the client's: the client follows the CLI process, which a
+    /// `cd` inside a Bash call moves, while the transcript stays in the folder the session was
+    /// launched from. Keyed on the client it would look for the .jsonl under a directory the CLI
+    /// never writes to.</para></summary>
+    private SessionManager Sessions => new(PaneClaudePaths, entry.WorkingDirectory, log);
 
     // id is the request/response correlation id (null for notifications). The request cases echo
     // it back via bridge.SendResponse(channel, id, dto); the rest ignore it.

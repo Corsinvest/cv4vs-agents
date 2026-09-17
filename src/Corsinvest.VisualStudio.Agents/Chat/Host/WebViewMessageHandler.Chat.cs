@@ -143,7 +143,7 @@ internal sealed partial class WebViewMessageHandler
         // running. StatsIndexDone fires when it finishes → the WebView re-reads the cache.
         HookStatsIndexer();
         {
-            Core.Stats.StatsService.StartIndexing(client.WorkingDirectory, PaneClaudePaths);
+            Core.Stats.StatsService.StartIndexing(entry.WorkingDirectory, PaneClaudePaths);
         }
     }
 
@@ -155,7 +155,7 @@ internal sealed partial class WebViewMessageHandler
             // thread — the registry entry can be dropped by the time a fire-and-forget RunAsync
             // job runs (e.g. the pane is reloading), which would NRE inside PaneClaudePaths.
             var statsPaths = PaneClaudePaths;
-            var statsWd = client.WorkingDirectory;
+            var statsWd = entry.WorkingDirectory;
             var statsSid = client.SessionId;
             var statsProfile = entry.Profile;
             var pStats = data.ToObject<Contracts.GetStatsRequest>();

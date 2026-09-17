@@ -50,6 +50,14 @@ internal sealed partial class ClaudeClient : IClaudeClient
     // are, so a profiled pane never silently reverts to native Claude.
     private IReadOnlyDictionary<string, string> _env;
 
+    // Set by StartProcess, cleared by the first system/init it produces: only that one carries a
+    // `cwd` worth reading back. Reset per process, so a respawn takes the CLI's answer again.
+    private bool _initCwdPending;
+
+    /// <summary>The directory the process was LAUNCHED in — what a respawn (<c>--resume</c>, auto-restart)
+    /// has to be given again, so it stays fixed for the client's life.
+    /// <para>To find a session's files, take the pane's <c>Entry.WorkingDirectory</c> instead: same value
+    /// for a pane's own client, but it also holds for the probes, which have no pane.</para></summary>
     public string WorkingDirectory { get; private set; }
     public string SessionId { get; private set; }
 
@@ -199,6 +207,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // fork) its late Exited was just detached above, so nothing else would drop them — and a
         // stale plan would still be found by path, and answered to a process that never asked.
         _toolRequestIds.Clear();
+        // The next system/init is this process's first: the one init whose `cwd` still describes
+        // where it was launched, before any Bash `cd` has moved it. See HandleInit.
+        _initCwdPending = true;
         // A new process has no bridge: the CLI reports nothing about Remote Control after
         // --resume, so nothing else would clear this.
         BridgeEpoch = null;
