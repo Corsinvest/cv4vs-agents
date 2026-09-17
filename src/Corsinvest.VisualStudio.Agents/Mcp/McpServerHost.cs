@@ -399,29 +399,7 @@ internal sealed partial class McpServerHost
     /// <summary>Builds a <c>selection_changed</c> notification and broadcasts it. The payload shape
     /// is what the CLI's <c>useIdeSelection</c> hook accepts before it injects an
     /// <c>&lt;ide_selection&gt;</c> block: { text, filePath, fileUrl, selection }.</summary>
-    private void OnEditorContextChanged(EditorContext ctx)
-    {
-        if (ctx == null)
-        {
-            // No active document: empty text is the CLI's signal to drop its cached selection.
-            BroadcastNotification(BuildSelectionNotification(
-                text: string.Empty, filePath: null, fileUrl: null,
-                startLine: 0, startChar: 0, endLine: 0, endChar: 0, isEmpty: true));
-            return;
-        }
-        // VS gives 1-based lines; LSP/MCP wants 0-based — hence the subtraction, and the floor
-        // that keeps it from going negative. The columns need neither: they arrive 0-based and
-        // already floored by SelectionGeometry.
-        var startLine = Math.Max(0, ctx.StartLine - 1);
-        var endLine = Math.Max(0, ctx.EndLine - 1);
-        BroadcastNotification(BuildSelectionNotification(
-            text: ctx.SelectedText ?? string.Empty,
-            filePath: ctx.FilePath,
-            fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
-            startLine: startLine, startChar: ctx.StartColumn,
-            endLine: endLine, endChar: ctx.EndColumn,
-            isEmpty: !ctx.HasSelection));
-    }
+    private void OnEditorContextChanged(EditorContext ctx) => BroadcastNotification(BuildSelectionNotification(ctx));
 
     /// <summary>Send the initial context after a pause, giving the CLI time to reach 'connected' and
     /// register its useIdeSelection handler (otherwise the broadcast fires into the void).</summary>
@@ -440,26 +418,7 @@ internal sealed partial class McpServerHost
         try
         {
             await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var ctx = IdeContextService.Instance.GetCurrentContext();
-            string json;
-            if (ctx == null)
-            {
-                json = BuildSelectionNotification(
-                    text: string.Empty, filePath: null, fileUrl: null,
-                    startLine: 0, startChar: 0, endLine: 0, endChar: 0, isEmpty: true);
-            }
-            else
-            {
-                // Same conversion as the live push at OnEditorContextChanged: VS gives 1-based
-                // lines, LSP/MCP wants 0-based; columns are already 0-based.
-                json = BuildSelectionNotification(
-                    text: ctx.SelectedText ?? string.Empty,
-                    filePath: ctx.FilePath,
-                    fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
-                    startLine: Math.Max(0, ctx.StartLine - 1), startChar: ctx.StartColumn,
-                    endLine: Math.Max(0, ctx.EndLine - 1), endChar: ctx.EndColumn,
-                    isEmpty: !ctx.HasSelection);
-            }
+            var json = BuildSelectionNotification(IdeContextService.Instance.GetCurrentContext());
             if (ws.State != WebSocketState.Open) { return; }
             OutputWindowLogger.Global.Trace(() => $"Mcp: -> (initial) {StringHelpers.Truncate(json, 200)}");
             var bytes = Encoding.UTF8.GetBytes(json);
@@ -468,6 +427,22 @@ internal sealed partial class McpServerHost
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Mcp.SendInitialContext", ex); }
     }
+
+    /// <summary>The wire form of an editor context, live or on connect — both go through here so a
+    /// client that arrives mid-selection is told the same thing the next change will tell it.
+    /// <para><c>null</c> means no active document: the CLI drops its cached selection on the empty
+    /// text. VS counts lines from 1 and LSP/MCP from 0, hence the subtraction and the floor under
+    /// it; the columns need neither, arriving 0-based and already floored.</para></summary>
+    private static string BuildSelectionNotification(EditorContext ctx)
+        => ctx == null
+            ? BuildSelectionNotification(string.Empty, null, null, 0, 0, 0, 0, isEmpty: true)
+            : BuildSelectionNotification(
+                text: ctx.SelectedText ?? string.Empty,
+                filePath: ctx.FilePath,
+                fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
+                startLine: Math.Max(0, ctx.StartLine - 1), startChar: ctx.StartColumn,
+                endLine: Math.Max(0, ctx.EndLine - 1), endChar: ctx.EndColumn,
+                isEmpty: !ctx.HasSelection);
 
     private static string BuildSelectionNotification(
         string text, string filePath, string fileUrl,
