@@ -24,7 +24,9 @@
     <StackPanel x:Name="ContentPanel" Orientation="Horizontal" Margin="7,0,8,0">
       <Image Source="{StaticResource MascotImage}" Width="16" Height="16" Margin="0,0,5,0"
              VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-      <TextBlock x:Name="ProfileText" VerticalAlignment="Center" />
+      <!-- Margin, not a trailing space in the text: the name is dropped when a pane has the focus,
+           and a collapsed TextBlock must not leave the gap behind. -->
+      <TextBlock x:Name="ProfileText" VerticalAlignment="Center" Margin="0,0,4,0" />
       <!-- One cell per figure, each with its bar underneath; built in code. -->
       <StackPanel x:Name="SegmentsPanel" Orientation="Horizontal" />
     </StackPanel>
