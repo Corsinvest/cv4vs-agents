@@ -4,7 +4,6 @@
  */
 
 using EnvDTE;
-using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Editor;
@@ -312,55 +311,16 @@ internal sealed partial class IdeContextService : IDisposable
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.ContextChanged", ex); }
     }
 
-    /// <summary>Synchronous snapshot of the editor for the live badge
-    /// path. Must be called on the UI thread.</summary>
+    /// <summary>Synchronous snapshot of the editor for the on-demand readers (badge refresh, the
+    /// CLI's initial context, the `&lt;ide_selection&gt;` block, the context menu). Reads the same
+    /// tracked state the push path emits from, so a pull and a push can never disagree. Must be
+    /// called on the UI thread.</summary>
     public EditorContext GetCurrentContext()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        try
-        {
-            var dte = Package.GetGlobalService(typeof(DTE)) as DTE2;
-            var doc = dte?.ActiveDocument;
-            var path = doc?.FullName;
-            // Only real code files; skip output/readonly/tool windows (synthetic path).
-            if (string.IsNullOrEmpty(path) || !File.Exists(path)) { return null; }
-            var ctx = new EditorContext
-            {
-                FilePath = path,
-                FileName = Path.GetFileName(path),
-            };
-            // Non-text docs (designers, images, .resx) expose a TextDocument
-            // proxy whose Selection getter throws COMException E_FAIL — expected,
-            // so swallow it silently instead of spamming the Output window.
-            try
-            {
-                if (doc.Object("TextDocument") is TextDocument textDoc &&
-                    textDoc.Selection is TextSelection sel)
-                {
-                    if (!sel.IsEmpty)
-                    {
-                        ctx.HasSelection = true;
-                        ctx.StartLine = sel.TopLine;
-                        ctx.EndLine = sel.BottomLine;
-                        ctx.StartColumn = Math.Max(0, (sel.TopPoint?.DisplayColumn ?? 1) - 1);
-                        ctx.EndColumn = Math.Max(0, (sel.BottomPoint?.DisplayColumn ?? 1) - 1);
-                        ctx.SelectedText = sel.Text;
-                    }
-                    else
-                    {
-                        ctx.StartLine = sel.CurrentLine;
-                        ctx.EndLine = sel.CurrentLine;
-                    }
-                }
-            }
-            catch (System.Runtime.InteropServices.COMException) { /* designer/non-text doc — no selection */ }
-            return ctx;
-        }
-        catch (Exception ex)
-        {
-            OutputWindowLogger.Global.LogException("Ide.GetCurrentContext", ex);
-            return null;
-        }
+        // The active view may not have been met yet (first call before any frame change).
+        if (_active == null) { TrackActiveView(); }
+        return BuildContext(_active, includeText: true);
     }
 
     /// <summary>If <paramref name="filePath"/> is open in an editor with unsaved changes, save it.
@@ -609,7 +569,7 @@ internal sealed partial class IdeContextService : IDisposable
         _hasEmitted = false;
         _lastFilePath = null;
         TrackActiveView();          // re-attach to whatever view is active now
-        Emit(GetCurrentContext());  // sync snapshot via DTE (on-demand path)
+        Emit(GetCurrentContext());  // sync snapshot of the freshly-tracked view
     }
 
 
