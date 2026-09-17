@@ -65,8 +65,7 @@ internal sealed class EditorPromptsMenuCommand : OleMenuCommand
         cmd.MatchedCommandId = 0;
     }
 
-    private static bool HasSelection()
-        => IdeContextService.Instance.GetCurrentContext()?.HasSelection == true;
+    private static bool HasSelection() => IdeContextService.Instance.HasSelection();
 
     private static void OnInvoke(object sender, EventArgs e)
     {

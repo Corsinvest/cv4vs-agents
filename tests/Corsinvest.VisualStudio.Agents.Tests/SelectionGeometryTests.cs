@@ -87,4 +87,19 @@ public class SelectionGeometryTests
     [InlineData("  ab  ", false)]
     public void IsEffectivelyEmpty_IsAboutWhitespace_NotAboutLength(string text, bool expected)
         => Assert.Equal(expected, SelectionGeometry.IsEffectivelyEmpty(text));
+
+    [Fact]
+    public void IsEffectivelyEmpty_OverAnAccessor_AgreesWithTheStringForm_AndStopsEarly()
+    {
+        // The accessor form is what runs on the context menu's hot path, over the editor snapshot.
+        // It must answer the same as the string form, and must not read past the first real
+        // character — a five-thousand-line selection is answered by reading one.
+        const string text = "   x                                        ";
+        var reads = 0;
+        var result = SelectionGeometry.IsEffectivelyEmpty(text.Length, i => { reads++; return text[i]; });
+
+        Assert.False(result);
+        Assert.Equal(SelectionGeometry.IsEffectivelyEmpty(text), result);
+        Assert.Equal(4, reads);
+    }
 }

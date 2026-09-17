@@ -187,6 +187,16 @@ internal sealed partial class IdeContextService : IDisposable
     /// <para><paramref name="includeText"/> false leaves <see cref="EditorContext.SelectedText"/>
     /// empty: the badge never reads it, and materialising a multi-megabyte selection for a
     /// consumer that wants two integers is the allocation this exists to avoid.</para></summary>
+    /// <summary>The span's own answer to <see cref="SelectionGeometry.IsEffectivelyEmpty"/>: no
+    /// characters, or nothing but whitespace. Reads the snapshot position by position and stops at
+    /// the first real character, so a large selection costs one character rather than its length.</summary>
+    private static bool IsSpanEffectivelyEmpty(SnapshotSpan span)
+    {
+        var start = span.Start.Position;
+        var snapshot = span.Snapshot;
+        return SelectionGeometry.IsEffectivelyEmpty(span.Length, i => snapshot[start + i]);
+    }
+
     private EditorContext BuildContext(EditorSelectionState state, bool includeText)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -214,8 +224,11 @@ internal sealed partial class IdeContextService : IDisposable
                 span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive);
             }
 
-            var text = span.IsEmpty ? string.Empty : span.GetText();
-            var isEmpty = SelectionGeometry.IsEffectivelyEmpty(text);
+            // Asked over the span rather than over its text: the caller that only wants to know
+            // whether there IS a selection (the context menu, on every query VS raises) must not
+            // pay for materialising a five-thousand-line one.
+            var isEmpty = IsSpanEffectivelyEmpty(span);
+            var text = !includeText || isEmpty ? string.Empty : span.GetText();
 
             var startLine = snapshot.GetLineFromPosition(span.Start.Position);
             var endLine = snapshot.GetLineFromPosition(span.End.Position);
@@ -331,6 +344,18 @@ internal sealed partial class IdeContextService : IDisposable
         if (_active?.View.IsClosed == true) { _active = null; }
         if (_active == null) { TrackActiveView(); }
         return BuildContext(_active, includeText: true);
+    }
+
+    /// <summary>Whether the active editor has a selection worth reporting, without building the
+    /// context to find out. The editor context menu asks this from OnBeforeQueryStatus, which VS
+    /// raises continuously and once per entry — going through GetCurrentContext there would
+    /// materialise the selected text on every keystroke's worth of menu state.</summary>
+    public bool HasSelection()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (_active?.View.IsClosed == true) { _active = null; }
+        if (_active == null) { TrackActiveView(); }
+        return BuildContext(_active, includeText: false)?.HasSelection == true;
     }
 
     /// <summary>If <paramref name="filePath"/> is open in an editor with unsaved changes, save it.
