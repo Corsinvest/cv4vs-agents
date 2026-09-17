@@ -66,6 +66,33 @@ internal sealed partial class McpServerHost
     private sealed class ClientConn
     {
         public WebSocket Ws { get; set; }
+
+        /// <summary>One sender at a time: a WebSocket throws if a second SendAsync starts before
+        /// the first completes, and the broadcast is fire-and-forget, so the loser's notification
+        /// would be lost to a logged exception. The initial context waits a second before it goes
+        /// out, which is exactly long enough for the user to select something.</summary>
+        public SemaphoreSlim SendLock { get; } = new(1, 1);
+    }
+
+    /// <summary>Send one frame, waiting for any send already in flight on this connection.</summary>
+    private static async Task SendAsync(ClientConn conn, string json, string logContext)
+    {
+        var bytes = Encoding.UTF8.GetBytes(json);
+        await conn.SendLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (conn.Ws.State != WebSocketState.Open) { return; }
+            await conn.Ws.SendAsync(new ArraySegment<byte>(bytes),
+                WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // A client that went away mid-send is ordinary; anything else the user would feel as
+            // context the CLI never received.
+            OutputWindowLogger.Global.LogException(logContext, ex);
+        }
+        finally { conn.SendLock.Release(); }
     }
 
     private McpServerHost() { }
@@ -354,7 +381,7 @@ internal sealed partial class McpServerHost
                 // The later 1s delay covers the React effect lagging the state transition.
                 if (raw.IndexOf("\"tools/list\"", StringComparison.Ordinal) >= 0)
                 {
-                    _ = DelayedSendInitialContextAsync(ws);
+                    _ = DelayedSendInitialContextAsync(conn);
                 }
                 if (reply != null && ws.State == WebSocketState.Open)
                 {
@@ -403,27 +430,28 @@ internal sealed partial class McpServerHost
 
     /// <summary>Send the initial context after a pause, giving the CLI time to reach 'connected' and
     /// register its useIdeSelection handler (otherwise the broadcast fires into the void).</summary>
-    private async Task DelayedSendInitialContextAsync(WebSocket ws)
+    private async Task DelayedSendInitialContextAsync(ClientConn conn)
     {
         try { await Task.Delay(1000); }
         catch { /* never throws here, but be safe */ }
-        if (ws.State != WebSocketState.Open) { return; }
-        await SendInitialContextAsync(ws);
+        if (conn.Ws.State != WebSocketState.Open) { return; }
+        await SendInitialContextAsync(conn);
     }
 
     /// <summary>Send a one-shot selection_changed to a freshly handshook client so the first prompt
     /// has IDE context for the current active file. Read on UI thread.</summary>
-    private async Task SendInitialContextAsync(WebSocket ws)
+    private async Task SendInitialContextAsync(ClientConn conn)
     {
         try
         {
             await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             var json = BuildSelectionNotification(IdeContextService.Instance.GetCurrentContext());
-            if (ws.State != WebSocketState.Open) { return; }
+            if (conn.Ws.State != WebSocketState.Open) { return; }
             OutputWindowLogger.Global.Trace(() => $"Mcp: -> (initial) {StringHelpers.Truncate(json, 200)}");
-            var bytes = Encoding.UTF8.GetBytes(json);
-            await ws.SendAsync(new ArraySegment<byte>(bytes),
-                WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None);
+            // Through the same per-connection lock the broadcast uses: this waits a second before
+            // it goes out, which is long enough for the user to make a selection, and two sends at
+            // once on one socket throw — losing whichever lost the race.
+            await SendAsync(conn, json, "Mcp.SendInitialContext");
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Mcp.SendInitialContext", ex); }
     }
@@ -474,21 +502,13 @@ internal sealed partial class McpServerHost
             snapshot = [.. _clients];
         }
         OutputWindowLogger.Global.Trace(() => $"Mcp: broadcast to {snapshot.Length} client(s) -> {StringHelpers.Truncate(json, 200)}");
-        var bytes = Encoding.UTF8.GetBytes(json);
         foreach (var conn in snapshot)
         {
-            var ws = conn.Ws;
-            if (ws.State != WebSocketState.Open) { continue; }
-            // Fire-and-forget: a slow/dead client must not break the others.
-            _ = ws.SendAsync(new ArraySegment<byte>(bytes),
-                WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None)
-                .ContinueWith(t =>
-                {
-                    if (t.Exception != null)
-                    {
-                        OutputWindowLogger.Global.LogException("Mcp.Broadcast", t.Exception);
-                    }
-                }, TaskScheduler.Default);
+            if (conn.Ws.State != WebSocketState.Open) { continue; }
+            // Fire-and-forget: a slow or dead client must not hold up the others, or the UI thread
+            // this is raised from. The per-connection lock inside keeps it from colliding with a
+            // send already in flight on the same socket.
+            _ = SendAsync(conn, json, "Mcp.Broadcast");
         }
     }
 
