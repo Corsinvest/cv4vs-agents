@@ -12,6 +12,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
 using System.Collections.Generic;
@@ -44,29 +45,32 @@ internal sealed partial class IdeContextService : IDisposable
 
     private IdeContextService() { }
 
-    // Live selection tracking. IWpfTextView.Selection.SelectionChanged is the only reliable
-    // signal for editor selection/caret — DTE doesn't fire on mouse selection.
-    // IVsMonitorSelection tells us when the active frame changes so we re-attach.
+    // Live selection tracking. The view's own events are the only reliable signal for editor
+    // selection/caret — DTE doesn't fire on mouse selection. IVsMonitorSelection tells us which
+    // view owns the context when the active frame changes.
 
     private IVsEditorAdaptersFactoryService _editorAdapters;
+    private ITextDocumentFactoryService _docFactory;
     private IVsMonitorSelection _monitorSelection;
     private uint _selectionCookie;
-    private IWpfTextView _trackedView;
     private bool _subscribed;
 
-    // Debounced push: SelectionChanged can fire rapidly while dragging; coalesce
-    // to one emit per 150ms. The dedup below drops no-op re-emits on top.
+    // The view that currently owns the context. Its own events drive the emit; nothing
+    // re-attaches, so there is no "the tracker missed it" state to recover from.
+    private EditorSelectionState _active;
+
+    // SelectionChanged fires rapidly while dragging; coalesce to one emit per 150ms. The
+    // bridge and the MCP broadcast are the reason this stays — unlike a local adornment,
+    // each emit crosses a process boundary.
     private Timer _debounce;
     private EditorContext _pending;
 
-    // Last-emitted state — suppress duplicate notifications when nothing the
-    // badge/CLI cares about actually changed.
+    // Last-emitted state — suppress duplicate notifications when nothing the badge or the
+    // CLI cares about actually changed.
     private string _lastFilePath;
     private bool _lastHasSelection;
     private int _lastStartLine;
     private int _lastEndLine;
-    private int _lastStartCol;
-    private int _lastEndCol;
     private bool _hasEmitted;
 
     /// <summary>Fires whenever the active editor file or its selection
@@ -83,11 +87,12 @@ internal sealed partial class IdeContextService : IDisposable
         if (_subscribed) { return; }
         try
         {
-            _editorAdapters = (Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel)
-                ?.GetService<IVsEditorAdaptersFactoryService>();
-            if (_editorAdapters == null)
+            var components = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+            _editorAdapters = components?.GetService<IVsEditorAdaptersFactoryService>();
+            _docFactory = components?.GetService<ITextDocumentFactoryService>();
+            if (_editorAdapters == null || _docFactory == null)
             {
-                OutputWindowLogger.Global.Warn("[ide-context] editor adapters unavailable — selection tracking will not fire");
+                OutputWindowLogger.Global.Warn("[ide-context] editor services unavailable — selection tracking will not fire");
             }
             else
             {
@@ -105,9 +110,9 @@ internal sealed partial class IdeContextService : IDisposable
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.SubscribeToEditorEvents", ex); }
     }
 
-    /// <summary>(Re)attach the SelectionChanged listener to the active text
-    /// view. When <paramref name="frame"/> is given we read the view straight
-    /// from it (avoids IVsTextManager.GetActiveView timing gaps).</summary>
+    /// <summary>Point the context at the active text view, attaching per-view tracking the first
+    /// time we meet it. When <paramref name="frame"/> is given we read the view straight from it
+    /// (avoids IVsTextManager.GetActiveView timing gaps).</summary>
     internal void TrackActiveView(IVsWindowFrame frame = null)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -127,133 +132,124 @@ internal sealed partial class IdeContextService : IDisposable
             var wpf = vsView != null ? _editorAdapters?.GetWpfTextView(vsView) : null;
             if (wpf == null)
             {
-                // Not a text editor. Ask the text manager for ANY active view to
-                // disambiguate: none → all editors closed, clear stale context;
-                // some → a non-editor frame got focus, keep current context.
-                // (IWpfTextView.Closed alone is unreliable for the tracked view.)
-                IVsTextView anyView = null;
-                (Package.GetGlobalService(typeof(SVsTextManager)) as IVsTextManager)
-                    ?.GetActiveView(0, null, out anyView);
-                if (anyView == null)
-                {
-                    UntrackView();
-                    ScheduleEmit(null);
-                }
+                // Not a text editor. A non-editor frame taking focus must not clear the context —
+                // only the last document closing does, and that arrives as the view's Closed event.
                 return;
             }
-            if (wpf == _trackedView) { return; }
 
-            UntrackView();
-            _trackedView = wpf;
-            _trackedView.Selection.SelectionChanged += OnViewSelectionChanged;
-            _trackedView.Closed += OnViewClosed;
+            // Only a real document editor counts. Output / Find-results / readonly tool windows are
+            // IWpfTextViews too, but their role is not Document.
+            if (!wpf.Roles.Contains(PredefinedTextViewRoles.Document)) { return; }
+
+            var state = EditorSelectionState.GetOrCreate(wpf, _docFactory, OnTrackedViewChanged);
+            if (state == null) { return; }
+
+            _active = state;
             CaptureAndSchedule();
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.TrackActiveView", ex); }
     }
 
-    private void UntrackView()
+    /// <summary>A tracked view reported a selection, focus or close change.</summary>
+    private void OnTrackedViewChanged()
     {
-        if (_trackedView == null) { return; }
-        try
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var state = _active;
+        if (state != null && state.View.IsClosed)
         {
-            _trackedView.Selection.SelectionChanged -= OnViewSelectionChanged;
-            _trackedView.Closed -= OnViewClosed;
+            _active = null;
+            ScheduleEmit(null);
+            return;
         }
-        catch { /* view already torn down */ }
-        _trackedView = null;
+        CaptureAndSchedule();
     }
 
-    private void OnViewSelectionChanged(object sender, EventArgs e) => CaptureAndSchedule();
-    private void OnViewClosed(object sender, EventArgs e)
-    {
-        UntrackView();
-        // No active text view anymore → clear context (badge/CLI drop it).
-        ScheduleEmit(null);
-    }
-
-    /// <summary>Snapshot the current selection (UI thread) into an
-    /// <see cref="EditorContext"/> and schedule a debounced emit.</summary>
+    /// <summary>Snapshot the tracked view (UI thread) and schedule a debounced emit.</summary>
     private void CaptureAndSchedule()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        // No consumer (MCP server down at 0 sessions, no chat pane hooked) → skip the
-        // snapshot/GetText work. The sink stays advised (MS pattern); only its downstream
-        // work is gated. Push-emit is dead here, but a fresh client still pulls the current
-        // context via McpServerHost.DelayedSendInitialContextAsync (on-demand GetCurrentContext).
-        // Trade-off: _latestSelection (getLatestSelection cache) isn't kept warm while gated,
-        // so a selection made with the extension closed is lost; it repopulates on the next
-        // TrackActiveView when a session reopens. Acceptable — nobody reads it until then.
+        // No consumer (MCP server down at 0 sessions, no chat pane hooked) → skip the work. The
+        // sink stays advised; only its downstream work is gated. A fresh client still pulls the
+        // current context via McpServerHost.DelayedSendInitialContextAsync.
         if (ContextChanged == null) { return; }
-        var view = _trackedView;
-        if (view == null) { ScheduleEmit(null); return; }
+        ScheduleEmit(BuildContext(_active, includeText: true));
+    }
+
+    /// <summary>The one projection from tracked state to <see cref="EditorContext"/>. Both the
+    /// push path and the on-demand readers go through here, so no two of them can disagree about
+    /// lines, columns or emptiness.
+    /// <para><paramref name="includeText"/> false leaves <see cref="EditorContext.SelectedText"/>
+    /// empty: the badge never reads it, and materialising a multi-megabyte selection for a
+    /// consumer that wants two integers is the allocation this exists to avoid.</para></summary>
+    private EditorContext BuildContext(EditorSelectionState state, bool includeText)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (state == null || state.View.IsClosed) { return null; }
         try
         {
-            // Only a real document editor counts. Output / Find-results / readonly
-            // tool windows are also IWpfTextViews, but their view role is not
-            // Document — selecting there must NOT become IDE context.
-            if (!view.Roles.Contains(PredefinedTextViewRoles.Document))
-            {
-                ScheduleEmit(null);
-                return;
-            }
-
-            var sel = view.Selection;
-            var snapshot = view.TextSnapshot;
-
-            string filePath = null;
-            if (view.TextBuffer.Properties.TryGetProperty(typeof(ITextDocument), out ITextDocument doc))
-            {
-                filePath = doc?.FilePath;
-            }
-            // And it must be a real file on disk (a Document view can still wrap a
-            // synthetic path like "\temp\readonly\Grep output" / "Temp.txt").
+            var filePath = state.Document?.FilePath;
+            // Must be a real file on disk: a Document view can still wrap a synthetic path
+            // ("\temp\readonly\Grep output").
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
             {
                 OutputWindowLogger.Global.Trace(() => $"[ide-context] drop: path missing/synthetic='{filePath}'");
-                ScheduleEmit(null);
-                return;
+                return null;
             }
 
-            var isEmpty = sel.IsEmpty;
-            var startLine = snapshot.GetLineFromPosition(sel.Start.Position.Position);
-            var endLine = snapshot.GetLineFromPosition(sel.End.Position.Position);
-            // Dragging to the START of a line leaves the end offset on a line the selection holds no
-            // character of — reporting it would hand Claude one line more than was selected. Step
-            // back to the line that actually ends the selection. Guarded on a real multi-line
-            // selection so a bare caret at column 0 is left alone.
-            if (!isEmpty
-                && endLine.LineNumber > startLine.LineNumber
-                && sel.End.Position.Position == endLine.Start.Position)
+            if (!state.TryGetSpan(out var span, out _)) { return null; }
+
+            // The debounce leaves a window in which the buffer can change — the user typing, or
+            // Claude editing the file. Report against the current snapshot or not at all.
+            var snapshot = state.View.TextSnapshot;
+            if (span.Snapshot != snapshot)
             {
-                endLine = snapshot.GetLineFromLineNumber(endLine.LineNumber - 1);
+                var mapped = state.View.BufferGraph.MapDownToSnapshot(span, SpanTrackingMode.EdgeExclusive, snapshot);
+                if (mapped.Count == 0)
+                {
+                    OutputWindowLogger.Global.Trace(() => "[ide-context] drop: selection no longer maps to the current snapshot");
+                    return null;
+                }
+                span = mapped[0];
             }
-            var ctx = new EditorContext
+
+            var text = span.IsEmpty ? string.Empty : span.GetText();
+            var isEmpty = SelectionGeometry.IsEffectivelyEmpty(text);
+
+            var startLine = snapshot.GetLineFromPosition(span.Start.Position);
+            var endLine = snapshot.GetLineFromPosition(span.End.Position);
+            var starts = new int[endLine.LineNumber - startLine.LineNumber + 1];
+            var ends = new int[starts.Length];
+            for (var i = 0; i < starts.Length; i++)
+            {
+                var line = snapshot.GetLineFromLineNumber(startLine.LineNumber + i);
+                starts[i] = line.Start.Position;
+                ends[i] = line.End.Position;
+            }
+            var geo = SelectionGeometry.Compute(span.Start.Position, span.End.Position, starts, ends, isEmpty);
+
+            return new EditorContext
             {
                 FilePath = filePath,
                 FileName = Path.GetFileName(filePath),
                 HasSelection = !isEmpty,
-                // VS editor lines are 0-based; we keep 1-based to match the
-                // rest of the code (DTE used 1-based) — MCP subtracts 1.
-                StartLine = startLine.LineNumber + 1,
-                EndLine = endLine.LineNumber + 1,
-                StartColumn = sel.Start.Position.Position - startLine.Start.Position,
-                // Clamped to the line's end: when the line above was stepped back to, the original
-                // offset sits past it and the bare subtraction would overshoot.
-                EndColumn = Math.Max(0, Math.Min(sel.End.Position.Position, endLine.End.Position) - endLine.Start.Position),
-                SelectedText = isEmpty
-                    ? string.Empty
-                    : snapshot.GetText(sel.Start.Position.Position, sel.End.Position.Position - sel.Start.Position.Position),
+                StartLine = startLine.LineNumber + geo.StartLine,
+                EndLine = startLine.LineNumber + geo.EndLine,
+                StartColumn = geo.StartCol,
+                EndColumn = geo.EndCol,
+                SelectedText = includeText && !isEmpty ? text : string.Empty,
             };
-            ScheduleEmit(ctx);
         }
-        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.CaptureAndSchedule", ex); }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.BuildContext", ex);
+            return null;
+        }
     }
 
     private void ScheduleEmit(EditorContext ctx)
     {
         // Defence in depth for the paths that reach here without CaptureAndSchedule
-        // (OnViewClosed, TrackActiveView's clear): don't arm the debounce with no consumer.
+        // (OnTrackedViewChanged's clear): don't arm the debounce with no consumer.
         if (ContextChanged == null) { return; }
         _pending = ctx;
         try { _debounce?.Change(150, Timeout.Infinite); }
@@ -279,7 +275,7 @@ internal sealed partial class IdeContextService : IDisposable
             {
                 _lastFilePath = null;
                 _lastHasSelection = false;
-                _lastStartLine = _lastEndLine = _lastStartCol = _lastEndCol = 0;
+                _lastStartLine = _lastEndLine = 0;
                 ContextChanged?.Invoke(null);
             }
             _hasEmitted = true;
@@ -293,11 +289,7 @@ internal sealed partial class IdeContextService : IDisposable
         if (_hasEmitted &&
             ctx.FilePath == _lastFilePath &&
             ctx.HasSelection == _lastHasSelection &&
-            (!ctx.HasSelection ||
-             (ctx.StartLine == _lastStartLine &&
-              ctx.EndLine == _lastEndLine &&
-              ctx.StartColumn == _lastStartCol &&
-              ctx.EndColumn == _lastEndCol)))
+            (!ctx.HasSelection || (ctx.StartLine == _lastStartLine && ctx.EndLine == _lastEndLine)))
         {
             return;
         }
@@ -305,8 +297,6 @@ internal sealed partial class IdeContextService : IDisposable
         _lastHasSelection = ctx.HasSelection;
         _lastStartLine = ctx.StartLine;
         _lastEndLine = ctx.EndLine;
-        _lastStartCol = ctx.StartColumn;
-        _lastEndCol = ctx.EndColumn;
         _hasEmitted = true;
         // Keep the MCP latest-selection cache warm so the CLI can still grab
         // "the last thing I selected" after focus moves to the chat/CLI pane.
@@ -572,7 +562,8 @@ internal sealed partial class IdeContextService : IDisposable
     {
         try
         {
-            UntrackView();
+            _active?.Detach();
+            _active = null;
             if (_monitorSelection != null && _selectionCookie != 0)
             {
                 _monitorSelection.UnadviseSelectionEvents(_selectionCookie);
@@ -583,6 +574,7 @@ internal sealed partial class IdeContextService : IDisposable
         catch { /* silent: cleanup */ }
         _monitorSelection = null;
         _editorAdapters = null;
+        _docFactory = null;
         _debounce = null;
         _subscribed = false;
     }
