@@ -212,7 +212,7 @@ internal sealed partial class IdeContextService : IDisposable
                 return null;
             }
 
-            if (!state.TryGetSpan(out var span, out _)) { return null; }
+            if (!state.TryGetSpan(out var span)) { return null; }
 
             // The debounce leaves a window in which the buffer can change — the user typing, or
             // Claude editing the file — so the captured span may belong to an older version.
@@ -224,9 +224,8 @@ internal sealed partial class IdeContextService : IDisposable
                 span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive);
             }
 
-            // Asked over the span rather than over its text: the caller that only wants to know
-            // whether there IS a selection (the context menu, on every query VS raises) must not
-            // pay for materialising a five-thousand-line one.
+            // Asked over the span rather than over its text, so the caller that only wants to know
+            // whether there IS a selection never materialises one.
             var isEmpty = IsSpanEffectivelyEmpty(span);
             var text = !includeText || isEmpty ? string.Empty : span.GetText();
 
@@ -251,7 +250,7 @@ internal sealed partial class IdeContextService : IDisposable
                 EndLine = startLine.LineNumber + geo.EndLine,
                 StartColumn = geo.StartCol,
                 EndColumn = geo.EndCol,
-                SelectedText = includeText && !isEmpty ? text : string.Empty,
+                SelectedText = text,
             };
         }
         catch (Exception ex)
@@ -347,9 +346,9 @@ internal sealed partial class IdeContextService : IDisposable
     }
 
     /// <summary>Whether the active editor has a selection worth reporting, without building the
-    /// context to find out. The editor context menu asks this from OnBeforeQueryStatus, which VS
-    /// raises continuously and once per entry — going through GetCurrentContext there would
-    /// materialise the selected text on every keystroke's worth of menu state.</summary>
+    /// context to find out. The editor context menu asks this once per entry each time it opens,
+    /// and going through GetCurrentContext would copy the whole selection into a string to answer
+    /// it — a right-click over five thousand selected lines should not cost five thousand lines.</summary>
     public bool HasSelection()
     {
         ThreadHelper.ThrowIfNotOnUIThread();

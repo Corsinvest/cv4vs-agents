@@ -58,17 +58,16 @@ internal sealed class EditorSelectionState
             typeof(Key), () => new EditorSelectionState(view, doc, onChanged));
     }
 
-    /// <summary>The primary selection's span and the real caret, on the view's current snapshot.
+    /// <summary>The primary selection's span on the view's current snapshot — the primary one, so
+    /// that a second caret elsewhere in the file does not stretch it across everything in between.
     /// False when the broker is unavailable or the view is gone.</summary>
-    internal bool TryGetSpan(out SnapshotSpan span, out SnapshotPoint caret)
+    internal bool TryGetSpan(out SnapshotSpan span)
     {
         span = default;
-        caret = default;
         if (_detached || _broker == null || View.IsClosed) { return false; }
 
         var primary = _broker.PrimarySelection;
         span = new SnapshotSpan(primary.Start.Position, primary.End.Position);
-        caret = primary.InsertionPoint.Position;
         return true;
     }
 
