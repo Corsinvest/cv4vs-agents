@@ -89,7 +89,7 @@ internal sealed partial class WebViewMessageHandler
         // Re-emit after the flip so re-opening the eye recovers the current selection instead of
         // waiting for the next editor change.
         entry.Options.SendSelection = data.ToObject<Contracts.SetSendSelectionNotification>().Enabled;
-        Ide.IdeContextService.Instance.ForceEmitCurrentContext();
+        Ide.IdeContextService.Instance.ResendCurrentContext();
     }
 
     private void HandleApplyFlagSettings(JObject data, int? id)
