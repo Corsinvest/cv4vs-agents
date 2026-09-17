@@ -12,7 +12,6 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Text.Projection;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
 using System.Collections.Generic;
@@ -71,6 +70,8 @@ internal sealed partial class IdeContextService : IDisposable
     private bool _lastHasSelection;
     private int _lastStartLine;
     private int _lastEndLine;
+    private int _lastStartCol;
+    private int _lastEndCol;
     private bool _hasEmitted;
 
     /// <summary>Fires whenever the active editor file or its selection
@@ -199,17 +200,13 @@ internal sealed partial class IdeContextService : IDisposable
             if (!state.TryGetSpan(out var span, out _)) { return null; }
 
             // The debounce leaves a window in which the buffer can change — the user typing, or
-            // Claude editing the file. Report against the current snapshot or not at all.
+            // Claude editing the file — so the captured span may belong to an older version.
+            // TranslateTo moves it forward on the same buffer, which is what this is: both sides
+            // are the view's top-level buffer, only the version differs.
             var snapshot = state.View.TextSnapshot;
             if (span.Snapshot != snapshot)
             {
-                var mapped = state.View.BufferGraph.MapDownToSnapshot(span, SpanTrackingMode.EdgeExclusive, snapshot);
-                if (mapped.Count == 0)
-                {
-                    OutputWindowLogger.Global.Trace(() => "[ide-context] drop: selection no longer maps to the current snapshot");
-                    return null;
-                }
-                span = mapped[0];
+                span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive);
             }
 
             var text = span.IsEmpty ? string.Empty : span.GetText();
@@ -275,7 +272,7 @@ internal sealed partial class IdeContextService : IDisposable
             {
                 _lastFilePath = null;
                 _lastHasSelection = false;
-                _lastStartLine = _lastEndLine = 0;
+                _lastStartLine = _lastEndLine = _lastStartCol = _lastEndCol = 0;
                 ContextChanged?.Invoke(null);
             }
             _hasEmitted = true;
@@ -286,10 +283,17 @@ internal sealed partial class IdeContextService : IDisposable
         // When neither side has a selection, dedup on FilePath alone; the position fields are compared
         // only when a selection is involved (so a real selection change, and the select↔deselect
         // transition, still emit).
+        // The columns are part of that comparison because the CLI keys on them: selecting one word
+        // and then another on the SAME line changes nothing else, and dropping the emit would leave
+        // the model holding the first word.
         if (_hasEmitted &&
             ctx.FilePath == _lastFilePath &&
             ctx.HasSelection == _lastHasSelection &&
-            (!ctx.HasSelection || (ctx.StartLine == _lastStartLine && ctx.EndLine == _lastEndLine)))
+            (!ctx.HasSelection ||
+             (ctx.StartLine == _lastStartLine &&
+              ctx.EndLine == _lastEndLine &&
+              ctx.StartColumn == _lastStartCol &&
+              ctx.EndColumn == _lastEndCol)))
         {
             return;
         }
@@ -297,6 +301,8 @@ internal sealed partial class IdeContextService : IDisposable
         _lastHasSelection = ctx.HasSelection;
         _lastStartLine = ctx.StartLine;
         _lastEndLine = ctx.EndLine;
+        _lastStartCol = ctx.StartColumn;
+        _lastEndCol = ctx.EndColumn;
         _hasEmitted = true;
         // Keep the MCP latest-selection cache warm so the CLI can still grab
         // "the last thing I selected" after focus moves to the chat/CLI pane.
