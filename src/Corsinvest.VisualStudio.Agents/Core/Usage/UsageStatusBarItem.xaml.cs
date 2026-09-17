@@ -119,9 +119,14 @@ public partial class UsageStatusBarItem : UserControl
         var now = DateTimeOffset.Now;
         var segments = UsageStatusFormat.Segments(snapshot, now);
 
-        ProfileText.Text = segments.Count > 0 ? snapshot.ProfileName + ":"
-            : snapshot.State == UsageAvailability.Unavailable ? snapshot.ProfileName + ": —"
-            : snapshot.ProfileName;
+        // The name is there to tell profiles apart, so it shows only when there are several and the
+        // focused pane isn't already saying which. The dash has to survive either way — without it
+        // an unavailable profile would render as nothing at all.
+        var named = UsageStatusService.Instance.ShowProfileName;
+        ProfileText.Text = segments.Count > 0 ? (named ? snapshot.ProfileName + ":" : "")
+            : snapshot.State == UsageAvailability.Unavailable ? (named ? snapshot.ProfileName + ": —" : "—")
+            : named ? snapshot.ProfileName : "";
+        ProfileText.Visibility = ProfileText.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
 
         SegmentsPanel.Children.Clear();
         for (var i = 0; i < segments.Count; i++)
