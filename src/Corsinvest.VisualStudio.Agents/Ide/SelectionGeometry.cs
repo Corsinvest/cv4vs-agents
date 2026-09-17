@@ -12,10 +12,14 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 /// character offsets within the line — not display columns, so a tab counts as one.</summary>
 internal static class SelectionGeometry
 {
-    /// <summary>A selection worth reporting, or not. Whitespace at the edges is not a selection,
-    /// and one character left after trimming is an accidental micro-drag.</summary>
+    /// <summary>A selection worth reporting, or not: whitespace alone is not, any real text is.
+    /// <para>A single character counts. Copilot's own tracker drops one too, but it has somewhere
+    /// to fall back to — it degrades the selection to a caret and expands to the surrounding block.
+    /// We have no such fallback and suppress caret-only context deliberately, so dropping a
+    /// one-character selection would just lose it: double-clicking <c>i</c> or <c>T</c> is a real
+    /// gesture, the editor highlights it, and the menu going grey explains nothing.</para></summary>
     internal static bool IsEffectivelyEmpty(string text)
-        => string.IsNullOrEmpty(text) || text.Trim().Length <= 1;
+        => string.IsNullOrEmpty(text) || text.Trim().Length == 0;
 
     /// <param name="lineStartOffsets">Start offset of each line, ascending.</param>
     /// <param name="lineEndOffsets">End offset of each line, excluding its line break.</param>
