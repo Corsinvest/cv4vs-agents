@@ -57,11 +57,7 @@ internal sealed partial class IdeContextService : IDisposable
     // re-attaches, so there is no "the tracker missed it" state to recover from.
     private EditorSelectionState _active;
 
-    // SelectionChanged fires rapidly while dragging; coalesce to one emit per 150ms. The
-    // bridge and the MCP broadcast are the reason this stays — unlike a local adornment,
-    // each emit crosses a process boundary.
     private Timer _debounce;
-    private EditorContext _pending;
 
     // Last-emitted state — suppress duplicate notifications when nothing the badge or the
     // CLI cares about actually changed.
@@ -147,7 +143,7 @@ internal sealed partial class IdeContextService : IDisposable
             // The outgoing state is deliberately not detached: its view is still open and may be
             // activated again, so it must keep listening; it dies with the view anyway.
             _active = state;
-            CaptureAndSchedule();
+            ScheduleEmit();
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.TrackActiveView", ex); }
     }
@@ -161,24 +157,9 @@ internal sealed partial class IdeContextService : IDisposable
         ThreadHelper.ThrowIfNotOnUIThread();
         if (!ReferenceEquals(state, _active)) { return; }
 
-        if (state.View.IsClosed)
-        {
-            _active = null;
-            ScheduleEmit(null);
-            return;
-        }
-        CaptureAndSchedule();
-    }
-
-    /// <summary>Snapshot the tracked view (UI thread) and schedule a debounced emit.</summary>
-    private void CaptureAndSchedule()
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        // No consumer (MCP server down at 0 sessions, no chat pane hooked) → skip the work. The
-        // sink stays advised; only its downstream work is gated. A fresh client still pulls the
-        // current context via McpServerHost.DelayedSendInitialContextAsync.
-        if (ContextChanged == null) { return; }
-        ScheduleEmit(BuildContext(_active, includeText: true));
+        // A closed view leaves nothing to report, and the same scheduled read says so.
+        if (state.View.IsClosed) { _active = null; }
+        ScheduleEmit();
     }
 
     /// <summary><see cref="SelectionGeometry.IsEffectivelyEmpty"/> asked over the snapshot, so the
@@ -213,10 +194,10 @@ internal sealed partial class IdeContextService : IDisposable
 
             if (!state.TryGetSpan(out var span)) { return null; }
 
-            // The debounce leaves a window in which the buffer can change — the user typing, or
-            // Claude editing the file — so the captured span may belong to an older version.
-            // TranslateTo moves it forward on the same buffer, which is what this is: both sides
-            // are the view's top-level buffer, only the version differs.
+            // The broker can answer on a version older than the view's own if an edit is landing
+            // as this runs. TranslateTo moves the span forward on the same buffer — both sides are
+            // the view's top-level one, only the version differs — rather than reporting lines
+            // against a snapshot that no longer exists.
             var snapshot = state.View.TextSnapshot;
             if (span.Snapshot != snapshot)
             {
@@ -257,25 +238,24 @@ internal sealed partial class IdeContextService : IDisposable
         }
     }
 
-    private void ScheduleEmit(EditorContext ctx)
+    /// <summary>Coalesce: a drag raises the selection event dozens of times a second, and every
+    /// emit crosses the WebView bridge and a socket to each connected CLI. Nothing is captured
+    /// here — the state is read when the timer fires, so a drag costs one read, not one per event,
+    /// and what goes out is the selection as it ended rather than as it passed through.
+    /// <para>No consumer (MCP down at 0 sessions, no chat pane hooked) → don't even arm it.</para></summary>
+    private void ScheduleEmit()
     {
-        // Defence in depth for the paths that reach here without CaptureAndSchedule
-        // (OnTrackedViewChanged's clear): don't arm the debounce with no consumer.
         if (ContextChanged == null) { return; }
-        _pending = ctx;
         try { _debounce?.Change(150, Timeout.Infinite); }
         catch (ObjectDisposedException) { /* shutting down */ }
     }
 
     private void OnDebounceElapsed()
-    {
-        var ctx = _pending;
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            Emit(ctx);
+            Emit(BuildContext(_active, includeText: true));
         }).FileAndForget("cv4vs/Ide.OnDebounceElapsed");
-    }
 
     private void Emit(EditorContext ctx)
     {
