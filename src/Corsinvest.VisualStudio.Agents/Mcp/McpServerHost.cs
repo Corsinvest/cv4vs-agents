@@ -409,16 +409,17 @@ internal sealed partial class McpServerHost
                 startLine: 0, startChar: 0, endLine: 0, endChar: 0, isEmpty: true));
             return;
         }
-        // VS gives 1-based lines; LSP/MCP wants 0-based. Columns are already
-        // 0-based from the editor snapshot.
+        // VS gives 1-based lines; LSP/MCP wants 0-based — hence the subtraction, and the floor
+        // that keeps it from going negative. The columns need neither: they arrive 0-based and
+        // already floored by SelectionGeometry.
         var startLine = Math.Max(0, ctx.StartLine - 1);
         var endLine = Math.Max(0, ctx.EndLine - 1);
         BroadcastNotification(BuildSelectionNotification(
             text: ctx.SelectedText ?? string.Empty,
             filePath: ctx.FilePath,
             fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
-            startLine: startLine, startChar: Math.Max(0, ctx.StartColumn),
-            endLine: endLine, endChar: Math.Max(0, ctx.EndColumn),
+            startLine: startLine, startChar: ctx.StartColumn,
+            endLine: endLine, endChar: ctx.EndColumn,
             isEmpty: !ctx.HasSelection));
     }
 
@@ -455,8 +456,8 @@ internal sealed partial class McpServerHost
                     text: ctx.SelectedText ?? string.Empty,
                     filePath: ctx.FilePath,
                     fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
-                    startLine: Math.Max(0, ctx.StartLine - 1), startChar: Math.Max(0, ctx.StartColumn),
-                    endLine: Math.Max(0, ctx.EndLine - 1), endChar: Math.Max(0, ctx.EndColumn),
+                    startLine: Math.Max(0, ctx.StartLine - 1), startChar: ctx.StartColumn,
+                    endLine: Math.Max(0, ctx.EndLine - 1), endChar: ctx.EndColumn,
                     isEmpty: !ctx.HasSelection);
             }
             if (ws.State != WebSocketState.Open) { return; }
