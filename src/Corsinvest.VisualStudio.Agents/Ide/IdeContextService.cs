@@ -562,14 +562,17 @@ internal sealed partial class IdeContextService : IDisposable
     /// selection from persisted state without firing a SelectionChanged we
     /// listen to, so MCP clients (CLI / chat) would otherwise have no idea
     /// what's currently open. Also (re)attaches the view tracker.</summary>
-    public void ForceEmitCurrentContext()
+    /// <summary>Emit the current context even though nothing changed, for a consumer that has just
+    /// arrived and holds nothing: a chat pane whose WebView is only now able to receive, or the
+    /// IDE-context eye being reopened. Both subscribe to <see cref="ContextChanged"/> and would
+    /// otherwise wait for the next editor event to learn what is open.
+    /// <para>The dedup is what it defeats — the tracker itself never needs waking.</para></summary>
+    public void ResendCurrentContext()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        // Reset the dedup baseline so the emit fires even if unchanged.
         _hasEmitted = false;
         _lastFilePath = null;
-        TrackActiveView();          // re-attach to whatever view is active now
-        Emit(GetCurrentContext());  // sync snapshot of the freshly-tracked view
+        Emit(GetCurrentContext());
     }
 
 

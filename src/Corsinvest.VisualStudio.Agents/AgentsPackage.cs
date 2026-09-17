@@ -549,9 +549,9 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         // spawning panes inside this COM event reenters solution state.
         RestorePanesDeferred();
         _ = Mcp.McpServerHost.Instance.RewriteLockFileAsync();
-        // VS may restore editor tabs without firing a DTE event we listen to;
-        // force an emit so MCP clients see the current file context now.
-        try { Ide.IdeContextService.Instance.ForceEmitCurrentContext(); }
+        // VS restores editor tabs without any selection change to hear, so the clients that
+        // reconnected with the solution would hold nothing until the user clicks in the editor.
+        try { Ide.IdeContextService.Instance.ResendCurrentContext(); }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.ForceEmit", ex); }
         return VSConstants.S_OK;
     }
