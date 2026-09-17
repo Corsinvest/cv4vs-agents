@@ -24,7 +24,7 @@ internal sealed partial class WebViewMessageHandler
         // context goes in as its own block, never glued to the prompt — see BuildContentBlocks.
         var blocks = WebViewBridge.BuildContentBlocks(p.Text ?? "",
                                                      data["attachments"] as JArray,
-                                                     BuildIdeContextBlock());
+                                                     BuildIdeContextBlock(p.Text ?? ""));
         client.SendPrompt(blocks, p.Uuid ?? "");
     }
 
@@ -33,9 +33,12 @@ internal sealed partial class WebViewMessageHandler
     /// crosses the bridge — the WebView only needs the file and the lines for its chip.
     /// <para>Goes in its own content block, never glued to the prompt — see
     /// <see cref="WebViewBridge.BuildContentBlocks"/> for why that matters.</para></summary>
-    private string BuildIdeContextBlock()
+    private string BuildIdeContextBlock(string text)
     {
         if (entry?.Options.SendSelection == false) { return ""; }
+        // Same gate as the WebView's own (cv-prompt.ts): a slash command carries no IDE context,
+        // and the bubble already shows no chip for one.
+        if (text.StartsWith("/")) { return ""; }
         var ctx = Ide.IdeContextService.Instance.GetCurrentContext();
         if (string.IsNullOrEmpty(ctx?.FilePath)) { return ""; }
         if (!ctx.HasSelection)
