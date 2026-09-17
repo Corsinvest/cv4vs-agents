@@ -18,8 +18,21 @@ internal static class SelectionGeometry
     /// We have no such fallback and suppress caret-only context deliberately, so dropping a
     /// one-character selection would just lose it: double-clicking <c>i</c> or <c>T</c> is a real
     /// gesture, the editor highlights it, and the menu going grey explains nothing.</para></summary>
+    /// <param name="length">How many characters there are.</param>
+    /// <param name="charAt">The character at an index — a delegate so the editor's snapshot can be
+    /// read in place: the context menu asks this on every status query VS raises, and a large
+    /// selection must not be copied into a string to answer it.</param>
+    internal static bool IsEffectivelyEmpty(int length, Func<int, char> charAt)
+    {
+        for (var i = 0; i < length; i++)
+        {
+            if (!char.IsWhiteSpace(charAt(i))) { return false; }
+        }
+        return true;
+    }
+
     internal static bool IsEffectivelyEmpty(string text)
-        => string.IsNullOrEmpty(text) || text.Trim().Length == 0;
+        => string.IsNullOrEmpty(text) || IsEffectivelyEmpty(text.Length, i => text[i]);
 
     /// <param name="lineStartOffsets">Start offset of each line, ascending.</param>
     /// <param name="lineEndOffsets">End offset of each line, excluding its line break.</param>
