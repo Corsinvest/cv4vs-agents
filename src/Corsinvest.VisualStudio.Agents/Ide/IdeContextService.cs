@@ -181,9 +181,8 @@ internal sealed partial class IdeContextService : IDisposable
         ScheduleEmit(BuildContext(_active, includeText: true));
     }
 
-    /// <summary>The span's own answer to <see cref="SelectionGeometry.IsEffectivelyEmpty"/>: no
-    /// characters, or nothing but whitespace. Reads the snapshot position by position and stops at
-    /// the first real character, so a large selection costs one character rather than its length.</summary>
+    /// <summary><see cref="SelectionGeometry.IsEffectivelyEmpty"/> asked over the snapshot, so the
+    /// span is never copied into a string to answer it.</summary>
     private static bool IsSpanEffectivelyEmpty(SnapshotSpan span)
     {
         var start = span.Start.Position;
@@ -224,8 +223,6 @@ internal sealed partial class IdeContextService : IDisposable
                 span = span.TranslateTo(snapshot, SpanTrackingMode.EdgeExclusive);
             }
 
-            // Asked over the span rather than over its text, so the caller that only wants to know
-            // whether there IS a selection never materialises one.
             var isEmpty = IsSpanEffectivelyEmpty(span);
             var text = !includeText || isEmpty ? string.Empty : span.GetText();
 

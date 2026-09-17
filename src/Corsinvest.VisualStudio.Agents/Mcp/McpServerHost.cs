@@ -448,9 +448,6 @@ internal sealed partial class McpServerHost
             var json = BuildSelectionNotification(IdeContextService.Instance.GetCurrentContext());
             if (conn.Ws.State != WebSocketState.Open) { return; }
             OutputWindowLogger.Global.Trace(() => $"Mcp: -> (initial) {StringHelpers.Truncate(json, 200)}");
-            // Through the same per-connection lock the broadcast uses: this waits a second before
-            // it goes out, which is long enough for the user to make a selection, and two sends at
-            // once on one socket throw — losing whichever lost the race.
             await SendAsync(conn, json, "Mcp.SendInitialContext");
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Mcp.SendInitialContext", ex); }
@@ -506,8 +503,7 @@ internal sealed partial class McpServerHost
         {
             if (conn.Ws.State != WebSocketState.Open) { continue; }
             // Fire-and-forget: a slow or dead client must not hold up the others, or the UI thread
-            // this is raised from. The per-connection lock inside keeps it from colliding with a
-            // send already in flight on the same socket.
+            // this is raised from.
             _ = SendAsync(conn, json, "Mcp.Broadcast");
         }
     }

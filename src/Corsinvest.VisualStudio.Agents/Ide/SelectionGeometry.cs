@@ -12,16 +12,11 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 /// character offsets within the line — not display columns, so a tab counts as one.</summary>
 internal static class SelectionGeometry
 {
-    /// <summary>A selection worth reporting, or not: whitespace alone is not, any real text is.
-    /// <para>A single character counts. Copilot's own tracker drops one too, but it has somewhere
-    /// to fall back to — it degrades the selection to a caret and expands to the surrounding block.
-    /// We have no such fallback and suppress caret-only context deliberately, so dropping a
-    /// one-character selection would just lose it: double-clicking <c>i</c> or <c>T</c> is a real
-    /// gesture, the editor highlights it, and the menu going grey explains nothing.</para></summary>
-    /// <param name="length">How many characters there are.</param>
-    /// <param name="charAt">The character at an index — a delegate so the editor's snapshot can be
-    /// read in place: the context menu asks this on every status query VS raises, and a large
-    /// selection must not be copied into a string to answer it.</param>
+    /// <summary>A selection worth reporting, or not: whitespace alone is not, any real text is —
+    /// including a single character, since double-clicking <c>i</c> or <c>T</c> is a real gesture
+    /// and there is no caret-only context to fall back to.
+    /// <para>Takes an accessor rather than the text so the editor's snapshot can be read in place:
+    /// a caller that only wants the answer must not copy a large selection to get it.</para></summary>
     internal static bool IsEffectivelyEmpty(int length, Func<int, char> charAt)
     {
         for (var i = 0; i < length; i++)
@@ -44,10 +39,8 @@ internal static class SelectionGeometry
         var endIdx = LineIndexOf(lineStartOffsets, endOffset);
 
         // Dragging to the START of a line leaves the end offset on a line the selection holds no
-        // character of; reporting it would hand the model one line more than was selected. A bare
-        // caret is excluded by the span alone — it cannot reach past its own line — and never by
-        // what the text turned out to be: a drag over blank lines overshoots exactly like a drag
-        // over code.
+        // character of; reporting it would hand the model one line more than was selected. Keyed on
+        // the span, never on what the text turned out to be — blank lines overshoot like any other.
         if (endIdx > startIdx && endOffset == lineStartOffsets[endIdx]) { endIdx--; }
 
         var startCol = Math.Max(0, startOffset - lineStartOffsets[startIdx]);

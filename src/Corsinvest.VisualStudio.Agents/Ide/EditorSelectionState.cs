@@ -86,9 +86,8 @@ internal sealed class EditorSelectionState
         }
         catch (Exception ex)
         {
-            // Unsubscribing from a view being torn down: the events are gone either way, so
-            // tracking is unaffected — but a throw here would mean the teardown is not what we
-            // think it is.
+            // Nothing to recover — the events are gone either way — but a throw here means the
+            // teardown is not what we think it is.
             OutputWindowLogger.Global.Warn($"[ide-context] detach from a torn-down view: {ex.Message}");
         }
     }
