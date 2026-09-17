@@ -17,7 +17,7 @@ public class SelectionGeometryTests
     [Fact]
     public void SingleLineSelection_ReportsOneBasedLineAndZeroBasedColumn()
     {
-        var r = SelectionGeometry.Compute(1, 4, Starts, Ends, isEmpty: false);
+        var r = SelectionGeometry.Compute(1, 4, Starts, Ends);
         Assert.Equal(1, r.StartLine);
         Assert.Equal(1, r.StartCol);
         Assert.Equal(1, r.EndLine);
@@ -28,7 +28,7 @@ public class SelectionGeometryTests
     public void DragToStartOfNextLine_StepsBackToTheLineThatEndsTheSelection()
     {
         // Selection ends at offset 6 = start of line 2, which holds none of it.
-        var r = SelectionGeometry.Compute(0, 6, Starts, Ends, isEmpty: false);
+        var r = SelectionGeometry.Compute(0, 6, Starts, Ends);
         Assert.Equal(1, r.StartLine);
         Assert.Equal(1, r.EndLine);
         Assert.Equal(5, r.EndCol);
@@ -37,7 +37,7 @@ public class SelectionGeometryTests
     [Fact]
     public void BareCaretAtColumnZero_IsLeftAlone()
     {
-        var r = SelectionGeometry.Compute(6, 6, Starts, Ends, isEmpty: true);
+        var r = SelectionGeometry.Compute(6, 6, Starts, Ends);
         Assert.Equal(2, r.StartLine);
         Assert.Equal(2, r.EndLine);
         Assert.Equal(0, r.StartCol);
@@ -47,7 +47,7 @@ public class SelectionGeometryTests
     [Fact]
     public void MultiLineSelection_SpansBothLines()
     {
-        var r = SelectionGeometry.Compute(1, 8, Starts, Ends, isEmpty: false);
+        var r = SelectionGeometry.Compute(1, 8, Starts, Ends);
         Assert.Equal(1, r.StartLine);
         Assert.Equal(2, r.EndLine);
         Assert.Equal(1, r.StartCol);
@@ -55,10 +55,21 @@ public class SelectionGeometryTests
     }
 
     [Fact]
+    public void StepBackDoesNotDependOnWhetherTheTextIsWorthReporting()
+    {
+        // A drag over blank lines ends at the start of a line it holds nothing of, exactly like a
+        // drag over code. The step-back is keyed on the span, never on what the text turned out to
+        // be — the two were conflated once and a whitespace-only drag reported a line too many.
+        var r = SelectionGeometry.Compute(6, 11, Starts, Ends);
+        Assert.Equal(2, r.StartLine);
+        Assert.Equal(2, r.EndLine);
+    }
+
+    [Fact]
     public void EndColumn_IsClampedToTheLineEnd()
     {
         // After a step-back the raw end offset sits past the line it landed on.
-        var r = SelectionGeometry.Compute(0, 11, Starts, Ends, isEmpty: false);
+        var r = SelectionGeometry.Compute(0, 11, Starts, Ends);
         Assert.Equal(2, r.EndLine);
         // "beta" is four characters, so one past its last is 4 — the raw end offset (11,
         // the start of line 3) would overshoot it.
