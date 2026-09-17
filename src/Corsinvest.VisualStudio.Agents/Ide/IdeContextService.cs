@@ -181,12 +181,6 @@ internal sealed partial class IdeContextService : IDisposable
         ScheduleEmit(BuildContext(_active, includeText: true));
     }
 
-    /// <summary>The one projection from tracked state to <see cref="EditorContext"/>. Both the
-    /// push path and the on-demand readers go through here, so no two of them can disagree about
-    /// lines, columns or emptiness.
-    /// <para><paramref name="includeText"/> false leaves <see cref="EditorContext.SelectedText"/>
-    /// empty: the badge never reads it, and materialising a multi-megabyte selection for a
-    /// consumer that wants two integers is the allocation this exists to avoid.</para></summary>
     /// <summary>The span's own answer to <see cref="SelectionGeometry.IsEffectivelyEmpty"/>: no
     /// characters, or nothing but whitespace. Reads the snapshot position by position and stops at
     /// the first real character, so a large selection costs one character rather than its length.</summary>
@@ -197,6 +191,12 @@ internal sealed partial class IdeContextService : IDisposable
         return SelectionGeometry.IsEffectivelyEmpty(span.Length, i => snapshot[start + i]);
     }
 
+    /// <summary>The one projection from tracked state to <see cref="EditorContext"/>. Both the push
+    /// path and the on-demand readers go through here, so no two of them can disagree about lines,
+    /// columns or emptiness.
+    /// <para><paramref name="includeText"/> false leaves <see cref="EditorContext.SelectedText"/>
+    /// empty: the badge never reads it, and materialising a multi-megabyte selection for a consumer
+    /// that wants one bool is the allocation this exists to avoid.</para></summary>
     private EditorContext BuildContext(EditorSelectionState state, bool includeText)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -333,29 +333,25 @@ internal sealed partial class IdeContextService : IDisposable
     /// CLI's initial context, the `&lt;ide_selection&gt;` block, the context menu). Reads the same
     /// tracked state the push path emits from, so a pull and a push can never disagree. Must be
     /// called on the UI thread.</summary>
-    public EditorContext GetCurrentContext()
+    public EditorContext GetCurrentContext() => BuildContext(ActiveState(), includeText: true);
+
+    /// <summary>The tracked state to read from, attaching to the active view if we hold none — or
+    /// hold a dead one. Closing a solution takes its editors with it, and a close from a view that
+    /// was not the active one is ignored by design, so the field can point at a corpse. Dropping it
+    /// first means finding no replacement leaves nothing rather than the corpse.</summary>
+    private EditorSelectionState ActiveState()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        // No usable state: either no view has been met yet, or the one we hold has been closed
-        // under us — closing a solution takes its editors with it, and the close event for a view
-        // that was not the active one leaves the field pointing at a dead view. Drop it first, so
-        // that finding no replacement leaves nothing rather than the corpse.
         if (_active?.View.IsClosed == true) { _active = null; }
         if (_active == null) { TrackActiveView(); }
-        return BuildContext(_active, includeText: true);
+        return _active;
     }
 
     /// <summary>Whether the active editor has a selection worth reporting, without building the
     /// context to find out. The editor context menu asks this once per entry each time it opens,
     /// and going through GetCurrentContext would copy the whole selection into a string to answer
     /// it — a right-click over five thousand selected lines should not cost five thousand lines.</summary>
-    public bool HasSelection()
-    {
-        ThreadHelper.ThrowIfNotOnUIThread();
-        if (_active?.View.IsClosed == true) { _active = null; }
-        if (_active == null) { TrackActiveView(); }
-        return BuildContext(_active, includeText: false)?.HasSelection == true;
-    }
+    public bool HasSelection() => BuildContext(ActiveState(), includeText: false)?.HasSelection == true;
 
     /// <summary>If <paramref name="filePath"/> is open in an editor with unsaved changes, save it.
     /// Used by the autosave hook so Claude reads/writes the live editor content, not the stale

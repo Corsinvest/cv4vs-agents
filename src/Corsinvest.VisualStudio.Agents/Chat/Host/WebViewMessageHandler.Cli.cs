@@ -36,9 +36,8 @@ internal sealed partial class WebViewMessageHandler
     private string BuildIdeContextBlock(string text)
     {
         if (entry?.Options.SendSelection == false) { return ""; }
-        // Same gate as the WebView's own (cv-prompt.ts): a slash command carries no IDE context,
-        // and the bubble already shows no chip for one. Trimmed like the WebView trims, or a
-        // leading space would send the block for a prompt whose bubble shows no chip.
+        // Same gate as the WebView's own (cv-prompt.ts), trimmed the way it trims: a slash command
+        // carries no IDE context, and its bubble shows no chip to match.
         if (text.TrimStart().StartsWith("/")) { return ""; }
         var ctx = Ide.IdeContextService.Instance.GetCurrentContext();
         if (string.IsNullOrEmpty(ctx?.FilePath)) { return ""; }
