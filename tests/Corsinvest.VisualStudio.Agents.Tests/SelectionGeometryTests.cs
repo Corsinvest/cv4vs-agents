@@ -80,10 +80,11 @@ public class SelectionGeometryTests
     [InlineData("", true)]
     [InlineData(" ", true)]
     [InlineData("\t", true)]
-    [InlineData("  \r\n ", true)]   // whitespace only
-    [InlineData("a", true)]          // one character left after trim: an accidental drag
+    [InlineData("  \r\n ", true)]   // whitespace only, however much of it
+    [InlineData("a", false)]         // one real character is a real selection: double-clicking `i`
+    [InlineData(" a ", false)]       // …and the trim must not talk it away
     [InlineData("ab", false)]
     [InlineData("  ab  ", false)]
-    public void IsEffectivelyEmpty_TreatsWhitespaceAndSingleCharAsNoSelection(string text, bool expected)
+    public void IsEffectivelyEmpty_IsAboutWhitespace_NotAboutLength(string text, bool expected)
         => Assert.Equal(expected, SelectionGeometry.IsEffectivelyEmpty(text));
 }
