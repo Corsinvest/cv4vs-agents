@@ -19,13 +19,13 @@ internal sealed class EditorSelectionState
     private sealed class Key { }
 
     private readonly IMultiSelectionBroker _broker;
-    private readonly Action _onChanged;
+    private readonly Action<EditorSelectionState> _onChanged;
     private bool _detached;
 
     internal IWpfTextView View { get; }
     internal ITextDocument Document { get; }
 
-    private EditorSelectionState(IWpfTextView view, ITextDocument document, Action onChanged)
+    private EditorSelectionState(IWpfTextView view, ITextDocument document, Action<EditorSelectionState> onChanged)
     {
         View = view;
         Document = document;
@@ -43,17 +43,19 @@ internal sealed class EditorSelectionState
     /// has no text document (a projection without a backing file, a non-document view).</summary>
     internal static EditorSelectionState GetOrCreate(IWpfTextView view,
                                                      ITextDocumentFactoryService docFactory,
-                                                     Action onChanged)
+                                                     Action<EditorSelectionState> onChanged)
     {
         if (view == null || docFactory == null) { return null; }
-        return view.Properties.GetOrCreateSingletonProperty(typeof(Key), () =>
-        {
-            // DocumentBuffer, not TextBuffer: in a projected view (Razor, .vue) TextBuffer is the
-            // projection and carries no ITextDocument.
-            return docFactory.TryGetTextDocument(view.TextDataModel.DocumentBuffer, out var doc)
-                ? new EditorSelectionState(view, doc, onChanged)
-                : null;
-        });
+
+        // DocumentBuffer, not TextBuffer: in a projected view (Razor, .vue) TextBuffer is the
+        // projection and carries no ITextDocument.
+        // The lookup happens before GetOrCreateSingletonProperty because that one caches on key
+        // presence, not on value: a null from the factory would bind the key forever and the view
+        // could never be tracked, not even once its document resolves.
+        if (!docFactory.TryGetTextDocument(view.TextDataModel.DocumentBuffer, out var doc)) { return null; }
+
+        return view.Properties.GetOrCreateSingletonProperty(
+            typeof(Key), () => new EditorSelectionState(view, doc, onChanged));
     }
 
     /// <summary>The primary selection's span and the real caret, on the view's current snapshot.
@@ -83,12 +85,14 @@ internal sealed class EditorSelectionState
         catch { /* view already torn down */ }
     }
 
-    private void OnSelectionChanged(object sender, EventArgs e) => _onChanged?.Invoke();
-    private void OnGotFocus(object sender, EventArgs e) => _onChanged?.Invoke();
+    // The firing state goes with the event: the listener owns several views and must know which
+    // one spoke, or it answers for the wrong file.
+    private void OnSelectionChanged(object sender, EventArgs e) => _onChanged?.Invoke(this);
+    private void OnGotFocus(object sender, EventArgs e) => _onChanged?.Invoke(this);
 
     private void OnClosed(object sender, EventArgs e)
     {
         Detach();
-        _onChanged?.Invoke();
+        _onChanged?.Invoke(this);
     }
 }

@@ -144,18 +144,24 @@ internal sealed partial class IdeContextService : IDisposable
             var state = EditorSelectionState.GetOrCreate(wpf, _docFactory, OnTrackedViewChanged);
             if (state == null) { return; }
 
+            // The outgoing state is deliberately not detached: its view is still open and may be
+            // activated again, so it must keep listening; it dies with the view anyway.
             _active = state;
             CaptureAndSchedule();
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.TrackActiveView", ex); }
     }
 
-    /// <summary>A tracked view reported a selection, focus or close change.</summary>
-    private void OnTrackedViewChanged()
+    /// <summary>A tracked view reported a selection, focus or close change.
+    /// <para>Every open view keeps listening, so the firing one has to be identified: a selection
+    /// in a side-by-side document the user has not activated is not the context, and closing a
+    /// background tab must not clear or rebuild the active one.</para></summary>
+    private void OnTrackedViewChanged(EditorSelectionState state)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        var state = _active;
-        if (state != null && state.View.IsClosed)
+        if (!ReferenceEquals(state, _active)) { return; }
+
+        if (state.View.IsClosed)
         {
             _active = null;
             ScheduleEmit(null);
@@ -556,12 +562,6 @@ internal sealed partial class IdeContextService : IDisposable
 
     public EditorSelection GetLatestSelection() => _latestSelection;
 
-    /// <summary>Force an emit of the current editor context, bypassing
-    /// the dedup-by-state filter. Used by the package after a solution
-    /// finishes opening: VS may have restored the previous active file +
-    /// selection from persisted state without firing a SelectionChanged we
-    /// listen to, so MCP clients (CLI / chat) would otherwise have no idea
-    /// what's currently open. Also (re)attaches the view tracker.</summary>
     /// <summary>Emit the current context even though nothing changed, for a consumer that has just
     /// arrived and holds nothing: a chat pane whose WebView is only now able to receive, or the
     /// IDE-context eye being reopened. Both subscribe to <see cref="ContextChanged"/> and would
