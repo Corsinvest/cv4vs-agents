@@ -378,8 +378,7 @@ public partial class ChatPaneControl
     private void RefreshTitleOnTurnEnd()
     {
         var sid = _client?.SessionId;
-        var wd = _client?.WorkingDirectory;
-        if (string.IsNullOrEmpty(sid) || string.IsNullOrEmpty(wd)) { return; }
+        if (string.IsNullOrEmpty(sid)) { return; }
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
             var title = await Task.Run(() => Sessions.ScanTitle(sid));
@@ -400,9 +399,10 @@ public partial class ChatPaneControl
         if (string.IsNullOrEmpty(sid) || sid == _titledSessionId) { return; }
         _titledSessionId = sid;
 
-        // Captured client's workdir, not the live Sessions property — this runs async and
-        // must stay keyed on the client that started it, even if the pane's client is swapped.
-        var sessions = new SessionManager(PaneClaudePaths, client.WorkingDirectory, _log);
+        // The pane's directory: it outlives a client swap, and unlike the client's it does not
+        // follow the CLI process when a Bash call `cd`s elsewhere — the transcript stays where
+        // the session was launched.
+        var sessions = new SessionManager(PaneClaudePaths, Entry.WorkingDirectory, _log);
         // Skip the CLI round-trip entirely if the session already has a title
         // (resumed session, or generated on a previous run).
         if (sessions.HasTitle(sid)) { return; }

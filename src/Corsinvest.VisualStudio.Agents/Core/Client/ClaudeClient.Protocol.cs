@@ -286,10 +286,21 @@ internal sealed partial class ClaudeClient
             SessionIdChanged?.Invoke(this, sid);
         }
 
-        var cwd = obj.Val("cwd");
-        if (!string.IsNullOrEmpty(cwd) && Directory.Exists(cwd) && cwd != WorkingDirectory)
+        // Only the FIRST init of a process gets to correct the working directory. `cwd` reports
+        // where the process is NOW, and a Bash `cd` moves it — while the session's .jsonl stays in
+        // the folder derived from where it was launched, so every later init would point the
+        // respawn options at a directory the CLI never writes to. The first one still earns its
+        // read: it is the CLI's own answer about the directory it was given (a canonicalized
+        // symlink, say), and no tool call has run yet to have moved it.
+        if (_initCwdPending)
         {
-            WorkingDirectory = cwd;
+            _initCwdPending = false;
+            var cwd = obj.Val("cwd");
+            if (!string.IsNullOrEmpty(cwd) && Directory.Exists(cwd) && cwd != WorkingDirectory)
+            {
+                _log.Debug(() => $"[client] working directory from init: '{WorkingDirectory}' -> '{cwd}'");
+                WorkingDirectory = cwd;
+            }
         }
 
         var model = obj.Val("model");

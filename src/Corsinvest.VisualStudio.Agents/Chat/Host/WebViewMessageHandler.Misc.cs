@@ -43,7 +43,7 @@ internal sealed partial class WebViewMessageHandler
         if (id is not int suggId) { return; }
         bridge.SendResponse(BridgeMessages.ToWebView.File.Suggestions, suggId, new Contracts.GetSuggestionsResponse
         {
-            Items = [.. FileSuggestions.Get(client.WorkingDirectory, data.ToObject<Contracts.GetSuggestionsRequest>().Query ?? "")
+            Items = [.. FileSuggestions.Get(entry.WorkingDirectory, data.ToObject<Contracts.GetSuggestionsRequest>().Query ?? "")
                 .Select(s => new Contracts.AtItemDto
                 {
                     Name = s.Name,
