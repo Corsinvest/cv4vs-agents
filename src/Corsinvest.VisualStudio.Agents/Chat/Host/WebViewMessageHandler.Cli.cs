@@ -37,8 +37,9 @@ internal sealed partial class WebViewMessageHandler
     {
         if (entry?.Options.SendSelection == false) { return ""; }
         // Same gate as the WebView's own (cv-prompt.ts): a slash command carries no IDE context,
-        // and the bubble already shows no chip for one.
-        if (text.StartsWith("/")) { return ""; }
+        // and the bubble already shows no chip for one. Trimmed like the WebView trims, or a
+        // leading space would send the block for a prompt whose bubble shows no chip.
+        if (text.TrimStart().StartsWith("/")) { return ""; }
         var ctx = Ide.IdeContextService.Instance.GetCurrentContext();
         if (string.IsNullOrEmpty(ctx?.FilePath)) { return ""; }
         if (!ctx.HasSelection)

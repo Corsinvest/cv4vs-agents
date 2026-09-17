@@ -227,7 +227,7 @@ internal sealed partial class IdeContextService : IDisposable
                 starts[i] = line.Start.Position;
                 ends[i] = line.End.Position;
             }
-            var geo = SelectionGeometry.Compute(span.Start.Position, span.End.Position, starts, ends, isEmpty);
+            var geo = SelectionGeometry.Compute(span.Start.Position, span.End.Position, starts, ends);
 
             return new EditorContext
             {
@@ -324,7 +324,11 @@ internal sealed partial class IdeContextService : IDisposable
     public EditorContext GetCurrentContext()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        // The active view may not have been met yet (first call before any frame change).
+        // No usable state: either no view has been met yet, or the one we hold has been closed
+        // under us — closing a solution takes its editors with it, and the close event for a view
+        // that was not the active one leaves the field pointing at a dead view. Drop it first, so
+        // that finding no replacement leaves nothing rather than the corpse.
+        if (_active?.View.IsClosed == true) { _active = null; }
         if (_active == null) { TrackActiveView(); }
         return BuildContext(_active, includeText: true);
     }

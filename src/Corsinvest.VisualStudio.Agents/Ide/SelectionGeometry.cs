@@ -20,15 +20,17 @@ internal static class SelectionGeometry
     /// <param name="lineStartOffsets">Start offset of each line, ascending.</param>
     /// <param name="lineEndOffsets">End offset of each line, excluding its line break.</param>
     internal static (int StartLine, int StartCol, int EndLine, int EndCol) Compute(
-        int startOffset, int endOffset, int[] lineStartOffsets, int[] lineEndOffsets, bool isEmpty)
+        int startOffset, int endOffset, int[] lineStartOffsets, int[] lineEndOffsets)
     {
         var startIdx = LineIndexOf(lineStartOffsets, startOffset);
         var endIdx = LineIndexOf(lineStartOffsets, endOffset);
 
         // Dragging to the START of a line leaves the end offset on a line the selection holds no
-        // character of; reporting it would hand the model one line more than was selected. Guarded
-        // on a real multi-line selection so a bare caret at column 0 is left alone.
-        if (!isEmpty && endIdx > startIdx && endOffset == lineStartOffsets[endIdx]) { endIdx--; }
+        // character of; reporting it would hand the model one line more than was selected.
+        // endIdx > startIdx is what leaves a bare caret alone — it cannot span lines. Deliberately
+        // not gated on isEmpty: that says "not worth reporting" (whitespace, one character), and a
+        // whitespace-only drag across lines still must not name a line it holds nothing of.
+        if (endIdx > startIdx && endOffset == lineStartOffsets[endIdx]) { endIdx--; }
 
         var startCol = Math.Max(0, startOffset - lineStartOffsets[startIdx]);
         // Clamped to the line's end: after a step-back the original offset sits past it.
