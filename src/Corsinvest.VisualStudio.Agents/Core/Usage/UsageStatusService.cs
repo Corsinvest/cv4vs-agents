@@ -14,6 +14,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -63,6 +64,7 @@ internal sealed class UsageStatusService
     private readonly HashSet<string> _inFlight = new(StringComparer.OrdinalIgnoreCase);
 
     private Profile _current;
+    private bool _paneFocused;
     private bool _started;
     private Timer _tick;
     private IVsMonitorSelection _monitorSelection;
@@ -76,7 +78,27 @@ internal sealed class UsageStatusService
     public event Action Changed;
 
     /// <summary>The shown profile's usage. Never null.</summary>
-    public UsageSnapshot Current => _current == null ? UsageSnapshot.Initial("Claude") : Get(_current.Name);
+    public UsageSnapshot Current => Shown is Profile profile ? Get(profile.Name) : UsageSnapshot.Initial("Claude");
+
+    /// <summary>The profile to show: <see cref="_current"/> while a pane still runs it, else the
+    /// newest one that has a pane. <see cref="OnPaneClosed"/> moves off a profile whose last pane
+    /// went, but it only runs if that close was seen — a frame VS keeps alive past the user closing
+    /// or floating it reports nothing, and the bar would name a profile with no session behind it.
+    /// Resolving again here cannot be skipped that way. Read-only on purpose: <see cref="_current"/>
+    /// is written from Track/SetCurrent, and a write from a getter would race the timers reading it.</summary>
+    private Profile Shown
+    {
+        get
+        {
+            var live = PaneRegistry.Instance.Entries;
+            if (_current == null || live.Count == 0) { return _current; }
+            if (live.Any(e => string.Equals(e.Profile?.Name, _current.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                return _current;
+            }
+            return live.LastOrDefault()?.Profile ?? _current;
+        }
+    }
 
     private static TimeSpan Interval => TimeSpan.FromMinutes(Math.Max(0, AgentsOptions.General.UsageRefreshMinutes));
 
@@ -87,6 +109,10 @@ internal sealed class UsageStatusService
         _started = true;
         _cts = new CancellationTokenSource();
         _current = ProfileStore.Load(forEdit: false).FirstOrDefault();
+
+        // Opening a pane on a second profile is what makes the name worth showing, and the registry's
+        // own events don't cover it: Add only announces the first session of all.
+        PaneRegistry.Instance.Entries.CollectionChanged += OnPanesChanged;
 
         _monitorSelection = Package.GetGlobalService(typeof(SVsShellMonitorSelection)) as IVsMonitorSelection;
         if (_monitorSelection != null)
@@ -112,6 +138,9 @@ internal sealed class UsageStatusService
         ThreadHelper.ThrowIfNotOnUIThread();
         if (!_started) { return; }
         _started = false;
+        // A later Start re-reads the focus; leaving this set would show the wrong label until it does.
+        _paneFocused = false;
+        PaneRegistry.Instance.Entries.CollectionChanged -= OnPanesChanged;
         if (_selectionCookie != 0)
         {
             _monitorSelection?.UnadviseSelectionEvents(_selectionCookie);
@@ -230,12 +259,51 @@ internal sealed class UsageStatusService
     }
 
     // Only our own panes move the status bar to another profile; focus going to the editor or anything
-    // else leaves it on the last pane's.
+    // else leaves it on the last pane's — but it does change whether the profile name is worth showing,
+    // so every frame change is recorded even when the shown profile stays put.
     private void Track(IVsWindowFrame frame)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        if (frame == null || frame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out var view) != VSConstants.S_OK) { return; }
-        if (view is PaneWindowBase pane && pane.Entry?.Profile is Profile profile) { SetCurrent(profile); }
+        Profile focused = null;
+        if (frame != null && frame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out var view) == VSConstants.S_OK
+            && view is PaneWindowBase pane)
+        {
+            focused = pane.Entry?.Profile;
+        }
+
+        SetPaneFocused(focused != null);
+        if (focused != null) { SetCurrent(focused); }
+    }
+
+    /// <summary>Whether the item should spell out which profile the figures belong to. Only when
+    /// there is something to tell it apart from: with every open pane on the same profile the name
+    /// answers a question nobody can ask, and the status bar is short of room. With several, it is
+    /// dropped only while one of our panes has the focus — that pane's caption already carries it,
+    /// and anywhere else (the editor, Solution Explorer) nothing on screen would say.</summary>
+    public bool ShowProfileName => !_paneFocused && DistinctLiveProfiles() > 1;
+
+    // A pane opened or closed: how many profiles are in play may have changed, and with it whether
+    // the name is shown. Redraw only — which profile is current stays Track's and OnPaneClosed's.
+    private void OnPanesChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (!_started) { return; }
+        Changed?.Invoke();
+    }
+
+    private static int DistinctLiveProfiles()
+        => PaneRegistry.Instance.Entries
+            .Select(e => e.Profile?.Name)
+            .Where(n => !string.IsNullOrEmpty(n))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+
+    private void SetPaneFocused(bool focused)
+    {
+        if (_paneFocused == focused) { return; }
+        _paneFocused = focused;
+        // Focus alone changes what the item reads; without this it would keep the old label until
+        // some other change happened to redraw it.
+        Changed?.Invoke();
     }
 
     private void SetCurrent(Profile profile)
