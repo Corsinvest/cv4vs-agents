@@ -27,9 +27,9 @@ the notification bell.
 
 ![The status bar item and the popup it opens](images/plan-usage-status-bar.png)
 
-`Claude: 5h 44% · 7d 10%` — the profile, then the session (5-hour) and weekly (7-day) windows, each with
-a thin bar under it. A bar turns amber at 75% and red at 90%, or sooner when the CLI itself flags the
-window. The tooltip lists every window with its reset time.
+`Claude: 5h 44% · 7d 10%` — the session (5-hour) and weekly (7-day) windows, each with a thin bar
+under it. A bar turns amber at 75% and red at 90%, or sooner when the CLI itself flags the window.
+The tooltip lists every window with its reset time.
 
 Click it for a popup with every window — per-model weeklies included — and when each resets, the
 account (collapsed, so an email isn't on screen every time it opens), when the numbers were fetched,
@@ -38,6 +38,12 @@ and links to **Refresh**, this **Usage** tab and **claude.ai**. Esc or a click e
 **Whose usage.** The profile of the Chat or CLI pane you last worked in, or the native **Claude** profile
 until you have used one. A third-party profile (z.ai/GLM, Bedrock, Vertex, an API key) has no plan
 limits, so the item shows just its name.
+
+The item **names that profile only when there is an ambiguity to resolve** — the open panes run more
+than one profile, and none of them has the focus. The pane you are in already carries its profile in
+its caption, so repeating it in the status bar spent room to say nothing; with every chat on one
+profile, which is the usual case, the name is never shown. The tooltip and the popup name it either
+way, so it stays a hover away.
 
 **Where the numbers come from, and what that costs.** The CLI is the only source — nothing is read from
 your credentials, nothing is estimated here:
