@@ -40,16 +40,18 @@ loose file. Low priority.
 
 ---
 
-## The status bar item depends on Visual Studio's own layout
+## A box selection reports one of its lines, not the rectangle
 
-The plan-usage item in the status bar is placed by finding the bar inside the
-main window's WPF tree.
+Hold **Alt** and drag to select a vertical column across several lines, and the
+context that reaches Claude names a fragment of **one** line — not the block you
+highlighted. The badge shows that single line too.
 
-**Why:** Visual Studio's status bar API takes text only. An element with an
-icon, bars and a popup has to be inserted into the window itself, and that tree
-is Visual Studio's internal layout — free to change between releases.
+**Why:** Visual Studio models a box selection as several independent fragments,
+one per line, and reports one of them as the *primary* selection. That is the
+right answer for multiple carets, where each is a separate gesture and one of
+them is the active one — a box is a single gesture whose lines are all equally
+meant, but the editor does not distinguish the two cases.
 
-**Workaround:** if a release moves it, the item simply doesn't appear and the
-Output window says `[usage-status] Visual Studio's status bar was not found`
-(Options → Debug → Log level `Warn` or higher). Nothing else is affected, and the
-same numbers stay under **View → cv4vs Agents → Usage**.
+**Workaround:** for a block you want Claude to read, select it the ordinary way
+(without Alt). A box selection is usually a column edit, where the surrounding
+code is what matters and asking about it works anyway.
