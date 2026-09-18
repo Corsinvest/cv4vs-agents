@@ -1016,26 +1016,13 @@ internal sealed partial class IdeContextService
 
     //  Selection (MCP getCurrentSelection)
 
-    /// <summary>Async snapshot of the active editor's selection for the
-    /// MCP path. Returns null when no text document is active.
-    /// Coordinates are 1-based to match VS conventions.</summary>
+    /// <summary>The active editor's selection for the MCP tool. Projects the same tracked state as
+    /// the badge and the notifications — the DTE reading this replaced reported display columns
+    /// (tabs counted as their tab stop) on a different base than every other caller.</summary>
     public async Task<EditorSelection> GetCurrentSelectionAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        var dte = Package.GetGlobalService(typeof(DTE)) as DTE;
-        var doc = dte?.ActiveDocument;
-        return doc?.Selection is not TextSelection sel
-            ? null
-            : new EditorSelection
-            {
-                FilePath = doc.FullName,
-                Text = sel.Text ?? string.Empty,
-                StartLine = sel.TopPoint?.Line ?? 0,
-                StartColumn = sel.TopPoint?.DisplayColumn ?? 0,
-                EndLine = sel.BottomPoint?.Line ?? 0,
-                EndColumn = sel.BottomPoint?.DisplayColumn ?? 0,
-                IsEmpty = string.IsNullOrEmpty(sel.Text),
-            };
+        return GetCurrentContext()?.ToSelection();
     }
 
     //  Open editors (MCP getOpenEditors)

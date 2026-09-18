@@ -137,6 +137,8 @@
     <Compile Include="Ide\IdeContextService.cs" />
     <Compile Include="Ide\IdeContextService.Operations.cs" />
     <Compile Include="Ide\IdeContextService.Common.cs" />
+    <Compile Include="Ide\EditorSelectionState.cs" />
+    <Compile Include="Ide\SelectionGeometry.cs" />
     <Compile Include="Ide\IdeDiagnosticsTracker.cs" />
     <Compile Include="Ide\IdeErrorListService.cs" />
     <Compile Include="Ide\IdeDebugService.cs" />

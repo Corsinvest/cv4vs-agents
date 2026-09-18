@@ -20,22 +20,23 @@ internal sealed partial class WebViewMessageHandler
         // reflect the submitted message back); the host only forwards to the CLI.
         var p = data.ToObject<Contracts.SendPromptNotification>();
         log.Debug(() => $"[{BridgeMessages.FromWebView.Cli.SendPrompt}] text len={(p.Text ?? "").Length} sessionId={client.SessionId ?? "(none)"} running={client.IsRunning}");
-        // attachments stays a raw JArray: BuildContentBlocks turns it into CLI blocks. The IDE
-        // context goes in as its own block, never glued to the prompt — see BuildContentBlocks.
+        // attachments stays a raw JArray: BuildContentBlocks turns it into CLI blocks.
         var blocks = WebViewBridge.BuildContentBlocks(p.Text ?? "",
                                                      data["attachments"] as JArray,
-                                                     BuildIdeContextBlock());
+                                                     BuildIdeContextBlock(p.Text ?? ""));
         client.SendPrompt(blocks, p.Uuid ?? "");
     }
 
-    /// <summary>The `&lt;ide_*&gt;` block sent ahead of the prompt, or "" when there is no editor
-    /// context to report. Composed here rather than in the composer so the selected code never
-    /// crosses the bridge — the WebView only needs the file and the lines for its chip.
-    /// <para>Goes in its own content block, never glued to the prompt — see
-    /// <see cref="WebViewBridge.BuildContentBlocks"/> for why that matters.</para></summary>
-    private string BuildIdeContextBlock()
+    /// <summary>The <c>&lt;ide_*&gt;</c> block sent ahead of the prompt. Composed here, not in the
+    /// composer, so the selected code never crosses the bridge — the WebView only needs the file
+    /// and the lines for its chip.
+    /// <para>It goes in its own content block, never glued to the prompt.</para></summary>
+    private string BuildIdeContextBlock(string text)
     {
         if (entry?.Options.SendSelection == false) { return ""; }
+        // Same gate as the WebView's own (cv-prompt.ts), trimmed the way it trims: a slash command
+        // carries no IDE context, and its bubble shows no chip to match.
+        if (text.TrimStart().StartsWith("/")) { return ""; }
         var ctx = Ide.IdeContextService.Instance.GetCurrentContext();
         if (string.IsNullOrEmpty(ctx?.FilePath)) { return ""; }
         if (!ctx.HasSelection)
@@ -47,9 +48,7 @@ internal sealed partial class WebViewMessageHandler
                    $"from {ctx.FilePath}";
         const string tail = "This may or may not be related to the current task.</ide_selection>";
         // With the text, the shape is the VS Code webview's — what the CLI's readers expect.
-        // Without, the tag ends on the path rather than trailing a colon over nothing: sending the
-        // code costs tokens on every message carrying a selection, and this option exists to name
-        // the file and the lines and stop there.
+        // Without, the tag ends on the path rather than trailing a colon over nothing.
         return Options.AgentsOptions.Chat.SendSelectionText
             ? $"{head}:\n{ctx.SelectedText ?? ""}\n\n{tail}"
             : $"{head}. {tail}";
@@ -89,7 +88,7 @@ internal sealed partial class WebViewMessageHandler
         // Re-emit after the flip so re-opening the eye recovers the current selection instead of
         // waiting for the next editor change.
         entry.Options.SendSelection = data.ToObject<Contracts.SetSendSelectionNotification>().Enabled;
-        Ide.IdeContextService.Instance.ForceEmitCurrentContext();
+        Ide.IdeContextService.Instance.ResendCurrentContext();
     }
 
     private void HandleApplyFlagSettings(JObject data, int? id)

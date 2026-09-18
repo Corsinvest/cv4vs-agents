@@ -718,7 +718,7 @@ public partial class ChatPaneControl : PaneControlBase
             if (withIdeContext && Entry?.Options.SendSelection == false)
             {
                 Entry.Options.SendSelection = true;
-                IdeContextService.Instance.ForceEmitCurrentContext();
+                IdeContextService.Instance.ResendCurrentContext();
             }
             _bridge?.Send(
                 BridgeMessages.ToWebView.Ui.SetComposer,
@@ -778,7 +778,7 @@ public partial class ChatPaneControl : PaneControlBase
                 // Seed the IDE-context badge with the already-open editor: we only subscribe to
                 // future ContextChanged events, so without this the badge stays empty until the
                 // first editor click. Force a snapshot emit now that the WebView can receive it.
-                IdeContextService.Instance.ForceEmitCurrentContext();
+                IdeContextService.Instance.ResendCurrentContext();
                 break;
 
             // Everything else is chat protocol — hand it to the message handler.

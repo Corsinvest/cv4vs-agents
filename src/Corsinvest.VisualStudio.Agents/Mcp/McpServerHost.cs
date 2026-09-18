@@ -56,9 +56,7 @@ internal sealed partial class McpServerHost
     public bool IsRunning => _listener != null;
     private JsonRpcDispatcher _dispatcher;
 
-    /// <summary>Connected CLI clients; we broadcast <c>selection_changed</c> to all on editor
-    /// selection changes (drives <c>&lt;ide_selection&gt;</c> injection). Snapshot-on-broadcast so a
-    /// slow client can't block new connections.</summary>
+    /// <summary>Connected CLI clients; <c>selection_changed</c> is broadcast to all.</summary>
     private readonly List<ClientConn> _clients = [];
     private readonly object _clientsLock = new();
 
@@ -66,6 +64,31 @@ internal sealed partial class McpServerHost
     private sealed class ClientConn
     {
         public WebSocket Ws { get; set; }
+
+        /// <summary>One sender at a time: a WebSocket throws if a second SendAsync starts before
+        /// the first completes, and the broadcast is fire-and-forget, so the loser's notification
+        /// would just be lost to a logged exception.</summary>
+        public SemaphoreSlim SendLock { get; } = new(1, 1);
+    }
+
+    private static async Task SendAsync(ClientConn conn, string json, string logContext)
+    {
+        var bytes = Encoding.UTF8.GetBytes(json);
+        await conn.SendLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (conn.Ws.State != WebSocketState.Open) { return; }
+            await conn.Ws.SendAsync(new ArraySegment<byte>(bytes),
+                WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // A client that went away mid-send is ordinary; anything else the user would feel as
+            // context the CLI never received.
+            OutputWindowLogger.Global.LogException(logContext, ex);
+        }
+        finally { conn.SendLock.Release(); }
     }
 
     private McpServerHost() { }
@@ -354,7 +377,7 @@ internal sealed partial class McpServerHost
                 // The later 1s delay covers the React effect lagging the state transition.
                 if (raw.IndexOf("\"tools/list\"", StringComparison.Ordinal) >= 0)
                 {
-                    _ = DelayedSendInitialContextAsync(ws);
+                    _ = SendInitialContextAsync(conn);
                 }
                 if (reply != null && ws.State == WebSocketState.Open)
                 {
@@ -396,77 +419,42 @@ internal sealed partial class McpServerHost
         }
     }
 
-    /// <summary>Builds a <c>selection_changed</c> notification and broadcasts it. The payload shape
-    /// is what the CLI's <c>useIdeSelection</c> hook accepts before it injects an
-    /// <c>&lt;ide_selection&gt;</c> block: { text, filePath, fileUrl, selection }.</summary>
-    private void OnEditorContextChanged(EditorContext ctx)
-    {
-        if (ctx == null)
-        {
-            // No active document: empty text is the CLI's signal to drop its cached selection.
-            BroadcastNotification(BuildSelectionNotification(
-                text: string.Empty, filePath: null, fileUrl: null,
-                startLine: 0, startChar: 0, endLine: 0, endChar: 0, isEmpty: true));
-            return;
-        }
-        // VS gives 1-based lines; LSP/MCP wants 0-based. Columns are already
-        // 0-based from the editor snapshot.
-        var startLine = Math.Max(0, ctx.StartLine - 1);
-        var endLine = Math.Max(0, ctx.EndLine - 1);
-        BroadcastNotification(BuildSelectionNotification(
-            text: ctx.SelectedText ?? string.Empty,
-            filePath: ctx.FilePath,
-            fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
-            startLine: startLine, startChar: Math.Max(0, ctx.StartColumn),
-            endLine: endLine, endChar: Math.Max(0, ctx.EndColumn),
-            isEmpty: !ctx.HasSelection));
-    }
+    private void OnEditorContextChanged(EditorContext ctx) => BroadcastNotification(BuildSelectionNotification(ctx));
 
-    /// <summary>Send the initial context after a pause, giving the CLI time to reach 'connected' and
-    /// register its useIdeSelection handler (otherwise the broadcast fires into the void).</summary>
-    private async Task DelayedSendInitialContextAsync(WebSocket ws)
+    /// <summary>Send a one-shot selection_changed to a freshly handshook client so its first prompt
+    /// has the current file's context.
+    /// <para>After a pause, which gives the CLI time to reach 'connected' and register its
+    /// useIdeSelection handler — sent sooner it fires into the void.</para></summary>
+    private async Task SendInitialContextAsync(ClientConn conn)
     {
-        try { await Task.Delay(1000); }
-        catch { /* never throws here, but be safe */ }
-        if (ws.State != WebSocketState.Open) { return; }
-        await SendInitialContextAsync(ws);
-    }
-
-    /// <summary>Send a one-shot selection_changed to a freshly handshook client so the first prompt
-    /// has IDE context for the current active file. Read on UI thread.</summary>
-    private async Task SendInitialContextAsync(WebSocket ws)
-    {
+        await Task.Delay(1000);
+        if (conn.Ws.State != WebSocketState.Open) { return; }
         try
         {
             await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var ctx = IdeContextService.Instance.GetCurrentContext();
-            string json;
-            if (ctx == null)
-            {
-                json = BuildSelectionNotification(
-                    text: string.Empty, filePath: null, fileUrl: null,
-                    startLine: 0, startChar: 0, endLine: 0, endChar: 0, isEmpty: true);
-            }
-            else
-            {
-                var startLine = Math.Max(0, ctx.StartLine - 1);
-                var endLine = Math.Max(0, ctx.EndLine - 1);
-                json = BuildSelectionNotification(
-                    text: ctx.SelectedText ?? string.Empty,
-                    filePath: ctx.FilePath,
-                    fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
-                    startLine: startLine, startChar: 0,
-                    endLine: endLine, endChar: 0,
-                    isEmpty: !ctx.HasSelection);
-            }
-            if (ws.State != WebSocketState.Open) { return; }
+            var json = BuildSelectionNotification(IdeContextService.Instance.GetCurrentContext());
+            if (conn.Ws.State != WebSocketState.Open) { return; }
             OutputWindowLogger.Global.Trace(() => $"Mcp: -> (initial) {StringHelpers.Truncate(json, 200)}");
-            var bytes = Encoding.UTF8.GetBytes(json);
-            await ws.SendAsync(new ArraySegment<byte>(bytes),
-                WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None);
+            await SendAsync(conn, json, "Mcp.SendInitialContext");
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Mcp.SendInitialContext", ex); }
     }
+
+    /// <summary>The wire form of an editor context, live or on connect — both go through here so a
+    /// client that arrives mid-selection is told the same thing the next change will tell it.
+    /// <para><c>null</c> means no active document: the CLI drops its cached selection on the empty
+    /// text. VS counts lines from 1 and LSP/MCP from 0, hence the subtraction and the floor under
+    /// it; the columns need neither, arriving 0-based and already floored.</para></summary>
+    private static string BuildSelectionNotification(EditorContext ctx)
+        => ctx == null
+            ? BuildSelectionNotification(string.Empty, null, null, 0, 0, 0, 0, isEmpty: true)
+            : BuildSelectionNotification(
+                text: ctx.SelectedText ?? string.Empty,
+                filePath: ctx.FilePath,
+                fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
+                startLine: Math.Max(0, ctx.StartLine - 1), startChar: ctx.StartColumn,
+                endLine: Math.Max(0, ctx.EndLine - 1), endChar: ctx.EndColumn,
+                isEmpty: !ctx.HasSelection);
 
     private static string BuildSelectionNotification(
         string text, string filePath, string fileUrl,
@@ -498,21 +486,12 @@ internal sealed partial class McpServerHost
             snapshot = [.. _clients];
         }
         OutputWindowLogger.Global.Trace(() => $"Mcp: broadcast to {snapshot.Length} client(s) -> {StringHelpers.Truncate(json, 200)}");
-        var bytes = Encoding.UTF8.GetBytes(json);
         foreach (var conn in snapshot)
         {
-            var ws = conn.Ws;
-            if (ws.State != WebSocketState.Open) { continue; }
-            // Fire-and-forget: a slow/dead client must not break the others.
-            _ = ws.SendAsync(new ArraySegment<byte>(bytes),
-                WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None)
-                .ContinueWith(t =>
-                {
-                    if (t.Exception != null)
-                    {
-                        OutputWindowLogger.Global.LogException("Mcp.Broadcast", t.Exception);
-                    }
-                }, TaskScheduler.Default);
+            if (conn.Ws.State != WebSocketState.Open) { continue; }
+            // Fire-and-forget: a slow or dead client must not hold up the others, or the UI thread
+            // this is raised from.
+            _ = SendAsync(conn, json, "Mcp.Broadcast");
         }
     }
 
