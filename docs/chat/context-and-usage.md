@@ -129,7 +129,8 @@ icon at its right end names the shape of the block:
 | 🧾 code block | the position **and** the selected code | the setting is on **and** you have a selection |
 
 The second row needs both conditions: an open file with nothing selected has no code to attach, so
-it stays a bookmark whatever the setting says. The icon follows what actually goes out, not how the
+it stays a bookmark whatever the setting says. Selecting only spaces or tabs counts as nothing
+selected — there is no code in it to send. The icon follows what actually goes out, not how the
 option is configured — and it disappears entirely when the eye is shut, since then nothing does.
 
 The tooltip spells the same thing out in words, so the icon never has to be guessed at.
