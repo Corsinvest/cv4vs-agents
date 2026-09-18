@@ -30,9 +30,12 @@ internal static class SelectionGeometry
     internal static bool IsEffectivelyEmpty(string text)
         => string.IsNullOrEmpty(text) || IsEffectivelyEmpty(text.Length, i => text[i]);
 
+    /// <summary>Where a selection starts and ends, as offsets INTO THE WINDOW the caller passed —
+    /// index 0 is whatever line <paramref name="lineStartOffsets"/> begins at, not the file's first.
+    /// The caller adds its own origin back; the columns are absolute within their line.</summary>
     /// <param name="lineStartOffsets">Start offset of each line, ascending.</param>
     /// <param name="lineEndOffsets">End offset of each line, excluding its line break.</param>
-    internal static (int StartLine, int StartCol, int EndLine, int EndCol) Compute(
+    internal static (int StartLineOffset, int StartCol, int EndLineOffset, int EndCol) Compute(
         int startOffset, int endOffset, int[] lineStartOffsets, int[] lineEndOffsets)
     {
         var startIdx = LineIndexOf(lineStartOffsets, startOffset);
@@ -47,7 +50,7 @@ internal static class SelectionGeometry
         // Clamped to the line's end: after a step-back the original offset sits past it.
         var endCol = Math.Max(0, Math.Min(endOffset, lineEndOffsets[endIdx]) - lineStartOffsets[endIdx]);
 
-        return (startIdx + 1, startCol, endIdx + 1, endCol);
+        return (startIdx, startCol, endIdx, endCol);
     }
 
     private static int LineIndexOf(int[] lineStartOffsets, int offset)
