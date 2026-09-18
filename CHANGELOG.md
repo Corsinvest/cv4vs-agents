@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-09-18
+
+What Claude is told you selected was being read through an API that counted a tab as several
+characters, reported a span nobody had made when two documents sat side by side, and could arrive
+with no selection at all on the first prompt. It is a per-view reading now, on the same geometry
+everywhere, and a drag costs one read instead of one per event. The message queue became something
+you can fix rather than only empty — click a waiting message to edit it, remove it, or join it to
+the one before so they leave together. And a `cd` in a Bash call no longer makes a chat lose track
+of its own transcript, which is what had been quietly breaking the diff dialog, the plan banner and
+the session title.
+
 ### Added
 
 - **Fix a queued message instead of retyping it.** Clicking one in the queue brings its text and
@@ -16,23 +27,77 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   a turn apart: Claude answered the first without having seen the rest. **Alt+Enter** now queues a
   message *into* the one before it, and they leave together as a single message. Plain Enter queues
   as before.
+- **The debugger says which modules are loaded, and which process you are looking at.** A breakpoint
+  that will not bind is nearly always a module whose symbols never arrived, and nothing here could
+  see that: `debug_list_modules` now reports each one with whether its symbols loaded, user code
+  first. `debug_list_debugged_processes` names the processes under the debugger — with a web app and
+  its worker both attached, nothing said which one the call stack, locals and threads were about.
+  `debug_list_processes` gained the `beingDebugged` flag it always declared, and splits the file name
+  from its full path so the two listings can be matched.
 
 ### Fixed
 
+- **A `cd` in a Bash call made a chat lose its own transcript.** The CLI reports its current
+  directory on every turn, and a command that changed it sent the pane looking for its session file
+  under a folder that never exists — the transcript stays where the session was launched. From that
+  turn on the diff dialog and the tool input/output views did nothing when clicked, the plan would
+  not open, and the session title stopped refreshing, with nothing on screen saying why. Nothing
+  repaired it either, unless the model happened to `cd` back. The same wrong folder reached further:
+  `@file` suggestions were filtered against a `.gitignore` read from it, rewind looked for its
+  backups there, and the stats were scoped to it. The pane's own working directory is now what all of
+  those use, and the wire cannot move it.
+- **What Claude is told you selected is read once, the same way everywhere.** The reading went
+  through an older editor API, and through a second path for the initial context that disagreed with
+  it: a tab counted as a whole tab stop instead of one character, the two paths differed by one on
+  the column, and the context sent when a CLI first connects carried hardcoded zeroes. With two
+  documents open side by side, selecting in the one you had not activated reported a span in the
+  other. Selecting to the start of a line now names the line the selection actually ends on, a
+  projected file (Razor, `.vue`) resolves to its real document, and closing a solution no longer
+  leaves the reading attached to a dead editor.
+- **A slash command sent your selection anyway.** Typing `/model` with code selected went out with
+  the selected code attached, under a bubble that showed no context chip — the screen said one thing
+  and the wire carried another. Slash commands carry no IDE context now, a leading space included.
+- **The badge could go on naming the file you had left.** Activating a Razor file before its document
+  had resolved left that editor untrackable for as long as it stayed open, so the chip above the
+  composer kept showing the previous file — and that is the file the model was told about.
+- **Selecting a second word on the same line left Claude holding the first.** Nothing but the columns
+  changes between the two, and the columns were not being compared — so the new selection was taken
+  for the one already sent and never went out. Asking about what you had just highlighted answered
+  about the word before it.
+- **A single selected character counted as nothing.** Double-clicking `i` in a loop left the chip
+  and the context menu's "Needs selection" entries greyed out, explaining nothing. If trimming the
+  edges leaves any text it is a selection — while whitespace alone, however much of it, still is not.
+- **The first prompt could go out with no selection attached.** Two senders on one connection could
+  start at once, and a WebSocket refuses that: the loser became a logged exception and a
+  notification that never arrived. It was usually the initial context that lost, in the ordinary case
+  of opening a chat and clicking in the editor.
+- **The status dot on a reply sat about two pixels above the line it marks.** Its box was fixed at
+  the height of a tool row's line; a reply's text is taller, and taller again when the chat font size
+  is raised. It now follows whatever line it sits beside.
 - **The plan usage in the status bar outlived the panes it was reporting on.** Close every chat and
   it stayed, showing whichever profile had been open last — and kept starting a background process
   every fifteen minutes to refresh numbers for a session that had ended. It now appears with the
   first pane and goes with the last; closing the only pane on the profile being shown moves it to one
   that still has a pane.
+- **The status bar repeated the profile name for nothing.** It sat there beside the notification
+  bell naming the profile of the pane you were already in — which carries that name in its own
+  caption. It is shown only when there is an ambiguity to resolve now: the open panes run more than
+  one profile, and none of them has the focus. Most people, with every chat on one profile, will not
+  see it again; the tooltip and the popup still name it either way. The name could also outlive its
+  sessions — close the last pane of a profile with the focus elsewhere and the bar kept naming it.
 - **A single queued message could not be read in full.** With one message waiting, its text sat
   truncated in the row with no way to see the rest or copy it — while two or more opened a list that
   showed everything. There is now always a list.
-
 - **The file outline now works in six languages instead of two.** Asking Claude for the structure of
   a file — its classes, methods and properties — used to answer only for C# and Visual Basic;
   anywhere else it said the language was not supported. It now answers for F#, C++ (headers
   included) and, while the file is open in an editor, TypeScript and JavaScript. Nothing changed for
   C# and Visual Basic.
+- **Go to definition, find references and rename could report a language as unsupported for the
+  reason the outline did.** Roslyn gives the property holding a project's language services two
+  different names, and those three tools read only the first — so a project exposing it under the
+  second answered "not supported" however complete its language service was. They read either name
+  now, the way the outline already did.
 - **The language report no longer sends you away from features that work.** The tool that says which
   languages Claude can navigate was still describing the situation from before the fix, so it
   reported F# and C++ as out of reach for the file outline while the outline was being returned for
@@ -46,6 +111,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Searches and reference lists come back faster on large results.** Finding every use of a symbol
   read the same source file from disk once per result — fifty references in one file meant reading
   it fifty times. Each file is now read once per search. Same results, same order.
+- **Dragging a selection costs one reading instead of dozens.** The delay before the selection is
+  sent was applied after building the whole thing — text included — so every event a drag raises
+  paid for a full reading that was then thrown away. What goes out is now the selection as it ended,
+  read once. Separately, the editor's context menu asks "is there a selection?" continuously and once
+  per entry, and was materialising the selected text to answer: with five thousand lines selected
+  that was megabytes per menu query. It now stops at the first non-whitespace character.
 
 ## [1.10.0] - 2026-09-14
 
