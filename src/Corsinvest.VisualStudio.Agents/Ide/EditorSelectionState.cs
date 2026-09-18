@@ -10,12 +10,10 @@ using System;
 namespace Corsinvest.VisualStudio.Agents.Ide;
 
 /// <summary>Per-view selection tracking, stored on the view itself so its lifetime is the
-/// view's. One instance per <see cref="IWpfTextView"/>; the view's own events drive it, so
-/// nothing has to re-attach when focus moves between documents.</summary>
+/// view's and nothing has to re-attach when focus moves.</summary>
 internal sealed class EditorSelectionState
 {
-    // Key type for the view's property bag: a private type cannot collide with any other
-    // extension's entry.
+    // Property-bag key: a private type cannot collide with another extension's entry.
     private sealed class Key { }
 
     private readonly IMultiSelectionBroker _broker;
@@ -39,8 +37,8 @@ internal sealed class EditorSelectionState
         view.Closed += OnClosed;
     }
 
-    /// <summary>Attach to the view, or return the instance already attached. Null when the view
-    /// has no text document (a projection without a backing file, a non-document view).</summary>
+    /// <summary>Null when the view has no text document: a projection without a backing file, or
+    /// a non-document view.</summary>
     internal static EditorSelectionState GetOrCreate(IWpfTextView view,
                                                      ITextDocumentFactoryService docFactory,
                                                      Action<EditorSelectionState> onChanged)
@@ -49,18 +47,16 @@ internal sealed class EditorSelectionState
 
         // DocumentBuffer, not TextBuffer: in a projected view (Razor, .vue) TextBuffer is the
         // projection and carries no ITextDocument.
-        // The lookup happens before GetOrCreateSingletonProperty because that one caches on key
-        // presence, not on value: a null from the factory would bind the key forever and the view
-        // could never be tracked, not even once its document resolves.
+        // Before GetOrCreateSingletonProperty, which caches on key presence, not value: a null
+        // would bind the key forever and the view could never be tracked.
         if (!docFactory.TryGetTextDocument(view.TextDataModel.DocumentBuffer, out var doc)) { return null; }
 
         return view.Properties.GetOrCreateSingletonProperty(
             typeof(Key), () => new EditorSelectionState(view, doc, onChanged));
     }
 
-    /// <summary>The primary selection's span on the view's current snapshot — the primary one, so
-    /// that a second caret elsewhere in the file does not stretch it across everything in between.
-    /// False when the broker is unavailable or the view is gone.</summary>
+    /// <summary>The primary selection's span, so a second caret elsewhere in the file does not
+    /// stretch it across everything in between.</summary>
     internal bool TryGetSpan(out SnapshotSpan span)
     {
         span = default;
@@ -71,9 +67,8 @@ internal sealed class EditorSelectionState
         return true;
     }
 
-    /// <summary>Stop listening. Idempotent, and the flag outlives the unsubscribe: the instance
-    /// stays in the view's property bag, so anything that meets this view again gets it back and
-    /// must find it inert rather than half-attached.</summary>
+    /// <summary>Stop listening. The flag outlives the unsubscribe because the instance stays in
+    /// the view's property bag: whoever meets this view again must find it inert.</summary>
     internal void Detach()
     {
         if (_detached) { return; }
@@ -92,8 +87,6 @@ internal sealed class EditorSelectionState
         }
     }
 
-    // The firing state goes with the event: the listener owns several views and must know which
-    // one spoke, or it answers for the wrong file.
     private void OnSelectionChanged(object sender, EventArgs e) => _onChanged?.Invoke(this);
     private void OnGotFocus(object sender, EventArgs e) => _onChanged?.Invoke(this);
 

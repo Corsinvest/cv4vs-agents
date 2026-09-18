@@ -56,9 +56,7 @@ internal sealed partial class McpServerHost
     public bool IsRunning => _listener != null;
     private JsonRpcDispatcher _dispatcher;
 
-    /// <summary>Connected CLI clients; we broadcast <c>selection_changed</c> to all on editor
-    /// selection changes (drives <c>&lt;ide_selection&gt;</c> injection). Snapshot-on-broadcast so a
-    /// slow client can't block new connections.</summary>
+    /// <summary>Connected CLI clients; <c>selection_changed</c> is broadcast to all.</summary>
     private readonly List<ClientConn> _clients = [];
     private readonly object _clientsLock = new();
 
@@ -69,12 +67,10 @@ internal sealed partial class McpServerHost
 
         /// <summary>One sender at a time: a WebSocket throws if a second SendAsync starts before
         /// the first completes, and the broadcast is fire-and-forget, so the loser's notification
-        /// would be lost to a logged exception. The initial context waits a second before it goes
-        /// out, which is exactly long enough for the user to select something.</summary>
+        /// would just be lost to a logged exception.</summary>
         public SemaphoreSlim SendLock { get; } = new(1, 1);
     }
 
-    /// <summary>Send one frame, waiting for any send already in flight on this connection.</summary>
     private static async Task SendAsync(ClientConn conn, string json, string logContext)
     {
         var bytes = Encoding.UTF8.GetBytes(json);
@@ -381,7 +377,7 @@ internal sealed partial class McpServerHost
                 // The later 1s delay covers the React effect lagging the state transition.
                 if (raw.IndexOf("\"tools/list\"", StringComparison.Ordinal) >= 0)
                 {
-                    _ = DelayedSendInitialContextAsync(conn);
+                    _ = SendInitialContextAsync(conn);
                 }
                 if (reply != null && ws.State == WebSocketState.Open)
                 {
@@ -423,25 +419,16 @@ internal sealed partial class McpServerHost
         }
     }
 
-    /// <summary>Builds a <c>selection_changed</c> notification and broadcasts it. The payload shape
-    /// is what the CLI's <c>useIdeSelection</c> hook accepts before it injects an
-    /// <c>&lt;ide_selection&gt;</c> block: { text, filePath, fileUrl, selection }.</summary>
     private void OnEditorContextChanged(EditorContext ctx) => BroadcastNotification(BuildSelectionNotification(ctx));
 
-    /// <summary>Send the initial context after a pause, giving the CLI time to reach 'connected' and
-    /// register its useIdeSelection handler (otherwise the broadcast fires into the void).</summary>
-    private async Task DelayedSendInitialContextAsync(ClientConn conn)
-    {
-        try { await Task.Delay(1000); }
-        catch { /* never throws here, but be safe */ }
-        if (conn.Ws.State != WebSocketState.Open) { return; }
-        await SendInitialContextAsync(conn);
-    }
-
-    /// <summary>Send a one-shot selection_changed to a freshly handshook client so the first prompt
-    /// has IDE context for the current active file. Read on UI thread.</summary>
+    /// <summary>Send a one-shot selection_changed to a freshly handshook client so its first prompt
+    /// has the current file's context.
+    /// <para>After a pause, which gives the CLI time to reach 'connected' and register its
+    /// useIdeSelection handler — sent sooner it fires into the void.</para></summary>
     private async Task SendInitialContextAsync(ClientConn conn)
     {
+        await Task.Delay(1000);
+        if (conn.Ws.State != WebSocketState.Open) { return; }
         try
         {
             await Microsoft.VisualStudio.Shell.ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();

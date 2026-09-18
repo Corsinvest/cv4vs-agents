@@ -43,9 +43,8 @@ internal sealed partial class IdeContextService : IDisposable
 
     private IdeContextService() { }
 
-    // Live selection tracking. The view's own events are the only reliable signal for editor
-    // selection/caret — DTE doesn't fire on mouse selection. IVsMonitorSelection tells us which
-    // view owns the context when the active frame changes.
+    // The view's own events are the only reliable signal for selection: DTE doesn't fire on
+    // mouse selection.
 
     private IVsEditorAdaptersFactoryService _editorAdapters;
     private ITextDocumentFactoryService _docFactory;
@@ -53,30 +52,22 @@ internal sealed partial class IdeContextService : IDisposable
     private uint _selectionCookie;
     private bool _subscribed;
 
-    // The view that currently owns the context. Its own events drive the emit; nothing
-    // re-attaches, so there is no "the tracker missed it" state to recover from.
+    // The view that currently owns the context.
     private EditorSelectionState _active;
 
     private Timer _debounce;
 
-    // Last-emitted state — suppress duplicate notifications when nothing the badge or the
-    // CLI cares about actually changed.
-    private string _lastFilePath;
-    private bool _lastHasSelection;
-    private int _lastStartLine;
-    private int _lastEndLine;
-    private int _lastStartCol;
-    private int _lastEndCol;
+    // What went out last, to suppress an emit that would say the same thing again. Null after a
+    // clear; _hasEmitted tells that apart from "nothing has gone out yet".
+    private EditorContext _last;
     private bool _hasEmitted;
 
     /// <summary>Fires whenever the active editor file or its selection
     /// changes. <c>null</c> argument = no document active.</summary>
     public event Action<EditorContext> ContextChanged;
 
-    /// <summary>Start tracking the active editor's selection. Idempotent.
-    /// Must be called on the UI thread. The MEF
-    /// <see cref="IVsEditorAdaptersFactoryService"/> is resolved via
-    /// IComponentModel so we can map IVsTextView → IWpfTextView.</summary>
+    /// <summary>Start tracking the active editor's selection. Idempotent. Must be called on the
+    /// UI thread.</summary>
     public void SubscribeToEditorEvents()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -96,7 +87,6 @@ internal sealed partial class IdeContextService : IDisposable
             }
             _debounce = new Timer(_ => OnDebounceElapsed(), null, Timeout.Infinite, Timeout.Infinite);
 
-            // Hear about active-frame changes so we re-attach to the new view.
             _monitorSelection = Package.GetGlobalService(typeof(SVsShellMonitorSelection)) as IVsMonitorSelection;
             _monitorSelection?.AdviseSelectionEvents(new SelectionEventSink(this), out _selectionCookie);
 
@@ -106,9 +96,8 @@ internal sealed partial class IdeContextService : IDisposable
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.SubscribeToEditorEvents", ex); }
     }
 
-    /// <summary>Point the context at the active text view, attaching per-view tracking the first
-    /// time we meet it. When <paramref name="frame"/> is given we read the view straight from it
-    /// (avoids IVsTextManager.GetActiveView timing gaps).</summary>
+    /// <summary>When <paramref name="frame"/> is given the view is read straight from it: it
+    /// avoids IVsTextManager.GetActiveView timing gaps.</summary>
     internal void TrackActiveView(IVsWindowFrame frame = null)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -133,8 +122,7 @@ internal sealed partial class IdeContextService : IDisposable
                 return;
             }
 
-            // Only a real document editor counts. Output / Find-results / readonly tool windows are
-            // IWpfTextViews too, but their role is not Document.
+            // Output / Find-results / readonly tool windows are IWpfTextViews too, not role Document.
             if (!wpf.Roles.Contains(PredefinedTextViewRoles.Document)) { return; }
 
             var state = EditorSelectionState.GetOrCreate(wpf, _docFactory, OnTrackedViewChanged);
@@ -148,10 +136,8 @@ internal sealed partial class IdeContextService : IDisposable
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.TrackActiveView", ex); }
     }
 
-    /// <summary>A tracked view reported a selection, focus or close change.
-    /// <para>Every open view keeps listening, so the firing one has to be identified: a selection
-    /// in a side-by-side document the user has not activated is not the context, and closing a
-    /// background tab must not clear or rebuild the active one.</para></summary>
+    /// <summary>Every open view keeps listening, so the firing one has to be identified: a
+    /// selection in a document the user has not activated is not the context.</summary>
     private void OnTrackedViewChanged(EditorSelectionState state)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -162,8 +148,6 @@ internal sealed partial class IdeContextService : IDisposable
         ScheduleEmit();
     }
 
-    /// <summary><see cref="SelectionGeometry.IsEffectivelyEmpty"/> asked over the snapshot, so the
-    /// span is never copied into a string to answer it.</summary>
     private static bool IsSpanEffectivelyEmpty(SnapshotSpan span)
     {
         var start = span.Start.Position;
@@ -171,12 +155,10 @@ internal sealed partial class IdeContextService : IDisposable
         return SelectionGeometry.IsEffectivelyEmpty(span.Length, i => snapshot[start + i]);
     }
 
-    /// <summary>The one projection from tracked state to <see cref="EditorContext"/>. Both the push
-    /// path and the on-demand readers go through here, so no two of them can disagree about lines,
-    /// columns or emptiness.
-    /// <para><paramref name="includeText"/> false leaves <see cref="EditorContext.SelectedText"/>
-    /// empty: the badge never reads it, and materialising a multi-megabyte selection for a consumer
-    /// that wants one bool is the allocation this exists to avoid.</para></summary>
+    /// <summary>The one projection from tracked state to <see cref="EditorContext"/> — push path
+    /// and on-demand readers both come here, so they cannot disagree.
+    /// <para><paramref name="includeText"/> false leaves SelectedText empty for a caller that
+    /// wants one bool.</para></summary>
     private EditorContext BuildContext(EditorSelectionState state, bool includeText)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -194,10 +176,8 @@ internal sealed partial class IdeContextService : IDisposable
 
             if (!state.TryGetSpan(out var span)) { return null; }
 
-            // The broker can answer on a version older than the view's own if an edit is landing
-            // as this runs. TranslateTo moves the span forward on the same buffer — both sides are
-            // the view's top-level one, only the version differs — rather than reporting lines
-            // against a snapshot that no longer exists.
+            // The broker can answer on a snapshot older than the view's if an edit lands as this
+            // runs; translate forward rather than report lines against one that no longer exists.
             var snapshot = state.View.TextSnapshot;
             if (span.Snapshot != snapshot)
             {
@@ -224,8 +204,10 @@ internal sealed partial class IdeContextService : IDisposable
                 FilePath = filePath,
                 FileName = Path.GetFileName(filePath),
                 HasSelection = !isEmpty,
-                StartLine = startLine.LineNumber + geo.StartLine,
-                EndLine = startLine.LineNumber + geo.EndLine,
+                // The window's own origin, plus the offset within it, plus one: VS counts lines
+                // from 0 and everything downstream of here counts from 1.
+                StartLine = startLine.LineNumber + geo.StartLineOffset + 1,
+                EndLine = startLine.LineNumber + geo.EndLineOffset + 1,
                 StartColumn = geo.StartCol,
                 EndColumn = geo.EndCol,
                 SelectedText = text,
@@ -262,41 +244,16 @@ internal sealed partial class IdeContextService : IDisposable
         ThreadHelper.ThrowIfNotOnUIThread();
         if (ctx == null)
         {
-            if (_hasEmitted && _lastFilePath != null)
+            if (_hasEmitted && _last != null)
             {
-                _lastFilePath = null;
-                _lastHasSelection = false;
-                _lastStartLine = _lastEndLine = _lastStartCol = _lastEndCol = 0;
+                _last = null;
                 ContextChanged?.Invoke(null);
             }
             _hasEmitted = true;
             return;
         }
-        // Skip caret-only moves: without a selection the caret position isn't context Claude cares
-        // about (it wants the SELECTION), so moving the cursor in the same file must not re-emit.
-        // When neither side has a selection, dedup on FilePath alone; the position fields are compared
-        // only when a selection is involved (so a real selection change, and the select↔deselect
-        // transition, still emit).
-        // The columns are part of that comparison because the CLI keys on them: selecting one word
-        // and then another on the SAME line changes nothing else, and dropping the emit would leave
-        // the model holding the first word.
-        if (_hasEmitted &&
-            ctx.FilePath == _lastFilePath &&
-            ctx.HasSelection == _lastHasSelection &&
-            (!ctx.HasSelection ||
-             (ctx.StartLine == _lastStartLine &&
-              ctx.EndLine == _lastEndLine &&
-              ctx.StartColumn == _lastStartCol &&
-              ctx.EndColumn == _lastEndCol)))
-        {
-            return;
-        }
-        _lastFilePath = ctx.FilePath;
-        _lastHasSelection = ctx.HasSelection;
-        _lastStartLine = ctx.StartLine;
-        _lastEndLine = ctx.EndLine;
-        _lastStartCol = ctx.StartColumn;
-        _lastEndCol = ctx.EndColumn;
+        if (_hasEmitted && ctx.SaysTheSameAs(_last)) { return; }
+        _last = ctx;
         _hasEmitted = true;
         // Keep the MCP latest-selection cache warm so the CLI can still grab
         // "the last thing I selected" after focus moves to the chat/CLI pane.
@@ -544,7 +501,12 @@ internal sealed partial class IdeContextService : IDisposable
             }
             _debounce?.Dispose();
         }
-        catch { /* silent: cleanup */ }
+        catch (Exception ex)
+        {
+            // The process is going down either way, but a shell that refuses to unadvise is worth
+            // knowing about — the same reason EditorSelectionState.Detach logs its own teardown.
+            OutputWindowLogger.Global.Warn($"[ide-context] teardown: {ex.Message}");
+        }
         _monitorSelection = null;
         _editorAdapters = null;
         _docFactory = null;
@@ -565,21 +527,18 @@ internal sealed partial class IdeContextService : IDisposable
 
     /// <summary>Emit the current context even though nothing changed, for a consumer that has just
     /// arrived and holds nothing: a chat pane whose WebView is only now able to receive, or the
-    /// IDE-context eye being reopened. Both subscribe to <see cref="ContextChanged"/> and would
-    /// otherwise wait for the next editor event to learn what is open.
-    /// <para>The dedup is what it defeats — the tracker itself never needs waking.</para></summary>
+    /// IDE-context eye reopened.
+    /// <para>It defeats the dedup; the tracker needs no waking.</para></summary>
     public void ResendCurrentContext()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
+        // _hasEmitted alone short-circuits the whole dedup; _last is left for Emit to overwrite.
         _hasEmitted = false;
-        _lastFilePath = null;
         Emit(GetCurrentContext());
     }
 
 
-    /// <summary>IVsMonitorSelection sink: when the active window frame changes
-    /// we re-attach the SelectionChanged listener to the new view's editor.
-    /// Only the frame-change element interests us.</summary>
+    /// <summary>IVsMonitorSelection sink: re-point the context when the active frame changes.</summary>
     private sealed class SelectionEventSink(IdeContextService owner) : IVsSelectionEvents
     {
         int IVsSelectionEvents.OnElementValueChanged(uint elementid, object varValueOld, object varValueNew)
@@ -612,6 +571,21 @@ internal sealed class EditorContext
     public int StartColumn { get; set; }
     public int EndColumn { get; set; }
     public string SelectedText { get; set; }
+
+    /// <summary>Whether re-sending this would tell the consumers what they already know.
+    /// <para>Without a selection only the file matters: moving the caret around one file is not
+    /// context Claude asked for. With one, the columns count too — selecting a second word on the
+    /// same line changes nothing else, and skipping that emit would leave the model holding the
+    /// first word.</para></summary>
+    public bool SaysTheSameAs(EditorContext other)
+        => other != null
+           && FilePath == other.FilePath
+           && HasSelection == other.HasSelection
+           && (!HasSelection
+               || (StartLine == other.StartLine
+                   && EndLine == other.EndLine
+                   && StartColumn == other.StartColumn
+                   && EndColumn == other.EndColumn));
 
     /// <summary>Project this badge snapshot to the MCP-facing
     /// <see cref="EditorSelection"/> shape (used to keep the
