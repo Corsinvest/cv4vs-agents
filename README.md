@@ -545,7 +545,10 @@ Studio is a different host, so several things are done differently — or don't 
   natively in the chat, including historical statistics across the current chat, the whole project,
   or **all projects together**.
 
-Not implemented (yet): a rewind/checkpoint feature — the closest is **Fork**.
+- **[Rewind](docs/chat/rewind.md)** — restore the files to the state they were in before any message
+  in the session, leaving the conversation itself untouched; a dry-run preview lists the files and
+  the lines added or removed before anything is written, and clicking a file opens the pre-message
+  copy against the current one in Visual Studio's diff.
 
 ---
 
