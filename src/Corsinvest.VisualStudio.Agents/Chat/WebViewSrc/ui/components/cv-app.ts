@@ -965,23 +965,34 @@ export class CvApp extends LitElement {
         this._offs.length = 0;
     }
 
-    /** Esc anywhere interrupts generation — unless a permission/Ask prompt is
-     *  open (the banner consumes Esc) or a menu/popover is open (model,
-     *  permission-mode, @ menu — there Esc just closes the menu, handled by the
-     *  native Popover API). */
+    /** Esc cancels the nearest open thing, and interrupts generation only when there is none:
+     *  a permission/Ask prompt consumes it in the banner, a menu/popover in the native Popover
+     *  API, an edit of a queued message here. */
     private _onGlobalEsc = (e: KeyboardEvent): void => {
-        if (e.key !== 'Escape' || this._awaitingUser || !this._isBusy) {
+        if (e.key !== 'Escape' || this._awaitingUser) {
             return;
         }
         // A native popover (model/permission/@ menu) is open → let Esc close it.
         if (document.querySelector(':popover-open')) {
             return;
         }
+        // Editing a queued message: Esc belongs to the edit. Ahead of the busy check on purpose —
+        // the turn is usually over by the time the queue is being edited, and there the interrupt
+        // has nothing to stop while the edit still has something to close.
+        const prompt = this.querySelector('cv-prompt');
+        if (prompt?.isEditingQueued) {
+            e.preventDefault();
+            prompt.cancelEdit();
+            return;
+        }
+        if (!this._isBusy) {
+            return;
+        }
         e.preventDefault();
         // Same gesture as the Stop button, so it goes through the composer's own stop: doing the
         // interrupt here and nothing else left the queue intact, and the next flush then sent
         // prompts the user had written behind a turn they had just cancelled.
-        this.querySelector('cv-prompt')?.stop();
+        prompt?.stop();
     };
 
     /** Build UiEntry[] from a replayed page of typed events (chat_history / subagent_loaded).

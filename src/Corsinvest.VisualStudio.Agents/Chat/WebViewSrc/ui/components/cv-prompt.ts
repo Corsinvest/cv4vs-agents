@@ -1290,9 +1290,15 @@ export class CvPrompt extends LitElement implements CommandHost {
         this.setComposerText(draft ? `${entry.text}\n${draft}` : entry.text);
     };
 
-    /** Leave the entry as it was. Not on Esc: that stops the turn and empties the queue with it
-     *  (cv-app), which has always been so and is not for this to change. */
-    private _cancelEdit = (): void => {
+    /** Whether the composer holds a queued message rather than a new one. Esc asks before
+     *  interrupting: while an edit is open it belongs to the edit, not to the turn. */
+    get isEditingQueued(): boolean {
+        return this._editingUuid !== null;
+    }
+
+    /** Leave the entry as it was: it stays in the queue, untouched. Public because Esc is the
+     *  keyboard form of the editing bar's cross. */
+    cancelEdit = (): void => {
         this._editingUuid = null;
         this._attachments = [];
         this.setComposerText('');
@@ -1758,7 +1764,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 icon-only
                 title="Stop editing"
                 aria-label="Stop editing"
-                @click=${this._cancelEdit}
+                @click=${this.cancelEdit}
                 >${unsafeHTML(Dismiss16Regular)}</fluent-button
             >
         </div>`;
