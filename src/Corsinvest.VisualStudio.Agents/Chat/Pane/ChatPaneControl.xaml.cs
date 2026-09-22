@@ -87,6 +87,10 @@ public partial class ChatPaneControl : PaneControlBase
     {
         _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
         SetSessionTitle(null); // fresh chat: no title until the first turn generates one
+        // Here rather than in OnProcessStarted alone: the respawn kills the old process with its
+        // transport detached, so if the new one fails to start no event arrives at all and the
+        // pane would read as busy until the watchdog.
+        AbandonTurnState();
         // The new session keeps the pane's current model/mode (NewSessionAsync reuses the
         // client's Model/PermissionMode); the respawn's system/init re-arms the gate, which
         // re-populates the selector — no seed push needed here.
@@ -107,6 +111,7 @@ public partial class ChatPaneControl : PaneControlBase
         // Clear first, on the click itself: the read below is off-thread now, and the transcript
         // would otherwise sit there showing the old session while the new one loads.
         _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
+        AbandonTurnState();
         // Two picks in a row are two reads in flight, finishing in whatever order the file sizes
         // decide rather than in click order.
         var generation = ++_loadGeneration;
@@ -344,12 +349,52 @@ public partial class ChatPaneControl : PaneControlBase
     // Session id we've already tried to auto-title, so we ask the CLI only once.
     private string _titledSessionId;
     private bool _initialized;
-    // True while background agents are running (from background_tasks_changed). Gates the
-    // "turn finished" attention notification so async agents don't trigger a premature one.
+    // The three axes of "what is this pane doing". Independent on purpose: a turn can end while
+    // background agents keep running, and a permission can be pending while they do. Written only
+    // through the properties below, so no caller has to remember to tell anyone.
     private bool _hasBackgroundTasks;
-    // True between the CLI's first status for a turn and its `result`. Keeps Options → Apply from
-    // re-rendering the transcript mid-turn, which would drop the reply still being streamed.
     private bool _turnInFlight;
+    private bool _awaitingPermission;
+
+    /// <summary>True while background agents run. They outlive the turn's own `result`, which is
+    /// why the "turn finished" notification waits for this to empty.</summary>
+    private bool HasBackgroundTasks
+    {
+        get => _hasBackgroundTasks;
+        set { if (_hasBackgroundTasks != value) { _hasBackgroundTasks = value; ApplyActivityToPower(); } }
+    }
+
+    /// <summary>True between the CLI's first status for a turn and its `result`. Also keeps
+    /// Options → Apply from re-rendering the transcript mid-turn, which would drop the reply still
+    /// being streamed.</summary>
+    private bool TurnInFlight
+    {
+        get => _turnInFlight;
+        set { if (_turnInFlight != value) { _turnInFlight = value; ApplyActivityToPower(); } }
+    }
+
+    /// <summary>True while the CLI is blocked on a can_use_tool answer. Several can be pending at
+    /// once, so this is recomputed from the client rather than toggled.</summary>
+    private bool AwaitingPermission
+    {
+        get => _awaitingPermission;
+        set { if (_awaitingPermission != value) { _awaitingPermission = value; ApplyActivityToPower(); } }
+    }
+
+    /// <summary>Whether claude.exe is computing for this pane right now.
+    /// <para>Deliberately NOT gated on the prevent-sleep option: that is one consumer's policy, and
+    /// baking it in here would make the fact useless to anyone else.</para></summary>
+    internal bool IsWorking => (TurnInFlight || HasBackgroundTasks) && !AwaitingPermission;
+
+    /// <summary>Whatever the old process was doing, nobody will ever report the end of it. Called
+    /// where a respawn is DECIDED, not where the new process starts: a start that throws produces
+    /// no event at all.</summary>
+    private void AbandonTurnState()
+    {
+        TurnInFlight = false;
+        HasBackgroundTasks = false;
+        AwaitingPermission = false;
+    }
     // Bumped by every transcript load, so a read that outlives its pick can tell and drop its answer.
     private int _loadGeneration;
 
@@ -534,6 +579,11 @@ public partial class ChatPaneControl : PaneControlBase
         var opts = PaneVsOptions();
         _bridge?.Send(BridgeMessages.ToWebView.Ui.VsSettings, opts);
 
+        // The one explicit call left: here the OPTION changed, not the pane's activity, so no
+        // setter fires. Before the early returns below — unticking must free the machine now
+        // rather than at the next turn boundary.
+        ApplyActivityToPower();
+
         // Say so when the setting was just changed and this session cannot follow it: the option is
         // read by claude.exe at startup. Without the notice the checkbox looks broken — ticked in
         // Options, and no Rewind in the menu.
@@ -558,7 +608,7 @@ public partial class ChatPaneControl : PaneControlBase
         // before the turn — the running turn disappears from the chat while the CLI is still
         // working on it. The options above are already applied; the rows rendered so far keep
         // the previous ones until the next re-render.
-        if (_turnInFlight)
+        if (TurnInFlight)
         {
             _log.Debug(() => $"[chat] options applied mid-turn on {sid} — settings only, transcript left alone");
             return;
@@ -578,7 +628,7 @@ public partial class ChatPaneControl : PaneControlBase
                 if (generation != _loadGeneration || _disposed) { return; }
                 // Re-checked, not just checked above: the read gave a turn time to start, and that
                 // is exactly what the guard is for.
-                if (_turnInFlight)
+                if (TurnInFlight)
                 {
                     _log.Debug(() => $"[chat] turn started while reading {sid} — transcript left alone");
                     return;

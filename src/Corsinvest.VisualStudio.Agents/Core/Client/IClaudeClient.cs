@@ -117,6 +117,11 @@ public interface IClaudeClient : IDisposable
     /// that hears every save in the IDE.</summary>
     bool HasPendingPlan { get; }
 
+    /// <summary>True while any tool permission is waiting on the user — the CLI is blocked on a
+    /// human, not computing. Tracked here because this is where the pending requests already live,
+    /// cleared on answer, on cancel and on process exit alike.</summary>
+    bool HasPendingToolPermission { get; }
+
     /// <summary>Responds to a HookCallback event (raw payload, since hook response shape depends on event).</summary>
     void RespondToHookCallback(string requestId, object response);
 
@@ -134,6 +139,14 @@ public interface IClaudeClient : IDisposable
     /// <summary>The CLI cancelled a pending can_use_tool (interrupt / superseded turn) — the
     /// permission banner for that tool_use must be dismissed.</summary>
     event EventHandler<ToolPermissionCancelledEventArgs> ToolPermissionCancelled;
+    /// <summary>A pending permission was answered. The CLI sends nothing back for it — the answer
+    /// is outbound — so a listener that tracks "is this pane blocked on the user" has no other way
+    /// to learn the wait is over.</summary>
+    event EventHandler<string> ToolPermissionResolved;
+
+    /// <summary>Any inbound frame that is not an answer to one of our own control requests, i.e.
+    /// proof the CLI is still working.</summary>
+    event EventHandler ActivityObserved;
     event EventHandler<HookCallbackEventArgs> HookCallbackRequested;
     event EventHandler<RateLimitEventArgs> RateLimitReceived;
     /// <summary>`system/bridge_state` — Remote Control connection state changes on the live session.</summary>

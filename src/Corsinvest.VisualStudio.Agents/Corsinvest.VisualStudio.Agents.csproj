@@ -276,6 +276,8 @@
     <Compile Include="Core\Client\NativeMethods.cs" />
     <Compile Include="Core\Profiles\Profile.cs" />
     <Compile Include="Core\Profiles\ProfileStore.cs" />
+    <Compile Include="Core\Power\PowerRequest.cs" />
+    <Compile Include="Core\Power\KeepAwakeService.cs" />
     <Compile Include="Core\Stats\StatsModels.cs" />
     <Compile Include="Core\Stats\StatsSelection.cs" />
     <Compile Include="Core\Stats\StatsTreeNode.cs" />

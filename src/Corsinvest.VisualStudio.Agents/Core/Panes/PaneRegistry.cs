@@ -61,6 +61,11 @@ public sealed class PaneRegistry
     {
         if (entry == null || !Entries.Contains(entry)) { return; }
         Entries.Remove(entry);
+        // The one service this registry names, and deliberately: a pane closed mid-turn sends no
+        // `result`, so nothing else releases its sleep block. Not routed through SessionClosed
+        // because that event carries no entry — and the twin release, on process death, has to run
+        // off the UI thread anyway, so an event here would only cover half the problem.
+        Power.KeepAwakeService.Instance.Forget(entry.SeqNo);
         SessionClosed?.Invoke();
         if (Entries.Count == 0)
         {

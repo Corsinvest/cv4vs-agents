@@ -123,6 +123,12 @@ internal sealed partial class ClaudeClient
                         : (obj["request"] as JObject).Val("subtype", "");
 
         _log.Trace(() => $"[CLI line] type={type}{(string.IsNullOrEmpty(subtype) ? "" : $" subtype={subtype}")}");
+
+        // Anything but an answer to something WE asked proves the CLI is working. The status bar
+        // polls get_usage on the live process every minute, so counting those would make a wedged
+        // CLI look busy forever.
+        if (type != ClientMessages.Type.ControlResponse) { ActivityObserved?.Invoke(this, EventArgs.Empty); }
+
         switch (type)
         {
             case ClientMessages.Type.ControlResponse: HandleControlResponse(obj); break;
