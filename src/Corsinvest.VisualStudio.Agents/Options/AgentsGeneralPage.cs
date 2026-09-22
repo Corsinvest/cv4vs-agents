@@ -63,6 +63,13 @@ public class AgentsGeneralPage : AgentsOptionsPage
     [Description("Which kind of session the \"New\" button creates by default (the dropdown still lets you pick the other).")]
     public NewSessionKind DefaultNewSession { get; set; } = NewSessionKind.Chat;
 
+    // Only while a turn is actually running — an idle pane must not cost the user battery. CLI
+    // panes are out entirely: a ConPTY terminal has no notion of a turn, and telling one apart from
+    // an idle prompt would mean scraping its ANSI output.
+    [DisplayName("Prevent the machine from sleeping while a session is running")]
+    [Description("Keep Windows awake while a chat pane is working, so a turn is not suspended half-way through and left hung. The display still sleeps on its own timer, and an idle pane holds nothing. Sleep you ask for (the lid, the power button) always wins, and on a modern-standby laptop the hold is capped while on battery. Run \"powercfg /requests\" as administrator to see the hold while it is held.")]
+    public bool PreventSleepWhileRunning { get; set; } = true;
+
     // Must be the real claude.exe: both panes launch it as a PE binary (ConPTY CreateProcess, and
     // ProcessStartInfo with UseShellExecute=false + redirected stdio), so a .cmd/.bat/.ps1 shim
     // can't be launched — hence the .exe-only picker.

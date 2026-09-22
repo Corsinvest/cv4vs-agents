@@ -88,6 +88,14 @@ internal sealed partial class ClaudeClient : IClaudeClient
     /// <summary>The CLI cancelled a pending can_use_tool (interrupt / superseded turn) — the
     /// permission banner for that tool_use must be dismissed.</summary>
     public event EventHandler<ToolPermissionCancelledEventArgs> ToolPermissionCancelled;
+    /// <summary>A pending permission was answered. The CLI sends nothing back for it — the answer
+    /// is outbound — so a listener that tracks "is this pane blocked on the user" has no other way
+    /// to learn the wait is over.</summary>
+    public event EventHandler<string> ToolPermissionResolved;
+    /// <summary>Any inbound frame that is not an answer to one of our own control requests, i.e.
+    /// proof the CLI is still working. Raised before dispatch, so a new message type counts
+    /// without anyone remembering to add it.</summary>
+    public event EventHandler ActivityObserved;
     public event EventHandler<HookCallbackEventArgs> HookCallbackRequested;
     public event EventHandler<RateLimitEventArgs> RateLimitReceived;
     /// <summary>Remote Control bridge changed state. Only `failed` is actionable.</summary>
@@ -944,6 +952,8 @@ internal sealed partial class ClaudeClient : IClaudeClient
             };
         }
         SendControlResponse(requestId, success: true, response: payload);
+        // Every resolution funnels here; the stale path above returned already.
+        ToolPermissionResolved?.Invoke(this, toolUseId);
         return true;
     }
 
@@ -978,6 +988,11 @@ internal sealed partial class ClaudeClient : IClaudeClient
     }
 
     public bool HasPendingPlan => _toolRequestIds.Any(kv => kv.Value.ToolName == PlanApproval.ToolName);
+
+    /// <summary>True while any tool permission is waiting on the user. Several can overlap, and
+    /// this dictionary is already cleared on cancel and on process exit — a count kept elsewhere
+    /// would drift out of step on exactly those paths.</summary>
+    public bool HasPendingToolPermission => !_toolRequestIds.IsEmpty;
 
     public void RespondToHookCallback(string requestId, object response)
         => SendControlResponse(requestId, success: true, response: response);

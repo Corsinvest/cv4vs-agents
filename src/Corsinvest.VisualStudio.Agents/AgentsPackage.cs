@@ -506,6 +506,8 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             _hidePanesTimer = null;
             try { Core.Usage.UsageStatusBarHost.Shutdown(); }
             catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.UsageStatusBar.Shutdown", ex); }
+            try { Core.Power.KeepAwakeService.ShutdownIfStarted(); }
+            catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.KeepAwake.Shutdown", ex); }
             Mcp.McpServerHost.Instance.Stop();
             AgentsOptions.Applied -= ProfilesMenuCommand.InvalidateCache;
             // Unadvise the selection sink (MS pattern: at package dispose) — without it the
