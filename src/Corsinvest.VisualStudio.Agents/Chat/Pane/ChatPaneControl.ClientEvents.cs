@@ -36,6 +36,8 @@ public partial class ChatPaneControl
         c.ResultReceived += OnResult;
         c.ToolPermissionRequested += OnToolPermissionRequested;
         c.ToolPermissionCancelled += OnToolPermissionCancelled;
+        c.ToolPermissionResolved += OnToolPermissionResolved;
+        c.ActivityObserved += OnActivityObserved;
         c.AssistantTextDelta += OnAssistantTextDelta;
         c.AssistantThinkingDelta += OnAssistantThinkingDelta;
         c.ToolProgressReceived += OnToolProgress;
@@ -61,6 +63,8 @@ public partial class ChatPaneControl
         c.ResultReceived -= OnResult;
         c.ToolPermissionRequested -= OnToolPermissionRequested;
         c.ToolPermissionCancelled -= OnToolPermissionCancelled;
+        c.ToolPermissionResolved -= OnToolPermissionResolved;
+        c.ActivityObserved -= OnActivityObserved;
         c.AssistantTextDelta -= OnAssistantTextDelta;
         c.AssistantThinkingDelta -= OnAssistantThinkingDelta;
         c.ToolProgressReceived -= OnToolProgress;
@@ -321,7 +325,7 @@ public partial class ChatPaneControl
     private void OnResult(object sender, ResultEventArgs e)
         => Dispatcher.Invoke(() =>
         {
-            _turnInFlight = false;
+            TurnInFlight = false;
             // NOTE: do NOT clear active sub-agents here. `result` ends the main turn, but
             // background agents (run_in_background / async) outlive it and keep running —
             // clearing here would hide the chip while they still work. Each agent sends its
@@ -331,7 +335,7 @@ public partial class ChatPaneControl
             // Notify "finished" only when no background agents are still running — an async agent
             // makes the main turn's `result` arrive early; the real end comes with the later `result`
             // once background_tasks_changed has emptied.
-            if (!_hasBackgroundTasks) { PaneAttentionService.NotifyFinished(Pane, Entry); }
+            if (!HasBackgroundTasks) { PaneAttentionService.NotifyFinished(Pane, Entry); }
             // The result carries the full picture: usage (tokens used) + the model's
             // context-window limits. Ship both so the gauge has numerator AND
             // denominator from one message (no static table, no extra round-trip).
@@ -455,13 +459,22 @@ public partial class ChatPaneControl
                                                  permissionSuggestions: e.PermissionSuggestions);
             // Draw the user's attention: this pane is blocked waiting for their answer.
             PaneAttentionService.NotifyInput(Pane, Entry);
+            AwaitingPermission = _client?.HasPendingToolPermission == true;
         });
 
     // The CLI cancelled a pending can_use_tool (interrupt / superseded turn) → tell the WebView
     // to dismiss the banner for that tool_use, else it hangs waiting for an answer that won't come.
     private void OnToolPermissionCancelled(object sender, ToolPermissionCancelledEventArgs e)
-        => Dispatcher.Invoke(() => _bridge.Send(BridgeMessages.ToWebView.Chat.ToolPermissionCancel,
-            new Contracts.ToolPermissionCancelNotification { ToolUseId = e.ToolUseId }));
+        => Dispatcher.Invoke(() =>
+        {
+            _bridge.Send(BridgeMessages.ToWebView.Chat.ToolPermissionCancel,
+                new Contracts.ToolPermissionCancelNotification { ToolUseId = e.ToolUseId });
+            AwaitingPermission = _client?.HasPendingToolPermission == true;
+        });
+
+    // Recomputed, not cleared: another permission may still be pending.
+    private void OnToolPermissionResolved(object sender, string toolUseId)
+        => Dispatcher.Invoke(() => AwaitingPermission = _client?.HasPendingToolPermission == true);
 
     // BeginInvoke, not Invoke like the rest: these three fire once per streamed token, and a
     // synchronous marshal parks the NDJSON reader until the UI thread answers — under a build that
@@ -502,15 +515,25 @@ public partial class ChatPaneControl
             var subtype = obj.Val("subtype", "");
             if (subtype == ClientMessages.SystemSubtype.Status)
             {
-                // The CLI reports a status the moment it starts working on a turn, and `result`
-                // ends it — the two bounds of "a turn is in flight", which OnOptionsApplied needs
-                // so it doesn't re-render the transcript out from under a running turn.
-                _turnInFlight = true;
+                var status = obj.Val("status", "") ?? "";
+
+                // `status` has two emitters in the CLI, and only one of them is a turn. The other
+                // echoes a permission-mode change — it carries `permissionMode` and a null status,
+                // and arrives on a pane that may be doing nothing at all. Opening a turn on it
+                // would hold the machine awake until the watchdog, with `powercfg` claiming a turn
+                // that never ran. `setSDKStatus` never sends that field, so its presence is the
+                // discriminator; a null status alone is not, since it also closes a compaction.
+                if (obj["permissionMode"] == null) { TurnInFlight = true; }
+
+
+                // Compaction produces no output, so a healthy one would read as a wedged CLI.
+                if (Entry != null) { Core.Power.KeepAwakeService.Instance.RelaxWatchdog(Entry.SeqNo, status == "compacting"); }
+
                 // Forward the raw work status ("compacting" at start, null→"" at end). The WebView
                 // maps known values to a spinner label; unknown ones fall back to the generic one.
                 _bridge.Send(BridgeMessages.ToWebView.Chat.Status, new Contracts.StatusNotification
                 {
-                    Status = obj.Val("status", "") ?? "",
+                    Status = status,
                     // Present when this status closes a compaction; "failed" is the only case the
                     // UI surfaces (a silent failure would leave the user with a stale spinner).
                     CompactResult = obj.Val("compact_result", "") ?? "",
@@ -640,7 +663,7 @@ public partial class ChatPaneControl
                 // ends the MAIN turn (while async agents outlive it) doesn't fire a premature
                 // "finished" — we notify only when this is empty (updates on finish AND on cancel).
                 var tasks = obj["tasks"] as JArray;
-                _hasBackgroundTasks = tasks != null && tasks.Count > 0;
+                HasBackgroundTasks = tasks != null && tasks.Count > 0;
 
                 // Forwarded as a set of ids, which is all it carries. task_updated's
                 // is_backgrounded covers only a foreground task being pushed down, and the agents
@@ -833,10 +856,11 @@ public partial class ChatPaneControl
             // Track it so the History picker marks the live session with a ✓ (CLI sets it too).
             Entry.ActiveSessionId = e.SessionId;
 
-            // Background tasks belong to the process that was running them. The CLI emits nothing
-            // at startup — the level signal only speaks when membership CHANGES — so a set left
-            // over from the previous process would stand until the next task started.
-            _hasBackgroundTasks = false;
+            // Nothing the previous process was doing survives into this one, and the CLI announces
+            // none of it at startup — the background-task signal only speaks when membership
+            // CHANGES, so a leftover set would stand until the next task started. Also covers an
+            // auto-restart, which reaches here without anyone having decided to respawn.
+            AbandonTurnState();
             _bridge.Send(BridgeMessages.ToWebView.Chat.BackgroundTasks,
                          new Contracts.BackgroundTasksNotification());
 
@@ -847,12 +871,20 @@ public partial class ChatPaneControl
 
     private void OnProcessExited(object sender, ProcessExitedEventArgs e)
     {
+        // Off the reader thread, not in the queued action below: during teardown that never runs.
+        // Safe because the service locks its own state, unlike the activity properties.
+        if (Entry != null) { Core.Power.KeepAwakeService.Instance.Forget(Entry.SeqNo); }
+
         // The CLI can exit during teardown when the dispatcher is gone, so `Invoke` would throw.
         // Use fire-and-forget `BeginInvoke` and swallow the exception.
         try
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
+                // A process that dies WITHOUT respawning would otherwise leave the pane reading
+                // as busy for its whole life.
+                AbandonTurnState();
+
                 _bridge?.Send(BridgeMessages.ToWebView.Cli.Exited, new Contracts.CliExitedNotification
                 {
                     ExitCode = e.ExitCode,
@@ -862,5 +894,25 @@ public partial class ChatPaneControl
         }
         catch (TaskCanceledException) { }
         catch (InvalidOperationException) { }
+    }
+
+    // Off the reader thread, no dispatcher hop: Signal only stamps a timestamp under the
+    // service's own lock, and marshalling once per streamed token would queue work on the UI
+    // thread for nothing.
+    private void OnActivityObserved(object sender, EventArgs e)
+    {
+        if (Entry != null) { Core.Power.KeepAwakeService.Instance.Signal(Entry.SeqNo); }
+    }
+
+    /// <summary>Turns this pane's activity into its effects. UI thread only: the three axes are
+    /// unlocked fields.</summary>
+    private void ApplyActivityToPower()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (Entry == null) { return; }
+
+        Core.Power.KeepAwakeService.Instance.SetBusy(
+            Entry.SeqNo,
+            AgentsOptions.General.PreventSleepWhileRunning && IsWorking);
     }
 }

@@ -181,9 +181,10 @@ own.
 - **[Restore panes on solution open](docs/options.md#general)** *(opt-in)* — reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
-- **[Tune it to your taste](docs/options.md)** — 33 options across General, Chat and Debug: what
+- **[Tune it to your taste](docs/options.md)** — 31 options across General, Chat and Debug: what
   the chat shows, how diffs render, which keys send, the starting permission mode, autosave,
-  file checkpoints, upload and `@`-picker filters, log verbosity.
+  file checkpoints, upload and `@`-picker filters, whether the machine may sleep mid-turn,
+  log verbosity.
 - **[It tells you when it needs you](#pane-attention-notifications)** — with several panes working
   at once, the one waiting on a permission raises a VS info bar, or an OS toast when you're outside
   Visual Studio. Clicking it takes you to that pane, focus already on the question.
@@ -433,6 +434,14 @@ you can answer immediately. It clears when you answer, click into the pane, or u
 
 > Note: the docked VS tab caption can't carry this state the way VS Code's editor title does (VS
 > derives it from the window name), which is why the extension uses an InfoBar + OS toast instead.
+
+### Keeping the machine awake
+
+While a chat pane is working, the machine is kept from suspending — a turn frozen half-way leaves
+the session hung. The display still sleeps on its own timer, an idle pane holds nothing, and sleep
+you ask for always wins. On by default.
+
+See [Keeping the machine awake](docs/power.md).
 
 ### Other
 
