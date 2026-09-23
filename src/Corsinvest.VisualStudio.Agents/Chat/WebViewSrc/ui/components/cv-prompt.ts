@@ -36,6 +36,7 @@ import type {
     ViewMode,
 } from '../../core/types';
 import { GetSuggestionsReq, SetRemoteControlAtStartupReq } from '../../core/request-types';
+import { markSent } from '../../core/sent-prompts';
 import { permissionItems } from '../../core/permission-modes';
 import type { ChatCommand, CommandHost } from '../../core/commands';
 import './cv-notice-stack';
@@ -1209,6 +1210,7 @@ export class CvPrompt extends LitElement implements CommandHost {
 
     private _dispatch(payload: { text: string; attachments: Attachment[]; uuid: string }): void {
         appState.isBusy = true;
+        markSent(payload.uuid);
         bridge.sendNotification<SendPromptNotification>(Msg.fromWebView.cli.sendPrompt, payload);
     }
 

@@ -229,6 +229,10 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // payload (sdkMcpServers) and registered via mcp_set_servers. The interactive
         // CLI pane keeps --ide + WS lockfile.
         var args = "--output-format stream-json --verbose --input-format stream-json --include-partial-messages";
+        // Without it a prompt typed on claude.ai through Remote Control shows only its answer here.
+        // Our own prompts come back too (the WebView drops them, core/sent-prompts.ts), and so do
+        // our control_responses — HandleControlResponse ignores ids it did not issue.
+        args += " --replay-user-messages";
         // --setting-sources: headless mode loads NO settings by default; re-enable so the user's
         // ~/.claude/settings.json permissions.allow/deny apply (else CLI asks can_use_tool for every tool).
         args += " --setting-sources user,project,local";
