@@ -378,6 +378,7 @@ export class CvApp extends LitElement {
                     // Gauge tracks main-thread usage only (sub-agents would skew it).
                     if (!parentId && data?.usage) {
                         appState.contextUsage = data.usage;
+                        appState.cacheAnchorMs = data.timestamp ?? Date.now();
                     }
                     const streamingId = this._streamingMsgs.get(parentId);
                     let entryId: number | undefined;
@@ -599,6 +600,7 @@ export class CvApp extends LitElement {
                 appState.hasMoreHistory = false;
                 appState.loadingOlder = false;
                 appState.contextUsage = null;
+                appState.cacheAnchorMs = null;
                 // The chip's tasks belonged to the session that just went. Left alone they would
                 // hang in the composer with no transcript under them, and their end notifications
                 // would land on a session that no longer exists.
@@ -678,6 +680,7 @@ export class CvApp extends LitElement {
                     // Gauge update (for assistant messages with only tool_use, no text).
                     if (!data.parentToolUseId && data.usage) {
                         appState.contextUsage = data.usage;
+                        appState.cacheAnchorMs = Date.now();
                     }
                     // Dedup by toolUseId (arrives twice: can_use_tool + assistant msg).
                     const existing = this._transcript.findTool(data.id);
@@ -775,6 +778,8 @@ export class CvApp extends LitElement {
                             const u = (events[i].data as AssistantTextNotification).usage;
                             if (u) {
                                 appState.contextUsage = u;
+                                appState.cacheAnchorMs =
+                                    (events[i].data as AssistantTextNotification).timestamp ?? null;
                                 break;
                             }
                         }
