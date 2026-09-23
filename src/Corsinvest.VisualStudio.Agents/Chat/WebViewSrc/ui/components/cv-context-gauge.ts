@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, css, svg } from 'lit';
+import { LitElement, html, css, svg, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 // The same two the VS menu's Analytics group uses (AgentsPackage.vsct): Statistics is a
@@ -10,6 +10,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 // already maps to the same glyph.
 import DataBarVertical16Regular from '@fluentui/svg-icons/icons/data_bar_vertical_16_regular.svg';
 import DataPie16Regular from '@fluentui/svg-icons/icons/data_pie_16_regular.svg';
+import ClockWarning16Regular from '@fluentui/svg-icons/icons/clock_warning_16_regular.svg';
 import { iconForCommandName } from '../../core/commands/command-icons';
 import { iconStyles, tooltipStyles } from '../styles/shared';
 import { state as appState } from '../../core/state';
@@ -21,6 +22,8 @@ import {
     contextPercent,
     autoCompactWindow,
     remainingPercent,
+    cacheState,
+    type CacheState,
 } from '../../core/ai-models';
 import { formatTokens } from '../helpers/format';
 import type { ContextUsageDto, SendPromptNotification } from '../../core/types';
@@ -48,6 +51,31 @@ function gaugeValidationState(percent: number): 'success' | 'warning' | 'error' 
     return 'success';
 }
 
+// Coarse on purpose: the reading is an estimate, and a cache dead for days is no more useful
+// stated to the minute.
+function formatIdle(ms: number): string {
+    const minutes = Math.max(0, Math.floor(ms / 60000));
+    if (minutes < 60) {
+        return `${minutes}m`;
+    }
+    const hours = Math.floor(minutes / 60);
+    return hours < 24 ? `${hours}h ${minutes % 60}m` : `${Math.floor(hours / 24)}d ${hours % 24}h`;
+}
+
+function cacheTooltip(state: CacheState): string {
+    switch (state.kind) {
+        case 'unknown':
+            return '';
+        case 'warm':
+            return `Prompt cache warm, about ${state.minutesLeft} min left.`;
+        case 'cold':
+            return (
+                `Prompt cache likely expired (idle ${formatIdle(state.idleMs)}).\n` +
+                `Your next message re-caches about ${formatTokens(state.recacheTokens)} tokens.`
+            );
+    }
+}
+
 const SIZE = 14;
 const STROKE = 2;
 const RADIUS = (SIZE - STROKE) / 2;
@@ -65,6 +93,20 @@ export class CvContextGauge extends LitElement {
         css`
             :host {
                 display: inline-flex;
+                align-items: center;
+            }
+            /* Amber, not red: the next message costs more, but nothing is broken — and the ring's
+               own red already means the context is nearly full. */
+            .cache-warning {
+                display: inline-flex;
+                color: var(--colorPaletteDarkOrangeForeground1);
+            }
+            /* 14px like every other glyph in the row: iconStyles only pins the ones inside an
+               icon-only button, and this one is a bare span. */
+            .cache-warning svg {
+                display: block;
+                width: 14px;
+                height: 14px;
             }
             /* Fluent's own button, cut to the row's density: even size="small" is padded for a
                control standing alone. The ring is 14px like every other glyph here. */
@@ -134,6 +176,7 @@ export class CvContextGauge extends LitElement {
 
     @state() private _usage: ContextUsageDto | null = appState.contextUsage;
     @state() private _window = appState.contextWindow;
+    @state() private _cacheAnchor = appState.cacheAnchorMs;
 
     private readonly _subs = new StateSubscriptions(this);
 
@@ -141,6 +184,9 @@ export class CvContextGauge extends LitElement {
         super();
         this._subs.on('contextUsage', (v) => {
             this._usage = v;
+        });
+        this._subs.on('cacheAnchorMs', (v) => {
+            this._cacheAnchor = v;
         });
         this._subs.on('contextWindow', (v) => {
             this._window = v;
@@ -178,6 +224,11 @@ export class CvContextGauge extends LitElement {
         const color = gaugeColor(percent);
         // Arc: stroke-dashoffset runs CIRC (empty) → 0 (full).
         const offset = CIRC * (1 - percent / 100);
+
+        // No timer: the reading is only ever seen while the tooltip or menu is open, and
+        // opening one renders.
+        const cache = cacheState(u, this._cacheAnchor, Date.now());
+        const cacheText = cacheTooltip(cache);
 
         const used = known ? consumedTokens(u) : 0;
         const limit = appState.contextWindow;
@@ -223,7 +274,6 @@ export class CvContextGauge extends LitElement {
                             stroke-width=${STROKE}
                             stroke-dasharray=${CIRC}
                             stroke-dashoffset=${offset}
-                            stroke-linecap="round"
                             transform="rotate(-90 ${SIZE / 2} ${SIZE / 2})"
                         />
                     </svg>
@@ -281,6 +331,16 @@ export class CvContextGauge extends LitElement {
                     </fluent-menu-item>
                 </fluent-menu-list>
             </fluent-menu>
+            ${
+                // Beside the ring, not on it: the two readings answer different questions, and
+                // drawn over the arc neither survived. Only shown cold — while the cache holds
+                // there is nothing to act on, and the tooltip says so for anyone who looks.
+                cache.kind === 'cold'
+                    ? html`<span id="cache-tip" class="cache-warning" aria-label="Prompt cache"
+                          >${unsafeHTML(ClockWarning16Regular)}</span
+                      >`
+                    : nothing
+            }
             <!-- Named like the other triggers, because a ring on its own says nothing about what it
                  measures. "left" stays: the arc fills with what has been CONSUMED while the number
                  is what REMAINS, so a bare percentage would read as the opposite of the ring beside
@@ -288,8 +348,22 @@ export class CvContextGauge extends LitElement {
                  ring already says there is nothing to read yet. Nothing about clicking either: this
                  is a menu trigger, and the menu says what it offers when it opens. -->
             <fluent-tooltip anchor="gauge-tip" positioning="above-end"
-                >${known ? `Context: ${remainingPct.toFixed(0)}% left` : 'Context'}</fluent-tooltip
+                >${[
+                    known ? `Context: ${remainingPct.toFixed(0)}% left` : 'Context',
+                    // Only while there is no icon: cold, the icon beside it carries this, and
+                    // saying it twice would answer the cache to someone pointing at the ring.
+                    cache.kind === 'cold' ? '' : cacheText,
+                ]
+                    .filter(Boolean)
+                    .join('\n')}</fluent-tooltip
             >
+            ${
+                cache.kind === 'cold'
+                    ? html`<fluent-tooltip anchor="cache-tip" positioning="above-end"
+                          >${cacheText}</fluent-tooltip
+                      >`
+                    : nothing
+            }
         `;
     }
 }

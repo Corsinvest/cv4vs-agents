@@ -89,6 +89,31 @@ internal sealed class ToolResultExtras
 /// </summary>
 internal static class ContentBlockTranslator
 {
+    /// <summary>The CLI reports the same usage shape on an assistant message and on the result,
+    /// so both paths build the DTO here.</summary>
+    public static Contracts.ContextUsageDto ToUsageDto(JToken usage)
+        => usage == null
+            ? null
+            : new Contracts.ContextUsageDto
+            {
+                InputTokens = usage.Val("input_tokens", 0),
+                OutputTokens = usage.Val("output_tokens", 0),
+                CacheReadTokens = usage.Val("cache_read_input_tokens", 0),
+                CacheCreationTokens = usage.Val("cache_creation_input_tokens", 0),
+                CacheTtl = CacheTtl(usage),
+            };
+
+    /// <summary>The TTL is stated only by WHICH counter under <c>cache_creation</c> is non-zero,
+    /// never as a value of its own. 1h wins when both are set: it's the outer bound.</summary>
+    private static string CacheTtl(JToken usage)
+    {
+        var creation = usage["cache_creation"];
+        if (creation == null) { return ""; }
+        if (creation.Val("ephemeral_1h_input_tokens", 0) > 0) { return "1h"; }
+        if (creation.Val("ephemeral_5m_input_tokens", 0) > 0) { return "5m"; }
+        return "";
+    }
+
     // `needsPermission` only for synthetic can_use_tool tool_use blocks (shows the banner).
     // Normal assistant tool_use is render-only; raising the banner there would flash spuriously.
     public static void EmitAssistant(JToken content,
@@ -107,17 +132,7 @@ internal static class ContentBlockTranslator
         if (content is not JArray contentBlocks) { return; }
         // Token fields for the gauge, attached to the first event of this message so it
         // updates once per turn. Sub-agent usage (non-null parentToolUseId) is ignored TS-side.
-        Contracts.ContextUsageDto usagePayload = null;
-        if (usage != null)
-        {
-            usagePayload = new Contracts.ContextUsageDto
-            {
-                InputTokens = usage.Val("input_tokens", 0),
-                OutputTokens = usage.Val("output_tokens", 0),
-                CacheReadTokens = usage.Val("cache_read_input_tokens", 0),
-                CacheCreationTokens = usage.Val("cache_creation_input_tokens", 0),
-            };
-        }
+        var usagePayload = ToUsageDto(usage);
 
         var firstEmitted = false;
 
