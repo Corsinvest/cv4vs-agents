@@ -69,3 +69,93 @@ export function isHiddenToolCall(e: UiEntry, pendingToolUseId?: string | null): 
         e.toolUseId !== pendingToolUseId
     );
 }
+
+/**
+ * Whether Focus folds this entry into its run: the tool rows the hide filter would take, plus
+ * thinking. Everything else — prose, the tools the user took part in, the call awaiting their
+ * approval — stays out and ends the run it interrupts.
+ */
+export function isFolded(e: UiEntry, pendingToolUseId?: string | null): boolean {
+    return isHiddenToolCall(e, pendingToolUseId) || (e.kind === 'text' && e.role === 'thinking');
+}
+
+/** One run of consecutive folded entries in a response: [start, end) and what it held. */
+export interface FoldRun {
+    /** Stable across re-renders: the first entry's tool-use id, or its entry id for thinking. */
+    key: string;
+    start: number;
+    end: number;
+    toolCount: number;
+    errorCount: number;
+    thinkingMs: number;
+    thinkingStreaming: boolean;
+    runningTool: string | null;
+}
+
+const foldKey = (e: UiEntry): string => (e.kind === 'tool' ? `t${e.toolUseId}` : `e${e.id}`);
+
+/** The runs of a response, keyed by the index of their first entry — the slot the fold row rides in. */
+export function buildFoldRuns(
+    response: readonly UiEntry[],
+    pendingToolUseId?: string | null,
+): Map<number, FoldRun> {
+    const runs = new Map<number, FoldRun>();
+    let run: FoldRun | null = null;
+    for (let i = 0; i < response.length; i++) {
+        const e = response[i];
+        if (!isFolded(e, pendingToolUseId)) {
+            run = null;
+            continue;
+        }
+        if (!run) {
+            run = {
+                key: foldKey(e),
+                start: i,
+                end: i + 1,
+                toolCount: 0,
+                errorCount: 0,
+                thinkingMs: 0,
+                thinkingStreaming: false,
+                runningTool: null,
+            };
+            runs.set(i, run);
+        }
+        run.end = i + 1;
+        if (e.kind === 'tool') {
+            run.toolCount++;
+            if (e.status === 'error') {
+                run.errorCount++;
+            }
+            if (e.status === 'pending') {
+                run.runningTool = e.data.name;
+            }
+        } else if (e.role === 'thinking') {
+            run.thinkingMs += e.durationMs ?? 0;
+            run.thinkingStreaming ||= !!e.streaming;
+        }
+    }
+    return runs;
+}
+
+/** The fold row's settled text — the same wording as the VS Code extension's Focus view. */
+export function foldLabel(run: FoldRun): string {
+    if (run.toolCount > 0) {
+        const calls = `${run.toolCount} tool call${run.toolCount === 1 ? '' : 's'}`;
+        return run.errorCount > 0 ? `${calls} · ${run.errorCount} failed` : calls;
+    }
+    if (run.thinkingStreaming) {
+        return 'Thinking…';
+    }
+    return run.thinkingMs > 0
+        ? `Thought for ${Math.max(1, Math.round(run.thinkingMs / 1000))}s`
+        : 'Thinking';
+}
+
+/** The caller decides whether the run is live at all (the last run of the running turn). */
+export function foldLiveLabel(run: FoldRun): string | null {
+    return run.runningTool
+        ? `Running ${run.runningTool}…`
+        : run.thinkingStreaming
+          ? 'Thinking…'
+          : null;
+}

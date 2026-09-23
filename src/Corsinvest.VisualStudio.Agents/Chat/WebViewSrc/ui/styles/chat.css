@@ -108,12 +108,14 @@
     margin-bottom: 10px;
     position: relative;
 }
-/* Hide tool calls (cv-app renderExchange): the rows stay in the DOM, each keeping its own state, and
+/* Chat view modes (cv-app renderExchange): the rows stay in the DOM, each keeping its own state, and
  * a response or exchange left with nothing to show goes with them. Spelled out because the author
  * display rules here (.cv-exchange is flex) outrank the user-agent [hidden]. */
 .cv-exchange[hidden],
 .cv-response[hidden],
-cv-tool-row[hidden] {
+cv-tool-row[hidden],
+cv-thinking[hidden],
+cv-fold-row[hidden] {
     display: none;
 }
 /* Skip the layout of answers that are off screen. A long chat is thousands of nodes the browser

@@ -32,6 +32,15 @@ public enum InitialPermissionMode
     BypassPermissions,
 }
 
+/// <summary>How much of Claude's work the chat shows. The member names are what VS serializes into
+/// the settings store: renaming one drops everyone's saved choice.</summary>
+public enum ChatViewMode
+{
+    Full,
+    Focus,
+    HideToolCalls,
+}
+
 [ComVisible(true)]
 public class AgentsChatPage : AgentsOptionsPage
 {
@@ -61,9 +70,24 @@ public class AgentsChatPage : AgentsOptionsPage
     public bool CollapseTools { get; set; }
 
     [Category("Display")]
-    [DisplayName("Hide tool calls")]
-    [Description("Hide the tool rows — commands, file reads and edits, searches, MCP calls, sub-agents — so the transcript reads as your messages and Claude's replies. What you took part in stays: your answers to questions, plan decisions, the task list, and a call waiting for your approval. Thinking blocks stay too. The filter button next to Session History on the chat toolbar flips this same setting, for every open chat.")]
+    [DisplayName("Chat view")]
+    [Description("How much of Claude's work the chat shows. Full: every row. Focus: each run of tool calls and thinking between two replies folds into one row that says how many calls it held and opens in place. HideToolCalls: the tool rows are removed. In every mode what you took part in stays — your answers to questions, plan decisions, the task list, a call waiting for your approval. The Chat view entry in the chat's / menu switches it too, for every open chat.")]
+    public ChatViewMode ViewMode { get; set; } = ChatViewMode.Full;
+
+    /// <summary>The bool <see cref="ViewMode"/> replaced, kept only so a stored <c>true</c> survives
+    /// the upgrade: read once in <see cref="LoadSettingsFromStorage"/>, then cleared for good.</summary>
+    [Browsable(false)]
     public bool HideToolCalls { get; set; }
+
+    public override void LoadSettingsFromStorage()
+    {
+        base.LoadSettingsFromStorage();
+        if (!HideToolCalls) { return; }
+        ViewMode = ChatViewMode.HideToolCalls;
+        HideToolCalls = false;
+        try { SaveSettingsToStorage(); }
+        catch (System.Exception ex) { OutputWindowLogger.Global.LogException("[options] migrate HideToolCalls", ex); }
+    }
 
     [Category("File links")]
     [DisplayName("Extra linkable extensions")]

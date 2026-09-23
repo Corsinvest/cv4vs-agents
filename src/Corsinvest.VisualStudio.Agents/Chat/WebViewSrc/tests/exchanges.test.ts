@@ -3,7 +3,14 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildGroups, isHiddenToolCall } from '../core/exchanges.ts';
+import {
+    buildGroups,
+    buildFoldRuns,
+    foldLabel,
+    foldLiveLabel,
+    isFolded,
+    isHiddenToolCall,
+} from '../core/exchanges.ts';
 import type { UiAssistantEntry, UiThinkingEntry, UiToolEntry, UiUserEntry } from '../core/types';
 
 const user = (id: number, uuid?: string): UiUserEntry => ({
@@ -143,4 +150,89 @@ test('only tool rows are ever hidden', () => {
     for (const e of [user(1), bot(2), thinking]) {
         assert.equal(isHiddenToolCall(e), false);
     }
+});
+
+const think = (id: number, durationMs = 0, streaming = false): UiThinkingEntry => ({
+    kind: 'text',
+    id,
+    role: 'thinking',
+    text: '',
+    durationMs,
+    streaming,
+});
+const toolAs = (id: number, name: string, status: UiToolEntry['status']): UiToolEntry => ({
+    ...tool(id, name),
+    status,
+});
+
+test('focus folds hidden tool calls and thinking, never prose or kept tools', () => {
+    assert.equal(isFolded(tool(1, 'Bash')), true);
+    assert.equal(isFolded(think(2)), true);
+    assert.equal(isFolded(bot(3)), false);
+    assert.equal(isFolded(user(4)), false);
+    assert.equal(isFolded(tool(5, 'AskUserQuestion')), false);
+    assert.equal(isFolded(tool(6, 'Bash'), 'toolu_6'), false);
+});
+
+test('each run of consecutive folded entries is one fold, split by prose', () => {
+    const runs = buildFoldRuns([
+        bot(1),
+        tool(2, 'Read'),
+        think(3, 1500),
+        tool(4, 'Edit'),
+        bot(5),
+        tool(6, 'Bash'),
+    ]);
+
+    assert.deepEqual([...runs.keys()], [1, 5]);
+    const first = runs.get(1)!;
+    assert.equal(first.start, 1);
+    assert.equal(first.end, 4);
+    assert.equal(first.toolCount, 2);
+    assert.equal(first.thinkingMs, 1500);
+    assert.equal(first.key, 'ttoolu_2');
+    assert.equal(runs.get(5)!.toolCount, 1);
+});
+
+test('a kept tool breaks a run like prose does', () => {
+    const runs = buildFoldRuns([tool(1, 'Read'), tool(2, 'AskUserQuestion'), tool(3, 'Edit')]);
+
+    assert.deepEqual([...runs.keys()], [0, 2]);
+});
+
+test('the call awaiting permission breaks a run while it waits', () => {
+    const response = [tool(1, 'Read'), tool(2, 'Bash'), tool(3, 'Edit')];
+
+    assert.deepEqual([...buildFoldRuns(response, 'toolu_2').keys()], [0, 2]);
+    assert.deepEqual([...buildFoldRuns(response, null).keys()], [0]);
+});
+
+test('a run keyed on a thinking block uses the entry id', () => {
+    const runs = buildFoldRuns([think(7), tool(8, 'Read')]);
+
+    assert.equal(runs.get(0)!.key, 'e7');
+});
+
+test('fold label counts calls and failures', () => {
+    const runs = buildFoldRuns([tool(1, 'Read'), toolAs(2, 'Bash', 'error'), tool(3, 'Edit')]);
+
+    assert.equal(foldLabel(runs.get(0)!), '3 tool calls · 1 failed');
+    assert.equal(foldLabel(buildFoldRuns([tool(1, 'Read')]).get(0)!), '1 tool call');
+});
+
+test('a thinking-only fold reports how long it thought', () => {
+    assert.equal(foldLabel(buildFoldRuns([think(1, 7600)]).get(0)!), 'Thought for 8s');
+    assert.equal(foldLabel(buildFoldRuns([think(1, 200)]).get(0)!), 'Thought for 1s');
+    assert.equal(foldLabel(buildFoldRuns([think(1, 0)]).get(0)!), 'Thinking');
+    assert.equal(foldLabel(buildFoldRuns([think(1, 0, true)]).get(0)!), 'Thinking…');
+});
+
+test('live label names the running tool, else streaming thinking, else nothing', () => {
+    const running = buildFoldRuns([tool(1, 'Read'), toolAs(2, 'Bash', 'pending')]).get(0)!;
+    const thinking = buildFoldRuns([tool(1, 'Read'), think(2, 0, true)]).get(0)!;
+    const settled = buildFoldRuns([tool(1, 'Read')]).get(0)!;
+
+    assert.equal(foldLiveLabel(running), 'Running Bash…');
+    assert.equal(foldLiveLabel(thinking), 'Thinking…');
+    assert.equal(foldLiveLabel(settled), null);
 });

@@ -159,6 +159,14 @@ internal sealed partial class WebViewMessageHandler
         });
     }
 
+    private void HandleSetViewMode(JObject data, int? id) =>
+        AgentsOptions.SetViewMode(data.ToObject<Contracts.SetViewModeNotification>().Mode switch
+        {
+            "focus" => ChatViewMode.Focus,
+            "hideToolCalls" => ChatViewMode.HideToolCalls,
+            _ => ChatViewMode.Full,
+        });
+
     private void HandleCliTerminal(JObject data, int? id) =>
         // Same as the toolbar "+" for CLI: a fresh interactive terminal pane, inheriting
         // this chat's profile.
