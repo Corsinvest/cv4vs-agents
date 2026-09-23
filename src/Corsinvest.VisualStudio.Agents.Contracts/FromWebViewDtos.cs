@@ -49,6 +49,12 @@ public class SetViewModeNotification
     public string Mode { get; set; }
 }
 
+/// <summary>The / menu's "Enable Remote Control for all sessions" switch (set_remote_control_at_startup).</summary>
+public class SetRemoteControlAtStartupRequest
+{
+    public bool Enabled { get; set; }
+}
+
 /// <summary>Open a file in the editor at a line range (open_ide_file).</summary>
 public class IdeFileNotification
 {

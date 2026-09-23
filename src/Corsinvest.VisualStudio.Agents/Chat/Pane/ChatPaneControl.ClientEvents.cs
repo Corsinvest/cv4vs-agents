@@ -209,6 +209,8 @@ public partial class ChatPaneControl
                     Ultracode = e.Ultracode,
                     BypassPermissionsDisabled = e.BypassPermissionsDisabled,
                     FastModeState = e.FastModeState,
+                    RemoteControlAtStartup = e.RemoteControlAtStartup,
+                    RemoteControlAvailable = e.RemoteControlAvailable,
                     SpinnerVerbsConfig = e.SpinnerVerbs == null ? null : new Contracts.SpinnerVerbsConfigDto
                     {
                         Mode = e.SpinnerVerbs.Mode,
@@ -216,6 +218,9 @@ public partial class ChatPaneControl
                     },
                 },
             });
+            // After the reset above: this process has no bridge yet, and the user asked for one in
+            // every new session (remoteControlAtStartup).
+            if (e.StartRemoteControl) { _ = _handler?.SetRemoteControlAsync(true, true); }
         });
 
     private bool _catalogPublished;

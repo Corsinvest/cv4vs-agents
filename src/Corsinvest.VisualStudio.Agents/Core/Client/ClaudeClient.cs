@@ -438,6 +438,9 @@ internal sealed partial class ClaudeClient : IClaudeClient
                     eff?["permissions"].Val("disableBypassPermissionsMode") == "disable",
                 SpinnerVerbs = ParseSpinnerVerbs(eff?["spinnerVerbs"] as JObject),
                 FastModeState = fastModeState,
+                StartRemoteControl = RemoteControlStartup.ShouldStart(resp),
+                RemoteControlAtStartup = RemoteControlStartup.UserValue(settings),
+                RemoteControlAvailable = RemoteControlStartup.Available(resp),
             });
         }
         // Same as the MCP registration above: a pane closed mid-startup faults these, and that is

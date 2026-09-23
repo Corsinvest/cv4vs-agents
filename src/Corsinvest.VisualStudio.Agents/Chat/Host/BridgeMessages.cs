@@ -53,6 +53,9 @@ internal static class BridgeMessages
             public const string Stop = "stop_cli";
             public const string SetModel = "set_cli_model";
             public const string SetRemoteControl = "set_remote_control";
+            /// <summary>remoteControlAtStartup in this profile's settings.json. A request: the write
+            /// can fail (org lock, unreadable file) and the switch must not claim what isn't saved.</summary>
+            public const string SetRemoteControlAtStartup = "set_remote_control_at_startup";
             public const string SetPermissionMode = "set_cli_permission_mode";
             public const string RespondPermission = "respond_cli_permission";
             /// <summary>Eye toggle: flips the session's SendSelection option,
@@ -168,6 +171,8 @@ internal static class BridgeMessages
             public const string Error = "cli_error";
             public const string State = "cli_state";                       // initialize + get_settings, re-sent on respawn
             public const string ModelChanged = "cli_model_changed";
+            public const string RemoteControlAtStartupResult = "remote_control_at_startup_result";
+            public const string RemoteControlAtStartupChanged = "remote_control_at_startup_changed";
             public const string PermissionModeChanged = "cli_permission_mode_changed";
         }
 

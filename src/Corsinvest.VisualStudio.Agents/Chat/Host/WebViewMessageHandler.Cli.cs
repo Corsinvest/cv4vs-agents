@@ -143,37 +143,75 @@ internal sealed partial class WebViewMessageHandler
         });
     }
 
-    private async Task HandleSetRemoteControlAsync(JObject data, int? id)
+    private Task HandleSetRemoteControlAsync(JObject data, int? id) =>
+        SetRemoteControlAsync(data.Val("enabled", false), false);
+
+    /// <summary>The Remote Control button and the start-up setting take this same path, so the
+    /// chip shows connecting → connected (or the CLI's refusal) either way.</summary>
+    internal async Task SetRemoteControlAsync(bool on, bool autoStarted)
     {
-        var on = data.Val("enabled", false);
         // Before the call: enabling takes a round-trip and the switch would sit still meanwhile.
-        SendRemoteControl(on ? "connecting" : "disconnected");
+        SendRemoteControl(on ? "connecting" : "disconnected", autoStarted);
         try
         {
             var url = await client.SetRemoteControlAsync(on);
-            SendRemoteControl(on ? "connected" : "disconnected", url);
+            SendRemoteControl(on ? "connected" : "disconnected", autoStarted, url);
         }
         // The CLI's own refusals ("/login", "disabled by your organization's policy") read fine and
         // pass through below. These two don't: they name the control subtype and transport details.
         catch (TimeoutException)
         {
-            SendRemoteControl("error", detail: "Remote Control did not answer in time.");
+            SendRemoteControl("error", autoStarted, detail: "Remote Control did not answer in time.");
         }
         catch (Exception) when (!client.IsRunning)
         {
-            SendRemoteControl("error", detail: "The Claude CLI isn't running.");
+            SendRemoteControl("error", autoStarted, detail: "The Claude CLI isn't running.");
         }
         catch (Exception ex)
         {
-            SendRemoteControl("error", detail: ex.Message);
+            SendRemoteControl("error", autoStarted, detail: ex.Message);
         }
     }
 
-    private void SendRemoteControl(string status, string url = null, string detail = null)
+    private async Task HandleSetRemoteControlAtStartupAsync(JObject data, int? id)
+    {
+        var enabled = data.ToObject<Contracts.SetRemoteControlAtStartupRequest>().Enabled;
+        var path = entry.ClaudePaths.SettingsFile;
+        Contracts.SetRemoteControlAtStartupResponse Fail(string error) => new() { Ok = false, Value = !enabled, Error = error };
+        Contracts.SetRemoteControlAtStartupResponse resp;
+        try
+        {
+            // Read now, not at startup: a policy can lock it after the session began. Turning it off
+            // is always allowed.
+            var locked = enabled ? RemoteControlStartup.LockReason(await client.GetSettingsAsync()) : null;
+            if (locked != null)
+            {
+                resp = Fail(locked);
+            }
+            else
+            {
+                CliSettingsStore.SetKey(path, RemoteControlStartup.SettingKey, enabled);
+                CliSettingsStore.RaiseKeyChanged(path, RemoteControlStartup.SettingKey, enabled);
+                resp = new() { Ok = true, Value = enabled };
+            }
+        }
+        catch (Exception ex)
+        {
+            log.LogException("[settings] remoteControlAtStartup", ex);
+            resp = Fail(ex.Message);
+        }
+        if (id is int reqId)
+        {
+            bridge.SendResponse(BridgeMessages.ToWebView.Cli.RemoteControlAtStartupResult, reqId, resp);
+        }
+    }
+
+    private void SendRemoteControl(string status, bool autoStarted, string url = null, string detail = null)
         => bridge.Send(BridgeMessages.ToWebView.Chat.RemoteControl, new Contracts.RemoteControlNotification
         {
             Status = status,
             Url = url,
             Detail = detail,
+            AutoStarted = autoStarted,
         });
 }

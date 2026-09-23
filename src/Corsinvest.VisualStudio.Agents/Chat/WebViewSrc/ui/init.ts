@@ -28,6 +28,7 @@ import type {
     ExchangeEndedNotification,
     Theme,
     VsOptionsDto,
+    RemoteControlAtStartupChangedNotification,
 } from '../core/types';
 import { applyHostKey } from './host-keys';
 import { installDebugApi } from './debug';
@@ -105,10 +106,19 @@ function wireBridgeHandlers(): void {
         // Absent → false: a missing policy means the mode is allowed.
         state.bypassPermissionsDisabled = !!c.bypassPermissionsDisabled;
         state.fastMode = (c.fastModeState ?? 'off') !== 'off';
+        state.remoteControlAtStartup = c.remoteControlAtStartup === true;
+        state.remoteControlAvailable = c.remoteControlAvailable !== false;
         // Custom spinner verbs from settings (replace/append the defaults). Migrated
         // from vsOptions into cliState — applied here rather than in applyVsOptions.
         setVerbsConfig(c.spinnerVerbsConfig ?? null);
     });
+
+    bridge.onNotification<RemoteControlAtStartupChangedNotification>(
+        Msg.toWebView.cli.remoteControlAtStartupChanged,
+        (data) => {
+            state.remoteControlAtStartup = !!data?.value;
+        },
+    );
 
     // VS Options re-pushed standalone when the user changes the Options page while
     // the pane is open (independent of CLI state / a respawn).

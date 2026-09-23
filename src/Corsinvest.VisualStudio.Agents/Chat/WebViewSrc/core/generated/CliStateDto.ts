@@ -17,4 +17,6 @@ export interface CliStateDto {
     bypassPermissionsDisabled?: boolean;
     fastModeState: string;
     spinnerVerbsConfig: SpinnerVerbsConfigDto | null;
+    remoteControlAtStartup?: boolean | null;
+    remoteControlAvailable?: boolean | null;
 }
