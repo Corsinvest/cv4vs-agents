@@ -628,7 +628,7 @@ public class VsOptionsDto
     public int PreviewLines { get; set; }
     public bool CollapseTools { get; set; }
 
-    /// <summary>Chat → Chat view: "full", "focus" or "hideToolCalls". Also pushed on its own when a
+    /// <summary>Chat → View mode: "full", "focus" or "hideToolCalls". Also pushed on its own when a
     /// chat's / menu changes it.</summary>
     public string ViewMode { get; set; }
     public int ChatFontSize { get; set; }

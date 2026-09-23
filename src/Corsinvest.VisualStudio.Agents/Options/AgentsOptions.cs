@@ -21,7 +21,7 @@ public static class AgentsOptions
     /// needs the new value pushed to each WebView.</summary>
     public static event System.Action ViewModeChanged;
 
-    /// <summary>Set Chat → Chat view from outside the Options dialog (the / menu's slider) and
+    /// <summary>Set Chat → View mode from outside the Options dialog (the / menu's slider) and
     /// persist it, as the dialog's OK would.</summary>
     public static void SetViewMode(ChatViewMode mode)
     {

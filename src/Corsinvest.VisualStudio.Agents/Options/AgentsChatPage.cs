@@ -70,8 +70,8 @@ public class AgentsChatPage : AgentsOptionsPage
     public bool CollapseTools { get; set; }
 
     [Category("Display")]
-    [DisplayName("Chat view")]
-    [Description("How much of Claude's work the chat shows. Full: every row. Focus: each run of tool calls and thinking between two replies folds into one row that says how many calls it held and opens in place. HideToolCalls: the tool rows are removed. In every mode what you took part in stays — your answers to questions, plan decisions, the task list, a call waiting for your approval. The Chat view entry in the chat's / menu switches it too, for every open chat.")]
+    [DisplayName("View mode")]
+    [Description("How much of Claude's work the chat shows. Full: every row. Focus: each run of tool calls and thinking between two replies folds into one row that says how many calls it held and opens in place. HideToolCalls: the tool rows are removed. In every mode what you took part in stays — your answers to questions, plan decisions, the task list, a call waiting for your approval. The View mode entry in the chat's / menu switches it too, for every open chat.")]
     public ChatViewMode ViewMode { get; set; } = ChatViewMode.Full;
 
     /// <summary>The bool <see cref="ViewMode"/> replaced, kept only so a stored <c>true</c> survives

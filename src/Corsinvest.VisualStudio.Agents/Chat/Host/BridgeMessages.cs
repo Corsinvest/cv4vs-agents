@@ -133,7 +133,7 @@ internal static class BridgeMessages
             /// native "Initializing…" placeholder now. The host answers it with ui_init.</summary>
             public const string Ready = "webview_ready";
 
-            /// <summary>The / menu's Chat view slider moved. Saved like Options → OK and pushed
+            /// <summary>The / menu's View mode slider moved. Saved like Options → OK and pushed
             /// to every open chat.</summary>
             public const string SetViewMode = "set_view_mode";
         }

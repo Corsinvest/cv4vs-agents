@@ -551,7 +551,7 @@ public partial class ChatPaneControl : PaneControlBase
         try { _bridge?.InjectTheme(VsThemeReader.IsDark()); } catch (Exception ex) { _log.LogException("SendTheme", ex); }
     }
 
-    /// <summary>A chat's / menu changed Chat view. Only the setting goes out: the WebView re-folds
+    /// <summary>A chat's / menu changed View mode. Only the setting goes out: the WebView re-folds
     /// the rows it already holds, so unlike Options → Apply there is nothing to re-read.</summary>
     private void OnViewModeChanged() =>
         _bridge?.Send(BridgeMessages.ToWebView.Ui.VsSettings, PaneVsOptions());

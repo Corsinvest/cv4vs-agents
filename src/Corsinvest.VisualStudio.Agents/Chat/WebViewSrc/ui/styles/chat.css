@@ -108,7 +108,7 @@
     margin-bottom: 10px;
     position: relative;
 }
-/* Chat view modes (cv-app renderExchange): the rows stay in the DOM, each keeping its own state, and
+/* View modes (cv-app renderExchange): the rows stay in the DOM, each keeping its own state, and
  * a response or exchange left with nothing to show goes with them. Spelled out because the author
  * display rules here (.cv-exchange is flex) outrank the user-agent [hidden]. */
 .cv-exchange[hidden],

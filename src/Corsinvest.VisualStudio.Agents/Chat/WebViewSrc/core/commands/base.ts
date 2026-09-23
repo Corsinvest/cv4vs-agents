@@ -62,7 +62,7 @@ export interface CommandHost {
      *  null to disable. */
     setMaxThinkingTokens(maxThinkingTokens: number, display: string | null): void;
     setRemoteControl(enabled: boolean): void;
-    /** Chat → Chat view: saved host-side and pushed to every open chat. */
+    /** Chat → View mode: saved host-side and pushed to every open chat. */
     setViewMode(mode: ViewMode): void;
 }
 
