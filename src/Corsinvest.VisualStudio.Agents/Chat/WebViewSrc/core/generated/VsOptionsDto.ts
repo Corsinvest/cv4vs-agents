@@ -3,11 +3,13 @@
  * Any changes made to this file can be lost when this file is regenerated.
  */
 
+import { ViewMode } from '../types';
+
 export interface VsOptionsDto {
     showCostAndDuration: boolean;
     previewLines: number;
     collapseTools: boolean;
-    hideToolCalls: boolean;
+    viewMode: ViewMode;
     chatFontSize: number;
     showRelativePaths: boolean;
     stickyUserMessages: boolean;

@@ -67,6 +67,7 @@ export const Msg = {
         },
         ui: {
             ready: 'webview_ready',
+            setViewMode: 'set_view_mode',
         },
     },
     toWebView: {

@@ -179,6 +179,10 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
                 HandleOptions(data, id);
                 break;
 
+            case BridgeMessages.FromWebView.Ui.SetViewMode:
+                HandleSetViewMode(data, id);
+                break;
+
             case BridgeMessages.FromWebView.Open.CliTerminal:
                 HandleCliTerminal(data, id);
                 break;

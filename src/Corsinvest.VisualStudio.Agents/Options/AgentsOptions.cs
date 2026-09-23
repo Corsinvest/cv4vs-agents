@@ -15,27 +15,27 @@ public static class AgentsOptions
 
     internal static void RaiseApplied() => Applied?.Invoke();
 
-    /// <summary>Raised when <see cref="SetHideToolCalls"/> changes the setting from a chat toolbar.
+    /// <summary>Raised when <see cref="SetViewMode"/> changes the setting from a chat's / menu.
     /// Not <see cref="Applied"/>: that one makes every chat reload its transcript from disk — which
-    /// drops the older pages already scrolled in, and is skipped mid-turn — while a view filter
-    /// only needs the new value pushed to each WebView.</summary>
-    public static event System.Action ToolCallsVisibilityChanged;
+    /// drops the older pages already scrolled in, and is skipped mid-turn — while a view mode only
+    /// needs the new value pushed to each WebView.</summary>
+    public static event System.Action ViewModeChanged;
 
-    /// <summary>Flip Chat → Hide tool calls from outside the Options dialog (the chat toolbar's
-    /// toggle) and persist it, as the dialog's OK would.</summary>
-    public static void SetHideToolCalls(bool hide)
+    /// <summary>Set Chat → View mode from outside the Options dialog (the / menu's slider) and
+    /// persist it, as the dialog's OK would.</summary>
+    public static void SetViewMode(ChatViewMode mode)
     {
         var chat = Chat;
-        if (chat.HideToolCalls == hide) { return; }
-        chat.HideToolCalls = hide;
+        if (chat.ViewMode == mode) { return; }
+        chat.ViewMode = mode;
         // Only the live page has a settings store behind it: the stand-in Get falls back to without
         // a package would throw, and the value still applies for this session either way.
         if (AgentsPackage.Instance?.GetDialogPage(typeof(AgentsChatPage)) is AgentsChatPage live)
         {
             try { live.SaveSettingsToStorage(); }
-            catch (System.Exception ex) { OutputWindowLogger.Global.LogException("[options] save HideToolCalls", ex); }
+            catch (System.Exception ex) { OutputWindowLogger.Global.LogException("[options] save ViewMode", ex); }
         }
-        ToolCallsVisibilityChanged?.Invoke();
+        ViewModeChanged?.Invoke();
     }
 
     public static AgentsGeneralPage General => Get<AgentsGeneralPage>();

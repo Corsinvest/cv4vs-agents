@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 import type { TemplateResult } from 'lit';
+import type { ViewMode } from '../types';
 
 /**
  * Chat command model — the `/` menu and the attach menu's command item are built from
@@ -61,6 +62,8 @@ export interface CommandHost {
      *  null to disable. */
     setMaxThinkingTokens(maxThinkingTokens: number, display: string | null): void;
     setRemoteControl(enabled: boolean): void;
+    /** Chat → View mode: saved host-side and pushed to every open chat. */
+    setViewMode(mode: ViewMode): void;
 }
 
 /**

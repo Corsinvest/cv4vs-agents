@@ -112,19 +112,6 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     /// custom-title JSONL; CLI keeps the no-op (no editable title).</summary>
     public virtual void RenameSession(string newTitle) { }
 
-    /// <summary>Whether the toolbar offers the hide-tool-calls toggle. Chat: true; CLI: false (a
-    /// terminal has no rows to hide). Default false.</summary>
-    public virtual bool SupportsHidingToolCalls => false;
-
-    public virtual bool ToolCallsHidden => false;
-
-    /// <summary>Chat overrides to write the setting; CLI keeps the no-op.</summary>
-    public virtual void SetToolCallsHidden(bool hidden) { }
-
-    public event EventHandler ToolCallsHiddenChanged;
-
-    protected void RaiseToolCallsHiddenChanged() => ToolCallsHiddenChanged?.Invoke(this, EventArgs.Empty);
-
     /// <summary>OS process id of the claude CLI behind this pane, or 0 when it isn't running.
     /// Both kinds have one — chat drives it over stdio, cli through the ConPTY — so the info
     /// dialog's row is built once here rather than duplicated per kind.</summary>

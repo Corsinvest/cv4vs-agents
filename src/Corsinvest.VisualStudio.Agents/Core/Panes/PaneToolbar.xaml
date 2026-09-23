@@ -91,15 +91,6 @@
         <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.AddComment}" />
       </Button>
 
-      <!-- Hide tool calls — chat panes only (collapsed on the CLI, which has no rows). One setting
-           for every open chat, the same as Tools → Options → Chat → Hide tool calls. -->
-      <ToggleButton x:Name="BtnToolCalls" DockPanel.Dock="Right" Visibility="Collapsed"
-                    Style="{StaticResource CommandBarButton}" ToolTip="Hide tool calls"
-                    Click="OnToolCalls_Click">
-        <imaging:CrispImage x:Name="ImgToolCalls" Width="16" Height="16"
-                            Moniker="{x:Static catalog:KnownMonikers.TreeList}" />
-      </ToggleButton>
-
       <!-- Session History (this pane). -->
       <Button x:Name="BtnSessionHistory" DockPanel.Dock="Right"
               Style="{StaticResource CommandBarButton}" ToolTip="Session History" Click="OnHistory_Click">
