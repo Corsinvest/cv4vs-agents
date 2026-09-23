@@ -31,7 +31,12 @@ internal sealed partial class WebViewBridge
             ShowCostAndDuration = chat.ShowCostAndDuration,
             PreviewLines = chat.PreviewLines,
             CollapseTools = chat.CollapseTools,
-            HideToolCalls = chat.HideToolCalls,
+            ViewMode = chat.ViewMode switch
+            {
+                ChatViewMode.Focus => "focus",
+                ChatViewMode.HideToolCalls => "hideToolCalls",
+                _ => "full",
+            },
             ChatFontSize = chat.ChatFontSize,
             ShowRelativePaths = chat.ShowRelativePaths,
             StickyUserMessages = chat.StickyUserMessages,

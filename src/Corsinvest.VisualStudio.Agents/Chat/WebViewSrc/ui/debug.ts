@@ -193,7 +193,7 @@ interface Snapshot {
         stickyUserMessages: boolean;
         showInlineToolErrors: boolean;
         chatFontSize: number;
-        hideToolCalls: boolean;
+        viewMode: string;
     };
     memory: { used: string; total: string; limit: string };
     dom: DomStats;
@@ -246,7 +246,7 @@ function snapshot(): Snapshot {
             stickyUserMessages: state.ui.stickyUserMessages,
             showInlineToolErrors: state.ui.showInlineToolErrors,
             chatFontSize: state.ui.chatFontSize,
-            hideToolCalls: state.ui.hideToolCalls,
+            viewMode: state.ui.viewMode,
         },
         memory: {
             used: fmtMb(mem?.usedJSHeapSize),

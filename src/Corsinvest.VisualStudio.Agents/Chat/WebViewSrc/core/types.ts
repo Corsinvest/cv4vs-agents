@@ -202,6 +202,9 @@ export type { CliStateNotification } from './generated/CliStateNotification';
 export type PermissionMode =
     'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' | (string & {});
 
+/** Chat → View mode, as it travels on the wire (VsOptionsDto.viewMode, set_view_mode). */
+export type ViewMode = 'full' | 'focus' | 'hideToolCalls';
+
 /** The mode names as values. `string & {}` in the type above means a typo still compiles, so a
  *  comparison written by hand is unchecked — these give the compiler something to check. The
  *  strings are the CLI's, not ours: renaming one here renames nothing on the wire. */
@@ -219,6 +222,7 @@ export const PERMISSION_MODE = {
 export type { SendPromptNotification } from './generated/SendPromptNotification';
 export type { RespondPermissionNotification } from './generated/RespondPermissionNotification';
 export type { SetSendSelectionNotification } from './generated/SetSendSelectionNotification';
+export type { SetViewModeNotification } from './generated/SetViewModeNotification';
 export type { IdeFileNotification } from './generated/IdeFileNotification';
 export type { GetSuggestionsRequest } from './generated/GetSuggestionsRequest';
 export type { RewindRequest } from './generated/RewindRequest';

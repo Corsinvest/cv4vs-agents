@@ -29,6 +29,7 @@ import {
     SwitchModelsOnFlagCommand,
 } from './model-controls';
 import { RewindCommand } from './rewind';
+import { ViewModeCommand } from './view-mode';
 import { SlashCommand } from './slash';
 
 /**
@@ -54,6 +55,7 @@ export const STATIC_COMMANDS: readonly ChatCommand[] = [
     new UsageCommand(),
     new ContextCommand(),
     new StatsCommand(),
+    new ViewModeCommand(),
     new GeneralConfigCommand(),
     new ManagePluginsCommand(),
     new OpenCliTerminalCommand(),

@@ -42,10 +42,8 @@ public partial class PaneToolbar : UserControl
         _pane = pane;
         pane.ReadyChanged += (_, _) => UpdateReadyState();
         pane.SessionTitleChanged += (_, _) => Dispatcher.Invoke(UpdateTitle);
-        pane.ToolCallsHiddenChanged += (_, _) => Dispatcher.Invoke(UpdateToolCallsToggle);
         UpdateReadyState();
         UpdateTitle();
-        UpdateToolCallsToggle();
     }
 
     // Session title: always an editable TextBox (border shows on hover/focus). Enter or
@@ -250,30 +248,6 @@ public partial class PaneToolbar : UserControl
     private void OnNewSession_Click(object sender, RoutedEventArgs e)
     {
         _pane.NewSession();
-        _pane.FocusInput();
-    }
-
-    /// <summary>Reflect the pane's hide-tool-calls state: shown only on a pane with rows to hide,
-    /// pressed while they are hidden, with a tooltip naming what a click will do.</summary>
-    private void UpdateToolCallsToggle()
-    {
-        BtnToolCalls.Visibility = _pane.SupportsHidingToolCalls ? Visibility.Visible : Visibility.Collapsed;
-        var hidden = _pane.ToolCallsHidden;
-        BtnToolCalls.IsChecked = hidden;
-        // The glyph names the shape of the view, not what is filtered out: a flat list of messages
-        // while the tool rows are hidden, the nested one that shows them again.
-        ImgToolCalls.Moniker = hidden ? KnownMonikers.FlatList : KnownMonikers.TreeList;
-        BtnToolCalls.ToolTip = hidden ? "Show tool calls" : "Hide tool calls";
-    }
-
-    // ToggleButton has flipped IsChecked before Click arrives. A real change re-syncs every toolbar
-    // through the pane's event; re-reading here too covers a click that changed nothing — a toggle
-    // that had fallen behind the setting — which raises no event. Focus goes back to the composer,
-    // as after New Session: left on the button, Space would flip it again.
-    private void OnToolCalls_Click(object sender, RoutedEventArgs e)
-    {
-        _pane.SetToolCallsHidden(BtnToolCalls.IsChecked == true);
-        UpdateToolCallsToggle();
         _pane.FocusInput();
     }
 

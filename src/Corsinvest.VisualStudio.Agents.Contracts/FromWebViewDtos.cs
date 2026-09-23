@@ -43,6 +43,12 @@ public class SetSendSelectionNotification
     public bool Enabled { get; set; }
 }
 
+/// <summary>The / menu's View mode slider: "full", "focus" or "hideToolCalls" (set_view_mode).</summary>
+public class SetViewModeNotification
+{
+    public string Mode { get; set; }
+}
+
 /// <summary>Open a file in the editor at a line range (open_ide_file).</summary>
 public class IdeFileNotification
 {
