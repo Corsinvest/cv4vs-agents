@@ -22,7 +22,7 @@ const STOPS: ReadonlyArray<{ mode: ViewMode; label: string }> = [
 /** One setting for every open chat: the host saves it and pushes it back to all of them. */
 export class ViewModeCommand extends ChatCommand {
     readonly id = 'view-mode';
-    readonly label = 'Chat view';
+    readonly label = 'View mode';
     readonly description = "How much of Claude's work the chat shows";
     readonly section: CommandSection = 'settings';
     readonly icon = TextBulletListSquare16Regular;

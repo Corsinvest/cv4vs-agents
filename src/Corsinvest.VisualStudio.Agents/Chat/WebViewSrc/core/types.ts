@@ -202,7 +202,7 @@ export type { CliStateNotification } from './generated/CliStateNotification';
 export type PermissionMode =
     'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' | (string & {});
 
-/** Chat → Chat view, as it travels on the wire (VsOptionsDto.viewMode, set_view_mode). */
+/** Chat → View mode, as it travels on the wire (VsOptionsDto.viewMode, set_view_mode). */
 export type ViewMode = 'full' | 'focus' | 'hideToolCalls';
 
 /** The mode names as values. `string & {}` in the type above means a typo still compiles, so a

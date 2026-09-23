@@ -134,7 +134,7 @@ export class CvApp extends LitElement {
     /** A permission/Ask prompt is awaiting the user → hide the "waiting" spinner
      *  (Claude isn't working, it's waiting for the user to choose). */
     @state() private _awaitingUser = appState.pendingPermission != null;
-    /** Chat → Chat view, mirrored so a change re-renders (appState.ui is read, not observed).
+    /** Chat → View mode, mirrored so a change re-renders (appState.ui is read, not observed).
      *  Hidden rows keep their place in the DOM: the transcript renders without keys, so taking one
      *  out of the list would hand its element — open/closed state included — to the next row. */
     @state() private _viewMode: ViewMode = appState.ui.viewMode ?? 'full';
@@ -1965,7 +1965,11 @@ export class CvApp extends LitElement {
                 : this.renderMessage(e);
     }
 
-    private _toggleFold(key: string, live: boolean): void {
+    /** The clicked row is held where it was painted: left to scroll anchoring, the browser may pin
+     *  something below it instead — the reply after the run — and the row flies off the top. */
+    private _toggleFold(key: string, live: boolean, row: HTMLElement): void {
+        const el = this._messagesEl;
+        const before = row.getBoundingClientRect().top;
         const open = new Set(this._openFolds);
         if (open.delete(key)) {
             this._openedWhileLive.delete(key);
@@ -1976,6 +1980,17 @@ export class CvApp extends LitElement {
             }
         }
         this._openFolds = open;
+        if (!el) {
+            return;
+        }
+        const prevBehavior = el.style.scrollBehavior;
+        el.style.scrollBehavior = 'auto';
+        void this.updateComplete.then(() => {
+            if (row.isConnected) {
+                el.scrollTop += row.getBoundingClientRect().top - before;
+            }
+            requestAnimationFrame(() => (el.style.scrollBehavior = prevBehavior));
+        });
     }
 
     // An exchange = the leading user message(s) then the response (assistant blocks + tool rows).
@@ -2023,7 +2038,8 @@ export class CvApp extends LitElement {
                 ?live=${!!liveLabel}
                 ?failed=${run.errorCount > 0}
                 ?expanded=${this._openFolds.has(run.key)}
-                @cv-fold-toggle=${() => this._toggleFold(run.key, !!liveLabel)}
+                @cv-fold-toggle=${(ev: Event) =>
+                    this._toggleFold(run.key, !!liveLabel, ev.currentTarget as HTMLElement)}
             ></cv-fold-row>`;
         };
         return html`<section
