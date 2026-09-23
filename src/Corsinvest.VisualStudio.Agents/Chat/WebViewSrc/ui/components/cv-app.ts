@@ -12,7 +12,14 @@ import { Msg } from '../../core/bridge-messages';
 import { fetchSubagent, fetchContextUsage, fetchCompactSummary } from '../../core/lazy';
 import { Transcript } from '../../core/transcript';
 import { clearMarkdownCache } from '../../core/markdown';
-import { buildGroups, isHiddenToolCall } from '../../core/exchanges';
+import {
+    buildGroups,
+    buildFoldRuns,
+    foldLabel,
+    foldLiveLabel,
+    isHiddenToolCall,
+    type FoldRun,
+} from '../../core/exchanges';
 import { openRewindDialog } from '../../core/dialog-host';
 import { cleanMessageOnlyText, parseIdeContextTags } from '../../core/ide';
 import './cv-notice-stack';
@@ -23,6 +30,7 @@ import './cv-message';
 import './cv-copy-btn';
 import { renderActionsRow, type TurnMetrics } from '../helpers/actions-row';
 import './cv-thinking';
+import './cv-fold-row';
 // Dialogs are created on demand by core/dialog-host (which must not import ui/),
 // so register their custom elements here in the UI layer.
 import './cv-usage-dialog';
@@ -73,6 +81,7 @@ import type {
     NoticeNotification,
     CliExitedNotification,
     RemoteControlNotification,
+    ViewMode,
 } from '../../core/types';
 import { EMPTY } from '../../core/types';
 import { GetHistoryReq } from '../../core/request-types';
@@ -125,10 +134,15 @@ export class CvApp extends LitElement {
     /** A permission/Ask prompt is awaiting the user → hide the "waiting" spinner
      *  (Claude isn't working, it's waiting for the user to choose). */
     @state() private _awaitingUser = appState.pendingPermission != null;
-    /** Chat → Hide tool calls, mirrored so a flip re-renders (appState.ui is read, not observed).
+    /** Chat → Chat view, mirrored so a change re-renders (appState.ui is read, not observed).
      *  Hidden rows keep their place in the DOM: the transcript renders without keys, so taking one
      *  out of the list would hand its element — open/closed state included — to the next row. */
-    @state() private _hideToolCalls = !!appState.ui.hideToolCalls;
+    @state() private _viewMode: ViewMode = appState.ui.viewMode ?? 'full';
+    /** Focus folds the user opened, by FoldRun.key. Per pane, never persisted. */
+    @state() private _openFolds = new Set<string>();
+    /** Folds opened while their run was still live: closed again when the turn settles, as the
+     *  VS Code Focus view does — the user looked at work in progress, not at the finished run. */
+    private _openedWhileLive = new Set<string>();
     /** The call whose permission prompt is open. Its row stays visible while tool calls are hidden:
      *  it is where what the prompt asks to run is spelled out. */
     @state() private _pendingToolUseId: string | null = appState.pendingPermission?.id ?? null;
@@ -225,7 +239,17 @@ export class CvApp extends LitElement {
 
     constructor() {
         super();
-        this._subs.on('isBusy', (v) => (this._isBusy = v));
+        this._subs.on('isBusy', (v) => {
+            if (this._isBusy && !v && this._openedWhileLive.size > 0) {
+                const open = new Set(this._openFolds);
+                for (const k of this._openedWhileLive) {
+                    open.delete(k);
+                }
+                this._openFolds = open;
+                this._openedWhileLive.clear();
+            }
+            this._isBusy = v;
+        });
         this._subs.on('queuedUuids', (v) => (this._queuedUuids = new Set(v)));
         this._subs.on('status', (v) => (this._status = v));
         this._subs.on('pendingPermission', (v) => {
@@ -235,8 +259,9 @@ export class CvApp extends LitElement {
         // 'ui' fires on every Options → Apply and twice at start-up: only a change to this one flag
         // is news here.
         this._subs.on('ui', (v) => {
-            if (!!v.hideToolCalls !== this._hideToolCalls) {
-                this._onHideToolCallsChanged(!!v.hideToolCalls);
+            const mode = v.viewMode ?? 'full';
+            if (mode !== this._viewMode) {
+                this._onViewModeChanged(mode);
             }
         });
     }
@@ -1698,11 +1723,13 @@ export class CvApp extends LitElement {
      * would shift it again the moment they are measured; the anchor is read first, off the layout
      * the user is actually looking at.
      */
-    private _onHideToolCallsChanged(hide: boolean): void {
+    private _onViewModeChanged(mode: ViewMode): void {
+        this._openFolds = new Set();
+        this._openedWhileLive.clear();
         const el = this._messagesEl;
         // 0 while WebView2 is suspended: there is no reading position to keep.
         if (!el || el.clientHeight === 0) {
-            this._hideToolCalls = hide;
+            this._viewMode = mode;
             return;
         }
         // A history page still settling re-applies its distance from the bottom whenever a block
@@ -1712,7 +1739,7 @@ export class CvApp extends LitElement {
             ro.disconnect();
         }
         if (this._isNearBottom()) {
-            this._hideToolCalls = hide;
+            this._viewMode = mode;
             this._scrollToBottom('instant');
         } else {
             const { top, bottom } = el.getBoundingClientRect();
@@ -1727,6 +1754,7 @@ export class CvApp extends LitElement {
                 ':scope > .cv-exchange > cv-message',
                 ':scope > .cv-exchange > .cv-response > cv-message',
                 ':scope > .cv-exchange > .cv-response > cv-thinking',
+                ':scope > .cv-exchange > .cv-response > cv-fold-row',
             ].join(', ');
             const candidates = [...el.querySelectorAll<HTMLElement>(selector)].filter(
                 (m) => !pinned(m),
@@ -1751,7 +1779,7 @@ export class CvApp extends LitElement {
             el.classList.add('anchoring');
             const prevBehavior = el.style.scrollBehavior;
             el.style.scrollBehavior = 'auto';
-            this._hideToolCalls = hide;
+            this._viewMode = mode;
             void this.updateComplete.then(() => {
                 if (anchor?.isConnected) {
                     el.scrollTop += anchor.getBoundingClientRect().top - before;
@@ -1855,7 +1883,7 @@ export class CvApp extends LitElement {
             for (const block of el.querySelectorAll('.cv-response')) {
                 ro.observe(block);
             }
-            // Registered so a tool-call flip can switch it off (_onHideToolCallsChanged).
+            // Registered so a view-mode change can switch it off (_onViewModeChanged).
             this._prependObservers.add(ro);
             window.setTimeout(() => {
                 ro.disconnect();
@@ -1918,7 +1946,7 @@ export class CvApp extends LitElement {
         });
     }
 
-    /** `hidden` only ever reaches a tool row: the one kind the "hide tool calls" filter touches. */
+    /** `hidden` reaches tool rows and thinking: the kinds the view modes fold or remove. */
     private renderEntry(e: UiEntry, hidden = false) {
         return e.kind === 'tool'
             ? this.renderToolRow(e, hidden)
@@ -1930,10 +1958,24 @@ export class CvApp extends LitElement {
                     .durationMs=${e.durationMs ?? 0}
                     .startedAt=${e.startedAt ?? 0}
                     ?redacted=${!!e.redacted}
+                    ?hidden=${hidden}
                 ></cv-thinking>`
               : e.role === 'remote-control'
                 ? html`<cv-remote-card .url=${e.text}></cv-remote-card>`
                 : this.renderMessage(e);
+    }
+
+    private _toggleFold(key: string, live: boolean): void {
+        const open = new Set(this._openFolds);
+        if (open.delete(key)) {
+            this._openedWhileLive.delete(key);
+        } else {
+            open.add(key);
+            if (live) {
+                this._openedWhileLive.add(key);
+            }
+        }
+        this._openFolds = open;
     }
 
     // An exchange = the leading user message(s) then the response (assistant blocks + tool rows).
@@ -1948,13 +1990,42 @@ export class CvApp extends LitElement {
         }
         const leadUsers = group.slice(0, i);
         const response = group.slice(i);
-        // Hidden in place, never left out of the list — see _hideToolCalls.
-        const hides = (e: UiEntry): boolean =>
-            this._hideToolCalls && isHiddenToolCall(e, this._pendingToolUseId);
+        const focus = this._viewMode === 'focus';
+        const runs = focus ? buildFoldRuns(response, this._pendingToolUseId) : null;
+        const lastRunStart = runs && runs.size > 0 ? Math.max(...runs.keys()) : -1;
+        const liveTurn = this._isBusy && group === this._exchanges[this._exchanges.length - 1];
+        const runOf = new Map<number, FoldRun>();
+        for (const run of runs?.values() ?? []) {
+            for (let r = run.start; r < run.end; r++) {
+                runOf.set(r, run);
+            }
+        }
+        // Hidden in place, never left out of the list — see _viewMode.
+        const hides = (e: UiEntry, idx: number): boolean => {
+            if (this._viewMode === 'hideToolCalls') {
+                return isHiddenToolCall(e, this._pendingToolUseId);
+            }
+            const run = runOf.get(idx);
+            return !!run && !this._openFolds.has(run.key);
+        };
         // A response with nothing left to show is hidden too, or it would keep its size estimate
         // (content-visibility, chat.css); so is an exchange with no user message heading it, since
-        // a history page can start on a group of tool rows alone.
-        const responseHidden = response.length > 0 && response.every(hides);
+        // a history page can start on a group of tool rows alone. In Focus a fold row always shows.
+        const responseHidden = !focus && response.length > 0 && response.every(hides);
+        // Rides inside its run's first slot, never as a list item of its own: the list has no keys,
+        // so an extra item would hand every later row the element — and state — of the one before.
+        const foldRow = (run: FoldRun) => {
+            const live = liveTurn && run.start === lastRunStart;
+            const liveLabel = live ? foldLiveLabel(run) : null;
+            return html`<cv-fold-row
+                .label=${foldLabel(run)}
+                .liveLabel=${liveLabel ?? ''}
+                ?live=${!!liveLabel}
+                ?failed=${run.errorCount > 0}
+                ?expanded=${this._openFolds.has(run.key)}
+                @cv-fold-toggle=${() => this._toggleFold(run.key, !!liveLabel)}
+            ></cv-fold-row>`;
+        };
         return html`<section
             class="cv-exchange"
             ?hidden=${leadUsers.length === 0 && responseHidden}
@@ -1963,7 +2034,13 @@ export class CvApp extends LitElement {
             ${
                 response.length > 0
                     ? html`<div class="cv-response" ?hidden=${responseHidden}>
-                          ${response.map((e) => this.renderEntry(e, hides(e)))}
+                          ${response.map(
+                              (e, idx) =>
+                                  html`${runs?.has(idx) ? foldRow(runs.get(idx)!) : nothing}${this.renderEntry(
+                                      e,
+                                      hides(e, idx),
+                                  )}`,
+                          )}
                           ${this.renderResponseActions(group)}
                       </div>`
                     : nothing

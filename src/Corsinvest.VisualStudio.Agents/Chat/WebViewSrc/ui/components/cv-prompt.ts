@@ -32,6 +32,8 @@ import type {
     ExternalUrlNotification,
     OpenOptionsNotification,
     PermissionMode,
+    SetViewModeNotification,
+    ViewMode,
 } from '../../core/types';
 import { GetSuggestionsReq } from '../../core/request-types';
 import { permissionItems } from '../../core/permission-modes';
@@ -1532,6 +1534,10 @@ export class CvPrompt extends LitElement implements CommandHost {
 
     setRemoteControl(enabled: boolean): void {
         bridge.sendNotification(Msg.fromWebView.cli.setRemoteControl, { enabled });
+    }
+
+    setViewMode(mode: ViewMode): void {
+        bridge.sendNotification<SetViewModeNotification>(Msg.fromWebView.ui.setViewMode, { mode });
     }
 
     private _onFilePickerChange = (e: Event): void => {

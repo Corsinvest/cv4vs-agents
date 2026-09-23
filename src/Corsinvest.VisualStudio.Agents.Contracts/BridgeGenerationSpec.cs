@@ -117,7 +117,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<GetCompactSummaryResponse>();
         AddInterface<SpinnerVerbsConfigDto>();
         AddInterface<InitConfigDto>();
-        AddInterface<VsOptionsDto>();
+        AddInterface<VsOptionsDto>()
+            .Member(x => nameof(x.ViewMode)).Type("ViewMode", "../types");
         AddInterface<InitPayloadNotification>()
             .Member(x => nameof(x.VsOptions)).Null();
         AddInterface<CliStateNotification>();
@@ -183,6 +184,7 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.UpdatedInput)).Optional()
             .Member(x => nameof(x.UpdatedPermissions)).Optional();
         AddInterface<SetSendSelectionNotification>();
+        AddInterface<SetViewModeNotification>();
         AddInterface<IdeFileNotification>();
         AddInterface<GetSuggestionsRequest>();
         // agentId/toolName omitted by openError() → optional.
