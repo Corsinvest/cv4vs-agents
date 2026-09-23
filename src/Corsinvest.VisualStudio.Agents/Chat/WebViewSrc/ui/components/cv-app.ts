@@ -2122,7 +2122,9 @@ export class CvApp extends LitElement {
             url: n.url ?? undefined,
             detail: n.detail ?? undefined,
         };
-        if (n.status === 'connected' && n.url) {
+        // Started by the setting, not asked for: the toolbar indicator says it is on, and the card
+        // stays one click away there ("Show link and QR code").
+        if (n.status === 'connected' && n.url && !n.autoStarted) {
             this._postRemoteControlCard(n.url);
         }
         if (n.status === 'error' || (n.status === 'disconnected' && n.detail)) {

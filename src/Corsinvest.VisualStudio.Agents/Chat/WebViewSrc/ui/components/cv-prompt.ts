@@ -35,7 +35,7 @@ import type {
     SetViewModeNotification,
     ViewMode,
 } from '../../core/types';
-import { GetSuggestionsReq } from '../../core/request-types';
+import { GetSuggestionsReq, SetRemoteControlAtStartupReq } from '../../core/request-types';
 import { permissionItems } from '../../core/permission-modes';
 import type { ChatCommand, CommandHost } from '../../core/commands';
 import './cv-notice-stack';
@@ -1538,6 +1538,25 @@ export class CvPrompt extends LitElement implements CommandHost {
 
     setViewMode(mode: ViewMode): void {
         bridge.sendNotification<SetViewModeNotification>(Msg.fromWebView.ui.setViewMode, { mode });
+    }
+
+    setRemoteControlAtStartup(enabled: boolean): void {
+        appState.remoteControlAtStartup = enabled;
+        void bridge
+            .sendRequest(SetRemoteControlAtStartupReq, { enabled })
+            .then((r) => {
+                appState.remoteControlAtStartup = r.value;
+                if (!r.ok) {
+                    this._noticeStack?.push({
+                        severity: 'error',
+                        message: `Remote Control at startup was not saved: ${r.error ?? 'unknown error'}`,
+                        key: 'rc-at-startup',
+                    });
+                }
+            })
+            .catch(() => {
+                appState.remoteControlAtStartup = !enabled;
+            });
     }
 
     private _onFilePickerChange = (e: Event): void => {

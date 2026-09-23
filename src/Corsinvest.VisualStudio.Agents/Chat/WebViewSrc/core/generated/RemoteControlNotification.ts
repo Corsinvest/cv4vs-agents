@@ -7,4 +7,5 @@ export interface RemoteControlNotification {
     status: string;
     url: string | null;
     detail: string | null;
+    autoStarted: boolean;
 }

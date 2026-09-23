@@ -11,6 +11,19 @@ renders as a toggle, not a one-shot action: switching it on sends a control requ
 CLI and waits for it to come up, switching it off tears the bridge down again. While the request is
 in flight the toggle is briefly disabled, so a second click can't race the first.
 
+## Start it in every new session
+
+`/` menu → **Enable Remote Control for all sessions** writes `remoteControlAtStartup` into the
+profile's `settings.json` — the same setting `/config remoteControl=true` sets in a terminal, and the
+one the VS Code extension's toggle writes. From then on every **new** chat of that profile starts
+Remote Control by itself. Chats already open keep their own toggle: turning the setting on or off
+never connects or disconnects them.
+
+It only acts on your explicit choice, and the CLI has the last word: a project whose
+`.claude/settings.json` sets it to `false` keeps it off there, and an organization policy can lock
+it — the switch then refuses to turn on and says why. If `settings.json` can't be read (not valid
+JSON), the switch says so and leaves the file alone.
+
 ## The link and the QR code
 
 Once the CLI confirms the bridge is up, the session link is posted into the conversation, with a QR
@@ -47,8 +60,10 @@ forking — ends the remote session along with it, and the indicator goes with i
 choice this extension makes; it's how the CLI's control protocol works, and every pane in this
 extension already respawns the process for those same actions.
 
-Resuming a session does **not** bring Remote Control back: in the stream-json mode this pane uses,
-the bridge only ever starts from an explicit request, so turn it on again if you want it.
+Resuming a session does **not** bring Remote Control back by itself: in the stream-json mode this
+pane uses, the bridge only ever starts from an explicit request. Turn it on again, or switch on
+**Enable Remote Control for all sessions** above — then every process the pane starts, a resumed
+session included, asks for it.
 
 A short network drop is not a disconnection. The bridge polls outwards and retries quietly, and the
 CLI reports nothing while it does — the indicator stays on, which is what the connection is

@@ -132,7 +132,8 @@ own.
 - **[Remote Control](docs/chat/remote-control.md)** — `/remote-control` hands a running session to
   `claude.ai/code` or the Claude mobile app: the session stays on your machine, web and mobile are
   just a window onto it. The link is posted into the conversation with a QR code to scan from your
-  phone, and a toolbar indicator says it's on for as long as it is.
+  phone, and a toolbar indicator says it's on for as long as it is. It can start by itself in every new
+  session: `/` menu → *Enable Remote Control for all sessions*.
 - **[It knows what you're looking at](#ide-integration)** — the file open in the editor (and your
   selection) rides along with the prompt, shown as a chip you can click to jump back to it. One
   toggle turns the sharing off when you'd rather it didn't.

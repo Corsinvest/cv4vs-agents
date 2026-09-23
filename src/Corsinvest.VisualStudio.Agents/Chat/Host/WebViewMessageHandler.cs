@@ -151,6 +151,10 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
                 _ = HandleSetRemoteControlAsync(data, id);
                 break;
 
+            case BridgeMessages.FromWebView.Cli.SetRemoteControlAtStartup:
+                _ = HandleSetRemoteControlAtStartupAsync(data, id);
+                break;
+
             case BridgeMessages.FromWebView.Session.Fork:
                 HandleFork(data, id);
                 break;

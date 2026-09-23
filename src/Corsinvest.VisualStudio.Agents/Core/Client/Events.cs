@@ -45,6 +45,13 @@ public sealed class CliStateReceivedEventArgs
     public SpinnerVerbs SpinnerVerbs { get; set; }
     // From initialize.fast_mode_state (present only if fast is available for the account/org) or "off".
     public string FastModeState { get; set; }
+    // initialize: the user explicitly chose remoteControlAtStartup=true and nothing overrides it
+    // (see RemoteControlStartup.ShouldStart).
+    public bool StartRemoteControl { get; set; }
+    // get_settings userSettings layer — what the menu switch shows (null = never set).
+    public bool? RemoteControlAtStartup { get; set; }
+    // initialize.remote_control_available; false hides the switch.
+    public bool? RemoteControlAvailable { get; set; }
 }
 
 public sealed class AssistantMessageEventArgs

@@ -96,6 +96,9 @@ public class CliStateDto
     // Custom spinner verbs from get_settings.effective.spinnerVerbs (null unless set in settings.json).
     // CLI state, not a VS Option.
     public SpinnerVerbsConfigDto SpinnerVerbsConfig { get; set; }
+    // remoteControlAtStartup from the user settings layer, for the / menu switch (null = unset).
+    public bool? RemoteControlAtStartup { get; set; }
+    public bool? RemoteControlAvailable { get; set; }
 }
 
 /// <summary>A file/dir suggestion for the @-mention picker (file_suggestions).</summary>
@@ -498,6 +501,9 @@ public class RemoteControlNotification
     public string Status { get; set; }
     public string Url { get; set; }
     public string Detail { get; set; }
+    /// <summary>Started by remoteControlAtStartup, not by the user: no link/QR card in the
+    /// transcript — nobody is reaching for a phone, and every respawn would post another one.</summary>
+    public bool AutoStarted { get; set; }
 }
 
 /// <summary>A streamed assistant-text token (chat_assistant_text_delta). parentToolUseId
@@ -754,4 +760,19 @@ public class RewindResultNotification
 public class RewindPointsNotification
 {
     public string[] Uuids { get; set; }
+}
+
+/// <summary>Answer to set_remote_control_at_startup. Value is what the file now holds; on a failure
+/// the WebView puts the switch back and shows Error.</summary>
+public class SetRemoteControlAtStartupResponse
+{
+    public bool Ok { get; set; }
+    public bool Value { get; set; }
+    public string Error { get; set; }
+}
+
+/// <summary>Another chat of the same profile changed remoteControlAtStartup: update the switch only.</summary>
+public class RemoteControlAtStartupChangedNotification
+{
+    public bool Value { get; set; }
 }

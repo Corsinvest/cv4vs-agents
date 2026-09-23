@@ -424,6 +424,7 @@ public partial class ChatPaneControl : PaneControlBase
         // so mouse events reach us.
         WebView.PreviewMouseDown += OnWebViewClicked;
         AgentsOptions.ViewModeChanged += OnViewModeChanged;
+        CliSettingsStore.KeyChanged += OnCliUserSettingChanged;
     }
 
     /// <summary>The user clicked into this pane: whatever InfoBar or toast was calling them here
@@ -511,6 +512,7 @@ public partial class ChatPaneControl : PaneControlBase
         VSColorTheme.ThemeChanged -= OnVsThemeChanged;
         AgentsOptions.Applied -= OnOptionsApplied;
         AgentsOptions.ViewModeChanged -= OnViewModeChanged;
+        CliSettingsStore.KeyChanged -= OnCliUserSettingChanged;
         WebView.HostKeyPressed -= OnHostKeyPressed;
         WebView.HostFilesDropped -= OnHostFilesDropped;
         WebView.PreviewMouseDown -= OnWebViewClicked;
@@ -549,6 +551,17 @@ public partial class ChatPaneControl : PaneControlBase
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         try { _bridge?.InjectTheme(VsThemeReader.IsDark()); } catch (Exception ex) { _log.LogException("SendTheme", ex); }
+    }
+
+    /// <summary>A chat changed remoteControlAtStartup. Chats of the same profile only move their
+    /// switch — the setting is for new sessions, so nobody's Remote Control is touched.</summary>
+    private void OnCliUserSettingChanged(string path, string key, JToken value)
+    {
+        if (key != RemoteControlStartup.SettingKey
+            || !string.Equals(path, Entry.ClaudePaths.SettingsFile, StringComparison.OrdinalIgnoreCase)) { return; }
+        _ = Dispatcher.BeginInvoke(new Action(() =>
+            _bridge?.Send(BridgeMessages.ToWebView.Cli.RemoteControlAtStartupChanged,
+                new Contracts.RemoteControlAtStartupChangedNotification { Value = value.Value<bool>() })));
     }
 
     /// <summary>A chat's / menu changed View mode. Only the setting goes out: the WebView re-folds
