@@ -359,13 +359,7 @@ public partial class ChatPaneControl
                 CostUsd = e.TotalCostUsd ?? 0,
                 DurationMs = e.DurationMs,
                 IsError = e.IsError,
-                Usage = e.Usage == null ? null : new Contracts.ContextUsageDto
-                {
-                    InputTokens = e.Usage.Val("input_tokens", 0),
-                    OutputTokens = e.Usage.Val("output_tokens", 0),
-                    CacheReadTokens = e.Usage.Val("cache_read_input_tokens", 0),
-                    CacheCreationTokens = e.Usage.Val("cache_creation_input_tokens", 0),
-                },
+                Usage = ContentBlockTranslator.ToUsageDto(e.Usage),
                 ContextWindow = modelUsage?.ContextWindow ?? 0,
                 MaxOutputTokens = modelUsage?.MaxOutputTokens ?? 0,
                 ErrorText = e.ErrorText ?? "",

@@ -83,6 +83,11 @@ export interface AppState {
     // sub-agents), in the CLI wire format. `null` until the first one arrives.
     contextUsage: ContextUsageDto | null;
 
+    // When the cache behind `contextUsage` was written (epoch ms) — the carrying message's own
+    // timestamp, not arrival time: a resumed session replays old messages, and stamping those on
+    // arrival would report a days-cold cache as fresh.
+    cacheAnchorMs: number | null;
+
     // Model catalogue from the CLI (`chat_models`); drives the picker and the
     // effort slider. Includes disabled models. Empty until the first init.
     models: ModelInfoDto[];
@@ -195,6 +200,7 @@ const _impl = new StoreImpl<AppState>({
     hasMoreHistory: false,
     loadingOlder: false,
     contextUsage: null,
+    cacheAnchorMs: null,
     models: [],
     contextWindow: 0,
     maxOutputTokens: 0,

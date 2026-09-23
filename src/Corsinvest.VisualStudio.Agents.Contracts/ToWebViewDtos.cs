@@ -46,6 +46,10 @@ public class ContextUsageDto
     public int OutputTokens { get; set; }
     public int CacheReadTokens { get; set; }
     public int CacheCreationTokens { get; set; }
+
+    /// <summary>How long the cache written on this turn lives: "5m", "1h", or "" when none was
+    /// written. The count above is a total and carries no TTL.</summary>
+    public string CacheTtl { get; set; }
 }
 
 /// <summary>A selectable model in the model picker (chat_models).</summary>
