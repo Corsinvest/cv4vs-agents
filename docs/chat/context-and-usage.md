@@ -19,6 +19,30 @@ below.
 `61% of context remaining until auto-compact` is the number that matters day to day: not how much
 you have used, but how much room is left before the CLI compacts the conversation.
 
+### The prompt cache
+
+Every message makes the model read the whole conversation again. The API keeps what it already
+processed in a **prompt cache**, so the next message reads that part back cheaply instead of paying
+for it in full — but only for a while: the cache lives **5 minutes or 1 hour**, and every message
+that uses it starts the clock again.
+
+A tooltip says where that stands:
+
+- *Prompt cache warm, about 42 min left* — keep going and the next message is cheap. The gauge's
+  own tooltip carries this: while the cache holds there is nothing to act on.
+- *Prompt cache likely expired (idle 3h 31m). Your next message re-caches about 71k tokens.* — a
+  **clock** appears next to the gauge, and carries that tooltip itself. The next message still
+  works, but it writes the whole conversation into the cache again, which costs more and takes a
+  little longer. For a quick question on a long, idle conversation, a fresh chat can be the
+  cheaper choice.
+
+It is an estimate, and says so: the API reports which lifetime it gave the cache on every message,
+but never whether the entry is still alive, so the gauge counts from the last message's time. Which
+lifetime you get is the CLI's choice — one hour on a Claude subscription's main conversation, five
+minutes on an API key or once you are on extra usage — which is why it is read from each message
+rather than assumed. A reopened session is judged by when its last message was sent, not by when you
+opened it.
+
 ---
 
 ## Account & usage

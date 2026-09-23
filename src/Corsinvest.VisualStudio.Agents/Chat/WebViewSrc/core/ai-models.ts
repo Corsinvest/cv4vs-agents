@@ -107,6 +107,30 @@ export function consumedTokens(u: ContextUsageDto): number {
     return u.inputTokens + u.cacheReadTokens + u.cacheCreationTokens;
 }
 
+const CACHE_TTL_MS: Record<string, number> = { '5m': 5 * 60 * 1000, '1h': 60 * 60 * 1000 };
+
+export type CacheState =
+    | { kind: 'unknown' }
+    | { kind: 'warm'; minutesLeft: number }
+    | { kind: 'cold'; idleMs: number; recacheTokens: number };
+
+/** An estimate, which is why the UI says "likely": the API states the TTL it wrote but never
+ *  reports whether the entry is still live, so anchor + TTL against the clock is all there is. */
+export function cacheState(
+    u: ContextUsageDto | null,
+    anchorMs: number | null,
+    now: number,
+): CacheState {
+    const ttl = u?.cacheTtl ? CACHE_TTL_MS[u.cacheTtl] : undefined;
+    if (!u || !anchorMs || ttl === undefined) {
+        return { kind: 'unknown' };
+    }
+    const msLeft = anchorMs + ttl - now;
+    return msLeft > 0
+        ? { kind: 'warm', minutesLeft: Math.ceil(msLeft / 60000) }
+        : { kind: 'cold', idleMs: now - anchorMs, recacheTokens: consumedTokens(u) };
+}
+
 /** Percent of the context window consumed. 0 until the window is known (no
  *  result yet). Clamped to [0, 100] — the CLI can report >100 on batches. */
 export function contextPercent(u: ContextUsageDto): number {

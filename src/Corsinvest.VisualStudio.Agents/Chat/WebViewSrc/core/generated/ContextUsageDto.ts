@@ -8,4 +8,5 @@ export interface ContextUsageDto {
     outputTokens: number;
     cacheReadTokens: number;
     cacheCreationTokens: number;
+    cacheTtl: string;
 }
