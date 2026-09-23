@@ -4,6 +4,9 @@ Remote Control lets you drive a running chat session from `claude.ai/code` or th
 app. The session itself keeps running on your machine, in this pane, talking to your solution and
 your MCP tools — the web page and the phone are just a window onto it, not a copy of it.
 
+What you type there shows up here too, as your own message, followed by the answer — the pane
+keeps the whole conversation whichever side it was typed on.
+
 ## Turning it on
 
 Run **`/remote-control`** (or the shorter `/remote`, `/rc`, `/phone`) from the `/` command menu. It

@@ -83,6 +83,7 @@ import type {
     RemoteControlNotification,
     ViewMode,
 } from '../../core/types';
+import { takeReplay } from '../../core/sent-prompts';
 import { EMPTY } from '../../core/types';
 import { GetHistoryReq } from '../../core/request-types';
 import { modelLabel } from '../../core/ai-models';
@@ -350,6 +351,12 @@ export class CvApp extends LitElement {
 
         this._offs.push(
             bridge.onNotification<UserTextEcho>(Msg.toWebView.chat.userText, (data) => {
+                // A replay of our own prompt is dropped, not merged: the bubble echoed before the send
+                // is the richer one (IDE chip, thumbnails, a group's separate bubbles). Only a prompt
+                // typed elsewhere — claude.ai, through Remote Control — adds a bubble.
+                if (data.uuid && !data.parentToolUseId && takeReplay(data.uuid)) {
+                    return;
+                }
                 const entry = CvApp.buildUserEntry(data);
                 if (!entry) {
                     return;
