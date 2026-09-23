@@ -315,6 +315,11 @@ See [Options → Profiles](docs/options.md#profiles).
   errors (toggleable). On an Edit the selection lands on the lines that changed — taken from the
   patch the CLI itself computed, so it is right even after the edit has been applied and the file
   touched again (**Select lines when opening file**).
+- **View mode: Full / Focus / Hide tool calls** — how much of the work the transcript shows, from the
+  **View mode** slider in the `/` menu. **Focus** keeps every reply and folds each run of tool calls
+  and thinking between two of them into one row — `5 tool calls · 1 failed`, `Running Bash…` while it
+  works — that opens in place, with the rows exactly as you left them. **Hide tool calls** drops them
+  altogether. Your answers to questions, plan decisions and the task list stay in every mode.
 - **[Inline diffs](docs/chat/diff.md)** — Edit/Write rows show a diff with the file's own line
   numbers and the context around each change, syntax-highlighted, with the changed words marked
   inside an edited line; the row's title carries the counts (`+3 −14`). Clicking it opens the change
