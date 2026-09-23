@@ -28,6 +28,8 @@ import type {
     RewindRequest,
     RewindResultNotification,
     RewindPointsNotification,
+    SetRemoteControlAtStartupRequest,
+    SetRemoteControlAtStartupResponse,
 } from './types';
 import type { PluginListResponse } from './generated/PluginListResponse';
 import type { MarketplaceListResponse } from './generated/MarketplaceListResponse';
@@ -108,3 +110,8 @@ export const MarketplaceListReq = new RequestType<Record<string, never>, Marketp
     Msg.fromWebView.plugins.marketplaceList,
     Msg.toWebView.plugins.marketplaceListResult,
 );
+
+export const SetRemoteControlAtStartupReq = new RequestType<
+    SetRemoteControlAtStartupRequest,
+    SetRemoteControlAtStartupResponse
+>(Msg.fromWebView.cli.setRemoteControlAtStartup, Msg.toWebView.cli.remoteControlAtStartupResult);

@@ -150,26 +150,14 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     {
         try
         {
-            Newtonsoft.Json.Linq.JObject root;
-            if (File.Exists(settingsPath))
-            {
-                var raw = File.ReadAllText(settingsPath);
-                try { root = Newtonsoft.Json.Linq.JObject.Parse(raw); }
-                catch { root = []; }
-            }
-            else
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(settingsPath));
-                root = [];
-            }
             // Don't overwrite an explicit user choice — only fill the gap.
-            if (root["diffTool"] != null) { return; }
-            root["diffTool"] = "auto";
-            // ToIndentedString avoids JToken.ToString(Formatting), whose signature
-            // shifts between Newtonsoft minor builds and would MissingMethodException
-            // against VS's own Newtonsoft. See JsonExtensions.ToIndentedString.
-            File.WriteAllText(settingsPath, root.ToIndentedString());
-            OutputWindowLogger.Global.Info($"Pkg: set diffTool=auto in {settingsPath}");
+            var wrote = Core.Client.CliSettingsStore.Update(settingsPath, root =>
+            {
+                if (root["diffTool"] != null) { return false; }
+                root["diffTool"] = "auto";
+                return true;
+            });
+            if (wrote) { OutputWindowLogger.Global.Info($"Pkg: set diffTool=auto in {settingsPath}"); }
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.EnsureDiffToolAuto", ex); }
     }
