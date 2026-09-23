@@ -39,6 +39,10 @@ export interface AppState {
     inDev: boolean;
     /** Fast mode on/off (Model menu toggle). */
     fastMode: boolean;
+    /** remoteControlAtStartup as the user set it for this profile (the / menu switch). */
+    remoteControlAtStartup: boolean;
+    /** false when the CLI says Remote Control is not available: the switch is hidden. */
+    remoteControlAvailable: boolean;
     /** Auto-switch model when a message is flagged (Model menu toggle). */
     switchModelsOnFlag: boolean;
     /** An org policy (CLI settings) forbids the bypass mode → the selector must not offer it. */
@@ -173,6 +177,8 @@ const _impl = new StoreImpl<AppState>({
     thinkingEnabled: false,
     inDev: false,
     fastMode: false,
+    remoteControlAtStartup: false,
+    remoteControlAvailable: true,
     switchModelsOnFlag: true, // permissive until get_settings says otherwise
     bypassPermissionsDisabled: false, // permissive until the CLI says otherwise
     remoteControl: { status: 'disconnected' },

@@ -223,6 +223,9 @@ export type { SendPromptNotification } from './generated/SendPromptNotification'
 export type { RespondPermissionNotification } from './generated/RespondPermissionNotification';
 export type { SetSendSelectionNotification } from './generated/SetSendSelectionNotification';
 export type { SetViewModeNotification } from './generated/SetViewModeNotification';
+export type { SetRemoteControlAtStartupRequest } from './generated/SetRemoteControlAtStartupRequest';
+export type { SetRemoteControlAtStartupResponse } from './generated/SetRemoteControlAtStartupResponse';
+export type { RemoteControlAtStartupChangedNotification } from './generated/RemoteControlAtStartupChangedNotification';
 export type { IdeFileNotification } from './generated/IdeFileNotification';
 export type { GetSuggestionsRequest } from './generated/GetSuggestionsRequest';
 export type { RewindRequest } from './generated/RewindRequest';

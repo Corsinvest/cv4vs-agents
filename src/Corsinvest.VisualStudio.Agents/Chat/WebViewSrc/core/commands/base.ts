@@ -64,6 +64,9 @@ export interface CommandHost {
     setRemoteControl(enabled: boolean): void;
     /** Chat → View mode: saved host-side and pushed to every open chat. */
     setViewMode(mode: ViewMode): void;
+    /** remoteControlAtStartup for this profile. Optimistic: the switch moves now and goes back,
+     *  with a notice, if the host could not save it. */
+    setRemoteControlAtStartup(enabled: boolean): void;
 }
 
 /**

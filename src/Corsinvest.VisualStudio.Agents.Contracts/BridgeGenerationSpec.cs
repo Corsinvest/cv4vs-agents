@@ -37,7 +37,9 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.AlwaysThinkingEnabled)).Null()
             .Member(x => nameof(x.SwitchModelsOnFlag)).Null()
             .Member(x => nameof(x.Ultracode)).Null()
-            .Member(x => nameof(x.SpinnerVerbsConfig)).Null();
+            .Member(x => nameof(x.SpinnerVerbsConfig)).Null()
+            .Member(x => nameof(x.RemoteControlAtStartup)).Null()
+            .Member(x => nameof(x.RemoteControlAvailable)).Null();
         AddInterface<AtItemDto>();
         AddInterface<GetImageResponse>();
         AddInterface<SubagentUsageDto>();
@@ -119,6 +121,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<InitConfigDto>();
         AddInterface<VsOptionsDto>()
             .Member(x => nameof(x.ViewMode)).Type("ViewMode", "../types");
+        AddInterface<SetRemoteControlAtStartupResponse>().Member(x => nameof(x.Error)).Null();
+        AddInterface<RemoteControlAtStartupChangedNotification>();
         AddInterface<InitPayloadNotification>()
             .Member(x => nameof(x.VsOptions)).Null();
         AddInterface<CliStateNotification>();
@@ -185,6 +189,7 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.UpdatedPermissions)).Optional();
         AddInterface<SetSendSelectionNotification>();
         AddInterface<SetViewModeNotification>();
+        AddInterface<SetRemoteControlAtStartupRequest>();
         AddInterface<IdeFileNotification>();
         AddInterface<GetSuggestionsRequest>();
         // agentId/toolName omitted by openError() → optional.

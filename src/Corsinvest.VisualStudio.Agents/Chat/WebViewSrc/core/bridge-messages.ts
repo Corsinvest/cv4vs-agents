@@ -22,6 +22,7 @@ export const Msg = {
             stop: 'stop_cli',
             setModel: 'set_cli_model',
             setRemoteControl: 'set_remote_control',
+            setRemoteControlAtStartup: 'set_remote_control_at_startup',
             setPermissionMode: 'set_cli_permission_mode',
             respondPermission: 'respond_cli_permission',
             setSendSelection: 'set_cli_send_selection',
@@ -87,6 +88,8 @@ export const Msg = {
             error: 'cli_error',
             state: 'cli_state',
             modelChanged: 'cli_model_changed',
+            remoteControlAtStartupResult: 'remote_control_at_startup_result',
+            remoteControlAtStartupChanged: 'remote_control_at_startup_changed',
             permissionModeChanged: 'cli_permission_mode_changed',
         },
         chat: {
