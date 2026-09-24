@@ -446,7 +446,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
 
                 var uuid = obj.Val("uuid");
                 // The cut message is excluded: grab its text for the composer and stop.
-                if (!string.IsNullOrEmpty(uuid) && uuid == resumeAtMessageUuid)
+                if (!string.IsNullOrEmpty(resumeAtMessageUuid) && IsLineFor(obj, resumeAtMessageUuid))
                 {
                     excludedPrompt = ExtractMessageText(obj);
                     foundCut = true;
@@ -478,12 +478,11 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
         return new ForkResult { NewSessionId = newSessionId, ExcludedPrompt = excludedPrompt };
     }
 
-    /// <summary>Plain text of a user/assistant JSONL entry: joins the text blocks
-    /// of message.content (string or block array). Empty when there's no text.</summary>
+    /// <summary>Plain text of a user/assistant JSONL entry, or of a queued prompt: joins the text
+    /// blocks of its content (string or block array). Empty when there's no text.</summary>
     private static string ExtractMessageText(JObject obj)
     {
-        if (obj["message"] is not JObject msg) { return ""; }
-        var content = msg["content"];
+        var content = LineContent(obj);
         if (content is JValue v) { return v.Value<string>() ?? ""; }
         if (content is not JArray blocks) { return ""; }
         var parts = blocks
