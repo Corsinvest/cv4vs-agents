@@ -459,7 +459,9 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
 
             // Remap every id that references a message — leaving one pointing at an
             // old uuid would dangle, since those ids are all regenerated above.
-            using var writer = new StreamWriter(dstPath, append: false, Encoding.UTF8);
+            // No BOM: it would make the first line invalid JSON for every reader of the file,
+            // this one's history scan included.
+            using var writer = new StreamWriter(dstPath, append: false, new UTF8Encoding(false));
             foreach (var obj in kept)
             {
                 RemapUuid(obj, "uuid", uuidMap);
