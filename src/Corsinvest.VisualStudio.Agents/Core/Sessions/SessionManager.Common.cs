@@ -51,37 +51,76 @@ internal sealed partial class SessionManager
         if (IsFlagTrue(line, "isMeta")) { return null; }
         if (IsFlagTrue(line, "isCompactSummary")) { return null; }
 
-        try
-        {
-            var obj = JObject.Parse(line);
-            var content = obj["message"]?["content"];
-            string text = null;
-            if (content is JArray arr)
-            {
-                // NOT simply the first text block: the editor-context block cv-prompt prepends is
-                // one, so stopping there yields the tag, which the strip below empties out — and
-                // the prompt drops out of the ↑/↓ history. Take the first block that still holds
-                // something once the tag is gone.
-                foreach (var item in arr)
-                {
-                    if (item.Val("type") != "text") { continue; }
-                    var candidate = Chat.MetaInjection.StripIdeContext(item.Val("text") ?? "").TrimStart();
-                    if (!string.IsNullOrWhiteSpace(candidate)) { text = candidate; break; }
-                }
-            }
-            else if (content?.Type == JTokenType.String)
-            {
-                text = (string)content;
-            }
-            if (string.IsNullOrWhiteSpace(text)) { return null; }
-            // Bare-string content carries the tag inline rather than in a block of its own, so it
-            // still needs stripping here; the array branch above has already done its own.
-            text = Chat.MetaInjection.StripIdeContext(text).TrimStart();
-            if (string.IsNullOrWhiteSpace(text)) { return null; }
-            return text.StartsWith("<") || text.StartsWith("[Request interrupted") ? null : text;
-        }
+        try { return PromptText(JObject.Parse(line)["message"]?["content"]); }
         catch { return null; }
     }
+
+    /// <summary><see cref="ExtractUserText"/> for a prompt sent while a turn was running, which
+    /// the CLI stores as a queued_command attachment rather than a user line.</summary>
+    private static string ExtractQueuedPromptText(string line)
+    {
+        // Cheap reject, as attachment lines are the most numerous in a transcript. Not IsType: it
+        // reads the FIRST "type" in the line, and the CLI writes the nested attachment object
+        // ahead of the line's own type. QueuedPrompt checks the type once parsed.
+        if (line.IndexOf("\"queued_command\"", StringComparison.Ordinal) < 0) { return null; }
+        try { return PromptText(QueuedPrompt(JObject.Parse(line))); }
+        catch { return null; }
+    }
+
+    /// <summary>The prompt of a message the user sent while a turn was running, or null for any
+    /// other line. The CLI injects it between tool calls and records it as an attachment, not as a
+    /// user line. The same attachment type also carries task notifications and messages from
+    /// other agents or channels: those are not the user's, and stay out.</summary>
+    internal static JToken QueuedPrompt(JObject line)
+    {
+        if (line?.Val("type") != "attachment" || line["attachment"] is not JObject a) { return null; }
+        if (a.Val("type") != "queued_command" || a.Val("commandMode", "prompt") != "prompt") { return null; }
+        if (a.Val("isMeta", false) || line.Val("isSidechain", false) || a["forwardedIntent"] != null) { return null; }
+        var kind = (a["origin"] as JObject)?.Val("kind");
+        return kind == null || kind == "human" ? a["prompt"] : null;
+    }
+
+    /// <summary>The id the UI knows a line by. For a queued prompt that is the uuid it was sent
+    /// with (source_uuid), which the live replay uses too — the line's own uuid appears nowhere
+    /// else the UI could have seen it.</summary>
+    private static bool IsLineFor(JObject line, string uuid)
+        => line.Val("uuid", "") == uuid
+        || (QueuedPrompt(line) != null && line["attachment"]?.Val("source_uuid", "") == uuid);
+
+    /// <summary>A line's message content: message.content, or a queued prompt's.</summary>
+    private static JToken LineContent(JObject line)
+        => (line["message"] as JObject)?["content"] ?? QueuedPrompt(line);
+
+    /// <summary>The typed text of a prompt's content, without the editor context the host
+    /// prepends; null when nothing typed is left or it is a CLI marker.</summary>
+    private static string PromptText(JToken content)
+    {
+        string text = null;
+        if (content is JArray arr)
+        {
+            // NOT simply the first text block: the editor-context block cv-prompt prepends is
+            // one, so stopping there yields the tag, which the strip below empties out — and
+            // the prompt drops out of the ↑/↓ history. Take the first block that still holds
+            // something once the tag is gone.
+            foreach (var item in arr)
+            {
+                if (item.Val("type") != "text") { continue; }
+                var candidate = Chat.MetaInjection.StripIdeContext(item.Val("text") ?? "").TrimStart();
+                if (!string.IsNullOrWhiteSpace(candidate)) { text = candidate; break; }
+            }
+        }
+        else if (content?.Type == JTokenType.String)
+        {
+            text = (string)content;
+        }
+        if (string.IsNullOrWhiteSpace(text)) { return null; }
+        // Bare-string content carries the tag inline rather than in a block of its own, so it
+        // still needs stripping here; the array branch above has already done its own.
+        text = Chat.MetaInjection.StripIdeContext(text).TrimStart();
+        if (string.IsNullOrWhiteSpace(text)) { return null; }
+        return text.StartsWith("<") || text.StartsWith("[Request interrupted") ? null : text;
+    }
+
     /// <summary>Read a string field from a JSONL line's top-level toolUseResult, or null.
     /// toolUseResult is often a plain string (e.g. error results), so a direct
     /// indexer access would throw — this guards the object shape.</summary>
