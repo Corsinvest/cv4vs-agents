@@ -280,4 +280,20 @@ public class HistoryReaderTests
         using var fx = SessionFixture.Compact(Conversation());
         Assert.Null(fx.Manager().ReadMessageBlock(fx.SessionId, "nope", 0));
     }
+
+    /// <summary>A BOM ahead of the first line makes it invalid JSON: the fork's opening message
+    /// then vanished from its history.</summary>
+    [Fact]
+    public void ForkSession_keeps_the_first_message_of_the_fork()
+    {
+        using var fx = SessionFixture.Compact(Conversation());
+        var manager = fx.Manager();
+
+        var fork = manager.ForkSession(fx.SessionId, "u3");
+
+        Assert.NotNull(fork);
+        Assert.Equal("third question", fork.ExcludedPrompt);
+        // u1, a1, u2, a2: the fork rewrites every uuid, so only the count can be compared.
+        Assert.Equal(4, manager.ReadHistoryRaw(fork.NewSessionId).Messages.Count);
+    }
 }
