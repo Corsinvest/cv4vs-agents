@@ -388,6 +388,19 @@ export class CvPopoverList extends LitElement {
         queueMicrotask(() => this._scrollActiveIntoView());
     }
 
+    /** Move the cursor by one visible page (dir ±1). Clamped at the ends rather than wrapped like
+     *  the arrows: a jump of a whole page that lands at the other end loses you where you were. */
+    movePage(dir: number): void {
+        const len = this._nav.length;
+        const row = this._list?.querySelector<HTMLElement>('.row.navigable');
+        if (len === 0 || !this._list || !row) {
+            return;
+        }
+        const page = Math.max(1, Math.floor(this._list.clientHeight / row.offsetHeight) - 1);
+        this._activeIdx = Math.max(0, Math.min(len - 1, this._activeIdx + dir * page));
+        queueMicrotask(() => this._scrollActiveIntoView());
+    }
+
     /** Place the cursor on a specific navigable index (e.g. the active model on open). */
     setActive(navIndex: number): void {
         const len = this._nav.length;
@@ -448,6 +461,9 @@ export class CvPopoverList extends LitElement {
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             this.moveSelection(-1);
+        } else if (e.key === 'PageDown' || e.key === 'PageUp') {
+            e.preventDefault();
+            this.movePage(e.key === 'PageDown' ? 1 : -1);
         } else if (e.key === 'Enter') {
             e.preventDefault();
             this.pickActive();
