@@ -280,4 +280,110 @@ public class HistoryReaderTests
         using var fx = SessionFixture.Compact(Conversation());
         Assert.Null(fx.Manager().ReadMessageBlock(fx.SessionId, "nope", 0));
     }
+
+    /// <summary>A BOM ahead of the first line makes it invalid JSON: the fork's opening message
+    /// then vanished from its history.</summary>
+    [Fact]
+    public void ForkSession_keeps_the_first_message_of_the_fork()
+    {
+        using var fx = SessionFixture.Compact(Conversation());
+        var manager = fx.Manager();
+
+        var fork = manager.ForkSession(fx.SessionId, "u3");
+
+        Assert.NotNull(fork);
+        Assert.Equal("third question", fork.ExcludedPrompt);
+        // u1, a1, u2, a2: the fork rewrites every uuid, so only the count can be compared.
+        Assert.Equal(4, manager.ReadHistoryRaw(fork.NewSessionId).Messages.Count);
+    }
+
+    /// <summary>A prompt typed while a turn ran, injected by the CLI after a tool call. The CLI
+    /// writes it only as an attachment, so it has to be read from there or it is lost on reopen.</summary>
+    private static List<JObject> ConversationWithQueuedPrompt(JObject queued = null) =>
+    [
+        Jsonl.UserPrompt("u1", "first question"),
+        Jsonl.Assistant("a1", "working on it", "u1"),
+        queued ?? Jsonl.QueuedPrompt("q1", "s1", "change of plan", "a1"),
+        Jsonl.Assistant("a2", "switching", "q1"),
+    ];
+
+    [Fact]
+    public void ReadHistoryRaw_replays_a_queued_prompt_where_it_was_injected()
+    {
+        using var fx = SessionFixture.Compact(ConversationWithQueuedPrompt());
+
+        var page = fx.Manager().ReadHistoryRaw(fx.SessionId);
+
+        Assert.Equal(new[] { "u1", "a1", "s1", "a2" }, page.Messages.Select(m => m["uuid"]?.Value<string>()));
+        var queued = page.Messages[2];
+        Assert.Equal("user", queued["role"]?.Value<string>());
+        Assert.Equal("change of plan", queued["content"]?[1]?["text"]?.Value<string>());
+    }
+
+    [Fact]
+    public void ReadHistoryRaw_reads_a_pretty_printed_queued_prompt_the_same_way()
+    {
+        var conversation = ConversationWithQueuedPrompt();
+        using var compact = SessionFixture.Compact(conversation);
+        using var pretty = SessionFixture.Pretty(conversation);
+
+        Assert.Equal(
+            compact.Manager().ReadHistoryRaw(compact.SessionId).Messages.Select(m => m["uuid"]?.Value<string>()),
+            pretty.Manager().ReadHistoryRaw(pretty.SessionId).Messages.Select(m => m["uuid"]?.Value<string>()));
+    }
+
+    /// <summary>The same attachment type carries what is not the user's: a background task's
+    /// completion notice, meta entries, messages forwarded from other agents or channels.</summary>
+    [Theory]
+    [InlineData("task-notification")]
+    [InlineData("meta")]
+    [InlineData("forwarded")]
+    [InlineData("coordinator")]
+    [InlineData("sidechain")]
+    public void ReadHistoryRaw_leaves_out_queued_commands_that_are_not_the_users(string variant)
+    {
+        var queued = Jsonl.QueuedPrompt("q1", "s1", "not typed by the user", "a1",
+            commandMode: variant == "task-notification" ? "task-notification" : "prompt",
+            origin: variant == "coordinator" ? new JObject { ["kind"] = "coordinator" } : null);
+        if (variant == "meta") { queued["attachment"]["isMeta"] = true; }
+        if (variant == "forwarded") { queued["attachment"]["forwardedIntent"] = "relay"; }
+        if (variant == "sidechain") { queued["isSidechain"] = true; }
+        using var fx = SessionFixture.Compact(ConversationWithQueuedPrompt(queued));
+
+        var page = fx.Manager().ReadHistoryRaw(fx.SessionId);
+
+        Assert.Equal(new[] { "u1", "a1", "a2" }, page.Messages.Select(m => m["uuid"]?.Value<string>()));
+        Assert.Equal(new[] { "first question" }, fx.Manager().ReadUserPrompts(fx.SessionId));
+    }
+
+    [Fact]
+    public void ReadUserPrompts_includes_a_queued_prompt()
+    {
+        using var fx = SessionFixture.Compact(ConversationWithQueuedPrompt());
+
+        Assert.Equal(new[] { "first question", "change of plan" }, fx.Manager().ReadUserPrompts(fx.SessionId));
+    }
+
+    [Fact]
+    public void ReadMessageBlock_finds_a_queued_prompt_by_the_uuid_it_was_sent_with()
+    {
+        using var fx = SessionFixture.Compact(ConversationWithQueuedPrompt());
+
+        var block = fx.Manager().ReadMessageBlock(fx.SessionId, "s1", 1);
+
+        Assert.Equal("change of plan", block?["text"]?.Value<string>());
+    }
+
+    [Fact]
+    public void ForkSession_cuts_at_a_queued_prompt_and_hands_back_its_text()
+    {
+        using var fx = SessionFixture.Compact(ConversationWithQueuedPrompt());
+        var manager = fx.Manager();
+
+        var fork = manager.ForkSession(fx.SessionId, "s1");
+
+        Assert.NotNull(fork);
+        Assert.Contains("change of plan", fork.ExcludedPrompt);
+        Assert.Equal(2, manager.ReadHistoryRaw(fork.NewSessionId).Messages.Count);
+    }
 }
