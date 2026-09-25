@@ -57,7 +57,7 @@ The driver auto-detects MSBuild via `vswhere`; override with env `MSBUILD=<path>
 
 The probe is how you test the control protocol the chat uses (set_model, get_settings,
 get_context_usage, and any `control_request`). **It must be launched with the right entrypoint**,
-otherwise init is reduced (no Fable / `unavailable_models`):
+otherwise init omits `unavailable_models` (the models shown greyed out):
 
 ```bash
 cd tools/cli-probe
@@ -109,6 +109,6 @@ Headless this is useless: no window, no screenshot.
 |---|---|
 | `'C:\Program' is not recognized…` launching MSBuild | Path with spaces + `shell:true`. Use `shell:false` or quote. The driver already does. |
 | `MSBuild not found` from the driver | The VS MSBuild component is missing, or `vswhere` can't find it. Set `MSBUILD=<path to MSBuild.exe>`. |
-| probe: init without Fable / `unavailable_models` | Missing `CLAUDE_CODE_ENTRYPOINT=claude-vscode`. |
+| probe: init without `unavailable_models` | Missing `CLAUDE_CODE_ENTRYPOINT=claude-vscode`. |
 | probe times out | Raise `PROBE_TIMEOUT_MS` (default 25000); check `which claude`. |
 | WebView: type errors | `npm run typecheck` for detail; the `build` minifies and doesn't always show the spot. |
