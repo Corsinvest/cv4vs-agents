@@ -10,5 +10,5 @@ export interface SetComposerNotification {
     enableIdeContext: boolean;
     send: boolean;
     append: boolean;
-    mention: ComposerMention | null;
+    mentions: ComposerMention[] | null;
 }

@@ -727,7 +727,7 @@ public partial class ChatPaneControl : PaneControlBase
         // A fork's forked-at message, or a prompt from the editor context menu. Not gated on
         // restoreState: the context menu opens a fresh pane, with a prompt but no session — which
         // is also what tells the two apart, a fork always brings the session it forked.
-        if (_startupComposer != null && (!string.IsNullOrEmpty(_startupComposer.Text) || _startupComposer.Mention != null))
+        if (_startupComposer != null && (!string.IsNullOrEmpty(_startupComposer.Text) || _startupComposer.Mentions?.Length > 0))
         {
             _startupComposer.EnableIdeContext &= !restoreState;
             ApplyComposer(_startupComposer);

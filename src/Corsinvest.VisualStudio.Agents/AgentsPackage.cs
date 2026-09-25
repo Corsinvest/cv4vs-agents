@@ -404,6 +404,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         await ActiveSessionsMenuCommand.InitializeAsync(this);
         await Editor.EditorPromptsMenuCommand.InitializeAsync(this);
         await Editor.WindowAddToChatMenuCommand.InitializeAsync(this);
+        await Editor.SolutionAddToChatMenuCommand.InitializeAsync(this);
         await Editor.AddToChatMenuCommand.InitializeAsync(this);
         await GlobalMenuCommands.InitializeAsync(this);
         // Lazy MCP lifecycle: server runs only while >=1 session is open,

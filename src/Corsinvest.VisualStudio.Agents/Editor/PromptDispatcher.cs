@@ -19,10 +19,10 @@ internal static class PromptDispatcher
     public static void Send(string prompt, bool sendImmediately)
         => Dispatch(new SetComposerNotification { Text = prompt, EnableIdeContext = true, Send = sendImmediately });
 
-    /// <summary>Adds a reference to a file, or to some of its lines, after what the composer holds.
-    /// The eye is left as it is: the reference names what it is about.</summary>
-    public static void Append(ComposerMention mention)
-        => Dispatch(new SetComposerNotification { Append = true, Mention = mention });
+    /// <summary>Adds references to files, folders or some lines of a file after what the composer
+    /// holds, one per line. The eye is left as it is: a reference names what it is about.</summary>
+    public static void Append(ComposerMention[] mentions)
+        => Dispatch(new SetComposerNotification { Append = true, Mentions = mentions });
 
     /// <summary>Adds text after what the composer holds, as a block of its own.</summary>
     public static void Append(string text)

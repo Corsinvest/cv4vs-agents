@@ -7,4 +7,5 @@ export interface ComposerMention {
     path: string;
     startLine?: number | null;
     endLine?: number | null;
+    isFolder: boolean;
 }
