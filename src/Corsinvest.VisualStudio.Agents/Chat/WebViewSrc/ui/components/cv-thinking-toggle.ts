@@ -44,7 +44,7 @@ export class CvThinkingToggle extends LitElement {
     ];
 
     /** cv-prompt, which owns setMaxThinkingTokens. A property because cv-prompt renders into a
-     *  shadow root — the same way cv-command-menu and cv-effort-selector receive it. */
+     *  shadow root — the same way cv-command-menu and cv-model-list receive it. */
     @property({ attribute: false }) host!: CommandHost;
 
     @state() private _enabled = appState.thinkingEnabled;
