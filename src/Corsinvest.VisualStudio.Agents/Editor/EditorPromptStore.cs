@@ -59,13 +59,15 @@ internal static class EditorPromptStore
                 RequiresSelection = true,
             },
         ],
-        // Sent on click, as the single "Explain" entry these menus had always was.
+        // Sent on click, as the single "Explain" entry these menus had always was. "For each": a
+        // batch of unrelated rows asked about as one invites a single story tying them together,
+        // where each needs its own cause — and one row reads the same either way.
         PromptScope.ErrorList =>
         [
             new EditorPrompt
             {
                 Title = "Explain",
-                Prompt = "What is causing these errors, and how do I fix them?",
+                Prompt = "For each of these, explain the cause and the fix.",
                 SendImmediately = true,
             },
             new EditorPrompt { Title = "Fix", Prompt = "Fix these errors.", SendImmediately = true },
