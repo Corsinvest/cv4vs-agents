@@ -74,7 +74,7 @@ Things that break in ways the compiler won't tell you about:
 - **New `.cs` files must be added by hand to `<Compile>` in the `.csproj`** — explicit items, no
   glob. A file that compiles in VS can be silently missing from the MSBuild VSIX.
 - **`CLAUDE_CODE_ENTRYPOINT=claude-vscode`** is mandatory when launching the CLI: without it
-  `initialize` returns a reduced payload (no Fable / `unavailable_models`).
+  `initialize` omits `unavailable_models`, the models the picker shows greyed out.
 - **`Newtonsoft.Json` pinned to 13.0.1** — the version VS forces at runtime; a higher one throws
   `MissingMethodException`. Use `JsonExtensions.ToIndentedString`, not `JToken.ToString(Formatting)`.
 - **Target framework v4.8**, not 4.7.2 — required by `Community.VisualStudio.Toolkit`.

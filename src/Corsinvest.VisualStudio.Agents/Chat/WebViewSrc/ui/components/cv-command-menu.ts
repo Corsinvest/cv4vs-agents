@@ -35,11 +35,6 @@ export class CvCommandMenu extends LitElement {
     @property({ attribute: false }) query = '';
     /** True when opened from the menu item: show the search box in the list. */
     @property({ type: Boolean }) searchable = false;
-    /** Show only these commands, by id, in the order given — the toolbar's Effort trigger opens
-     *  the menu on that one row. Takes precedence over `query`: a trigger that means "this exact
-     *  setting" can't go through Fuse, whose matches depend on what else happens to be installed.
-     *  Ids, not labels: the id is the stable name, the label is what the user reads. */
-    @property({ attribute: false }) only: string[] | null = null;
     /** The command host (cv-prompt), needed by inline controls (slider/toggle). */
     @property({ attribute: false }) host!: CommandHost;
 
@@ -121,10 +116,6 @@ export class CvCommandMenu extends LitElement {
     /** Commands matching the current query (Fuse), or all commands unchanged when empty. */
     private _filtered(): ChatCommand[] {
         const all = allCommands();
-        if (this.only) {
-            const wanted = this.only;
-            return all.filter((c) => wanted.includes(c.id));
-        }
         const q = this.query.trim();
         return q ? this._fuseSearch(all, q) : all;
     }

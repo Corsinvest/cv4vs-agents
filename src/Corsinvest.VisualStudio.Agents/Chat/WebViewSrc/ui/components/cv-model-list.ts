@@ -8,9 +8,13 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Checkmark16Regular from '@fluentui/svg-icons/icons/checkmark_16_regular.svg';
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
-import { displayModels, resolveModelValue } from '../../core/ai-models';
+import { resolveModelValue } from '../../core/ai-models';
+import type { CommandHost } from '../../core/commands/base';
+import { EffortCommand } from '../../core/commands/model-controls';
 import type { ModelInfoDto } from '../../core/types';
 import './cv-popover-list';
+import './cv-segmented-slider';
+import type { SliderStop } from './cv-segmented-slider';
 import type { CvPopoverList } from './cv-popover-list';
 
 /**
@@ -22,10 +26,16 @@ import type { CvPopoverList } from './cv-popover-list';
 @customElement('cv-model-list')
 export class CvModelList extends LitElement {
     @property({ type: Boolean, reflect: true }) open = false;
+    /** The command host (cv-prompt), which the effort slider applies its level through. */
+    @property({ attribute: false }) host!: CommandHost;
 
-    // The picker's own view of the catalogue (a duplicated `default` collapsed away) — the
-    // navigation index and the rendered rows must come from the SAME list to stay aligned.
-    @state() private _models = displayModels(appState.models);
+    // The same command the `/` menu's Effort row uses: its stops, label and setter follow the
+    // current model's levels, so the two can't disagree.
+    private readonly _effort = new EffortCommand();
+
+    // `default` is listed even when another entry resolves to the same model: it follows the
+    // CLI's recommendation when that changes, a named entry stays put.
+    @state() private _models = appState.models;
     @state() private _current = appState.currentModel;
 
     private readonly _subs = new StateSubscriptions(this);
@@ -40,7 +50,7 @@ export class CvModelList extends LitElement {
     constructor() {
         super();
         this._subs.on('models', (v) => {
-            this._models = displayModels(v);
+            this._models = v;
         });
         this._subs.on('currentModel', (v) => {
             this._current = v;
@@ -50,7 +60,7 @@ export class CvModelList extends LitElement {
     override willUpdate(changed: Map<string, unknown>): void {
         if (changed.has('open') && this.open) {
             this._current = appState.currentModel;
-            this._models = displayModels(appState.models);
+            this._models = appState.models;
         }
     }
 
@@ -88,6 +98,29 @@ export class CvModelList extends LitElement {
         );
     }
 
+    /** Effort for the current model, below the list; absent when the model has none (Haiku). */
+    private _renderEffort() {
+        if (!this._effort.isEnabled()) {
+            return undefined;
+        }
+        const ctrl = this._effort.trailingControl;
+        if (ctrl.kind !== 'slider') {
+            return undefined;
+        }
+        return html`<span>Effort</span>
+            <span class="dots-wrap">
+                <span class="dots-val">${ctrl.label}</span>
+                <cv-segmented-slider
+                    .stops=${ctrl.stops}
+                    .activeValue=${ctrl.value}
+                    @change=${(e: CustomEvent<SliderStop<number>>) => {
+                        ctrl.onSet(this.host, e.detail.value);
+                        this.requestUpdate();
+                    }}
+                ></cv-segmented-slider>
+            </span>`;
+    }
+
     override render() {
         if (!this.open) {
             return html``;
@@ -98,9 +131,7 @@ export class CvModelList extends LitElement {
                 .items=${this._models}
                 .isNavigable=${(m: ModelInfoDto) => !m.disabled}
                 .header=${html`<span>Select a model</span>`}
-                searchable
-                searchPlaceholder="Search models…"
-                .searchText=${(m: ModelInfoDto) => `${m.displayName} ${m.description} ${m.value}`}
+                .footer=${this._renderEffort()}
                 emptyText="No models"
                 .renderRow=${(m: ModelInfoDto) => html`
                     <span class="row-text">

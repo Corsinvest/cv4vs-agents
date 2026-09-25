@@ -304,8 +304,9 @@ See [Options → Profiles](docs/options.md#profiles).
 - **Prompt history** — recall previous prompts with ↑/↓ (shell-style).
 - **Voice input** — dictation via the Web Speech API (pulsing mic while recording; hidden when
   unsupported).
-- **Model switcher & controls** — pick the model; toggle extended **Thinking**, **Fast mode**, an
-  **Effort** slider, and auto-switch-on-flag.
+- **Model switcher & controls** — pick the model, with its **Effort** slider under the list and the
+  level beside the model name in the toolbar; toggle extended **Thinking**, **Fast mode** and
+  auto-switch-on-flag.
 - **Permission mode** — Shift+Tab cycles it, and while the composer has focus its border takes the
   mode's colour, so the change is visible where you are already looking. **Bypass permissions** —
   the mode that runs everything without asking, dangerous commands included — is named in red on
