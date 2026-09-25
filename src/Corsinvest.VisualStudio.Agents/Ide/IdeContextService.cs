@@ -185,7 +185,7 @@ internal sealed partial class IdeContextService : IDisposable
             }
 
             var isEmpty = IsSpanEffectivelyEmpty(span);
-            var text = !includeText || isEmpty ? string.Empty : span.GetText();
+            var text = !includeText || isEmpty ? "" : span.GetText();
 
             var startLine = snapshot.GetLineFromPosition(span.Start.Position);
             var endLine = snapshot.GetLineFromPosition(span.End.Position);
@@ -449,7 +449,7 @@ internal sealed partial class IdeContextService : IDisposable
                 // Start of the line after the last one wanted, so the range is inclusive.
                 if (to < totalLines) { stop.MoveToLineAndOffset(to + 1, 1); }
                 else { stop.MoveToPoint(td.EndPoint); }
-                text = start.GetText(stop) ?? string.Empty;
+                text = start.GetText(stop) ?? "";
                 // Not "there is more file after this": the caller asked for a range and got all of
                 // it, so nothing was cut. Saying otherwise made truncated useless for deciding
                 // whether to ask again — which is the only thing it is for. It only turns true when
@@ -461,12 +461,12 @@ internal sealed partial class IdeContextService : IDisposable
                 // Keep the head: unlike an output pane, a file is read top-down.
                 var stop = td.StartPoint.CreateEditPoint();
                 stop.MoveToLineAndOffset(from + maxLines, 1);
-                text = start.GetText(stop) ?? string.Empty;
+                text = start.GetText(stop) ?? "";
                 truncated = true;
             }
             else
             {
-                text = start.GetText(td.EndPoint) ?? string.Empty;
+                text = start.GetText(td.EndPoint) ?? "";
                 truncated = false;
             }
 
@@ -593,7 +593,7 @@ internal sealed class EditorContext
     public EditorSelection ToSelection() => new()
     {
         FilePath = FilePath,
-        Text = SelectedText ?? string.Empty,
+        Text = SelectedText ?? "",
         StartLine = StartLine,
         StartColumn = StartColumn,
         EndLine = EndLine,
