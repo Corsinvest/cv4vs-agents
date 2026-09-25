@@ -67,7 +67,7 @@ public partial class PaneToolbar : UserControl
         if (!_pane.SupportsTitleEditing)
         {
             TitleHost.Visibility = Visibility.Collapsed;
-            TitleBox.Text = string.Empty;
+            TitleBox.Text = "";
             return;
         }
         var title = _pane.SessionTitle;

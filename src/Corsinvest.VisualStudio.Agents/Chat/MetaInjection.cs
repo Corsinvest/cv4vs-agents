@@ -55,5 +55,5 @@ public static class MetaInjection
     /// <summary>Remove a leading IDE-context block, returning the user's own text. No block → the
     /// text is returned unchanged.</summary>
     public static string StripIdeContext(string text)
-        => string.IsNullOrEmpty(text) ? text : LeadingIdeContext.Replace(text, string.Empty);
+        => string.IsNullOrEmpty(text) ? text : LeadingIdeContext.Replace(text, "");
 }

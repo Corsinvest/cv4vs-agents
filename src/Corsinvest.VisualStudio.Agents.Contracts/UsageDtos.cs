@@ -43,11 +43,11 @@ public class UsageAttributionDto
 /// (skills / subagents / plugins / MCP servers).</summary>
 public class UsageBehaviorsDto
 {
-    public UsageInsightDto[] Insights { get; set; } = System.Array.Empty<UsageInsightDto>();
-    public UsageAttributionDto[] Skills { get; set; } = System.Array.Empty<UsageAttributionDto>();
-    public UsageAttributionDto[] Subagents { get; set; } = System.Array.Empty<UsageAttributionDto>();
-    public UsageAttributionDto[] Plugins { get; set; } = System.Array.Empty<UsageAttributionDto>();
-    public UsageAttributionDto[] McpServers { get; set; } = System.Array.Empty<UsageAttributionDto>();
+    public UsageInsightDto[] Insights { get; set; } = [];
+    public UsageAttributionDto[] Skills { get; set; } = [];
+    public UsageAttributionDto[] Subagents { get; set; } = [];
+    public UsageAttributionDto[] Plugins { get; set; } = [];
+    public UsageAttributionDto[] McpServers { get; set; } = [];
 
     public bool HasAttribution =>
         (Skills?.Length ?? 0) + (Subagents?.Length ?? 0) + (Plugins?.Length ?? 0) + (McpServers?.Length ?? 0) > 0;
@@ -62,7 +62,7 @@ public class UsageDto
     public string AuthMethod { get; set; } // apiProvider decoded to a human label
     public string Plan { get; set; }
     public bool RateLimitsAvailable { get; set; }
-    public RateWindowDto[] Windows { get; set; } = System.Array.Empty<RateWindowDto>();
+    public RateWindowDto[] Windows { get; set; } = [];
     public UsageBehaviorsDto Day { get; set; }
     public UsageBehaviorsDto Week { get; set; }
 }

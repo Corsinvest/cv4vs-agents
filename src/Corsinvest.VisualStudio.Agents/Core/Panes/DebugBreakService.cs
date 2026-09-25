@@ -105,7 +105,7 @@ internal static class DebugBreakService
 
     private static string Where(IdeDebugService.DebugState state)
     {
-        if (string.IsNullOrEmpty(state.CurrentFile)) { return string.Empty; }
+        if (string.IsNullOrEmpty(state.CurrentFile)) { return ""; }
         var name = Path.GetFileName(state.CurrentFile);
         return state.CurrentLine > 0 ? $" at {name}:{state.CurrentLine}" : $" in {name}";
     }

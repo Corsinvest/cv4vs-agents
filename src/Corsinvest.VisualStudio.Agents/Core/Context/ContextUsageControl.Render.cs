@@ -93,19 +93,19 @@ public partial class ContextUsageControl
             Background = CvContextPalette.EmptyCell,
         };
         var max = d.MaxTokens;
-        foreach (var c in d.Categories ?? Array.Empty<ContextCategoryDto>())
+        foreach (var c in d.Categories ?? [])
         {
             if (c.Name == "Free space" || max <= 0 || c.Tokens <= 0) { continue; }
             bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(c.Tokens, GridUnitType.Star) });
         }
         // A trailing star column for the remaining free space so the coloured slices stay proportional.
-        var used = (d.Categories ?? Array.Empty<ContextCategoryDto>())
+        var used = (d.Categories ?? [])
             .Where(c => c.Name != "Free space" && c.Tokens > 0).Sum(c => (long)c.Tokens);
         var free = Math.Max(0, max - used);
         if (free > 0) { bar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(free, GridUnitType.Star) }); }
 
         var col = 0;
-        foreach (var c in d.Categories ?? Array.Empty<ContextCategoryDto>())
+        foreach (var c in d.Categories ?? [])
         {
             if (c.Name == "Free space" || max <= 0 || c.Tokens <= 0) { continue; }
             var seg = new Border { Background = CvContextPalette.BrushFor(c.Name), ToolTip = $"{c.Name}: {Tok(c.Tokens)}" };
@@ -138,7 +138,7 @@ public partial class ContextUsageControl
     {
         var host = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
         // Categories by tokens desc, Free space last (matches the TS sort).
-        var cats = (d.Categories ?? Array.Empty<ContextCategoryDto>())
+        var cats = (d.Categories ?? [])
             .OrderBy(c => c.Name == "Free space" ? 1 : 0)
             .ThenByDescending(c => c.Tokens)
             .ThenBy(c => c.Name, StringComparer.Ordinal)
@@ -244,7 +244,7 @@ public partial class ContextUsageControl
         if (d.Skills != null && d.Skills.TotalSkills > 0)
         {
             host.Children.Add(Tree("Skills", d.Skills.TotalSkills, d.Skills.Tokens, null,
-                Grouped(d.Skills.SkillFrontmatter ?? Array.Empty<ContextSkillDto>(),
+                Grouped(d.Skills.SkillFrontmatter ?? [],
                     s => s.Source, s => s.Tokens, s => SubRow(s.Name, s.Tokens))));
         }
         if ((d.McpTools?.Length ?? 0) > 0)

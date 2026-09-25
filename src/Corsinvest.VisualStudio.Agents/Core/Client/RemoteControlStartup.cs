@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-using System.Linq;
 using Corsinvest.VisualStudio.Agents.Helpers;
 using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Client;
 

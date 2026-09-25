@@ -469,7 +469,7 @@ internal sealed partial class IdeDiffViewer
     {
         var temp = Path.Combine(Path.GetTempPath(),
                                 $"{AppConstants.AppId}-diff-{Guid.NewGuid():N}-{namedFor}");
-        File.WriteAllText(temp, content ?? string.Empty);
+        File.WriteAllText(temp, content ?? "");
         return temp;
     }
 

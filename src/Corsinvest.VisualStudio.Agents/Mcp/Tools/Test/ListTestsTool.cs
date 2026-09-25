@@ -46,11 +46,17 @@ internal sealed class ListTestsTool : McpTool<ListTestsArgs>
         // a build, so an early answer is empty. Under a filter, though, empty is a real answer, and
         // blaming discovery there sends the caller chasing a problem that is not theirs.
         var filtered = args?.Filter?.Any(f => !string.IsNullOrWhiteSpace(f)) == true;
-        return new { supported = true, count = 0, tests, note = filtered
-            ? "No discovered test matches that filter. It matches against the fully-qualified name, "
-            + "so try a shorter fragment, or call test_list with no filter to see what is there."
-            : "The Test Explorer has discovered nothing yet. Discovery runs in the background after "
-            + "a build, so try again in a moment; failing that, build the solution, or run test_run, "
-            + "which discovers first." };
+        return new
+        {
+            supported = true,
+            count = 0,
+            tests,
+            note = filtered
+                    ? "No discovered test matches that filter. It matches against the fully-qualified name, "
+                        + "so try a shorter fragment, or call test_list with no filter to see what is there."
+                    : "The Test Explorer has discovered nothing yet. Discovery runs in the background after "
+                        + "a build, so try again in a moment; failing that, build the solution, or run test_run, "
+                        + "which discovers first."
+        };
     }
 }

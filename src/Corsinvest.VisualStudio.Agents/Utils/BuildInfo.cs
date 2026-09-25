@@ -41,7 +41,7 @@ internal static class BuildInfo
 
         // Split on the first hyphen only, so a dotted suffix (rc.1) survives intact.
         var parts = Version.Split(['-'], 2);
-        PreRelease = parts.Length > 1 ? parts[1] : string.Empty;
+        PreRelease = parts.Length > 1 ? parts[1] : "";
 
         Copyright = asm.GetCustomAttribute<AssemblyCopyrightAttribute>().Copyright;
     }

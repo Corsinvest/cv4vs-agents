@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-using System;
-using System.IO;
 using Corsinvest.VisualStudio.Agents.Core.Client;
 using Newtonsoft.Json.Linq;
+using System;
+using System.IO;
 using Xunit;
 
 namespace Corsinvest.VisualStudio.Agents.Tests;

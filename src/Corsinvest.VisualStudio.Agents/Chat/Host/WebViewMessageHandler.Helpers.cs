@@ -401,7 +401,7 @@ internal sealed partial class WebViewMessageHandler
         else if (stripped.StartsWith("file://", System.StringComparison.OrdinalIgnoreCase)) { stripped = stripped.Substring(7); }
         var normalized = stripped.Replace('/', Path.DirectorySeparatorChar);
         if (Path.IsPathRooted(normalized) && File.Exists(normalized)) { return normalized; }
-        var combined = Path.Combine(entry.WorkingDirectory ?? string.Empty, normalized);
+        var combined = Path.Combine(entry.WorkingDirectory ?? "", normalized);
         if (File.Exists(combined)) { return combined; }
         if (File.Exists(normalized)) { return normalized; }
         // Bare name (a "X.cs:20" link carries just the file name): search the workspace by name.
