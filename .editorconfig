@@ -9,6 +9,9 @@ indent_style = space
 indent_size = 4
 trim_trailing_whitespace = true
 insert_final_newline = true
+# Comments and strings are written in English. Without this VS spell-checks them in the IDE's own
+# language, and on an Italian install every English word is flagged.
+spelling_languages = en-us
 
 [*.cs]
 # Require accessibility modifiers (private, public, etc.) — except on interface members, where

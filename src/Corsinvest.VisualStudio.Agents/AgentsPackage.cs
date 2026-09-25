@@ -6,7 +6,6 @@
 using Corsinvest.VisualStudio.Agents.Chat.Pane;
 using Corsinvest.VisualStudio.Agents.Cli.Pane;
 using Corsinvest.VisualStudio.Agents.Core.Panes;
-using Corsinvest.VisualStudio.Agents.Helpers;
 using Corsinvest.VisualStudio.Agents.Menu;
 using Corsinvest.VisualStudio.Agents.Options;
 using Microsoft.VisualStudio;
