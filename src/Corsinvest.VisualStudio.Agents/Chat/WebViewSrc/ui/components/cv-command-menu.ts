@@ -54,6 +54,9 @@ export class CvCommandMenu extends LitElement {
     moveSelection(delta: number): void {
         this._list?.moveSelection(delta);
     }
+    movePage(dir: number): void {
+        this._list?.movePage(dir);
+    }
     pickActive(): void {
         this._list?.pickActive();
     }
@@ -193,7 +196,9 @@ export class CvCommandMenu extends LitElement {
             </span>`;
         }
         if (cmd instanceof SlashCommand && cmd.argumentHint) {
-            return html`<span class="row-trailing">${cmd.argumentHint}</span>`;
+            return html`<span class="row-hint" title=${cmd.argumentHint}
+                >${cmd.argumentHint}</span
+            >`;
         }
         if (cmd.id === 'report-problem' && appState.ui.appVersion) {
             return html`<span class="row-trailing">v${appState.ui.appVersion}</span>`;
@@ -210,6 +215,7 @@ export class CvCommandMenu extends LitElement {
                 .items=${this._flat}
                 .sections=${this._displayGroups()}
                 ?searchable=${this.searchable}
+                searchPlaceholder="Filter actions…"
                 .query=${this.query}
                 emptyText="No matching commands"
                 .renderRow=${(cmd: ChatCommand) => html`

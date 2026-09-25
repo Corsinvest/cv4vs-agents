@@ -22,8 +22,9 @@ export interface ListSection<T> {
  * + their own select event.
  *
  * Navigation runs over the navigable items only (`items` filtered by `isNavigable`), so an index
- * skips both section headings and non-navigable rows (e.g. disabled models). Filtering (Fuse,
- * etc.) is NOT here — a searchable list emits `search-input` and the caller re-supplies items.
+ * skips both section headings and non-navigable rows (e.g. disabled models). A searchable list
+ * either filters itself (the caller supplies `searchText`) or emits `search-input` and the caller
+ * re-supplies items (Fuse, in the command palette).
  */
 @customElement('cv-popover-list')
 export class CvPopoverList extends LitElement {
@@ -105,13 +106,13 @@ export class CvPopoverList extends LitElement {
                 display: flex;
                 align-items: center;
                 gap: var(--spacingHorizontalS);
-                padding: 6px 8px;
+                padding: 4px 8px;
                 border-radius: var(--borderRadiusMedium);
                 cursor: pointer;
                 color: var(--colorNeutralForeground2);
                 font-family: var(--fontFamilyBase);
                 font-size: 1em;
-                line-height: var(--lineHeightBase300);
+                line-height: 1.2;
                 min-width: 0;
             }
             .row:hover {
@@ -177,6 +178,18 @@ export class CvPopoverList extends LitElement {
                 color: var(--colorNeutralForeground3);
                 text-align: right;
             }
+            /* Free text beside the label (a command's argument hint): it gives way to the label,
+               which must stay readable, instead of pushing it out of the row. */
+            .row-hint {
+                flex: 0 1 auto;
+                min-width: 0;
+                max-width: 50%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                font-size: var(--fontSizeBase200);
+                color: var(--colorNeutralForeground3);
+            }
             /* Glyph of the current value (e.g. the active permission mode), so the row,
              * the toolbar trigger and the picker all show the same icon. */
             .trailing-icon {
@@ -193,10 +206,9 @@ export class CvPopoverList extends LitElement {
                 min-width: 0;
                 display: flex;
                 flex-direction: column;
-                gap: 1px;
             }
             .row-desc {
-                font-size: var(--fontSizeBase200);
+                font-size: 0.85em;
                 color: var(--colorNeutralForeground3);
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -264,7 +276,8 @@ export class CvPopoverList extends LitElement {
                 --cv-slider-border: var(--colorNeutralForegroundOnBrand);
             }
             .row.selected .dots-val,
-            .row.selected .row-trailing {
+            .row.selected .row-trailing,
+            .row.selected .row-hint {
                 color: var(--colorNeutralForegroundOnBrand);
                 opacity: 0.85;
             }
@@ -296,10 +309,18 @@ export class CvPopoverList extends LitElement {
     /** When set, rows are grouped under headings; navigation still runs over the flat navigable set. */
     @property({ attribute: false }) sections?: ListSection<unknown>[];
     @property() emptyText = 'No results';
+    /** Ask for the search box. Shown only when there is something to choose between (more than
+     *  one item), and kept for the rest of the open once shown — a filter narrowing the caller's
+     *  items down to one must not take the box away while the user is typing in it. */
     @property({ type: Boolean }) searchable = false;
+    @property() searchPlaceholder = 'Search…';
+    /** The text an item is searched by. When set the list filters itself against its own query;
+     *  when absent it only emits `search-input` and the caller re-supplies the items. */
+    @property({ attribute: false }) searchText?: (item: unknown) => string;
     @property() query = '';
 
     @state() private _activeIdx = 0;
+    @state() private _searchShown = false;
 
     @query('.list') private _list?: HTMLDivElement;
     @query('.search') private _search?: HTMLElement & { value: string };
@@ -307,10 +328,23 @@ export class CvPopoverList extends LitElement {
     /** The flat list of navigable items, in display order — what ↑/↓ and pickActive index into. */
     private get _nav(): unknown[] {
         const nav = this.isNavigable;
-        return nav ? this.items.filter(nav) : this.items;
+        const items = this._filter(this.items);
+        return nav ? items.filter(nav) : items;
+    }
+
+    /** The items left by the self-managed filter (`searchText`); all of them otherwise. */
+    private _filter<T>(items: T[]): T[] {
+        const text = this.searchText;
+        const q = this.query.trim().toLowerCase();
+        return text && q ? items.filter((it) => text(it).toLowerCase().includes(q)) : items;
     }
 
     override willUpdate(changed: Map<string, unknown>): void {
+        if (!this.searchable) {
+            this._searchShown = false;
+        } else if (this.items.length > 1) {
+            this._searchShown = true;
+        }
         // Reset the cursor to the first navigable row when the visible SET changes
         // (filter typed, results replaced). But items/sections are rebuilt as fresh
         // array refs on every parent re-render — e.g. toggling a trailing switch/slider
@@ -339,7 +373,7 @@ export class CvPopoverList extends LitElement {
     private _lastNavSig = '';
 
     override updated(changed: Map<string, unknown>): void {
-        if (changed.has('searchable') && this.searchable) {
+        if (changed.has('_searchShown') && this._searchShown) {
             requestAnimationFrame(() => this._search?.focus());
         }
     }
@@ -351,6 +385,19 @@ export class CvPopoverList extends LitElement {
             return;
         }
         this._activeIdx = (this._activeIdx + delta + len) % len;
+        queueMicrotask(() => this._scrollActiveIntoView());
+    }
+
+    /** Move the cursor by one visible page (dir ±1). Clamped at the ends rather than wrapped like
+     *  the arrows: a jump of a whole page that lands at the other end loses you where you were. */
+    movePage(dir: number): void {
+        const len = this._nav.length;
+        const row = this._list?.querySelector<HTMLElement>('.row.navigable');
+        if (len === 0 || !this._list || !row) {
+            return;
+        }
+        const page = Math.max(1, Math.floor(this._list.clientHeight / row.offsetHeight) - 1);
+        this._activeIdx = Math.max(0, Math.min(len - 1, this._activeIdx + dir * page));
         queueMicrotask(() => this._scrollActiveIntoView());
     }
 
@@ -395,6 +442,9 @@ export class CvPopoverList extends LitElement {
 
     private _onSearchInput = (e: Event): void => {
         const q = (e.currentTarget as HTMLElement & { value?: string }).value ?? '';
+        if (this.searchText) {
+            this.query = q;
+        }
         this.dispatchEvent(
             new CustomEvent('search-input', {
                 detail: { query: q },
@@ -411,6 +461,9 @@ export class CvPopoverList extends LitElement {
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             this.moveSelection(-1);
+        } else if (e.key === 'PageDown' || e.key === 'PageUp') {
+            e.preventDefault();
+            this.movePage(e.key === 'PageDown' ? 1 : -1);
         } else if (e.key === 'Enter') {
             e.preventDefault();
             this.pickActive();
@@ -468,26 +521,26 @@ export class CvPopoverList extends LitElement {
                         <span>${s.label}</span>
                         ${s.hint ? html`<span class="section-hint">${s.hint}</span>` : nothing}
                     </div>
-                    ${s.items.map(rowOf)}
+                    ${this._filter(s.items).map(rowOf)}
                 `,
             )}`;
         }
-        return html`${this.items.map(rowOf)}`;
+        return html`${this._filter(this.items).map(rowOf)}`;
     }
 
     override render() {
         const empty = this.sections
-            ? this.sections.every((s) => s.items.length === 0)
-            : this.items.length === 0;
+            ? this.sections.every((s) => this._filter(s.items).length === 0)
+            : this._filter(this.items).length === 0;
         return html`
             <div class="popover">
                 ${this.header ? html`<div class="header">${this.header}</div>` : nothing}
                 ${
-                    this.searchable
+                    this._searchShown
                         ? html`<fluent-text-input
                               class="search"
                               type="text"
-                              placeholder="Filter actions…"
+                              placeholder=${this.searchPlaceholder}
                               aria-label="Filter"
                               .value=${this.query}
                               @input=${this._onSearchInput}
