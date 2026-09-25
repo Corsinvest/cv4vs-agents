@@ -121,7 +121,7 @@ public partial class UsageControl : UserControl
         var firstParty = string.IsNullOrEmpty(provider) || provider == "firstParty";
         ManageLink.Visibility = firstParty ? Visibility.Visible : Visibility.Collapsed;
 
-        var windows = (dto.Windows ?? Array.Empty<RateWindowDto>())
+        var windows = (dto.Windows ?? [])
             .Select(w => new WindowVm
             {
                 Name = w.Name,
@@ -156,7 +156,7 @@ public partial class UsageControl : UserControl
             + " · these are independent characteristics of your usage, not a breakdown";
 
         // The DTO already carries the composed headline + body; bind them directly.
-        InsightsList.ItemsSource = b?.Insights ?? Array.Empty<UsageInsightDto>();
+        InsightsList.ItemsSource = b?.Insights ?? [];
 
         var groups = new List<AttributionVm>();
         AddGroup(groups, "Skills", b?.Skills);
