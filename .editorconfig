@@ -2,7 +2,9 @@ root = true
 
 [*]
 charset = utf-8
-end_of_line = crlf
+# LF, as .gitattributes normalises the repo to: crlf here made the editor write CRLF lines that git
+# then converted back, one file at a time.
+end_of_line = lf
 indent_style = space
 indent_size = 4
 trim_trailing_whitespace = true
