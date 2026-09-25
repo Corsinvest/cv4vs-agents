@@ -2,17 +2,21 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
 import { iconStyles, tooltipStyles } from '../styles/shared';
 import { modelLabelShort } from '../../core/ai-models';
+import { currentEffortLevels } from '../../core/commands/model-controls';
+import { effortLabel } from '../../core/types';
 
 /**
  * Model trigger in the input toolbar, next to the permission selector: shows the active model and
- * asks cv-prompt to open the picker (cv-model-list, above the textarea). The list, not this button,
- * owns the menu — same split as cv-permission-selector.
+ * its effort, and asks cv-prompt to open the picker (cv-model-list, above the textarea), which
+ * carries the effort slider below the models. The list, not this button, owns the menu — same split
+ * as cv-permission-selector. The effort is left out when the model has none (Haiku), on the same
+ * condition that hides the slider.
  *
  * The label is deliberately the SHORT name: the toolbar row is narrow and already carries attach,
  * gauge, sub-agent, IDE badge, permission and mic. The full name and the model's description are
@@ -42,15 +46,28 @@ export class CvModelSelector extends LitElement {
                 padding-inline: 8px;
                 min-width: 0;
             }
-            .trigger span {
+            .model {
                 max-width: 14ch;
                 overflow: hidden;
                 text-overflow: ellipsis;
+            }
+            /* A soft tag, not plain grey text: as text the level ran into the permission trigger
+               beside it ("Opus 5.5 Medium Manual"), and a border on the button would be the only
+               one in the toolbar. A span of ours, so the fill is allowed. */
+            .effort {
+                margin-inline-start: 4px;
+                padding: 1px 6px;
+                border-radius: var(--borderRadiusMedium);
+                background: var(--colorNeutralBackground3);
+                color: var(--colorNeutralForeground3);
+                white-space: nowrap;
             }
         `,
     ];
 
     @state() private _current = appState.currentModel;
+    @state() private _effort = appState.effortLevel;
+    @state() private _ultracode = appState.ultracodeEnabled;
 
     private readonly _subs = new StateSubscriptions(this);
 
@@ -58,6 +75,12 @@ export class CvModelSelector extends LitElement {
         super();
         this._subs.on('currentModel', (v) => {
             this._current = v;
+        });
+        this._subs.on('effortLevel', (v) => {
+            this._effort = v;
+        });
+        this._subs.on('ultracodeEnabled', (v) => {
+            this._ultracode = v;
         });
         this._subs.rerenderOn('models');
     }
@@ -75,17 +98,26 @@ export class CvModelSelector extends LitElement {
             <fluent-button
                 id="model-trigger"
                 class="trigger"
-                aria-label="Model"
+                aria-label="Model and effort"
                 appearance="subtle"
                 size="small"
                 @click=${this._onClick}
             >
-                <span>${modelLabelShort(this._current)}</span>
+                <span class="model">${modelLabelShort(this._current)}</span>
+                ${
+                    currentEffortLevels() !== null
+                        ? html`<span class="effort"
+                              >${effortLabel(this._effort, this._ultracode)}</span
+                          >`
+                        : nothing
+                }
             </fluent-button>
             <!-- The name of the control, like the permission trigger beside it. The full name, the
                  [1m] variant and the description are all in cv-model-list, one row each — a click
                  answers "which model is this exactly" better than a tooltip echoing the button. -->
-            <fluent-tooltip anchor="model-trigger" positioning="above-end">Model</fluent-tooltip>
+            <fluent-tooltip anchor="model-trigger" positioning="above-end"
+                >Model and effort</fluent-tooltip
+            >
         `;
     }
 }

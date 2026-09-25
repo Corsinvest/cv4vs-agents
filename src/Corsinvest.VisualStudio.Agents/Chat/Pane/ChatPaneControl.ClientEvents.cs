@@ -231,8 +231,8 @@ public partial class ChatPaneControl
         => Dispatcher.Invoke(() =>
         {
             // Publish the model catalogue only on the first init (fresh pane, no --resume).
-            // --resume grafts the session model id onto the catalogue (e.g. duplicating "opus[1m]"),
-            // dirtying the picker on later inits.
+            // A --resume init answers with a different catalogue (CLI 2.1.282 drops "opus[1m]"),
+            // so a later init must not replace the first one.
             // Slash commands are re-published every time (they don't dirty).
             if (!_catalogPublished)
             {
