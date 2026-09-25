@@ -160,12 +160,14 @@ function wireBridgeHandlers(): void {
             import('./components/cv-prompt').CvPrompt | null;
         const mention = data?.mention;
         const text = mention
-            ? `${mentionToken(relPath(mention.path, state.workingDirectory), mention.startLine, mention.endLine)}\n`
+            ? `${mentionToken(relPath(mention.path, state.workingDirectory), mention.startLine, mention.endLine)}`
             : (data?.text ?? '');
         if (data?.append) {
             // One reference per line: paths are long, and several on one line wrap where they will.
-            // Text is a block of its own, a blank line below what is there.
-            input?.appendText(text, mention ? '\n' : '\n\n');
+            // Text is a block of its own, a blank line below what is there. Either way the caret
+            // ends on a fresh line, ready for the question or the next piece.
+            const piece = text.endsWith('\n') ? text : `${text}\n`;
+            input?.appendText(piece, mention ? '\n' : '\n\n');
         } else if (data?.send && text) {
             input?.setComposerTextAndSubmit(text);
         } else {

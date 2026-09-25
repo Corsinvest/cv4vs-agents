@@ -76,6 +76,6 @@ internal static class AddToChatMenuCommand
         var fence = ctx.SelectedText.Contains("```") ? "````" : "```";
         var language = Path.GetExtension(ctx.FilePath).TrimStart('.');
         PromptDispatcher.Append(
-            $"{ctx.FilePath}:{lines}\n{fence}{language}\n{ctx.SelectedText.TrimEnd('\r', '\n')}\n{fence}\n");
+            $"{ctx.FilePath}:{lines}\n{fence}{language}\n{ctx.SelectedText.TrimEnd('\r', '\n')}\n{fence}");
     }
 }
