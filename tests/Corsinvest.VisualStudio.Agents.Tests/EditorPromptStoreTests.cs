@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-using System.Collections.Generic;
 using Corsinvest.VisualStudio.Agents.Editor;
+using System.Collections.Generic;
 using Xunit;
 
 namespace Corsinvest.VisualStudio.Agents.Tests;

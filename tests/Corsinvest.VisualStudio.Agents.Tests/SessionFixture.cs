@@ -170,23 +170,23 @@ internal static class Jsonl
     /// scan taking the first "type" it meets reads the wrong one.</summary>
     public static JObject QueuedPrompt(string uuid, string sourceUuid, string text, string parent = null,
                                        string commandMode = "prompt", JObject origin = null) => new()
-    {
-        ["parentUuid"] = parent,
-        ["isSidechain"] = false,
-        ["attachment"] = new JObject
-        {
-            ["type"] = "queued_command",
-            ["prompt"] = new JArray
+                                       {
+                                           ["parentUuid"] = parent,
+                                           ["isSidechain"] = false,
+                                           ["attachment"] = new JObject
+                                           {
+                                               ["type"] = "queued_command",
+                                               ["prompt"] = new JArray
             {
                 new JObject { ["type"] = "text", ["text"] = "<ide_opened_file>Foo.cs</ide_opened_file>" },
                 new JObject { ["type"] = "text", ["text"] = text },
             },
-            ["source_uuid"] = sourceUuid,
-            ["commandMode"] = commandMode,
-            ["origin"] = origin ?? new JObject { ["kind"] = "human" },
-        },
-        ["type"] = "attachment",
-        ["uuid"] = uuid,
-        ["timestamp"] = "2026-08-26T10:00:02.000Z",
-    };
+                                               ["source_uuid"] = sourceUuid,
+                                               ["commandMode"] = commandMode,
+                                               ["origin"] = origin ?? new JObject { ["kind"] = "human" },
+                                           },
+                                           ["type"] = "attachment",
+                                           ["uuid"] = uuid,
+                                           ["timestamp"] = "2026-08-26T10:00:02.000Z",
+                                       };
 }
