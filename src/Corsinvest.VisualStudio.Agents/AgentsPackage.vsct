@@ -88,6 +88,25 @@
           <ButtonText>cv4vs Agents</ButtonText>
         </Strings>
       </Menu>
+      <!-- Solution Explorer and a document's tab: a submenu even with one entry, so prompts can
+           join it later without moving anything, and so "Add reference to chat" is not read as
+           Copilot's, which sits in the same menus. -->
+      <Menu guid="guidAgentsCommandSet" id="SolutionSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="SolutionContextGroup"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>cv4vs Agents</ButtonText>
+        </Strings>
+      </Menu>
+      <Menu guid="guidAgentsCommandSet" id="TabSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="TabContextGroup"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>cv4vs Agents</ButtonText>
+        </Strings>
+      </Menu>
 
       <!-- Help &amp; Feedback: docs first (it answers without bothering anyone), contact after. -->
       <Menu guid="guidAgentsCommandSet" id="HelpSubMenu" priority="0x0100" type="Menu">
@@ -178,6 +197,24 @@
       </Group>
       <Group guid="guidAgentsCommandSet" id="OutputAddToChatGroup" priority="0x0200">
         <Parent guid="guidAgentsCommandSet" id="OutputSubMenu"/>
+      </Group>
+      <!-- Solution Explorer: a file here; a folder, a project and a multi-selection through the
+           CommandPlacements below, since a Group carries one Parent. At the top like the others:
+           each of those menus has its own groups at its own priorities, so anything in between
+           lands in a different place per menu — the top is the one position that is the same in
+           all of them. -->
+      <Group guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE"/>
+      </Group>
+      <Group guid="guidAgentsCommandSet" id="TabContextGroup" priority="0x0050">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_EZDOCWINTAB"/>
+      </Group>
+      <!-- Inside them, 0x0200 like the other menus' Add to chat: prompts, when they come, go above. -->
+      <Group guid="guidAgentsCommandSet" id="SolutionAddToChatGroup" priority="0x0200">
+        <Parent guid="guidAgentsCommandSet" id="SolutionSubMenu"/>
+      </Group>
+      <Group guid="guidAgentsCommandSet" id="TabAddToChatGroup" priority="0x0200">
+        <Parent guid="guidAgentsCommandSet" id="TabSubMenu"/>
       </Group>
       <Group guid="guidAgentsCommandSet" id="HelpDocsGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="HelpSubMenu"/>
@@ -273,6 +310,16 @@
         <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings><ButtonText>Add to chat</ButtonText></Strings>
       </Button>
+      <Button guid="guidAgentsCommandSet" id="SolutionAddReferenceToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="SolutionAddToChatGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Add reference to chat</ButtonText></Strings>
+      </Button>
+      <Button guid="guidAgentsCommandSet" id="TabAddReferenceToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="TabAddToChatGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Add reference to chat</ButtonText></Strings>
+      </Button>
 
       <Button guid="guidAgentsCommandSet" id="SettingsCommandId" priority="0x0100" type="Button">
         <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
@@ -360,6 +407,22 @@
   </Commands>
 
 
+  <CommandPlacements>
+    <!-- The Solution Explorer group placed again, not a second one to keep in step. -->
+    <CommandPlacement guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_FOLDERNODE"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_PROJNODE"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_MULTIITEM"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_PROJITEM"/>
+    </CommandPlacement>
+  </CommandPlacements>
+
   <Symbols>
     <GuidSymbol name="guidAgentsPackage" value="{b1c2d3e4-f5a6-7890-bcde-fa1234567890}" />
     <GuidSymbol name="guidAgentsCommandSet" value="{a2b3c4d5-e6f7-8901-cdef-ab1234567890}">
@@ -389,6 +452,12 @@
       <IDSymbol name="OutputSubMenu" value="0x1081" />
       <IDSymbol name="OutputPromptsGroup" value="0x1082" />
       <IDSymbol name="OutputAddToChatGroup" value="0x1083" />
+      <IDSymbol name="SolutionContextGroup" value="0x1084" />
+      <IDSymbol name="SolutionSubMenu" value="0x1085" />
+      <IDSymbol name="SolutionAddToChatGroup" value="0x1086" />
+      <IDSymbol name="TabContextGroup" value="0x1087" />
+      <IDSymbol name="TabSubMenu" value="0x1088" />
+      <IDSymbol name="TabAddToChatGroup" value="0x1089" />
       <IDSymbol name="HelpDocsGroup" value="0x1080" />
       <IDSymbol name="HelpContactGroup" value="0x1090" />
       <!-- Must match PackageIds.cs — a mismatch is silent: the entry just never appears. -->
@@ -410,6 +479,8 @@
       <IDSymbol name="AddSelectionToChatCommandId" value="0x020F" />
       <IDSymbol name="ErrorListAddToChatCommandId" value="0x0210" />
       <IDSymbol name="OutputAddToChatCommandId" value="0x0211" />
+      <IDSymbol name="SolutionAddReferenceToChatCommandId" value="0x0212" />
+      <IDSymbol name="TabAddReferenceToChatCommandId" value="0x0213" />
       <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
            number of open panes and must not run into the fixed ids above. -->
       <IDSymbol name="ActiveSessionCommandId" value="0x0300" />

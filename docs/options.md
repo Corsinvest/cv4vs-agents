@@ -168,6 +168,10 @@ The Error List and Output menus end the same way, with one **Add to chat** that 
 prompts would be handed — the selected rows, the pane's selection or tail — as a block below
 what the composer holds.
 
+Solution Explorer and a document's tab have a **cv4vs Agents** submenu too, with **Add reference
+to chat** alone for now: the selected files, folders and projects (a project stands for its
+folder) as references, one per line; on a tab, the whole file.
+
 Like profiles, these are **not** in the VS settings store: they live in `prompts.json` so the
 menus can be built without opening the Options page first — see
 [Settings and data](settings-and-data.md).

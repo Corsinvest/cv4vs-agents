@@ -147,7 +147,8 @@ own.
   instruction. The list is yours to edit in Options → Prompts — title, text, whether the
   entry needs a selection, and whether it sends on click instead of waiting. Below them, **Add
   reference to chat** and **Add selection to chat** gather pieces from several files into the
-  composer before you write the question.
+  composer before you write the question. The same **Add reference to chat** is in Solution
+  Explorer — files, folders, projects, several at once — and on a document's tab.
 - **Ask about a failure** — right-click in the **Output window** or the **Error List** and the same
   **cv4vs Agents** submenu offers its own prompts (Explain, Fix) and **Add to chat**. In the Error
   List it takes the rows you selected, with their file, line and project; in the Output window your

@@ -55,12 +55,15 @@ internal static class AddToChatMenuCommand
         var ctx = IdeContextService.Instance.GetCurrentContext();
         if (ctx == null) { return; }
 
-        PromptDispatcher.Append(new ComposerMention
-        {
-            Path = ctx.FilePath,
-            StartLine = ctx.HasSelection ? ctx.StartLine : null,
-            EndLine = ctx.HasSelection ? ctx.EndLine : null,
-        });
+        PromptDispatcher.Append(
+        [
+            new ComposerMention
+            {
+                Path = ctx.FilePath,
+                StartLine = ctx.HasSelection ? ctx.StartLine : null,
+                EndLine = ctx.HasSelection ? ctx.EndLine : null,
+            },
+        ]);
     }
 
     /// <summary>Headed by the absolute path and the lines, the form the CLI's own

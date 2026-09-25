@@ -10,7 +10,7 @@ import { Msg } from '../core/bridge-messages';
 import { state } from '../core/state';
 import type { IdeContextNotification } from '../core/types';
 import { PERMISSION_MODE } from '../core/types';
-import { mentionToken, normPath, relPath } from '../core/path';
+import { composerMentionToken, normPath } from '../core/path';
 import { closeTopDialog } from '../core/dialog-focus';
 import { setExtraLinkableExtensions } from '../core/file-links';
 import type {
@@ -158,16 +158,27 @@ function wireBridgeHandlers(): void {
         }
         const input = document.querySelector('cv-prompt') as
             import('./components/cv-prompt').CvPrompt | null;
-        const mention = data?.mention;
-        const text = mention
-            ? `${mentionToken(relPath(mention.path, state.workingDirectory), mention.startLine, mention.endLine)}`
-            : (data?.text ?? '');
+        const mentions = data?.mentions ?? [];
+        const text =
+            mentions.length > 0
+                ? mentions
+                      .map((m) =>
+                          composerMentionToken(
+                              m.path,
+                              state.workingDirectory,
+                              m.startLine,
+                              m.endLine,
+                              m.isFolder,
+                          ),
+                      )
+                      .join('\n')
+                : (data?.text ?? '');
         if (data?.append) {
             // One reference per line: paths are long, and several on one line wrap where they will.
             // Text is a block of its own, a blank line below what is there. Either way the caret
             // ends on a fresh line, ready for the question or the next piece.
             const piece = text.endsWith('\n') ? text : `${text}\n`;
-            input?.appendText(piece, mention ? '\n' : '\n\n');
+            input?.appendText(piece, mentions.length > 0 ? '\n' : '\n\n');
         } else if (data?.send && text) {
             input?.setComposerTextAndSubmit(text);
         } else {

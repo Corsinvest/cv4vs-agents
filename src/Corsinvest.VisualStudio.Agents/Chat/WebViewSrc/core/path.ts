@@ -60,6 +60,22 @@ export function mentionToken(
     return target.includes(' ') ? `@"${target}"` : `@${target}`;
 }
 
+/**
+ * The `@…` token for an absolute path the host sent: relative to the working directory when it is
+ * inside it, absolute otherwise. A folder keeps its trailing slash, inside the quotes as the @ menu
+ * writes it; the working directory itself is `./` rather than an empty path.
+ */
+export function composerMentionToken(
+    path: string,
+    workingDirectory: string | undefined | null,
+    startLine?: number | null,
+    endLine?: number | null,
+    isFolder?: boolean,
+): string {
+    const rel = relPath(path, workingDirectory);
+    return mentionToken(isFolder ? `${rel || '.'}/` : rel, startLine, endLine);
+}
+
 export function fileName(path: string | undefined | null): string {
     return normPath(path).split('/').pop() ?? '';
 }

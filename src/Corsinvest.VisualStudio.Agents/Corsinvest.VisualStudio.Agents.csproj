@@ -349,6 +349,7 @@
     <Compile Include="Editor\AddToChatMenuCommand.cs" />
     <Compile Include="Editor\EditorPromptsMenuCommand.cs" />
     <Compile Include="Editor\PromptDispatcher.cs" />
+    <Compile Include="Editor\SolutionAddToChatMenuCommand.cs" />
     <Compile Include="Editor\WindowAddToChatMenuCommand.cs" />
     <Compile Include="Editor\WindowPayload.cs" />
     <Compile Include="Core\Panes\PaneLauncher.cs" />
