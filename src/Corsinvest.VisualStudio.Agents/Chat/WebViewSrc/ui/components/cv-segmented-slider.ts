@@ -216,8 +216,10 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
         // The fill runs past the knob, like fluent-switch — but it is measured from the track's own
         // edges, not from the knob: derived from knobPx it inherited the 11px padding the knob is
         // inset by, so at the last stop it stopped short of the right edge and left a sliver of
-        // bare track. 19px is that inset plus the knob's 8px half.
-        const fillPx = `calc(19px + (100% - 19px) * ${pos / 100})`;
+        // bare track. 22px is the knob's centre (11px) plus half the track's height, so the fill ends
+        // in a semicircle concentric with the knob: ending at the knob's edge (19px) left the first
+        // stop ringed on three sides and bare on the right.
+        const fillPx = `calc(22px + (100% - 22px) * ${pos / 100})`;
 
         return html`
             ${
