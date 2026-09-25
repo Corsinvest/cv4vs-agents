@@ -99,10 +99,9 @@ public sealed class PaneEntry
     /// VS routes Esc through IOleCommandTarget, so it never reaches the popup on its own.</summary>
     internal Func<bool> DismissHistoryAction { get; set; }
 
-    /// <summary>Writes text into this pane's composer, for the editor context menu and the
-    /// debugger-break offer; the flag sends it outright. Chat panes only — the CLI pane has no
-    /// composer of ours to fill.</summary>
-    internal Action<string, bool> SetComposerAction { get; set; }
+    /// <summary>Fills or adds to this pane's composer, for the context menus and the
+    /// debugger-break offer. Chat panes only — the CLI pane has no composer of ours to fill.</summary>
+    internal Action<SetComposerNotification> SetComposerAction { get; set; }
 
     /// <summary>Asks this pane's own claude.exe for plan usage, so the status bar needn't start one.
     /// Chat panes only. Answers null while the CLI hasn't finished init, or when get_usage failed —

@@ -69,6 +69,45 @@
         </Strings>
       </Menu>
 
+      <!-- The same submenu in the Error List and the Output window: one each rather than one placed
+           twice, so every command inside knows its window by its id — VS routes a context-menu
+           command without saying which menu it came from. -->
+      <Menu guid="guidAgentsCommandSet" id="ErrorListSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="ErrorListContextGroup"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>cv4vs Agents</ButtonText>
+        </Strings>
+      </Menu>
+      <Menu guid="guidAgentsCommandSet" id="OutputSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="OutputContextGroup"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>cv4vs Agents</ButtonText>
+        </Strings>
+      </Menu>
+      <!-- Solution Explorer and a document's tab: a submenu even with one entry, so prompts can
+           join it later without moving anything, and so "Add reference to chat" is not read as
+           Copilot's, which sits in the same menus. -->
+      <Menu guid="guidAgentsCommandSet" id="SolutionSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="SolutionContextGroup"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>cv4vs Agents</ButtonText>
+        </Strings>
+      </Menu>
+      <Menu guid="guidAgentsCommandSet" id="TabSubMenu" priority="0x0100" type="Menu">
+        <Parent guid="guidAgentsCommandSet" id="TabContextGroup"/>
+        <Icon guid="guidImages" id="bmpPic1"/>
+        <CommandFlag>IconAndText</CommandFlag>
+        <Strings>
+          <ButtonText>cv4vs Agents</ButtonText>
+        </Strings>
+      </Menu>
+
       <!-- Help &amp; Feedback: docs first (it answers without bothering anyone), contact after. -->
       <Menu guid="guidAgentsCommandSet" id="HelpSubMenu" priority="0x0100" type="Menu">
         <Parent guid="guidAgentsCommandSet" id="HelpGroup"/>
@@ -129,10 +168,12 @@
       <Group guid="guidAgentsCommandSet" id="EditorPromptsGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="EditorPromptsSubMenu"/>
       </Group>
-      <!-- Explain, in the two windows that show a failure. A flat entry rather than the editor's
-           submenu: there is one thing to ask of a build log, and a submenu holding a single item
-           is a click spent on nothing. Same low priority, for the same reason — it is reached
-           without hunting.
+      <!-- Add to chat, below the prompts: a group of its own so VS draws the separator. -->
+      <Group guid="guidAgentsCommandSet" id="EditorAddToChatGroup" priority="0x0200">
+        <Parent guid="guidAgentsCommandSet" id="EditorPromptsSubMenu"/>
+      </Group>
+      <!-- The two windows that show a failure. Same low priority as the editor's, for the same
+           reason — it is reached without hunting.
            The Output pane's context menu is IDM_VS_CTXT_RESULTSLIST, which does not read like it:
            vsshlids.h has no IDM_VS_CTXT_OUTPUTWINDOW, and the groups inside this one are the
            IDG_VS_RESULTSLIST* block it heads "Output Window Pane Context menu groups".
@@ -143,6 +184,37 @@
       </Group>
       <Group guid="guidAgentsCommandSet" id="ErrorListContextGroup" priority="0x0050">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ERRORLIST"/>
+      </Group>
+      <!-- Inside each: the prompts, then Add to chat in a group of its own for the separator. -->
+      <Group guid="guidAgentsCommandSet" id="ErrorListPromptsGroup" priority="0x0100">
+        <Parent guid="guidAgentsCommandSet" id="ErrorListSubMenu"/>
+      </Group>
+      <Group guid="guidAgentsCommandSet" id="ErrorListAddToChatGroup" priority="0x0200">
+        <Parent guid="guidAgentsCommandSet" id="ErrorListSubMenu"/>
+      </Group>
+      <Group guid="guidAgentsCommandSet" id="OutputPromptsGroup" priority="0x0100">
+        <Parent guid="guidAgentsCommandSet" id="OutputSubMenu"/>
+      </Group>
+      <Group guid="guidAgentsCommandSet" id="OutputAddToChatGroup" priority="0x0200">
+        <Parent guid="guidAgentsCommandSet" id="OutputSubMenu"/>
+      </Group>
+      <!-- Solution Explorer: a file here; a folder, a project and a multi-selection through the
+           CommandPlacements below, since a Group carries one Parent. At the top like the others:
+           each of those menus has its own groups at its own priorities, so anything in between
+           lands in a different place per menu — the top is the one position that is the same in
+           all of them. -->
+      <Group guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE"/>
+      </Group>
+      <Group guid="guidAgentsCommandSet" id="TabContextGroup" priority="0x0050">
+        <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_EZDOCWINTAB"/>
+      </Group>
+      <!-- Inside them, 0x0200 like the other menus' Add to chat: prompts, when they come, go above. -->
+      <Group guid="guidAgentsCommandSet" id="SolutionAddToChatGroup" priority="0x0200">
+        <Parent guid="guidAgentsCommandSet" id="SolutionSubMenu"/>
+      </Group>
+      <Group guid="guidAgentsCommandSet" id="TabAddToChatGroup" priority="0x0200">
+        <Parent guid="guidAgentsCommandSet" id="TabSubMenu"/>
       </Group>
       <Group guid="guidAgentsCommandSet" id="HelpDocsGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="HelpSubMenu"/>
@@ -196,13 +268,57 @@
         </Strings>
       </Button>
 
-      <!-- DynamicVisibility so BeforeQueryStatus can grey it when there is nothing to explain.
-           The Error List placement is the CommandPlacement below: a Button carries one Parent. -->
-      <Button guid="guidAgentsCommandSet" id="ExplainCommandId" priority="0x0100" type="Button">
-        <Parent guid="guidAgentsCommandSet" id="OutputContextGroup"/>
-        <Icon guid="guidImages" id="bmpPic1"/>
+      <!-- No BeforeQueryStatus: without a selection the reference names the whole file. -->
+      <Button guid="guidAgentsCommandSet" id="AddReferenceToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="EditorAddToChatGroup"/>
+        <Strings><ButtonText>Add reference to chat</ButtonText></Strings>
+      </Button>
+      <!-- DynamicVisibility so BeforeQueryStatus can grey it without a selection. -->
+      <Button guid="guidAgentsCommandSet" id="AddSelectionToChatCommandId" priority="0x0200" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="EditorAddToChatGroup"/>
         <CommandFlag>DynamicVisibility</CommandFlag>
-        <Strings><ButtonText>Explain in cv4vs Agents</ButtonText></Strings>
+        <Strings><ButtonText>Add selection to chat</ButtonText></Strings>
+      </Button>
+
+      <!-- The Error List's and the Output window's prompt ranges, like the editor's above. -->
+      <Button guid="guidAgentsCommandSet" id="ErrorListPromptCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="ErrorListPromptsGroup"/>
+        <CommandFlag>DynamicItemStart</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <CommandFlag>TextChanges</CommandFlag>
+        <Strings>
+          <ButtonText>Prompt</ButtonText>
+        </Strings>
+      </Button>
+      <Button guid="guidAgentsCommandSet" id="OutputPromptCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="OutputPromptsGroup"/>
+        <CommandFlag>DynamicItemStart</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <CommandFlag>TextChanges</CommandFlag>
+        <Strings>
+          <ButtonText>Prompt</ButtonText>
+        </Strings>
+      </Button>
+      <!-- DynamicVisibility so BeforeQueryStatus can grey them when there is nothing to add. -->
+      <Button guid="guidAgentsCommandSet" id="ErrorListAddToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="ErrorListAddToChatGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Add to chat</ButtonText></Strings>
+      </Button>
+      <Button guid="guidAgentsCommandSet" id="OutputAddToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="OutputAddToChatGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Add to chat</ButtonText></Strings>
+      </Button>
+      <Button guid="guidAgentsCommandSet" id="SolutionAddReferenceToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="SolutionAddToChatGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Add reference to chat</ButtonText></Strings>
+      </Button>
+      <Button guid="guidAgentsCommandSet" id="TabAddReferenceToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="TabAddToChatGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Add reference to chat</ButtonText></Strings>
       </Button>
 
       <Button guid="guidAgentsCommandSet" id="SettingsCommandId" priority="0x0100" type="Button">
@@ -290,10 +406,20 @@
     </Bitmaps>
   </Commands>
 
+
   <CommandPlacements>
-    <!-- The same command placed again, not a second one to keep in step. -->
-    <CommandPlacement guid="guidAgentsCommandSet" id="ExplainCommandId" priority="0x0100">
-      <Parent guid="guidAgentsCommandSet" id="ErrorListContextGroup"/>
+    <!-- The Solution Explorer group placed again, not a second one to keep in step. -->
+    <CommandPlacement guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_FOLDERNODE"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_PROJNODE"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_MULTIITEM"/>
+    </CommandPlacement>
+    <CommandPlacement guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
+      <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_XPROJ_PROJITEM"/>
     </CommandPlacement>
   </CommandPlacements>
 
@@ -319,6 +445,19 @@
       <IDSymbol name="EditorPromptsGroup" value="0x1079" />
       <IDSymbol name="OutputContextGroup" value="0x107A" />
       <IDSymbol name="ErrorListContextGroup" value="0x107B" />
+      <IDSymbol name="EditorAddToChatGroup" value="0x107C" />
+      <IDSymbol name="ErrorListSubMenu" value="0x107D" />
+      <IDSymbol name="ErrorListPromptsGroup" value="0x107E" />
+      <IDSymbol name="ErrorListAddToChatGroup" value="0x107F" />
+      <IDSymbol name="OutputSubMenu" value="0x1081" />
+      <IDSymbol name="OutputPromptsGroup" value="0x1082" />
+      <IDSymbol name="OutputAddToChatGroup" value="0x1083" />
+      <IDSymbol name="SolutionContextGroup" value="0x1084" />
+      <IDSymbol name="SolutionSubMenu" value="0x1085" />
+      <IDSymbol name="SolutionAddToChatGroup" value="0x1086" />
+      <IDSymbol name="TabContextGroup" value="0x1087" />
+      <IDSymbol name="TabSubMenu" value="0x1088" />
+      <IDSymbol name="TabAddToChatGroup" value="0x1089" />
       <IDSymbol name="HelpDocsGroup" value="0x1080" />
       <IDSymbol name="HelpContactGroup" value="0x1090" />
       <!-- Must match PackageIds.cs — a mismatch is silent: the entry just never appears. -->
@@ -335,13 +474,21 @@
       <IDSymbol name="StatisticsCommandId" value="0x0209" />
       <IDSymbol name="UsageCommandId" value="0x020A" />
       <IDSymbol name="ContextUsageCommandId" value="0x020B" />
-      <IDSymbol name="ExplainCommandId" value="0x020C" />
       <IDSymbol name="FileHistoryCommandId" value="0x020D" />
+      <IDSymbol name="AddReferenceToChatCommandId" value="0x020E" />
+      <IDSymbol name="AddSelectionToChatCommandId" value="0x020F" />
+      <IDSymbol name="ErrorListAddToChatCommandId" value="0x0210" />
+      <IDSymbol name="OutputAddToChatCommandId" value="0x0211" />
+      <IDSymbol name="SolutionAddReferenceToChatCommandId" value="0x0212" />
+      <IDSymbol name="TabAddReferenceToChatCommandId" value="0x0213" />
       <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
            number of open panes and must not run into the fixed ids above. -->
       <IDSymbol name="ActiveSessionCommandId" value="0x0300" />
       <!-- Seed of the editor-prompt range. Its own 0x04xx block: the panes range above grows too. -->
       <IDSymbol name="EditorPromptCommandId" value="0x0400" />
+      <!-- The Error List's and the Output window's, a block each for the same reason. -->
+      <IDSymbol name="ErrorListPromptCommandId" value="0x0500" />
+      <IDSymbol name="OutputPromptCommandId" value="0x0600" />
     </GuidSymbol>
     <GuidSymbol name="guidImages" value="{c3d4e5f6-a7b8-9012-defa-bc1234567890}">
       <IDSymbol name="bmpPic1" value="1" />

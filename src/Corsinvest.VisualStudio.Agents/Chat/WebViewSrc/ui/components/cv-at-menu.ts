@@ -6,7 +6,7 @@ import { LitElement, html } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
 import { iconUrl } from '../../core/icon-url';
-import { fileName, normPath, relPath } from '../../core/path';
+import { fileName, mentionToken, normPath, relPath } from '../../core/path';
 import type { AtItemDto } from '../../core/types';
 import './cv-popover-list';
 import type { CvPopoverList } from './cv-popover-list';
@@ -54,18 +54,6 @@ export class CvAtMenu extends LitElement {
         return slash > 0 ? rel.slice(0, slash) : '';
     }
 
-    /**
-     * The `@…` token for a path, quoted when it contains a space.
-     *
-     * The CLI reads attachments with two patterns, `@"<path>"` and a bare `@<path>` that stops at
-     * the first whitespace — so an unquoted path with a space in it silently references only the
-     * part before the space. The user has no way to get this right by hand: it is the menu that
-     * writes the token.
-     */
-    private _token(path: string): string {
-        return path.includes(' ') ? `@"${path}"` : `@${path}`;
-    }
-
     private _pick(item: AtItemDto): void {
         const wd = appState.workingDirectory;
         const rel = relPath(item.path, wd);
@@ -79,7 +67,7 @@ export class CvAtMenu extends LitElement {
             // outside them it would sit past the closing quote where nothing looks for it.
             this.dispatchEvent(
                 new CustomEvent<{ token: string; isDir: true }>('select-at', {
-                    detail: { token: `${this._token(`${dirToken}/`)} `, isDir: true },
+                    detail: { token: `${mentionToken(`${dirToken}/`)} `, isDir: true },
                     bubbles: true,
                     composed: true,
                 }),
@@ -90,7 +78,7 @@ export class CvAtMenu extends LitElement {
             rel && rel !== normPath(item.path) ? rel : item.name || fileName(item.path);
         this.dispatchEvent(
             new CustomEvent<{ token: string; isDir: false }>('select-at', {
-                detail: { token: `${this._token(replacement)} `, isDir: false },
+                detail: { token: `${mentionToken(replacement)} `, isDir: false },
                 bubbles: true,
                 composed: true,
             }),
