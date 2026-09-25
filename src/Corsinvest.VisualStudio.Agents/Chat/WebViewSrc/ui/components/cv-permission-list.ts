@@ -88,9 +88,11 @@ export class CvPermissionList extends LitElement {
         return html`
             <cv-popover-list
                 .items=${this._items}
-                .sections=${[
-                    { label: 'Permission modes', hint: '⇧ + tab to switch', items: this._items },
-                ]}
+                .header=${html`<span>Permission modes</span>
+                    <span class="section-hint">⇧ + tab to switch</span>`}
+                searchable
+                searchPlaceholder="Search modes…"
+                .searchText=${(it: PermissionItem) => `${it.label} ${it.description}`}
                 emptyText="No modes"
                 .renderRow=${(it: PermissionItem) => html`
                     <span class="row-icon">${unsafeHTML(it.icon)}</span>

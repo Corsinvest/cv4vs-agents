@@ -94,7 +94,10 @@ export class CvModelList extends LitElement {
             <cv-popover-list
                 .items=${this._models}
                 .isNavigable=${(m: ModelInfoDto) => !m.disabled}
-                .sections=${[{ label: 'Select a model', items: this._models }]}
+                .header=${html`<span>Select a model</span>`}
+                searchable
+                searchPlaceholder="Search models…"
+                .searchText=${(m: ModelInfoDto) => `${m.displayName} ${m.description} ${m.value}`}
                 emptyText="No models"
                 .renderRow=${(m: ModelInfoDto) => html`
                     <span class="row-text">
