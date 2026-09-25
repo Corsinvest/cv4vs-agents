@@ -264,7 +264,7 @@ internal sealed partial class SessionManager
                 var lines = text.Split('\n');
                 for (int i = lines.Length - 1; i >= 0; i--)
                 {
-                    var pt = ExtractUserText(lines[i]);
+                    var pt = ExtractUserText(lines[i]) ?? ExtractQueuedPromptText(lines[i]);
                     if (pt != null)
                     {
                         promptsNewestFirst.Add(pt);
@@ -447,6 +447,21 @@ internal sealed partial class SessionManager
                     return true;
                 }
                 return false;
+
+            case "attachment":
+                // A prompt sent while a turn was running: the CLI injected it after a tool_result
+                // and wrote it only as this attachment, so without this it vanishes on reopen.
+                // Replayed as a user message under the uuid it was sent with, as live shows it.
+                var queued = QueuedPrompt(obj);
+                if (queued == null) { return false; }
+                messagesNewestFirst?.Add(new JObject
+                {
+                    ["role"] = "user",
+                    ["content"] = queued,
+                    ["uuid"] = obj["attachment"].Val("source_uuid") ?? obj.Val("uuid", ""),
+                    ["timestamp"] = obj.Val("timestamp", (string)null),
+                });
+                return true;
         }
 
         return false;
@@ -465,8 +480,8 @@ internal sealed partial class SessionManager
                 if (string.IsNullOrWhiteSpace(line) || !line.Contains(uuid)) { continue; }
                 JObject obj;
                 try { obj = JObject.Parse(line); } catch { continue; }
-                if (obj.Val("uuid", "") != uuid) { continue; }
-                return obj["message"]?["content"] is not JArray content || blockIdx < 0 || blockIdx >= content.Count
+                if (!IsLineFor(obj, uuid)) { continue; }
+                return LineContent(obj) is not JArray content || blockIdx < 0 || blockIdx >= content.Count
                     ? null
                     : content[blockIdx] as JObject;
             }
