@@ -1,4 +1,4 @@
-<UserControl x:Class="Corsinvest.VisualStudio.Agents.Options.EditorPromptsControl"
+<UserControl x:Class="Corsinvest.VisualStudio.Agents.Options.PromptListControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
@@ -10,8 +10,8 @@
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,6"
-               Text="Prompts offered when you right-click code, under &quot;cv4vs Agents&quot;. Picking one hands it to a chat pane — the file and selection are sent with it, so the prompt is the instruction alone. &quot;Send on click&quot; runs it straight away; clear it for a prompt you mean to finish typing first. Rows appear in the menu in this order." />
+    <!-- Set by the page: each menu hands its prompt something different. -->
+    <TextBlock Grid.Row="0" x:Name="Description" TextWrapping="Wrap" Margin="0,0,0,6" />
 
     <!-- One grid, not the master/detail the profiles page needs: four fields per row fit in it. -->
     <DataGrid Grid.Row="1" x:Name="PromptsGrid"
@@ -24,7 +24,7 @@
                             Binding="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
         <DataGridTextColumn Header="Prompt" Width="*"
                             Binding="{Binding Prompt, UpdateSourceTrigger=PropertyChanged}" />
-        <DataGridCheckBoxColumn Header="Needs selection" Width="Auto"
+        <DataGridCheckBoxColumn x:Name="NeedsSelectionColumn" Header="Needs selection" Width="Auto"
                                 Binding="{Binding RequiresSelection, UpdateSourceTrigger=PropertyChanged}" />
         <DataGridCheckBoxColumn Header="Send on click" Width="Auto"
                                 Binding="{Binding SendImmediately, UpdateSourceTrigger=PropertyChanged}" />

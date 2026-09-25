@@ -144,12 +144,16 @@ own.
 - **Ask from the editor** — right-click code and the **cv4vs Agents** submenu offers Explain,
   Review, Find bugs, Write tests, Simplify. The prompt lands in the composer, so you can add the
   half line that matters; the file and selection travel with it, so the prompt itself is just the
-  instruction. The list is yours to edit in Options → Editor prompts — title, text, whether the
-  entry needs a selection, and whether it sends on click instead of waiting.
-- **Ask about a failure** — right-click in the **Output window** or the **Error List** and pick
-  **Explain in cv4vs Agents**. In the Error List it takes the rows you selected, with their file,
-  line and project; in the Output window your selection, or the tail of the pane when you selected
-  nothing — a build error is worth asking about without highlighting it first.
+  instruction. The list is yours to edit in Options → Prompts — title, text, whether the
+  entry needs a selection, and whether it sends on click instead of waiting. Below them, **Add
+  reference to chat** and **Add selection to chat** gather pieces from several files into the
+  composer before you write the question.
+- **Ask about a failure** — right-click in the **Output window** or the **Error List** and the same
+  **cv4vs Agents** submenu offers its own prompts (Explain, Fix) and **Add to chat**. In the Error
+  List it takes the rows you selected, with their file, line and project; in the Output window your
+  selection, or the tail of the pane when you selected nothing — a build error is worth asking
+  about without highlighting it first. These prompts are yours to edit too, each menu in its own
+  tab.
 - **Jump between panes** — a toolbar list of every open pane, Chat and CLI together, each with its
   title and kind. Docked panes hide each other behind tabs; this is how you find the one you want.
 - **Code review findings as a list** — `/code-review` reports its findings as a readable list —
@@ -523,7 +527,7 @@ Every tool is listed and described in **[MCP tools](docs/mcp-tools.md)**.
 ## Options
 
 All settings live under **Tools → Options → cv4vs Agents**, split into five pages — General,
-Chat, Debug, **Editor prompts** and **Profiles** (see
+Chat, Debug, **Prompts** and **Profiles** (see
 [Two panes, one extension](#two-panes-one-extension)).
 Every setting is documented in **[docs/options.md](docs/options.md)**.
 

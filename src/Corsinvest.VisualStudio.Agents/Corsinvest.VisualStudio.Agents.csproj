@@ -348,8 +348,9 @@
     <Compile Include="Editor\EditorPromptStore.cs" />
     <Compile Include="Editor\AddToChatMenuCommand.cs" />
     <Compile Include="Editor\EditorPromptsMenuCommand.cs" />
-    <Compile Include="Editor\ExplainMenuCommand.cs" />
     <Compile Include="Editor\PromptDispatcher.cs" />
+    <Compile Include="Editor\WindowAddToChatMenuCommand.cs" />
+    <Compile Include="Editor\WindowPayload.cs" />
     <Compile Include="Core\Panes\PaneLauncher.cs" />
     <Compile Include="AgentsPackage.cs" />
     <Compile Include="Core\Sessions\SessionInfo.cs" />
@@ -391,8 +392,8 @@
     <Compile Include="Options\AgentsEditorPromptsPage.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Options\EditorPromptsControl.xaml.cs">
-      <DependentUpon>EditorPromptsControl.xaml</DependentUpon>
+    <Compile Include="Options\PromptListControl.xaml.cs">
+      <DependentUpon>PromptListControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Chat\IconCacheService.cs" />
     <Compile Include="Helpers\OutputWindowLogger.cs" />
@@ -481,7 +482,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Options\EditorPromptsControl.xaml">
+    <Page Include="Options\PromptListControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
