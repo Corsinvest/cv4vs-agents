@@ -1906,6 +1906,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 ></cv-command-menu>
                 <cv-model-list
                     ?open=${this._modelListOpen}
+                    .host=${this}
                     @select-model=${this._onSelectModel}
                 ></cv-model-list>
                 <cv-permission-list

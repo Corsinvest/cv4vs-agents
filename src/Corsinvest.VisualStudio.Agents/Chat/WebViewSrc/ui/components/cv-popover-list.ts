@@ -81,6 +81,18 @@ export class CvPopoverList extends LitElement {
                 font-size: var(--fontSizeBase200);
                 font-weight: var(--fontWeightSemibold);
             }
+            /* The optional band below the list: outside the scroller like the header, so it stays
+               in view — for a control that acts on the whole list rather than on one row. */
+            .footer {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                padding: 6px 12px;
+                border-top: 1px solid var(--colorNeutralStroke2);
+                color: var(--colorNeutralForeground2);
+                font-family: var(--fontFamilyBase);
+            }
             .section {
                 display: flex;
                 align-items: baseline;
@@ -288,6 +300,8 @@ export class CvPopoverList extends LitElement {
      *  because what goes there is not always only a title — the queue puts its clear button beside
      *  the count. Like renderRow: the caller says what, this owns where. */
     @property({ attribute: false }) header?: TemplateResult;
+    /** Optional band below the list, the header's twin: the caller says what, this owns where. */
+    @property({ attribute: false }) footer?: TemplateResult;
     /** Mark the cursor row with the hover tint instead of the brand fill. For a list you act ON
      *  rather than pick FROM: the fill announces "this is what Enter takes", which is wrong for a
      *  row that carries its own buttons — and a solid blue behind them leaves a red one no longer
@@ -552,6 +566,7 @@ export class CvPopoverList extends LitElement {
                 <div class="list">
                     ${empty ? html`<div class="empty">${this.emptyText}</div>` : this._renderRows()}
                 </div>
+                ${this.footer ? html`<div class="footer">${this.footer}</div>` : nothing}
             </div>
         `;
     }
