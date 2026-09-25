@@ -44,24 +44,24 @@ public class StatsAggregatorTests : IDisposable
                                      int cacheRead = 0, int cacheCreation = 0,
                                      string timestamp = "2026-08-26T10:00:00.000Z",
                                      string cwd = @"C:\proj\demo") => new()
-    {
-        ["type"] = "assistant",
-        ["timestamp"] = timestamp,
-        ["cwd"] = cwd,
-        ["message"] = new JObject
-        {
-            ["role"] = "assistant",
-            ["model"] = model,
-            ["content"] = new JArray { new JObject { ["type"] = "text", ["text"] = "hi" } },
-            ["usage"] = new JObject
-            {
-                ["input_tokens"] = input,
-                ["output_tokens"] = output,
-                ["cache_read_input_tokens"] = cacheRead,
-                ["cache_creation_input_tokens"] = cacheCreation,
-            },
-        },
-    };
+                                     {
+                                         ["type"] = "assistant",
+                                         ["timestamp"] = timestamp,
+                                         ["cwd"] = cwd,
+                                         ["message"] = new JObject
+                                         {
+                                             ["role"] = "assistant",
+                                             ["model"] = model,
+                                             ["content"] = new JArray { new JObject { ["type"] = "text", ["text"] = "hi" } },
+                                             ["usage"] = new JObject
+                                             {
+                                                 ["input_tokens"] = input,
+                                                 ["output_tokens"] = output,
+                                                 ["cache_read_input_tokens"] = cacheRead,
+                                                 ["cache_creation_input_tokens"] = cacheCreation,
+                                             },
+                                         },
+                                     };
 
     private static JObject UserWithBlocks(string timestamp, params string[] blockTypes)
     {

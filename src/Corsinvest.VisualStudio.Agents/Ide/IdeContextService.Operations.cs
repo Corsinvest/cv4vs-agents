@@ -1009,7 +1009,7 @@ internal sealed partial class IdeContextService
         // itself, so taking its directory yields the PARENT).
         var folder = AgentsPackage.Instance?.CurrentSolutionFolder;
         return string.IsNullOrEmpty(folder)
-                ? Array.Empty<string>()
+                ? []
                 : [PathHelpers.LowercaseDrive(folder)];
     }
 
@@ -1046,7 +1046,7 @@ internal sealed partial class IdeContextService
         {
             foreach (Document d in dte.Documents)
             {
-                if (!string.IsNullOrEmpty(d?.FullName)) { langByPath[d.FullName] = d.Language ?? string.Empty; }
+                if (!string.IsNullOrEmpty(d?.FullName)) { langByPath[d.FullName] = d.Language ?? ""; }
             }
         }
 
@@ -1062,7 +1062,7 @@ internal sealed partial class IdeContextService
                 FilePath = path,
                 IsActive = string.Equals(path, activePath, StringComparison.OrdinalIgnoreCase),
                 IsDirty = FrameDirty(frame),
-                Language = lang ?? string.Empty,
+                Language = lang ?? "",
             });
         }
         // GetDocumentWindowEnum gives no ordering guarantee, so sort like every other list tool.
@@ -1102,7 +1102,7 @@ internal sealed partial class IdeContextService
             // and they are the ones a caller cannot find any other way — file-level diagnostics at
             // least surface again when that file is opened. They group under a marker URI rather
             // than an empty one, which the CLI's parseDiagnosticResult would treat as a real path.
-            var file = item.FileName ?? string.Empty;
+            var file = item.FileName ?? "";
             var fileless = string.IsNullOrEmpty(file);
             if (fileless)
             {
@@ -1123,7 +1123,7 @@ internal sealed partial class IdeContextService
                 // HTML-decode: the Error List sometimes returns descriptions with
                 // HTML entities (XAML-prepared); without decoding Claude misreads
                 // e.g. `/&quot;/g` instead of `/"/g`.
-                Message = System.Net.WebUtility.HtmlDecode(item.Description ?? string.Empty),
+                Message = System.Net.WebUtility.HtmlDecode(item.Description ?? ""),
                 Severity = severity,
                 Range = new DiagnosticRange
                 {

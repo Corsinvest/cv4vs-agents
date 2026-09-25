@@ -328,7 +328,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         try
         {
             var options = core.Environment.CreateFindOptions();
-            options.FindTerm = string.Empty;
+            options.FindTerm = "";
             _ = core.Find.StartAsync(options);
         }
         catch (Exception ex)

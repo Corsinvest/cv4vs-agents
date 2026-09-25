@@ -65,7 +65,7 @@ internal static class StatsChart
     {
         var infos = new Dictionary<string, DayInfo>();
 
-        foreach (var a in r.DailyActivity ?? Array.Empty<StatsDayDto>())
+        foreach (var a in r.DailyActivity ?? [])
         {
             if (a.Date == null) { continue; }
             if (!infos.TryGetValue(a.Date, out var info))
@@ -83,7 +83,7 @@ internal static class StatsChart
         {
             for (var i = 0; i < r.ModelBreakdown.Length; i++) { order[r.ModelBreakdown[i].Model] = i; }
         }
-        foreach (var d in r.DailyModelTokens ?? Array.Empty<StatsDayModelDto>())
+        foreach (var d in r.DailyModelTokens ?? [])
         {
             if (d.Date == null) { continue; }
             if (!infos.TryGetValue(d.Date, out var info)) { info = new DayInfo { Date = d.Date }; infos[d.Date] = info; }
@@ -105,7 +105,7 @@ internal static class StatsChart
     public static List<HeatCell[]> BuildHeatmap(StatsResponse r)
     {
         var cols = new List<HeatCell[]>();
-        var activity = r.DailyActivity ?? Array.Empty<StatsDayDto>();
+        var activity = r.DailyActivity ?? [];
         if (activity.Length == 0) { return cols; }
 
         var infos = BuildDayInfos(r);
@@ -157,7 +157,7 @@ internal static class StatsChart
     /// palette index (same order as the MODELS list), so the stack matches the model dots.</summary>
     public static List<DayBar> BuildBars(StatsResponse r)
     {
-        var days = r.DailyModelTokens ?? Array.Empty<StatsDayModelDto>();
+        var days = r.DailyModelTokens ?? [];
         if (days.Length == 0) { return new List<DayBar>(); }
 
         var infos = BuildDayInfos(r);

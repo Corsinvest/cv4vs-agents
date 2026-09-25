@@ -2,11 +2,16 @@ root = true
 
 [*]
 charset = utf-8
-end_of_line = crlf
+# LF, as .gitattributes normalises the repo to: crlf here made the editor write CRLF lines that git
+# then converted back, one file at a time.
+end_of_line = lf
 indent_style = space
 indent_size = 4
 trim_trailing_whitespace = true
 insert_final_newline = true
+# Comments and strings are written in English. Without this VS spell-checks them in the IDE's own
+# language, and on an Italian install every English word is flagged.
+spelling_languages = en-us
 
 [*.cs]
 # Require accessibility modifiers (private, public, etc.) — except on interface members, where

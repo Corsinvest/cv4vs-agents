@@ -447,9 +447,9 @@ internal sealed partial class McpServerHost
     /// it; the columns need neither, arriving 0-based and already floored.</para></summary>
     private static string BuildSelectionNotification(EditorContext ctx)
         => ctx == null
-            ? BuildSelectionNotification(string.Empty, null, null, 0, 0, 0, 0, isEmpty: true)
+            ? BuildSelectionNotification("", null, null, 0, 0, 0, 0, isEmpty: true)
             : BuildSelectionNotification(
-                text: ctx.SelectedText ?? string.Empty,
+                text: ctx.SelectedText ?? "",
                 filePath: ctx.FilePath,
                 fileUrl: PathHelpers.ToFileUri(ctx.FilePath),
                 startLine: Math.Max(0, ctx.StartLine - 1), startChar: ctx.StartColumn,

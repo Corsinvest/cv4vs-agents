@@ -154,9 +154,9 @@ internal static class Win32Focus
                     hWnd = window.Handle,
                     uID = (int)id,
                     uFlags = NIF_INFO,
-                    szInfo = string.Empty,
-                    szInfoTitle = string.Empty,
-                    szTip = string.Empty,
+                    szInfo = "",
+                    szInfoTitle = "",
+                    szTip = "",
                 };
                 if (!Shell_NotifyIcon(NIM_MODIFY, ref data))
                 {
