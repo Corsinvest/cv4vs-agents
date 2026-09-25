@@ -98,7 +98,7 @@ internal static class FileSuggestions
                         // which of the four `cv4vs-*` you are looking at.
                         Name = dirKey,
                         Path = Path.Combine(root, dirRel.Replace('/', Path.DirectorySeparatorChar)),
-                        Dir = string.Empty,
+                        Dir = "",
                         IsDir = true,
                     });
                 }
@@ -243,7 +243,7 @@ internal static class GitIgnoreCache
                 // The workspace file plus git's global excludes, which is where a personal rule
                 // like `**/.claude/settings.local.json` lives: git honours both, so a file hidden
                 // from the repo has no business showing up in the picker either.
-                var text = hasLocal ? File.ReadAllText(path) : string.Empty;
+                var text = hasLocal ? File.ReadAllText(path) : "";
                 if (hasGlobal) { text += "\n" + File.ReadAllText(globalPath); }
                 var ignore = GitIgnore.Parse(text);
                 _cache[root] = (mtime, ignore);

@@ -136,7 +136,7 @@ public partial class SessionManagerControl : UserControl
 
     private void ApplyFilter()
     {
-        var query = (SearchBox.Text ?? string.Empty).Trim();
+        var query = (SearchBox.Text ?? "").Trim();
         _filtered.Clear();
         IEnumerable<SessionRow> source = _allSessions;
         if (!string.IsNullOrEmpty(query))
@@ -302,7 +302,7 @@ public partial class SessionManagerControl : UserControl
 
     private void CommitEdit(SessionRow row, string newTitle)
     {
-        var trimmed = (newTitle ?? string.Empty).Trim();
+        var trimmed = (newTitle ?? "").Trim();
         if (string.IsNullOrEmpty(trimmed) || trimmed == row.DisplayTitle)
         {
             row.CancelEdit();
@@ -432,7 +432,7 @@ public sealed class SessionRow : INotifyPropertyChanged
 
     public void BeginEdit()
     {
-        EditBuffer = DisplayTitle ?? string.Empty;
+        EditBuffer = DisplayTitle ?? "";
         IsEditing = true;
     }
 
