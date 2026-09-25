@@ -784,9 +784,22 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
     };
 
+    /** PageUp/PageDown page through an open list instead of scrolling the textarea. */
+    private _pageKey(e: KeyboardEvent, list: { movePage(dir: number): void } | undefined): boolean {
+        if (e.key !== 'PageDown' && e.key !== 'PageUp') {
+            return false;
+        }
+        e.preventDefault();
+        list?.movePage(e.key === 'PageDown' ? 1 : -1);
+        return true;
+    }
+
     private _onKeyDown = (e: KeyboardEvent): void => {
-        // While the model list is open, ↑/↓/Enter/Tab/Esc drive it.
+        // While the model list is open, ↑/↓/PgUp/PgDn/Enter/Tab/Esc drive it.
         if (this._modelListOpen) {
+            if (this._pageKey(e, this._modelList)) {
+                return;
+            }
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 this._modelList?.moveSelection(1);
@@ -812,6 +825,9 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
         // Same keys drive the mode list while it's open.
         if (this._permissionListOpen) {
+            if (this._pageKey(e, this._permissionList)) {
+                return;
+            }
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 this._permissionList?.moveSelection(1);
@@ -835,8 +851,11 @@ export class CvPrompt extends LitElement implements CommandHost {
                 return;
             }
         }
-        // While the command palette is open, ↑/↓/Enter/Tab/Esc drive it.
+        // While the command palette is open, ↑/↓/PgUp/PgDn/Enter/Tab/Esc drive it.
         if (this._cmdOpen) {
+            if (this._pageKey(e, this._cmdMenu)) {
+                return;
+            }
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 this._cmdMenu?.moveSelection(1);
@@ -859,8 +878,11 @@ export class CvPrompt extends LitElement implements CommandHost {
                 return;
             }
         }
-        // While the @ menu is open, ↑/↓/Enter/Tab/Esc drive it, not the textarea.
+        // While the @ menu is open, ↑/↓/PgUp/PgDn/Enter/Tab/Esc drive it, not the textarea.
         if (this._atOpen) {
+            if (this._pageKey(e, this._atMenu)) {
+                return;
+            }
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 this._atMenu?.moveSelection(1);

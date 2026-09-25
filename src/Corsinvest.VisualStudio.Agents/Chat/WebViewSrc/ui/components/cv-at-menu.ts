@@ -33,6 +33,9 @@ export class CvAtMenu extends LitElement {
     moveSelection(delta: number): void {
         this._list?.moveSelection(delta);
     }
+    movePage(dir: number): void {
+        this._list?.movePage(dir);
+    }
     pickActive(): void {
         this._list?.pickActive();
     }
