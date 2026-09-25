@@ -95,6 +95,22 @@ directories at the same time.
 
 ---
 
+## Right-click to ask
+
+Every place that shows code or a failure has a **cv4vs Agents** submenu:
+
+- **Code editor** — Explain, Review, Find bugs, Write tests, Simplify; the file and selection travel
+  with the prompt.
+- **Error List** — Explain and Fix the rows you selected.
+- **Output window** — Explain your selection, or the tail of the pane when you selected nothing.
+- **Solution Explorer** and a **document's tab** — files, folders and projects, several at once.
+
+Each menu ends with **Add to chat**: it puts a reference (`@src/Foo.cs#L12-18`) or the text itself
+in the composer **without sending**, so you gather pieces from several files and windows, then ask
+once. The prompts are yours to edit in **Options → Prompts**, one tab per menu.
+
+---
+
 ## Built for long sessions
 
 Nothing is built, read or started until you look at it. The chat holds **nothing in memory** — the

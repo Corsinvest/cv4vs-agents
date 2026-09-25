@@ -10,7 +10,7 @@ import { Msg } from '../core/bridge-messages';
 import { state } from '../core/state';
 import type { IdeContextNotification } from '../core/types';
 import { PERMISSION_MODE } from '../core/types';
-import { normPath } from '../core/path';
+import { composerMentionToken, normPath } from '../core/path';
 import { closeTopDialog } from '../core/dialog-focus';
 import { setExtraLinkableExtensions } from '../core/file-links';
 import type {
@@ -150,7 +150,7 @@ function wireBridgeHandlers(): void {
         input?.focusInput();
     });
 
-    // Forked pane: pre-fill the composer with the forked-at message text.
+    // The composer, filled or added to by the host: a fork's message, an editor prompt, "Add to chat".
     bridge.onNotification<SetComposerNotification>(Msg.toWebView.ui.setComposer, (data) => {
         // The host re-opened the eye; mirror it so the badge shows what the CLI is being sent.
         if (data?.enableIdeContext) {
@@ -158,8 +158,28 @@ function wireBridgeHandlers(): void {
         }
         const input = document.querySelector('cv-prompt') as
             import('./components/cv-prompt').CvPrompt | null;
-        const text = data?.text ?? '';
-        if (data?.send && text) {
+        const mentions = data?.mentions ?? [];
+        const text =
+            mentions.length > 0
+                ? mentions
+                      .map((m) =>
+                          composerMentionToken(
+                              m.path,
+                              state.workingDirectory,
+                              m.startLine,
+                              m.endLine,
+                              m.isFolder,
+                          ),
+                      )
+                      .join('\n')
+                : (data?.text ?? '');
+        if (data?.append) {
+            // One reference per line: paths are long, and several on one line wrap where they will.
+            // Text is a block of its own, a blank line below what is there. Either way the caret
+            // ends on a fresh line, ready for the question or the next piece.
+            const piece = text.endsWith('\n') ? text : `${text}\n`;
+            input?.appendText(piece, mentions.length > 0 ? '\n' : '\n\n');
+        } else if (data?.send && text) {
             input?.setComposerTextAndSubmit(text);
         } else {
             input?.setComposerText(text);

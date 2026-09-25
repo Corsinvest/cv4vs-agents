@@ -21,8 +21,12 @@ internal static class AppPaths
     /// so the menu/launch can read profiles without materializing the Options page first.</summary>
     public static readonly string ProfilesFile = Path.Combine(DataFolder, "profiles.json");
 
-    /// <summary>The editor context menu's prompts, next to the profiles and for the same reason:
-    /// the menu is queried constantly by VS, long before any Options page exists.</summary>
+    /// <summary>The context menus' prompts, one list per menu, next to the profiles and for the
+    /// same reason: the menus are queried constantly by VS, long before any Options page exists.</summary>
+    public static readonly string PromptsFile = Path.Combine(DataFolder, "prompts.json");
+
+    /// <summary>The editor's prompts before <see cref="PromptsFile"/> existed: read once to carry
+    /// them over, never written — an older version reading it after a downgrade finds it intact.</summary>
     public static readonly string EditorPromptsFile = Path.Combine(DataFolder, "editor-prompts.json");
 
     /// <summary>What the `@` file picker hides on top of the workspace's own rules. A file rather

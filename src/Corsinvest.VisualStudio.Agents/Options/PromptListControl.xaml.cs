@@ -11,26 +11,33 @@ using System.Windows.Controls;
 
 namespace Corsinvest.VisualStudio.Agents.Options;
 
-/// <summary>Editor for the context menu's prompts, hosted by <see cref="AgentsEditorPromptsPage"/>.
-/// Edits an ObservableCollection and writes it back to the page's list on every change, so Apply
-/// finds the current state — the page owns persistence, this owns the UI.</summary>
-public partial class EditorPromptsControl : UserControl
+/// <summary>Editor for one context menu's prompts, a tab of <see cref="AgentsEditorPromptsPage"/>.
+/// Edits an ObservableCollection and writes it back to the page's list for its scope on every
+/// change, so Apply finds the current state — the page owns persistence, this owns the UI. One
+/// control for every menu: what differs is passed in.</summary>
+public partial class PromptListControl : UserControl
 {
     private readonly AgentsEditorPromptsPage _page;
+    private readonly PromptScope _scope;
     private readonly ObservableCollection<EditorPrompt> _items;
 
-    public EditorPromptsControl(AgentsEditorPromptsPage page)
+    /// <param name="showNeedsSelection">The editor's alone: the other menus always have something
+    /// to send or none at all, and a column that does nothing reads as broken.</param>
+    public PromptListControl(AgentsEditorPromptsPage page, PromptScope scope, string description, bool showNeedsSelection)
     {
         InitializeComponent();
         _page = page;
-        _items = [.. page.Prompts];
+        _scope = scope;
+        Description.Text = description;
+        NeedsSelectionColumn.Visibility = showNeedsSelection ? Visibility.Visible : Visibility.Collapsed;
+        _items = [.. page.Prompts[scope]];
         _items.CollectionChanged += (_, __) => Commit();
         PromptsGrid.ItemsSource = _items;
     }
 
     /// <summary>Push the edited list back to the page. The grid edits the EditorPrompt objects in
     /// place, so this only has to keep the page's list in the same order as the grid.</summary>
-    private void Commit() => _page.Prompts = [.. _items];
+    private void Commit() => _page.Prompts[_scope] = [.. _items];
 
     private void OnAddClick(object sender, RoutedEventArgs e)
     {
@@ -45,16 +52,17 @@ public partial class EditorPromptsControl : UserControl
         if (PromptsGrid.SelectedItem is EditorPrompt sel) { _items.Remove(sel); }
     }
 
+    /// <summary>This menu's list only: the other tabs keep what they hold.</summary>
     private void OnRestoreDefaultsClick(object sender, RoutedEventArgs e)
     {
         if (!ShellHelpers.ConfirmOkCancel(
-                "Replace the list with the prompts the extension ships with? Your own are lost.",
-                "Editor prompts"))
+                "Replace this menu's prompts with the ones the extension ships with? Your own are lost.",
+                "Prompts"))
         {
             return;
         }
         _items.Clear();
-        foreach (var p in EditorPromptStore.Defaults) { _items.Add(p); }
+        foreach (var p in EditorPromptStore.Defaults(_scope)) { _items.Add(p); }
     }
 
     private void OnMoveUpClick(object sender, RoutedEventArgs e) => Move(-1);

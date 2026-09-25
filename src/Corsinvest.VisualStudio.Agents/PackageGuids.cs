@@ -34,8 +34,13 @@ internal static class PackageIds
     public const int StatisticsCommandId = 0x0209;
     public const int UsageCommandId = 0x020A;
     public const int ContextUsageCommandId = 0x020B;
-    public const int ExplainCommandId = 0x020C;
     public const int FileHistoryCommandId = 0x020D;
+    public const int AddReferenceToChatCommandId = 0x020E;
+    public const int AddSelectionToChatCommandId = 0x020F;
+    public const int ErrorListAddToChatCommandId = 0x0210;
+    public const int OutputAddToChatCommandId = 0x0211;
+    public const int SolutionAddReferenceToChatCommandId = 0x0212;
+    public const int TabAddReferenceToChatCommandId = 0x0213;
 
     // Seeds the dynamic open-panes range, which grows with the number of open panes — its own
     // 0x0300 block, clear of the fixed ids above.
@@ -44,6 +49,10 @@ internal static class PackageIds
     // Seeds the editor context menu's prompt range, which grows with the configured prompts —
     // 0x0400, clear of the panes range that grows under it.
     public const int EditorPromptCommandId = 0x0400;
+
+    // The Error List's and the Output window's prompt ranges, a block each for the same reason.
+    public const int ErrorListPromptCommandId = 0x0500;
+    public const int OutputPromptCommandId = 0x0600;
 }
 
 /// <summary>Images declared in Monikers.imagemanifest. The Guid and ids must match that file: a mismatch
