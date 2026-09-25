@@ -8,7 +8,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Checkmark16Regular from '@fluentui/svg-icons/icons/checkmark_16_regular.svg';
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
-import { displayModels, resolveModelValue } from '../../core/ai-models';
+import { resolveModelValue } from '../../core/ai-models';
 import type { ModelInfoDto } from '../../core/types';
 import './cv-popover-list';
 import type { CvPopoverList } from './cv-popover-list';
@@ -23,9 +23,9 @@ import type { CvPopoverList } from './cv-popover-list';
 export class CvModelList extends LitElement {
     @property({ type: Boolean, reflect: true }) open = false;
 
-    // The picker's own view of the catalogue (a duplicated `default` collapsed away) — the
-    // navigation index and the rendered rows must come from the SAME list to stay aligned.
-    @state() private _models = displayModels(appState.models);
+    // `default` is listed even when another entry resolves to the same model: it follows the
+    // CLI's recommendation when that changes, a named entry stays put.
+    @state() private _models = appState.models;
     @state() private _current = appState.currentModel;
 
     private readonly _subs = new StateSubscriptions(this);
@@ -40,7 +40,7 @@ export class CvModelList extends LitElement {
     constructor() {
         super();
         this._subs.on('models', (v) => {
-            this._models = displayModels(v);
+            this._models = v;
         });
         this._subs.on('currentModel', (v) => {
             this._current = v;
@@ -50,7 +50,7 @@ export class CvModelList extends LitElement {
     override willUpdate(changed: Map<string, unknown>): void {
         if (changed.has('open') && this.open) {
             this._current = appState.currentModel;
-            this._models = displayModels(appState.models);
+            this._models = appState.models;
         }
     }
 
