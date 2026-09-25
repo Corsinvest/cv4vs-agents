@@ -448,6 +448,28 @@ public class SetComposerNotification
     /// <summary>Send the text instead of leaving it in the composer, for a prompt the user asked
     /// for by pressing a button of its own. Otherwise it is a pre-fill they can still edit.</summary>
     public bool Send { get; set; }
+
+    /// <summary>Add to what the composer holds instead of replacing it: "Add to chat" is used
+    /// several times, from several files, before the user writes the question. A mention goes on
+    /// a line of its own; text goes in as a block, a blank line below. Never sends.</summary>
+    public bool Append { get; set; }
+
+    /// <summary>A file reference, written by the page with the same token its @ menu writes, so a
+    /// reference reads the same whichever way it got into the composer. Null for plain text.</summary>
+    public ComposerMention Mention { get; set; }
+}
+
+/// <summary>A file, or some of its lines, to reference from the composer
+/// (<see cref="SetComposerNotification.Mention"/>).</summary>
+public class ComposerMention
+{
+    /// <summary>Absolute: the page makes it relative to the pane's working directory.</summary>
+    public string Path { get; set; }
+
+    /// <summary>1-based, inclusive. Both null for the whole file.</summary>
+    public int? StartLine { get; set; }
+
+    public int? EndLine { get; set; }
 }
 
 /// <summary>A keystroke the host claimed on the WebView's behalf (ui_host_key).

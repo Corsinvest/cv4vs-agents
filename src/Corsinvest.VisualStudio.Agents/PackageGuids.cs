@@ -36,6 +36,8 @@ internal static class PackageIds
     public const int ContextUsageCommandId = 0x020B;
     public const int ExplainCommandId = 0x020C;
     public const int FileHistoryCommandId = 0x020D;
+    public const int AddReferenceToChatCommandId = 0x020E;
+    public const int AddSelectionToChatCommandId = 0x020F;
 
     // Seeds the dynamic open-panes range, which grows with the number of open panes — its own
     // 0x0300 block, clear of the fixed ids above.

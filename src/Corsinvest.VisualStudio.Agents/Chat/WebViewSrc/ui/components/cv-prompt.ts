@@ -1467,21 +1467,60 @@ export class CvPrompt extends LitElement implements CommandHost {
             return;
         }
         ta.focus({ preventScroll: true });
-        const start = ta.selectionStart ?? ta.value.length;
-        const end = ta.selectionEnd ?? ta.value.length;
-        const before = ta.value.slice(0, start);
-        const needsSpace = before.length > 0 && !/\s$/.test(before);
-        const insert = (needsSpace ? ' ' : '') + text;
-        ta.value = before + insert + ta.value.slice(end);
-        const caret = start + insert.length;
-        ta.setSelectionRange(caret, caret);
-        this._hasText = ta.value.trim().length > 0;
-        this._autoResize();
+        this._insert(
+            ta,
+            ta.selectionStart ?? ta.value.length,
+            ta.selectionEnd ?? ta.value.length,
+            text,
+            ' ',
+        );
         if (text === '@') {
             // Open the @ menu and request the (empty-query) file list.
             this._atOpen = true;
             this._fetchSuggestions('');
         }
+    }
+
+    /** Add text after whatever the prompt box holds, for "Add to chat" (host ui_set_composer
+     *  with append). At the end rather than the caret: the box is not focused when the user
+     *  right-clicks in the editor, and a caret left there turns ago would drop the text anywhere. */
+    appendText(text: string, separator: string): void {
+        const ta = this._ta;
+        if (!ta) {
+            return;
+        }
+        ta.focus({ preventScroll: true });
+        this._insert(ta, ta.value.length, ta.value.length, text, separator);
+    }
+
+    /** Replace start..end with text, separated from what comes before by `separator` — so an `@`
+     *  token parses fresh instead of gluing onto a word, and a block starts on a line of its own.
+     *  Whitespace already there counts towards it: `' '` is satisfied by any, `'\n\n'` only adds
+     *  the line breaks that are missing. */
+    private _insert(
+        ta: HTMLTextAreaElement,
+        start: number,
+        end: number,
+        text: string,
+        separator: string,
+    ): void {
+        const before = ta.value.slice(0, start);
+        const tail = /\s*$/.exec(before)?.[0] ?? '';
+        const breaks = (s: string) => s.split('\n').length - 1;
+        const have = breaks(tail);
+        const want = breaks(separator);
+        const prefix =
+            before.length === 0 || (tail.length > 0 && have >= want)
+                ? ''
+                : want > 0
+                  ? '\n'.repeat(want - have)
+                  : separator;
+        const insert = prefix + text;
+        ta.value = before + insert + ta.value.slice(end);
+        const caret = start + insert.length;
+        ta.setSelectionRange(caret, caret);
+        this._hasText = ta.value.trim().length > 0;
+        this._autoResize();
     }
 
     /** Open the upload-from-computer file picker. */

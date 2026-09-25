@@ -143,6 +143,16 @@ Which pane receives: the last one you worked in, brought to the front. With none
 opened. If the IDE-context eye was shut, it is re-opened with the prompt — asking about this code
 with nothing saying which file it is would reach the CLI as a question about nothing.
 
+Below the prompts, past a separator, two fixed entries add to the composer instead of replacing
+it, so you can gather pieces from several files before writing the question. Neither sends, and
+neither touches the eye.
+
+- **Add reference to chat** writes `@path#L12-18` (or `@path` with no selection) on a line of its
+  own. The CLI reads those lines from disk when the turn goes: whole lines, however much of them
+  you selected, and without edits you have not saved yet.
+- **Add selection to chat** writes the selected text itself, in a fenced block headed by the path
+  and lines — exactly what is on screen, down to the character. Greyed out with no selection.
+
 Like profiles, these are **not** in the VS settings store: they live in `editor-prompts.json` so
 the menu can be built without opening the Options page first — see
 [Settings and data](settings-and-data.md).

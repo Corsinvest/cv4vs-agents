@@ -346,6 +346,7 @@
     <Compile Include="Menu\GlobalMenuCommands.cs" />
     <Compile Include="Editor\EditorPrompt.cs" />
     <Compile Include="Editor\EditorPromptStore.cs" />
+    <Compile Include="Editor\AddToChatMenuCommand.cs" />
     <Compile Include="Editor\EditorPromptsMenuCommand.cs" />
     <Compile Include="Editor\ExplainMenuCommand.cs" />
     <Compile Include="Editor\PromptDispatcher.cs" />
