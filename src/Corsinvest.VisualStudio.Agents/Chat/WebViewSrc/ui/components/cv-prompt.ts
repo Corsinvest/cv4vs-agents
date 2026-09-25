@@ -49,7 +49,6 @@ import './cv-context-gauge';
 import './cv-ide-context-badge';
 import './cv-subagent-chip';
 import './cv-queue-chip';
-import './cv-effort-selector';
 import './cv-thinking-toggle';
 import './cv-remote-chip';
 import './cv-model-list';
@@ -366,9 +365,6 @@ export class CvPrompt extends LitElement implements CommandHost {
     // True when the palette was opened from the menu item (owns its own
     // search box + focus); false when opened by typing `/` (textarea drives it).
     @state() private _cmdSearchable = false;
-    // Non-null when the palette was opened on one specific row (the Effort trigger): the ids to
-    // show, instead of the whole list.
-    @state() private _cmdOnly: string[] | null = null;
     @state() private _modelListOpen = false;
     @state() private _permissionListOpen = false;
     @state() private _permissionMode = appState.permissionMode;
@@ -590,17 +586,15 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
         // Only the palettes a click opened: the `/` one is driven by the textarea and closes when
         // the token goes away, so an outside click must not touch it.
-        if (!this._cmdOpen || !(this._cmdSearchable || this._cmdOnly)) {
+        if (!this._cmdOpen || !this._cmdSearchable) {
             return;
         }
         const path = e.composedPath();
         if (!path.some((n) => n instanceof Element && n.tagName === 'CV-COMMAND-MENU')) {
-            // Both triggers toggle themselves; closing here too would reopen-then-close. The
-            // attach menu is one of them: its "Slash command" item is what opens this palette.
+            // The attach menu toggles itself (its "Slash command" item is what opens this
+            // palette); closing here too would reopen-then-close.
             const onTrigger = path.some(
-                (n) =>
-                    n instanceof Element &&
-                    (n.tagName === 'CV-ATTACH-MENU' || n.tagName === 'CV-EFFORT-SELECTOR'),
+                (n) => n instanceof Element && n.tagName === 'CV-ATTACH-MENU',
             );
             if (!onTrigger) {
                 this._closeCommandMenu();
@@ -685,7 +679,6 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._cmdOpen = true;
             this._cmdSearchable = false; // textarea drives the filter
             this._cmdQuery = slashQuery;
-            this._cmdOnly = null; // typing `/` searches everything, whatever opened it last
             this._atOpen = false;
             return;
         }
@@ -1641,34 +1634,15 @@ export class CvPrompt extends LitElement implements CommandHost {
     /** The attach menu's "Slash command" item: toggle the full palette with its own search box
      *  focused (all sections, the menu owns filtering + keyboard nav). */
     private _onOpenCommands = (): void => {
-        // Re-opening it while its own list is open closes it (toggle). Not when the
-        // palette is open on a single row: that came from another trigger, so this click means
-        // "show me all of them", not "close".
-        if (this._cmdOpen && this._cmdSearchable && !this._cmdOnly) {
+        // Re-opening it while its own list is open closes it (toggle).
+        if (this._cmdOpen && this._cmdSearchable) {
             this._closeCommandMenu();
             return;
         }
         this._cmdQuery = '';
         this._cmdSearchable = true;
-        this._cmdOnly = null; // the full list, even if the Effort trigger narrowed it last
         this._cmdOpen = true;
         this._atOpen = false;
-    };
-
-    /** The Effort trigger: the same palette, opened on its Effort row alone. The row already
-     *  carries the slider, so there is nothing here the menu doesn't already do. */
-    private _onOpenEffort = (): void => {
-        if (this._cmdOpen && this._cmdOnly) {
-            this._closeCommandMenu();
-            return;
-        }
-        this._modelListOpen = false;
-        this._permissionListOpen = false;
-        this._atOpen = false;
-        this._cmdQuery = '';
-        this._cmdSearchable = false;
-        this._cmdOnly = ['effort'];
-        this._cmdOpen = true;
     };
 
     private _closeCommandMenu = (): void => {
@@ -1676,7 +1650,6 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._cmdOpen = false;
             this._cmdQuery = '';
             this._cmdSearchable = false;
-            this._cmdOnly = null;
         }
     };
 
@@ -1899,7 +1872,6 @@ export class CvPrompt extends LitElement implements CommandHost {
                     .query=${this._cmdQuery}
                     ?open=${this._cmdOpen}
                     .searchable=${this._cmdSearchable}
-                    .only=${this._cmdOnly}
                     .host=${this}
                     @select-command=${this._onSelectCommand}
                     @close-commands=${this._closeCommandMenu}
@@ -1948,13 +1920,11 @@ export class CvPrompt extends LitElement implements CommandHost {
                         id="toolbar-right"
                         @open-models=${this._onOpenModels}
                         @open-permissions=${this._onOpenPermissions}
-                        @open-effort=${this._onOpenEffort}
                     >
                         <!-- The settings that outlive the message: the left of the row is what goes
                              into it, the right is how it will be answered. The gap between the two
                              groups is the separation. -->
                         <cv-thinking-toggle .host=${this}></cv-thinking-toggle>
-                        <cv-effort-selector></cv-effort-selector>
                         <cv-model-selector></cv-model-selector>
                         <cv-permission-selector></cv-permission-selector>
                         <!-- Out here with the settings, not in the field with send: how much
