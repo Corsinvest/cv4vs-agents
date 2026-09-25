@@ -98,9 +98,6 @@ export class CvModelList extends LitElement {
                 .items=${this._models}
                 .isNavigable=${(m: ModelInfoDto) => !m.disabled}
                 .header=${html`<span>Select a model</span>`}
-                searchable
-                searchPlaceholder="Search models…"
-                .searchText=${(m: ModelInfoDto) => `${m.displayName} ${m.description} ${m.value}`}
                 emptyText="No models"
                 .renderRow=${(m: ModelInfoDto) => html`
                     <span class="row-text">
