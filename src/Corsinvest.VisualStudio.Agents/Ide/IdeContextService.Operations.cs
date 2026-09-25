@@ -1009,7 +1009,7 @@ internal sealed partial class IdeContextService
         // itself, so taking its directory yields the PARENT).
         var folder = AgentsPackage.Instance?.CurrentSolutionFolder;
         return string.IsNullOrEmpty(folder)
-                ? Array.Empty<string>()
+                ? []
                 : [PathHelpers.LowercaseDrive(folder)];
     }
 

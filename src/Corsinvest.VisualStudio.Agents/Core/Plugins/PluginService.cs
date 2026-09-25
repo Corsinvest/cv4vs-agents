@@ -32,7 +32,7 @@ internal static class PluginService
         if (!ok || !(ExtractJson(stdout) is JObject root))
         {
             OutputWindowLogger.Global.Debug(() => "[plugins] list failed (process error or unparseable JSON) — returning empty");
-            return (Array.Empty<PluginDto>(), Array.Empty<AvailablePluginDto>());
+            return ([], []);
         }
         var installed = (root["installed"] as JArray ?? new JArray()).Select(MapInstalled).ToArray();
         var available = (root["available"] as JArray ?? new JArray()).Select(MapAvailable).ToArray();
