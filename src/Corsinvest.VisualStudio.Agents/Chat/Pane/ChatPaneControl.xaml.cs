@@ -395,20 +395,18 @@ public partial class ChatPaneControl : PaneControlBase
     // When set (by PaneLauncher before the pane loads), this pane opens ON this
     // session instead of a fresh one — used to land a fork in its own pane.
     private string _startupSessionId;
-    // Forked-at message text to pre-fill in the composer once the fork loads.
-    private string _startupPrompt;
-    private bool _startupPromptSend;
+    // What to put in the composer once the pane loads: a fork's forked-at message, or what a
+    // context-menu entry had for a chat that was not open yet.
+    private Contracts.SetComposerNotification _startupComposer;
 
     /// <summary>Make this pane start resumed on <paramref name="sessionId"/> rather
-    /// than fresh, pre-filling the composer with <paramref name="initialPrompt"/>.
+    /// than fresh, filling the composer with <paramref name="composer"/>.
     /// Must be called before the pane's Loaded fires (PaneLauncher does this right
-    /// after creating the window, like AssignPaneId).
-    /// <paramref name="sendPrompt"/> runs it on load instead of leaving it there; a fork waits.</summary>
-    internal void SetStartupSession(string sessionId, string initialPrompt, bool sendPrompt)
+    /// after creating the window, like AssignPaneId).</summary>
+    internal void SetStartupSession(string sessionId, Contracts.SetComposerNotification composer)
     {
         _startupSessionId = sessionId;
-        _startupPrompt = initialPrompt;
-        _startupPromptSend = sendPrompt;
+        _startupComposer = composer;
     }
 
     public ChatPaneControl()
@@ -490,7 +488,7 @@ public partial class ChatPaneControl : PaneControlBase
             SendTheme();
             // Re-push the caption: RegisterInstance runs before VS wires IVsWindowFrame, so the earlier set can no-op.
             RepushCaption();
-            Entry.SetComposerAction = (text, send) => SetComposerText(text, true, send);
+            Entry.SetComposerAction = ApplyComposer;
 
             AgentsOptions.Applied += OnOptionsApplied;
             VSColorTheme.ThemeChanged += OnVsThemeChanged;
@@ -729,9 +727,10 @@ public partial class ChatPaneControl : PaneControlBase
         // A fork's forked-at message, or a prompt from the editor context menu. Not gated on
         // restoreState: the context menu opens a fresh pane, with a prompt but no session — which
         // is also what tells the two apart, a fork always brings the session it forked.
-        if (!string.IsNullOrEmpty(_startupPrompt))
+        if (_startupComposer != null && (!string.IsNullOrEmpty(_startupComposer.Text) || _startupComposer.Mention != null))
         {
-            SetComposerText(_startupPrompt, !restoreState, _startupPromptSend);
+            _startupComposer.EnableIdeContext &= !restoreState;
+            ApplyComposer(_startupComposer);
         }
 
         // Detached from the startup path on purpose: it is a network call, and the chat must open
@@ -757,21 +756,18 @@ public partial class ChatPaneControl : PaneControlBase
         });
     }
 
-    /// <summary>Writes text into the composer. <paramref name="withIdeContext"/> also re-opens the
+    /// <summary>Fills or adds to the composer. <c>EnableIdeContext</c> also re-opens the
     /// IDE-context eye: a prompt picked from the editor context menu is about the file it came
-    /// from, and with the eye shut the CLI is never told which file that is.
-    /// <paramref name="send"/> sends it instead of leaving it there to edit.</summary>
-    private void SetComposerText(string text, bool withIdeContext, bool send)
+    /// from, and with the eye shut the CLI is never told which file that is.</summary>
+    private void ApplyComposer(Contracts.SetComposerNotification composer)
         => Dispatcher.Invoke(() =>
         {
-            if (withIdeContext && Entry?.Options.SendSelection == false)
+            if (composer.EnableIdeContext && Entry?.Options.SendSelection == false)
             {
                 Entry.Options.SendSelection = true;
                 IdeContextService.Instance.ResendCurrentContext();
             }
-            _bridge?.Send(
-                BridgeMessages.ToWebView.Ui.SetComposer,
-                new Contracts.SetComposerNotification { Text = text, EnableIdeContext = withIdeContext, Send = send });
+            _bridge?.Send(BridgeMessages.ToWebView.Ui.SetComposer, composer);
         });
 
     /// <summary>Creates the single ClaudeClient instance on demand (once per tool window lifetime).</summary>

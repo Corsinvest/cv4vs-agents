@@ -10,7 +10,7 @@ import { Msg } from '../core/bridge-messages';
 import { state } from '../core/state';
 import type { IdeContextNotification } from '../core/types';
 import { PERMISSION_MODE } from '../core/types';
-import { normPath } from '../core/path';
+import { mentionToken, normPath, relPath } from '../core/path';
 import { closeTopDialog } from '../core/dialog-focus';
 import { setExtraLinkableExtensions } from '../core/file-links';
 import type {
@@ -150,7 +150,7 @@ function wireBridgeHandlers(): void {
         input?.focusInput();
     });
 
-    // Forked pane: pre-fill the composer with the forked-at message text.
+    // The composer, filled or added to by the host: a fork's message, an editor prompt, "Add to chat".
     bridge.onNotification<SetComposerNotification>(Msg.toWebView.ui.setComposer, (data) => {
         // The host re-opened the eye; mirror it so the badge shows what the CLI is being sent.
         if (data?.enableIdeContext) {
@@ -158,8 +158,15 @@ function wireBridgeHandlers(): void {
         }
         const input = document.querySelector('cv-prompt') as
             import('./components/cv-prompt').CvPrompt | null;
-        const text = data?.text ?? '';
-        if (data?.send && text) {
+        const mention = data?.mention;
+        const text = mention
+            ? `${mentionToken(relPath(mention.path, state.workingDirectory), mention.startLine, mention.endLine)}\n`
+            : (data?.text ?? '');
+        if (data?.append) {
+            // One reference per line: paths are long, and several on one line wrap where they will.
+            // Text is a block of its own, a blank line below what is there.
+            input?.appendText(text, mention ? '\n' : '\n\n');
+        } else if (data?.send && text) {
             input?.setComposerTextAndSubmit(text);
         } else {
             input?.setComposerText(text);

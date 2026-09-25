@@ -129,6 +129,10 @@
       <Group guid="guidAgentsCommandSet" id="EditorPromptsGroup" priority="0x0100">
         <Parent guid="guidAgentsCommandSet" id="EditorPromptsSubMenu"/>
       </Group>
+      <!-- Add to chat, below the prompts: a group of its own so VS draws the separator. -->
+      <Group guid="guidAgentsCommandSet" id="EditorAddToChatGroup" priority="0x0200">
+        <Parent guid="guidAgentsCommandSet" id="EditorPromptsSubMenu"/>
+      </Group>
       <!-- Explain, in the two windows that show a failure. A flat entry rather than the editor's
            submenu: there is one thing to ask of a build log, and a submenu holding a single item
            is a click spent on nothing. Same low priority, for the same reason — it is reached
@@ -194,6 +198,18 @@
         <Strings>
           <ButtonText>Prompt</ButtonText>
         </Strings>
+      </Button>
+
+      <!-- No BeforeQueryStatus: without a selection the reference names the whole file. -->
+      <Button guid="guidAgentsCommandSet" id="AddReferenceToChatCommandId" priority="0x0100" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="EditorAddToChatGroup"/>
+        <Strings><ButtonText>Add reference to chat</ButtonText></Strings>
+      </Button>
+      <!-- DynamicVisibility so BeforeQueryStatus can grey it without a selection. -->
+      <Button guid="guidAgentsCommandSet" id="AddSelectionToChatCommandId" priority="0x0200" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="EditorAddToChatGroup"/>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Add selection to chat</ButtonText></Strings>
       </Button>
 
       <!-- DynamicVisibility so BeforeQueryStatus can grey it when there is nothing to explain.
@@ -319,6 +335,7 @@
       <IDSymbol name="EditorPromptsGroup" value="0x1079" />
       <IDSymbol name="OutputContextGroup" value="0x107A" />
       <IDSymbol name="ErrorListContextGroup" value="0x107B" />
+      <IDSymbol name="EditorAddToChatGroup" value="0x107C" />
       <IDSymbol name="HelpDocsGroup" value="0x1080" />
       <IDSymbol name="HelpContactGroup" value="0x1090" />
       <!-- Must match PackageIds.cs — a mismatch is silent: the entry just never appears. -->
@@ -337,6 +354,8 @@
       <IDSymbol name="ContextUsageCommandId" value="0x020B" />
       <IDSymbol name="ExplainCommandId" value="0x020C" />
       <IDSymbol name="FileHistoryCommandId" value="0x020D" />
+      <IDSymbol name="AddReferenceToChatCommandId" value="0x020E" />
+      <IDSymbol name="AddSelectionToChatCommandId" value="0x020F" />
       <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
            number of open panes and must not run into the fixed ids above. -->
       <IDSymbol name="ActiveSessionCommandId" value="0x0300" />

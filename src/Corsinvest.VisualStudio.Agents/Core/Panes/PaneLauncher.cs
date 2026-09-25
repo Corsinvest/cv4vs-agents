@@ -130,15 +130,13 @@ internal static class PaneLauncher
     /// is handed to the pane before it's shown — always a concrete profile (the native
     /// "Claude" included); callers pass the chosen or inherited one. When
     /// <paramref name="forkSessionId"/> is set (Chat only), the new pane opens resumed on
-    /// that forked session instead of fresh, pre-filling the composer with
-    /// <paramref name="initialPrompt"/> (the forked-at message). When
+    /// that forked session instead of fresh, filling the composer with
+    /// <paramref name="initialComposer"/> (the forked-at message). When
     /// <paramref name="resumeSessionId"/> is set (workspace restore, either kind), the new
     /// pane opens resumed on that session instead of fresh — a separate case from the fork,
-    /// with no pre-filled prompt.
-    /// <paramref name="initialPromptSend"/> runs that prompt once the pane loads instead of
-    /// leaving it in the composer; it only means anything alongside a fresh
-    /// <paramref name="initialPrompt"/>, since a fork is there to be edited.</summary>
-    public static void OpenNew(PaneKind kind, Profile profile, string forkSessionId = null, string initialPrompt = null, string resumeSessionId = null, bool initialPromptSend = false)
+    /// with no pre-filled prompt. A fresh chat pane takes <paramref name="initialComposer"/> too:
+    /// what a context-menu entry had for a chat that was not open yet.</summary>
+    public static void OpenNew(PaneKind kind, Profile profile, string forkSessionId = null, Contracts.SetComposerNotification initialComposer = null, string resumeSessionId = null)
     {
         var pkg = AgentsPackage.Instance;
         if (pkg == null) { OutputWindowLogger.Global.Warn("PaneLauncher: package not yet initialized"); return; }
@@ -177,13 +175,13 @@ internal static class PaneLauncher
                     var isFork = pane is ChatPaneWindow && !string.IsNullOrEmpty(forkSessionId);
                     if (isFork)
                     {
-                        ((ChatPaneWindow)pane).SetStartupSession(forkSessionId, initialPrompt, sendPrompt: false);
+                        ((ChatPaneWindow)pane).SetStartupSession(forkSessionId, initialComposer);
                     }
                     else if (!string.IsNullOrEmpty(resumeSessionId))
                     {
                         if (pane is ChatPaneWindow chatPane)
                         {
-                            chatPane.SetStartupSession(resumeSessionId, null, sendPrompt: false);
+                            chatPane.SetStartupSession(resumeSessionId, null);
                         }
                         else if (pane is CliPaneWindow cliPane)
                         {
@@ -193,11 +191,11 @@ internal static class PaneLauncher
                             cliPane.LoadSession(resumeSessionId);
                         }
                     }
-                    else if (pane is ChatPaneWindow freshChat && !string.IsNullOrEmpty(initialPrompt))
+                    else if (pane is ChatPaneWindow freshChat && initialComposer != null)
                     {
-                        // A prompt with no session to start from — the editor context menu. Both
+                        // A prompt with no session to start from — the context menus. Both
                         // branches above need one, so without this the prompt would be dropped.
-                        freshChat.SetStartupSession(null, initialPrompt, initialPromptSend);
+                        freshChat.SetStartupSession(null, initialComposer);
                     }
                     if (pane.Frame is IVsWindowFrame frame) { ErrorHandler.ThrowOnFailure(frame.Show()); }
 

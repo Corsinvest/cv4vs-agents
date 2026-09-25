@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Contracts;
 using Corsinvest.VisualStudio.Agents.Core.Panes;
 using Corsinvest.VisualStudio.Agents.Core.Profiles;
 using System.Linq;
@@ -13,16 +14,24 @@ namespace Corsinvest.VisualStudio.Agents.Editor;
 /// pane when none is open. Shared by every context-menu entry that hands text to the agent.</summary>
 internal static class PromptDispatcher
 {
-    /// <summary><para>
-    /// With several panes open it goes to the last activated — the one being worked in,
-    /// where the first by SeqNo would just be the oldest — and brings it forward, or the prompt
-    /// lands in a tool window nobody is looking at.
-    /// </para>
-    /// <para>
-    /// <paramref name="sendImmediately"/> submits the composer the way the send button does, IDE
-    /// context and all.
-    /// </para></summary>
+    /// <summary><paramref name="sendImmediately"/> submits the composer the way the send button
+    /// does, IDE context and all.</summary>
     public static void Send(string prompt, bool sendImmediately)
+        => Dispatch(new SetComposerNotification { Text = prompt, EnableIdeContext = true, Send = sendImmediately });
+
+    /// <summary>Adds a reference to a file, or to some of its lines, after what the composer holds.
+    /// The eye is left as it is: the reference names what it is about.</summary>
+    public static void Append(ComposerMention mention)
+        => Dispatch(new SetComposerNotification { Append = true, Mention = mention });
+
+    /// <summary>Adds text after what the composer holds, as a block of its own.</summary>
+    public static void Append(string text)
+        => Dispatch(new SetComposerNotification { Append = true, Text = text });
+
+    /// <summary>With several panes open it goes to the last activated — the one being worked in,
+    /// where the first by SeqNo would just be the oldest — and brings it forward, or the prompt
+    /// lands in a tool window nobody is looking at.</summary>
+    private static void Dispatch(SetComposerNotification composer)
     {
         var target = PaneRegistry.Instance.OfKind(PaneKind.Chat).LastOrDefault(e => e.SetComposerAction != null);
         if (target == null)
@@ -31,7 +40,7 @@ internal static class PromptDispatcher
             var profile = ProfileStore.Load(forEdit: false).FirstOrDefault();
             if (profile != null)
             {
-                PaneLauncher.OpenNew(PaneKind.Chat, profile, initialPrompt: prompt, initialPromptSend: sendImmediately);
+                PaneLauncher.OpenNew(PaneKind.Chat, profile, initialComposer: composer);
             }
             return;
         }
@@ -39,7 +48,7 @@ internal static class PromptDispatcher
         // Text first, activation second. Bringing the pane forward makes it the active window, and
         // the IDE context that rides along with the turn is read from the active document — so
         // activating first sends the prompt with no file behind it.
-        target.SetComposerAction(prompt, sendImmediately);
+        target.SetComposerAction(composer);
         target.ActivateAction?.Invoke();
     }
 }

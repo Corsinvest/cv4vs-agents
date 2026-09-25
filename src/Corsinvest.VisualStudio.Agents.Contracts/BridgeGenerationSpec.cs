@@ -74,7 +74,10 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<NoticeNotification>();
         AddInterface<ModelChangedNotification>();
         AddInterface<PermissionModeChangedNotification>();
-        AddInterface<SetComposerNotification>();
+        AddInterface<SetComposerNotification>().Member(x => nameof(x.Mention)).Null();
+        AddInterface<ComposerMention>()
+            .Member(x => nameof(x.StartLine)).Null()
+            .Member(x => nameof(x.EndLine)).Null();
         AddInterface<FilesDroppedNotification>();
         AddInterface<DroppedFile>();
         AddInterface<PromptHistoryNotification>();

@@ -30,7 +30,8 @@ internal sealed partial class WebViewMessageHandler
         var fork = Sessions.ForkSession(forkSourceId, forkAtUuid);
         if (fork != null)
         {
-            Core.Panes.PaneLauncher.OpenNew(PaneKind.Chat, entry.Profile, forkSessionId: fork.NewSessionId, initialPrompt: fork.ExcludedPrompt);
+            Core.Panes.PaneLauncher.OpenNew(PaneKind.Chat, entry.Profile, forkSessionId: fork.NewSessionId,
+                initialComposer: new Contracts.SetComposerNotification { Text = fork.ExcludedPrompt });
         }
         else
         {
