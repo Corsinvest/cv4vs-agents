@@ -24,8 +24,10 @@ internal static class Win32Focus
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
-    /// <summary>The VS main window handle, or IntPtr.Zero if unavailable. Read on the UI thread.</summary>
-    private static IntPtr MainWindowHandle()
+    /// <summary>The VS main window handle, or IntPtr.Zero if unavailable. Read on the UI thread.
+    /// Internal: <see cref="Chat.Pane.ChatWebView"/> reuses this to park a floating pane's
+    /// WebView2 controller somewhere stable when the window that hosts it is about to close.</summary>
+    internal static IntPtr MainWindowHandle()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (Package.GetGlobalService(typeof(SVsUIShell)) is IVsUIShell shell
