@@ -30,11 +30,19 @@ A tooltip says where that stands:
 
 - *Prompt cache warm, about 42 min left* — keep going and the next message is cheap. The gauge's
   own tooltip carries this: while the cache holds there is nothing to act on.
-- *Prompt cache likely expired (idle 3h 31m). Your next message re-caches about 71k tokens.* — a
-  **clock** appears next to the gauge, and carries that tooltip itself. The next message still
-  works, but it writes the whole conversation into the cache again, which costs more and takes a
-  little longer. For a quick question on a long, idle conversation, a fresh chat can be the
-  cheaper choice.
+- *Prompt cache expires in about 3 min. Send your next message before then to keep it.* — a
+  **yellow clock** appears next to the gauge: 5 minutes before the end of a 1-hour cache, 1 minute
+  before the end of a 5-minute one. If you still have something to ask, now is the cheap moment.
+- *Prompt cache likely expired (idle 3h 31m). Your next message re-caches about 71k tokens.* — the
+  clock turns **orange**, and carries that tooltip itself. The next message still works, but it
+  writes the whole conversation into the cache again, which costs more and takes a little longer.
+  For a quick question on a long, idle conversation, a fresh chat can be the cheaper choice.
+- *Prompt cache does not cover the compacted conversation.* — the same orange clock right after a
+  compaction, however recent the last message: the cache holds the conversation as it was, not the
+  summary that replaced it, so the next message caches that summary anew.
+
+The clock appears and changes on its own while the chat sits idle — which is when the cache runs
+out — without waiting for a message to redraw it.
 
 It is an estimate, and says so: the API reports which lifetime it gave the cache on every message,
 but never whether the entry is still alive, so the gauge counts from the last message's time. Which

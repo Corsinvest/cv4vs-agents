@@ -10,6 +10,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 // already maps to the same glyph.
 import DataBarVertical16Regular from '@fluentui/svg-icons/icons/data_bar_vertical_16_regular.svg';
 import DataPie16Regular from '@fluentui/svg-icons/icons/data_pie_16_regular.svg';
+import Clock16Regular from '@fluentui/svg-icons/icons/clock_16_regular.svg';
 import ClockWarning16Regular from '@fluentui/svg-icons/icons/clock_warning_16_regular.svg';
 import { iconForCommandName } from '../../core/commands/command-icons';
 import { iconStyles, tooltipStyles } from '../styles/shared';
@@ -23,6 +24,7 @@ import {
     autoCompactWindow,
     remainingPercent,
     cacheState,
+    msUntilCacheChange,
     type CacheState,
 } from '../../core/ai-models';
 import { formatTokens } from '../helpers/format';
@@ -68,11 +70,17 @@ function cacheTooltip(state: CacheState): string {
             return '';
         case 'warm':
             return `Prompt cache warm, about ${state.minutesLeft} min left.`;
-        case 'cold':
+        case 'expiring':
             return (
-                `Prompt cache likely expired (idle ${formatIdle(state.idleMs)}).\n` +
-                `Your next message re-caches about ${formatTokens(state.recacheTokens)} tokens.`
+                `Prompt cache expires in about ${state.minutesLeft} min.\n` +
+                'Send your next message before then to keep it.'
             );
+        case 'cold':
+            return state.reason === 'compacted'
+                ? 'Prompt cache does not cover the compacted conversation.\n' +
+                      'Your next message re-caches it.'
+                : `Prompt cache likely expired (idle ${formatIdle(state.idleMs)}).\n` +
+                      `Your next message re-caches about ${formatTokens(state.recacheTokens)} tokens.`;
     }
 }
 
@@ -100,6 +108,10 @@ export class CvContextGauge extends LitElement {
             .cache-warning {
                 display: inline-flex;
                 color: var(--colorPaletteDarkOrangeForeground1);
+            }
+            /* Lighter than cold: nothing costs more yet, there is still time to use the cache. */
+            .cache-warning.expiring {
+                color: var(--colorPaletteMarigoldForeground1);
             }
             /* 14px like every other glyph in the row: iconStyles only pins the ones inside an
                icon-only button, and this one is a bare span. */
@@ -177,6 +189,11 @@ export class CvContextGauge extends LitElement {
     @state() private _usage: ContextUsageDto | null = appState.contextUsage;
     @state() private _window = appState.contextWindow;
     @state() private _cacheAnchor = appState.cacheAnchorMs;
+    @state() private _cacheCompacted = appState.cacheCompactedMs;
+
+    // One timeout, aimed at the next moment the cache reading changes on its own — see
+    // msUntilCacheChange. Re-aimed after every render, so a new message moves it.
+    private _cacheTimer: ReturnType<typeof setTimeout> | undefined;
 
     private readonly _subs = new StateSubscriptions(this);
 
@@ -187,6 +204,9 @@ export class CvContextGauge extends LitElement {
         });
         this._subs.on('cacheAnchorMs', (v) => {
             this._cacheAnchor = v;
+        });
+        this._subs.on('cacheCompactedMs', (v) => {
+            this._cacheCompacted = v;
         });
         this._subs.on('contextWindow', (v) => {
             this._window = v;
@@ -211,6 +231,26 @@ export class CvContextGauge extends LitElement {
     private _onViewContext = (): void => openContextDialog();
     private _onViewStats = (): void => openStatsDialog();
 
+    /** Re-aim the one timeout: the next render is the moment the cache turns expiring or cold, which
+     *  no message announces — it happens while the user is idle, when nothing else redraws. */
+    override updated(): void {
+        clearTimeout(this._cacheTimer);
+        const ms = msUntilCacheChange(
+            this._usage,
+            this._cacheAnchor,
+            Date.now(),
+            this._cacheCompacted,
+        );
+        // A few ms past the boundary, so the render lands on the far side of it.
+        this._cacheTimer =
+            ms === null ? undefined : setTimeout(() => this.requestUpdate(), ms + 50);
+    }
+
+    override disconnectedCallback(): void {
+        super.disconnectedCallback();
+        clearTimeout(this._cacheTimer);
+    }
+
     override render() {
         const u = this._usage;
         // The real window only arrives with the first result, so a fresh (or just-resumed) session
@@ -225,10 +265,10 @@ export class CvContextGauge extends LitElement {
         // Arc: stroke-dashoffset runs CIRC (empty) → 0 (full).
         const offset = CIRC * (1 - percent / 100);
 
-        // No timer: the reading is only ever seen while the tooltip or menu is open, and
-        // opening one renders.
-        const cache = cacheState(u, this._cacheAnchor, Date.now());
+        const cache = cacheState(u, this._cacheAnchor, Date.now(), this._cacheCompacted);
         const cacheText = cacheTooltip(cache);
+        // Only once there is something to act on: send soon, or know the next one re-caches.
+        const cacheIcon = cache.kind === 'expiring' || cache.kind === 'cold';
 
         const used = known ? consumedTokens(u) : 0;
         const limit = appState.contextWindow;
@@ -333,11 +373,16 @@ export class CvContextGauge extends LitElement {
             </fluent-menu>
             ${
                 // Beside the ring, not on it: the two readings answer different questions, and
-                // drawn over the arc neither survived. Only shown cold — while the cache holds
-                // there is nothing to act on, and the tooltip says so for anyone who looks.
-                cache.kind === 'cold'
-                    ? html`<span id="cache-tip" class="cache-warning" aria-label="Prompt cache"
-                          >${unsafeHTML(ClockWarning16Regular)}</span
+                // drawn over the arc neither survived. Not while the cache holds with time to spare
+                // — there is nothing to act on, and the tooltip says so for anyone who looks.
+                cacheIcon
+                    ? html`<span
+                          id="cache-tip"
+                          class="cache-warning ${cache.kind === 'expiring' ? 'expiring' : ''}"
+                          aria-label="Prompt cache"
+                          >${unsafeHTML(
+                              cache.kind === 'expiring' ? Clock16Regular : ClockWarning16Regular,
+                          )}</span
                       >`
                     : nothing
             }
@@ -350,15 +395,15 @@ export class CvContextGauge extends LitElement {
             <fluent-tooltip anchor="gauge-tip" positioning="above-end"
                 >${[
                     known ? `Context: ${remainingPct.toFixed(0)}% left` : 'Context',
-                    // Only while there is no icon: cold, the icon beside it carries this, and
+                    // Only while there is no icon: with one, the icon beside it carries this, and
                     // saying it twice would answer the cache to someone pointing at the ring.
-                    cache.kind === 'cold' ? '' : cacheText,
+                    cacheIcon ? '' : cacheText,
                 ]
                     .filter(Boolean)
                     .join('\n')}</fluent-tooltip
             >
             ${
-                cache.kind === 'cold'
+                cacheIcon
                     ? html`<fluent-tooltip anchor="cache-tip" positioning="above-end"
                           >${cacheText}</fluent-tooltip
                       >`

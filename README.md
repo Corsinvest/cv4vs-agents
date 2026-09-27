@@ -118,9 +118,10 @@ own.
   Claude Desktop. ~270 extensions out of the box, extendable from Options; code blocks stay untouched,
   and clocks, host:ports and version numbers never become dead links.
 - **[Know when the next message costs more](docs/chat/context-and-usage.md#the-prompt-cache)** —
-  the context gauge tracks the **prompt cache**: *warm, about 42 min left* while you work, and a
-  clock beside it once it has likely expired, with how many tokens the next message will write
-  back. Coming back to a long conversation after lunch, you know before you type.
+  the context gauge tracks the **prompt cache**: *warm, about 42 min left* while you work, a yellow
+  clock beside it a few minutes before it expires — still time to send — and an orange one once it
+  has likely expired or a compaction replaced what it held, with how many tokens the next message
+  will write back. Coming back to a long conversation after lunch, you know before you type.
 - **Read a response aloud** — a speaker button on each answer reads it out with the system voice
   (Web Speech, no extra install); click to pause, click to resume. The markdown is spoken as plain
   prose — no "asterisk asterisk", no code blocks recited.
@@ -376,8 +377,9 @@ See [Options → Profiles](docs/options.md#profiles).
 
 A gauge in the composer shows how full the context window is; clicking it opens what is filling it,
 your plan's rate limits, and historical usage — aggregated locally from the session files, with no
-telemetry. Its tooltip also tells you whether the **prompt cache** is still warm, and when it has
-expired a clock appears beside it: the next message re-caches the whole conversation. See
+telemetry. Its tooltip also tells you whether the **prompt cache** is still warm; a clock appears
+beside it when the cache is about to expire (yellow) and once it has (orange): the next message
+re-caches the whole conversation. See
 [Context, usage & statistics](docs/chat/context-and-usage.md).
 
 ### Sessions

@@ -379,6 +379,7 @@ export class CvApp extends LitElement {
                     if (!parentId && data?.usage) {
                         appState.contextUsage = data.usage;
                         appState.cacheAnchorMs = data.timestamp ?? Date.now();
+                        appState.cacheCompactedMs = null;
                     }
                     const streamingId = this._streamingMsgs.get(parentId);
                     let entryId: number | undefined;
@@ -601,6 +602,7 @@ export class CvApp extends LitElement {
                 appState.loadingOlder = false;
                 appState.contextUsage = null;
                 appState.cacheAnchorMs = null;
+                appState.cacheCompactedMs = null;
                 // The chip's tasks belonged to the session that just went. Left alone they would
                 // hang in the composer with no transcript under them, and their end notifications
                 // would land on a session that no longer exists.
@@ -616,6 +618,8 @@ export class CvApp extends LitElement {
 
         this._offs.push(
             bridge.onNotification<CompactedNotification>(Msg.toWebView.chat.compacted, (data) => {
+                // Arrival time: the notification carries no timestamp, and a live one is now.
+                appState.cacheCompactedMs = Date.now();
                 const atBottom = this._isNearBottom();
                 this._appendEntry(CvApp.buildCompactEntry(data));
                 if (atBottom) {
@@ -681,6 +685,7 @@ export class CvApp extends LitElement {
                     if (!data.parentToolUseId && data.usage) {
                         appState.contextUsage = data.usage;
                         appState.cacheAnchorMs = Date.now();
+                        appState.cacheCompactedMs = null;
                     }
                     // Dedup by toolUseId (arrives twice: can_use_tool + assistant msg).
                     const existing = this._transcript.findTool(data.id);
@@ -772,14 +777,24 @@ export class CvApp extends LitElement {
                     this._dropAllIds();
                     const out = this._applyHistoryPage(data, events);
 
-                    // Seed the gauge from the last assistant_text event carrying usage.
+                    // Seed the gauge from the last assistant_text event carrying usage. A compaction
+                    // met on the way back, before that event, came after it: nothing has cached the
+                    // compacted conversation yet.
+                    let compactedAfter = false;
+                    appState.cacheCompactedMs = null;
                     for (let i = events.length - 1; i >= 0; i--) {
-                        if (events[i].type === Msg.toWebView.chat.assistantText) {
+                        if (events[i].type === Msg.toWebView.chat.compacted) {
+                            compactedAfter = true;
+                        } else if (events[i].type === Msg.toWebView.chat.assistantText) {
                             const u = (events[i].data as AssistantTextNotification).usage;
                             if (u) {
                                 appState.contextUsage = u;
                                 appState.cacheAnchorMs =
                                     (events[i].data as AssistantTextNotification).timestamp ?? null;
+                                if (compactedAfter) {
+                                    appState.cacheCompactedMs =
+                                        appState.cacheAnchorMs ?? Date.now();
+                                }
                                 break;
                             }
                         }

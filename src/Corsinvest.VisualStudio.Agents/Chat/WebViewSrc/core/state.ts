@@ -88,6 +88,10 @@ export interface AppState {
     // arrival would report a days-cold cache as fresh.
     cacheAnchorMs: number | null;
 
+    // Set by a compaction, cleared by the next reply's usage: in between, the cache holds the
+    // conversation as it was before the summary replaced it, and the next message re-caches it.
+    cacheCompactedMs: number | null;
+
     // Model catalogue from the CLI (`chat_models`); drives the picker and the
     // effort slider. Includes disabled models. Empty until the first init.
     models: ModelInfoDto[];
@@ -201,6 +205,7 @@ const _impl = new StoreImpl<AppState>({
     loadingOlder: false,
     contextUsage: null,
     cacheAnchorMs: null,
+    cacheCompactedMs: null,
     models: [],
     contextWindow: 0,
     maxOutputTokens: 0,
