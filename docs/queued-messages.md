@@ -55,9 +55,9 @@ after it would go while yours, no longer queued, arrived last.
 If the turn ends mid-edit nothing is sent, and the bar stays: with the turn over it is the only
 thing saying the queue is still there and still waiting on you.
 
-The **cross** on that bar puts the entry back as it was. Not Esc — that stops the turn and clears
-the queue with it, as it always has. A cross there and a bin in the list are deliberate: one closes
-what you opened, the other deletes something.
+The **cross** on that bar puts the entry back as it was, and **Esc** does the same: it closes the
+nearest thing open, and stops the turn only when nothing is. A cross there and a bin in the list
+are deliberate: one closes what you opened, the other deletes something.
 
 ## Sending two messages as one
 
