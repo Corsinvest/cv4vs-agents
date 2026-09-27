@@ -185,12 +185,13 @@ question about another repo, a long back-and-forth about something abstract. Thi
 the two knobs — the setting above changes what the block *contains*, the eye decides whether there
 is one at all.
 
-Picking an [editor prompt](../options.md#editor-prompts) re-opens it: a question about "this code"
+Picking an [editor prompt](../options.md#prompts) re-opens it: a question about "this code"
 with nothing saying which code would reach the CLI as a question about nothing.
 
 ### Thinking and effort
 
-The model menu in the composer toolbar carries the extended-thinking toggle and the effort level.
+Both sit in the composer toolbar: extended thinking is a toggle of its own, and the effort level is
+the slider at the foot of the model picker, named beside the model on its button.
 Thinking buys the model room to reason before answering — real output tokens, on every turn it uses
 them. It earns its cost on a hard debugging session and wastes it on "rename this variable".
 

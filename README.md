@@ -184,8 +184,9 @@ own.
   - **[File history](docs/file-history.md)** — what the CLI's file backups cost on disk, per project
     and per session, with a diff against the file as it is now and a way to delete the ones you no
     longer want (orphaned ones included).
-- **[Plugin manager](docs/chat/plugins.md)** — install from a marketplace, enable/disable what you have,
-  add marketplaces — from Installed / Available / Marketplaces tabs, without leaving the chat.
+- **[Plugin manager](docs/chat/plugins.md)** — install from a marketplace, enable/disable or update
+  what you have, add marketplaces — from Installed / Available / Marketplaces tabs, without leaving
+  the chat.
 - **Talk to it** — dictate the prompt instead of typing it: a mic button in the composer transcribes
   as you speak (Web Speech API; hidden when the platform doesn't support it).
 - **Hot-swap** — model, permission mode and interrupt change on the live process, never a restart.
@@ -296,9 +297,9 @@ See [Options → Profiles](docs/options.md#profiles).
   Shift+Enter for a newline.
 - **Write while it is still answering** — the message is held until the turn ends, then sent. Its
   bubble appears straight away, greyed out so it does not read as already sent, and drops into place
-  below the reply it was waiting on, so each answer stays under the question that prompted it. A row
-  above the composer lists what is still waiting and takes one back out, without stopping the turn
-  to do it — see [Messages waiting to be sent](docs/queued-messages.md).
+  below the reply it was waiting on, so each answer stays under the question that prompted it. A chip
+  in the composer's toolbar lists what is still waiting and takes one back out, without stopping the
+  turn to do it — see [Messages waiting to be sent](docs/queued-messages.md).
 - **Slash-command palette** — a lightning button opens a unified palette; typing `/` filters. It
   lists the CLI's slash/skill commands plus built-in actions (Attach, Mention, Clear, Switch model,
   Settings, Manage plugins, Open Claude in Terminal, Help, Report a problem).
@@ -308,6 +309,9 @@ See [Options → Profiles](docs/options.md#profiles).
 - **Attachments** — upload files/images from the computer, or paste image data straight into the
   composer; removable attachment chips. Images are sent as images, PDFs as documents, the rest as text.
 - **Prompt history** — recall previous prompts with ↑/↓ (shell-style).
+- **Keyboard in the lists** — the `@` menu, the `/` palette and the model and permission pickers
+  move with ↑/↓ and a page at a time with PageUp/PageDown. **Esc** closes whatever is open — a
+  list, a permission prompt, the edit of a queued message — and stops the turn only when nothing is.
 - **Voice input** — dictation via the Web Speech API (pulsing mic while recording; hidden when
   unsupported).
 - **Model switcher & controls** — pick the model, with its **Effort** slider under the list and the
@@ -406,7 +410,7 @@ re-caches the whole conversation. See
 ### Plugins
 
 - **[Plugin manager](docs/chat/plugins.md)** — Installed / Available / Marketplaces tabs; install,
-  enable/disable, refresh, add a marketplace.
+  enable/disable, update an installed plugin, add or refresh a marketplace.
 
 ---
 
@@ -485,7 +489,7 @@ These four are the ones that reach the wire:
 |---|---|---|---|
 | **The eye** on the file chip | composer, **per pane** | open | Shuts off the file/lines block on every message. The biggest single knob — reach for it when the conversation has nothing to do with what is on screen. |
 | **Send the selected text with the message** | Options → Chat | **off** | On, your selected code rides along with *every* message while that selection stands (the chip's icon turns from 🔖 to 🧾). Off, Claude opens the file when it needs it. Turn it on for unsaved buffers, where the copy on disk is the stale one. |
-| **Extended thinking / effort** | model menu, **per session** | thinking off | Buys the model room to reason before answering — worth it on a hard bug, wasted on a rename. |
+| **Extended thinking / effort** | composer toolbar and model picker, **per session** | thinking off | Buys the model room to reason before answering — worth it on a hard bug, wasted on a rename. |
 | **Send post-edit diagnostics** | Options → Chat | **off** | Feeds the errors an edit introduced back into the context after every edit. |
 
 Three of the four already default to the cheap setting, so the one to know about is the eye — it is
