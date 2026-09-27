@@ -87,6 +87,12 @@ public class PluginUninstallNotification
     public string Scope { get; set; }
 }
 
+public class PluginUpdateNotification
+{
+    public string PluginId { get; set; }
+    public string Scope { get; set; }
+}
+
 public class PluginSetEnabledNotification
 {
     public string PluginId { get; set; }

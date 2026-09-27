@@ -225,6 +225,7 @@ public class BridgeGenerationSpec : GenerationSpec
         // Plugin-manager requests. Scope is omitted by the WebView (host defaults to "user").
         AddInterface<PluginInstallNotification>().Member(x => nameof(x.Scope)).Optional();
         AddInterface<PluginUninstallNotification>().Member(x => nameof(x.Scope)).Optional();
+        AddInterface<PluginUpdateNotification>().Member(x => nameof(x.Scope)).Optional();
         AddInterface<PluginSetEnabledNotification>().Member(x => nameof(x.Scope)).Optional();
         AddInterface<MarketplaceAddNotification>();
         AddInterface<MarketplaceRemoveNotification>();
