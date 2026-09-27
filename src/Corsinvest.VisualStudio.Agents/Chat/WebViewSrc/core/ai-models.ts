@@ -77,26 +77,69 @@ export function consumedTokens(u: ContextUsageDto): number {
 
 const CACHE_TTL_MS: Record<string, number> = { '5m': 5 * 60 * 1000, '1h': 60 * 60 * 1000 };
 
+/** How long before expiry the cache counts as expiring: long enough to finish a thought and send
+ *  it. A fifth of the 5m TTL rather than the same five minutes — that would have it expiring from
+ *  the moment it was written. */
+const CACHE_EXPIRING_MS: Record<string, number> = { '5m': 60 * 1000, '1h': 5 * 60 * 1000 };
+
 export type CacheState =
     | { kind: 'unknown' }
     | { kind: 'warm'; minutesLeft: number }
-    | { kind: 'cold'; idleMs: number; recacheTokens: number };
+    | { kind: 'expiring'; minutesLeft: number }
+    | { kind: 'cold'; reason: 'expired'; idleMs: number; recacheTokens: number }
+    | { kind: 'cold'; reason: 'compacted' };
 
 /** An estimate, which is why the UI says "likely": the API states the TTL it wrote but never
- *  reports whether the entry is still live, so anchor + TTL against the clock is all there is. */
+ *  reports whether the entry is still live, so anchor + TTL against the clock is all there is.
+ *  `compactedMs` is set by a compaction that no reply has cached yet: the cache still holds the
+ *  conversation as it was, not the summary that replaced it, whatever the clock says. */
 export function cacheState(
     u: ContextUsageDto | null,
     anchorMs: number | null,
     now: number,
+    compactedMs: number | null,
 ): CacheState {
+    if (compactedMs !== null) {
+        return { kind: 'cold', reason: 'compacted' };
+    }
     const ttl = u?.cacheTtl ? CACHE_TTL_MS[u.cacheTtl] : undefined;
     if (!u || !anchorMs || ttl === undefined) {
         return { kind: 'unknown' };
     }
     const msLeft = anchorMs + ttl - now;
-    return msLeft > 0
-        ? { kind: 'warm', minutesLeft: Math.ceil(msLeft / 60000) }
-        : { kind: 'cold', idleMs: now - anchorMs, recacheTokens: consumedTokens(u) };
+    if (msLeft <= 0) {
+        return {
+            kind: 'cold',
+            reason: 'expired',
+            idleMs: now - anchorMs,
+            recacheTokens: consumedTokens(u),
+        };
+    }
+    const minutesLeft = Math.ceil(msLeft / 60000);
+    return msLeft <= CACHE_EXPIRING_MS[u.cacheTtl]
+        ? { kind: 'expiring', minutesLeft }
+        : { kind: 'warm', minutesLeft };
+}
+
+/** Milliseconds until `cacheState` next changes on its own — into expiring, then each minute of the
+ *  countdown it shows, then into cold — or null when only a new message can change it. Nothing
+ *  re-renders the gauge while the user is idle, and idle is exactly when the cache runs out: this is
+ *  when to look again. Minute by minute only while expiring: a handful of renders, not one an hour. */
+export function msUntilCacheChange(
+    u: ContextUsageDto | null,
+    anchorMs: number | null,
+    now: number,
+    compactedMs: number | null,
+): number | null {
+    const ttl = u?.cacheTtl ? CACHE_TTL_MS[u.cacheTtl] : undefined;
+    if (compactedMs !== null || !u || !anchorMs || ttl === undefined) {
+        return null;
+    }
+    const msLeft = anchorMs + ttl - now;
+    const expiring = CACHE_EXPIRING_MS[u.cacheTtl];
+    // minutesLeft is ceil(msLeft / 1 min): it drops, and at the last minute turns cold, each time
+    // msLeft crosses a whole minute.
+    return msLeft <= 0 ? null : msLeft > expiring ? msLeft - expiring : msLeft % 60000 || 60000;
 }
 
 /** Percent of the context window consumed. 0 until the window is known (no
