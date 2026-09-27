@@ -80,8 +80,9 @@ Under the message box, a row for the turn itself: **thinking**, **model and effo
 **permission mode**, each a click away. Which model is answering, and what it may do without asking,
 are the two things that change a turn the most — they belong in sight, not three levels down a menu.
 
-One button on the toolbar takes out everything Claude *did* — the commands, file reads and edits,
-searches, MCP calls and sub-agents — and leaves the conversation. What you took part in stays:
+**View mode** decides how much of what Claude *did* — the commands, file reads and edits, searches,
+MCP calls and sub-agents — the transcript shows: all of it, each run folded into one row that opens
+in place, or none of it, leaving the conversation. What you took part in stays in every mode:
 answers to questions, plan decisions, the task list, anything waiting on your approval. And a plan
 too long for the banner's small box opens in the editor as a normal document, where you can edit it
 before approving — the banner sends what you wrote.
@@ -120,13 +121,20 @@ MCP server and the panes themselves start on first use, not on solution load.
 
 A long session opens as quickly as an empty one.
 
+Walk away from a long turn and come back to it finished: while a chat is working, **Windows is kept
+from going to sleep** — the screen still turns off on its own timer, and everything goes back to
+normal the moment the reply ends. Messages written while Claude is still answering **wait in a
+queue** and go out when the turn ends; you can edit, remove or merge them before they do.
+
 ---
 
 ## Context and cost, visible
 
 ![Statistics document-tab](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/statistics-document.png)
 
-A live gauge in the composer shows how full the context window is, and a full-window **Statistics**
+A live gauge in the composer shows how full the context window is, and a small clock beside it warns
+when the **prompt cache** is about to expire — after a break the next message can cost up to ten
+times more, and the warning comes while there is still time to send. A full-window **Statistics**
 tab aggregates token usage and cost from your local session files: a navigable tree (All → Profile →
 Folder → Project → Days/Sessions) drives summary tiles, a GitHub-style activity heatmap and
 per-day/per-model charts.
@@ -159,7 +167,8 @@ and a **Stop** button next to every one of them. Their tool calls stay grouped u
 made them.
 
 A **plugin manager** covers the rest of the CLI's ecosystem — Installed, Available and Marketplaces
-tabs: install, enable or disable, add a marketplace, without leaving the IDE.
+tabs: install, enable or disable, update to the latest version, add a marketplace, without leaving
+the IDE.
 
 ---
 
@@ -173,7 +182,8 @@ onto it, not a copy.
 
 The session link lands in the conversation with a **QR code**: scan it and the turn you started at
 your desk carries on in your hand. A toolbar indicator says it is on for as long as it is, and
-turns it off from the same place.
+turns it off from the same place. Or turn it on once for **every session**, and each new chat starts
+it on its own.
 
 ---
 

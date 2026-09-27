@@ -6,6 +6,70 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-09-27
+
+A chat now keeps the computer awake while it works, and warns you when the next message is about to
+cost more than it looks. The conversation can fold Claude's tool calls out of the way, the model
+button now carries the effort level too, and a right-click in Solution Explorer, a document tab, the
+Error List or the Output window puts what you clicked into the chat. Remote Control can start on its
+own, and what you type through it now shows up in the pane.
+
+### Added
+
+- **The computer no longer goes to sleep in the middle of a reply.** Windows suspending mid-turn
+  left the conversation stuck where it was. While a chat is working the computer stays awake; the
+  screen can still turn off as usual. It goes back to normal as soon as the reply ends, the chat is
+  closed, or Claude is waiting for your permission.
+- **View mode, with a new Focus level.** The *Hide tool calls* switch became three choices: **Full**
+  shows everything, **Focus** folds each run of tool calls into one row you can open (`5 tool calls ·
+  1 failed`), and **Hide tool calls** works as before. Change it from the `/` menu or in Options; the
+  old setting carries over.
+- **A warning before the next message costs more.** After a break the conversation's cache expires,
+  and the next message is billed as if the whole conversation were new — up to ten times the usual.
+  A small clock beside the context gauge now appears shortly before that happens, while there is
+  still time to send, and again once it has, saying how much the next message will cost. It also
+  appears after a compaction, for the same reason.
+- **Remote Control at startup.** If you turned Remote Control on for every session, chats in Visual
+  Studio now start it on their own, as the terminal and VS Code already did. **Enable Remote Control
+  for all sessions** in the `/` menu switches it.
+- **Add to chat, from wherever you are.** Right-click files, folders or projects in Solution Explorer,
+  or a document's tab, and **Add reference to chat** puts them in the message you are writing. In the
+  editor, **Add reference to chat** points at the selected lines and **Add selection to chat** copies
+  the text itself. Nothing is sent until you send it.
+- **Your own prompts for the Error List and the Output window.** Both now have the editor's menu:
+  prompts you can edit, plus **Add to chat**. Options → **Prompts** (was *Editor prompts*) has one tab
+  per menu; your existing prompts carry over.
+- **Update an installed plugin.** The plugin manager now has an Update button on each installed
+  plugin, and tells you when it is already up to date.
+- **PageUp and PageDown** move a page at a time in the `@` menu, the `/` menu and the model and
+  permission pickers.
+
+### Changed
+
+- **Model and effort in one button.** The toolbar reads, for example, `Opus 5.5 Medium`, and the
+  effort slider is at the bottom of the model list. The separate effort button is gone.
+- **More compact lists.** The model list, the `/` and `@` menus, the queue and rewind show more at
+  once, the pickers keep their title in view while you scroll, and long command hints no longer push
+  the command name out of sight.
+- **Explain in the Error List asks about each error separately**, instead of looking for one story
+  behind unrelated errors.
+
+### Fixed
+
+- **Esc while editing a queued message stopped Claude and emptied the queue.** It now just closes the
+  edit.
+- **Messages typed through Remote Control did not appear in the pane** — only Claude's answers did.
+- **Messages sent while Claude was working disappeared from history**, so a reopened conversation
+  showed answers to nothing. They now appear, and ↑/↓ recalls them.
+- **A forked conversation lost its first message.**
+- **Default was missing from the model list.** It is not the same as picking the model it currently
+  points to: Default follows Claude Code's recommendation when that changes.
+- **A chat could look busy forever** after starting a new conversation, or opening one from History,
+  while a reply was still running.
+- **A damaged Claude Code settings file could be overwritten**, losing everything in it, just by
+  opening a chat. A file that cannot be read is now left alone.
+- **The first position of the slider controls looked unbalanced**, highlighted on three sides only.
+
 ## [1.11.0] - 2026-09-18
 
 What Claude is told you selected was being read through an API that counted a tab as several
