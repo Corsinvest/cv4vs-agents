@@ -291,13 +291,23 @@ export class CvPluginManager extends CvDialogBase {
             .ins-actions {
                 display: none;
                 align-items: center;
-                gap: 8px;
+                /* icon-only buttons already pad their icon; any gap on top reads as too loose. */
+                gap: 0;
+            }
+            /* The switch has no padding of its own: match the button's so the three sit evenly. */
+            .switch-wrap {
+                display: flex;
+                padding-inline-end: 8px;
             }
             .ins-card:hover .dates {
                 display: none;
             }
-            .ins-card:hover .ins-actions {
+            .ins-card:hover .ins-actions,
+            .ins-card:has(.spin) .ins-actions {
                 display: flex;
+            }
+            .ins-card:has(.spin) .dates {
+                display: none;
             }
             .danger-hover:hover {
                 color: var(--colorPaletteRedForeground1);
@@ -357,6 +367,8 @@ export class CvPluginManager extends CvDialogBase {
     @state() private _opError = false;
     // Name of the marketplace currently refreshing (its ↻ icon spins until the op completes).
     @state() private _refreshing: string | null = null;
+    // Id of the installed plugin currently updating (same spinner, on its row).
+    @state() private _updating: string | null = null;
     // Live value of the "add marketplace" input, so the + button enables only when non-empty.
     @state() private _addSource = '';
 
@@ -399,6 +411,7 @@ export class CvPluginManager extends CvDialogBase {
         this._opError = !r.ok;
         this._opMessage = r.message ?? '';
         this._refreshing = null; // stop the spinner (any op completed)
+        this._updating = null;
         // Refresh regardless of which tab acted: an install changes both Installed and Available.
         void this._loadAll();
     }
@@ -406,6 +419,11 @@ export class CvPluginManager extends CvDialogBase {
     private _onRefresh(name: string): void {
         this._refreshing = name;
         this._send(Msg.fromWebView.plugins.marketplaceRefresh, { name });
+    }
+
+    private _onUpdate(p: PluginDto): void {
+        this._updating = p.id;
+        this._send(Msg.fromWebView.plugins.update, { pluginId: p.id, scope: p.scope });
     }
 
     private _send(channel: string, payload: Record<string, unknown>): void {
@@ -556,15 +574,32 @@ export class CvPluginManager extends CvDialogBase {
                             ${updated ? html`<span class="date-row" title="Updated">${unsafeHTML(ArrowSync16Regular)}${updated}</span>` : nothing}
                         </div>
                         <div class="ins-actions">
-                            <fluent-switch
-                                ?checked=${p.enabled}
-                                title=${p.enabled ? 'Disable' : 'Enable'}
-                                @change=${(e: Event) =>
-                                    this._send(Msg.fromWebView.plugins.setEnabled, {
-                                        pluginId: p.id,
-                                        enabled: (e.target as HTMLInputElement).checked,
-                                    })}
-                            ></fluent-switch>
+                            <span class="switch-wrap"
+                                ><fluent-switch
+                                    ?checked=${p.enabled}
+                                    title=${p.enabled ? 'Disable' : 'Enable'}
+                                    @change=${(e: Event) =>
+                                        this._send(Msg.fromWebView.plugins.setEnabled, {
+                                            pluginId: p.id,
+                                            enabled: (e.target as HTMLInputElement).checked,
+                                        })}
+                                ></fluent-switch
+                            ></span>
+                            ${
+                                // Synced plugins come from claude.ai with no marketplace behind them: the CLI refuses to update them.
+                                p.scope === 'synced'
+                                    ? nothing
+                                    : html`<fluent-button
+                                          appearance="transparent"
+                                          icon-only
+                                          title="Update to the latest version"
+                                          aria-label="Update"
+                                          class=${this._updating === p.id ? 'spin' : ''}
+                                          ?disabled=${this._updating !== null}
+                                          @click=${() => this._onUpdate(p)}
+                                          >${unsafeHTML(ArrowSync16Regular)}</fluent-button
+                                      >`
+                            }
                             <fluent-button
                                 appearance="transparent"
                                 icon-only
