@@ -211,6 +211,9 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
             case BridgeMessages.FromWebView.Plugins.Uninstall:
                 HandleUninstall(data, id);
                 break;
+            case BridgeMessages.FromWebView.Plugins.Update:
+                HandleUpdate(data, id);
+                break;
             case BridgeMessages.FromWebView.Plugins.SetEnabled:
                 HandleSetEnabled(data, id);
                 break;

@@ -134,6 +134,22 @@ internal static class PluginService
         return (ok, LastMeaningfulLine(source));
     }
 
+    /// <summary>Update one installed plugin (<c>plugin update --json</c>). Unlike the other ops it
+    /// reports on stdout even when it fails. <c>updated</c> is true only when a new version was
+    /// installed: <c>up_to_date</c> and <c>skipped</c> leave the active plugins as they were.</summary>
+    public static async Task<(bool ok, bool updated, string message)> UpdateAsync(string pluginId, string scope)
+    {
+        var (ok, stdout, stderr) = await RunRawAsync("plugin", "update", pluginId, "--scope", scope, "--json");
+        if (ExtractJson(stdout) is not JObject result)
+        {
+            return (false, false, LastMeaningfulLine(string.IsNullOrWhiteSpace(stderr) ? stdout : stderr));
+        }
+        var message = (string)result["message"] ?? "";
+        // The CLI refreshes the marketplace first; when that fails the version it compared against may be stale.
+        if ((bool?)result["refreshFailed"] == true) { message += " (marketplace could not be refreshed — the latest version may be newer)"; }
+        return (ok, ok && (string)result["updateOutcome"] == "updated", message);
+    }
+
     // The --json output is a single JSON value, but action commands print progress lines around
     // it. Find the first '[' or '{' that parses to the end — that's the JSON payload.
     private static JToken ExtractJson(string stdout)

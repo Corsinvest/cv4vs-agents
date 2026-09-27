@@ -98,6 +98,7 @@ internal static class BridgeMessages
             public const string List = "plugins_list";
             public const string Install = "plugin_install";
             public const string Uninstall = "plugin_uninstall";
+            public const string Update = "plugin_update";
             public const string SetEnabled = "plugin_set_enabled";
             public const string MarketplaceList = "marketplace_list";
             public const string MarketplaceAdd = "marketplace_add";

@@ -19,6 +19,11 @@ Everything currently installed, each with its marketplace, version and enable/di
 plugin off to keep it installed but inactive; on to bring it back. Its skills, agents and MCP servers
 follow the toggle.
 
+**Update** (↻, on hover) installs the latest version the plugin's marketplace offers. The CLI refreshes
+that marketplace first, so there is no need to refresh it by hand. When the plugin is already at the
+latest version the message says so, and nothing needs a reload. Plugins synced from your claude.ai
+account have no marketplace behind them and no Update button; manage them on claude.ai.
+
 ---
 
 ## Available
