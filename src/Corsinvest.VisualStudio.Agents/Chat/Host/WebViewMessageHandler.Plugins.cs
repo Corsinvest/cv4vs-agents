@@ -32,6 +32,18 @@ internal sealed partial class WebViewMessageHandler
             "plugin", p.Enabled ? "enable" : "disable", p.PluginId);
     }
 
+    private void HandleUpdate(JObject data, int? id)
+    {
+        var p = data.ToObject<Contracts.PluginUpdateNotification>();
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            var (ok, updated, message) = await Core.Plugins.PluginService.UpdateAsync(p.PluginId, p.Scope ?? "user");
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            // Already at the latest version is a success that changed nothing: no reload banner.
+            SendPluginOpResult("update", ok, message, updated);
+        }).FileAndForget(nameof(WebViewMessageHandler));
+    }
+
     private void HandleMarketplaceAdd(JObject data, int? id) =>
         // Adding a marketplace only changes what's installable, not the active plugins.
         HandlePluginOp("marketplace-add", affectsActive: false,
@@ -75,15 +87,20 @@ internal sealed partial class WebViewMessageHandler
                                                                                              {
                                                                                                  var (ok, message) = await Core.Plugins.PluginService.RunOpAsync(args);
                                                                                                  await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                                                                                                 bridge.Send(BridgeMessages.ToWebView.Plugins.OpResult, new Contracts.PluginOpResultNotification
-                                                                                                 {
-                                                                                                     Op = op,
-                                                                                                     Ok = ok,
-                                                                                                     Message = message,
-                                                                                                     AffectsActive = affectsActive && ok,
-                                                                                                 });
-                                                                                                 // Only this pane hears about it: a plugin change affects every live chat, but there is
-                                                                                                 // no broadcast channel yet, so the others find out on their next reload.
-                                                                                                 if (ok && affectsActive) { bridge.Send(BridgeMessages.ToWebView.Plugins.Changed, null); }
+                                                                                                 SendPluginOpResult(op, ok, message, affectsActive && ok);
                                                                                              }).FileAndForget(nameof(WebViewMessageHandler));
+
+    private void SendPluginOpResult(string op, bool ok, string message, bool affectsActive)
+    {
+        bridge.Send(BridgeMessages.ToWebView.Plugins.OpResult, new Contracts.PluginOpResultNotification
+        {
+            Op = op,
+            Ok = ok,
+            Message = message,
+            AffectsActive = affectsActive,
+        });
+        // Only this pane hears about it: a plugin change affects every live chat, but there is
+        // no broadcast channel yet, so the others find out on their next reload.
+        if (affectsActive) { bridge.Send(BridgeMessages.ToWebView.Plugins.Changed, null); }
+    }
 }

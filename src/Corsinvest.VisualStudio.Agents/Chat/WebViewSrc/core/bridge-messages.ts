@@ -45,6 +45,7 @@ export const Msg = {
             list: 'plugins_list',
             install: 'plugin_install',
             uninstall: 'plugin_uninstall',
+            update: 'plugin_update',
             setEnabled: 'plugin_set_enabled',
             marketplaceList: 'marketplace_list',
             marketplaceAdd: 'marketplace_add',
