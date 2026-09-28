@@ -7,10 +7,14 @@ on:
     branches: ["master"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   webview:
     name: WebView (TypeScript)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc
@@ -55,6 +59,7 @@ jobs:
     name: Build VSIX
     # A VSIX needs MSBuild and the VS SDK: .NET Framework 4.8 can't be built on Linux.
     runs-on: windows-latest
+    timeout-minutes: 30
     permissions:
       actions: read
       contents: read
