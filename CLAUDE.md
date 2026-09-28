@@ -45,7 +45,7 @@ servers, and symptoms that look like bugs in the code. `tools\extension.ps1` is 
 hives, which deleting the folder alone does not — VS keeps serving the cached menu entries.
 
 **Unit tests exist, and cover less than the extension does.** `tests/Corsinvest.VisualStudio.Agents.Tests`
-holds ~195 xUnit tests over the pure logic — the JSONL readers, the content-block translator, meta
+holds the xUnit tests over the pure logic — the JSONL readers, the content-block translator, meta
 injection, stats, schema building. Run them:
 
 ```powershell
@@ -61,8 +61,9 @@ will look like your change is covered when nothing ran it.
 Everything else — WPF, the WebView, the MCP surface, anything touching the VS shell — is verified by
 hand in the Exp instance (F5 → `devenv /rootsuffix Exp`). A green build proves less than it looks:
 XAML `x:Class`, `.vsct` ids and the manifest fail at *runtime*, not compile time — a mismatched
-`.vsct` id gives a silent no-op menu entry. **CI does not run the tests**, so a red suite reaches
-master unless someone ran it.
+`.vsct` id gives a silent no-op menu entry. CI runs the tests after its build (`quality.yml`,
+`release.yml`, `--no-build` against the DLL it just built), so a red suite fails the PR — but only
+there if you skipped the local run.
 
 `tests/LangMatrix` is not a test project: five throwaway libraries the solution loads but never
 builds, so the `nav_*` tools can be pointed at a real file in each language.
