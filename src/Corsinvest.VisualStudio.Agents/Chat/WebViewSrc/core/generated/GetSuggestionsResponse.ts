@@ -7,4 +7,5 @@ import { AtItemDto } from './AtItemDto';
 
 export interface GetSuggestionsResponse {
     items: AtItemDto[];
+    unavailable: string | null;
 }

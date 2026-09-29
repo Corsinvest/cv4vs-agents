@@ -5,4 +5,5 @@
 
 export interface GetSuggestionsRequest {
     query: string;
+    refresh?: boolean;
 }

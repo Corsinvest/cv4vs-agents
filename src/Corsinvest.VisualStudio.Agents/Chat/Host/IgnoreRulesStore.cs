@@ -14,7 +14,7 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 /// a rule list with comments and sections, which is a thing to edit in a real editor and copy
 /// between machines, not a preference to toggle.
 /// <para>These apply only where the workspace's own ignore rules say nothing —
-/// <c>FileSuggestions.IsIgnored</c> asks the .gitignore stack first. They exist for the project
+/// <c>WorkspaceFileLister</c> asks the .gitignore stack first. They exist for the project
 /// that ships no rules at all: without them a repository with an unignored node_modules fills the
 /// menu with 2,000 rows of dependencies.</para>
 /// </summary>
@@ -76,7 +76,7 @@ internal static class IgnoreRulesStore
     }
 
     /// <summary>Shipped starting point, also the fallback when the file is missing or unreadable.
-    /// Read by the .gitignore parser, so these ARE gitignore rules: a trailing `/` marks a
+    /// Read as a .gitignore, so these ARE gitignore rules: a trailing `/` marks a
     /// directory, a leading `/` anchors to the workspace root, and `*.ext` is a glob rather than
     /// the bare extension an earlier shorthand accepted.</summary>
     public const string Defaults = """
@@ -88,10 +88,12 @@ internal static class IgnoreRulesStore
         # These only apply where the workspace's rules say nothing, so a project that
         # ignores its own build output is already covered without touching this file.
 
-        # Version control and IDE state
+        # Version control and IDE state. `.vscode/*` rather than `.vscode/`: hiding the
+        # folder itself would stop a project's `!.vscode/settings.json` from bringing that
+        # one file back.
         .git/
         .vs/
-        .vscode/
+        .vscode/*
         .idea/
         .hg/
         .svn/
