@@ -360,7 +360,10 @@
     <Compile Include="Core\Sessions\SessionManager.Common.cs" />
     <Compile Include="Core\Plugins\PluginService.cs" />
     <Compile Include="Chat\Host\BridgeMessages.cs" />
+    <Compile Include="Chat\Host\FileIndex.cs" />
     <Compile Include="Chat\Host\FileSuggestions.cs" />
+    <Compile Include="Chat\Host\GitIgnore.cs" />
+    <Compile Include="Chat\Host\WorkspaceFileLister.cs" />
     <Compile Include="Chat\Host\IgnoreRulesStore.cs" />
     <Compile Include="Chat\Host\WebViewBridge.cs" />
     <Compile Include="Chat\Host\WebViewBridge.Payloads.cs" />

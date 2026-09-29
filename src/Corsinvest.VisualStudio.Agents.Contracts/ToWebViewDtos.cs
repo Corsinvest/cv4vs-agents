@@ -590,6 +590,8 @@ public class ThemeChangedNotification
 public class GetSuggestionsResponse
 {
     public AtItemDto[] Items { get; set; }
+    /// <summary>Why there is no listing (the workspace could not be listed); null when there is one.</summary>
+    public string Unavailable { get; set; }
 }
 
 /// <summary>The model catalogue from the CLI's initialize (chat_models): wrapper over ModelInfoDto.</summary>

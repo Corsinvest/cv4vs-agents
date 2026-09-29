@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The `@` file picker could miss files in large projects, and froze Visual Studio while it
+  looked.** It re-read the whole project on every keystroke and gave up after 20,000 files, so in a
+  big solution a file you typed by its exact name could still be missing. The list is now read once
+  when the menu opens, in the background, with no limit, and filtered as you type.
+
 ## [1.12.0] - 2026-09-27
 
 A chat now keeps the computer awake while it works, and warns you when the next message is about to

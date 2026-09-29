@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, css, nothing } from 'lit';
+import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { iconStyles, tooltipStyles } from '../styles/shared';
@@ -37,6 +37,7 @@ import type {
 } from '../../core/types';
 import { GetSuggestionsReq, SetRemoteControlAtStartupReq } from '../../core/request-types';
 import { markSent } from '../../core/sent-prompts';
+import { AtRequests } from '../../core/at-requests';
 import { permissionItems } from '../../core/permission-modes';
 import type { ChatCommand, CommandHost } from '../../core/commands';
 import './cv-notice-stack';
@@ -358,6 +359,9 @@ export class CvPrompt extends LitElement implements CommandHost {
     @state() private _editingUuid: string | null = null;
     @state() private _atOpen = false;
     @state() private _atItems: AtItemDto[] = [];
+    // Set when the host could not list the workspace; shown in place of "No matches".
+    @state() private _atUnavailable: string | null = null;
+    private readonly _atRequests = new AtRequests();
     // Command palette (typing `/`, or the attach menu's "Slash command" item). `_cmdQuery` is the
     // text after `/` while typing; empty when opened from the menu.
     @state() private _cmdOpen = false;
@@ -717,15 +721,35 @@ export class CvPrompt extends LitElement implements CommandHost {
         }, 150);
     };
 
-    /** Correlated @-mention fetch: the response updates the picker only if it's still open
-     *  (a stale response after the picker closed is ignored). Rejection (timeout) is swallowed. */
+    override willUpdate(changed: PropertyValues): void {
+        super.willUpdate(changed);
+        // Closing ends the opening: the next one lists the workspace again.
+        if (changed.has('_atOpen') && !this._atOpen) {
+            this._atRequests.closed();
+            this._atUnavailable = null;
+            if (this._atDebounce) {
+                clearTimeout(this._atDebounce);
+                this._atDebounce = undefined;
+            }
+        }
+    }
+
+    /** Correlated @-mention fetch. The first request of an opening asks the host to list the
+     *  workspace; later ones filter that listing. Only the latest request's answer is applied, and
+     *  only while the picker is still open. Rejection (timeout) is swallowed. */
     private _fetchSuggestions(query: string): void {
+        const request = this._atRequests.next(this._atOpen);
+        if (!request) {
+            return;
+        }
         bridge
-            .sendRequest(GetSuggestionsReq, { query })
+            .sendRequest(GetSuggestionsReq, { query, refresh: request.refresh })
             .then((data) => {
-                if (this._atOpen) {
-                    this._atItems = data?.items ?? [];
+                if (!this._atRequests.isLatest(request.seq) || !this._atOpen) {
+                    return;
                 }
+                this._atItems = data?.items ?? [];
+                this._atUnavailable = data?.unavailable ?? null;
             })
             .catch(() => {
                 /* timeout — leave current items */
@@ -1904,6 +1928,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 <cv-at-menu
                     .anchor=${this._ta ?? null}
                     .items=${this._atItems}
+                    .emptyText=${this._atUnavailable ?? 'No matches'}
                     ?open=${this._atOpen}
                     @select-at=${this._onSelectAtLive}
                 ></cv-at-menu>
