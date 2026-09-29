@@ -21,6 +21,8 @@ export class CvAtMenu extends LitElement {
     @property({ attribute: false }) items: AtItemDto[] = [];
     @property({ attribute: false }) anchor: HTMLElement | null = null;
     @property({ type: Boolean, reflect: true }) open = false;
+    // What the list says when it has no rows: "No matches", or why the host could not list the workspace.
+    @property({ attribute: false }) emptyText = 'No matches';
 
     @query('cv-popover-list') private _list?: CvPopoverList;
 
@@ -92,7 +94,7 @@ export class CvAtMenu extends LitElement {
         return html`
             <cv-popover-list
                 .items=${this.items}
-                emptyText="No matches"
+                .emptyText=${this.emptyText}
                 .renderRow=${(it: AtItemDto) => html`
                     <span class="item-icon">
                         <img src=${iconUrl(it.path, !!it.isDir)} alt="" width="16" height="16" />

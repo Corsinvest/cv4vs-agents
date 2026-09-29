@@ -23,6 +23,10 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
     // StatsIndexDone notification to this WebView when a background pass finishes.
     private bool _statsIndexHooked;
 
+    // The `@` picker's listing for this pane. Options are read when a build starts, on this thread.
+    private readonly FileIndex _fileIndex = new((root, ct) =>
+        WorkspaceFileLister.ListAsync(root, Options.AgentsOptions.Chat.UseGitIgnore, ct));
+
     /// <summary>This session's Claude paths, from the pane's entry (always set — created by
     /// PaneLauncher before the pane loads, so it never NREs). Evaluate on the ORIGIN thread
     /// (before/outside any Task.Run), not on a background thread.</summary>
@@ -254,6 +258,7 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
         // The RDT holds the listener, and through it this handler and the bridge: left advised, a
         // closed pane would stay alive and keep hearing every save in the IDE.
         DisposePlanSaveListener();
+        _fileIndex.Dispose();
     }
 
 }

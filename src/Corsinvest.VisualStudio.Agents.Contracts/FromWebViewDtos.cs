@@ -67,6 +67,8 @@ public class IdeFileNotification
 public class GetSuggestionsRequest
 {
     public string Query { get; set; }
+    /// <summary>Set on the first request after the picker opens: list the workspace again.</summary>
+    public bool Refresh { get; set; }
 }
 
 /// <summary>Open a tool's full input/output in a temp doc (open_tool_output). which is
