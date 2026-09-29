@@ -164,23 +164,6 @@ internal static class PluginService
         return null;
     }
 
-    // Quote an argument for CreateProcess (CommandLineToArgvW rules): wrap in quotes if it has
-    // whitespace/quotes, escaping backslashes-before-quote and inner quotes. Simple args pass through.
-    private static string QuoteArg(string arg)
-    {
-        if (!string.IsNullOrEmpty(arg) && arg.IndexOfAny([' ', '\t', '"']) < 0) { return arg; }
-        var sb = new System.Text.StringBuilder("\"");
-        for (int i = 0; i < arg.Length; i++)
-        {
-            int backslashes = 0;
-            while (i < arg.Length && arg[i] == '\\') { backslashes++; i++; }
-            if (i == arg.Length) { sb.Append('\\', backslashes * 2); break; }
-            if (arg[i] == '"') { sb.Append('\\', backslashes * 2 + 1).Append('"'); }
-            else { sb.Append('\\', backslashes).Append(arg[i]); }
-        }
-        return sb.Append('"').ToString();
-    }
-
     private static string LastMeaningfulLine(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) { return ""; }
@@ -206,7 +189,7 @@ internal static class PluginService
             {
                 // .NET Framework 4.8 has no ProcessStartInfo.ArgumentList — build the string,
                 // quoting each arg (plugin ids/sources/paths may contain spaces or special chars).
-                Arguments = string.Join(" ", args.Select(QuoteArg)),
+                Arguments = string.Join(" ", args.Select(Helpers.StringHelpers.QuoteProcessArgument)),
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,

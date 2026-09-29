@@ -15,6 +15,14 @@ namespace Corsinvest.VisualStudio.Agents.Tests;
 public class StringHelpersTests
 {
     [Theory]
+    [InlineData("--files", "--files")]
+    [InlineData(@"C:\a b\", "\"C:\\a b\\\\\"")]
+    [InlineData("say \"hi\"", "\"say \\\"hi\\\"\"")]
+    [InlineData("", "\"\"")]
+    public void QuoteProcessArgument_follows_CommandLineToArgvW(string arg, string expected)
+        => Assert.Equal(expected, StringHelpers.QuoteProcessArgument(arg));
+
+    [Theory]
     [InlineData("short", 10, "short")]
     // Exactly at the limit is not truncated: the ellipsis would claim something was dropped.
     [InlineData("exactly-10", 10, "exactly-10")]

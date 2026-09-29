@@ -90,7 +90,7 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<ThinkingEndedNotification>().Member(x => nameof(x.ParentToolUseId)).Null();
         AddInterface<ToolProgressNotification>().Member(x => nameof(x.ParentToolUseId)).Null();
         AddInterface<ThemeChangedNotification>();
-        AddInterface<GetSuggestionsResponse>();
+        AddInterface<GetSuggestionsResponse>().Member(x => nameof(x.Unavailable)).Null();
         AddInterface<ModelsNotification>();
         // usage rides on the first block of a turn only (null afterwards) / is null when
         // the result carried none — so it's genuinely nullable on the wire.
@@ -194,7 +194,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<SetViewModeNotification>();
         AddInterface<SetRemoteControlAtStartupRequest>();
         AddInterface<IdeFileNotification>();
-        AddInterface<GetSuggestionsRequest>();
+        // refresh rides only on the first request of an opening → optional.
+        AddInterface<GetSuggestionsRequest>().Member(x => nameof(x.Refresh)).Optional();
         // agentId/toolName omitted by openError() → optional.
         AddInterface<ToolOutputNotification>()
             .Member(x => nameof(x.AgentId)).Optional()

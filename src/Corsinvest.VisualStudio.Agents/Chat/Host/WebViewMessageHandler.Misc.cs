@@ -4,7 +4,9 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Core.Panes;
+using Microsoft.VisualStudio.Shell;
 using Newtonsoft.Json.Linq;
+using System;
 using System.Linq;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Host;
@@ -42,16 +44,45 @@ internal sealed partial class WebViewMessageHandler
     private void HandleGetSuggestions(JObject data, int? id)
     {
         if (id is not int suggId) { return; }
-        bridge.SendResponse(BridgeMessages.ToWebView.File.Suggestions, suggId, new Contracts.GetSuggestionsResponse
+        var request = data.ToObject<Contracts.GetSuggestionsRequest>();
+        var root = entry.WorkingDirectory;
+        if (request.Refresh) { _fileIndex.Refresh(root); }
+        var listingTask = _fileIndex.CurrentAsync(root);
+
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
-            Items = [.. FileSuggestions.Get(entry.WorkingDirectory, data.ToObject<Contracts.GetSuggestionsRequest>().Query ?? "")
-                .Select(s => new Contracts.AtItemDto
+            var response = new Contracts.GetSuggestionsResponse { Items = [] };
+            try
+            {
+                var listing = await listingTask.ConfigureAwait(false);
+                if (request.Refresh)
                 {
-                    Name = s.Name,
-                    Path = s.Path,
-                    Dir = s.Dir,
-                    IsDir = s.IsDir,
-                })]
-        });
+                    // Once per opening, not per keystroke: every request of an opening shares this listing.
+                    if (listing.Ok) { log.Perf(() => $"[picker] listed {listing.Paths.Count} files in {listing.ElapsedMs} ms"); }
+                    else { log.Warn($"[picker] {listing.Failure}"); }
+                    if (listing.Warning != null) { log.Warn($"[picker] listed all but: {listing.Warning}"); }
+                }
+                if (listing.Ok)
+                {
+                    response.Items = [.. FileSuggestions.Filter(root, listing.Paths, request.Query ?? "")
+                        .Select(s => new Contracts.AtItemDto { Name = s.Name, Path = s.Path, Dir = s.Dir, IsDir = s.IsDir })];
+                }
+                else
+                {
+                    response.Unavailable = "File list unavailable — see Output";
+                }
+            }
+            // A newer opening replaced this listing; the WebView drops this answer as stale.
+            catch (OperationCanceledException) { }
+            // Answered anyway: without a response the picker waits out the 30 s request timeout.
+            catch (Exception ex)
+            {
+                log.LogException("[picker] suggestions", ex);
+                response.Items = [];
+                response.Unavailable = "File list unavailable — see Output";
+            }
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            bridge.SendResponse(BridgeMessages.ToWebView.File.Suggestions, suggId, response);
+        }).FileAndForget(nameof(WebViewMessageHandler));
     }
 }

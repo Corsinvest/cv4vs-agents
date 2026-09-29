@@ -30,4 +30,22 @@ internal static class StringHelpers
         => string.IsNullOrEmpty(text)
             ? 0
             : text.Split('\n').Count(l => l.Length > 0);
+
+    /// <summary>Quote an argument for CreateProcess (CommandLineToArgvW rules): wrap in quotes if it
+    /// has whitespace/quotes, escaping backslashes-before-quote and inner quotes. .NET Framework 4.8
+    /// has no ProcessStartInfo.ArgumentList.</summary>
+    public static string QuoteProcessArgument(string arg)
+    {
+        if (!string.IsNullOrEmpty(arg) && arg.IndexOfAny([' ', '\t', '"']) < 0) { return arg; }
+        var sb = new System.Text.StringBuilder("\"");
+        for (int i = 0; i < arg.Length; i++)
+        {
+            int backslashes = 0;
+            while (i < arg.Length && arg[i] == '\\') { backslashes++; i++; }
+            if (i == arg.Length) { sb.Append('\\', backslashes * 2); break; }
+            if (arg[i] == '"') { sb.Append('\\', backslashes * 2 + 1).Append('"'); }
+            else { sb.Append('\\', backslashes).Append(arg[i]); }
+        }
+        return sb.Append('"').ToString();
+    }
 }
