@@ -161,6 +161,11 @@ public class AgentsChatPage : AgentsOptionsPage
     public bool UseCtrlEnterToSend { get; set; } = false;
 
     [Category("Input")]
+    [DisplayName("Spell check in the composer")]
+    [Description("Underline misspelled words while you type a message. Off by default: most of what goes in the composer is code names, paths, @ mentions and / commands, which the spell checker flags. Turn it on if you write a lot of plain prose to Claude. The underline marks the word only — correcting it is up to you.")]
+    public bool SpellCheckComposer { get; set; } = false;
+
+    [Category("Input")]
     [DisplayName("Send the selected text with the message")]
     [Description("Attach the selected code to the message, not just its file and line numbers. Costs tokens on every message sent with a selection, so it is off by default — but it is what makes an unsaved buffer readable, since otherwise the model opens the file from disk and sees the saved version. The composer's file badge shows which of the two is going out.")]
     public bool SendSelectionText { get; set; } = false;

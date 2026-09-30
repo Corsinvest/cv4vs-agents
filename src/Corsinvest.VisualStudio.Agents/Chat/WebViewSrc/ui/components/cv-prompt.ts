@@ -435,6 +435,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._subs.on('subagentTasks', (v) => {
             this._subagentTasks = v;
         });
+        this._subs.rerenderOn('ui');
     }
 
     override connectedCallback(): void {
@@ -1878,6 +1879,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                     <div id="input-line">
                         <textarea
                             id="input"
+                            spellcheck=${appState.ui.spellCheckComposer ? 'true' : 'false'}
                             placeholder=${
                                 this._isBusy
                                     ? // Alt+Enter only once there is something to join, which is
