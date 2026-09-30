@@ -18,6 +18,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Starting the debugger with two chats side by side could keep Visual Studio busy for good.**
   When the run-time layout put both in one group, each chat brought back to the front hid the
   other, which was then brought back in turn. Each chat is now brought back once per layout swap.
+- **A floating chat pane stopped taking typed keys.** A click still landed (the caret would show in
+  the composer for a moment), but the letters that followed went to whatever Visual Studio window
+  had focus instead, sometimes driving Solution Explorer's type-ahead. `WebView2CompositionControl`
+  points its browser's keyboard focus at the HWND that hosted it the first time the control loaded,
+  and never updates that afterwards; docking never moves the pane out of the main window, so the bug
+  never showed there, but floating it reparents the content into a separate window VS creates for
+  the float, and the browser kept targeting the old one
+  ([WebView2Feedback#5398](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5398), open with
+  no SDK fix, and moot anyway, since Visual Studio loads its own `WebView2.Wpf` copy rather than the
+  one the VSIX ships). The chat pane now follows the window it's actually hosted in: it re-points the
+  controller whenever that changes, and moves it onto the main window first if the one it's leaving
+  is about to close: the case a pane opened while already floating hits the moment it's docked.
+  Re-docking a pane that had focus also reclaims it: re-pointing the controller moves the browser,
+  not Win32 keyboard focus, so without this the code editor (if one was open) kept the keystrokes
+  while the composer's caret just sat there blinking.
 
 ## [1.14.0] - 2026-10-12
 
