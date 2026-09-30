@@ -61,7 +61,7 @@ public class UsageStatusFormatTests
     [InlineData("NoPlan", "Claude")]
     [InlineData("CliMissing", "Claude")]
     // Tried and failed with nothing older to show: the dash tells that apart from "nothing to ask".
-    [InlineData("Unavailable", "Claude: —")]
+    [InlineData("Unavailable", "Claude: -")]
     public void Status_text_without_numbers_is_the_profile_name(string state, string expected)
     {
         var snapshot = UsageSnapshot.Initial("Claude", (UsageAvailability)Enum.Parse(typeof(UsageAvailability), state));
@@ -210,7 +210,7 @@ public class UsageStatusFormatTests
 
         Assert.Equal(new[]
         {
-            "Claude — Claude max",
+            "Claude: Claude max",
             "Session (5hr): 44% · resets 20:09 (in 2h 31m)",
             "Weekly Fable: 13% · resets Sun 04:59 (in 6d 11h)",
             "Updated 17:38 · via Chat 1",

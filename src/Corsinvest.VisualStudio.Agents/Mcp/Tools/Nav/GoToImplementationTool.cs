@@ -34,7 +34,7 @@ internal sealed class GoToImplementationTool : McpTool<GoToImplementationArgs>
         "Find the implementations of a symbol (semantic): for an interface or an interface member, " +
         "the concrete classes/members that implement it; for a virtual/abstract member, the " +
         "overrides. Give the file, the 1-based line where the symbol appears, and the symbol name. " +
-        "Use this — not nav_find_references — to see the actual code behind an interface. The file must " +
+        "Use this (not nav_find_references) to see the actual code behind an interface. The file must " +
         "belong to a project in the open solution. Returns supported=false for languages this isn't " +
         "available for, or transiently while the solution is still loading.";
 

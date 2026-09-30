@@ -80,7 +80,7 @@ public abstract class PaneWindowBase : ToolWindowPane
             Padding = new Thickness(8, 3, 8, 3),
             Child = new TextBlock
             {
-                Text = $"Pre-release {BuildInfo.Version} — not for production use",
+                Text = $"Pre-release {BuildInfo.Version}: not for production use",
                 Foreground = Brushes.White,
                 FontSize = 11,
                 TextAlignment = TextAlignment.Center,

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  *
  * AUTO-GENERATED from Host/BridgeMessages.cs by tools/gen-bridge.mjs.
- * DO NOT EDIT BY HAND — run `npm run gen-bridge` after changing the C# file.
+ * DO NOT EDIT BY HAND: run `npm run gen-bridge` after changing the C# file.
  */
 
 export const Msg = {

@@ -23,7 +23,7 @@ internal sealed class SelectThreadTool : McpTool<SelectThreadArgs>
         "Choose which thread debug_get_callstack, debug_get_locals and the rest read, by the id " +
         "debug_list_threads reports. They all look at one thread, so on multi-threaded code the " +
         "others are invisible until you switch. The frame selection starts over at the top of the " +
-        "new thread's stack — frames belong to a thread — so debug_select_frame after this, not " +
+        "new thread's stack (frames belong to a thread) so debug_select_frame after this, not " +
         "before. Only valid in break mode.";
 
     public override bool Idempotent => true;

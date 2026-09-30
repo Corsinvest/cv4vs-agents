@@ -115,7 +115,7 @@ internal static class IgnoreRulesStore
         .cache/
 
         # Anchored to the workspace root: these are output there, but ordinary source folder
-        # names deeper in a tree — this extension's own Mcp/Tools/Build/ holds four of them.
+        # names deeper in a tree; this extension's own Mcp/Tools/Build/ holds four of them.
         /build/
         /out/
         /target/

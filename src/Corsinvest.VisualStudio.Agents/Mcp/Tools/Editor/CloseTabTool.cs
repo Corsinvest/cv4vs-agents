@@ -25,7 +25,7 @@ internal sealed class CloseTabTool : McpTool<CloseTabArgs>
     public override string Description =>
         "Close a diff tab this server opened, by the tabName that editor_open_diff was given. It " +
         "does NOT close arbitrary editor tabs: only frames in our own diff registry are touched, " +
-        "so the user's documents are safe from it — and closing something they opened is not on " +
+        "so the user's documents are safe from it, and closing something they opened is not on " +
         "offer. closed=false says nothing was closed, which covers all three harmless cases: the " +
         "diff had already gone, the name never matched one of ours, or it names a document the " +
         "user opened. Not an error either way. Use editor_close_all_diffs to clear them all.";

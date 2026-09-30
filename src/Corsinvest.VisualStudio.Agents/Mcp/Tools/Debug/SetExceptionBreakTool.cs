@@ -28,7 +28,7 @@ internal sealed class SetExceptionBreakTool : McpTool<SetExceptionBreakArgs>
     public override string Name => "debug_set_exception_breakpoint";
     public override string Description =>
         "Configure the debugger to break when a specific exception type is thrown (first-chance), " +
-        "even if it's caught — useful to find where an exception originates. Pass the " +
+        "even if it's caught: useful to find where an exception originates. Pass the " +
         "fully-qualified type (e.g. 'System.NullReferenceException'). breakWhenThrown=false turns " +
         "it off. Works in any mode; needs a solution loaded. After it breaks, debug_get_state " +
         "reports the exception type/message.";

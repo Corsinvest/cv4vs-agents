@@ -123,7 +123,7 @@ const config = {
 // stayed green and a stale dist/ from an earlier run hid the gap until someone cleaned it.
 async function copyRequired(src, dest) {
     if (!existsSync(src)) {
-        throw new Error(`[esbuild] missing ${src} — the VSIX would ship without it`);
+        throw new Error(`[esbuild] missing ${src}: the VSIX would ship without it`);
     }
     await mkdir(path.dirname(dest), { recursive: true });
     await copyFile(src, dest);
@@ -146,7 +146,7 @@ async function copyStatic() {
     // with the WPF side, which embeds the same files in the assembly for pack:// URIs.
     const resources = path.join('..', '..', 'Resources');
     if (!existsSync(resources)) {
-        throw new Error(`[esbuild] missing ${resources} — the VSIX would ship without it`);
+        throw new Error(`[esbuild] missing ${resources}: the VSIX would ship without it`);
     }
     await cp(resources, path.join('dist', 'images'), { recursive: true });
 }

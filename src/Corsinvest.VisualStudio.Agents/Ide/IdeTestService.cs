@@ -37,7 +37,7 @@ internal static class IdeTestService
     // A null query is never handed to the service: it dereferences it inside ToSearchQuery, and the
     // NullReferenceException that comes back names nothing the caller can act on.
     private const string QueryFailed =
-        "Could not build the test query — this version of Visual Studio shapes TestQuery differently.";
+        "Could not build the test query: this version of Visual Studio shapes TestQuery differently.";
 
     private static readonly object _probeGate = new();
     private static bool _probed;
@@ -97,14 +97,14 @@ internal static class IdeTestService
         catch (Exception ex)
         {
             _unavailableReason = $"{step}: {ex.GetType().Name}: {ex.Message}";
-            OutputWindowLogger.Global.Warn($"[test] Test Explorer services unavailable — {_unavailableReason}");
+            OutputWindowLogger.Global.Warn($"[test] Test Explorer services unavailable: {_unavailableReason}");
         }
     }
 
     private static void Fail(string step)
     {
         _unavailableReason = $"{step} not found";
-        OutputWindowLogger.Global.Warn($"[test] Test Explorer services unavailable — {_unavailableReason}");
+        OutputWindowLogger.Global.Warn($"[test] Test Explorer services unavailable: {_unavailableReason}");
     }
 
     /// <summary>A TestQuery for everything, or for the tests whose fully-qualified name contains one
@@ -136,7 +136,7 @@ internal static class IdeTestService
                                  .FirstOrDefault(c => c.GetParameters().Length == 3);
         if (ctor == null)
         {
-            OutputWindowLogger.Global.Warn($"[test] {QueryFailed} — no 3-argument TestQuery constructor.");
+            OutputWindowLogger.Global.Warn($"[test] {QueryFailed}: no 3-argument TestQuery constructor.");
             return null;
         }
         return ctor.Invoke([

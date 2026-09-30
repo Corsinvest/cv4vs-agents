@@ -14,7 +14,7 @@ internal sealed class RunToLineArgs
     [Required, Description("Absolute path of the file to run to.")]
     public string FilePath { get; set; }
 
-    [Required, Description("1-based line to run to. Must be executable code — a blank line or a " +
+    [Required, Description("1-based line to run to. Must be executable code: a blank line or a " +
         "comment has nothing to stop on.")]
     public int Line { get; set; }
 }
@@ -25,10 +25,10 @@ internal sealed class RunToLineTool : McpTool<RunToLineArgs>
 {
     public override string Name => "debug_run_to_line";
     public override string Description =>
-        "Resume the paused program and stop again when it reaches this line — the Run to Cursor " +
+        "Resume the paused program and stop again when it reaches this line: the Run to Cursor " +
         "command. Saves stepping through a loop or a long method one statement at a time. " +
         "Non-blocking: poll debug_get_state, and check WHERE it stopped, because anything on the " +
-        "way there — another breakpoint, a thrown exception — pauses it first, and if the line is " +
+        "way there (another breakpoint, a thrown exception) pauses it first, and if the line is " +
         "never reached the program just runs on to the end. Adds no breakpoint of its own. Only " +
         "valid in break mode.";
 

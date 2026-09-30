@@ -152,7 +152,7 @@ internal sealed class KeepAwakeService
         // not sleep, and it means an event we expected never arrived.
         foreach (var (seq, silent) in expired)
         {
-            OutputWindowLogger.Global.Warn($"[power] pane #{seq} silent for {silent / 60000} min — releasing the sleep block");
+            OutputWindowLogger.Global.Warn($"[power] pane #{seq} silent for {silent / 60000} min, releasing the sleep block");
         }
     }
 

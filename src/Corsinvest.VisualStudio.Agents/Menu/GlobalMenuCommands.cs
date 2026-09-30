@@ -27,7 +27,7 @@ internal static class GlobalMenuCommands
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (await package.GetServiceAsync(typeof(IMenuCommandService)) is not OleMenuCommandService svc)
         {
-            OutputWindowLogger.Global.Warn("[menu] no command service — the View entries won't respond");
+            OutputWindowLogger.Global.Warn("[menu] no command service: the View entries won't respond");
             return;
         }
 

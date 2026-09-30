@@ -216,7 +216,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         {
             // Showing or hiding a frame has to happen on the UI thread; the timer lands on a pool one.
             await JoinableTaskFactory.SwitchToMainThreadAsync();
-            OutputWindowLogger.Global.Debug(() => "[reload] no solution opening — hiding panes");
+            OutputWindowLogger.Global.Debug(() => "[reload] no solution opening, hiding panes");
             try { Core.Panes.PaneLauncher.HideExisting(); }
             catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.HidePanesOnClose", ex); }
         }).FileAndForget(nameof(AgentsPackage));
@@ -227,7 +227,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         {
             await JoinableTaskFactory.SwitchToMainThreadAsync();
             _closingSolutionFolder = null;
-            OutputWindowLogger.Global.Info($"[reload] watch elapsed — closing {Core.Panes.PaneRegistry.Instance.Entries.Count} pane(s)");
+            OutputWindowLogger.Global.Info($"[reload] watch elapsed: closing {Core.Panes.PaneRegistry.Instance.Entries.Count} pane(s)");
             try { Core.Panes.PaneRegistry.Instance.CloseAll(); }
             catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.ReloadWatchElapsed", ex); }
         }).FileAndForget(nameof(AgentsPackage));
@@ -524,7 +524,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         var kept = 0;
         try { kept = Core.Panes.PaneRegistry.Instance.CloseWhereWorkdirDiffers(CurrentSolutionFolder); }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.OnAfterOpenSolution", ex); }
-        OutputWindowLogger.Global.Info($"[reload] solution open on {CurrentSolutionFolder ?? "(none)"} — kept {kept} of {had} pane(s)");
+        OutputWindowLogger.Global.Info($"[reload] solution open on {CurrentSolutionFolder ?? "(none)"}: kept {kept} of {had} pane(s)");
         // Bring back what the close hid. StartOnIdle for the same reason the restore defers: showing
         // a frame from inside this COM event freezes the shell, which is still mid-transition.
         if (kept > 0)
@@ -552,7 +552,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionLoadEvents.OnBeforeOpenSolution(string pszSolutionFilename)
     {
-        OutputWindowLogger.Global.Debug(() => $"[reload] solution opening: {pszSolutionFilename ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        OutputWindowLogger.Global.Debug(() => $"[reload] solution opening: {pszSolutionFilename ?? "(none)"}, panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         // Rearm rather than disarm: if this load fails or is cancelled, OnAfterOpenSolution never
         // comes and no close event follows either (the solution was already closed) so the panes
         // would stay pinned forever.
@@ -580,7 +580,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnAfterCloseSolution(object pUnkReserved)
     {
-        OutputWindowLogger.Global.Debug(() => $"[reload] solution closed — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        OutputWindowLogger.Global.Debug(() => $"[reload] solution closed: panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         CurrentSolutionFolder = null;
         // Out of sight shortly, so closing a solution looks like it always did, but alive, so a
         // reload can hand them back with the session intact. Deferred rather than immediate because
@@ -607,7 +607,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     int IVsSolutionEvents.OnBeforeCloseSolution(object pUnkReserved)
     {
-        OutputWindowLogger.Global.Debug(() => $"[reload] solution closing: {CurrentSolutionFolder ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
+        OutputWindowLogger.Global.Debug(() => $"[reload] solution closing: {CurrentSolutionFolder ?? "(none)"}, panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         SaveWorkspace();
         // Last point where the folder is still known: OnAfterCloseSolution clears it. The panes are
         // NOT closed here: a reload would take the live CLI down with them, losing the turn in flight.

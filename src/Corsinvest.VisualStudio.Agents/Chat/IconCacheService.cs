@@ -61,7 +61,7 @@ internal static class IconCacheService
             // generic document rather than serve a file that isn't there.
             if (bytes == null && key != "file")
             {
-                OutputWindowLogger.Global.Debug(() => $"[icons] no bitmap for '{key}' — using the generic document");
+                OutputWindowLogger.Global.Debug(() => $"[icons] no bitmap for '{key}': using the generic document");
                 bytes = RenderMonikerToPng(KnownMonikers.Document, themeBg);
             }
             if (bytes != null) { File.WriteAllBytes(pngPath, bytes); }

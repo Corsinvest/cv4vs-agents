@@ -537,7 +537,7 @@ export class CvApp extends LitElement {
                         const detail = turnErrorDetail(data.errorText ?? '');
                         this._addText<UiSlashResultEntry>({
                             role: 'slash-result',
-                            text: detail ? `${label} — ${detail}` : label,
+                            text: detail ? `${label}: ${detail}` : label,
                             isError: true,
                         });
                     }
@@ -651,7 +651,7 @@ export class CvApp extends LitElement {
                 // A failed compaction otherwise ends in silence: the spinner just stops and the
                 // chat is left un-compacted with no clue why. Surface it as a red centered notice.
                 if (data?.compactResult === 'failed') {
-                    const why = data.compactError ? ` — ${data.compactError}` : '';
+                    const why = data.compactError ? `: ${data.compactError}` : '';
                     this._addText<UiSlashResultEntry>({
                         role: 'slash-result',
                         text: `Compaction failed${why}`,

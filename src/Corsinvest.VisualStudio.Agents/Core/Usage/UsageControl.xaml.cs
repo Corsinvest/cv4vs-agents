@@ -113,7 +113,7 @@ public partial class UsageControl : UserControl
         AuthText.Text = dto.AuthMethod;
         SetRow(EmailRow, EmailText, acct?.Email);
         SetRow(OrgRow, OrgText, acct?.Organization);
-        PlanText.Text = string.IsNullOrEmpty(dto.Plan) ? "—" : dto.Plan;
+        PlanText.Text = string.IsNullOrEmpty(dto.Plan) ? "-" : dto.Plan;
 
         // The claude.ai link only makes sense for the first-party account (null = native Claude);
         // for 3rd-party providers (z.ai/GLM, Bedrock, Vertex, gateway) it points nowhere useful.

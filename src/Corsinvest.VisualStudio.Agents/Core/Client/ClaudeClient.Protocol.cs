@@ -217,7 +217,7 @@ internal sealed partial class ClaudeClient
                 // decline is the protocol's expected "unsupported" answer; an error would be a bug.
                 // Warn (not silent): from the user's side an MCP action silently didn't happen;
                 // this line is the only trace of why (e.g. an MCP login that never prompts).
-                _log.Warn($"[client] elicitation from MCP server '{req.Val("mcp_server_name", "?")}' declined — no elicitation UI");
+                _log.Warn($"[client] elicitation from MCP server '{req.Val("mcp_server_name", "?")}' declined: no elicitation UI");
                 SendControlResponse(rid, success: true, response: new { action = "decline" });
                 break;
 

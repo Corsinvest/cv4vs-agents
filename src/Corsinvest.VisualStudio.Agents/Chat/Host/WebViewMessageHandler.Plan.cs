@@ -63,7 +63,7 @@ internal sealed partial class WebViewMessageHandler
             // Two different misses: the call is not in the transcript at all, or it is and carries no
             // plan: the model left plan mode without writing a plan file, so the CLI injected none.
             var reason = input == null ? "Plan not found in the transcript" : "Claude sent no plan with this request";
-            log.Warn($"[plan] can't open the plan of {toolUseId} — {reason}");
+            log.Warn($"[plan] can't open the plan of {toolUseId}: {reason}");
             // Not NoticeOpenFailed: that one names a file, and there is none here (its GetFileName also
             // eats anything up to a ':'). Keyed by toolUseId so two dead plans don't share one notice.
             bridge.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
@@ -101,7 +101,7 @@ internal sealed partial class WebViewMessageHandler
                     // gets approved is read from the buffer below, saved or not.
                     var save = Ide.IdeContextService.Instance.SaveIfDirtyAsync(path);
                     var saved = await Task.WhenAny(save, Task.Delay(3000)) == save && await save;
-                    if (!saved) { log.Warn($"[plan] could not save {path} before approving — sending the editor's text instead"); }
+                    if (!saved) { log.Warn($"[plan] could not save {path} before approving, sending the editor's text instead"); }
                     response.UpdatedInput = PlanApproval.UpdatedInputFor(snapshot, await ReadPlanTextAsync(path));
                 }
                 else if (PlanApproval.IsEdited(snapshot, await ReadPlanTextAsync(path)))

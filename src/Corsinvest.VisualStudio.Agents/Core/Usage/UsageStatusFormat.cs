@@ -87,7 +87,7 @@ internal static class UsageStatusFormat
         var name = snapshot?.ProfileName ?? "";
         var segments = Segments(snapshot, now);
         if (segments.Count > 0) { return $"{name}: {string.Join(" · ", segments.Select(s => s.Text))}"; }
-        return snapshot?.State == UsageAvailability.Unavailable ? $"{name}: —" : name;
+        return snapshot?.State == UsageAvailability.Unavailable ? $"{name}: -" : name;
     }
 
     /// <summary>Whether the window's reset time has passed: its figure then describes a window that is
@@ -156,7 +156,7 @@ internal static class UsageStatusFormat
         {
             case UsageAvailability.Available:
                 var usage = snapshot.Usage;
-                if (!string.IsNullOrEmpty(usage.Plan) && usage.Plan != "—") { sb.Append(" — ").Append(usage.Plan); }
+                if (!string.IsNullOrEmpty(usage.Plan) && usage.Plan != "-") { sb.Append(": ").Append(usage.Plan); }
                 foreach (var w in usage.Windows ?? [])
                 {
                     sb.AppendLine().Append(w.Name).Append(": ").Append(EffectivePercent(w, now)).Append('%');

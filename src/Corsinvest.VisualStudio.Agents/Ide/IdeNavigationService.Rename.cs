@@ -178,7 +178,7 @@ internal sealed partial class IdeNavigationService
                     Supported = true,
                     Applied = false,
                     Conflicts = [.. conflicts],
-                    Reason = $"Rename would cause {conflicts.Count} unresolved conflict(s) — not applied.",
+                    Reason = $"Rename would cause {conflicts.Count} unresolved conflict(s): not applied.",
                 };
             }
 

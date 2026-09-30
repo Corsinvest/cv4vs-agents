@@ -182,10 +182,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
                 <div class="cv-children-scroll ${this.showAll ? '' : 'cv-children-collapsed'}">
                     ${
                         hasToggle && !this.showAll
-                            ? html`<div
-                                  class="cv-children-more"
-                                  title="Earlier children — Show all"
-                              >
+                            ? html`<div class="cv-children-more" title="Earlier children: Show all">
                                   …
                               </div>`
                             : nothing

@@ -15,8 +15,8 @@ internal sealed class DetachDebugTool : McpTool<NoArgs>
     public override string Name => "debug_detach";
     public override string Description =>
         "Detach the debugger from every process it is debugging, leaving them RUNNING (Debug ▸ " +
-        "Detach All). Use this after debug_attach on something you did not launch — a service, a " +
-        "browser, a long-running host — where debug_stop would terminate it instead. Breakpoints " +
+        "Detach All). Use this after debug_attach on something you did not launch: a service, a " +
+        "browser, a long-running host, where debug_stop would terminate it instead. Breakpoints " +
         "stop being hit and the debug_* inspection tools have nothing to report once detached. " +
         "Poll debug_get_state for the mode: the transition is not immediate.";
 

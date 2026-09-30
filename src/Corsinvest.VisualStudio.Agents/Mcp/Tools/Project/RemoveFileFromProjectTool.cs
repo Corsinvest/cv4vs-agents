@@ -27,7 +27,7 @@ internal sealed class RemoveFileFromProjectTool : McpTool<RemoveFileFromProjectA
 {
     public override string Name => "project_remove_file";
     public override string Description =>
-        "Remove a file from a project. The file stays on disk — this takes it out of the build, " +
+        "Remove a file from a project. The file stays on disk: this takes it out of the build, " +
         "it does not delete it. The reverse of project_add_file.";
 
     public override bool Destructive => true;

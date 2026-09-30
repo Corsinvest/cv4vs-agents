@@ -17,7 +17,7 @@ internal sealed class ExpandExpressionArgs
 
     [Description("Levels of members to walk, 1-3. Default 2. How much it costs depends on the " +
         "object, not the number: a flat data class barely grows past level 2, while an exception " +
-        "or a framework type explodes — its static and non-public members open up too. Start at 1 " +
+        "or a framework type explodes: its static and non-public members open up too. Start at 1 " +
         "for those.")]
     public int? Depth { get; set; }
 
@@ -37,9 +37,9 @@ internal sealed class ExpandExpressionTool : McpTool<ExpandExpressionArgs>
     public override string Description =>
         "Expand an expression into its members while paused (break mode), so an object comes back " +
         "as a tree instead of just a type name: pass 'order', 'order.Customer', 'this', or " +
-        "'$exception' when stopped on a throw (that one carries InnerException and the stack — " +
+        "'$exception' when stopped on a throw (that one carries InnerException and the stack: " +
         "expand it at depth 1, it is a framework type and depth 3 buries the message in static " +
-        "members). This is what debug_get_locals points at when it reports hasMembers=true — one call " +
+        "members). This is what debug_get_locals points at when it reports hasMembers=true: one call " +
         "instead of a debug_evaluate per field. hasMembers on a returned node means there is more " +
         "below it: expand that path to see it. truncated=true means a level had more members than " +
         "maxMembers and what came back is a prefix. Note: reading a property runs its getter in " +

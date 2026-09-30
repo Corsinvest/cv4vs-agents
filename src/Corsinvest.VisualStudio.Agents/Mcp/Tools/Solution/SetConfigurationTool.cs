@@ -26,7 +26,7 @@ internal sealed class SetConfigurationTool : McpTool<SetConfigurationArgs>
 {
     public override string Name => "solution_set_configuration";
     public override string Description =>
-        "Switch the solution's active configuration (Debug, Release, …) — the one build_solution " +
+        "Switch the solution's active configuration (Debug, Release, …), the one build_solution " +
         "and build_project compile and debug_start launches. Pass 'Debug' or 'Release', or the " +
         "full 'Release|Any CPU' when a name has several platforms; returns ok plus the resolved " +
         "configuration, or ok=false with the available ones if the name doesn't match. This is a " +

@@ -167,7 +167,8 @@ package: the file in git *is* what the Marketplace shows. Its images still need 
 That manifest carries the rest of the listing too (categories, Q&A, price). Publishing overwrites
 them, so a field changed on the portal and not there is reverted by the next release.
 
-**No em dashes (`—`) in any Markdown file or code comment**: docs, README, CHANGELOG, this file,
-skills, and comments in C#, TS, CSS and scripts. They read as machine-written. Use a colon, a comma,
-parentheses or a new sentence instead; `-` for an empty table cell.
+**No em dashes (U+2014) anywhere in the repo**: Markdown, code comments, UI text, log messages, MCP
+tool descriptions, commit messages. They read as machine-written. Use a colon, a comma, parentheses
+or a new sentence instead; `-` for an empty value or table cell. Code that has to recognise the
+character in external text writes it as `\u2014`.
 

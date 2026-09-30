@@ -158,7 +158,7 @@ internal sealed partial class IdeNavigationService
             return new NavResult
             {
                 Supported = false,
-                Reason = $"Find-{kind} could not be wired up to this Visual Studio's language service — " +
+                Reason = $"Find-{kind} could not be wired up to this Visual Studio's language service: " +
                          "the internal API it goes through has moved. Grep finds the same text meanwhile.",
             };
         }

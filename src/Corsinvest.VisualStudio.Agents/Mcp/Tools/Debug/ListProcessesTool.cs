@@ -23,11 +23,11 @@ internal sealed class ListProcessesTool : McpTool<ListProcessesArgs>
     public override string Description =>
         "List local processes the debugger can attach to: pid, name (the file alone), path (the " +
         "full one, which is what tells two same-named processes apart) and whether something is " +
-        "already debugging them. Optionally filter by a substring, matched against the full path — " +
+        "already debugging them. Optionally filter by a substring, matched against the full path: " +
         "so a folder narrows the list as well as a name. Use this to find the process to pass to " +
         "debug_attach: beingDebugged=true is why an attach would be refused, and is worth checking " +
         "first, since the refusal talks about the attach rather than about the state. For the " +
-        "processes THIS session is debugging, use debug_list_debugged_processes — name has the " +
+        "processes THIS session is debugging, use debug_list_debugged_processes: name has the " +
         "same shape in both, so the two listings can be matched up.";
 
     public override bool ReadOnly => true;

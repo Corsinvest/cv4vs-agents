@@ -12,4 +12,4 @@ contact_links:
 
   - name: 🧩 Claude Code CLI issues
     url: https://github.com/anthropics/claude-code/issues
-    about: For problems in the CLI itself — this extension drives it, it doesn't ship it
+    about: For problems in the CLI itself: this extension drives it, it doesn't ship it

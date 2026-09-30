@@ -75,13 +75,13 @@ public sealed class PaneEntry
     /// known, and always null for a CLI pane.</summary>
     public string SessionTitle { get; internal set; }
 
-    /// <summary>"Chat 3 (Default) — Fix the drag and drop", for the two menus that list open panes.
+    /// <summary>"Chat 3 (Default): Fix the drag and drop", for the two menus that list open panes.
     /// The number stays: two panes can sit on the same session, and it is what the docked tab
     /// shows. The title arrives single-line and already cut (SessionManager.MaxTitleLength).</summary>
     public string MenuLabel()
     {
         var title = SessionTitle?.Trim();
-        return string.IsNullOrEmpty(title) ? Title : $"{Title} — {title}";
+        return string.IsNullOrEmpty(title) ? Title : $"{Title}: {title}";
     }
 
     /// <summary>Invoked by the toolbar ✕ to close this pane. Set by the window on register.</summary>

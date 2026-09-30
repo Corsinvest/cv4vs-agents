@@ -74,7 +74,7 @@ public class AgentsGeneralPage : AgentsOptionsPage
     // ProcessStartInfo with UseShellExecute=false + redirected stdio), so a .cmd/.bat/.ps1 shim
     // can't be launched, hence the .exe-only picker.
     [DisplayName("Claude executable path")]
-    [Description("Full path to claude.exe, to override auto-detection (PATH, native installer, npm). Leave empty to auto-detect. Must be the real claude.exe — .cmd/.bat/.ps1 shims cannot be launched.")]
+    [Description("Full path to claude.exe, to override auto-detection (PATH, native installer, npm). Leave empty to auto-detect. Must be the real claude.exe: .cmd/.bat/.ps1 shims cannot be launched.")]
     [Editor(typeof(ExeFileNameEditor), typeof(UITypeEditor))]
     public string ClaudeExecutablePath { get; set; } = "";
 
@@ -85,6 +85,6 @@ public class AgentsGeneralPage : AgentsOptionsPage
     // Only the background probe follows this: a chat pane on the profile refreshes the numbers after its
     // own turns whatever the value, and costs no extra process doing it.
     [DisplayName("Status bar usage refresh (minutes)")]
-    [Description("How often the status bar refreshes plan usage while no chat pane on that profile is open, by starting a short-lived claude.exe — only while Visual Studio is in front. 0 = never in the background: open chat panes, and opening the status bar popup, still refresh it.")]
+    [Description("How often the status bar refreshes plan usage while no chat pane on that profile is open, by starting a short-lived claude.exe, only while Visual Studio is in front. 0 = never in the background: open chat panes, and opening the status bar popup, still refresh it.")]
     public int UsageRefreshMinutes { get; set; } = 15;
 }

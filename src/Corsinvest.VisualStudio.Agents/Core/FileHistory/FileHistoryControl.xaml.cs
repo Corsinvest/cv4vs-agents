@@ -94,7 +94,7 @@ public partial class FileHistoryControl : UserControl
             catch (Exception ex)
             {
                 OutputWindowLogger.Global.LogException("FileHistoryControl.Reload", ex);
-                error = "Could not read the backup folders — see the output log.";
+                error = "Could not read the backup folders. See the output log.";
             }
             // Back on the UI thread before touching anything WPF, including re-enabling the
             // button, which is why that isn't in a finally around the scan.
@@ -161,8 +161,8 @@ public partial class FileHistoryControl : UserControl
                             .Count(n => n.Kind == FileHistoryNodeKind.Session && !n.CanDelete);
         LiveText.Visibility = blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
         LiveText.Text = blocked == 1
-            ? "1 session is open in a pane — not deletable"
-            : $"{blocked} sessions are open in panes — not deletable";
+            ? "1 session is open in a pane: not deletable"
+            : $"{blocked} sessions are open in panes: not deletable";
     }
 
     // Projects, then their sessions. Orphans (backups whose transcript is gone) get their own

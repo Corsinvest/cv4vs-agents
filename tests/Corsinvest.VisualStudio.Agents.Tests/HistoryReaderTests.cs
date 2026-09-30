@@ -138,7 +138,7 @@ public class HistoryReaderTests
         // multi-byte UTF-8 at the boundary and garbled accented characters in titles. The padding
         // is ASCII so it alone sets the byte offsets, and the accented text sits at both ends.
         const string firstText = "café naïve résumé";          // Latin-1 range, 2 bytes each
-        const string lastText = "日本語 — emoji 😀";           // 3-byte CJK and a 4-byte pair
+        const string lastText = "日本語 \u2014 emoji 😀";           // 3-byte CJK and a 4-byte pair
         var padding = new string('a', 30000);
         var lines = new List<JObject>
         {

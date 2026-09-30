@@ -25,11 +25,11 @@ public class AgentsEditorPromptsPage : UIElementDialogPage
     private static readonly (PromptScope Scope, string Header, string Description)[] Tabs =
     [
         (PromptScope.Editor, "Editor",
-            "Prompts offered when you right-click code, under \"cv4vs Agents\". Picking one hands it to a chat pane — the file and selection are sent with it, so the prompt is the instruction alone. \"Send on click\" runs it straight away; clear it for a prompt you mean to finish typing first. Rows appear in the menu in this order."),
+            "Prompts offered when you right-click code, under \"cv4vs Agents\". Picking one hands it to a chat pane: the file and selection are sent with it, so the prompt is the instruction alone. \"Send on click\" runs it straight away; clear it for a prompt you mean to finish typing first. Rows appear in the menu in this order."),
         (PromptScope.ErrorList, "Error List",
             "Prompts offered when you right-click the Error List, under \"cv4vs Agents\". The rows you selected are added below the prompt, so write the instruction alone. \"Send on click\" runs it straight away. Rows appear in the menu in this order."),
         (PromptScope.Output, "Output",
-            "Prompts offered when you right-click the Output window, under \"cv4vs Agents\". What you selected in the pane — or, with nothing selected, its last 80 lines — is added below the prompt, so write the instruction alone. \"Send on click\" runs it straight away. Rows appear in the menu in this order."),
+            "Prompts offered when you right-click the Output window, under \"cv4vs Agents\". What you selected in the pane (or, with nothing selected, its last 80 lines) is added below the prompt, so write the instruction alone. \"Send on click\" runs it straight away. Rows appear in the menu in this order."),
     ];
 
     private Dictionary<PromptScope, List<EditorPrompt>> _prompts;

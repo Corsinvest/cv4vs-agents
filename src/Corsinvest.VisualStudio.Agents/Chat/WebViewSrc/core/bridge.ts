@@ -103,7 +103,7 @@ class Bridge {
     private _postRaw(type: string, data: unknown, id?: number): void {
         const wv = window.chrome?.webview;
         if (!wv) {
-            console.warn('[bridge] chrome.webview not available — message dropped:', type);
+            console.warn('[bridge] chrome.webview not available, message dropped:', type);
             return;
         }
         if (!NOISY.has(type)) {
@@ -138,7 +138,7 @@ class Bridge {
         }
         const wv = window.chrome?.webview;
         if (!wv) {
-            console.warn('[bridge] chrome.webview not available — start() is a no-op');
+            console.warn('[bridge] chrome.webview not available: start() is a no-op');
             return;
         }
         wv.addEventListener('message', (e) => this._dispatch(e.data));
@@ -182,7 +182,7 @@ class Bridge {
                 // id present but not pending: timed-out, duplicate, or stale response. Drop it:
                 // do NOT reinterpret as a notification (would re-mutate the UI after the fact).
                 logger.warn(
-                    `bridge: response for unknown/expired id ${parsed.id} (${parsed.type}) — dropped`,
+                    `bridge: response for unknown/expired id ${parsed.id} (${parsed.type}), dropped`,
                 );
             }
             return;

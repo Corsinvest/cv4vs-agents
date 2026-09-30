@@ -437,7 +437,7 @@ export class CvStatsDialog extends CvDialogBase {
     }
 
     override willUpdate(changed: Map<string, unknown>): void {
-        // Refetch on open and whenever a combo changes. Only the very first open clears to "—"
+        // Refetch on open and whenever a combo changes. Only the very first open clears to "-"
         // (no data yet); a combo change keeps the previous numbers on screen and swaps them in
         // place when the new ones arrive, so the layout never collapses/flickers: the loading
         // bar signals the refresh instead.
@@ -454,7 +454,7 @@ export class CvStatsDialog extends CvDialogBase {
     // cache, so closing the dialog mid-aggregation isn't wasted work, just not shown.
     private _reqSeq = 0;
 
-    // `clear` blanks the grid to "—" first (combo change / initial open: the old data is for a
+    // `clear` blanks the grid to "-" first (combo change / initial open: the old data is for a
     // different scope). A background-index refresh passes clear:false so the current numbers stay
     // put and just update in place → no flicker while re-reading on each stats_index_done.
     private _load({ clear }: { clear: boolean }): void {
@@ -536,9 +536,9 @@ export class CvStatsDialog extends CvDialogBase {
     }
 
     // Overview grid. `d` is null while (re)loading, the layout stays put and every value
-    // shows a "—" placeholder, so changing a combo never resizes the dialog.
+    // shows a "-" placeholder, so changing a combo never resizes the dialog.
     private _renderOverview(d: StatsResponse | null): TemplateResult {
-        const dash = '—';
+        const dash = '-';
         const peak = d && d.peakHour >= 0 ? `${String(d.peakHour).padStart(2, '0')}:00` : dash;
         const num = (n: number | undefined): string =>
             d && n !== undefined ? n.toLocaleString() : dash;
@@ -809,7 +809,7 @@ export class CvStatsDialog extends CvDialogBase {
     private _renderModels(d: StatsResponse | null): TemplateResult {
         // While loading (d null) keep the tab area occupied so switching combos doesn't jump.
         if (!d) {
-            return html`<div class="empty">${'—'}</div>`;
+            return html`<div class="empty">${'-'}</div>`;
         }
         if (d.modelBreakdown.length === 0) {
             return html`<div class="empty">No per-model data.</div>`;
@@ -845,7 +845,7 @@ export class CvStatsDialog extends CvDialogBase {
             return html`<div class="status">Statistics unavailable.</div>`;
         }
         // Pass _data (may be null while loading) straight through: the tab renderers show
-        // "—" placeholders in the fixed layout, so a combo change never collapses the dialog.
+        // "-" placeholders in the fixed layout, so a combo change never collapses the dialog.
         return this._tab === 'overview'
             ? this._renderOverview(this._data)
             : this._renderModels(this._data);

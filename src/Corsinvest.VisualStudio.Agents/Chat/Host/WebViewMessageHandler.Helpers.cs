@@ -348,12 +348,12 @@ internal sealed partial class WebViewMessageHandler
     /// same dead link twice doesn't stack.</summary>
     private void NoticeOpenFailed(string path, string reason)
     {
-        log.Warn($"[chat] can't open '{path}' — {reason}");
+        log.Warn($"[chat] can't open '{path}': {reason}");
         bridge.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
         {
             Key = "openfile:" + path,
             Severity = Contracts.NoticeVariantDto.Error,
-            Message = $"{Path.GetFileName(path)} — {reason}",
+            Message = $"{Path.GetFileName(path)}: {reason}",
             Position = Contracts.NoticePositionDto.Top,
         });
     }

@@ -1921,8 +1921,8 @@ export class CvPrompt extends LitElement implements CommandHost {
                         <fluent-tooltip anchor="send" positioning="above-end"
                             >${
                                 this._isBusy
-                                    ? 'Stop — Esc'
-                                    : `Send — ${appState.ui.useCtrlEnterToSend ? 'Ctrl+Enter' : 'Enter'}`
+                                    ? 'Stop: Esc'
+                                    : `Send: ${appState.ui.useCtrlEnterToSend ? 'Ctrl+Enter' : 'Enter'}`
                             }</fluent-tooltip
                         >
                     </div>

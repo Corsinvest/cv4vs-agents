@@ -176,7 +176,7 @@
                 <RadioButton x:Name="WeekTab" Content="Week" GroupName="Period" Checked="OnPeriodChanged" />
               </StackPanel>
               <TextBlock Opacity="0.6" FontSize="11" TextWrapping="Wrap"
-                         Text="Approximate, based on local sessions on this machine — does not include other devices or claude.ai" />
+                         Text="Approximate, based on local sessions on this machine; does not include other devices or claude.ai" />
               <TextBlock x:Name="PeriodNote" Opacity="0.6" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
 
               <!-- Insights (headline + body). -->

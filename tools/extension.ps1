@@ -185,7 +185,7 @@ function Assert-VisualStudioClosed {
 # Without this VS keeps serving cached menu entries for an extension that no longer exists.
 function Update-VisualStudioConfiguration {
     if (-not (Test-Path $vswhere)) {
-        Write-Host "`nvswhere not found — run 'devenv /rootsuffix Exp /updateconfiguration' by hand." -ForegroundColor Yellow
+        Write-Host "`nvswhere not found; run 'devenv /rootsuffix Exp /updateconfiguration' by hand." -ForegroundColor Yellow
         return
     }
 
@@ -227,7 +227,7 @@ function Show-Status {
         # More than one copy in a hive is the failure this script exists for: VS loads both, so menu
         # entries double up and two MCP servers race for the same lock file.
         if ($group.Count -gt 1) {
-            Write-Host "    $($group.Count) copies — run -Reinstall to collapse them." -ForegroundColor Red
+            Write-Host "    $($group.Count) copies; run -Reinstall to collapse them." -ForegroundColor Red
         }
     }
 
@@ -267,7 +267,7 @@ function Invoke-Uninstall {
             catch {
                 # An instance on this hive still has the assemblies loaded. The guard above should
                 # have caught it, so say which folder is stuck rather than dying on a raw exception.
-                Write-Host "  locked — close every Visual Studio on this hive and re-run: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "  locked; close every Visual Studio on this hive and re-run: $($_.Exception.Message)" -ForegroundColor Red
                 exit 1
             }
         }
@@ -296,7 +296,7 @@ function Invoke-Install {
     $Path = (Resolve-Path $Path).Path
 
     if (-not (Test-Path $vswhere)) {
-        Write-Host "vswhere not found — install by double-clicking the .vsix instead." -ForegroundColor Yellow
+        Write-Host "vswhere not found; install by double-clicking the .vsix instead." -ForegroundColor Yellow
         exit 1
     }
 

@@ -303,7 +303,7 @@ public partial class ChatPaneControl : PaneControlBase
         var done = await Task.WhenAny(call, Task.Delay(2000)).ConfigureAwait(true);
         if (done != call)
         {
-            _log.Warn($"[chat] {what} timed out — WebView not answering");
+            _log.Warn($"[chat] {what} timed out: WebView not answering");
             return default;
         }
         return await call.ConfigureAwait(true);
@@ -457,7 +457,7 @@ public partial class ChatPaneControl : PaneControlBase
             }
             catch (Exception ex)
             {
-                _log.Warn($"[chat] dropped file '{path}' could not be read — {ex.Message}");
+                _log.Warn($"[chat] dropped file '{path}' could not be read: {ex.Message}");
             }
         }
         if (files.Count > 0)
@@ -591,8 +591,8 @@ public partial class ChatPaneControl : PaneControlBase
                 Key = "filecheckpoints",
                 Severity = Contracts.NoticeVariantDto.Info,
                 Message = opts.FileCheckpoints
-                    ? "File checkpoints stay on for this chat — turning them off applies to the next one you open."
-                    : "File checkpoints are off for this chat — open a new one to start keeping them.",
+                    ? "File checkpoints stay on for this chat; turning them off applies to the next one you open."
+                    : "File checkpoints are off for this chat; open a new one to start keeping them.",
                 Position = Contracts.NoticePositionDto.Top,
             });
         }
@@ -607,7 +607,7 @@ public partial class ChatPaneControl : PaneControlBase
         // the previous ones until the next re-render.
         if (TurnInFlight)
         {
-            _log.Debug(() => $"[chat] options applied mid-turn on {sid} — settings only, transcript left alone");
+            _log.Debug(() => $"[chat] options applied mid-turn on {sid}: settings only, transcript left alone");
             return;
         }
 
@@ -627,7 +627,7 @@ public partial class ChatPaneControl : PaneControlBase
                 // is exactly what the guard is for.
                 if (TurnInFlight)
                 {
-                    _log.Debug(() => $"[chat] turn started while reading {sid} — transcript left alone");
+                    _log.Debug(() => $"[chat] turn started while reading {sid}: transcript left alone");
                     return;
                 }
                 _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
@@ -673,7 +673,7 @@ public partial class ChatPaneControl : PaneControlBase
         // Closed while the read above was in flight. Bail rather than guard each call below with
         // ?.: the tail of this method starts a claude.exe, and it would start one for a pane
         // nobody can see.
-        if (_disposed) { _log.Debug(() => "load: pane closed mid-read — init abandoned"); return; }
+        if (_disposed) { _log.Debug(() => "load: pane closed mid-read: init abandoned"); return; }
 
         _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
         _log.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode})");
@@ -697,7 +697,7 @@ public partial class ChatPaneControl : PaneControlBase
         // installed" panel as the CLI pane instead of throwing when the transport spawns a null exe.
         if (ClaudeInstall.ResolveExecutable() == null)
         {
-            _log.Warn("[chat] claude.exe not found — showing 'not installed' panel");
+            _log.Warn("[chat] claude.exe not found: showing 'not installed' panel");
             Content = ClaudeInstall.BuildMissingPanel();
             return;
         }

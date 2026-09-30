@@ -44,14 +44,14 @@ const PERMISSION_ITEMS: PermissionItem[] = [
         label: 'Edit automatically',
         short: 'Auto-edit',
         description:
-            'Files in the working directory are edited without asking — anything outside it, and commands, still ask',
+            'Files in the working directory are edited without asking; anything outside it, and commands, still ask',
         icon: Code20Regular,
     },
     {
         value: PERMISSION_MODE.plan,
         label: 'Plan',
         short: 'Plan',
-        description: 'Reads and explores freely, then proposes a plan — no file is changed',
+        description: 'Reads and explores freely, then proposes a plan: no file is changed',
         icon: ClipboardBulletListLtr20Regular,
     },
     {

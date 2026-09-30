@@ -23,11 +23,11 @@ internal sealed class ListModulesTool : McpTool<ListModulesArgs>
     public override string Description =>
         "List the modules (DLLs/EXEs) loaded into the process being debugged: name, path, version, " +
         "whether symbols were loaded and whether the debugger counts it as user code. THIS IS THE " +
-        "TOOL FOR A BREAKPOINT THAT WILL NOT BIND — a breakpoint the debugger shows as unresolved " +
+        "TOOL FOR A BREAKPOINT THAT WILL NOT BIND: a breakpoint the debugger shows as unresolved " +
         "is nearly always a module with symbolsLoaded=false, or a module that was never loaded at " +
         "all. Also answers which build of a dependency is actually in the process, when that is in " +
         "doubt. User-code modules come FIRST; pass userCodeOnly to drop the framework and runtime " +
-        "rows entirely. Works while running, not only in break mode — but the list only grows as " +
+        "rows entirely. Works while running, not only in break mode, but the list only grows as " +
         "the program loads more.";
 
     public override bool ReadOnly => true;

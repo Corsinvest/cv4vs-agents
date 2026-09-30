@@ -38,13 +38,13 @@ internal sealed class SetBreakpointTool : McpTool<SetBreakpointArgs>
     public override string Name => "debug_set_breakpoint";
     public override string Description =>
         "Add a breakpoint at a file and 1-based line. Optionally pass a condition (an expression " +
-        "that must be true for the breakpoint to trigger), or a hitCount to skip the first passes " +
-        "— the way to stop on the 500th iteration of a loop without a counter variable to test. " +
+        "that must be true for the breakpoint to trigger), or a hitCount to skip the first passes" +
+        ", the way to stop on the 500th iteration of a loop without a counter variable to test. " +
         "Works whether or not a debug session is running. Combine with debug_start + " +
         "debug_get_state to pause execution at this point. " +
         "A line with no executable code (blank, comment, a type declaration) is refused, not moved: " +
         "ok=false and the reason says so, so retry on a line that has a statement. A method's " +
-        "opening brace is fine — it carries the entry sequence point. " +
+        "opening brace is fine: it carries the entry sequence point. " +
         "Accepting the line does not mean the debugger can stop on it either: binding happens later. " +
         "debug_list_breakpoints reports bound once the session is running, which is where " +
         "\"why did it never stop\" gets answered.";

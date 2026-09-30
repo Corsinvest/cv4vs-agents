@@ -133,7 +133,7 @@ internal static class UsageStatusBarHost
                     }
                 }
                 _attachCts = null;
-                OutputWindowLogger.Global.Warn("[usage-status] Visual Studio's status bar was not found — the usage item is not shown");
+                OutputWindowLogger.Global.Warn("[usage-status] Visual Studio's status bar was not found: the usage item is not shown");
             }
             catch (OperationCanceledException)
             {
@@ -160,7 +160,7 @@ internal static class UsageStatusBarHost
         if (bar.ItemsSource != null)
         {
             // A bound bar takes no extra items: a layout this code doesn't know, not a timing problem.
-            OutputWindowLogger.Global.Warn("[usage-status] the status bar is data-bound — the usage item is not shown");
+            OutputWindowLogger.Global.Warn("[usage-status] the status bar is data-bound: the usage item is not shown");
             return true;
         }
 

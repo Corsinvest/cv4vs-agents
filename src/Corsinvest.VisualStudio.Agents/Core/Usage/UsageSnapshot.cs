@@ -78,7 +78,7 @@ internal sealed class UsageSnapshot
     /// the next scheduled refresh still happens.</summary>
     public UsageSnapshot WithWindows(RateWindowDto[] windows)
     {
-        var old = Usage ?? new UsageDto { Plan = "—" };
+        var old = Usage ?? new UsageDto { Plan = "-" };
         var usage = new UsageDto
         {
             Account = old.Account,

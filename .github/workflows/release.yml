@@ -105,7 +105,7 @@ jobs:
           $expected = Get-ChildItem $dist -Recurse -File |
               ForEach-Object { 'WebView2/' + $_.FullName.Substring((Resolve-Path $dist).Path.Length + 1).Replace('\', '/') }
           if (-not $expected) {
-              Write-Host "::error::$dist is empty — the WebView was never built"
+              Write-Host "::error::$dist is empty: the WebView was never built"
               exit 1
           }
 
@@ -151,7 +151,7 @@ jobs:
           # both 1.1.0 to VS, and installing the second over the first exits 1001 "already
           # installed". Say so here: the installer's own message explains nothing.
           $install = if ('${{ steps.version.outputs.prerelease }}' -eq 'true') {
-              'Preview build — install the attached `.vsix` by double-clicking it. Uninstall any earlier preview of the same version first: previews share one version number, so Visual Studio treats the second one as already installed. Stable releases are on the Marketplace.'
+              'Preview build: install the attached `.vsix` by double-clicking it. Uninstall any earlier preview of the same version first: previews share one version number, so Visual Studio treats the second one as already installed. Stable releases are on the Marketplace.'
           } else {
               'Install from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents), or from Extensions → Manage Extensions in the IDE.'
           }

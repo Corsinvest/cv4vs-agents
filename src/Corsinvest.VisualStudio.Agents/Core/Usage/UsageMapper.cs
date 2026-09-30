@@ -39,7 +39,7 @@ internal static class UsageMapper
         var dto = new UsageDto { Account = account, AuthMethod = AuthLabel(account?.ApiProvider) };
 
         var sub = raw?.Val("subscription_type") ?? account?.SubscriptionType;
-        dto.Plan = string.IsNullOrEmpty(sub) ? "—" : "Claude " + sub;
+        dto.Plan = string.IsNullOrEmpty(sub) ? "-" : "Claude " + sub;
 
         if (raw?["rate_limits"] is JObject limits)
         {
@@ -171,7 +171,7 @@ internal static class UsageMapper
     private static UsageAttributionDto[] Attribution(JToken arr)
         => [.. (arr as JArray ?? new JArray())
             .OfType<JObject>()
-            .Select(x => new UsageAttributionDto { Name = x.Val("name", "—"), Pct = x.Val("pct", 0) })];
+            .Select(x => new UsageAttributionDto { Name = x.Val("name", "-"), Pct = x.Val("pct", 0) })];
 
     // Headline + body for an insight key (pct fills the headline). Null for unknown keys → dropped.
     private static (string Headline, string Body)? InsightCopy(string key, int pct) => key switch
@@ -179,7 +179,7 @@ internal static class UsageMapper
         "long_context" => ($"{pct}% of your usage was at >150k context",
             "Longer sessions are more expensive even when cached. /compact mid-task, /clear when switching to new tasks."),
         "subagent_heavy" => ($"{pct}% of your usage came from subagent-heavy sessions",
-            "Each subagent runs its own requests. Be deliberate about spawning them — and consider configuring a cheaper model for simpler subagents."),
+            "Each subagent runs its own requests. Be deliberate about spawning them, and consider configuring a cheaper model for simpler subagents."),
         _ => null,
     };
 

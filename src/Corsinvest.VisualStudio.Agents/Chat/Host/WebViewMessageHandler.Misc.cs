@@ -37,7 +37,7 @@ internal sealed partial class WebViewMessageHandler
         }
         else
         {
-            log.Debug(() => $"[fork] ForkSession returned null (uuid={forkAtUuid}) — no pane opened");
+            log.Debug(() => $"[fork] ForkSession returned null (uuid={forkAtUuid}), no pane opened");
         }
     }
 
@@ -69,7 +69,7 @@ internal sealed partial class WebViewMessageHandler
                 }
                 else
                 {
-                    response.Unavailable = "File list unavailable — see Output";
+                    response.Unavailable = "File list unavailable: see Output";
                 }
             }
             // A newer opening replaced this listing; the WebView drops this answer as stale.
@@ -79,7 +79,7 @@ internal sealed partial class WebViewMessageHandler
             {
                 log.LogException("[picker] suggestions", ex);
                 response.Items = [];
-                response.Unavailable = "File list unavailable — see Output";
+                response.Unavailable = "File list unavailable: see Output";
             }
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             bridge.SendResponse(BridgeMessages.ToWebView.File.Suggestions, suggId, response);

@@ -45,7 +45,7 @@ internal sealed partial class IdeDebugService
             // No Mode: Go() returns before the transition, so this reads the state being left. It
             // happened to be right ("run" either way) which is why it outlived the same fix on
             // start/stop/restart/break.
-            return new DebugResult { Ok = true, Reason = "Resumed — poll debug_get_state for where it stops next." };
+            return new DebugResult { Ok = true, Reason = "Resumed: poll debug_get_state for where it stops next." };
         }
         catch (Exception ex)
         {
@@ -104,7 +104,7 @@ internal sealed partial class IdeDebugService
                 return new StepResult
                 {
                     Ok = true,
-                    Reason = "Step still running after 10s — poll debug_get_state for where it stops.",
+                    Reason = "Step still running after 10s: poll debug_get_state for where it stops.",
                 };
             }
 
@@ -166,7 +166,7 @@ internal sealed partial class IdeDebugService
                 {
                     Ok = false,
                     InBreak = true,
-                    Reason = $"No thread with id {threadId}. Known ids: {string.Join(", ", known)} — debug_list_threads has the details.",
+                    Reason = $"No thread with id {threadId}. Known ids: {string.Join(", ", known)}; debug_list_threads has the details.",
                 };
             }
 
@@ -417,7 +417,7 @@ internal sealed partial class IdeDebugService
             {
                 Ok = false,
                 InBreak = true,
-                Reason = $"No thread {threadId} — the program has {ids}. debug_list_threads shows them with their locations.",
+                Reason = $"No thread {threadId}: the program has {ids}. debug_list_threads shows them with their locations.",
             };
         }
         catch (Exception ex)
@@ -478,7 +478,7 @@ internal sealed partial class IdeDebugService
                 {
                     Ok = false,
                     InBreak = true,
-                    Reason = $"Frame {index} is out of range — the stack has {count} ({(count > 0 ? $"0..{count - 1}" : "none")}).",
+                    Reason = $"Frame {index} is out of range: the stack has {count} ({(count > 0 ? $"0..{count - 1}" : "none")}).",
                 };
             }
 
@@ -506,7 +506,7 @@ internal sealed partial class IdeDebugService
                 Ok = false,
                 InBreak = true,
                 Reason = $"Could not select frame {index}: {ex.Message} " +
-                         "Frames with no symbols — runtime and OS ones — cannot be selected; " +
+                         "Frames with no symbols (runtime and OS ones) cannot be selected; " +
                          "debug_get_callstack shows which have a module.",
             };
         }
@@ -593,7 +593,7 @@ internal sealed partial class IdeDebugService
                     Value = root.Value,
                     Type = root.Type,
                     Members = [],
-                    Reason = $"{expression} is null — nothing to expand.",
+                    Reason = $"{expression} is null, nothing to expand.",
                 };
             }
 
@@ -642,7 +642,7 @@ internal sealed partial class IdeDebugService
         var frame = dbg.CurrentStackFrame?.FunctionName;
         return string.IsNullOrEmpty(frame)
             ? "Expression not valid in the current scope."
-            : $"Not in scope in the current frame ({frame}) — it may be a local of a calling frame: "
+            : $"Not in scope in the current frame ({frame}): it may be a local of a calling frame: "
               + "debug_get_callstack lists them, debug_select_frame switches.";
     }
 
@@ -741,11 +741,11 @@ internal sealed partial class IdeDebugService
 
         public string Message =>
             HitDeadline
-                ? $"Stopped after {WalkDeadline.TotalSeconds:0.#}s at depth {DeepestLevel} ({Nodes} members read) — "
+                ? $"Stopped after {WalkDeadline.TotalSeconds:0.#}s at depth {DeepestLevel} ({Nodes} members read): "
                   + "reading members runs getters in the debuggee. Expand one path with "
                   + "debug_expand(\"<expression>\") instead of walking every object."
                 : HitMemberCap
-                    ? $"Some level held more members than maxMembers kept ({Nodes} read) — raise maxMembers, "
+                    ? $"Some level held more members than maxMembers kept ({Nodes} read): raise maxMembers, "
                       + "or expand the one object you need with debug_expand."
                     : null;
     }

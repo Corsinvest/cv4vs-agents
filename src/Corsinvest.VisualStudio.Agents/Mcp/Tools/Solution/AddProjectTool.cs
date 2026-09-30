@@ -25,7 +25,7 @@ internal sealed class AddProjectTool : McpTool<AddProjectArgs>
     public override string Description =>
         "Add an existing project file to the open solution, as Solution Explorer's " +
         "'Add → Existing Project' does, and save the solution. The project file must already " +
-        "exist — this does not scaffold one. Returns the resolved project name. " +
+        "exist; this does not scaffold one. Returns the resolved project name. " +
         "solution_remove_project is the reverse; project_add_file adds a file to a project " +
         "that is already in the solution.";
 

@@ -25,7 +25,7 @@ internal sealed class FreezeThreadTool : McpTool<FreezeThreadArgs>
     public override string Description =>
         "Freeze or thaw one thread, by the id debug_list_threads reports. A frozen thread does not " +
         "run when the program resumes, which is how a race is pinned down: freeze the ones that " +
-        "interfere and step the one being watched. It STAYS frozen until something thaws it — a " +
+        "interfere and step the one being watched. It STAYS frozen until something thaws it: a " +
         "forgotten one makes the program behave in ways nothing else explains, so thaw it when the " +
         "investigation is over, and debug_list_threads shows isFrozen if you lose track. Freezing " +
         "everything leaves nothing to run. Only valid in break mode.";

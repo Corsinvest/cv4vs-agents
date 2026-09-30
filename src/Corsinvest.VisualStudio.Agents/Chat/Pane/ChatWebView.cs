@@ -154,7 +154,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
                 // about why a second renderer is there. The task manager labels each row with the
                 // document title, so give it one.
                 _taskManagerOwner.CoreWebView2.NavigateToString(
-                    "<!doctype html><title>cv4vs Agents — task manager host</title>");
+                    "<!doctype html><title>cv4vs Agents: task manager host</title>");
             }
 
             _taskManagerOwner.CoreWebView2.OpenTaskManagerWindow();

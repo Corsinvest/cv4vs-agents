@@ -146,6 +146,6 @@ internal static class DebugBreakService
             ? "The debugger is paused. Look at it and tell me what is going on here."
             : "The debugger is paused on an exception. Look at it and tell me why.";
 
-        return $"{ask}\nDo not move the debugger — I am looking at this break.";
+        return $"{ask}\nDo not move the debugger: I am looking at this break.";
     }
 }

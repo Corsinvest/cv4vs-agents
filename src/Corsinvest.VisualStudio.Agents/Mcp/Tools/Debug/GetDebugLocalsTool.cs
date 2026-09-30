@@ -11,13 +11,13 @@ namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 internal sealed class GetDebugLocalsArgs
 {
-    [Description("Levels of members to walk, 0-3. Default 0 — names, types and values only, which " +
+    [Description("Levels of members to walk, 0-3. Default 0: names, types and values only, which " +
         "is what you want unless every object in scope is worth opening. 1 saves a debug_expand " +
         "per object, but it walks ALL of them: with a collection in scope, lower maxMembers first " +
         "or expand the one you care about instead.")]
     public int? Depth { get; set; }
 
-    [Description("Members kept at each walked level, 1-200. Default 50 — low for one object, a lot " +
+    [Description("Members kept at each walked level, 1-200. Default 50: low for one object, a lot " +
         "when every local is walked at once. Ignored at depth 0.")]
     public int? MaxMembers { get; set; }
 }
@@ -31,7 +31,7 @@ internal sealed class GetDebugLocalsTool : McpTool<GetDebugLocalsArgs>
     public override string Description =>
         "List the parameters and local variables of the selected stack frame while paused (break " +
         "mode): each with name, type and value, the parameters first and marked isArgument. " +
-        "Objects are flat by default — hasMembers=true means you can see inside with " +
+        "Objects are flat by default: hasMembers=true means you can see inside with " +
         "debug_expand(\"name\"), or pass depth here to walk them all at once. Reads the frame " +
         "debug_select_frame chose, which is the paused one until you move it. Only valid in break " +
         "mode.";

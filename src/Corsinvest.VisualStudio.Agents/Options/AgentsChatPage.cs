@@ -71,7 +71,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Display")]
     [DisplayName("View mode")]
-    [Description("How much of Claude's work the chat shows. Full: every row. Focus: each run of tool calls and thinking between two replies folds into one row that says how many calls it held and opens in place. HideToolCalls: the tool rows are removed. In every mode what you took part in stays — your answers to questions, plan decisions, the task list, a call waiting for your approval. The View mode entry in the chat's / menu switches it too, for every open chat.")]
+    [Description("How much of Claude's work the chat shows. Full: every row. Focus: each run of tool calls and thinking between two replies folds into one row that says how many calls it held and opens in place. HideToolCalls: the tool rows are removed. In every mode what you took part in stays: your answers to questions, plan decisions, the task list, a call waiting for your approval. The View mode entry in the chat's / menu switches it too, for every open chat.")]
     public ChatViewMode ViewMode { get; set; } = ChatViewMode.Full;
 
     /// <summary>The bool <see cref="ViewMode"/> replaced, kept only so a stored <c>true</c> survives
@@ -91,7 +91,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("File links")]
     [DisplayName("Extra linkable extensions")]
-    [Description("Extensions to also turn into clickable links when Claude mentions a file in prose (e.g. `render.wgsl:20`), on top of the ~270 built-in ones. Needed only for a language we don't ship yet — a markdown link written by the model is always linked, whatever its extension. Click `…` to edit one entry per line, without the leading dot.")]
+    [Description("Extensions to also turn into clickable links when Claude mentions a file in prose (e.g. `render.wgsl:20`), on top of the ~270 built-in ones. Needed only for a language we don't ship yet; a markdown link written by the model is always linked, whatever its extension. Click `…` to edit one entry per line, without the leading dot.")]
     [Editor("System.Windows.Forms.Design.StringArrayEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", typeof(UITypeEditor))]
     public string[] ExtraLinkableExtensions { get; set; } = [];
 
@@ -102,7 +102,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Display")]
     [DisplayName("Show WebView developer entries")]
-    [Description("Add \"WebView DevTools\" and \"WebView task manager\" to the chat toolbar's \"More\" (…) menu. DevTools opens the WebView2 developer tools (browser console, DOM, network) on the chat itself — how you diagnose a chat that renders wrongly or stops responding. The task manager lists the browser's processes with their memory and CPU. Pre-release builds always offer both.")]
+    [Description("Add \"WebView DevTools\" and \"WebView task manager\" to the chat toolbar's \"More\" (…) menu. DevTools opens the WebView2 developer tools (browser console, DOM, network) on the chat itself, which is how you diagnose a chat that renders wrongly or stops responding. The task manager lists the browser's processes with their memory and CPU. Pre-release builds always offer both.")]
     public bool ShowWebViewDevEntries { get; set; } = false;
 
     [Category("Files")]
@@ -112,17 +112,17 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Files")]
     [DisplayName("Keep file checkpoints (Rewind)")]
-    [Description("Let Claude keep a copy of each file before it edits one, so the Rewind command can put them back the way they were before a message. The copies live under ~/.claude/file-history and are never cleaned up, which is the reason to turn this off if you do not use Rewind. Only files Claude edits are covered — what it changes by running a command is not. Takes effect on the next chat you open.")]
+    [Description("Let Claude keep a copy of each file before it edits one, so the Rewind command can put them back the way they were before a message. The copies live under ~/.claude/file-history and are never cleaned up, which is the reason to turn this off if you do not use Rewind. Only files Claude edits are covered: what it changes by running a command is not. Takes effect on the next chat you open.")]
     public bool FileCheckpoints { get; set; } = true;
 
     [Category("Files")]
     [DisplayName("Send post-edit diagnostics to Claude (experimental)")]
-    [Description("EXPERIMENTAL, off by default. After Claude edits a file, send back the new errors/warnings that edit introduced. Currently unreliable: Visual Studio only analyses files open in an editor, so the Error List is often still empty when we read it right after the edit — Claude then gets nothing. Use the ide_get_diagnostics MCP tool instead, which works because it runs when the Error List has settled.")]
+    [Description("EXPERIMENTAL, off by default. After Claude edits a file, send back the new errors/warnings that edit introduced. Currently unreliable: Visual Studio only analyses files open in an editor, so the Error List is often still empty when we read it right after the edit, so Claude then gets nothing. Use the ide_get_diagnostics MCP tool instead, which works because it runs when the Error List has settled.")]
     public bool PostEditDiagnostics { get; set; } = false;
 
     [Category("Files")]
     [DisplayName("Allowed upload file extensions")]
-    [Description("Extensions accepted when uploading/dropping files into the chat. Images (.png/.jpg/.gif/.webp) are sent as images, .pdf as a PDF document, everything else as text — video files are listed so they can be attached, but Claude cannot watch them and only sees the file name. Anything not listed is rejected with a notice. One entry per line, with or without the leading dot. Click `…` to edit.")]
+    [Description("Extensions accepted when uploading/dropping files into the chat. Images (.png/.jpg/.gif/.webp) are sent as images, .pdf as a PDF document, everything else as text; video files are listed so they can be attached, but Claude cannot watch them and only sees the file name. Anything not listed is rejected with a notice. One entry per line, with or without the leading dot. Click `…` to edit.")]
     [Editor("System.Windows.Forms.Design.StringArrayEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", typeof(UITypeEditor))]
     public string[] AllowedUploadFileExtensions { get; set; } =
     [
@@ -147,7 +147,7 @@ public class AgentsChatPage : AgentsOptionsPage
     public bool StickyUserMessages { get; set; } = true;
 
     [DisplayName("Show tool errors inline")]
-    [Description("Show the tool error message inline below the diff/output. When disabled, only the alert icon (on hover) is shown — click it to open the full error in VS.")]
+    [Description("Show the tool error message inline below the diff/output. When disabled, only the alert icon (on hover) is shown; click it to open the full error in VS.")]
     public bool ShowInlineToolErrors { get; set; } = false;
 
     [Category("Display")]
@@ -162,22 +162,22 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Input")]
     [DisplayName("Spell check in the composer")]
-    [Description("Underline misspelled words while you type a message. Off by default: most of what goes in the composer is code names, paths, @ mentions and / commands, which the spell checker flags. Turn it on if you write a lot of plain prose to Claude. The underline marks the word only — correcting it is up to you.")]
+    [Description("Underline misspelled words while you type a message. Off by default: most of what goes in the composer is code names, paths, @ mentions and / commands, which the spell checker flags. Turn it on if you write a lot of plain prose to Claude. The underline marks the word only; correcting it is up to you.")]
     public bool SpellCheckComposer { get; set; } = false;
 
     [Category("Input")]
     [DisplayName("Send the selected text with the message")]
-    [Description("Attach the selected code to the message, not just its file and line numbers. Costs tokens on every message sent with a selection, so it is off by default — but it is what makes an unsaved buffer readable, since otherwise the model opens the file from disk and sees the saved version. The composer's file badge shows which of the two is going out.")]
+    [Description("Attach the selected code to the message, not just its file and line numbers. Costs tokens on every message sent with a selection, so it is off by default, but it is what makes an unsaved buffer readable, since otherwise the model opens the file from disk and sees the saved version. The composer's file badge shows which of the two is going out.")]
     public bool SendSelectionText { get; set; } = false;
 
     [Category("Input")]
     [DisplayName("Initial permission mode")]
-    [Description("Permission mode every new chat session starts in. You can still change it per-session from the toolbar. \"Manual\" (Default) is the most cautious. \"BypassPermissions\" also requires \"Allow dangerously skip permissions\" below — without it, sessions start in Manual.")]
+    [Description("Permission mode every new chat session starts in. You can still change it per-session from the toolbar. \"Manual\" (Default) is the most cautious. \"BypassPermissions\" also requires \"Allow dangerously skip permissions\" below: without it, sessions start in Manual.")]
     public InitialPermissionMode InitialPermissionMode { get; set; } = InitialPermissionMode.Default;
 
     [Category("Input")]
     [DisplayName("Allow dangerously skip permissions")]
-    [Description("When enabled, the toolbar's permission menu offers \"Bypass permissions\", which never asks for approval — even for commands that can destroy data. Enabling it does not skip anything by itself: the mode still has to be selected. Takes effect on new sessions (the CLI decides at launch whether the mode can ever be entered). Off by default.")]
+    [Description("When enabled, the toolbar's permission menu offers \"Bypass permissions\", which never asks for approval, even for commands that can destroy data. Enabling it does not skip anything by itself: the mode still has to be selected. Takes effect on new sessions (the CLI decides at launch whether the mode can ever be entered). Off by default.")]
     public bool AllowDangerouslySkipPermissions { get; set; } = false;
 
     [Category("Ignore")]
@@ -187,7 +187,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Ignore")]
     [DisplayName("Ignored patterns")]
-    [Description("Extra rules hiding files from the `@` file picker, on top of the workspace's own. Written as a `.gitignore` and kept as one — click `…` to open the file in the editor. Applied only where the workspace's rules say nothing.")]
+    [Description("Extra rules hiding files from the `@` file picker, on top of the workspace's own. Written as a `.gitignore` and kept as one; click `…` to open the file in the editor. Applied only where the workspace's rules say nothing.")]
     [Editor(typeof(IgnoreRulesFileEditor), typeof(UITypeEditor))]
     // Not the rules themselves: those live in a file (Chat/Host/IgnoreRulesStore.cs), because a
     // commented rule list is something to edit in a real editor and copy between machines, not a

@@ -63,12 +63,12 @@
         <!-- Refresh re-reads changed sessions and re-fetches the visible one. -->
         <StackPanel x:Name="RefreshButtons" Orientation="Horizontal">
           <Button Style="{StaticResource ToolBtn}" Click="OnRefreshClick"
-                  ToolTip="Refresh — re-read changed sessions">
+                  ToolTip="Refresh: re-read changed sessions">
             <imaging:CrispImage Width="16" Height="16"
                                 Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
           </Button>
           <Button Style="{StaticResource ToolBtn}" Click="OnRecreateClick"
-                  ToolTip="Recreate — re-index everything from scratch">
+                  ToolTip="Recreate: re-index everything from scratch">
             <imaging:CrispImage Width="16" Height="16"
                                 Moniker="{x:Static catalog:KnownMonikers.Restart}" />
           </Button>

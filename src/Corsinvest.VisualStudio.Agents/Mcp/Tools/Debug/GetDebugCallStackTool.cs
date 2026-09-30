@@ -19,7 +19,7 @@ internal sealed class GetDebugCallStackTool : McpTool<NoArgs>
         "execution is paused; isCurrent marks the frame debug_get_locals and debug_evaluate read, " +
         "which debug_select_frame moves. This is one thread's stack: debug_list_threads shows the " +
         "others, debug_select_thread switches. " +
-        "Only valid in break mode — if the program is still running, poll debug_get_state until " +
+        "Only valid in break mode: if the program is still running, poll debug_get_state until " +
         "mode='break'.";
 
     public override bool ReadOnly => true;

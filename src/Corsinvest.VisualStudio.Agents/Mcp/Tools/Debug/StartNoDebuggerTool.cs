@@ -16,7 +16,7 @@ internal sealed class StartNoDebuggerTool : McpTool<NoArgs>
     public override string Description =>
         "Run the solution's startup project WITHOUT the debugger (equivalent to Ctrl+F5): " +
         "breakpoints are ignored and exceptions do not break into the IDE, so none of the " +
-        "debug_get_* or debug_step tools will have anything to report afterwards — use " +
+        "debug_get_* or debug_step tools will have anything to report afterwards: use " +
         "debug_start when you need any of that. To run a different project, " +
         "solution_set_startup_project first. Returns ok or ok=false with a reason.";
 

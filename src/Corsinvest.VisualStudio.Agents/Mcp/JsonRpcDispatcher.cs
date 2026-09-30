@@ -109,7 +109,7 @@ internal sealed class JsonRpcDispatcher
     /// the things a caller would otherwise have to infer tool by tool, paying for the prose in
     /// every catalogue listing.</summary>
     private const string ServerInstructions =
-        "These tools reach the Visual Studio instance that has this solution open — its compiler, " +
+        "These tools reach the Visual Studio instance that has this solution open: its compiler, " +
         "its symbol graph, its running debugger. They report what the IDE knows, not what the " +
         "files say.\n\n" +
         "Prefer them to the shell where both work: build_solution over msbuild or dotnet build " +
@@ -117,7 +117,7 @@ internal sealed class JsonRpcDispatcher
         "line), nav_find_references and nav_go_to_definition over grep (the symbol graph, not " +
         "text), ide_get_diagnostics over parsing build output.\n\n" +
         "Things that are easy to get wrong: build tools compile whichever configuration the IDE " +
-        "has active and report it back — solution_set_configuration changes it, and the change stays " +
+        "has active and report it back: solution_set_configuration changes it, and the change stays " +
         "for the user's next manual build. Debug inspection needs the debugger paused; " +
         "debug_get_state says whether it is. Output panes are listed under the IDE's display " +
         "language, but the built-in ones also answer to their English names.";
@@ -200,7 +200,7 @@ internal sealed class JsonRpcDispatcher
             {
                 OutputWindowLogger.Global.Warn($"[mcp] '{tool.Name}' did not return within {ToolCallTimeout.TotalMinutes:0} minutes");
                 return ToolFailure($"'{tool.Name}' did not return within {ToolCallTimeout.TotalMinutes:0} minutes. " +
-                    "Visual Studio may be waiting on a modal dialog, or the operation may still be running — " +
+                    "Visual Studio may be waiting on a modal dialog, or the operation may still be running: " +
                     "it was not cancelled.");
             }
             payload = await call;

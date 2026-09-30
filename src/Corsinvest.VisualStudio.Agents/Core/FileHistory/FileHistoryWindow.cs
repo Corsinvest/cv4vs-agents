@@ -40,7 +40,7 @@ public sealed class FileHistoryWindow : ToolWindowPane
                 var window = pkg.FindToolWindow(typeof(FileHistoryWindow), 0, create: true);
                 if (window?.Frame is not IVsWindowFrame frame)
                 {
-                    OutputWindowLogger.Global.Warn("[filehistory] the File history window has no frame — cannot show it");
+                    OutputWindowLogger.Global.Warn("[filehistory] the File history window has no frame, cannot show it");
                     return;
                 }
                 ErrorHandler.ThrowOnFailure(frame.Show());

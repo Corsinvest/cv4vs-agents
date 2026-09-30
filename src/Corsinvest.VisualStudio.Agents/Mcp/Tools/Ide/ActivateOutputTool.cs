@@ -12,8 +12,8 @@ namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 internal sealed class ActivateOutputArgs
 {
-    [Required, Description("Output pane name to bring to the foreground. The built-in ones — " +
-        "'Build', 'Debug', 'General', 'Build Order' — work under those English names on any " +
+    [Required, Description("Output pane name to bring to the foreground. The built-in ones (" +
+        "'Build', 'Debug', 'General', 'Build Order') work under those English names on any " +
         "IDE language.")]
     public string Pane { get; set; }
 }
@@ -27,7 +27,7 @@ internal sealed class ActivateOutputTool : McpTool<ActivateOutputArgs>
         "Bring a Visual Studio Output window pane (by name) to the foreground so the user sees " +
         "it. Use at a debug checkpoint to show the relevant build/debug output before asking " +
         "the user to confirm. The pane name is required. Returns ok; ok=false with " +
-        "availablePanes when the pane isn't found — ide_read_output with no pane lists them. " +
+        "availablePanes when the pane isn't found: ide_read_output with no pane lists them. " +
         "This shows a pane to the user; reading it is ide_read_output's job and needs no " +
         "activation.";
 

@@ -351,9 +351,9 @@ const BACK = /[^\s|<>[({,;:#'"`]*$/;
 // The column and the range ends are matched but dropped: we open at each start line. A range takes a
 // hyphen or an en/em-dash; a list takes commas. The verbose ", line 339" form is out by design (the
 // model writes X.cs:20, never "X.cs, line 20").
-const RANGE_LIST = String.raw`\d+(?:[-–—]\d+)?(?:,\d+(?:[-–—]\d+)?)*`;
+const RANGE_LIST = String.raw`\d+(?:[-–\u2014]\d+)?(?:,\d+(?:[-–\u2014]\d+)?)*`;
 const FWD = new RegExp(
-    `^(?::(?<r1>${RANGE_LIST})(?::\\d+)?|\\((?<r2>\\d+)(?:,\\d+)?\\)|\\[(?<r3>\\d+)(?::\\d+)?\\]|#L?(?<r4>\\d+(?:[-–—]L?\\d+)?))`,
+    `^(?::(?<r1>${RANGE_LIST})(?::\\d+)?|\\((?<r2>\\d+)(?:,\\d+)?\\)|\\[(?<r3>\\d+)(?::\\d+)?\\]|#L?(?<r4>\\d+(?:[-–\u2014]L?\\d+)?))`,
 );
 
 // A windows drive letter, which BACK cuts off because of its ':', re-attached when it sits right
@@ -408,7 +408,7 @@ export function findFileRefs(text: string, strictness: RefStrictness = 'known-ex
         const lines: number[] = [];
         const ends: number[] = [];
         for (const part of raw.split(',')) {
-            const [a, b] = part.split(/[-–—]/).map((n) => Number(n.replace(/^L/i, '')));
+            const [a, b] = part.split(/[-–\u2014]/).map((n) => Number(n.replace(/^L/i, '')));
             if (!(a > 0) || lines.includes(a)) {
                 continue; // drop junk and duplicates, keeping the first occurrence
             }

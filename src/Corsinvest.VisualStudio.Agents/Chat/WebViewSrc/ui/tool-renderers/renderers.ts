@@ -748,7 +748,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                       const rows = (q.options ?? []).map((o) => {
                           const label = o.label ?? '';
                           const mark = chosen.includes(label) ? '✅ ' : '';
-                          const desc = o.description ? ` — ${o.description}` : '';
+                          const desc = o.description ? `: ${o.description}` : '';
                           return `- ${mark}${label}${desc}`;
                       });
                       // Typed into "Other": no declared option carries it, so it needs a row of
@@ -899,7 +899,7 @@ function answerText(q: AskQuestion, answered: string): string {
     if (chosen.length) {
         return chosen.join(', ');
     }
-    return questionAnswer(q, answered) || '—';
+    return questionAnswer(q, answered) || '-';
 }
 
 interface Finding {

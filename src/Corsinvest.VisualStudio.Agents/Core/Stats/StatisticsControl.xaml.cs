@@ -246,8 +246,8 @@ public partial class StatisticsControl : UserControl
         ActiveDaysText.Text = r.ActiveDays.ToString("N0");
         CurrentStreakText.Text = r.CurrentStreak + "d";
         LongestStreakText.Text = r.LongestStreak + "d";
-        PeakHourText.Text = r.PeakHour >= 0 ? $"{r.PeakHour:D2}:00" : "—";
-        FavoriteModelText.Text = string.IsNullOrEmpty(r.FavoriteModel) ? "—" : r.FavoriteModel;
+        PeakHourText.Text = r.PeakHour >= 0 ? $"{r.PeakHour:D2}:00" : "-";
+        FavoriteModelText.Text = string.IsNullOrEmpty(r.FavoriteModel) ? "-" : r.FavoriteModel;
         ImagesText.Text = r.ImageCount.ToString("N0");
         AttachmentsText.Text = r.FileCount.ToString("N0");
         SubagentsText.Text = r.SubagentSessions.ToString("N0");

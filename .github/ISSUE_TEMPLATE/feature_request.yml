@@ -43,7 +43,7 @@ body:
     id: alternatives
     attributes:
       label: Alternatives you've considered
-      description: Including "I do it by hand like this" — that's useful too.
+      description: Including "I do it by hand like this". that's useful too.
 
   - type: textarea
     id: additional-context

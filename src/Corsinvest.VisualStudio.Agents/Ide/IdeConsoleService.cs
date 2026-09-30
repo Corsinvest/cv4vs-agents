@@ -192,7 +192,7 @@ internal sealed class IdeConsoleService
         var dbg = dte?.Debugger;
         if (dbg == null || dbg.CurrentMode == dbgDebugMode.dbgDesignMode)
         {
-            return (0, "No debug session is running — debug_start begins one.");
+            return (0, "No debug session is running: debug_start begins one.");
         }
         var procs = dbg.DebuggedProcesses;
         if (procs == null || procs.Count == 0) { return (0, "The debugger reports no processes."); }
@@ -217,7 +217,7 @@ internal sealed class IdeConsoleService
                 // never existed sends the caller looking at the wrong thing.
                 return Fail(pid, ProcessExists(pid)
                     ? $"Process {pid} has no console to attach to (Win32 error {err}). Only a console " +
-                      "application has one — a GUI or web project does not."
+                      "application has one: a GUI or web project does not."
                     : $"No process with PID {pid} is running (Win32 error {err}). Omit processId to use " +
                       "the first debugged process, or debug_list_processes for the live ones.");
             }

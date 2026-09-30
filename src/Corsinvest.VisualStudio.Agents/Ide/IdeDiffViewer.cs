@@ -90,7 +90,7 @@ internal sealed partial class IdeDiffViewer
         newFilePath = PathHelpers.FromFileUri(newFilePath);
         if (string.IsNullOrEmpty(oldFilePath))
         {
-            OutputWindowLogger.Global.Warn("[diff] no old_file_path given — nothing to compare against");
+            OutputWindowLogger.Global.Warn("[diff] no old_file_path given: nothing to compare against");
             return new DiffResult { Status = DiffRejected };
         }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -130,7 +130,7 @@ internal sealed partial class IdeDiffViewer
             // don't have to learn the (Ctrl+S = apply, X = reject)
             // convention from a tooltip. Cheap UX nudge while we don't
             // have a proper Accept/Reject toolbar over the diff editor.
-            var baseCaption = tabName ?? ($"Claude Code — {Path.GetFileName(oldFilePath)}");
+            var baseCaption = tabName ?? ($"Claude Code: {Path.GetFileName(oldFilePath)}");
             var caption = baseCaption + "  ·  Ctrl+S to apply · close to reject";
 
             var frame = OpenComparison(
@@ -145,7 +145,7 @@ internal sealed partial class IdeDiffViewer
                 // the outside this is indistinguishable from a diff the user rejected in a hurry:
                 // both answer DIFF_REJECTED, one after a decision and one without ever asking.
                 OutputWindowLogger.Global.Warn(
-                    $"[diff] the comparison window did not open for '{caption}' — answering rejected without showing anything");
+                    $"[diff] the comparison window did not open for '{caption}': answering rejected without showing anything");
                 try { File.Delete(tempPath); } catch (Exception) { /* best effort */ }
                 return new DiffResult { Status = DiffRejected };
             }
@@ -180,7 +180,7 @@ internal sealed partial class IdeDiffViewer
                 onAccept: () => TryResolve(tempPath, FileSaved),
                 onReject: () => TryResolve(tempPath, TabClosed));
 
-            OutputWindowLogger.Global.Debug(() => $"[diff] waiting on '{registryKey}' — accept, reject or close resolves it");
+            OutputWindowLogger.Global.Debug(() => $"[diff] waiting on '{registryKey}': accept, reject or close resolves it");
             var status = await tcs.Task;
             OutputWindowLogger.Global.Debug(() => $"[diff] '{registryKey}' resolved as {status}");
             // Ship the user's content along with FILE_SAVED so the CLI
@@ -245,7 +245,7 @@ internal sealed partial class IdeDiffViewer
 
             var tempOld = WriteTemp(oldContent, Path.GetFileName(filePath) + ".old");
             var tempNew = WriteTemp(newContent, Path.GetFileName(filePath) + ".new");
-            var caption = $"Claude Code — {Path.GetFileName(filePath)}";
+            var caption = $"Claude Code: {Path.GetFileName(filePath)}";
             var frame = OpenComparison(
                 leftPath: tempOld, rightPath: tempNew,
                 caption: caption,
@@ -265,7 +265,7 @@ internal sealed partial class IdeDiffViewer
             {
                 // Logged because this is the only route to a full diff: a silent failure looks
                 // exactly like a diff nobody asked for.
-                OutputWindowLogger.Global.Warn($"[diff] chat diff did not open for '{caption}' — nothing shown");
+                OutputWindowLogger.Global.Warn($"[diff] chat diff did not open for '{caption}': nothing shown");
                 // Nothing opened, so nothing will close and take the temps with it.
                 foreach (var t in new[] { tempOld, tempNew })
                 {
@@ -427,7 +427,7 @@ internal sealed partial class IdeDiffViewer
         ThreadHelper.ThrowIfNotOnUIThread();
         if (Package.GetGlobalService(typeof(SVsDifferenceService)) is not IVsDifferenceService svc)
         {
-            OutputWindowLogger.Global.Warn("[diff] difference service unavailable — diff cannot open");
+            OutputWindowLogger.Global.Warn("[diff] difference service unavailable: diff cannot open");
             return null;
         }
         uint opts = 0;

@@ -16,7 +16,7 @@ internal sealed class GetDebugStateTool : McpTool<NoArgs>
     public override string Description =>
         "Get the current debug state: mode is 'design' (not debugging), 'run' (running), or " +
         "'break' (paused on a breakpoint/exception). In 'break' mode also returns the current " +
-        "file and 1-based line where execution is paused, and — if paused ON AN EXCEPTION — its " +
+        "file and 1-based line where execution is paused, and (if paused ON AN EXCEPTION) its " +
         "type and message. That position is where the program stopped and stays put while you " +
         "look around: debug_select_frame changes which frame the inspection tools read, not this. " +
         "Poll this after debug_start to know when the program has hit a breakpoint or thrown.";
