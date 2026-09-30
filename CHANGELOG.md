@@ -36,7 +36,7 @@ own, and what you type through it now shows up in the pane.
   1 failed`), and **Hide tool calls** works as before. Change it from the `/` menu or in Options; the
   old setting carries over.
 - **A warning before the next message costs more.** After a break the conversation's cache expires,
-  and the next message is billed as if the whole conversation were new — up to ten times the usual.
+  and the next message is billed as if the whole conversation were new: up to ten times the usual.
   A small clock beside the context gauge now appears shortly before that happens, while there is
   still time to send, and again once it has, saying how much the next message will cost. It also
   appears after a compaction, for the same reason.
@@ -69,7 +69,7 @@ own, and what you type through it now shows up in the pane.
 
 - **Esc while editing a queued message stopped Claude and emptied the queue.** It now just closes the
   edit.
-- **Messages typed through Remote Control did not appear in the pane** — only Claude's answers did.
+- **Messages typed through Remote Control did not appear in the pane**: only Claude's answers did.
 - **Messages sent while Claude was working disappeared from history**, so a reopened conversation
   showed answers to nothing. They now appear, and ↑/↓ recalls them.
 - **A forked conversation lost its first message.**
@@ -87,7 +87,7 @@ What Claude is told you selected was being read through an API that counted a ta
 characters, reported a span nobody had made when two documents sat side by side, and could arrive
 with no selection at all on the first prompt. It is a per-view reading now, on the same geometry
 everywhere, and a drag costs one read instead of one per event. The message queue became something
-you can fix rather than only empty — click a waiting message to edit it, remove it, or join it to
+you can fix rather than only empty: click a waiting message to edit it, remove it, or join it to
 the one before so they leave together. And a `cd` in a Bash call no longer makes a chat lose track
 of its own transcript, which is what had been quietly breaking the diff dialog, the plan banner and
 the session title.
@@ -96,7 +96,7 @@ the session title.
 
 - **Fix a queued message instead of retyping it.** Clicking one in the queue brings its text and
   attachments back into the composer; change it and it goes back to its own place in the line. Until
-  then it holds that place and the queue waits there, so nothing jumps ahead of it — and if the turn
+  then it holds that place and the queue waits there, so nothing jumps ahead of it, and if the turn
   ends while you are still editing, nothing is sent at all.
 - **Send two queued messages as one.** Three messages that correct one another were no use arriving
   a turn apart: Claude answered the first without having seen the rest. **Alt+Enter** now queues a
@@ -105,7 +105,7 @@ the session title.
 - **The debugger says which modules are loaded, and which process you are looking at.** A breakpoint
   that will not bind is nearly always a module whose symbols never arrived, and nothing here could
   see that: `debug_list_modules` now reports each one with whether its symbols loaded, user code
-  first. `debug_list_debugged_processes` names the processes under the debugger — with a web app and
+  first. `debug_list_debugged_processes` names the processes under the debugger, with a web app and
   its worker both attached, nothing said which one the call stack, locals and threads were about.
   `debug_list_processes` gained the `beingDebugged` flag it always declared, and splits the file name
   from its full path so the two listings can be matched.
@@ -114,7 +114,7 @@ the session title.
 
 - **A `cd` in a Bash call made a chat lose its own transcript.** The CLI reports its current
   directory on every turn, and a command that changed it sent the pane looking for its session file
-  under a folder that never exists — the transcript stays where the session was launched. From that
+  under a folder that never exists: the transcript stays where the session was launched. From that
   turn on the diff dialog and the tool input/output views did nothing when clicked, the plan would
   not open, and the session title stopped refreshing, with nothing on screen saying why. Nothing
   repaired it either, unless the model happened to `cd` back. The same wrong folder reached further:
@@ -130,18 +130,18 @@ the session title.
   projected file (Razor, `.vue`) resolves to its real document, and closing a solution no longer
   leaves the reading attached to a dead editor.
 - **A slash command sent your selection anyway.** Typing `/model` with code selected went out with
-  the selected code attached, under a bubble that showed no context chip — the screen said one thing
+  the selected code attached, under a bubble that showed no context chip: the screen said one thing
   and the wire carried another. Slash commands carry no IDE context now, a leading space included.
 - **The badge could go on naming the file you had left.** Activating a Razor file before its document
   had resolved left that editor untrackable for as long as it stayed open, so the chip above the
-  composer kept showing the previous file — and that is the file the model was told about.
+  composer kept showing the previous file, and that is the file the model was told about.
 - **Selecting a second word on the same line left Claude holding the first.** Nothing but the columns
-  changes between the two, and the columns were not being compared — so the new selection was taken
+  changes between the two, and the columns were not being compared, so the new selection was taken
   for the one already sent and never went out. Asking about what you had just highlighted answered
   about the word before it.
 - **A single selected character counted as nothing.** Double-clicking `i` in a loop left the chip
   and the context menu's "Needs selection" entries greyed out, explaining nothing. If trimming the
-  edges leaves any text it is a selection — while whitespace alone, however much of it, still is not.
+  edges leaves any text it is a selection, while whitespace alone, however much of it, still is not.
 - **The first prompt could go out with no selection attached.** Two senders on one connection could
   start at once, and a WebSocket refuses that: the loser became a logged exception and a
   notification that never arrived. It was usually the initial context that lost, in the ordinary case
@@ -150,27 +150,27 @@ the session title.
   the height of a tool row's line; a reply's text is taller, and taller again when the chat font size
   is raised. It now follows whatever line it sits beside.
 - **The plan usage in the status bar outlived the panes it was reporting on.** Close every chat and
-  it stayed, showing whichever profile had been open last — and kept starting a background process
+  it stayed, showing whichever profile had been open last, and kept starting a background process
   every fifteen minutes to refresh numbers for a session that had ended. It now appears with the
   first pane and goes with the last; closing the only pane on the profile being shown moves it to one
   that still has a pane.
 - **The status bar repeated the profile name for nothing.** It sat there beside the notification
-  bell naming the profile of the pane you were already in — which carries that name in its own
+  bell naming the profile of the pane you were already in, which carries that name in its own
   caption. It is shown only when there is an ambiguity to resolve now: the open panes run more than
   one profile, and none of them has the focus. Most people, with every chat on one profile, will not
   see it again; the tooltip and the popup still name it either way. The name could also outlive its
-  sessions — close the last pane of a profile with the focus elsewhere and the bar kept naming it.
+  sessions: close the last pane of a profile with the focus elsewhere and the bar kept naming it.
 - **A single queued message could not be read in full.** With one message waiting, its text sat
-  truncated in the row with no way to see the rest or copy it — while two or more opened a list that
+  truncated in the row with no way to see the rest or copy it, while two or more opened a list that
   showed everything. There is now always a list.
 - **The file outline now works in six languages instead of two.** Asking Claude for the structure of
-  a file — its classes, methods and properties — used to answer only for C# and Visual Basic;
+  a file (its classes, methods and properties) used to answer only for C# and Visual Basic;
   anywhere else it said the language was not supported. It now answers for F#, C++ (headers
   included) and, while the file is open in an editor, TypeScript and JavaScript. Nothing changed for
   C# and Visual Basic.
 - **Go to definition, find references and rename could report a language as unsupported for the
   reason the outline did.** Roslyn gives the property holding a project's language services two
-  different names, and those three tools read only the first — so a project exposing it under the
+  different names, and those three tools read only the first, so a project exposing it under the
   second answered "not supported" however complete its language service was. They read either name
   now, the way the outline already did.
 - **The language report no longer sends you away from features that work.** The tool that says which
@@ -184,10 +184,10 @@ the session title.
 - **The queue moved into the composer's toolbar.** It was a row of its own above the box, holding a
   label and a count; it is now a chip beside the sub-agent one, and gives that line back.
 - **Searches and reference lists come back faster on large results.** Finding every use of a symbol
-  read the same source file from disk once per result — fifty references in one file meant reading
+  read the same source file from disk once per result: fifty references in one file meant reading
   it fifty times. Each file is now read once per search. Same results, same order.
 - **Dragging a selection costs one reading instead of dozens.** The delay before the selection is
-  sent was applied after building the whole thing — text included — so every event a drag raises
+  sent was applied after building the whole thing, text included, so every event a drag raises
   paid for a full reading that was then thrown away. What goes out is now the selection as it ended,
   read once. Separately, the editor's context menu asks "is there a selection?" continuously and once
   per entry, and was materialising the selected text to answer: with five thousand lines selected
@@ -197,32 +197,32 @@ the session title.
 
 Your plan limits are now visible at a glance in the status bar, without opening anything. The chat
 can hide everything Claude did and leave just the conversation, and a plan can be opened full-size
-in the editor — and edited there before you approve it. Tool windows have icons again when a tab
+in the editor, and edited there before you approve it. Tool windows have icons again when a tab
 group gets crowded, and the Usage tab's reset times are no longer hours off.
 
 ### Added
 
 - **Plan usage in the status bar.** `Claude: 5h 44% · 7d 10%` at the right of Visual Studio's status
   bar, each figure with a thin bar that turns amber and then red as the window fills. Click it for
-  every limit — per-model weeklies included — when each one resets, and which account they belong to.
+  every limit, per-model weeklies included, when each one resets, and which account they belong to.
   It follows the pane you last worked in, and stays current on its own. How often it refreshes when
   no chat is open is under **Options → General**; `0` turns that off. The idea comes from
   [vsix-copilot-status-extension](https://github.com/3rikF/vsix-copilot-status-extension).
 - **Hide tool calls.** A button on the chat toolbar, between Session History and New Session, that
-  takes out everything Claude did — the commands, file reads and edits, searches, MCP calls and
-  sub-agents — and leaves the conversation: your messages and its replies. What you took part in
+  takes out everything Claude did (the commands, file reads and edits, searches, MCP calls and
+  sub-agents) and leaves the conversation: your messages and its replies. What you took part in
   stays: answers to questions, plan decisions, the task list, and anything waiting for your approval.
   The button's own icon says which way the transcript reads, and the setting is shared by every open
   chat and remembered across restarts (also under **Options → Chat**).
 - **Open a plan in the editor.** Long plans no longer have to be read through the banner's small
   scrolling box: "Open in editor" opens the plan as a normal document, full-size, in Visual Studio's
-  Markdown editor. While the plan is still waiting for your answer you can edit it there and save —
+  Markdown editor. While the plan is still waiting for your answer you can edit it there and save:
   the banner picks up the change, and approving sends what you wrote.
 - **Code review findings read as a list** instead of arriving as raw data in the transcript.
 
 ### Fixed
 
-- **The Usage tab's "Resets in" was off by your distance from UTC** — east of Greenwich a window
+- **The Usage tab's "Resets in" was off by your distance from UTC**: east of Greenwich a window
   looked like it reset hours later than it does, west of it hours earlier. The chat's Account &
   Usage dialog was already right.
 - **A weekly limit for a single model was shown nowhere.** A *Weekly Fable* window, say, reported by
@@ -230,7 +230,7 @@ group gets crowded, and the Usage tab's reset times are no longer hours off.
   now, after the session and weekly windows.
 - **A crowded tab group no longer shows the extension's windows as blank tabs.** When Visual Studio
   runs out of room it hides the tab captions and draws only the icons, and ours had none. Each window
-  now shows the mascot with a small glyph saying which one it is — a speech bubble for a chat, a
+  now shows the mascot with a small glyph saying which one it is: a speech bubble for a chat, a
   console for the CLI, and for Statistics, Usage, Context usage and File history the same glyph as
   their menu entry.
 - **Collapsible section headers ignored the colour theme**, staying the same shade whichever theme
@@ -248,21 +248,21 @@ group gets crowded, and the Usage tab's reset times are no longer hours off.
 
 A crash that took Visual Studio down with it: expanding an auto-hidden chat pane could kill
 `devenv.exe` outright, and the fix is two lines guarding against a WebView2 SDK bug that is still
-open upstream. The transcript reads better too — an MCP call now says it is one instead of naming
+open upstream. The transcript reads better too: an MCP call now says it is one instead of naming
 the server where every other row names the action, its arguments and result are formatted JSON on
 both sides, and the twenty CLI tools that used to fall through to a raw name over an input dump each
 have a renderer. Three things that broke only when a message was sent with a file open in the editor
-— a dead attachment click, ↑/↓ recalling nothing, history paging from the wrong place — turn out to
+(a dead attachment click, ↑/↓ recalling nothing, history paging from the wrong place) turn out to
 be the same off-by-one and are fixed together.
 
 ### Added
 
 - **An MCP call says it is one, and both its cells are readable JSON.** The row for
-  `mcp__server__tool` read `Vs [build_solution]` — the server, where every other row names the
+  `mcp__server__tool` read `Vs [build_solution]`: the server, where every other row names the
   action (`Read`, `Grep`, `Web Search`), so nothing on screen said the call went to an MCP server at
   all. It reads `MCP Tool` · `vs · build_solution` now, which also fills a detail that used to come
   up empty: the fallback looks for `query`/`url`/`path`, and MCP tools rarely carry those. Both
-  cells are JSON by protocol — arguments in, serialised result out — so both are highlighted and the
+  cells are JSON by protocol (arguments in, serialised result out), so both are highlighted and the
   result is indented instead of arriving as one line that scrolls sideways. Clicking a cell used to
   open a `.txt` holding that same single line; it is now an indented `.json` on both sides.
 - **A renderer for every CLI tool** (23 → 43). Twenty were falling through to the default renderer,
@@ -273,14 +273,14 @@ be the same off-by-one and are fixed together.
   sub-agents run, which is what started this. Three carry more than a header: SendMessage and Brief
   put the message itself in the body, REPL highlights its code and never clips it, LSP links to the
   file and line it asked about. Nothing lands on the default renderer now, which leaves it for what
-  it is for — a tool this build has never heard of.
+  it is for: a tool this build has never heard of.
 
 ### Fixed
 
 - **Expanding an auto-hidden chat pane could crash Visual Studio** (issue #208). Not the pane: the
   whole IDE, with an unhandled `ArgumentException` on the UI thread.
   `WebView2CompositionControl` passes its size straight from a private `SizeChanged` handler to
-  `Direct3D11CaptureFramePool.Recreate`, which throws on 0×0 — and VS docking hands the pane exactly
+  `Direct3D11CaptureFramePool.Recreate`, which throws on 0×0, and VS docking hands the pane exactly
   that when an auto-hidden window is expanded, the content being re-added to the visual tree before
   the flyout is sized. The throw happens inside WPF layout, so nothing in the extension is in a
   position to catch it. The control now has a 1 DIP minimum, which stays ≥ 1px at every scale and is
@@ -290,72 +290,72 @@ be the same off-by-one and are fixed together.
   `WebView2.Wpf` copy rather than the one the VSIX ships.
 - **Three things that only broke with a file open in the editor** (PR #203). The host puts the
   editor-context tag in a content block of its own, ahead of everything else, and three places
-  downstream assumed the user's content came first — which is why they looked intermittent.
+  downstream assumed the user's content came first, which is why they looked intermittent.
   **Clicking an attachment did nothing**: the fetch asked for the block holding the tag and got
   `image block not found`. **↑/↓ recalled nothing**: stripping the tag from the first text block
-  left an empty string, so the prompt never entered the history — on one measured session, 72% of
+  left an empty string, so the prompt never entered the history: on one measured session, 72% of
   user messages carry that tag. **History paged from the wrong place**: a real turn read as a meta
   injection, and the pagination anchors on that.
 - **Sessions started from a Claude Code terminal saved nothing.** Launch Visual Studio from inside a
   Claude Code session and every `claude.exe` the extension spawns inherited that session's identity.
   One of the inherited markers turns transcript saving off: no `.jsonl`, so no history, no
   `--resume`, and nothing in the statistics. The CLI does say so, but only in its own TUI, which the
-  chat pane never shows — so the failure was silent. Three more variables are now stripped at
+  chat pane never shows, so the failure was silent. Three more variables are now stripped at
   launch, matching what the VS Code extension removes.
 
 ### Internal
 
 - **CI runs the unit tests.** The suite existed and nothing ran it, so a red suite could reach
-  master unnoticed — 195 tests, under a second, in both workflows. It runs *after* the build and
+  master unnoticed: 195 tests, under a second, in both workflows. It runs *after* the build and
   with `-c Release --no-build`, which is not a preference: the test project references the built DLL
   rather than the project, so running it first tests whatever `bin/` happened to hold.
 - Eight WebView dependencies moved to their current patch or minor. `dompurify` is the one that
-  earned it — it sanitises the markdown the chat renders. TypeScript 7, `@types/node` 26 and
+  earned it: it sanitises the markdown the chat renders. TypeScript 7, `@types/node` 26 and
   Fluent 3.1.3 are deliberately held back.
 - Seven exports nothing outside their own file reads are closed, two of them dead code. An open
   export is a contract to the rest of the WebView, and it invites callers past the function that
   knows the edge cases.
 - A pass over the comments across CSS, TypeScript and C#, dropping the ones that no longer describe
-  the code — among them three lines above a rule that does not exist, a claim of "no shadow DOM in
+  the code, among them three lines above a rule that does not exist, a claim of "no shadow DOM in
   our components" against 33 shadow to 8 light, and a "broadcast to ALL live chats" that the only
   emitter contradicts.
 
 ## [1.8.0] - 2026-09-02
 
 The agent can run your tests without leaving Visual Studio: four tools onto the Test Explorer, which
-means its adapters and the build the IDE already has — and a failing test can be stopped in under
+means its adapters and the build the IDE already has, and a failing test can be stopped in under
 the debugger, where the locals and the call stack are readable. The navigation tools had been the
 weak half of that promise: go-to-implementation answered "none found" for every symbol in every
 language, a solution with C++ in it reported "no results" for names that were right there, and when
 a tool did decline there was no way to tell whether to retry, use another one, or fall back to
 searching text. All three are fixed, and a new tool answers the last question up front. In the chat,
-slash commands work again — `/config`, `/context` and the rest had started being answered in prose
-instead of being run — the transcript no longer stutters while Visual Studio is busy, and picking a
+slash commands work again (`/config`, `/context` and the rest had started being answered in prose
+instead of being run); the transcript no longer stutters while Visual Studio is busy, and picking a
 session from History no longer freezes the IDE while it loads.
 
 ### Added
 
 - **Run your tests from the chat, through the Test Explorer** (issue #192). The agent could build
   the solution, read the Error List and drive the debugger, but running a test meant shelling out to
-  `dotnet test` — a different build from the one the IDE just made, a different configuration from
+  `dotnet test`: a different build from the one the IDE just made, a different configuration from
   the one you are on, and console text to read back instead of results. Four tools now go through
   Visual Studio's own Test Explorer: `test_list` for what it has discovered, with project, class and
   source; `test_run` to run them; `test_get_results` for the outcome of each, failures first, with
   the assertion message and stack trace, so a red test can be opened at its line rather than hunted
   for. `test_run_with_debugger` runs them under the debugger, which is the thing no external runner
   offers: execution stops where the test fails and the debug tools read the state there.
-  - **Every framework the IDE supports, not only .NET** — xUnit, NUnit, MSTest, GoogleTest, Boost,
+  - **Every framework the IDE supports, not only .NET**: xUnit, NUnit, MSTest, GoogleTest, Boost,
     CppUnitTest, because the discovery is the Test Explorer's, not ours. Verified on a solution
     holding a C++ project and a C# one: 16 tests from two adapters, run and reported together.
   - The docs had advertised "Tests: discovery and runs" since 1.0.0 with no such tool in the code.
     They are now true.
-- **`nav_get_language_coverage` — which languages the navigation tools can actually answer for.**
+- **`nav_get_language_coverage`: which languages the navigation tools can actually answer for.**
   When a `nav_*` tool declines, there are three quite different reasons and the message could not
   tell them apart: that language is missing the service, the project is outside the language
   workspace entirely, or the file's extension is not the one its project's language covers. The
   difference decides what to do next, and working it out by hand took a round of trial calls. One
   tool now reports it: per language, which of the five navigation services it provides; the projects
-  the workspace never saw at all — C++ ones are, and nothing changes that; and, per project, the
+  the workspace never saw at all: C++ ones are, and nothing changes that; and, per project, the
   files whose extension its own language does not cover. That last one is the case nothing else
   reveals: a C# project full of TypeScript reports every tool as available and answers for none of
   those files. On this solution it also turned up fourteen `.xaml` files nobody had noticed.
@@ -363,71 +363,71 @@ session from History no longer freezes the IDE while it loads.
 ### Fixed
 
 - **Slash commands run again.** `/config`, `/context` and the rest had stopped being executed and
-  were reaching the model as ordinary sentences, which it answered in prose. The editor context —
-  the file and lines you are looking at — was being glued to the front of the message, and the CLI
+  were reaching the model as ordinary sentences, which it answered in prose. The editor context,
+  the file and lines you are looking at, was being glued to the front of the message, and the CLI
   decides something is a command by whether the text starts with `/`; with a tag in front, it never
   did. Nothing about the commands changed, which is why they used to work: the context tag simply
   started being there more often. It now travels alongside your message rather than in front of it.
 - **Go-to-implementation finds implementations.** `nav_go_to_implementation` answered "No
-  implementations found" for every symbol in every language, while reporting itself as supported —
+  implementations found" for every symbol in every language, while reporting itself as supported,
   so the agent read "there are none" and stopped looking, which is worse than an error. It was
   reading the results of the wrong search. On this solution the same call now returns the 73 classes
   implementing `IMcpTool`, where it returned nothing before.
 - **Symbol search says which projects it could not look in.** Searching a name across a solution
-  that is partly C++ came back "no results" — indistinguishable from a name that exists nowhere,
+  that is partly C++ came back "no results": indistinguishable from a name that exists nowhere,
   when in fact the C++ projects had simply not been searched. The answer now names them, so a miss
   can be told from a gap.
 - **Two navigation tools used at once no longer disagree about what this Visual Studio supports.**
   Asked in parallel, one could answer normally while the other declined the same service as
   unavailable. Used one at a time it never showed, which is why it had been there from the start.
 - **The chat no longer stutters while Visual Studio is busy.** During a build, a solution load or
-  heavy IntelliSense, the reply arrived in visible jerks — and it read as the model being slow, when
+  heavy IntelliSense, the reply arrived in visible jerks, and it read as the model being slow, when
   what was actually happening is that reading the reply was waiting on the busy UI. It no longer
   waits.
 - **Picking a session from History no longer freezes the IDE.** Loading a transcript read the file
-  on the UI thread — around 200ms on a large session, with Visual Studio frozen for all of it. It
+  on the UI thread, around 200ms on a large session, with Visual Studio frozen for all of it. It
   now loads in the background, and picking a second session while the first is still loading gives
   you the one you picked last: previously the larger transcript could finish later and paint itself
   over your choice.
 - **A CLI launched from Visual Studio no longer inherits another session's identity.** Start Visual
-  Studio from inside a Claude Code session — which is how anyone working on this extension starts
-  it — and the panes it opens picked up that session's markers, presenting themselves as part of a
+  Studio from inside a Claude Code session, which is how anyone working on this extension starts
+  it, and the panes it opens picked up that session's markers, presenting themselves as part of a
   conversation they have no part in. Both launch paths now start clean.
 - **The spinner says something from the first frame.** A turn used to open as a single small glyph
   with no word and no counter beside it, and on a turn that starts with tool calls it stayed that
-  way for as long as the tools ran — a lone character changing shape reads as a broken font, not as
+  way for as long as the tools ran: a lone character changing shape reads as a broken font, not as
   work in progress. The elapsed counter now shows from zero.
-- **A Dockerfile in a diff is highlighted as a Dockerfile.** Files whose name has no extension —
-  Dockerfile, Makefile, `.gitignore`, `.editorconfig` — rendered as plain text in the diff preview
+- **A Dockerfile in a diff is highlighted as a Dockerfile.** Files whose name has no extension
+  (Dockerfile, Makefile, `.gitignore`, `.editorconfig`) rendered as plain text in the diff preview
   and in the body of a Write, even though the extension knew what they were. Also filled in the gaps
   that showed up alongside: `.vcxproj`, `.vsixmanifest`, the rest of the ignore-file family, and the
-  names a .NET or web repository really holds — CODEOWNERS, Procfile, the shell dotfiles.
+  names a .NET or web repository really holds: CODEOWNERS, Procfile, the shell dotfiles.
 - **Closing a chat pane no longer logs errors.** Three exceptions were written to the Output window
-  on every close, all of them the shutdown working exactly as designed — noise in the one place you
+  on every close, all of them the shutdown working exactly as designed: noise in the one place you
   look when something is genuinely wrong. Closing a pane could also, in the wrong moment, start a
   `claude.exe` for a pane that was already gone.
 - **Listing tests with a filter returns the matching tests.** Any filtered `test_list` failed
   outright; only the unfiltered call worked, which is why 16 tests listed fine while a search for
-  one came back empty. An empty result now also says which kind of empty it is — nothing discovered
-  yet, nothing matching the filter, or no run yet — instead of sending you after a problem that was
+  one came back empty. An empty result now also says which kind of empty it is (nothing discovered
+  yet, nothing matching the filter, or no run yet) instead of sending you after a problem that was
   not yours.
 
 ### Internal
 
 - **The navigation tools ask Visual Studio which files are code, instead of keeping a list of
   extensions.** `nav_get_language_coverage` arrived with two hardcoded extension tables, which would
-  have made six such lists in this codebase — each one a place to forget when a language is added.
+  have made six such lists in this codebase, each one a place to forget when a language is added.
   Visual Studio can answer both questions itself: which extensions are text rather than assets, and
   which of them a given language owns. A language you install now works without anyone editing this
   file. Both questions fail open, so an extension VS cannot place is reported as uncovered rather
   than silently dropped.
 - **The chat pane uses the base class's teardown flag** instead of the one it had reinvented, which
-  was set later and also meant "the WebView is not built yet" — two questions on one field, which is
+  was set later and also meant "the WebView is not built yet": two questions on one field, which is
   what let work resuming mid-shutdown see a pane that looked alive.
 - **Reflection helpers that name the interface they mean.** Visual Studio hands out objects wearing
   several interfaces that share member names, and asking for a member without saying which interface
   throws on exactly those.
-- **Four throwaway projects to measure which languages the navigation tools cover** — the C++, VB
+- **Four throwaway projects to measure which languages the navigation tools cover**: the C++, VB
   and mixed-content cases that turned "the tool declined" into three distinct causes a tool could
   report.
 - **The tool table matches the server again.** `nav_get_language_coverage` and
@@ -437,7 +437,7 @@ session from History no longer freezes the IDE while it loads.
 
 Three places the IDE knew something and the chat did not: stopping on an exception now raises a bar
 over the line it happened on, right-clicking a build failure offers to ask about it, and the file
-copies the CLI takes before every edit — which nothing has ever cleaned up — finally have a window
+copies the CLI takes before every edit, which nothing has ever cleaned up, finally have a window
 that says what they cost and deletes them. The transcript learned to fold: tool rows close, a table
 copies as markdown and scrolls when it is wide, and the user's own message sits to the right so a
 glance tells question from answer. Underneath, the host half got its first 192 unit tests, and four
@@ -445,24 +445,24 @@ MCP tools stopped answering with a bare failure where they could name what would
 
 ### Added
 
-- **File history — see what the file backups cost, and delete them.** Before overwriting a file the
+- **File history: see what the file backups cost, and delete them.** Before overwriting a file the
   CLI copies it whole into `~/.claude/file-history/<session>/`, and nothing ever removes those
   copies: they outlive the session and the transcript alike. On the machine this was built on that
   was 33 folders and 46 MB, six of them orphans whose transcript is long gone. A tool window under
   **Analytics** shows a config-dir → project → session tree with size and date on every row, the
   files a session preserved, a diff against the file as it is now, and a delete that says how many
-  copies and megabytes go — and that your project files are untouched. Sorting is in the column
+  copies and megabytes go, and that your project files are untouched. Sorting is in the column
   headers rather than a combo, because a click also has to say which way. A session an open pane is
   driving cannot be deleted: its checkbox is disabled and the status bar says why, since deleting
   the copies a live rewind restores from would break it half-way. The restore command is
-  **Save a copy as…**, not Restore — it writes a file and leaves the conversation alone.
+  **Save a copy as…**, not Restore: it writes a file and leaves the conversation alone.
 - **A bar over the file when the debugger stops, one press from asking.** Stopping on an exception
   used to raise nothing, so a question typed mid-session got answered from the source instead of the
-  running program. The break now raises an InfoBar on the frame of the file it happened in — where
-  you are looking, not the top of the shell — and its button asks the last chat pane. The press is
+  running program. The break now raises an InfoBar on the frame of the file it happened in (where
+  you are looking, not the top of the shell) and its button asks the last chat pane. The press is
   the consent; nothing starts a turn on its own. Which pauses are worth an offer differs by kind,
   so it is three values rather than a checkbox: exceptions are a surprise (the default), breakpoints
-  are not — you placed it — and steps never ask.
+  are not, you placed it, and steps never ask.
 - **Ask about a build failure from where you are reading it.** Right-clicking the Output window or
   the Error List offers **Explain in cv4vs Agents**. The Error List sends the rows you selected with
   their severity, file, line and project; the Output window sends your selection, or the tail of the
@@ -471,18 +471,18 @@ MCP tools stopped answering with a bare failure where they could name what would
   reach the agent with nothing to explain. Editor prompts gain a **Send on click** column, off by
   default, so the prompt still lands in the composer for the half line that matters.
 - **Tool rows can be folded away.** A long session reads as how Claude got somewhere rather than
-  what it did — every row shows its body, and diffs are the tallest thing in a transcript.
+  what it did: every row shows its body, and diffs are the tallest thing in a transcript.
   **Options → Chat → Collapse tool results** starts every row closed, off by default because it
   changes how the whole transcript looks. It is a separate option rather than a meaning bolted onto
   *Preview lines*: setting that to 0 used to do this, which made "I want short bodies" and "I want
   them closed" the same switch. *Preview lines* now caps an open body and nothing else.
 - **A table has a Copy button.** Hover a markdown table and it appears over its top-right corner,
-  the way a code block's already did. It copies the markdown the model wrote — pipes, alignment row
-  and empty cells — so what you paste parses back as the same table. The DOM could not supply it:
+  the way a code block's already did. It copies the markdown the model wrote (pipes, alignment row
+  and empty cells) so what you paste parses back as the same table. The DOM could not supply it:
   a `<table>`'s text content is the cells run together, with no pipes and no line breaks, which is
   why the fence's approach of reading the rendered element does not carry over.
 - **A truncated locals or expand walk says why it stopped.** The walk had a time budget already but
-  reported both ways it can truncate through one bool — and the two want different moves: a member
+  reported both ways it can truncate through one bool, and the two want different moves: a member
   cap is raised with `maxMembers`, an exhausted budget is not, and there the answer is to expand one
   path instead of all of them. `debug_get_locals` and `debug_expand` now carry `truncatedReason`
   ("budget" | "maxMembers") and `truncationMessage` next to `truncated`.
@@ -498,14 +498,14 @@ MCP tools stopped answering with a bare failure where they could name what would
   glance down a long transcript tells what was asked from what was answered without a second colour.
   The assistant's answer keeps the full width: it carries code, diffs and tool rows, and narrowing
   it would only cost legibility. Pinned, that bubble is the exchange's header rather than a message
-  in the flow, so it takes the full column back — via `stuck: top`, which needs Chrome 133+; an
+  in the flow, so it takes the full column back, via `stuck: top`, which needs Chrome 133+; an
   older WebView2 keeps the 85% bubble, which is a fine thing to fall back to.
 - **A wide table scrolls instead of squeezing itself unreadable.** Bounded by the bubble a table
-  never overflows — it compresses: measured at 12 columns, every header wrapped letter by letter,
+  never overflows; it compresses: measured at 12 columns, every header wrapped letter by letter,
   144px tall against 29. Nothing was cut, and none of it could be read. Narrow tables are untouched.
 - **Both breakpoint tools report where the breakpoint landed.** For a file breakpoint that is the
   line you asked for, but for a function breakpoint it is the only way to learn which file and line
-  the name resolved to — which matters when the name is unqualified and an overload could have
+  the name resolved to, which matters when the name is unqualified and an overload could have
   matched.
 
 ### Fixed
@@ -513,14 +513,14 @@ MCP tools stopped answering with a bare failure where they could name what would
 - **A breakpoint refused for a line with no executable code says so.** It came back as a bare
   "Failed to set breakpoint", leaving no way to tell a bad line from a broken debugger and no hint
   that one line down would work. Verified in the experimental instance: a blank line and a class
-  declaration are refused, a statement, an expression-bodied member and — against the obvious guess
-  — a method's opening brace are accepted.
+  declaration are refused, a statement, an expression-bodied member and, against the obvious guess,
+a method's opening brace are accepted.
 - **An edit header always shows both change counts.** A deletions-only edit rendered as "-20" with
-  no "+0". Each side was behind a truthiness check, so a zero disappeared instead of being shown —
+  no "+0". Each side was behind a truthiness check, so a zero disappeared instead of being shown,
   and it was information: it told the reader the file had not grown at all.
 - **The permission picker keeps the mode you are in.** The gate for `auto` answered "show it"
   whenever the model catalogue had not arrived; if the model then turned out not to support it, the
-  row vanished from a menu already being read — worst exactly when `auto` was the active mode. The
+  row vanished from a menu already being read: worst exactly when `auto` was the active mode. The
   fallback now keeps it only when it is already active.
 - **A tool row that starts open can be closed.** The chevron was gated on "starts collapsed", which
   was enough while the Agent row was the only one that ever did. It also ran the *row's* click
@@ -529,7 +529,7 @@ MCP tools stopped answering with a bare failure where they could name what would
 ### Internal
 
 - **192 unit tests for the host half.** The WebView side has had tests for a while; the host had
-  none, and the gate was a green build plus a manual pass — which catches a broken pane and catches
+  none, and the gate was a green build plus a manual pass, which catches a broken pane and catches
   nothing when a parser quietly returns a slightly wrong answer. The suites cover the `.jsonl` scan
   and its readers, `StatsAggregator`, the path helpers, the meta filter, the MCP schema builder and
   the content-block translator. Each was checked by putting the defect in and watching it get
@@ -539,11 +539,11 @@ MCP tools stopped answering with a bare failure where they could name what would
   bookkeeping for the same thing in two dialects that had grown side by side; `cv-prompt` had
   reached eight fields and eight `?.()` calls in `disconnectedCallback`, and nothing was ever
   unsubscribed on its own. Seven components lose `disconnectedCallback` entirely. Four composer
-  controls also kept an `@state()` copy of `appState.models` that no render ever read — it existed
+  controls also kept an `@state()` copy of `appState.models` that no render ever read: it existed
   only to make Lit re-render, which `requestUpdate()` says directly.
 - **The permission mode names are declared once.** They were bare string literals in six files, and
-  `PermissionMode` ends in `(string & {})` — deliberately, so a mode the CLI adds later travels as
-  its own string — which made every hand-written comparison unchecked: a typo compiled.
+  `PermissionMode` ends in `(string & {})` (deliberately, so a mode the CLI adds later travels as
+  its own string), which made every hand-written comparison unchecked: a typo compiled.
 - **The WebView tests speak English, like the rest of the repo.** Comments, test names and assertion
   messages: a stack trace that reads half in one language is worse than either. 177 tests, same
   count green before and after.
@@ -555,7 +555,7 @@ MCP tools stopped answering with a bare failure where they could name what would
 ## [1.6.0] - 2026-08-26
 
 The inline diff was rebuilt around the patch the CLI already sends, so it shows the file's real line
-numbers instead of numbering every edit from 1 — and the full-screen viewer we drew ourselves is
+numbers instead of numbering every edit from 1, and the full-screen viewer we drew ourselves is
 gone, because Visual Studio's own diff was one click away the whole time. The debugger tools stopped
 answering with the editor's caret instead of their own position, and four of them gained the piece
 that was missing. Plus the fixes you find by reading transcripts: a file path in backticks is now a
@@ -567,24 +567,24 @@ under you.
 - **The diff shows the file's line numbers, and the context around the change.** An Edit's input
   carries two fragments, not the file, so diffing them produced a patch that started at line 1 every
   time: line 219 appeared as line 1, with nothing around it. The CLI computes the right patch when
-  it applies the edit and sends it on the tool result — real line numbers, three lines of context
+  it applies the edit and sends it on the tool result: real line numbers, three lines of context
   either side. That patch now travels whole to the preview instead of being read for one number and
   discarded. The jump and the preview read the same hunks, so the two can no longer disagree about
   where a change is.
 - **Long lines wrap.** Measured on a real C# diff: median line 59 characters against roughly 45 that
   fit in a docked tool window. More than half of every diff needed sideways scrolling to read.
 - **The changed words keep their syntax colours.** A changed piece used to be highlighted on its
-  own, and a highlighter given `boolean` alone sees a word rather than a keyword — so the one place
+  own, and a highlighter given `boolean` alone sees a word rather than a keyword, so the one place
   worth reading came back plain. The line is highlighted whole and the word-diff's marks are laid
   over it.
 - **Counts in the title, the way git reports them.** An edit that replaced fourteen lines with one
   said "Removed 13 lines"; git calls that +1 −14, and so does anyone reading the row.
 - **Shell commands render as code.** The IN cell of a Bash or PowerShell row was a flat block of
-  text, and a command is the thing that gets re-read most — pipes, redirections, quoting. It is now
+  text, and a command is the thing that gets re-read most: pipes, redirections, quoting. It is now
   highlighted, and never truncated: measured over 6839 shell commands in this project's own
   transcripts, 73% already fit the three-line cap, so showing the rest whole costs almost nothing.
 - **A newer Claude Code gets a notice.** The chat says so at the top when the npm registry has a
-  release newer than the installed CLI. It only says so — the CLI is not ours, and replacing it
+  release newer than the installed CLI. It only says so: the CLI is not ours, and replacing it
   under a live session would break that session. Once per Visual Studio, and detached from startup:
   the pane opens at the same speed whether the registry answers in 50ms or never.
 - **`debug_enable_breakpoint`.** Turning a breakpoint off meant removing it, which took its
@@ -595,24 +595,24 @@ under you.
   400–450 of a large file meant pulling 450 and discarding 400.
 - **`ide_read_output` filters by pattern.** On a Debug pane holding tens of thousands of lines there
   was no way to say "the lines that mention X". The filter runs *before* the tail, which is the
-  order that matters — "the last N matching lines", not "the matches among the last N".
+  order that matters: "the last N matching lines", not "the matches among the last N".
 - **`solution_get_configuration` reports the startup project.** It could be set but never read, so
   the only way to use it was blind, with no way to put the previous one back.
 - **A file reference in backticks is a link.** Counted over 25 real sessions in this repository: 33
-  references written inside inline code against 2 written bare — the feature worked on one case in
+  references written inside inline code against 2 written bare: the feature worked on one case in
   seventeen. Only when the whole span is a reference: `Foo.cs:12` qualifies, `cat Foo.cs:12` does
   not. On the sample, 33 links and no false positives.
 - **The mode that never asks now looks like it.** Four of the five permission modes tinted the
-  composer border; `bypassPermissions` — the one that runs everything without asking, dangerous
-  commands included — had no rule at all and inherited the resting grey. It gets the red, and its
+  composer border; `bypassPermissions` (the one that runs everything without asking, dangerous
+  commands included) had no rule at all and inherited the resting grey. It gets the red, and its
   name on the toolbar in red, which is the part that answers "how did I leave this pane".
 
 ### Changed
 
 - **Clicking a diff opens Visual Studio's diff viewer.** The full-screen dialog we drew ourselves is
   gone, and with it the library behind it: 89.6 KB minified plus 16.9 KB of CSS, replaced by about
-  forty lines of grid. That library rendered a GitHub-shaped page — side-by-side panes, synchronised
-  scroll, a file list — none of which fits a tool window 350px wide, and everything built to make it
+  forty lines of grid. That library rendered a GitHub-shaped page (side-by-side panes, synchronised
+  scroll, a file list), none of which fits a tool window 350px wide, and everything built to make it
   fit was compensation. **Options → Chat → Diff** goes with it: its one setting governed a patch we
   no longer compute, so it had stopped changing the diff it named. So does *Show the "open in VS"
   button*, which existed to hide a duplicate and would now hide the only route.
@@ -626,7 +626,7 @@ under you.
 
 - **The debugger answered with the editor's caret, not its own position.** Where execution is paused
   was read from the active document's caret. The two agree most of the time, which is why it
-  survived — they part company exactly when a tool moves the caret itself, so after `run_to_line` or
+  survived: they part company exactly when a tool moves the caret itself, so after `run_to_line` or
   `debug_set_next_statement` the state reported the line we had just planted. Opening any file while
   paused was enough to make it point somewhere else entirely. Every frame of a call stack now
   carries its own file and line too, which is what `debug_get_thread_callstack` exists for.
@@ -635,22 +635,22 @@ under you.
   takes a lock or calls out to the network left the walk sitting there with no limit exceeded,
   because none of them measured time. There is now a deadline, checked where a single slow getter is
   actually reached.
-- **Evaluating an expression had no time limit at all** — the member walk had a ceiling for exactly
+- **Evaluating an expression had no time limit at all**: the member walk had a ceiling for exactly
   this reason; the evaluation it starts from did not.
 - **A breakpoint that could never fire looked like any other.** Setting one answered "ok" whether
   the line held executable code or not, and a function breakpoint answered the same for a method
   name that matched nothing. `debug_list_breakpoints` now reports how many locations each one bound
   to, which is half of "why did it not break".
-- **Asking to pause an already-paused program was an error** — that is the state the caller was
+- **Asking to pause an already-paused program was an error**: that is the state the caller was
   asking for.
 - **`document_read_buffer` said "not open" for the file most worth reading.** It looked the document
   up by a route that misses preview tabs, so a file open in one had `document_check_dirty` answering
-  "open, and dirty" while this one sent the caller to disk — for exactly the file whose buffer
+  "open, and dirty" while this one sent the caller to disk, for exactly the file whose buffer
   differs from it.
 - **Loading older history dropped the reading position.** Scrolling up left the transcript a couple
   of paragraphs below where it had been: blocks that have never been on screen are counted at a
   guess until they are laid out for real, and on a real transcript those guesses were off by 504px
-  over twelve blocks. Two supporting bugs went with it — the observer meant to re-anchor while
+  over twelve blocks. Two supporting bugs went with it: the observer meant to re-anchor while
   images settle watched an element whose height never changes, and a second page could be fetched
   while the first was still being placed.
 - **Expanding a failed Agent hid the button explaining the failure.** The row's action slot was
@@ -658,16 +658,16 @@ under you.
   error button away.
 - **The rewind dialog read its two counts backwards.** "+2 −5" described the change in the wrong
   direction: those are the lines the button is about to add and remove. Now spelled out in the
-  future tense — "5 lines will be removed and 2 lines added across 1 file".
+  future tense: "5 lines will be removed and 2 lines added across 1 file".
 - **A word-diff marked whole lines as changed.** Pairing each removed line with the added one that
   follows treats two unrelated lines as one edit: measured on a real patch, 24 rows out of 28 were
   marked end to end, which says nothing at all. A pair is now word-diffed only when most of its
-  words already match — same measurement afterwards, a single word inside a ninety-character line.
-- **The range in a file link never worked.** `x.cs:35-48` opened at line 35 and selected nothing —
+  words already match: same measurement afterwards, a single word inside a ninety-character line.
+- **The range in a file link never worked.** `x.cs:35-48` opened at line 35 and selected nothing:
   the attribute carrying the end of the range was being stripped before it reached the page. A range
   selected downwards also left Visual Studio scrolled to its *end*, with the beginning off the top
   of the screen.
-- **Diff temp files were never deleted** — 213 of them in `%TEMP%`, the oldest four months old. They
+- **Diff temp files were never deleted**: 213 of them in `%TEMP%`, the oldest four months old. They
   now leave with the window that showed them.
 
 ## [1.5.0] - 2026-08-20
@@ -680,35 +680,35 @@ doing it.
 
 ### Added
 
-- **`/rewind` — put the files back, leave the conversation alone.** Claude edits a handful of files
+- **`/rewind`: put the files back, leave the conversation alone.** Claude edits a handful of files
   across a long turn and one of them was a mistake; undo in the editor only reaches what is open,
   and re-asking rarely restores exactly what was there. The command opens a picker of the session's
   user messages, and choosing one shows **what going back to it would change before anything is
   written**: which files, how many lines each. Clicking a file opens it in **Visual Studio's own
-  diff** — its copy from before that message against what is on disk now — so the decision is made
+  diff**, its copy from before that message against what is on disk now, so the decision is made
   looking at the change, not at a filename. Only the Rewind button touches disk.
   - **The conversation is never modified.** VS Code's version rewinds the transcript too, and forks
     it; this one restores files and nothing else, so the chat you are reading stays the chat you
     were having.
-  - Only messages that actually changed files are offered — a question that changed nothing is not
+  - Only messages that actually changed files are offered: a question that changed nothing is not
     a place to go back to.
   - A file the turn *created* has no earlier copy, so rewinding past it deletes the file and the
     diff shows an empty left side. Said in the dialog rather than discovered afterwards.
   - The command hides itself when the pane has no snapshots behind it, which is the honest answer
     to a command that could only reply "nothing to restore".
-  - Snapshots come from the CLI, under `~/.claude/file-history` — now documented in
+  - Snapshots come from the CLI, under `~/.claude/file-history`: now documented in
     [Settings and data](docs/settings-and-data.md), as the one folder there that grows on its own
     and is never cleaned up. **Options → Chat → Keep file checkpoints** turns it off; it is read
     when a chat starts, so flipping it mid-session leaves that session as it was and says so.
   - See [Rewind](docs/chat/rewind.md).
 
 - **Send the selected code with the message, for the buffer you have not saved.** The block that
-  travels with each prompt named the lines — *lines 40 to 78 from Foo.cs* — and carried nothing
+  travels with each prompt named the lines, *lines 40 to 78 from Foo.cs*, and carried nothing
   between them, so on an unsaved buffer the model opened the file and read the stale version from
   disk. **Options → Chat → Send the selected text with the message** attaches the selection itself.
   Off by default: the code goes out again with *every* message while that selection stands,
   including "yes" and "go on", and with it off the model opens the file only when it needs to.
-  The context chip says which of the two is going out — a bookmark for the position alone, a code
+  The context chip says which of the two is going out: a bookmark for the position alone, a code
   block when the text rides along. See
   [Spending less context](docs/chat/context-and-usage.md#spending-less-context), which is new and
   covers what actually saves context and what only looks like it does.
@@ -717,7 +717,7 @@ doing it.
 
 - **The composer, redrawn around one border.** Six borders became one, on the text field itself;
   the model, effort, permission and context controls sit outside it as flat subtle buttons, and
-  attachment chips moved to their own band above the text — a long list now pushes the field down
+  attachment chips moved to their own band above the text: a long list now pushes the field down
   instead of eating the first line you type. The slash button is gone: its job is the third item in
   the `+` menu, next to attaching a file and referencing one, which is where you were already
   looking. Tooltips stopped repeating what clicking obviously does.
@@ -731,7 +731,7 @@ doing it.
   through Other.
 
 - **An Ask answered with Other showed no answer at all.** Typing a free-text answer rendered as
-  unanswered — an em dash in the compact cell, no chosen row in the full list, a dash in the copied
+  unanswered: an em dash in the compact cell, no chosen row in the full list, a dash in the copied
   markdown. The answer had always reached the CLI; only the rendering lost it.
 
 - **Enter in the last question's Other box did nothing.** It submits now.
@@ -739,11 +739,11 @@ doing it.
 - **The `@` menu opened on email addresses, and half-referenced paths with spaces.** Typing
   `mario@rossi.it` opened the file picker, and Enter or Tab then picked a suggestion instead of
   sending the message; the trigger now follows the CLI's own rule (start of text, or whitespace
-  before the `@`). And a picked file whose path contains a space reached the CLI cut short —
-  `docs/my notes/todo.md` arrived as `docs/my` — so the menu now quotes it.
+  before the `@`). And a picked file whose path contains a space reached the CLI cut short,
+  `docs/my notes/todo.md` arrived as `docs/my`, so the menu now quotes it.
 
 - **The IDE-context chip vanished when a session was reopened.** A submitted message can reach the
-  CLI as several text blocks, and the replay kept only the last one — which meant the block holding
+  CLI as several text blocks, and the replay kept only the last one, which meant the block holding
   the context tag was the one overwritten. Live it was fine; on reopening it was gone.
 
 - **The chevron on Ask and Update Todos toggled nothing.** Both rows looked open-and-active at rest
@@ -751,12 +751,12 @@ doing it.
   keeps its chevron, which works.
 
 - **The confirmation dialogs were drawn by Windows, not by Visual Studio.** Deleting a session,
-  restoring the default editor prompts, pasting a malformed profile — each threw up a white Windows
+  restoring the default editor prompts, pasting a malformed profile, each threw up a white Windows
   box in the middle of a dark IDE. All nine now use the shell's own dialog, themed like everything
   else, and the Yes/No ones default to **No**: a stray Enter no longer deletes a session.
 
 - **The session picker froze Visual Studio while it read the folder.** Opening the list scanned
-  every session file on the UI thread — on this repo's own working directory, 2031 sessions across
+  every session file on the UI thread: on this repo's own working directory, 2031 sessions across
   520 MB. The popup now opens immediately and fills in behind: **508ms cold, 40ms warm**, and the
   IDE stays responsive throughout. While it is still reading, the empty list says so instead of
   claiming there are no sessions; and a session whose only prompt was blank lines no longer shows
@@ -770,8 +770,8 @@ doing it.
   all.
 
 - **The queue row, in the two things it is for.** Its bin now lines up with the send button below
-  it, all three bins light up on hover, a long queued message clamps at three lines instead of six
-  — one pasted function used to bury everything else waiting — and a queued message with
+  it, all three bins light up on hover, a long queued message clamps at three lines instead of six,
+  one pasted function used to bury everything else waiting, and a queued message with
   attachments shows the same chip the composer and the sent bubble show.
 
 - **A queued message scrolled out from under you.** Sending one slid its bubble below the reply and
@@ -781,16 +781,16 @@ doing it.
 ### Performance
 
 - **Opening a chat pane is about three seconds faster.** The page had its HTML in 4ms and then sat
-  there for two and a half seconds — the same ±3ms gap however loaded the machine was, which is the
+  there for two and a half seconds: the same ±3ms gap however loaded the machine was, which is the
   shape of a fixed wait rather than of work. It was the hostname: the WebView is served from a
   virtual host, and `.local` is reserved for mDNS, so Windows answered it with a multicast query and
   waited out the timeout before WebView2 served the file from disk as it was always going to.
-  Opening a pane goes from **~4.5s to ~1.5s**, and the number stops moving — 1215/1255/1334ms across
+  Opening a pane goes from **~4.5s to ~1.5s**, and the number stops moving: 1215/1255/1334ms across
   three panes, against 2.1–4.3s before.
 
 - **A long transcript no longer re-renders itself on every token.** One streaming delta used to
   update every message and every tool row in the conversation, and force a reflow per user bubble.
-  Measured on a real 24.5k-node transcript — 318 tool rows, 402 messages — median full layout fell
+  Measured on a real 24.5k-node transcript (318 tool rows, 402 messages), median full layout fell
   from **46.4ms to 8.8ms (81%)**, and a token now updates only the message that changed. Code stops
   re-highlighting once its fence closes.
 
@@ -801,7 +801,7 @@ doing it.
 
 ## [1.4.0] - 2026-08-17
 
-A session can be driven from somewhere else — claude.ai/code, or a phone — and the code you are
+A session can be driven from somewhere else (claude.ai/code, or a phone), and the code you are
 looking at can start one, from the right-click menu. The MCP catalogue reaches past reading the
 solution into changing it: files into projects, projects into the solution, the configuration
 builds go through. And an Output window that is not in English stops hiding the build log.
@@ -812,25 +812,25 @@ builds go through. And an Output window that is not in English stops hiding the 
   session to the CLI's bridge and post the URL and a QR into the transcript, so the same
   conversation continues from a browser or a phone while Visual Studio keeps it. The QR is for the
   phone; the link beside it now has a copy button, because sending it to someone meant selecting a
-  URL wrapped across three lines on purpose. Opening it also closes the command menu — the other
+  URL wrapped across three lines on purpose. Opening it also closes the command menu: the other
   toggles act in place and leave it up, but this one posts a card into the transcript and the menu
   was sitting on top of what you had just asked for. If the bridge drops, the banner says so rather
   than advertising a session that has gone. See [Remote Control](docs/chat/remote-control.md).
 
 - **Ask Claude about the code you are looking at, from the right-click menu.** A **cv4vs Agents**
-  submenu on the editor's context menu — Explain, Review, Find bugs, Write tests, Simplify — writes
+  submenu on the editor's context menu (Explain, Review, Find bugs, Write tests, Simplify) writes
   the prompt into a chat pane's composer instead of sending it, since the canned text is generic
   and usually wants half a line added first. Entries that need a selection are greyed out rather
   than hidden, the way Copilot's are: one that comes and goes reads as a bug. The prompts carry no
-  code — the file and selection reach the CLI through the IDE context, and Claude reads the symbol
-  with the `nav_*` tools — so **Options → Editor prompts** lets you write your own: title, prompt,
+  code (the file and selection reach the CLI through the IDE context, and Claude reads the symbol
+  with the `nav_*` tools), so **Options → Editor prompts** lets you write your own: title, prompt,
   and whether it needs a selection, in the order they appear. Which pane receives is the last one
   worked in, brought forward; with none open, one is opened. The IDE-context eye is re-opened with
   the prompt, since asking about this code with nothing saying which file it is would reach the CLI
   as a question about nothing.
 
 - **Take one message back out of the queue.** Writing while a turn runs queues the message, and
-  until now regretting one meant Stop — which clears the queue but interrupts the answer with it,
+  until now regretting one meant Stop, which clears the queue but interrupts the answer with it,
   rarely what you wanted. A row above the composer now holds what is still waiting: with one
   message it shows its text and a bin, with more a count that opens the list, each entry with a bin
   of its own and numbered in the order it will go out. That order is the one thing the greyed-out
@@ -840,7 +840,7 @@ builds go through. And an Output window that is not in English stops hiding the 
   reaches the model either way: a queued message was never given to the CLI.
 
 - **The agent can change the solution, not just read it.** A `.cs` written to disk compiles in the
-  IDE and is missing from a command-line build, because this project lists every file explicitly —
+  IDE and is missing from a command-line build, because this project lists every file explicitly:
   the first trap in our own contributor notes. `project_add_file` goes through the same path
   Solution Explorer's "Add → Existing Item" takes, so the item lands where the project system wants
   it; an SDK-style project that globs its files says the file is already included rather than
@@ -849,7 +849,7 @@ builds go through. And an Output window that is not in English stops hiding the 
   the build and deleting it are different intents, and only the first is reversible.
 
 - **Which configuration a build went through, and switching it.** Builds followed whichever
-  configuration the IDE happened to have active, and nothing in the exchange said which — with the
+  configuration the IDE happened to have active, and nothing in the exchange said which, with the
   toolbar on Release and the caller assuming Debug there was no way to tell. `build_solution` and
   `build_project` now report it, `solution_get_configuration` reads the active one plus the names
   that can be asked for without building anything, and `solution_set_configuration` switches it.
@@ -857,30 +857,30 @@ builds go through. And an Output window that is not in English stops hiding the 
   and leaves it changed: the toolbar dropdown moves and the user's next manual build follows it.
 
 - **`build_cancel`.** A build had a thirty-minute ceiling and then gave up, leaving the IDE
-  compiling with nothing able to stop it — the next build found the road occupied. This closes that
+  compiling with nothing able to stop it: the next build found the road occupied. This closes that
   path, including a build the user started outside the chat. Finding nothing running reports
   success, since that is the state the caller asked for, and the build timeout message now names
   the tool, so the model meets it at the moment it needs it.
 
-- **`ide_write_output`.** Writes into an Output window pane, creating it on demand — somewhere to
+- **`ide_write_output`.** Writes into an Output window pane, creating it on demand: somewhere to
   leave a note where the user will see it, that outlives the turn.
 
 - **Every tool says whether it reads or writes.** Without the standard MCP annotations the CLI
   cannot tell one from the other, so `nav_find_references` cost the same permission prompt as
   `debug_stop`. Three independent flags rather than one value, because the axes combine: read-only
-  and idempotent, or destructive and idempotent. The stepping tools stay deliberately bare — they
+  and idempotent, or destructive and idempotent. The stepping tools stay deliberately bare: they
   advance execution, which is neither.
 
 - **Backgrounded sub-agents are visible in the chip.** Sub-agents that outlive the turn had nowhere
   to be seen: the chat looked finished while three of them were still working. They render as a
   section under the foreground rows rather than behind a tab, which would hide half the answer
-  behind a click, and the heading counts the whole set — Background is a subset, not a rival
+  behind a click, and the heading counts the whole set: Background is a subset, not a rival
   category. One clock drives every elapsed badge on the page instead of a timer per row.
 
 ### Fixed
 
 - **Chat and CLI panes started in the wrong folder with a folder open.** With Visual Studio in Open
-  Folder mode — no `.sln` — the panes fell back to the user profile, so the CLI worked from the home
+  Folder mode (no `.sln`), the panes fell back to the user profile, so the CLI worked from the home
   directory rather than the folder on screen. `IVsSolution` reports no directory there, because
   there is no solution file backing it; the folder now comes from the workspace itself. A missing
   Open Folder assembly degrades to the old fallback instead of failing package activation.
@@ -894,16 +894,16 @@ builds go through. And an Output window that is not in English stops hiding the 
 
 - **A queued message ended the running turn's exchange.** Write a second prompt while a turn is
   answering and the header of the turn actually in flight came unstuck halfway through its own
-  reply. A message waiting in the queue heads no turn — the CLI has not been given it — but it
+  reply. A message waiting in the queue heads no turn (the CLI has not been given it), but it
   opened an exchange all the same, ending the running one early, and a pinned user bubble only
   holds within its own exchange. It now stays with the turn in progress and opens its own once sent.
 
 - **Built-in Output panes were unreachable outside an English IDE.** The Build pane is
-  "Compilazione" on an Italian install, and the panes were matched by display name — so
+  "Compilazione" on an Italian install, and the panes were matched by display name, so
   `ide_read_output`, `ide_clear_output` and `ide_activate_output` all answered "no output pane named
   'Build'" with a list in which Build indeed was not there, indistinguishable from a build that
   produced nothing. The four built-in panes now resolve through a GUID that does not change with the
-  IDE language, and a pane the Output window has never displayed is realised before being read —
+  IDE language, and a pane the Output window has never displayed is realised before being read:
   it holds what the build wrote, but refuses to hand over its text until it has been shown once.
 
 - **The `@` picker's ignore rules never matched what they were written to match.** Patterns were
@@ -911,11 +911,11 @@ builds go through. And an Output window that is not in English stops hiding the 
   in the picker.
 
 - **Project-level diagnostics were dropped, and the workspace folder was wrong.** The Error List
-  carries entries that name no file — an unresolved reference, a file the project would not add —
+  carries entries that name no file (an unresolved reference, a file the project would not add)
   and every one was discarded: 14 of 232 on this solution, and the ones a caller cannot find another
   way, since a diagnostic attached to a file surfaces again when that file is opened and these never
   do. Separately, the workspace folder was re-derived from the solution path, which in Open Folder
-  mode handed the CLI the *parent* of the open folder — wrong in a way that reads as right.
+  mode handed the CLI the *parent* of the open folder: wrong in a way that reads as right.
 
 - **A wrapped permission label was centred.** "Yes, allow Bash(cd …) for this project (just you)"
   is long enough to wrap in a narrow pane, and the second line came out centred under the first, so
@@ -929,13 +929,13 @@ builds go through. And an Output window that is not in English stops hiding the 
 
 - **The `@` picker's ignore rules are a `.gitignore` file, not a list of patterns.** They were a
   string array in the Visual Studio settings store, each entry an exact name, an extension with a
-  leading dot, or a `*`/`?` glob — three conventions of our own for something every developer
+  leading dot, or a `*`/`?` glob: three conventions of our own for something every developer
   already knows how to write. They now live in a real `.gitignore` under the app data folder, with
   its syntax, its comments and its negations; **Options → Chat → Ignored patterns** shows the path,
   and the `…` button opens the file in the editor. Two consequences worth knowing: the rules now
   apply **only where the workspace's own ignore rules say nothing**, so a repository that ignores
   its own build output decides for itself and these are the fallback for one that ships no rules at
-  all; and **a customised list from 1.3.0 does not carry over** — the file starts from the shipped
+  all; and **a customised list from 1.3.0 does not carry over**: the file starts from the shipped
   defaults, which are the same set the array held, so only a hand-edited list needs redoing.
 
 - **`build_set_startup_project` is now `solution_set_startup_project`.** The startup project is a
@@ -945,27 +945,27 @@ builds go through. And an Output window that is not in English stops hiding the 
 ## [1.3.0] - 2026-08-10
 
 The debugger is reachable: the agent can look inside an object, move up the call stack, and say
-which thread it is talking about. Navigation stops lying — searching the solution for a symbol
+which thread it is talking about. Navigation stops lying: searching the solution for a symbol
 never worked at all, and go-to-definition gave up at the edge of your own code. Files can be
 dragged onto the chat, and every tool now says what to reach for around it.
 
 ### Added
 
 - **Seven new debug tools, and the ones around them answer better.** `debug_expand` opens a value
-  into its members, so seeing inside an object is one call instead of an evaluate per field — around
+  into its members, so seeing inside an object is one call instead of an evaluate per field, around
   eighteen of them for a class with sixteen properties, and only after reading the source to learn
   what to ask for. `debug_select_frame` points the inspection tools at another frame of the call
   stack, which is what makes a caller's variables reachable at all: stopped on a throw inside a
   method that was called, they were simply out of scope with no way to say so. `debug_run_to_line`
   is Run to Cursor, and `debug_set_next_statement` moves the instruction pointer without running
-  what lies between — the one debug tool with side effects, and it says so. `debug_get_locals` also
+  what lies between: the one debug tool with side effects, and it says so. `debug_get_locals` also
   returns the method's **parameters**, which were missing entirely, and can walk the members in the
   same call. And because all of that reads one thread, `debug_list_threads` and
-  `debug_select_thread` say which — on multi-threaded code the rest of the program had no id to be
-  named by — while `debug_freeze_thread` holds one still, which is how a race is pinned down.
+  `debug_select_thread` say which (on multi-threaded code the rest of the program had no id to be
+  named by), while `debug_freeze_thread` holds one still, which is how a race is pinned down.
 
 - **Files can be dropped on the chat, and pasted whatever they are.** Dragging one onto the pane
-  handed it to Visual Studio, which opened it in an editor — the composer never saw it. Pasting
+  handed it to Visual Studio, which opened it in an editor: the composer never saw it. Pasting
   anything that was not an image did nothing at all, silently, including the `.txt` and `.pdf` the
   allow-list accepts. What reaches the CLI is now chosen by the file's media type rather than by its
   extension, which is how a video came through as 1.4 MB of replacement characters. Video
@@ -973,24 +973,24 @@ dragged onto the chat, and every tool now says what to reach for around it.
   nothing is worse than one that arrives named.
 
 - **The open panes are named by their session.** Both menus that list them showed "Chat 3
-  (Default)" — a number and a profile, identical for every chat on the same profile. The View menu
+  (Default)": a number and a profile, identical for every chat on the same profile. The View menu
   was the odder of the two: its whole reason for existing is that the docked tab caption is stuck at
   "Chat 1", and it showed the same number the tab does.
 
 - **A message written during a turn says so, and lands where it was sent.** Typing while Claude is
   still answering has always held the message back until the turn ended, but its bubble went in at
-  once and looked exactly like a sent one — then stayed above a reply it had not prompted. Since an
+  once and looked exactly like a sent one, then stayed above a reply it had not prompted. Since an
   exchange begins at each user message, that reply was also filed under the wrong question, and a
   reopened session showed a different order from the live one, because the `.jsonl` records what was
   actually sent. The bubble is now greyed out while it waits and drops below the running reply when
   it goes, which is the order the session file already had. Stopping the turn takes those bubbles
-  away rather than leaving them looking sent — the model was never given them. The "N messages
+  away rather than leaving them looking sent: the model was never given them. The "N messages
   queued" bar above the composer is gone with this: it counted what the bubbles now show, and its
   Clear discarded the whole queue, which was never the thing anyone wanted to do.
 
 - **A turn tells you what it cost and how long it took.** The spinner counts the seconds while the
   turn runs and while it is thinking, and the cost lands on the hover-actions row when it finishes.
-  An Agent row does the same for its own run — elapsed while it works, cost when it is done — in
+  An Agent row does the same for its own run (elapsed while it works, cost when it is done) in
   history too, where the numbers come back off the `.jsonl`. Sub-agent and thinking badges now read
   the value they are given instead of parsing their own label.
 
@@ -999,7 +999,7 @@ dragged onto the chat, and every tool now says what to reach for around it.
   user would read that text and reply to it while the model had no memory of writing it, so the
   transcript and the model's context quietly disagreed from there on. Both signals the CLI sends are
   honoured (`supersedes` on the replacing message, `retracted_message_uuids` at the end of the turn),
-  at any depth — a sub-agent's reply is as retracted as a main-thread one.
+  at any depth: a sub-agent's reply is as retracted as a main-thread one.
 
 - **The model selector follows a refusal fallback.** The same swap is persistent for the rest of the
   session, so the selector kept naming a model that was no longer answering, and the next model
@@ -1008,28 +1008,28 @@ dragged onto the chat, and every tool now says what to reach for around it.
 ### Fixed
 
 - **Go-to-definition stopped at the edge of the solution.** Ask `nav_go_to_definition` where
-  `DialogWindow` or `string` is defined and the answer was "No definition found" — which is not
+  `DialogWindow` or `string` is defined and the answer was "No definition found", which is not
   merely incomplete, it is wrong: the definition exists, it just isn't a file on disk. The service
   behind it only covers code with source in the solution, and returns nothing at all for anything
   else, so a model reading that answer concludes the symbol does not exist and stops looking. The
   comment in our code said those results were being skipped; there were never any to skip. VS's own
-  F12 has a second half we did not have — it resolves the symbol, asks Roslyn to write the
+  F12 has a second half we did not have: it resolves the symbol, asks Roslyn to write the
   declaration out, and navigates to the file that comes back. That now happens here too, taking
   about two seconds the first time an assembly is decompiled and nothing on later hits. A definition
   found this way says which kind it is: `decompiled`, rebuilt from IL with the names of locals lost,
-  or `source`, the real thing fetched through SourceLink — the difference decides how much of what
+  or `source`, the real thing fetched through SourceLink: the difference decides how much of what
   you are reading can be trusted. The files are generated, and the tool says so, because nothing
   should try to edit them.
 
 - **Searching the solution for a symbol has never worked.** `nav_search_workspace_symbols` answered
-  `supported=false` on every call, in every language, and the reason it gave — that this Visual
-  Studio has no NavigateTo — was wrong: the service was there and handed out on request. It was
+  `supported=false` on every call, in every language, and the reason it gave, that this Visual
+  Studio has no NavigateTo, was wrong: the service was there and handed out on request. It was
   looked up under `SearchProjectAsync`, a name Roslyn dropped for `SearchProjectsAsync`, so the
   probe stopped one letter short. Two more faults were waiting behind it. The kinds of symbol to
   match were passed as an empty set, which reads as "no kind at all" rather than "any", and returned
   nothing without failing; they now come from the service's own `KindsProvided`, so each language
   offers what it actually has. And the results arrive as a private type that implements its
-  interface explicitly — nothing is visible on the type itself, so every field read came back null
+  interface explicitly: nothing is visible on the type itself, so every field read came back null
   and four found symbols mapped to zero. A hit now also carries the declaration line, which was
   being computed and discarded, so choosing between twenty of them no longer means opening files.
 
@@ -1042,18 +1042,18 @@ dragged onto the chat, and every tool now says what to reach for around it.
 
 - **Half the debug tools reported the state they were leaving.** Start, stop, restart, break and
   continue all return before the transition they ask for, so the mode read straight after was the
-  previous one — `debug_start` could answer "design" for a session it had just started, and the next
+  previous one: `debug_start` could answer "design" for a session it had just started, and the next
   call would say "already debugging" about a mode it had reported as stopped. They report no mode
   now, which is the honest answer, and point at the tool that knows.
 
 - **`debug_step` returned the line it started from.** The same cause, and the worst of them: the
   position came back before the step had landed, so the answer was identical to the input. Measured
   on a step out of a method with a second of work left, it named the line inside that method while
-  the program went on to the caller — wrong file, wrong method. It waits for the step to land now,
+  the program went on to the caller: wrong file, wrong method. It waits for the step to land now,
   and after ten seconds answers without a position rather than with a stale one.
 
 - **The paused position came from the editor's caret, not the debugger.** Which reads as the same
-  place nearly always — except `debug_run_to_line` and `debug_set_next_statement` move the caret
+  place nearly always: except `debug_run_to_line` and `debug_set_next_statement` move the caret
   themselves, so after either of those the reported position was the one they had just set: a break
   on line 19 was reported as line 17, a comment. A breakpoint knows its own line, and that is what
   answers when one is what stopped us.
@@ -1061,7 +1061,7 @@ dragged onto the chat, and every tool now says what to reach for around it.
 - **A permission request no longer disappears behind the next one.** The banner held a single
   request and assigned straight into it, so a second `can_use_tool` overwrote the first: it vanished
   from the screen while the CLI was still waiting for an answer that could no longer be given, and
-  that tool hung until the turn was interrupted. Not an edge case — a turn firing parallel tools, or
+  that tool hung until the turn was interrupted. Not an edge case: a turn firing parallel tools, or
   several sub-agents, does it routinely.
 
 - **A tool's chip no longer lies about what was sent.** An attachment whose base64 failed to decode
@@ -1069,19 +1069,19 @@ dragged onto the chat, and every tool now says what to reach for around it.
   file were there, and nothing anywhere explained it.
 
 - **The token count on a turn counts what the turn cost.** It read `input_tokens` alone, which is
-  what is left once prompt caching takes the rest — a turn that pushed a 540k-token video into the
+  what is left once prompt caching takes the rest: a turn that pushed a 540k-token video into the
   context reported `↑ 2`, and so did every other turn of that session. Content entering the context
   for the first time is counted now; context replayed from earlier turns still is not, or every turn
   would report the same five-figure number.
 
 - **A session title is one line.** With no custom or generated title it falls back to the last
-  prompt — a whole message, newlines and all — and the path feeding the pane menus never cut it. In
+  prompt (a whole message, newlines and all) and the path feeding the pane menus never cut it. In
   a menu those newlines break the row instead of wrapping, and everything after the first line
   disappears without saying so.
 
 - **The IDE-context tooltip stays inside the pane.** It opened towards the left edge, where there is
   no room: with a deep path it ran past the edge and covered the textarea and the toolbar buttons,
-  and the start of the path — the part that says where the file lives — was the first thing to go.
+  and the start of the path, the part that says where the file lives, was the first thing to go.
 
 - **Two IDE tools answer predictably.** `editor_get_open_files` returned whatever order the shell
   enumerator happened to give, while claiming to match VS's tab order: two consecutive calls could
@@ -1089,7 +1089,7 @@ dragged onto the chat, and every tool now says what to reach for around it.
 
 - **Coming back to a pane lands the caret in the composer.** Focus went to the toolbar instead, so
   the first thing typed after switching panes went nowhere. The pane was being focused while the
-  shell was still activating the frame, and the shell then moved it — a hidden pane does that
+  shell was still activating the frame, and the shell then moved it: a hidden pane does that
   activation for real, which is why an already-visible one appeared to work.
 
 - **The spinner stays up for the whole turn.** It disappeared as soon as the first text arrived and
@@ -1097,18 +1097,18 @@ dragged onto the chat, and every tool now says what to reach for around it.
   turn does, or when a permission is waiting for an answer.
 
 - **A build through the MCP tools no longer freezes the IDE.** It ran the build on the UI thread and
-  then waited for it there, so Visual Studio was unusable until it finished — while the same build
+  then waited for it there, so Visual Studio was unusable until it finished, while the same build
   started from the IDE leaves it responsive.
 
 - **Not every line on stderr is a failed session.** Anything `claude.exe` wrote to stderr became the
   red error banner: no step in the chain ever decided it was an error. An untrusted workspace, or one
   of Node's own deprecation warnings, would raise three banners over a chat that was working fine.
-  A line now reaches the chat only if the process actually died — the CLI's own verdict on how bad it
+  A line now reaches the chat only if the process actually died: the CLI's own verdict on how bad it
   was, rather than us matching its wording release by release. Nothing is lost: every line was
   already logged.
 
 - **An API failure looks like a failure.** Nothing on the wire says "error" when the API refuses a
-  turn — the CLI fabricates an assistant message whose text *is* the error and sends it like any
+  turn: the CLI fabricates an assistant message whose text *is* the error and sends it like any
   reply, so the chat drew it as one, grey dot included. The frame does carry which failure it was,
   and it is now read and shown as such.
 
@@ -1124,7 +1124,7 @@ dragged onto the chat, and every tool now says what to reach for around it.
   debugger operation that failed both returned quietly, so "nothing happened" was all you got.
 
 - **A selection no longer claims a line it never reached.** Dragging to the *start* of a line leaves
-  the end offset on a line holding none of the selected characters, and it was reported anyway — so
+  the end offset on a line holding none of the selected characters, and it was reported anyway, so
   selecting lines 5 to 8's first column told Claude the selection spanned 5-8, one line more than
   was highlighted. The text was always right; only the line numbers Claude was asked to reason about
   were off.
@@ -1134,8 +1134,8 @@ dragged onto the chat, and every tool now says what to reach for around it.
 - **Every MCP tool now says what to reach for around it.** Twenty-eight of the fifty-eight named no
   other tool, so an agent needing two of them in order had to guess it or find it by failing. Three
   were not merely thin but wrong, which is what the pass turned up: `editor_close_tab` claimed to
-  close any tab by its caption when it only closes a diff the extension itself opened — the user's
-  documents were never within its reach, which is a guarantee worth stating — and
+  close any tab by its caption when it only closes a diff the extension itself opened (the user's
+  documents were never within its reach, which is a guarantee worth stating) and
   `ide_get_diagnostics` never mentioned that Visual Studio only analyses files open in an editor, so
   it can come back empty for a file nothing has looked at while a build reports plenty.
 
@@ -1144,15 +1144,15 @@ dragged onto the chat, and every tool now says what to reach for around it.
   180 characters. Everything up to the last blank line outside a code fence is parsed once and kept.
 
 - **The icon buttons are Fluent's, not ours.** Nine of them were bare `<button>`s carrying ninety
-  lines of hand-written CSS in two copies — one for Shadow DOM, one for the light DOM — that had to
+  lines of hand-written CSS in two copies (one for Shadow DOM, one for the light DOM) that had to
   be kept in step by eye, and no longer were: Copy and Fork sit next to each other and had drifted
   to different colours. Hover, focus and disabled come from Fluent now, and both copies are gone.
 
 - **The message that refuses a file opens the setting it names.** It recited a four-level Options
-  path to walk by hand, and claimed binary files cannot be read — which stopped being true when
+  path to walk by hand, and claimed binary files cannot be read, which stopped being true when
   attachments started travelling as documents with their own media type. Shorter, with a button.
 
-- **Markdown is rendered once per message**, not on every re-render — the transcript stops re-parsing
+- **Markdown is rendered once per message**, not on every re-render: the transcript stops re-parsing
   text that has not changed.
 
 - **The transcript scrolls once per streaming delta**, not three times plus a timer.
@@ -1166,7 +1166,7 @@ sits, and the MCP tools tell the agent what a build is actually complaining abou
 ### Added
 
 - **The `@` menu searches the whole tree.** It used to look one directory deep until three
-  characters were typed and four levels after that, matching on the file name alone — so a file that
+  characters were typed and four levels after that, matching on the file name alone, so a file that
   exists could not be found, and the only way down to it was picking folder after folder. It now
   walks the whole workspace with no depth limit and filters on the path, so `ctrl` finds
   `ChatPaneControl.cs` and `src/foo` works as one filter. Folders come from the files that matched,
@@ -1179,13 +1179,13 @@ sits, and the MCP tools tell the agent what a build is actually complaining abou
   the area tag, which is what makes diagnosing anything multi-instance possible at all.
 
 - **`document_read_buffer`**: an MCP tool that reads what is in the editor, unsaved edits included.
-  "Look at what I'm writing" had no answer — the `Read` tool sees the file on disk, and the autosave
+  "Look at what I'm writing" had no answer: the `Read` tool sees the file on disk, and the autosave
   hook writes the user's buffer whether they wanted that or not.
 
 - **`build_clean`**: rebuilding from scratch was the one build step the agent could not reach.
 
-- **The build tools report warnings.** They used to keep only errors, so in this repository — where
-  the gate is a green build and there is no test project — the whole quality signal was being thrown
+- **The build tools report warnings.** They used to keep only errors, so in this repository, where
+  the gate is a green build and there is no test project, the whole quality signal was being thrown
   away. `severity` is a floor, like a log level; errors stay the default because a solution carries
   a hundred pre-existing warnings, and the message now names how many were left out and how to ask
   for them.
@@ -1193,7 +1193,7 @@ sits, and the MCP tools tell the agent what a build is actually complaining abou
 - **`ide_get_diagnostics` filters by severity and caps its result**, instead of carrying every
   warning back to read three errors.
 
-- **The chat can report what the page weighs** — DOM nodes broken down by what a row contains,
+- **The chat can report what the page weighs**: DOM nodes broken down by what a row contains,
   plus the CLI state the UI believes it has, context usage and history paging. Appended to the
   pane's Info dialog, so collecting it takes no DevTools.
 
@@ -1208,7 +1208,7 @@ sits, and the MCP tools tell the agent what a build is actually complaining abou
 - **The chat pane no longer draws over Visual Studio.** WebView2 hosts its browser in a child window
   that always paints above WPF content, so VS's floating tool windows and notification bars were
   overlapped by the pane everywhere except where the WebView was. It renders inside the WPF tree
-  now, which also brings back the mouse events the old hosting could not deliver — and with them the
+  now, which also brings back the mouse events the old hosting could not deliver, and with them the
   attention notice clearing when you click into a finished pane. `Home` and `End` move the caret
   again rather than jumping to the start or end of the document, the pane no longer flashes white
   while opening, double-click selects the word instead of the paragraph, and the browser's task
@@ -1234,10 +1234,10 @@ sits, and the MCP tools tell the agent what a build is actually complaining abou
   the file and the exception.
 
 - **The statistics cache stops failing on long paths**, its folders being named after the project
-  rather than the CLI's directory — the data folders no project claims are removed on the way, and a
+  rather than the CLI's directory: the data folders no project claims are removed on the way, and a
   folder that is also a project is one row rather than two.
 
-- **The daily-tokens chart dates are readable again** — they came out as "2/", "6/", "1/", each
+- **The daily-tokens chart dates are readable again**: they came out as "2/", "6/", "1/", each
   label cut to fit a cell one bar wide.
 
 - **Dismissing the rate-limit notice keeps it dismissed.** The CLI re-sends it every turn with the
@@ -1249,8 +1249,8 @@ sits, and the MCP tools tell the agent what a build is actually complaining abou
 - **The lightbox stops clipping the image against its right edge**, and follows the pane when it is
   widened.
 
-- **The composer is ready to type when a chat opens** — on first open and on a new session, where
-  the caret used to be nowhere until you clicked — and no longer jumps when it regains focus.
+- **The composer is ready to type when a chat opens**: on first open and on a new session, where
+  the caret used to be nowhere until you clicked, and no longer jumps when it regains focus.
 
 - **`ide_get_project_structure` no longer returns a file twice**, nor a lowercased drive letter that
   disagreed with every other path in the same response. The solution walks are guarded against a
@@ -1258,11 +1258,11 @@ sits, and the MCP tools tell the agent what a build is actually complaining abou
 
 - **The formatting tools stay inside the open solution.** `document_format`,
   `document_organize_imports` and `document_run_cleanup` validated nothing but that the path
-  existed, then rewrote it — a wrong path that happens to exist was enough to reformat a file in
+  existed, then rewrote it: a wrong path that happens to exist was enough to reformat a file in
   another repository.
 
 - **The autosave hook waits for the save.** It answered "go ahead" while the write was still queued,
-  so Claude could read a stale file — or, on an edit, rewrite one under a buffer VS still held. A
+  so Claude could read a stale file, or, on an edit, rewrite one under a buffer VS still held. A
   failure now says so instead of vanishing into a log that is off by default.
 
 - **A session id that is not a plain token is refused before it reaches a path**, closing a
@@ -1280,7 +1280,7 @@ sits, and the MCP tools tell the agent what a build is actually complaining abou
 ### Changed
 
 - **The inline diff preview builds only the lines it can show.** A large edit mounted hundreds of
-  rows to display twelve, none of the rest reachable — the heaviest row in a day-long chat went from
+  rows to display twelve, none of the rest reachable: the heaviest row in a day-long chat went from
   1468 nodes to 229. Drops the "Diff - preview context lines" option, which fed two unrelated things
   at once and whose default of 10 was the reason patches were long in the first place; the preview
   now shows 3 lines of context, which is what git and GitHub show.
@@ -1289,14 +1289,14 @@ sits, and the MCP tools tell the agent what a build is actually complaining abou
   Interactive pane, so an agent would build on state that never changed. `debug_evaluate` already
   covers "run this, give me the value", typed and inside the real program.
 
-- **The MCP documentation leads with the fact that a live IDE is on the other end** — that it has
-  compiled this code and holds the semantic model — rather than with which tool beats which shell
+- **The MCP documentation leads with the fact that a live IDE is on the other end**: that it has
+  compiled this code and holds the semantic model, rather than with which tool beats which shell
   command. Seeing a name in a list of fifty is not the same as thinking of it, and what an agent
   brings by default are a terminal's habits.
 
 - **Comments across the codebase justify a choice by the CLI's wire contract**, the behaviour wanted
   or the constraint that forced it, instead of by how another editor's extension does it. No
-  rationale was dropped — where the attribution *was* the rationale, it is replaced by the real one.
+  rationale was dropped, where the attribution *was* the rationale, it is replaced by the real one.
 
 ## [1.1.2] - 2026-08-01
 
@@ -1306,11 +1306,11 @@ cause.
 ### Fixed
 
 - **Hovering a timestamp stopped the chat from rendering.** The "x ago" stamp under a message wrote
-  its own text into the element on hover — and that element's content belonged to the rendering
+  its own text into the element on hover, and that element's content belonged to the rendering
   engine, which was left holding references to nodes that no longer existed. From that moment every
   later update threw, and the pane went on looking alive while showing nothing new. One hover was
   enough: no click, no command, nothing in any log, and the failure surfaced on whatever came next,
-  often minutes later. That delay is why the two fixes in 1.1.1 landed elsewhere — both were sound
+  often minutes later. That delay is why the two fixes in 1.1.1 landed elsewhere, both were sound
   in themselves, and neither was this.
 
   The stamp is now a component that re-renders itself, so the text changes the only way it safely
@@ -1319,7 +1319,7 @@ cause.
 ### Changed
 
 - **A Debug build produces the readable WebView bundle**, with sourcemaps, instead of the minified
-  one. A stack trace from the chat now names real functions — which is most of the reason the crash
+  one. A stack trace from the chat now names real functions, which is most of the reason the crash
   above took two days to find. Release is unchanged, and still ships without sourcemaps.
 
 ## [1.1.1] - 2026-07-31
@@ -1330,7 +1330,7 @@ link that said nothing.
 ### Fixed
 
 - **The chat stops rendering mid-conversation.** With sub-agents running, the transcript could reach
-  a state where every later update threw and nothing appeared again — a pane that looked alive but
+  a state where every later update threw and nothing appeared again: a pane that looked alive but
   was frozen, with the reason visible only in the browser console. The tree was updated in place
   while Lit still held references into it, so a row skipped its update and was left rendering into
   nodes that no longer existed. The transcript is now rebuilt rather than mutated, which the type
@@ -1342,7 +1342,7 @@ link that said nothing.
   wrong branch. Both paths are covered by tests now.
 
 - **Session info could freeze Visual Studio.** `More → Info` asked the WebView for the process
-  hosting the pane and waited for the answer on the UI thread — the same thread the answer needed in
+  hosting the pane and waited for the answer on the UI thread: the same thread the answer needed in
   order to arrive. A busy or missing renderer left nothing to break the wait. It now gives up after
   two seconds and reports the process as unknown.
 
@@ -1355,7 +1355,7 @@ link that said nothing.
 
 ## [1.1.0] - 2026-07-31
 
-A pass over the chat's composer, the permission modes, and the sub-agents — plus the panes finally
+A pass over the chat's composer, the permission modes, and the sub-agents, plus the panes finally
 behaving like the rest of the IDE's windows.
 
 ### Added
@@ -1371,26 +1371,26 @@ behaving like the rest of the IDE's windows.
   session and profile included. Docked panes hide each other behind tabs captioned "Chat 1"/"Chat 2",
   and this is the way to tell them apart and to reach one that drifted behind its siblings.
 
-- **The session info dialog names the processes behind the pane** — the CLI's own PID for both pane
+- **The session info dialog names the processes behind the pane**: the CLI's own PID for both pane
   kinds, and for the chat the WebView2 browser plus the renderer that pane actually runs in, matched
   by frame rather than guessed from a list. A new option adds the WebView DevTools and the browser's
   task manager to the "More" menu on stable builds, for when a chat renders wrongly and the browser
   console is the only way to find out why.
 
 - **Bypass permissions can be chosen** from the composer and set as a profile's initial mode, gated
-  on a new "Allow dangerously skip permissions" option — and on the CLI's own policy, which an
+  on a new "Allow dangerously skip permissions" option, and on the CLI's own policy, which an
   organisation can impose.
 
 - **Written files are syntax-highlighted** by their extension, including the ones the .NET world
   uses (`csproj`, `xaml`, `props`, `targets`, `resx`, `vsct`, `psm1`, `psd1`).
 
-- A profile's **Description is now multi-line Notes** — what the account is, when the token expires,
+- A profile's **Description is now multi-line Notes**: what the account is, when the token expires,
   why the profile exists.
 
 ### Changed
 
-- **The composer is one row again.** Attach, commands and the file in context on the left — what
-  goes into the message; model, effort, permission mode and send on the right — how and when it
+- **The composer is one row again.** Attach, commands and the file in context on the left: what
+  goes into the message; model, effort, permission mode and send on the right: how and when it
   leaves. The mode names are shorter, so it all fits in a docked pane.
 
 - **Statistics, Usage and Context usage are tool windows**, not document tabs. None of them owns a
@@ -1402,21 +1402,21 @@ behaving like the rest of the IDE's windows.
 - **The eye on the context chip appears only when sharing is paused.** Sharing is the ordinary state
   and needs no badge; not sharing is the exception, and without a mark a chip carrying a file name
   reads as "this goes with your message" when it doesn't. The tooltips say what happens rather than
-  naming the machinery — "File.cs goes with every message".
+  naming the machinery: "File.cs goes with every message".
 
 - **`Write` shows the file, not a diff.** A diff where every line is an addition distinguishes
   nothing; the header now carries the size instead, the way `Read` shows its line range.
 
-- **A sub-agent's report reads as a report** — rendered as markdown, untruncated, with its file
+- **A sub-agent's report reads as a report**: rendered as markdown, untruncated, with its file
   links opening in the editor.
 
 - Tool output gained back the 52px of width that the IN/OUT gutter was spending on two three-letter
-  words — width being what a docked pane hasn't got.
+  words: width being what a docked pane hasn't got.
 
 ### Fixed
 
 - **Adding a project to the solution cost you the conversation.** Visual Studio reloads the solution
-  whenever the `.sln`/`.slnx` changes on disk, and the panes were closed on the way down — taking
+  whenever the `.sln`/`.slnx` changes on disk, and the panes were closed on the way down: taking
   the running `claude.exe`, and the turn in flight, with them. Nothing in the SDK distinguishes a
   reload from a real close at the time it happens, so the close is now deferred: the panes go out of
   sight immediately but stay alive, and come back where they were if the same solution returns.
@@ -1426,16 +1426,16 @@ behaving like the rest of the IDE's windows.
 
 - **Panes vanished when the debugger started.** Visual Studio keeps a separate window layout for
   run time, and a pane opened while writing code was simply absent from it. They now come back, and
-  dock against windows VS owns — Chat beside Solution Explorer, CLI beside Output.
+  dock against windows VS owns: Chat beside Solution Explorer, CLI beside Output.
 
 - **In Bypass, Claude could not ask you anything.** The flag that registers the question tool was
-  withheld in that mode, so the model did not merely lose the right to ask — it lost the tool. Turns
+  withheld in that mode, so the model did not merely lose the right to ask: it lost the tool. Turns
   ended successfully with nothing surfaced.
 
 - **Shift+Tab in Bypass threw you into the most restrictive mode.** It cycled a hand-written list
   that honoured none of the gates the rest of the UI applies.
 
-- **A permission mode that failed to change still showed as changed** — you would believe you were
+- **A permission mode that failed to change still showed as changed**: you would believe you were
   in Plan while the CLI wrote. The same applied to the model. Both now roll back on failure.
 
 - **A nested sub-agent opened its parent's transcript** when expanded, and its own tools could not
@@ -1452,7 +1452,7 @@ behaving like the rest of the IDE's windows.
   invisible on light; the effort slider was styled with tokens that only exist in VS Code's webview
   and had never been wired to our theme at all.
 
-- **A file link VS won't open now says so** instead of doing nothing — a `.csproj` the solution
+- **A file link VS won't open now says so** instead of doing nothing: a `.csproj` the solution
   already owns cannot be opened as a document, and the failure went nowhere.
 
 - **The context gauge gave up before a resuming CLI could answer.** On a large transcript the reply
@@ -1460,8 +1460,8 @@ behaving like the rest of the IDE's windows.
 
 - Clicking into a pane left its OS balloon toast on screen after the in-IDE notice had gone.
 
-- The Sessions list counted every `.jsonl` the CLI had ever opened — sessions where nothing was ever
-  asked, and sub-agent transcripts — which is why it read as a wall of dates.
+- The Sessions list counted every `.jsonl` the CLI had ever opened (sessions where nothing was ever
+  asked, and sub-agent transcripts), which is why it read as a wall of dates.
 
 - The image lightbox opened far wider than the image inside it.
 
@@ -1483,14 +1483,14 @@ First stable release. Everything from the preview, plus the work below.
 
 ### Added
 
-- **Statistics**: a full window showing where your tokens went — by profile, folder, project, day
+- **Statistics**: a full window showing where your tokens went: by profile, folder, project, day
   or single session. Daily chart, activity heatmap, per-model breakdown, and a tile summary.
   Reads the session files already on your disk; nothing is sent anywhere.
 
 - **Usage**: your plan's limits and how much of them you have used, per profile.
 
-- **Context usage**: what is actually filling the model's context in a session — system prompt,
-  tools, memory files, messages — as a map you can read at a glance, so it is clear what to trim
+- **Context usage**: what is actually filling the model's context in a session (system prompt,
+  tools, memory files, messages) as a map you can read at a glance, so it is clear what to trim
   before compacting.
 
 - **Turn settings in the composer**: thinking, effort, model and permission mode now sit on their
@@ -1499,8 +1499,8 @@ First stable release. Everything from the preview, plus the work below.
 
 - **Read a reply aloud**: any assistant message can be spoken, with pause and resume.
 
-- **Clickable file references**: when the assistant mentions a file — with or without a line number
-  — it becomes a link that opens in the editor at that spot. Recognises around 270 extensions.
+- **Clickable file references**: when the assistant mentions a file, with or without a line number,
+it becomes a link that opens in the editor at that spot. Recognises around 270 extensions.
 
 - **Session notices**: rate limits, CLI advisories and warnings stack in one place instead of
   replacing each other, and can be dismissed individually.
@@ -1511,7 +1511,7 @@ First stable release. Everything from the preview, plus the work below.
   afterwards and shifting the toolbar around it.
 
 - **The model picker no longer lists the same model twice.** "Default" is hidden when it is just
-  another name for a model already in the list — which also means a reopened session shows the
+  another name for a model already in the list, which also means a reopened session shows the
   model you actually picked.
 
 - **Renaming a session** now goes through the CLI rather than editing its file directly, so the
@@ -1533,7 +1533,7 @@ First stable release. Everything from the preview, plus the work below.
 ## [1.0.0-rc1] - 2026-07-22
 
 First public preview. Requires the Claude Code CLI, installed separately with
-`npm i -g @anthropic-ai/claude-code` — the extension drives it and never bundles it.
+`npm i -g @anthropic-ai/claude-code`: the extension drives it and never bundles it.
 
 ### Added
 
@@ -1546,10 +1546,10 @@ First public preview. Requires the Claude Code CLI, installed separately with
   once, on different working directories.
 
 - **Diffs in the chat**: file edits render inline, switching between line-by-line and side-by-side
-  as the pane is resized. Opening one gives a full viewer with four modes — auto, split, unified and
-  raw patch — and an **Open in VS** button hands the same comparison to the editor's own diff viewer.
+  as the pane is resized. Opening one gives a full viewer with four modes (auto, split, unified and
+  raw patch) and an **Open in VS** button hands the same comparison to the editor's own diff viewer.
 
-- **MCP server**: around 50 tools exposing the IDE to the agent — editor and selection, solution and
+- **MCP server**: around 50 tools exposing the IDE to the agent: editor and selection, solution and
   project structure, symbol navigation, diagnostics, build, debugger, and test runner. Runs
   in-process, so the agent sees the live state rather than the files on disk.
 
@@ -1559,7 +1559,7 @@ First public preview. Requires the Claude Code CLI, installed separately with
 - **Sub-agents**: nested runs are shown inline with their own transcript, and can be opened in a
   pane of their own.
 
-- **Sessions and history**: past conversations are read from the CLI's own `.jsonl` files — the same
+- **Sessions and history**: past conversations are read from the CLI's own `.jsonl` files: the same
   sessions the terminal `claude` sees. Resume, fork, or open in a new pane.
 
 - **Profiles**: named configurations for working directory, model, permission mode and environment,
@@ -1572,7 +1572,7 @@ First public preview. Requires the Claude Code CLI, installed separately with
 - **Permission prompts**: tool approvals appear inline in the chat, with the affected file and a
   preview of the change.
 
-- **Options**: four pages — General, Chat, Profiles and Debug — under Tools → Options → cv4vs
+- **Options**: four pages (General, Chat, Profiles and Debug) under Tools → Options → cv4vs
   Agents.
 
 ### Notes

@@ -1,7 +1,7 @@
 # Rewinding files
 
 Claude keeps a copy of every file **before** it edits one. `/rewind` puts them back the way they
-were before a message you pick — without touching the conversation, which stays exactly where it
+were before a message you pick, without touching the conversation, which stays exactly where it
 is.
 
 It is the answer to "that last hour went the wrong way": the files return to a known point while
@@ -16,7 +16,7 @@ would change:
 ![The Rewind dialog: the session's messages, and what rewinding to the selected one would change](../images/chat/checkpoints.png)
 
 The panel under the list is the answer to "what happens if I press this": how many files, how many
-lines added and removed, and which files. Clicking a message never touches them — the figures come
+lines added and removed, and which files. Clicking a message never touches them: the figures come
 from asking the CLI what it *would* do. Only the **Rewind** button writes anything, so the list is
 meant to be browsed.
 
@@ -25,12 +25,12 @@ left, what is on disk now on the right. It is the same viewer the chat uses to
 [review a change](diff.md), so the two sides are real editors.
 
 With more than a handful of messages a filter box appears above the list. The arrow keys walk the
-list — while you are still typing in the filter — and Home/End jump to the ends.
+list (while you are still typing in the filter) and Home/End jump to the ends.
 
 ## What comes back, and what does not
 
 Only files **Claude edited through its own file tools** are covered. What it changed by running a
-command — `sed`, `git checkout`, a build script, a shell redirect — is not part of a checkpoint and
+command (`sed`, `git checkout`, a build script, a shell redirect) is not part of a checkpoint and
 stays as it is. A rewind after a turn that mixed the two puts back one half and leaves the other.
 
 Directory operations are not covered either: a folder created, moved or deleted stays that way.
@@ -38,7 +38,7 @@ Directory operations are not covered either: a folder created, moved or deleted 
 A file the message **created** has no earlier version to restore, so rewinding past it **deletes**
 it. Its diff shows an empty left-hand side, which is what that means.
 
-Messages that changed no file are not listed at all — there would be nothing to restore.
+Messages that changed no file are not listed at all; there would be nothing to restore.
 
 ## Where the copies live
 
@@ -52,7 +52,7 @@ That is the reason the feature can be turned off. **Keep file checkpoints (Rewin
 them at all. With it off no copies are written, and the `/rewind` command is hidden rather than
 offered as something that can only decline.
 
-The setting is read when a chat starts, so changing it leaves any chat already open as it was —
+The setting is read when a chat starts, so changing it leaves any chat already open as it was:
 the pane says so when you apply it, and the next chat you open follows the new value.
 
 ## Limits worth knowing
@@ -62,4 +62,4 @@ the pane says so when you apply it, and the next chat you open follows the new v
 - **One session only.** A checkpoint belongs to the session that took it, so `/rewind` offers this
   chat's messages and no others.
 - The conversation is never rewound. To go back in the conversation as well, use **Fork** on the
-  message — it opens a new pane from that point and leaves this one alone.
+  message; it opens a new pane from that point and leaves this one alone.

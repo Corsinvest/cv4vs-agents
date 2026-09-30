@@ -10,13 +10,13 @@ longer want. It opens as a document-tab in the editor area, next to [Statistics]
 ## What it reads
 
 Before overwriting a file, the CLI copies it into `~/.claude/file-history/<session>/`. Those copies
-are what a rewind restores from — and **nothing prunes them**: they stay after the session ends, and
+are what a rewind restores from, and **nothing prunes them**: they stay after the session ends, and
 after the transcript itself is deleted. On a development machine a few dozen sessions come to tens of
 megabytes.
 
 The copies are named by a hash of the path plus a version (`072f0f4b…@v6`), so the folder alone can't
 say which file a copy belongs to. That mapping lives in the session transcript, in the
-`file-history-snapshot` records — which is why the file list is read only when you select a session.
+`file-history-snapshot` records, which is why the file list is read only when you select a session.
 
 Everything here is read from the local `~/.claude/` of each configured profile. No CLI process is
 started and nothing is sent anywhere.
@@ -28,25 +28,25 @@ are the leaves: a row is one `file-history/<session>/` folder.
 
 - The **config-dir** level appears only when profiles resolve to more than one. Several profiles
   usually share `~/.claude`, and a tree rooted on profiles would count the same megabytes twice, so
-  the root is the directory — the tooltip names the profiles using it.
+  the root is the directory; the tooltip names the profiles using it.
 - **Sessions no longer on disk** is a group of its own, last in the list: backups whose transcript is
   gone. Nothing else refers to them, which makes them the first thing worth deleting. Their real file
-  paths can't be recovered — without the transcript, only the folder is left to open or delete.
+  paths can't be recovered: without the transcript, only the folder is left to open or delete.
 
 Click **Name**, **Date** or **Size** to sort; click the same header again to reverse it. The
 ordering applies to every level at once, and an arrow marks the column in effect. There is no date
 *filter* on purpose: it would hide exactly the old sessions this view exists to find.
 
-**Refresh** re-reads the folders. Nothing is indexed and nothing is cached — the sizes come from the
+**Refresh** re-reads the folders. Nothing is indexed and nothing is cached: the sizes come from the
 filesystem, which already knows them.
 
 ## The files (right)
 
 Selecting a session shows what it backed up: **file, version, size, and when the copy was taken**,
-newest-largest first. The tiles above give the session's totals — size on disk, distinct files,
+newest-largest first. The tiles above give the session's totals: size on disk, distinct files,
 copies (one per version of each file), and the date of the last one.
 
-- **Double-click a row** — or **Compare with the current file** — opens a diff between the backup and
+- **Double-click a row** (or **Compare with the current file**) opens a diff between the backup and
   the file as it is now, in Visual Studio's own diff viewer.
 - **Save a copy as…** writes the backup wherever you choose. It is deliberately *not* called
   "Restore": it saves a file and leaves both your working copy and the conversation alone. Going back
@@ -58,7 +58,7 @@ entries that can be neither diffed nor saved.
 
 ## Deleting
 
-Tick sessions in the tree — a parent ticks everything under it — and press the delete button. The
+Tick sessions in the tree (a parent ticks everything under it) and press the delete button. The
 confirmation names how many sessions, copies and files go, and how many megabytes that frees.
 
 Two things are worth knowing before you press it:
@@ -75,4 +75,4 @@ half-way, so the consequence sits in the control rather than in a warning you ca
 
 This is an archive, not a second rewind. It shows and deletes; it never writes into a conversation.
 Restoring files *and* moving a session back is [rewind](chat/rewind.md), and it only works on the
-session its own pane is driving — the running CLI knows nothing about the others.
+session its own pane is driving; the running CLI knows nothing about the others.
