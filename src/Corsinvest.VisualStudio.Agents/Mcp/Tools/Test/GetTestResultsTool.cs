@@ -42,7 +42,7 @@ internal sealed class GetTestResultsTool : McpTool<GetTestResultsArgs>
         }
 
         // Counted by the platform's own outcome, so a skipped test is skipped rather than folded
-        // into "not passed" — the two mean different things to whoever reads this.
+        // into "not passed": the two mean different things to whoever reads this.
         var failed = results.Count(r => r.Failed);
         var skipped = results.Count(r => string.Equals(r.Outcome, "Skipped", System.StringComparison.OrdinalIgnoreCase));
 

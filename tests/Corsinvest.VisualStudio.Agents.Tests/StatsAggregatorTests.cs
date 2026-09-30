@@ -234,7 +234,7 @@ public class StatsAggregatorTests : IDisposable
     }
 
     [Theory]
-    // The day-bucket key. Producer and readers only agree as long as both go through DateKey —
+    // The day-bucket key. Producer and readers only agree as long as both go through DateKey:
     // change one and lookups return nothing: empty heatmap, no exception.
     [InlineData(2026, 8, 26, "2026-08-26")]
     [InlineData(2026, 1, 1, "2026-01-01")]

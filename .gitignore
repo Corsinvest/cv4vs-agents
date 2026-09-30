@@ -358,7 +358,7 @@ paket-files/
 #tools/**
 #!tools/packages.config
 
-# cli-probe: dump grezzi con dati account (email, costo, permessi) — non versionare
+# cli-probe: dump grezzi con dati account (email, costo, permessi): non versionare
 tools/cli-probe/results-*.txt
 tools/cli-probe/init-dump.json
 
@@ -438,6 +438,6 @@ tools/cli-probe/results
 .superpowers/
 
 # The "[Dd]ebug/" build-output rule above also matches our MCP tools subfolder
-# Mcp/Tools/Debug/ — re-include it so new debug tools aren't silently ignored.
+# Mcp/Tools/Debug/: re-include it so new debug tools aren't silently ignored.
 !src/Corsinvest.VisualStudio.Agents/Mcp/Tools/Debug/
 !src/Corsinvest.VisualStudio.Agents/Mcp/Tools/Debug/**

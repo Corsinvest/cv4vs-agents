@@ -78,7 +78,7 @@ export class CvUsageDialog extends CvDialogBase {
                 font-variant-numeric: tabular-nums;
                 color: var(--colorNeutralForeground2);
             }
-            /* fluent-progress-bar stays pure — only vertical spacing in the row. */
+            /* fluent-progress-bar stays pure: only vertical spacing in the row. */
             .bar {
                 display: block;
                 margin: 4px 0;
@@ -88,12 +88,12 @@ export class CvUsageDialog extends CvDialogBase {
                 font-size: 0.85em;
                 color: var(--colorNeutralForeground3);
             }
-            /* fluent-link stays pure — only top spacing separating it from the bars above. */
+            /* fluent-link stays pure: only top spacing separating it from the bars above. */
             .link {
                 display: inline-block;
                 margin-top: 16px;
             }
-            /* fluent-tablist stays pure — only spacing around the Day/Week tabs. */
+            /* fluent-tablist stays pure: only spacing around the Day/Week tabs. */
             .period {
                 margin: 8px 0 4px;
             }
@@ -136,7 +136,7 @@ export class CvUsageDialog extends CvDialogBase {
     @state() private _loading = false;
     @state() private _period: 'day' | 'week' = 'day';
     // Timestamp captured when the payload arrives, for "Resets in …" (Date.now
-    // is fine here — display only, not persisted).
+    // is fine here: display only, not persisted).
     private _nowMs = 0;
 
     override willUpdate(changed: Map<string, unknown>): void {
@@ -158,7 +158,7 @@ export class CvUsageDialog extends CvDialogBase {
         }
     }
 
-    /** A usage bar — the C# DTO already carries the label + clamped utilization. */
+    /** A usage bar: the C# DTO already carries the label + clamped utilization. */
     private _bar(w: RateWindowDto): TemplateResult {
         return html`
             <div class="row">
@@ -205,7 +205,7 @@ export class CvUsageDialog extends CvDialogBase {
         }
     };
 
-    /** "What's contributing to your limits usage?" — the C# DTO already carries the day/week
+    /** "What's contributing to your limits usage?": the C# DTO already carries the day/week
      *  behaviours (insights filtered, attribution grouped). */
     private _renderBehaviors(): TemplateResult | typeof nothing {
         const period = this._period === 'day' ? this._data?.day : this._data?.week;

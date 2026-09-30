@@ -18,7 +18,7 @@ public class SessionScanTests
     [Theory]
     // The CLI's own compact output.
     [InlineData("{\"isSidechain\":true}", "isSidechain", true)]
-    // A pretty-printer's space after the colon — same JSON, and it must read the same.
+    // A pretty-printer's space after the colon; same JSON, and it must read the same.
     [InlineData("{\"isSidechain\": true}", "isSidechain", true)]
     // Present but false, and absent: both are "not flagged".
     [InlineData("{\"isSidechain\":false}", "isSidechain", false)]

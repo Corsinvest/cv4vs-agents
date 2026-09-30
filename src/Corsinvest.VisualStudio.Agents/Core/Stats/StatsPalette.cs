@@ -7,7 +7,7 @@ using System.Windows.Media;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
-/// <summary>One stable colour per model, keyed by its index in the (token-sorted) breakdown — the
+/// <summary>One stable colour per model, keyed by its index in the (token-sorted) breakdown: the
 /// same colour is used for the model's dot, its share bar, and its bars in the daily chart, so a
 /// model reads as one colour everywhere. Mirrors the WebView dialog's MODEL_COLORS. The hues stay
 /// legible on both the light and dark VS themes.</summary>

@@ -11,7 +11,7 @@ namespace Corsinvest.VisualStudio.Agents.Chat;
 /// line but aren't the user's own turn (command outputs, task notifications, ticks, hooks…).
 /// Claude Code hides these in its own UI (see MessageSelector's filter); we do the same,
 /// host-side, so the WebView never receives them and doesn't need its own filter. NOT every
-/// '&lt;'-tag is meta — the user's own prompt is often prefixed with &lt;ide_selection&gt;/
+/// '&lt;'-tag is meta: the user's own prompt is often prefixed with &lt;ide_selection&gt;/
 /// &lt;ide_opened_file&gt;, which must still render as a turn.</summary>
 public static class MetaInjection
 {
@@ -30,7 +30,7 @@ public static class MetaInjection
     ];
 
     /// <summary>True if the user text is a CLI meta-injection (not the user's own words),
-    /// so it should not surface as a chat bubble. An interrupt marker is NOT meta — it is a
+    /// so it should not surface as a chat bubble. An interrupt marker is NOT meta: it is a
     /// real turn that renders with an orange bar; callers that must skip it (session title)
     /// guard it explicitly.</summary>
     public static bool IsMetaText(string text)
@@ -46,7 +46,7 @@ public static class MetaInjection
 
     // cv-prompt.ts prepends the active editor context to the user's message as an
     // <ide_selection>/<ide_opened_file> block followed by a newline. It is not the user's words:
-    // strip a leading block so callers see the prompt itself — otherwise a message sent with editor
+    // strip a leading block so callers see the prompt itself: otherwise a message sent with editor
     // context looks like it starts with "<", and title generation (which rejects "<") drops it.
     private static readonly Regex LeadingIdeContext = new(
         @"^\s*<(ide_selection|ide_opened_file)>.*?</\1>\s*",

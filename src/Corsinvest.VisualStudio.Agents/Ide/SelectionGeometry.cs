@@ -9,10 +9,10 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 
 /// <summary>Offset-to-line/column arithmetic for a selection, kept free of VS types so it can be
 /// tested. Lines are 1-based (what the rest of the code and DTE used); columns are 0-based
-/// character offsets within the line — not display columns, so a tab counts as one.</summary>
+/// character offsets within the line, not display columns, so a tab counts as one.</summary>
 internal static class SelectionGeometry
 {
-    /// <summary>A selection worth reporting, or not: whitespace alone is not, any real text is —
+    /// <summary>A selection worth reporting, or not: whitespace alone is not, any real text is:
     /// including a single character, since double-clicking <c>i</c> or <c>T</c> is a real gesture
     /// and there is no caret-only context to fall back to.
     /// <para>Takes an accessor rather than the text so the editor's snapshot can be read in place:
@@ -30,7 +30,7 @@ internal static class SelectionGeometry
     internal static bool IsEffectivelyEmpty(string text)
         => string.IsNullOrEmpty(text) || IsEffectivelyEmpty(text.Length, i => text[i]);
 
-    /// <summary>Where a selection starts and ends, as offsets INTO THE WINDOW the caller passed —
+    /// <summary>Where a selection starts and ends, as offsets INTO THE WINDOW the caller passed:
     /// index 0 is whatever line <paramref name="lineStartOffsets"/> begins at, not the file's first.
     /// The caller adds its own origin back; the columns are absolute within their line.</summary>
     /// <param name="lineStartOffsets">Start offset of each line, ascending.</param>
@@ -43,7 +43,7 @@ internal static class SelectionGeometry
 
         // Dragging to the START of a line leaves the end offset on a line the selection holds no
         // character of; reporting it would hand the model one line more than was selected. Keyed on
-        // the span, never on what the text turned out to be — blank lines overshoot like any other.
+        // the span, never on what the text turned out to be; blank lines overshoot like any other.
         if (endIdx > startIdx && endOffset == lineStartOffsets[endIdx]) { endIdx--; }
 
         var startCol = Math.Max(0, startOffset - lineStartOffsets[startIdx]);

@@ -23,7 +23,7 @@ internal sealed class GoToImplementationArgs
     public string SymbolName { get; set; }
 }
 
-/// <summary>MCP tool: find the IMPLEMENTATIONS of a symbol — the concrete classes/members that
+/// <summary>MCP tool: find the IMPLEMENTATIONS of a symbol: the concrete classes/members that
 /// implement an interface, or override a virtual/abstract member. Different from nav_go_to_definition
 /// (the declaration) and nav_find_references (the callers). Multi-language where the VS language
 /// service supports it; returns supported=false otherwise.</summary>

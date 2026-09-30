@@ -13,7 +13,7 @@ import { permissionItems } from '../../core/permission-modes';
 
 /**
  * Permission-mode trigger in the input toolbar: shows the active mode and asks cv-prompt to
- * open the picker (cv-permission-list, above the textarea — same place as the model picker
+ * open the picker (cv-permission-list, above the textarea, same place as the model picker
  * and the `/` palette). The list, not this button, owns the menu.
  *
  * The title carries the mode's full description as well as its name: which mode is active decides
@@ -34,7 +34,7 @@ export class CvPermissionSelector extends LitElement {
                 min-width: 0;
             }
             /* The one mode that asks nothing before running anything, said where the modes are
-             * named — the composer border only shows it while the composer has focus. On the span:
+             * named: the composer border only shows it while the composer has focus. On the span:
              * the button is Fluent's, which takes layout from us and nothing else. */
             .trigger .danger {
                 color: var(--colorPaletteRedForeground1);
@@ -79,7 +79,7 @@ export class CvPermissionSelector extends LitElement {
             </fluent-button>
             <!-- The name of the control, not of the mode: three of the five modes are shown in full
                  on the button already (Manual, Plan, Auto), so echoing the label would be the same
-                 word twice. What a mode allows, and the Shift+Tab hint, are in cv-permission-list —
+                 word twice. What a mode allows, and the Shift+Tab hint, are in cv-permission-list:
                  a click answers that better than a tooltip repeating it. -->
             <fluent-tooltip anchor="perm-trigger" positioning="above-end"
                 >Permission mode</fluent-tooltip

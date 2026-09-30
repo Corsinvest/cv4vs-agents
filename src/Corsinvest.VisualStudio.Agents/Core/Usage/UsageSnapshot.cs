@@ -29,7 +29,7 @@ internal enum UsageAvailability
 }
 
 /// <summary>One profile's usage as the status bar shows it: the last good answer, when and where it came
-/// from, and the last failure if a later refresh went wrong. Never edited once published — every change
+/// from, and the last failure if a later refresh went wrong. Never edited once published: every change
 /// is a new instance, so the UI can hold one without locking.</summary>
 internal sealed class UsageSnapshot
 {

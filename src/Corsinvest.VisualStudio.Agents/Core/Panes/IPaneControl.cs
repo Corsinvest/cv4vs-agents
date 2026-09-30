@@ -41,7 +41,7 @@ public interface IPaneControl
     event EventHandler ReadyChanged;
 
     /// <summary>Whether this pane exposes an editable session title in the toolbar.
-    /// Chat: true. CLI: false — the interactive terminal doesn't surface its live
+    /// Chat: true. CLI: false; the interactive terminal doesn't surface its live
     /// session id, so there's no title to track/rename.</summary>
     bool SupportsTitleEditing { get; }
 
@@ -50,8 +50,8 @@ public interface IPaneControl
     /// toolbar; editing it renames the session.</summary>
     string SessionTitle { get; }
 
-    /// <summary>Fires (on the UI thread) when <see cref="SessionTitle"/> changes
-    /// — e.g. after loading/switching a session or an AI title arriving.</summary>
+    /// <summary>Fires (on the UI thread) when <see cref="SessionTitle"/> changes,
+    /// e.g. after loading/switching a session or an AI title arriving.</summary>
     event EventHandler SessionTitleChanged;
 
     /// <summary>Persist a user-set title for the current session (custom-title in
@@ -78,7 +78,7 @@ public interface IPaneControl
     IEnumerable<ButtonAction> MoreMenuActions { get; }
 
     /// <summary>Show this pane's session info (id, session file, workdir, CLI) for debug and bug
-    /// reports. Same dialog for both kinds — the base builds it from the pane's Entry.
+    /// reports. Same dialog for both kinds: the base builds it from the pane's Entry.
     /// <para>Async because the chat's rows come back from its WebView, which answers on the UI
     /// thread: gathering them has to yield it, not hold it.</para></summary>
     Task ShowSessionInfoAsync();

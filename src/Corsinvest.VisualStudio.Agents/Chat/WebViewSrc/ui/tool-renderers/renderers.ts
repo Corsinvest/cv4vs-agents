@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-// One class per tool. Each overrides only what differs — row() picks a layout,
+// One class per tool. Each overrides only what differs: row() picks a layout,
 // header()/body() supply content. Adding a tool is a single class here,
 // registered in index.ts. No name-switching anywhere else.
 
@@ -71,7 +71,7 @@ export class EditRenderer extends ToolRenderer {
 }
 
 /** Write creates a file, so there is no "before" to diff against: rendered as the plain content,
- *  not as a diff where every line is an addition. Deliberately NOT extending EditRenderer — it
+ *  not as a diff where every line is an addition. Deliberately NOT extending EditRenderer: it
  *  would bring rowDiff(), which has nothing to compare here.
  *  Same split VS Code makes (Edit → diff component, Write → the content). */
 export class WriteRenderer extends ToolRenderer {
@@ -95,7 +95,7 @@ export class WriteRenderer extends ToolRenderer {
     }
     /** No IN label: there is no in/out pair to tell apart, the body IS the file. And on success
      *  the result only repeats the path already in the header ("File created successfully at: …"),
-     *  so it is dropped too — an error still gets its row, being the one thing the header can't say.
+     *  so it is dropped too: an error still gets its row, being the one thing the header can't say.
      *  The body is a file, so it is highlighted as one, by its own extension. */
     override body(): TemplateResult | null {
         return this.ioGrid(this.inputText(), {
@@ -105,7 +105,7 @@ export class WriteRenderer extends ToolRenderer {
         });
     }
     override highlightInputAs(): string {
-        // An extensionless name IS its own language when the map knows it — Dockerfile, Makefile.
+        // An extensionless name IS its own language when the map knows it: Dockerfile, Makefile.
         return langForFile(String(this.host.input.file_path ?? ''));
     }
 }
@@ -185,13 +185,13 @@ export class ShellRenderer extends ToolRenderer {
         super(host);
         this.host.clipsOutput = true;
     }
-    /** A command is code, and the thing that gets re-read most — pipes, redirections, quoting.
+    /** A command is code, and the thing that gets re-read most: pipes, redirections, quoting.
      *  Both shells are hljs natives, so the language is what tells the two renderers apart. */
     override highlightInputAs(): string {
         return 'bash';
     }
     /** The command is never clipped, unlike the output it produces: half a pipeline says nothing,
-     *  where the first lines of a log still do. Cheap in practice — half the commands are one line. */
+     *  where the first lines of a log still do. Cheap in practice: half the commands are one line. */
     protected override clipsInput(): ClipMode {
         return 'never';
     }
@@ -242,7 +242,7 @@ export class AgentRenderer extends ToolRenderer {
     override header(): TemplateResult {
         const desc = truncate(String(this.host.input.description ?? ''), 80);
         // Elapsed time while the sub-agent runs (the dot handles the spinner). cv-elapsed owns the
-        // 1s tick — a renderer is rebuilt per render and could not hold a timer.
+        // 1s tick: a renderer is rebuilt per render and could not hold a timer.
         const active = this._activeTask();
         // Running: our own clock. Finished: the CLI's totals, which are the authoritative figures
         // (they measure the run, not when the WebView noticed it) and survive into history. An
@@ -266,7 +266,7 @@ export class AgentRenderer extends ToolRenderer {
             this.host.input.prompt ?? this.host.input.message ?? this.host.input.description ?? '',
         );
     }
-    // IN is the prompt we handed the sub-agent, OUT the report it handed back — prose on both
+    // IN is the prompt we handed the sub-agent, OUT the report it handed back: prose on both
     // sides, so they render as markdown and in full. Keeping the pair on the row itself puts the
     // answer next to the question, where it is readable without scrolling past the nested rows.
     override body(): TemplateResult | null {
@@ -274,13 +274,13 @@ export class AgentRenderer extends ToolRenderer {
         return inText ? this.ioGrid(inText, { markdown: true }) : null;
     }
     // A sub-agent's whole transcript (prompt IN + nested rows) is a lot of content, so the
-    // row starts collapsed even when previews are on — dot + description until expanded — and
+    // row starts collapsed even when previews are on (dot + description until expanded) and
     // keeps its chevron visible at rest so it reads as expandable. A click toggles it like
     // any other tool. This is the only tool that opts into it.
     override defaultCollapsed(): boolean {
         return true;
     }
-    // The chevron must appear while the sub-agent runs, not only once it finishes — so the row can be
+    // The chevron must appear while the sub-agent runs, not only once it finishes, so the row can be
     // opened to follow the live children. Expandable when there's a prompt body OR any child yet.
     protected override hasExpandableContent(): boolean {
         // An Agent is always expandable: it has a prompt body, and even at 0 children the chevron must
@@ -338,7 +338,7 @@ export class ExitWorktreeRenderer extends HeaderOnlyRenderer {
     }
 }
 
-/** TaskOutput, and BashOutput which is its former name — the CLI still maps the old one onto it,
+/** TaskOutput, and BashOutput which is its former name: the CLI still maps the old one onto it,
  *  so a transcript from either era lands here. The id field was renamed along with the tool. */
 export class TaskOutputRenderer extends HeaderOnlyRenderer {
     readonly name: string = 'TaskOutput';
@@ -434,7 +434,7 @@ export class TeamDeleteRenderer extends HeaderOnlyRenderer {
 
 export class SendMessageRenderer extends ToolRenderer {
     readonly name = 'SendMessage';
-    /** Recipient in the header, the message itself in the body — it is prose, and the point. */
+    /** Recipient in the header, the message itself in the body: it is prose, and the point. */
     override header(): TemplateResult {
         const i = this.host.input;
         const to = String(i.to ?? '');
@@ -541,7 +541,7 @@ export class LspRenderer extends HeaderOnlyRenderer {
 
 export class ReplRenderer extends ToolRenderer {
     readonly name = 'REPL';
-    /** Code, so it is highlighted and never clipped — the same call ShellRenderer makes. */
+    /** Code, so it is highlighted and never clipped, the same call ShellRenderer makes. */
     override highlightInputAs(): string {
         return 'javascript';
     }
@@ -571,7 +571,7 @@ export class EnterPlanModeRenderer extends HeaderOnlyRenderer {
 
 export class ExitPlanModeRenderer extends ToolRenderer {
     readonly name = 'ExitPlanMode';
-    /** Same shape as Ask: the outcome IS the body, so no chevron — and nothing to show
+    /** Same shape as Ask: the outcome IS the body, so no chevron, and nothing to show
      *  while the banner is still up. */
     override row(): TemplateResult {
         const done = this.host.status !== 'pending';
@@ -586,7 +586,7 @@ export class ExitPlanModeRenderer extends ToolRenderer {
         return html`${this.nameSpan("Claude's Plan")}`;
     }
     /** Reopen the plan. The host picks what: the file while this request waits for its answer
-     *  (editable — what the banner will approve), that call's own plan read-only once answered. */
+     *  (editable: what the banner will approve), that call's own plan read-only once answered. */
     protected override renderHeaderActions(): TemplateResult | typeof nothing {
         // A call that carries no plan (the model left plan mode without writing one) has nothing
         // to open: a button there would only lead to an error notice.
@@ -611,7 +611,7 @@ export class ExitPlanModeRenderer extends ToolRenderer {
     }
     /** What the user decided, in the Ask answer's shape: a chip for the question, the
      *  choice next to it. The plan itself was read in the banner and is in the approved-plan
-     *  message that follows — repeating it here would say the same thing three times. */
+     *  message that follows: repeating it here would say the same thing three times. */
     private outcomeBody(): TemplateResult {
         const approved = this.host.status !== 'error';
         return html`
@@ -645,7 +645,7 @@ export class ReadMcpResourceRenderer extends HeaderOnlyRenderer {
 
 export class TodoWriteRenderer extends ToolRenderer {
     readonly name = 'TodoWrite';
-    /** The list is the whole content — no chevron, there is no second view to expand into. */
+    /** The list is the whole content: no chevron, there is no second view to expand into. */
     override row(): TemplateResult {
         const done = this.host.status !== 'pending';
         return this.chrome({
@@ -704,7 +704,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
         const more = qs.length > 1 ? ` (+${qs.length - 1})` : '';
         return html`${this.nameSpan('Ask')}${this.detailSpan(`${truncate(first, 80)}${more}`)}`;
     }
-    /** Compact answered view: one line per question — the header chip (or the
+    /** Compact answered view: one line per question: the header chip (or the
      *  truncated question text) followed by the chosen option(s). Mirrors VS
      *  Code's terse summary, dropping the options the user didn't pick. */
     private compactBody(questions: AskQuestion[], answered: string): TemplateResult {
@@ -730,7 +730,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
         `;
     }
 
-    /** Copy button for the Ask body. Copies markdown built from the questions —
+    /** Copy button for the Ask body. Copies markdown built from the questions,
      *  matching the shown view: compact = "- **Header**: chosen" per line; full =
      *  "**N. Header**" + one bullet per option, a ✅ prefixing the chosen ones (the
      *  unchosen have no marker). NOT the CLI's raw "Your questions have been
@@ -847,7 +847,7 @@ function cleanText(s: string): string {
 /**
  * The option labels chosen for `q`.
  *
- * Matched against this question's own answer — the `"<question>"="<answer>"` pair — and not
+ * Matched against this question's own answer (the `"<question>"="<answer>"` pair) and not
  * against the whole result text. Two things go wrong when the blob is searched instead: one
  * option's label can sit inside a longer one ("Tab" inside "Tab to indent, spaces to align"),
  * and with several questions the labels of one can appear in another's answer. Either way more
@@ -865,7 +865,7 @@ function chosenLabels(q: AskQuestion, answered: string): string[] {
 }
 
 /**
- * The answer the user gave to `q` — a declared option's label or free text alike — or '' when it
+ * The answer the user gave to `q` (a declared option's label or free text alike) or '' when it
  * cannot be told apart.
  *
  * The CLI reports answers as prose wrapping `"<question>"="<answer>"` pairs, followed by
@@ -873,7 +873,7 @@ function chosenLabels(q: AskQuestion, answered: string): string[] {
  * several questions at once: each one picks its own pair instead of the whole blob, which would
  * otherwise put another question's answer under this header.
  *
- * Returns '' when the shape isn't there — a CLI that words this differently gets an em dash, not
+ * Returns '' when the shape isn't there: a CLI that words this differently gets an em dash, not
  * a paragraph of its own prose rendered as if the user had typed it.
  */
 function questionAnswer(q: AskQuestion, answered: string): string {
@@ -887,7 +887,7 @@ function questionAnswer(q: AskQuestion, answered: string): string {
 }
 
 /**
- * What to show as the answer to `q`: the options that matched, or — when none did — the answer
+ * What to show as the answer to `q`: the options that matched, or (when none did) the answer
  * text itself.
  *
  * "Other" is free text, so it is never one of the declared options and matching against them can
@@ -917,11 +917,11 @@ interface Finding {
  *  it carries a verified list from the model to the UI (its result only echoes that list back).
  *  So the row reads from the input, which arrives with the call instead of one turn later.
  *
- *  The body is the list itself, like TodoWrite's and Ask's — NOT the IN/OUT grid. That grid's
+ *  The body is the list itself, like TodoWrite's and Ask's, NOT the IN/OUT grid. That grid's
  *  cells cap their height and scroll inside the row, which is right for a prompt or a log the
  *  user glances at, and wrong here: a review IS the row, so it gets as tall as it needs and the
  *  chat scrolls, rather than hiding half the findings behind a scrollbar the moment it opens.
- *  The findings themselves are still markdown — that is what turns the bare "path/x.cs:42" into
+ *  The findings themselves are still markdown: that is what turns the bare "path/x.cs:42" into
  *  the link that opens the file, so the reference is written plain, never as [label](href). */
 export class ReportFindingsRenderer extends ToolRenderer {
     readonly name = 'ReportFindings';
@@ -951,12 +951,12 @@ export class ReportFindingsRenderer extends ToolRenderer {
 
     /** ❌/⚠️/✅ carry the severity: markdown has no way to colour a glyph, and these read in a
      *  prose cell where the monochrome ✓/○ of the todo list would not. Once a --fix run has been
-     *  through, `outcome` replaces the category — the question is no longer "is this a bug" but
-     *  "did you deal with it" — and a fixed finding drops its failure scenario, having none left.
+     *  through, `outcome` replaces the category: the question is no longer "is this a bug" but
+     *  "did you deal with it", and a fixed finding drops its failure scenario, having none left.
      *
      *  Only an explicit CONFIRMED earns ❌. An inline-only review runs no verify pass and reports
      *  every finding without a verdict at all, so treating absent as confirmed would dress its
-     *  guesses up as verified defects — the one error the glyph must not make. */
+     *  guesses up as verified defects: the one error the glyph must not make. */
     override inputText(): string {
         return this.findings()
             .map((f) => {
@@ -1027,7 +1027,7 @@ export class McpToolRenderer extends ToolRenderer {
             return raw;
         }
     }
-    /** Named for what it is, like every other row names what it does — 'Read', 'Web Search'. The
+    /** Named for what it is, like every other row names what it does: 'Read', 'Web Search'. The
      *  server used to be the name, which read as a label nobody could place: nothing said the call
      *  went to an MCP server at all. It is the detail now, next to the tool it provides. */
     override header(): TemplateResult {

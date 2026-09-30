@@ -26,12 +26,12 @@ internal sealed class RenameSymbolArgs
     public string NewName { get; set; }
 }
 
-/// <summary>MCP tool: rename a symbol across the whole solution (semantic, not text replace) —
+/// <summary>MCP tool: rename a symbol across the whole solution (semantic, not text replace);
 /// updates every reference and the definition. Applies the changes directly (no editor popup),
 /// atomically: if it would cause unresolved conflicts nothing is written. Multi-language where
 /// the VS language service supports it (C#/VB/F#/… ); returns supported=false otherwise so the
 /// model can fall back to manual edits.
-/// <para>Closed files are written to disk, open ones go dirty — the workspace's own behaviour,
+/// <para>Closed files are written to disk, open ones go dirty: the workspace's own behaviour,
 /// deliberately left alone. See the comment on TryApplyChanges in IdeNavigationService.Rename.cs
 /// for why opening them first was tried and dropped.</para></summary>
 internal sealed class RenameSymbolTool : McpTool<RenameSymbolArgs>

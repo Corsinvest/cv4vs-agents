@@ -25,7 +25,7 @@ internal sealed class EnableBreakpointArgs
 }
 
 /// <summary>MCP tool: turn a breakpoint off without losing it. debug_remove_breakpoint is the
-/// destructive twin — it takes the condition and hit-count rule with it.</summary>
+/// destructive twin: it takes the condition and hit-count rule with it.</summary>
 internal sealed class EnableBreakpointTool : McpTool<EnableBreakpointArgs>
 {
     public override string Name => "debug_enable_breakpoint";

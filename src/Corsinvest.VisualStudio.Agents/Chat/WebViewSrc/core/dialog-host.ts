@@ -11,7 +11,7 @@ import { captureFocus, restoreFocus, pushDialog, popDialog } from './dialog-focu
 import type { LightboxRequest, RewindPoint } from './types';
 
 // The dialog custom elements are registered by the UI layer (cv-app imports them),
-// not here — core/ must not import ui/. mount() only creates the already-defined tag.
+// not here: core/ must not import ui/. mount() only creates the already-defined tag.
 
 // Close of the instance currently up for a tag, so a reopen tears the old one down the same way
 // its own `close` event would.

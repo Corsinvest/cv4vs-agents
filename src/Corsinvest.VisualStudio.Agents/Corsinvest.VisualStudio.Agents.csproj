@@ -75,8 +75,8 @@
        VS terminal). Path varies between channels: Community/Pro/Enterprise
        use Common7\IDE\CommonExtensions\Microsoft\Terminal directly; some
        Canary/Insiders builds nest it under Terminal.Wpf\. We probe both.
-       Private=False because the DLL is already in VS's AppDomain at runtime
-       — we don't bundle it into the VSIX. -->
+       Private=False because the DLL is already in VS's AppDomain at runtime;
+       we don't bundle it into the VSIX. -->
   <PropertyGroup>
     <_TerminalWpfBase>$(VsInstallRoot)\Common7\IDE\CommonExtensions\Microsoft\Terminal</_TerminalWpfBase>
     <_TerminalWpfDll Condition="Exists('$(_TerminalWpfBase)\Microsoft.Terminal.Wpf.dll')">$(_TerminalWpfBase)\Microsoft.Terminal.Wpf.dll</_TerminalWpfDll>
@@ -90,7 +90,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.SDK" Version="17.0.31902.203" NoWarn="NU1604" />
-    <!-- Open Folder workspace API (IVsFolderWorkspaceService) — not part of the SDK meta-package
+    <!-- Open Folder workspace API (IVsFolderWorkspaceService), not part of the SDK meta-package
          above. Pinned to an old, low-dependency release on purpose: it only needs
          Microsoft.VisualStudio.Threading >= 15.8.132, well under what the SDK already resolves,
          so it can't bump Threading/Shell.15.0 to a version that conflicts elsewhere. The
@@ -105,7 +105,7 @@
          PrivateAssemblies, and the one every VS SDK / Community.Toolkit
          transitive dependency requests. Shipping higher (13.0.4) triggers
          CVSTBLD002 and, since VS forces its own assembly via binding
-         redirect, MissingMethodException at runtime — the package fails
+         redirect, MissingMethodException at runtime; the package fails
          to load. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <!-- Mads Kristensen's helper toolkit. We use it for `toolkit:Themes.UseVsTheme="True"`
@@ -494,7 +494,7 @@
   <ItemGroup>
     <!-- What VS sees in the IDE, so an F5 (and `npm run dev` in watch) copies fresh bundle output
          without a project reload. MSBuild evaluates this glob before any target runs, so on a clean
-         check-out — where npm has not created dist\ yet — it matches nothing; BuildWebViewSrc
+         check-out (where npm has not created dist\ yet) it matches nothing; BuildWebViewSrc
          re-adds the files after generating them. -->
     <Content Include="Chat\WebViewSrc\dist\**\*">
       <Link>WebView2\%(RecursiveDir)%(Filename)%(Extension)</Link>
@@ -513,7 +513,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
-    <!-- About dialog uses these via pack://application URIs — must be
+    <!-- About dialog uses these via pack://application URIs, must be
          <Resource>, not <Content>, to be embedded in the assembly. -->
     <Resource Include="Resources\plugin-logo.png" />
     <Resource Include="Resources\corsinvest-logo.png" />
@@ -544,7 +544,7 @@
   <Target Name="BuildWebViewSrc" BeforeTargets="BeforeBuild" Condition="Exists('Chat\WebViewSrc\package.json')">
     <!-- Debug builds the readable bundle, Release the minified one. A Debug build is something you
          are about to F5 into and read a stack trace from, and a minified bundle names every frame
-         `t.$` — which is what made the 2026-07-31 crash take two days to place. `build:dev` also
+         `t.$`, which is what made the 2026-07-31 crash take two days to place. `build:dev` also
          mirrors dist\ into the Exp hives, so a TypeScript-only change is picked up by reopening the
          pane; the mirror only writes to folders that already exist, so CI and a first build are
          untouched. Release must stay `build`: the sourcemaps would otherwise ship in the VSIX. -->
@@ -554,7 +554,7 @@
     </PropertyGroup>
     <Exec Command="npm install --no-fund --no-audit" WorkingDirectory="$(MSBuildProjectDirectory)\Chat\WebViewSrc" Condition="!Exists('Chat\WebViewSrc\node_modules')" />
     <!-- Delete the sourcemaps a previous Debug build left behind. MSBuild globs dist\ during
-         evaluation, before this target runs, so those .map files are already in @(Content) — and a
+         evaluation, before this target runs, so those .map files are already in @(Content), and a
          Release build then removes them, leaving @(Content) pointing at files that no longer exist
          (MSB3030 at copy time). Deleting them here means the glob below re-runs against a dist\
          that npm is about to rewrite either way. -->
@@ -566,7 +566,7 @@
     <Exec Command="npm run $(_WebViewNpmScript)" WorkingDirectory="$(MSBuildProjectDirectory)\Chat\WebViewSrc" />
     <!-- Re-add what npm just produced. The static glob above ran during evaluation, before this
          target: on a clean check-out it found nothing, so without this the VSIX would install fine
-         and then throw DirectoryNotFoundException when the chat pane opens — a green build shipping
+         and then throw DirectoryNotFoundException when the chat pane opens: a green build shipping
          a package with no chat UI.
 
          Two steps on purpose: %(RecursiveDir) does not expand when the glob and the metadata are
@@ -575,7 +575,7 @@
          glob did pick up are not added a second time. -->
     <ItemGroup>
       <!-- Clear first: a Debug build leaves .map files in dist\, the static glob above picks them
-           up during evaluation, and the Release build then deletes them — leaving @(Content) with
+           up during evaluation, and the Release build then deletes them, leaving @(Content) with
            two entries that no longer exist on disk (MSB3030 at copy time). Re-globbing after npm
            is what makes the item list match what was actually produced. -->
       <_WebViewDist Remove="@(_WebViewDist)" />

@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
-/// <summary>Overrides a node's icon when its scope alone isn't enough — the "Days"/"Sessions"
+/// <summary>Overrides a node's icon when its scope alone isn't enough: the "Days"/"Sessions"
 /// grouping nodes both carry the Project scope but want distinct icons.</summary>
 internal enum StatsNodeKind { Default, DaysGroup, SessionsGroup }
 

@@ -17,7 +17,7 @@ namespace Corsinvest.VisualStudio.Agents.Helpers;
 /// <summary>
 /// Themes the parts of a window WPF can't reach.
 /// <para>A dialog's content follows the VS theme through WPF resources, but the title bar and the
-/// border are drawn by Windows outside the visual tree — so a dark VS on a light Windows gets a
+/// border are drawn by Windows outside the visual tree, so a dark VS on a light Windows gets a
 /// white bar around themed content. DWM is the only way in.</para>
 /// </summary>
 internal static class WindowChrome
@@ -28,7 +28,7 @@ internal static class WindowChrome
     /// older build simply keeps its default chrome instead of failing.</para></summary>
     public static void ApplyTheme(Window window)
     {
-        // Reads themed colours off the shell, so it belongs on the UI thread — as does the
+        // Reads themed colours off the shell, so it belongs on the UI thread, as does the
         // SourceInitialized handler every caller hooks this from.
         ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -52,7 +52,7 @@ internal static class WindowChrome
         catch (Exception ex) { OutputWindowLogger.Global.LogException($"{nameof(WindowChrome)}.{nameof(ApplyTheme)}", ex); }
     }
 
-    /// <summary>The border colour as a COLORREF (0x00BBGGRR — the reverse of RGB), taken from the
+    /// <summary>The border colour as a COLORREF (0x00BBGGRR, the reverse of RGB), taken from the
     /// same theme key the tool windows use. Falls back to DWMWA_COLOR_DEFAULT so Windows picks one
     /// if the shell can't be reached.</summary>
     private static int ThemedBorderColor()

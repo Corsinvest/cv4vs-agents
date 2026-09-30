@@ -35,10 +35,10 @@ interface ToolPermission {
     name: string;
     preview?: string;
     input?: { questions?: AskQuestion[] } & Record<string, unknown>;
-    /** True only for a real can_use_tool request — when false this message
+    /** True only for a real can_use_tool request, when false this message
      *  is a tool_use for RENDERING (the tool row), not a permission prompt. */
     needsPermission?: boolean;
-    /** CLI permission_suggestions (PermissionUpdate[]) — each yields an extra
+    /** CLI permission_suggestions (PermissionUpdate[]): each yields an extra
      *  "allow … for this session/project" button. Echoed back as updatedPermissions. */
     permissionSuggestions?: PermissionSuggestion[];
     /** ExitPlanMode only: the plan file was saved in the editor and differs from what the CLI sent.
@@ -59,7 +59,7 @@ interface PermissionSuggestion {
 const OTHER = 'Other';
 
 /** The tool the model calls to leave plan mode. Its request is a permission request like any
- *  other, but the choice is not "may I run this" — it is which mode the session continues in,
+ *  other, but the choice is not "may I run this"; it is which mode the session continues in,
  *  so it gets its own wording (see _renderPlanPermission). */
 const EXIT_PLAN_MODE = 'ExitPlanMode';
 
@@ -78,7 +78,7 @@ const SCOPE_LABEL: Record<Scope, string> = {
     session: 'this session',
 };
 
-/** Tooltip per scope — explains where the permission is persisted. Keyed by
+/** Tooltip per scope: explains where the permission is persisted. Keyed by
  *  scope so the hint follows the button as the scope cycles. */
 const SCOPE_TOOLTIP: Record<Scope, string> = {
     localSettings: 'Saves to .claude/settings.local.json (gitignored)',
@@ -162,7 +162,7 @@ export class CvPermissionBanner extends LitElement {
                 overflow-y: auto;
             }
             /* The plan is prose, not a command: rendered markdown, in the body font, and taller
-               than the command box — it is what the choice is about, so it is worth the room. */
+               than the command box: it is what the choice is about, so it is worth the room. */
             #plan-body {
                 font-size: var(--fontSizeBase200);
                 color: var(--colorNeutralForeground2);
@@ -253,7 +253,7 @@ export class CvPermissionBanner extends LitElement {
                 justify-content: center;
             }
 
-            /* Free-text alternative to the choices — denies with this as the message.
+            /* Free-text alternative to the choices: denies with this as the message.
              * Stretches to the full width of the choice buttons above it. */
             #permission-deny-input {
                 display: block;
@@ -296,7 +296,7 @@ export class CvPermissionBanner extends LitElement {
              * flex-gap the spans and swallow the spaces between words).
              *
              * block + text-align:left because Fluent centres its content part, and a label
-             * long enough to wrap had its second line centred under the first — the tail of
+             * long enough to wrap had its second line centred under the first, the tail of
              * a sentence reading as an element of its own. The number stays OUTSIDE this
              * span, as it is on the other two buttons, so the wrapped lines line up with the
              * text rather than under the digit. */
@@ -445,7 +445,7 @@ export class CvPermissionBanner extends LitElement {
      * on screen together would ask the user to track which buttons belong to which tool.
      *
      * Not `@state`: Lit dirty-checks by reference and this object is mutated in place. `_pending`
-     * is the rendered projection of `_queue.current`, and it IS state — every path that changes
+     * is the rendered projection of `_queue.current`, and it IS state: every path that changes
      * the queue assigns it, which is what triggers the render.
      */
     private _queue = new PermissionQueue<ToolPermission>();
@@ -473,10 +473,10 @@ export class CvPermissionBanner extends LitElement {
     private _offs: Array<() => void> = [];
 
     // Set once the first button has been focused for the current prompt, so the
-    // auto-focus runs only when the prompt opens — not on every re-render.
+    // auto-focus runs only when the prompt opens, not on every re-render.
     private _focusedOnOpen = false;
 
-    /** Focus the first choice — the primary button (Yes) for a tool-permission ask, the first
+    /** Focus the first choice: the primary button (Yes) for a tool-permission ask, the first
      *  option for an AskUserQuestion. Public so "Go to pane" can land the user on the ask, not the
      *  (hidden) textarea. Returns true if something was focused. */
     focusFirst(): boolean {
@@ -523,8 +523,8 @@ export class CvPermissionBanner extends LitElement {
                         permissionSuggestions:
                             dto.permissionSuggestions as unknown as PermissionSuggestion[],
                     };
-                    // AskUserQuestion is interactive — the user answers it directly rather than
-                    // allowing a tool — but it queues like everything else: it is still a
+                    // AskUserQuestion is interactive: the user answers it directly rather than
+                    // allowing a tool, but it queues like everything else: it is still a
                     // can_use_tool the CLI is waiting on, and letting it jump the queue would
                     // strand whatever was on screen.
                     this._enqueue(data);
@@ -538,7 +538,7 @@ export class CvPermissionBanner extends LitElement {
                 }
             }),
         );
-        // The CLI aborted this permission (interrupt / superseded turn) — no answer expected.
+        // The CLI aborted this permission (interrupt / superseded turn): no answer expected.
         this._offs.push(
             bridge.onNotification<ToolPermissionCancelNotification>(
                 Msg.toWebView.chat.toolPermissionCancel,
@@ -550,7 +550,7 @@ export class CvPermissionBanner extends LitElement {
             ),
         );
         // A pending plan was saved in the editor: show the new text. By id, on whichever request it
-        // is — the plan may be waiting behind another — and an id already answered is a no-op.
+        // is (the plan may be waiting behind another) and an id already answered is a no-op.
         this._offs.push(
             bridge.onNotification<PlanUpdatedNotification>(
                 Msg.toWebView.chat.planUpdated,
@@ -572,8 +572,8 @@ export class CvPermissionBanner extends LitElement {
         );
         // Session gone: everything waiting belonged to it, and none of it can be answered now.
         this._offs.push(bridge.onNotification(Msg.toWebView.chat.cleared, () => this._clearAll()));
-        // The CLI died. Nothing on screen can be answered any more — there is no process left to
-        // send the answer to — and a banner asking about a tool that will never run is worse than
+        // The CLI died. Nothing on screen can be answered any more: there is no process left to
+        // send the answer to, and a banner asking about a tool that will never run is worse than
         // no banner: the user clicks Yes and nothing happens. The failure itself is reported by
         // cv-app's notice; this only takes down what can no longer be acted on.
         this._offs.push(bridge.onNotification(Msg.toWebView.cli.exited, () => this._clearAll()));
@@ -635,10 +635,10 @@ export class CvPermissionBanner extends LitElement {
             return;
         }
         // Numbered actions, least-destructive first: Yes, [suggestion], No, focus the
-        // deny field. The last number doesn't confirm — it jumps to the textarea.
+        // deny field. The last number doesn't confirm: it jumps to the textarea.
         const actions = this._numberedActions();
         // Enter on a header button (the plan's "Open in editor") belongs to that button: falling
-        // through would confirm the default choice — accepting the plan in auto-accept — and the
+        // through would confirm the default choice (accepting the plan in auto-accept) and the
         // preventDefault would swallow the keypress the button clicks on.
         if (e.key === 'Enter' && this._activeInShadow()?.closest('#permission-header')) {
             return;
@@ -781,7 +781,7 @@ export class CvPermissionBanner extends LitElement {
         this._focusedOnOpen = false;
         // Nothing left to answer: hand the caret back to the composer. Clearing pendingPermission
         // re-shows the prompt, but only on the next render, so defer a frame (like dialog-focus).
-        // Not done when another request took over — updated() focuses that one's first choice.
+        // Not done when another request took over: updated() focuses that one's first choice.
         if (!req) {
             requestAnimationFrame(() =>
                 (
@@ -791,7 +791,7 @@ export class CvPermissionBanner extends LitElement {
         }
     }
 
-    /** Drop `toolUseId` wherever it is — on screen or still waiting. A queued one has to go too:
+    /** Drop `toolUseId` wherever it is: on screen or still waiting. A queued one has to go too:
      *  the CLI cancels a superseded request by id, and a tool_result can arrive for one nobody
      *  answered. Left in, it would surface later asking about a tool that has already run. */
     private _drop(toolUseId: string): void {
@@ -803,7 +803,7 @@ export class CvPermissionBanner extends LitElement {
     }
 
     /** The current request is answered or gone: show whoever was waiting, or close. Handing over
-     *  rather than closing is the point — the CLI is still holding those requests open. */
+     *  rather than closing is the point: the CLI is still holding those requests open. */
     private _dismiss(): void {
         this._show(this._queue.next());
     }
@@ -880,7 +880,7 @@ export class CvPermissionBanner extends LitElement {
 
     /** Enter in the Other field advances to the next question; Shift+Enter adds
      *  a newline, so a multi-line answer is still possible. */
-    /** Enter moves on, Shift+Enter breaks the line — the composer's own bargain, and the reason
+    /** Enter moves on, Shift+Enter breaks the line, the composer's own bargain, and the reason
      *  the field is a textarea at all. On the last question there is nothing to move on to, so
      *  Enter submits: otherwise the only way out of this field is the mouse, the digit shortcut
      *  being deliberately dead while typing here. */
@@ -903,7 +903,7 @@ export class CvPermissionBanner extends LitElement {
     };
 
     /** Up/Down move focus between the options (radio or checkbox), wrapping
-     *  around — selection stays on Enter/Space, so browsing never answers by
+     *  around: selection stays on Enter/Space, so browsing never answers by
      *  accident. Also stops the arrows from scrolling the panel. */
     private _onOptionsKey = (e: KeyboardEvent): void => {
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
@@ -1050,7 +1050,7 @@ export class CvPermissionBanner extends LitElement {
             if (s.mode === PERMISSION_MODE.acceptEdits) {
                 return 'Yes, allow all edits this session';
             }
-            // `default` asks about every edit again — the opposite of not asking, so it can't
+            // `default` asks about every edit again, the opposite of not asking, so it can't
             // share the wording below.
             return s.mode === PERMISSION_MODE.default
                 ? 'Yes, return to normal mode'
@@ -1120,7 +1120,7 @@ export class CvPermissionBanner extends LitElement {
         if (p.name === EXIT_PLAN_MODE) {
             return this._renderPlanPermission(p);
         }
-        // At most THREE numbered choices — 1 Yes, 2 "allow … for this project"
+        // At most THREE numbered choices: 1 Yes, 2 "allow … for this project"
         // (the suggestions collapsed into one), 3 No: more rows than that and the
         // banner stops being scannable. Numbers are keyboard shortcuts (handled
         // in _onKeydown), shown as a badge per row.
@@ -1206,7 +1206,7 @@ export class CvPermissionBanner extends LitElement {
     };
 
     /** Accept the plan and continue in `mode`. Two messages, in this order: the mode first, the
-     *  allow second — the turn resumes the moment the tool is allowed, so a mode arriving after
+     *  allow second: the turn resumes the moment the tool is allowed, so a mode arriving after
      *  it would leave the first edit to be judged in plan mode, and blocked.
      *
      *  Not `updatedPermissions`: the CLI attaches no permission_suggestions to ExitPlanMode (its

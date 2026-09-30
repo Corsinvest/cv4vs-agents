@@ -25,7 +25,7 @@ internal sealed class ReadDocumentBufferArgs
 
 /// <summary>MCP tool: read the editor buffer instead of the file on disk, so unsaved
 /// changes are visible. Without it the user has to save before asking about what they
-/// are writing — and the autosave hook, when it is on, saves for them, which is not the
+/// are writing, and the autosave hook, when it is on, saves for them, which is not the
 /// same as being able to look without touching.</summary>
 internal sealed class ReadDocumentBufferTool : McpTool<ReadDocumentBufferArgs>
 {

@@ -53,7 +53,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
 
             // WebView2 defaults to an opaque WHITE background before the first paint, which flashes
             // as a blank block until the bundle renders. Setting it on the control alone is too
-            // late — by then the controller exists and has already painted once — so it goes into
+            // late: by then the controller exists and has already painted once, so it goes into
             // the controller options, which is what "initialize the DefaultBackgroundColor early"
             // is for. Transparent lets the WPF host's VsBrush.Window (themed) show through instead.
             var controllerOpts = env.CreateCoreWebView2ControllerOptions();
@@ -80,7 +80,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             // Inject boot-time theme script BEFORE navigation to avoid FOUC (refreshed via InjectTheme).
             if (_pendingTheme.HasValue) { await RegisterBootThemeScriptAsync(_pendingTheme.Value); }
 
-            // Virtual https host instead of file:// — Chromium gives every file: document an origin
+            // Virtual https host instead of file://: Chromium gives every file: document an origin
             // unique to its own path, so the page cannot even reach itself ("Unsafe attempt to load
             // URL … from frame with URL …", the same URL on both sides). The virtual host gives one
             // real origin, correct MIME types, and a secure context.
@@ -89,7 +89,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             if (!File.Exists(indexPath))
             {
                 // Mapping a missing folder throws a bare DirectoryNotFoundException that names
-                // nothing — say which path we resolved before it does.
+                // nothing: say which path we resolved before it does.
                 log.Warn($"[webview] index.html not found at '{indexPath}' — the chat can't load");
             }
             webView.CoreWebView2.SetVirtualHostNameToFolderMapping(AppPaths.WebViewHost, folder, CoreWebView2HostResourceAccessKind.Allow);
@@ -100,7 +100,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             webView.CoreWebView2.AddWebResourceRequestedFilter($"https://{AppPaths.IconHost}/*", CoreWebView2WebResourceContext.Image);
             webView.CoreWebView2.WebResourceRequested += OnIconRequested;
 
-            // https, not http: the scheme costs nothing either way (nothing ever connects — the
+            // https, not http: the scheme costs nothing either way (nothing ever connects; the
             // host is served from disk), and https is what gives the page a secure context.
             webView.Source = new Uri($"https://{AppPaths.WebViewHost}/" + Path.GetFileName(indexPath));
         }
@@ -200,7 +200,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
 
     /// <summary>PID of the WebView2 browser process, or null before the WebView is up. WebView2
     /// keys the browser on the user-data folder, not on the host: every pane shares this one, and
-    /// so does a second VS instance running the extension. It identifies the group, not the pane —
+    /// so does a second VS instance running the extension. It identifies the group, not the pane:
     /// <see cref="RendererProcessIdAsync"/> is the per-pane process.</summary>
     public uint? BrowserProcessId => webView.CoreWebView2?.BrowserProcessId;
 
@@ -255,7 +255,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
     }
 
     /// <summary>Name the page after the pane, so the browser's task manager can tell one chat's
-    /// renderer from another's — every pane loads the same index.html, so they otherwise share one
+    /// renderer from another's: every pane loads the same index.html, so they otherwise share one
     /// title. Diagnostics only: nothing in the UI shows it.</summary>
     public void SetDocumentTitle(string title)
     {
@@ -270,11 +270,11 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
 
     /// <summary>Evaluate `script` in the page and return its value, or null when the WebView is
     /// gone or the script threw. ExecuteScriptAsync hands back the result JSON-encoded, so a
-    /// string comes out quoted and escaped — this unwraps it.
+    /// string comes out quoted and escaped: this unwraps it.
     /// <para>Deliberately NOT a bridge message: the bridge only carries WebView→host requests, and
     /// the host→WebView direction with a reply would mean correlation and timeouts built for a
     /// single diagnostic caller. The cost is that the script is a string, so what it names in the
-    /// page is not checked by anything — keep such callers to diagnostics, where a rename that
+    /// page is not checked by anything: keep such callers to diagnostics, where a rename that
     /// slips through degrades a dialog instead of breaking a feature.</para></summary>
     public async Task<string> EvalAsync(string script)
     {
@@ -284,7 +284,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             var core = webView.CoreWebView2;
             if (core == null) { return null; }
             var json = await core.ExecuteScriptAsync(script);
-            // "null" is what the page returns for undefined too — both mean "nothing to show".
+            // "null" is what the page returns for undefined too: both mean "nothing to show".
             return string.IsNullOrEmpty(json) || json == "null"
                 ? null
                 : JsonConvert.DeserializeObject<string>(json);
@@ -298,7 +298,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
 
     /// <summary>Give the WebView2 control the native (WPF) focus, so the keyboard actually reaches
     /// the page. Without this a JS `element.focus()` only shows a blinking caret while keystrokes
-    /// still go to VS — the WebView host must own the focus first. Call before posting
+    /// still go to VS: the WebView host must own the focus first. Call before posting
     /// ui_focus_input.
     /// <para>Guarded: a session switch can land after the pane closed, and Focus() on a disposed
     /// control throws where every other member here quietly no-ops.</para></summary>
@@ -309,7 +309,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         {
             // Already ours as far as WPF is concerned, which on a pane that has just opened is the
             // problem: rendering through Windows.UI.Composition, this control hands the focus to
-            // its WebView2 controller from OnGotFocus — and WPF doesn't raise that for a control
+            // its WebView2 controller from OnGotFocus, and WPF doesn't raise that for a control
             // that already has it. Focused while the controller was still being created, the
             // browser side never heard: document.hasFocus() stays false and the keys go elsewhere.
             // Dropping the focus and taking it back raises the event with the controller in place.
@@ -372,7 +372,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
                 _docCreatedScriptId = null;
             }
             // Tag <html> with the active theme; index.html's inline boot script reads it before first paint.
-            // This runs BEFORE the DOM is parsed, so documentElement may be null — fall back to readystatechange.
+            // This runs BEFORE the DOM is parsed, so documentElement may be null: fall back to readystatechange.
             var theme = isDark ? "dark" : "light";
             var script = $@"
                 (function() {{
@@ -406,7 +406,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
 
     /// <summary>Reply to a request (WebView sent an `id`): echoes the same id so the
     /// WebView's sendRequest Promise correlates the response. The channel `type` is the
-    /// existing ToWebView response channel (e.g. chat_image_data). Never queued — a
+    /// existing ToWebView response channel (e.g. chat_image_data). Never queued: a
     /// request only arrives after the WebView is ready.</summary>
     public void SendResponse(string type, int id, object data)
         => SendDirect(type, data, id);
@@ -427,7 +427,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
 
     // The ToWebView channels that carry request responses. In DEBUG, Send() warns if called
     // on one of these (a case that forgot Send→SendResponse would silently time out the Promise).
-    // chat_history is a pure response channel — the unprompted push goes on chat_history_loaded.
+    // chat_history is a pure response channel: the unprompted push goes on chat_history_loaded.
     private static readonly System.Collections.Generic.HashSet<string> _responseChannels =
     [
         BridgeMessages.ToWebView.Chat.ImageData,
@@ -465,12 +465,12 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
     }
 
     /// <summary>Hand one serialized envelope to the page. CoreWebView2 is thread-affine (UI
-    /// thread), so a caller on a background thread — a CLI-event continuation, say — is marshalled
+    /// thread), so a caller on a background thread (a CLI-event continuation, say) is marshalled
     /// rather than left to throw; already on it, we post straight through.
     /// <para>The `?.` is not enough on its own: once the control is disposed the GETTER throws
     /// ObjectDisposedException rather than returning null, and a message queued a moment before the
     /// pane closed runs after it. That is an ordinary end-of-life race, not a fault, so it is
-    /// swallowed here — including inside the dispatched branch, which the caller's try/catch does
+    /// swallowed here, including inside the dispatched branch, which the caller's try/catch does
     /// not cover.</para></summary>
     private void Post(string json)
     {

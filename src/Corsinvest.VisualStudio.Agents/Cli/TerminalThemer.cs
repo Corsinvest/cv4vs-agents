@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  *
  * The 16-entry ANSI palettes below are standard console colors, stored as COLORREF
- * (0x00BBGGRR) — the byte order Windows Terminal's ColorTable expects.
+ * (0x00BBGGRR), the byte order Windows Terminal's ColorTable expects.
  */
 
 using Microsoft.Terminal.Wpf;

@@ -13,13 +13,13 @@ namespace Corsinvest.VisualStudio.Agents.Chat;
 /// <para>
 /// Builds a tiny inline preview (PNG data-URI) from a chat image's original base64.
 /// Shown in the attachment chip so a history image is visible immediately, without
-/// fetching the full bytes — those stay lazy (fetched on click for the lightbox).
+/// fetching the full bytes: those stay lazy (fetched on click for the lightbox).
 /// </para>
 /// <para>
 /// WPF decoding is used on purpose: <c>DecodePixelWidth</c> downsamples at decode
 /// time, so the full-size bitmap is never allocated (a 4K screenshot never becomes a
-/// 32 MB surface just to make a 16 px thumbnail). Output is always re-encoded to PNG
-/// — the source may be jpeg/gif/webp, but the previews are tiny and PNG stays crisp on
+/// 32 MB surface just to make a 16 px thumbnail). Output is always re-encoded to PNG:
+/// the source may be jpeg/gif/webp, but the previews are tiny and PNG stays crisp on
 /// the screenshots/text this chat mostly carries. Any failure returns null (the chip
 /// falls back to its generic file-type icon).
 /// </para>
@@ -33,7 +33,7 @@ internal static class ThumbnailGenerator
     /// <summary>
     /// Decode <paramref name="base64"/> to a ≤DecodeWidth PNG thumbnail and return it as a
     /// <c>data:image/png;base64,…</c> URI, or null if the input is empty or can't be decoded.
-    /// Safe to call off the UI thread — the bitmaps are frozen and never touch the dispatcher.
+    /// Safe to call off the UI thread: the bitmaps are frozen and never touch the dispatcher.
     /// </summary>
     public static string Make(string base64)
     {
@@ -68,7 +68,7 @@ internal static class ThumbnailGenerator
         }
         catch (Exception ex)
         {
-            // Unsupported codec (no WIC decoder), corrupt data, etc. — skip the preview.
+            // Unsupported codec (no WIC decoder), corrupt data, etc. Skip the preview.
             OutputWindowLogger.Global.LogException("ThumbnailGenerator.Make", ex);
             return null;
         }

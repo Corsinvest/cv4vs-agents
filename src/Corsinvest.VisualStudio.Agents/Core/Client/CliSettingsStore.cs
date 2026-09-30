@@ -11,7 +11,7 @@ using System.IO;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Client;
 
-/// <summary>Writes the CLI's own settings.json — its contract, not ours. The control protocol can't:
+/// <summary>Writes the CLI's own settings.json, its contract, not ours. The control protocol can't:
 /// update_settings refuses remoteControlAtStartup ("keys not allowed") and apply_flag_settings
 /// answers success while persisting nothing, which is why the VS Code extension writes the file by
 /// hand too. Everything it wasn't asked to change is kept, and a file it can't read is never

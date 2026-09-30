@@ -11,7 +11,7 @@ namespace Corsinvest.VisualStudio.Agents.Tests;
 
 /// <summary>What goes back to the CLI when a plan edited in the editor is approved.
 /// <para>Both directions fail quietly. Send nothing for a real edit and the CLI re-reads a file that
-/// may not hold it; send a plan for an untouched one and the model is told the user rewrote it —
+/// may not hold it; send a plan for an untouched one and the model is told the user rewrote it,
 /// and the CLI writes that text over the file.</para></summary>
 public class PlanApprovalTests
 {

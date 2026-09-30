@@ -12,7 +12,7 @@ namespace Corsinvest.VisualStudio.Agents.Chat;
 
 /// <summary>Replays a page of raw JSONL history messages through the SAME EmitUser/
 /// EmitAssistant used live, accumulating the typed bridge events instead of sending them.
-/// One construction path for live and history — no separate history parser.</summary>
+/// One construction path for live and history: no separate history parser.</summary>
 internal static class HistoryReplay
 {
     /// <summary>Turn a chronological JArray of history messages into typed bridge events.

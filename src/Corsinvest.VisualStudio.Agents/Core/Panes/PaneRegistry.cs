@@ -34,13 +34,13 @@ public sealed class PaneRegistry
     public event Action LastSessionEnded;
 
     /// <summary>Fired for every close, the last one included. <see cref="LastSessionEnded"/> answers
-    /// "is anything still open"; this one answers "what is open now" — the status bar shows one
+    /// "is anything still open"; this one answers "what is open now": the status bar shows one
     /// profile and has to leave a profile whose panes have all gone, even with others still up.</summary>
     public event Action SessionClosed;
 
     /// <summary>Append a freshly-created entry, notify, and raise lifecycle events.
     /// No dedupe: every RegisterInstance mints a distinct entry (unique <see cref="PaneEntry.SeqNo"/>),
-    /// removed by exact instance. Identity must NOT key off PaneId — VS recycles
+    /// removed by exact instance. Identity must NOT key off PaneId: VS recycles
     /// MultiInstanceToolNum, so two live panes can briefly share one and a PaneId-keyed
     /// dedupe would silently evict a still-open sibling.</summary>
     public PaneEntry Add(PaneEntry entry)
@@ -63,7 +63,7 @@ public sealed class PaneRegistry
         Entries.Remove(entry);
         // The one service this registry names, and deliberately: a pane closed mid-turn sends no
         // `result`, so nothing else releases its sleep block. Not routed through SessionClosed
-        // because that event carries no entry — and the twin release, on process death, has to run
+        // because that event carries no entry, and the twin release, on process death, has to run
         // off the UI thread anyway, so an event here would only cover half the problem.
         Power.KeepAwakeService.Instance.Forget(entry.SeqNo);
         SessionClosed?.Invoke();
@@ -76,7 +76,7 @@ public sealed class PaneRegistry
 
     /// <summary>Close every live pane via its CloseAction (which disposes the pane and
     /// removes the entry). Used when no solution came back after a close, and on package
-    /// teardown. Snapshot first — CloseAction mutates Entries.</summary>
+    /// teardown. Snapshot first: CloseAction mutates Entries.</summary>
     public void CloseAll()
     {
         foreach (var entry in Entries.ToArray())
@@ -89,7 +89,7 @@ public sealed class PaneRegistry
     /// <summary>Close every pane whose working directory differs from <paramref name="workingDirectory"/>,
     /// and return how many were left alive. A solution reload reopens the same folder, so the panes on
     /// it keep their live CLI process instead of being torn down and resumed from disk. A null or empty
-    /// folder means "no solution" — nothing can match, so everything closes.
+    /// folder means "no solution": nothing can match, so everything closes.
     /// Snapshot first: CloseAction mutates Entries.</summary>
     public int CloseWhereWorkdirDiffers(string workingDirectory)
     {
@@ -109,7 +109,7 @@ public sealed class PaneRegistry
         => !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b)
            && string.Equals(a.TrimEnd('\\', '/'), b.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Live entries of one kind — what the toolbar open-panes list binds to.</summary>
+    /// <summary>Live entries of one kind: what the toolbar open-panes list binds to.</summary>
     public IEnumerable<PaneEntry> OfKind(PaneKind kind) => Entries.Where(e => e.Kind == kind);
 
     public PaneEntry Find(PaneKind kind, int paneId)

@@ -40,7 +40,7 @@ public partial class StatisticsControl : UserControl
         {
             // Loaded fires again every time the tab is re-activated / regains focus. Re-attach the
             // indexing event each time (Unloaded detaches it), but run the initial build + index ONLY
-            // once — otherwise it would re-index on every tab switch.
+            // once: otherwise it would re-index on every tab switch.
             StatsService.IndexingCompleted -= OnIndexingCompleted;
             StatsService.IndexingCompleted += OnIndexingCompleted;
             if (_loaded) { return; }
@@ -120,7 +120,7 @@ public partial class StatisticsControl : UserControl
 
     private static bool Matches(StatsSelection a, StatsSelection b)
         => a.Scope == b.Scope
-        // Profiles are reloaded on every rebuild, so a new instance each time — compare by config-dir
+        // Profiles are reloaded on every rebuild, so a new instance each time: compare by config-dir
         // (stable), not by reference, or the selection would never survive a range change.
         && string.Equals(ConfigIdOf(a.Profile), ConfigIdOf(b.Profile), StringComparison.OrdinalIgnoreCase)
         && string.Equals(a.ProjectDir, b.ProjectDir, StringComparison.OrdinalIgnoreCase)
@@ -137,7 +137,7 @@ public partial class StatisticsControl : UserControl
         {
             // BuildTree's programmatic IsSelected re-selects the very node it just stored in _selNode;
             // that echo would race the caller's own ReloadAsync (the donut flickered in then out). Only
-            // a real user pick lands on a different node — reload just for those.
+            // a real user pick lands on a different node: reload just for those.
             if (ReferenceEquals(node, _selNode)) { return; }
             _selNode = node;
             _sel = node.Selection;
@@ -153,7 +153,7 @@ public partial class StatisticsControl : UserControl
     }
 
     // Refresh: incremental re-index (only changed files). Recreate: full re-index from scratch
-    // (ignore cache — picks up moved files / changed cwd). Both show the spinner while running;
+    // (ignore cache: picks up moved files / changed cwd). Both show the spinner while running;
     // OnIndexingCompleted rebuilds the tree + reloads + re-enables. Single-flight: no-op if running.
     private void OnRefreshClick(object sender, RoutedEventArgs e) => StartIndex(force: false);
 
@@ -175,7 +175,7 @@ public partial class StatisticsControl : UserControl
     }
 
     private void OnIndexingCompleted() =>
-        // Raised on a background thread — marshal to the UI, restore the buttons, rebuild the tree
+        // Raised on a background thread: marshal to the UI, restore the buttons, rebuild the tree
         // (new sessions may have appeared) preserving the selection, then re-read.
         _ = ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
@@ -198,11 +198,11 @@ public partial class StatisticsControl : UserControl
             var slices = await Task.Run(() => StatsService.ChildBreakdown(node, range));
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            // A newer reload started while this one ran — drop this stale paint.
+            // A newer reload started while this one ran: drop this stale paint.
             if (token != _reloadToken) { return; }
             Apply(resp);
             Donut.SetData(slices);
-            // Show even a single child (a full 100% ring) — a hidden donut where the node clearly has
+            // Show even a single child (a full 100% ring): a hidden donut where the node clearly has
             // data reads as a bug. Only a true leaf (no children) yields an empty list and hides it.
             var showDonut = slices.Count >= 1;
             BreakdownHead.Visibility = Donut.Visibility = showDonut ? Visibility.Visible : Visibility.Collapsed;

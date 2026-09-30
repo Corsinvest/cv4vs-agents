@@ -15,7 +15,7 @@ using System.Text;
 namespace Corsinvest.VisualStudio.Agents.Tests;
 
 /// <summary>A throwaway config-dir holding one session .jsonl, laid out where the CLI would put it.
-/// <para>The readers take the real filesystem — ClaudePaths and the working directory both arrive
+/// <para>The readers take the real filesystem: ClaudePaths and the working directory both arrive
 /// through the constructor, so a temp folder is all the isolation needed. No IFileSystem seam:
 /// these files are small, and an abstraction here would be tested instead of the code that ships.
 /// </para></summary>
@@ -41,7 +41,7 @@ internal sealed class SessionFixture : IDisposable
         => Write(lines, Formatting.None);
 
     /// <summary>The same content through a pretty-printing writer. Still valid JSONL only if each
-    /// record stays on one line, so indentation goes INSIDE the object — which is the shape the
+    /// record stays on one line, so indentation goes INSIDE the object, which is the shape the
     /// string-matching scan has to survive: '"type": "user"' with a space after the colon.</summary>
     public static SessionFixture Pretty(IEnumerable<JObject> lines)
         => Write(lines, Formatting.None, spaceAfterColon: true);
@@ -155,7 +155,7 @@ internal static class Jsonl
         };
     }
 
-    /// <summary>A snapshot with nothing tracked — present in real transcripts, and NOT rewindable.</summary>
+    /// <summary>A snapshot with nothing tracked: present in real transcripts, and NOT rewindable.</summary>
     public static JObject EmptySnapshot(string messageId) => new()
     {
         ["type"] = "file-history-snapshot",
@@ -166,7 +166,7 @@ internal static class Jsonl
     /// <summary>A prompt sent while a turn was running, as the CLI records it once injected: an
     /// attachment with its own line uuid, carrying the uuid it was sent with as source_uuid. The
     /// prompt is a block array with the editor-context block ahead, the host's shape. Keys in the
-    /// CLI's order: the nested attachment, with its own "type", comes BEFORE the line's type — a
+    /// CLI's order: the nested attachment, with its own "type", comes BEFORE the line's type: a
     /// scan taking the first "type" it meets reads the wrong one.</summary>
     public static JObject QueuedPrompt(string uuid, string sourceUuid, string text, string parent = null,
                                        string commandMode = "prompt", JObject origin = null) => new()

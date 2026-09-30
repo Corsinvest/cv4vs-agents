@@ -14,7 +14,7 @@ export function captureFocus(): HTMLElement | null {
 /** Restore focus to `target` (if still connected) or fall back to the composer.
  *  Delayed (two frames + 250 ms) so Fluent's own focus-restore runs first. The
  *  fallback goes through cv-prompt.focusInput() (like init.ts), not a global
- *  querySelector for the textarea — it lives in cv-prompt's shadow. */
+ *  querySelector for the textarea: it lives in cv-prompt's shadow. */
 export function restoreFocus(target: HTMLElement | null): void {
     const refocus = () => {
         if (target && target.isConnected) {
@@ -31,7 +31,7 @@ export function restoreFocus(target: HTMLElement | null): void {
 // modal <dialog> can't auto-close; init.ts' ui_escape handler asks the top dialog
 // to close instead. A registry (not a DOM query) keeps this shadow-DOM-proof: the
 // dialog's <fluent-dialog> may live in its shadow root, unreachable by a global
-// querySelector — but the dialog knows how to close itself.
+// querySelector, but the dialog knows how to close itself.
 const openDialogs: Array<() => void> = [];
 
 /** Register a dialog's close callback when it opens (call from `open()`). No-op if
@@ -44,7 +44,7 @@ export function pushDialog(close: () => void): void {
 }
 
 /** Deregister on close (call from `close()` / the toggle-closed handler). Safe to
- *  call when not present (idempotent) — the toggle event may fire after close(). */
+ *  call when not present (idempotent): the toggle event may fire after close(). */
 export function popDialog(close: () => void): void {
     const i = openDialogs.lastIndexOf(close);
     if (i >= 0) {

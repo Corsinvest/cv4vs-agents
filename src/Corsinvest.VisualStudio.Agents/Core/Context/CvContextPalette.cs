@@ -10,7 +10,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Context;
 
 /// <summary>Category-name → colour, ported from the WebView dialog's CATEGORY_BY_NAME
 /// (cv-context-dialog.ts). The CLI's per-category Color symbol reuses the same value across
-/// categories (promptBorder / inactive), so we key on the stable category NAME instead — like VS
+/// categories (promptBorder / inactive), so we key on the stable category NAME instead, like VS
 /// Code. Vivid mid-tone hues, legible on both the light and dark VS themes.</summary>
 internal static class CvContextPalette
 {
@@ -30,7 +30,7 @@ internal static class CvContextPalette
     private static readonly Brush Lavender = Freeze(0x8B, 0x5C, 0xF6);
 
     /// <summary>The unfilled memory-map cell (never a category colour). Matches the TS
-    /// colorNeutralBackground4 — a dim grey the coloured cells clearly stand out from.</summary>
+    /// colorNeutralBackground4: a dim grey the coloured cells clearly stand out from.</summary>
     public static readonly Brush EmptyCell = Freeze(0x3B, 0x3B, 0x3B);
 
     // Same keys as the TS CATEGORY_BY_NAME. Free space maps to the empty-cell grey (a track, never a

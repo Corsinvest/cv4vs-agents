@@ -11,13 +11,13 @@
     instead of a double-click, a dialog and a manual cleanup.
 
     Experimental hives by default: that is where an extension under test belongs, and it keeps the
-    IDE you actually work in untouched — including while this runs, since only instances on the hive
+    IDE you actually work in untouched, including while this runs, since only instances on the hive
     being written to have to be closed.
 
     Why this exists rather than "just use Manage Extensions":
 
     - VS keys extensions by Identity Id, so a build with a changed identity installs *alongside* the
-      old one, giving duplicate menu entries and two MCP servers racing for the same lock file —
+      old one, giving duplicate menu entries and two MCP servers racing for the same lock file,
       which reads as a bug in the code.
     - Deleting the folder is not enough on its own: VS caches menu entries, so a removed extension
       leaves dead commands behind until devenv /updateconfiguration runs.
@@ -85,7 +85,7 @@ $Status = -not ($Install -or $Uninstall -or $Reinstall)
 $IdentityPattern = 'Corsinvest\.VisualStudio\.(Agents|ClaudeCode)'
 
 # -products * also returns SQL Server Management Studio, which ships through the VS installer but
-# can't host a VSIX — name the three editions that can instead of filtering it out afterwards.
+# can't host a VSIX: name the three editions that can instead of filtering it out afterwards.
 $Editions = @(
     'Microsoft.VisualStudio.Product.Community'
     'Microsoft.VisualStudio.Product.Professional'
@@ -98,7 +98,7 @@ $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer
 # only instance is one of those -- right after -Uninstall has already removed the old copy.
 $hiveRoot = Join-Path $env:LOCALAPPDATA 'Microsoft\VisualStudio'
 
-# Hive folders are named <version>_<instanceId>[Exp] — "17.0_456b4614Exp" names no product a human
+# Hive folders are named <version>_<instanceId>[Exp]: "17.0_456b4614Exp" names no product a human
 # recognises, so resolve the instance id back to what vswhere calls it.
 $script:instanceNames = $null
 function Get-InstanceName {
@@ -121,7 +121,7 @@ function Get-InstanceName {
 
 # Returns the folder of every installed copy, across every layout: VSIXInstaller writes
 # Extensions\<random>\, the F5 deploy writes Extensions\Corsinvest\<display name>\, and a
-# per-version install adds a third level, Extensions\<publisher>\<display name>\<version>\ —
+# per-version install adds a third level, Extensions\<publisher>\<display name>\<version>\,
 # hence -Depth 3 and the match on the manifest rather than on the folder name. Too shallow a
 # depth is silent: nothing matches, and the script reports "Nothing installed" over a hive that
 # has copies in it, so -Uninstall leaves them behind and -Install stacks on top.
@@ -155,7 +155,7 @@ function Find-InstalledCopies {
 
 # VS holds its extension folders open, and VSIXInstaller writes into the hive VS reads at startup:
 # either one under a running instance leaves a half-applied state. Only the instances on the hive
-# being touched matter, though — the hives are separate folders and separate registry nodes, so a
+# being touched matter, though: the hives are separate folders and separate registry nodes, so a
 # normal instance neither locks the experimental extension folder nor minds it being rewritten.
 # That is what lets the chat pane in the normal instance stay open while a build is installed for
 # testing next door.
@@ -214,7 +214,7 @@ function Show-Status {
         Write-Host "  $(Get-InstanceName $group.Name)" -ForegroundColor Cyan
 
         foreach ($copy in $group.Group) {
-            # The identity is always the same one — printing it every time is noise. It earns a
+            # The identity is always the same one: printing it every time is noise. It earns a
             # line only when it is the former ...ClaudeCode, which is a leftover to remove.
             $version = "v$($copy.Version)"
             if ($copy.Id -notlike '*.Agents') { $version += "  [$($copy.Id)]" }
@@ -348,7 +348,7 @@ function Invoke-Install {
     # so the script would report success before the install had even started.
     $code = (Start-Process $installer -ArgumentList $vsixArgs -PassThru -Wait).ExitCode
 
-    # 1001 means "already installed at this version" — not a failure worth stopping a test cycle for.
+    # 1001 means "already installed at this version", not a failure worth stopping a test cycle for.
     switch ($code) {
         0 { Write-Host "`nInstalled." -ForegroundColor Green }
         1001 { Write-Host "`nAlready installed at this version. Uninstall first, or bump VsixVersion." -ForegroundColor Yellow }
@@ -378,7 +378,7 @@ function Invoke-Install {
     Write-Host "`nStart VS to pick it up." -ForegroundColor Green
 }
 
-# Reporting doesn't touch anything, so it works with VS open — which is when you most want to ask
+# Reporting doesn't touch anything, so it works with VS open, which is when you most want to ask
 # what is installed.
 if ($Status) {
     Show-Status

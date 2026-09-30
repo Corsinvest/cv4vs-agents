@@ -16,7 +16,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 /// overwrite the user's edits.</para></summary>
 internal static class PlanApproval
 {
-    /// <summary>The CLI's tool name — its contract, not ours.</summary>
+    /// <summary>The CLI's tool name: its contract, not ours.</summary>
     public const string ToolName = "ExitPlanMode";
 
     /// <summary>The plan file the CLI named, or null when it named none (a CLI predating the field).</summary>
@@ -29,7 +29,7 @@ internal static class PlanApproval
 
     /// <summary>Strip a BOM and fold CRLF to LF. A VS save can add either without the user changing a
     /// word: compared raw, an untouched plan would come back "edited by user", and sent raw it would
-    /// leave the file with mixed line endings — which VS then stops on with a modal.</summary>
+    /// leave the file with mixed line endings, which VS then stops on with a modal.</summary>
     public static string Normalize(string text)
     {
         if (string.IsNullOrEmpty(text)) { return ""; }

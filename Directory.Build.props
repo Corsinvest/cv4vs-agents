@@ -3,7 +3,7 @@
   <!--
     Single source of truth for the product version.
 
-    Bump it here and nowhere else — everything downstream is generated:
+    Bump it here and nowhere else, everything downstream is generated:
       - the assembly version attributes, by GenerateVersionAssemblyInfo
       - <Identity Version> in source.extension.vsixmanifest, which holds the token
         |%CurrentProject%;GetVsixVersion| and is resolved at build time
@@ -14,7 +14,7 @@
   -->
   <PropertyGroup>
     <!--
-      The whole version, suffix and all — this is what the release tag must equal, and what
+      The whole version, suffix and all: this is what the release tag must equal, and what
       AssemblyInformationalVersion carries so a preview build can say it is one at runtime. Ship a
       stable release by dropping the suffix.
     -->
@@ -29,7 +29,7 @@
 
   <!--
     Package-level metadata (PackageLicenseExpression, RepositoryUrl, …) is deliberately absent:
-    nothing here ships to NuGet. The VSIX equivalents — licence, repo link, description, tags —
+    nothing here ships to NuGet. The VSIX equivalents (licence, repo link, description, tags)
     live in source.extension.vsixmanifest, which is what the Marketplace reads. Company, Product
     and Copyright stay in the legacy AssemblyInfo.cs; only the version attributes are generated
     (GenerateVersionAssemblyInfo), because those need to agree with Version.

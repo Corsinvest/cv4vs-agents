@@ -14,7 +14,7 @@ using System.Runtime.InteropServices;
 namespace Corsinvest.VisualStudio.Agents.Core.FileHistory;
 
 /// <summary>Tool window listing what the CLI's file backups occupy on disk, and deleting them.
-/// Owns no file — see StatisticsWindow for why that makes a tool window the right shape.
+/// Owns no file: see StatisticsWindow for why that makes a tool window the right shape.
 /// Single-instance.</summary>
 [Guid("9e6b3f24-71ad-4c85-b0f2-3d5817ea9c46")]
 public sealed class FileHistoryWindow : ToolWindowPane

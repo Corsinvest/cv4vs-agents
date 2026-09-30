@@ -6,9 +6,9 @@ import type { TemplateResult } from 'lit';
 import type { ViewMode } from '../types';
 
 /**
- * Chat command model — the `/` menu and the attach menu's command item are built from
+ * Chat command model: the `/` menu and the attach menu's command item are built from
  * these. Same shape as the tool-renderers: a command is a small class that gets a
- * CommandHost (the atomic actions it may call) and stays pure — no bridge/state/DOM
+ * CommandHost (the atomic actions it may call) and stays pure: no bridge/state/DOM
  * imports. Mirrors the CLI's kinds: `run` acts and is done (CLI `local`); `render`
  * opens its own result UI (CLI `local-jsx`); dynamic CLI/skill commands are `run`
  * commands that just `host.sendPrompt("/name args")` (CLI `prompt`).
@@ -27,7 +27,7 @@ export type CommandTrailing = 'toggle' | 'slider' | 'value';
 
 /**
  * Atomic actions a command may invoke, implemented by the composer (cv-prompt).
- * Kept minimal and semantic — same spirit as ToolHost. If it grows a lot, a
+ * Kept minimal and semantic, same spirit as ToolHost. If it grows a lot, a
  * command is probably doing too much.
  */
 export interface CommandHost {
@@ -50,7 +50,7 @@ export interface CommandHost {
     /** Open this pane's session picker (same popup as the toolbar History button). */
     openSessionHistory(): void;
     /** Open the rewind dialog. Routed through the host because the list it shows is built from the
-     *  transcript, which belongs to cv-app — a command cannot read it from here. */
+     *  transcript, which belongs to cv-app: a command cannot read it from here. */
     openRewind(): void;
     /** Open a fresh chat pane (same as the toolbar "+" for Chat). */
     openChatPane(): void;
@@ -75,7 +75,7 @@ export interface CommandHost {
  */
 export type TrailingControl =
     | { kind: 'toggle'; on: boolean }
-    /** `icon` (raw SVG) shows the current value's own glyph next to the label — used where the
+    /** `icon` (raw SVG) shows the current value's own glyph next to the label, used where the
      *  value has one, so the row, the toolbar trigger and the picker all read the same. */
     | { kind: 'value'; label: string; icon?: string }
     | {
@@ -95,7 +95,7 @@ export abstract class ChatCommand {
     abstract readonly label: string;
     abstract readonly section: CommandSection;
     /** Position within its section (ascending). Ties break by label A–Z, so
-     *  unset (0) items sort alphabetically — matching the CLI slash list. */
+     *  unset (0) items sort alphabetically, matching the CLI slash list. */
     readonly order: number = 0;
     readonly description?: string;
     readonly aliases: readonly string[] = [];
@@ -119,7 +119,7 @@ export abstract class ChatCommand {
 
     /** Action: do something via the host, then the menu closes. */
     run(_host: CommandHost): void {
-        // no-op by default — render-only commands don't act
+        // no-op by default: render-only commands don't act
     }
 
     /** Result UI: render the command's own panel (e.g. Usage). Undefined = none. */

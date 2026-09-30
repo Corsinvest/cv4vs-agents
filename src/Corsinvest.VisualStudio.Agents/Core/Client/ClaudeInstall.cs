@@ -20,18 +20,18 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 /// <para>
 /// We need the REAL <c>claude.exe</c> (a PE binary): ConPTY's CreateProcess and the Chat's
 /// ProcessStartInfo both launch it directly, and neither runs a <c>.cmd</c>/<c>.ps1</c> shim. So
-/// the resolver looks for <c>claude.exe</c> specifically — never the npm shims (<c>claude</c>,
+/// the resolver looks for <c>claude.exe</c> specifically, never the npm shims (<c>claude</c>,
 /// <c>claude.cmd</c>, <c>claude.ps1</c>) that <c>where claude</c> returns.
 /// </para>
 /// </summary>
 public static class ClaudeInstall
 {
-    /// <summary>Anthropic setup/quickstart page — shown when the binary can't be found.</summary>
+    /// <summary>Anthropic setup/quickstart page, shown when the binary can't be found.</summary>
     public const string DocsUrl = "https://code.claude.com/docs/en/setup";
 
     /// <summary>Session-identity variables to strip from a CLI we launch. Start Visual Studio from
     /// inside a Claude Code session and VS inherits that session's identity, then hands it to every
-    /// claude.exe it spawns — the child reads the markers of a conversation it has no part in.
+    /// claude.exe it spawns: the child reads the markers of a conversation it has no part in.
     /// <para>Shared by both launch paths. <c>CLAUDE_CODE_ENTRYPOINT</c> is deliberately absent:
     /// both assign it straight after, so dropping it first would only be noise.</para></summary>
     public static readonly string[] InheritedSessionEnvVars =
@@ -42,7 +42,7 @@ public static class ClaudeInstall
         "CLAUDE_CODE_MESSAGING_SOCKET",
         "CLAUDE_CODE_MESSAGING_TOKEN",
         "CLAUDE_PID",
-        // Inherited, this one turns transcript saving off — no .jsonl, so no history, no --resume.
+        // Inherited, this one turns transcript saving off: no .jsonl, so no history, no --resume.
         // The CLI only says so in its TUI, which the chat pane never shows.
         "CLAUDE_CODE_CHILD_SESSION",
         "TRACEPARENT",
@@ -147,7 +147,7 @@ public static class ClaudeInstall
                 OutputWindowLogger.Global.Warn("[cli] `claude --version` timed out");
                 return null;
             }
-            // "2.1.245 (Claude Code)" — the version is the first token.
+            // "2.1.245 (Claude Code)": the version is the first token.
             var first = stdout.Result?.Trim().Split(' ')[0];
             return string.IsNullOrEmpty(first) ? null : first;
         }

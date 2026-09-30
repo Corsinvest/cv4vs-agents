@@ -13,7 +13,7 @@ namespace Corsinvest.VisualStudio.Agents.Options;
 
 /// <summary>Editor for one context menu's prompts, a tab of <see cref="AgentsEditorPromptsPage"/>.
 /// Edits an ObservableCollection and writes it back to the page's list for its scope on every
-/// change, so Apply finds the current state — the page owns persistence, this owns the UI. One
+/// change, so Apply finds the current state: the page owns persistence, this owns the UI. One
 /// control for every menu: what differs is passed in.</summary>
 public partial class PromptListControl : UserControl
 {

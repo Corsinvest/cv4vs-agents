@@ -18,7 +18,7 @@ internal sealed class AttachDebugArgs
 }
 
 /// <summary>MCP tool: attach the debugger to an already-running local process. The primary AI
-/// debugging workflow — the app is running, attach and inspect rather than launching with F5.</summary>
+/// debugging workflow: the app is running, attach and inspect rather than launching with F5.</summary>
 internal sealed class AttachDebugTool : McpTool<AttachDebugArgs>
 {
     public override string Name => "debug_attach";

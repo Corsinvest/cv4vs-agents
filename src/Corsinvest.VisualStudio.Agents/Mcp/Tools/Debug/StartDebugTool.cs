@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
-/// <summary>MCP tool: start debugging the startup project (like F5). Non-blocking — the program
+/// <summary>MCP tool: start debugging the startup project (like F5). Non-blocking: the program
 /// then runs until it hits a breakpoint or ends. Use debug_get_state to know when it pauses.</summary>
 internal sealed class StartDebugTool : McpTool<NoArgs>
 {

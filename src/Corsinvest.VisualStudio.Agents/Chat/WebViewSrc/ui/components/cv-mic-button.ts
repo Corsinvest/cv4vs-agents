@@ -22,7 +22,7 @@ export class CvMicButton extends LitElement {
         tooltipStyles,
         css`
             /* While recording: red button that pulses, reads as "stop". The colour is set on the
-               host, over the subtle appearance — this state is the one thing Fluent has no
+               host, over the subtle appearance: this state is the one thing Fluent has no
                variant for. */
             .trigger.is-recording,
             .trigger.is-recording:hover {
@@ -62,7 +62,7 @@ export class CvMicButton extends LitElement {
      * `abort()` and not `stop()`: stop() finalises the pending utterance and fires one last
      * `onresult`, which would dispatch `transcript` at a detached listener. The handlers are
      * cleared first because abort() still fires `onend`, and that branch dispatches
-     * `recording-end` — cv-prompt's handler reads its textarea, which is gone by then.
+     * `recording-end`: cv-prompt's handler reads its textarea, which is gone by then.
      */
     override disconnectedCallback(): void {
         super.disconnectedCallback();

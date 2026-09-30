@@ -4,7 +4,7 @@
  */
 
 /* All colors / typography / spacing / radii come from Fluent v3 tokens
- * applied via setTheme(webDarkTheme | webLightTheme) — see ui/fluent.ts.
+ * applied via setTheme(webDarkTheme | webLightTheme); see ui/fluent.ts.
  * No custom CSS variables. Theme switching just calls setTheme() again. */
 
 ::selection {
@@ -43,7 +43,7 @@
 /* Zero the browser-default margin/padding on plain HTML tags only. A universal
  * `* { margin:0; padding:0 }` also hits Fluent web components, wiping the padding
  * they set on their shadow :host (dialog-body content flush to the edges, dropdown
- * cramped, …) — so target the offending tags explicitly instead of every element. */
+ * cramped, …), so target the offending tags explicitly instead of every element. */
 body,
 h1, h2, h3, h4, h5, h6,
 p, ul, ol, dl, dd,
@@ -79,7 +79,7 @@ fluent-link svg[fill='none'] {
 }
 /* Fluent's small icon-only button scales its glyph to 20px; pin it to 14, the size every action
  * icon in the chat is drawn at (shadow-DOM components do the same via iconStyles).
- * Only icon-only buttons — labelled ones keep their sizing. */
+ * Only icon-only buttons: labelled ones keep their sizing. */
 fluent-button[icon-only] svg {
     width: 14px;
     height: 14px;

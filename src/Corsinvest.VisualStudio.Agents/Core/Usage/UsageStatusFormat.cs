@@ -21,7 +21,7 @@ internal enum UsageLevel
     Critical,
 }
 
-/// <summary>One figure in the status bar item — "5h 44%" — with the level its bar is drawn at.</summary>
+/// <summary>One figure in the status bar item ("5h 44%") with the level its bar is drawn at.</summary>
 internal sealed class UsageSegment(string label, int percent, UsageLevel level)
 {
     public string Label { get; } = label;
@@ -56,7 +56,7 @@ internal static class UsageStatusFormat
     };
 
     /// <summary>Available when the CLI reported windows, NoPlan when it answered without any, Unavailable
-    /// when there was no answer at all — the distinction the Usage tab doesn't need to make.</summary>
+    /// when there was no answer at all: the distinction the Usage tab doesn't need to make.</summary>
     public static UsageAvailability Classify(UsageDto usage)
         => usage == null ? UsageAvailability.Unavailable
             : usage.RateLimitsAvailable && usage.Windows?.Length > 0 ? UsageAvailability.Available
@@ -202,7 +202,7 @@ internal static class UsageStatusFormat
     }
 
     /// <summary>Folds a rate_limit_event into the windows already shown. The event covers one window in
-    /// its own units — a 0..1 fraction and Unix seconds — so it is converted here. Returns the input
+    /// its own units (a 0..1 fraction and Unix seconds) so it is converted here. Returns the input
     /// itself when the event names nothing this can place; never edits it.</summary>
     public static RateWindowDto[] ApplyRateLimit(RateWindowDto[] windows, RateLimitInfo info)
     {

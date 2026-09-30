@@ -45,7 +45,7 @@ internal sealed class SearchWorkspaceSymbolsTool : McpTool<SearchWorkspaceSymbol
         return new
         {
             supported = true,
-            // Null unless part of the solution could not be searched — see SkippedReason. Without
+            // Null unless part of the solution could not be searched; see SkippedReason. Without
             // it an empty result reads as "no such symbol" rather than "none where I could look".
             reason = r.Reason,
             results = r.Hits.Select(h => new

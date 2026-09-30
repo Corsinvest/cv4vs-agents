@@ -13,7 +13,7 @@ using System.Windows.Shapes;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
-/// <summary>Donut chart of a node's token breakdown by child (no plotting library — plain WPF
+/// <summary>Donut chart of a node's token breakdown by child (no plotting library: plain WPF
 /// shapes). One ring segment per slice, coloured from the shared palette (same as the model dots);
 /// the "Others" slice is grey. The total sits in the hole. Each segment hovers/tooltips with the
 /// shared StatsTooltip, like the heatmap cells and chart bars.</summary>

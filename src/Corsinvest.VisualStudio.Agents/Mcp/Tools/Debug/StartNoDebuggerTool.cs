@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
-/// <summary>MCP tool: Start Without Debugging (Ctrl+F5) — run the program with no debugger
+/// <summary>MCP tool: Start Without Debugging (Ctrl+F5): run the program with no debugger
 /// attached. Complements debug_start (which attaches the debugger).</summary>
 internal sealed class StartNoDebuggerTool : McpTool<NoArgs>
 {

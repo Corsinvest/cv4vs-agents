@@ -22,7 +22,7 @@ internal sealed class CvHeatmap : StackPanel
     // Intensity ramp: 0 = empty (neutral), 1–4 climbing blue (same hues as cv-heatmap).
     private static readonly Brush[] Ramp =
     {
-        Freeze(Color.FromRgb(0x3A, 0x3A, 0x3D)), // 0 — neutral square
+        Freeze(Color.FromRgb(0x3A, 0x3A, 0x3D)), // 0: neutral square
         Freeze(Color.FromRgb(0x2B, 0x6C, 0xB0)), // 1
         Freeze(Color.FromRgb(0x3B, 0x82, 0xF6)), // 2
         Freeze(Color.FromRgb(0x60, 0xA5, 0xFA)), // 3

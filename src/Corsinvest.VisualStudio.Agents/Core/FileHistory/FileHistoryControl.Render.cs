@@ -20,7 +20,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.FileHistory;
 /// so neither file has to be read to work on the other.</summary>
 public partial class FileHistoryControl
 {
-    /// <summary>One row of the file list — a backed-up file with the copy that holds it.</summary>
+    /// <summary>One row of the file list: a backed-up file with the copy that holds it.</summary>
     internal sealed class BackupRow
     {
         /// <summary>As the CLI spelled it: relative to the working directory when it sits under it.</summary>
@@ -84,7 +84,7 @@ public partial class FileHistoryControl
 
         if (session.IsOrphan)
         {
-            // No transcript, so no path for any of the copies — only the folder is left to open.
+            // No transcript, so no path for any of the copies: only the folder is left to open.
             MessageText.Text = "The transcript is gone, so the real paths of these copies are unknown. "
                              + "The folder can still be opened or deleted.";
             MessageText.Visibility = Visibility.Visible;
@@ -173,7 +173,7 @@ public partial class FileHistoryControl
     }
 
     // A DataGrid raises this for its column headers and its empty area too, where SelectedItem is
-    // still whatever was picked last — a double click on a header would re-open that row's diff.
+    // still whatever was picked last: a double click on a header would re-open that row's diff.
     private void OnFileDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         ThreadHelper.ThrowIfNotOnUIThread();

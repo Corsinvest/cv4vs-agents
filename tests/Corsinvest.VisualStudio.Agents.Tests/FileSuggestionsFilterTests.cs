@@ -10,7 +10,7 @@ using Xunit;
 namespace Corsinvest.VisualStudio.Agents.Tests;
 
 /// <summary>The `@` picker's rows over a listing: substring on the relative path, directories derived
-/// from what matched, tree order, a row cap — and nothing that stops at the 20,000th file.</summary>
+/// from what matched, tree order, a row cap, and nothing that stops at the 20,000th file.</summary>
 public class FileSuggestionsFilterTests
 {
     private const string Root = @"C:\proj";

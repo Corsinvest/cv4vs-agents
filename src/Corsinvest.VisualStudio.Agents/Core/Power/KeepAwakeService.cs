@@ -12,8 +12,8 @@ namespace Corsinvest.VisualStudio.Agents.Core.Power;
 
 /// <summary>Keeps Windows from suspending the machine while a turn is running.
 /// <para>A turn is an interval between two messages from a process we do not control, so the
-/// closing message may never arrive. Hence a set keyed by pane rather than a refcount: every exit
-/// — result, process death, pane closed, silence — removes an id, and removing one twice is a
+/// closing message may never arrive. Hence a set keyed by pane rather than a refcount: every exit (
+/// result, process death, pane closed, silence) removes an id, and removing one twice is a
 /// no-op. One native request covers the whole set.</para></summary>
 internal sealed class KeepAwakeService
 {
@@ -26,7 +26,7 @@ internal sealed class KeepAwakeService
     private static readonly long TicksPerMs = Stopwatch.Frequency / 1000;
 
     /// <summary>Monotonic milliseconds. DateTime.Now moves under us on DST, an NTP correction or a
-    /// resume — on a feature about suspension, that is the normal case — and Environment.TickCount
+    /// resume (on a feature about suspension, that is the normal case) and Environment.TickCount
     /// wraps negative at ~25 days of uptime. Stopwatch is net48's TickCount64.</summary>
     private static long Now() => Stopwatch.GetTimestamp() / TicksPerMs;
 
@@ -59,8 +59,8 @@ internal sealed class KeepAwakeService
     private readonly Timer _watchdog;
     private bool _watchdogRunning;
 
-    // Set once at teardown. A pane event can still land after it — VS disposes the package while
-    // tool windows may outlive it — and acquiring then would leave a request nobody releases.
+    // Set once at teardown. A pane event can still land after it (VS disposes the package while
+    // tool windows may outlive it) and acquiring then would leave a request nobody releases.
     private bool _shutdown;
 
     private KeepAwakeService() : this(PowerRequest.Create, Now)
@@ -91,7 +91,7 @@ internal sealed class KeepAwakeService
     }
 
     /// <summary>The pane is gone or its process died. Same as going idle, but says why at the call
-    /// site — these are the paths where no "turn ended" message will ever arrive.</summary>
+    /// site: these are the paths where no "turn ended" message will ever arrive.</summary>
     public void Forget(int seqNo) => SetBusy(seqNo, false);
 
     public void ReleaseAll()
@@ -205,7 +205,7 @@ internal sealed class KeepAwakeService
         SetWatchdogRunning(_busy.Count > 0);
     }
 
-    /// <summary>Runs the watchdog only while something is held — a tick on an idle machine is what
+    /// <summary>Runs the watchdog only while something is held: a tick on an idle machine is what
     /// this feature exists to avoid. Caller holds the gate.</summary>
     private void SetWatchdogRunning(bool running)
     {

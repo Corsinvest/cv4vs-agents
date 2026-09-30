@@ -69,7 +69,7 @@ internal static class FileSuggestions
 
     /// <summary>Rows shown, files and derived directories together. Deliberately generous: the listing
     /// is in path order, so a low cap does not sample the tree, it stops partway through and hides
-    /// everything from there to the end of the alphabet — at 600 this repository's own `tools/` was
+    /// everything from there to the end of the alphabet: at 600 this repository's own `tools/` was
     /// cut, 31 rows short of the 631 it produces. Bounded all the same: cv-popover-list renders
     /// every row it is given, with no virtualisation.</summary>
     internal const int MaxRows = 2000;

@@ -31,7 +31,7 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 ///   • the live "editor context" indicator (selection / file badge)
 /// </para>
 /// <para>
-/// All members marshal to the UI thread internally — callers can be on
+/// All members marshal to the UI thread internally: callers can be on
 /// any thread. Read-only operations only; mutations (open file, diff,
 /// close tab) are explicit.
 /// </para>
@@ -117,7 +117,7 @@ internal sealed partial class IdeContextService : IDisposable
             var wpf = vsView != null ? _editorAdapters?.GetWpfTextView(vsView) : null;
             if (wpf == null)
             {
-                // Not a text editor. A non-editor frame taking focus must not clear the context —
+                // Not a text editor. A non-editor frame taking focus must not clear the context:
                 // only the last document closing does, and that arrives as the view's Closed event.
                 return;
             }
@@ -155,7 +155,7 @@ internal sealed partial class IdeContextService : IDisposable
         return SelectionGeometry.IsEffectivelyEmpty(span.Length, i => snapshot[start + i]);
     }
 
-    /// <summary>The one projection from tracked state to <see cref="EditorContext"/> — push path
+    /// <summary>The one projection from tracked state to <see cref="EditorContext"/>: push path
     /// and on-demand readers both come here, so they cannot disagree.
     /// <para><paramref name="includeText"/> false leaves SelectedText empty for a caller that
     /// wants one bool.</para></summary>
@@ -222,7 +222,7 @@ internal sealed partial class IdeContextService : IDisposable
 
     /// <summary>Coalesce: a drag raises the selection event dozens of times a second, and every
     /// emit crosses the WebView bridge and a socket to each connected CLI. Nothing is captured
-    /// here — the state is read when the timer fires, so a drag costs one read, not one per event,
+    /// here: the state is read when the timer fires, so a drag costs one read, not one per event,
     /// and what goes out is the selection as it ended rather than as it passed through.
     /// <para>No consumer (MCP down at 0 sessions, no chat pane hooked) → don't even arm it.</para></summary>
     private void ScheduleEmit()
@@ -269,7 +269,7 @@ internal sealed partial class IdeContextService : IDisposable
     /// called on the UI thread.</summary>
     public EditorContext GetCurrentContext() => BuildContext(ActiveState(), includeText: true);
 
-    /// <summary>The tracked state to read from, attaching to the active view if we hold none — or
+    /// <summary>The tracked state to read from, attaching to the active view if we hold none, or
     /// hold a dead one. Closing a solution takes its editors with it, and a close from a view that
     /// was not the active one is ignored by design, so the field can point at a corpse. Dropping it
     /// first means finding no replacement leaves nothing rather than the corpse.</summary>
@@ -284,12 +284,12 @@ internal sealed partial class IdeContextService : IDisposable
     /// <summary>Whether the active editor has a selection worth reporting, without building the
     /// context to find out. The editor context menu asks this once per entry each time it opens,
     /// and going through GetCurrentContext would copy the whole selection into a string to answer
-    /// it — a right-click over five thousand selected lines should not cost five thousand lines.</summary>
+    /// it: a right-click over five thousand selected lines should not cost five thousand lines.</summary>
     public bool HasSelection() => BuildContext(ActiveState(), includeText: false)?.HasSelection == true;
 
     /// <summary>If <paramref name="filePath"/> is open in an editor with unsaved changes, save it.
     /// Used by the autosave hook so Claude reads/writes the live editor content, not the stale
-    /// on-disk version — so the caller must AWAIT this before letting the tool run, or the save
+    /// on-disk version, so the caller must AWAIT this before letting the tool run, or the save
     /// races the read it exists to precede. Safe to call from any thread (marshals to the UI
     /// thread); no-op if the file isn't open or clean. False means the file is open, dirty, and
     /// could NOT be saved: whatever reads it next gets a stale version.</summary>
@@ -318,7 +318,7 @@ internal sealed partial class IdeContextService : IDisposable
             OutputWindowLogger.Global.LogException("Ide.SaveIfDirty", ex);
             return false;
         }
-        // Not open in any editor — nothing to save, and nothing stale either.
+        // Not open in any editor: nothing to save, and nothing stale either.
         return true;
     }
 
@@ -385,7 +385,7 @@ internal sealed partial class IdeContextService : IDisposable
         public string Reason { get; set; }
     }
 
-    /// <summary>Read an open document's editor buffer — the text as it is on screen, unsaved
+    /// <summary>Read an open document's editor buffer: the text as it is on screen, unsaved
     /// changes included. With no path, reads the active document: "what I'm looking at" is the
     /// gesture this exists for, and it's the user who picks it, not the model. The on-disk
     /// version is the Read tool's job; this one is for what hasn't been written yet.</summary>
@@ -420,7 +420,7 @@ internal sealed partial class IdeContextService : IDisposable
                 }
                 if (doc == null)
                 {
-                    // Not open means there is no buffer — the file on disk is Read's job.
+                    // Not open means there is no buffer; the file on disk is Read's job.
                     return new BufferReadResult { Reason = $"'{target}' is not open in an editor; use the Read tool for the on-disk version." };
                 }
             }
@@ -452,7 +452,7 @@ internal sealed partial class IdeContextService : IDisposable
                 text = start.GetText(stop) ?? "";
                 // Not "there is more file after this": the caller asked for a range and got all of
                 // it, so nothing was cut. Saying otherwise made truncated useless for deciding
-                // whether to ask again — which is the only thing it is for. It only turns true when
+                // whether to ask again, which is the only thing it is for. It only turns true when
                 // the range itself was clipped, i.e. endLine ran past the end of the file.
                 truncated = endLine > totalLines;
             }
@@ -504,7 +504,7 @@ internal sealed partial class IdeContextService : IDisposable
         catch (Exception ex)
         {
             // The process is going down either way, but a shell that refuses to unadvise is worth
-            // knowing about — the same reason EditorSelectionState.Detach logs its own teardown.
+            // knowing about: the same reason EditorSelectionState.Detach logs its own teardown.
             OutputWindowLogger.Global.Warn($"[ide-context] teardown: {ex.Message}");
         }
         _monitorSelection = null;
@@ -574,7 +574,7 @@ internal sealed class EditorContext
 
     /// <summary>Whether re-sending this would tell the consumers what they already know.
     /// <para>Without a selection only the file matters: moving the caret around one file is not
-    /// context Claude asked for. With one, the columns count too — selecting a second word on the
+    /// context Claude asked for. With one, the columns count too: selecting a second word on the
     /// same line changes nothing else, and skipping that emit would leave the model holding the
     /// first word.</para></summary>
     public bool SaysTheSameAs(EditorContext other)
@@ -655,10 +655,10 @@ internal sealed class BuildResult
     public string Message { get; set; }
 
     /// <summary>Solution configuration the build ran under ("Debug|Any CPU"), so the caller can
-    /// tell which one it got — it is the IDE's active one, which the caller did not choose.</summary>
+    /// tell which one it got: it is the IDE's active one, which the caller did not choose.</summary>
     public string Configuration { get; set; }
 
-    /// <summary>Errors, plus warnings and info when the caller asked for them — one list, each
+    /// <summary>Errors, plus warnings and info when the caller asked for them: one list, each
     /// entry saying what it is, the way ide_get_diagnostics reports the same Error List.</summary>
     public List<BuildError> Errors { get; set; } = [];
 }
@@ -670,7 +670,7 @@ internal sealed class BuildError
     public string Description { get; set; }
     public string Project { get; set; }
 
-    /// <summary>"Error", "Warning" or "Info" — an entry is no longer necessarily an error.</summary>
+    /// <summary>"Error", "Warning" or "Info": an entry is no longer necessarily an error.</summary>
     public string Severity { get; set; }
 }
 

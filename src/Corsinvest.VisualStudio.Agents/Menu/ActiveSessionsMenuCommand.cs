@@ -16,8 +16,8 @@ namespace Corsinvest.VisualStudio.Agents.Menu;
 /// <para>
 /// View-menu entry point: one item per open pane, listed under an "Active sessions" submenu, to
 /// bring that pane forward. VS's own Window list mixes tool windows in with every open document,
-/// and the docked tab caption is stuck at "Chat 1"/"Chat 2" — VS derives it from the window name
-/// and ignores every caption property — so with several panes open this is the only place their
+/// and the docked tab caption is stuck at "Chat 1"/"Chat 2"; VS derives it from the window name
+/// and ignores every caption property, so with several panes open this is the only place their
 /// full titles (session and profile) are visible together.
 /// </para>
 /// <para>
@@ -45,7 +45,7 @@ internal sealed class ActiveSessionsMenuCommand : OleMenuCommand
         commandService?.AddCommand(new ActiveSessionsMenuCommand(rootId));
     }
 
-    /// <summary>The open panes, in the order they were opened. Read live — no cache, unlike the
+    /// <summary>The open panes, in the order they were opened. Read live: no cache, unlike the
     /// profiles menu: this list changes whenever a pane opens or closes, and it costs a field read.</summary>
     private static IReadOnlyList<PaneEntry> Items() => [.. PaneRegistry.Instance.Entries];
 
@@ -80,7 +80,7 @@ internal sealed class ActiveSessionsMenuCommand : OleMenuCommand
         }
 
         // Reset so the next query re-derives MatchedCommandId from DynamicItemMatch
-        // instead of reusing this call's id — without this, VS keeps re-querying the
+        // instead of reusing this call's id; without this, VS keeps re-querying the
         // same matched id and only the first item in the range ever gets shown.
         cmd.MatchedCommandId = 0;
     }

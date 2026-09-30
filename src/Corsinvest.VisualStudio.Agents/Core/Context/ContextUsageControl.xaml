@@ -117,7 +117,7 @@
                   VerticalAlignment="Stretch" Background="Transparent" />
 
     <!-- Column 2: the per-session context panel, built entirely in code-behind (data-driven). The
-         panel's TextBlocks set no Foreground — the theme colour inherits from UseVsTheme down the
+         panel's TextBlocks set no Foreground: the theme colour inherits from UseVsTheme down the
          live visual tree (same as the Statistics tiles / donut legend), so runtime-added text follows
          the theme too. Dim secondary text with Opacity, never a hardcoded brush. -->
     <ScrollViewer x:Name="ContextScroller" Grid.Column="2" Margin="10,0,0,0" Padding="0,0,12,0"

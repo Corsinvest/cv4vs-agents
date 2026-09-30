@@ -34,7 +34,7 @@ internal sealed class FileHistoryTreeNode : INotifyPropertyChanged
     /// <summary>Set on Session nodes only; null on the grouping levels.</summary>
     public FileHistoryService.SessionBackups Session { get; set; }
 
-    /// <summary>The config-dir this node lives under — a session needs it to find its transcript.</summary>
+    /// <summary>The config-dir this node lives under: a session needs it to find its transcript.</summary>
     public ClaudePaths Paths { get; set; }
 
     /// <summary>Any profile resolving to <see cref="Paths"/>. Several may share one config-dir, and
@@ -46,7 +46,7 @@ internal sealed class FileHistoryTreeNode : INotifyPropertyChanged
     public long Bytes { get; set; }
     public string SizeText => FileHistoryService.Format.Size(Bytes);
 
-    /// <summary>Newest backup under this node — the session's own on a leaf, the newest of its
+    /// <summary>Newest backup under this node: the session's own on a leaf, the newest of its
     /// children on a group. What the date orderings sort on at every level.</summary>
     public DateTime LastWrite { get; set; }
 
@@ -55,7 +55,7 @@ internal sealed class FileHistoryTreeNode : INotifyPropertyChanged
     public string LastWriteText => LastWrite == default ? "" : LastWrite.ToString("d MMM");
 
     /// <summary>False on a session an open pane is driving: deleting the copies a live rewind would
-    /// restore from breaks it half-way. The checkbox is disabled rather than merely warned about —
+    /// restore from breaks it half-way. The checkbox is disabled rather than merely warned about:
     /// the consequence belongs in the control, not in a dialog the user can click past.</summary>
     public bool CanDelete { get; set; } = true;
 

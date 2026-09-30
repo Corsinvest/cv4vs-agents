@@ -25,7 +25,7 @@ const _ro = new ResizeObserver((entries) => {
 
 /**
  * Observe size changes of `el`; fires on initial observe and every change.
- * One callback per element — re-registering replaces it. Returns an unobserve fn.
+ * One callback per element: re-registering replaces it. Returns an unobserve fn.
  */
 export function observeSize(el: Element, fn: (entry: ResizeObserverEntry) => void): () => void {
     _callbacks.set(el, fn);

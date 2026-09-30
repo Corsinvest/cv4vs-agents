@@ -15,11 +15,11 @@ internal sealed class RunCleanupArgs
     public string FilePath { get; set; }
 }
 
-/// <summary>MCP tool: run VS's Code Cleanup on a file — the user's Ctrl+K,
+/// <summary>MCP tool: run VS's Code Cleanup on a file, the user's Ctrl+K,
 /// Ctrl+E. Goes beyond <c>document_format</c>: besides formatting it applies
 /// the fixers of the user's configured cleanup profile (remove unused
 /// imports, apply code-style preferences, and so on).
-/// The profile can't be chosen — VS runs the default one — and the set of
+/// The profile can't be chosen (VS runs the default one) and the set of
 /// fixers is language-dependent (rich for C#/VB, minimal elsewhere), so on
 /// other languages this may do no more than formatting.
 /// Side effect: the file is opened in the editor (single tab).</summary>

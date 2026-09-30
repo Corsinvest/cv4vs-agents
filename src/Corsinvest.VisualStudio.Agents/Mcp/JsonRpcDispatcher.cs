@@ -18,8 +18,8 @@ namespace Corsinvest.VisualStudio.Agents.Mcp;
 internal sealed class JsonRpcDispatcher
 {
     /// <summary>MCP protocol versions we can speak, newest first. The client's own version is
-    /// echoed back when it is one of these — a server that answers with a version the client did
-    /// not ask for is entitled to be rejected — and the oldest is the floor we fall back to.</summary>
+    /// echoed back when it is one of these: a server that answers with a version the client did
+    /// not ask for is entitled to be rejected, and the oldest is the floor we fall back to.</summary>
     private static readonly string[] SupportedProtocolVersions =
     [
         "2025-06-18",
@@ -33,7 +33,7 @@ internal sealed class JsonRpcDispatcher
     private const string ProtocolVersion = "2024-11-05";
 
     /// <summary>How long a single tool call may run before the caller is told the IDE is not
-    /// answering. Long enough for a solution-wide build to finish on a slow machine — the point is
+    /// answering. Long enough for a solution-wide build to finish on a slow machine: the point is
     /// to break a deadlock, not to police slow work.</summary>
     private static readonly TimeSpan ToolCallTimeout = TimeSpan.FromMinutes(10);
 
@@ -52,7 +52,7 @@ internal sealed class JsonRpcDispatcher
         foreach (var t in tools) { _tools[t.Name] = t; }
     }
 
-    /// <summary>Handle one inbound message; returns <c>null</c> for notifications. Never throws —
+    /// <summary>Handle one inbound message; returns <c>null</c> for notifications. Never throws:
     /// errors become JSON-RPC error envelopes.</summary>
     public async Task<string> HandleMessageAsync(string raw)
     {
@@ -105,7 +105,7 @@ internal sealed class JsonRpcDispatcher
     }
 
     /// <summary>Guidance delivered once at handshake instead of repeated in every tool's
-    /// description. It says what this server is and which of its tools beat the shell equivalent —
+    /// description. It says what this server is and which of its tools beat the shell equivalent:
     /// the things a caller would otherwise have to infer tool by tool, paying for the prose in
     /// every catalogue listing.</summary>
     private const string ServerInstructions =
@@ -195,7 +195,7 @@ internal sealed class JsonRpcDispatcher
             var call = tool.InvokeAsync(args);
             // A tool that never returns takes the whole conversation with it: the CLI has no
             // timeout of its own and simply waits. The usual cause is the UI thread parked behind
-            // a modal dialog, which is why the message names it — the caller can't see the IDE.
+            // a modal dialog, which is why the message names it: the caller can't see the IDE.
             if (await Task.WhenAny(call, Task.Delay(ToolCallTimeout)) != call)
             {
                 OutputWindowLogger.Global.Warn($"[mcp] '{tool.Name}' did not return within {ToolCallTimeout.TotalMinutes:0} minutes");
@@ -212,7 +212,7 @@ internal sealed class JsonRpcDispatcher
         catch (Exception ex)
         {
             // The tool threw. That is a failure OF the tool, not of the protocol, so it belongs in
-            // the result where the model can read it and try something else — a JSON-RPC error
+            // the result where the model can read it and try something else: a JSON-RPC error
             // reaches the client as a hard fault instead.
             OutputWindowLogger.Global.LogException($"Mcp.tool.{tool.Name}", ex);
             return ToolFailure($"{tool.Name} failed: {ex.Message}");
@@ -237,7 +237,7 @@ internal sealed class JsonRpcDispatcher
         };
     }
 
-    /// <summary>Whether a tool's own payload says it failed — the <c>ok: false</c> convention the
+    /// <summary>Whether a tool's own payload says it failed, the <c>ok: false</c> convention the
     /// tools use. Read off the serialized shape rather than an interface so the 16 tools that
     /// already follow it need no change.</summary>
     private static bool IsFailurePayload(object payload)

@@ -27,7 +27,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 internal static class UsageStatusBarHost
 {
     // The package loads at shell start, possibly while the start window still stands in for the main
-    // window's content — so the bar is looked for again, for about a minute, before giving up.
+    // window's content, so the bar is looked for again, for about a minute, before giving up.
     private static readonly TimeSpan[] RetryDelays =
     [
         TimeSpan.Zero,
@@ -102,7 +102,7 @@ internal static class UsageStatusBarHost
     private static void Sync()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        // No pane, nothing being spent — and nothing worth starting a claude.exe for every quarter
+        // No pane, nothing being spent, and nothing worth starting a claude.exe for every quarter
         // of an hour. The item followed the active pane's profile but had no answer for there being
         // none, so it stayed on whichever pane closed last.
         var anySession = Panes.PaneRegistry.Instance.Entries.Count > 0;
@@ -180,7 +180,7 @@ internal static class UsageStatusBarHost
         return true;
     }
 
-    // VS takes the bar down when it closes, and may rebuild it on a layout change — then the item belongs
+    // VS takes the bar down when it closes, and may rebuild it on a layout change; then the item belongs
     // in the new bar. The old one is gone either way, so start over.
     private static void OnItemUnloaded(object sender, RoutedEventArgs e)
     {

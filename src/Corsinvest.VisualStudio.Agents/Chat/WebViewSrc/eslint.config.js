@@ -12,7 +12,7 @@ import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 
 export default tseslint.config(
-    // Generated DTOs are TypeGen's output — linting them reports on a file nobody edits.
+    // Generated DTOs are TypeGen's output: linting them reports on a file nobody edits.
     { ignores: ['core/generated/**'] },
 
     js.configs.recommended,
@@ -52,7 +52,7 @@ export default tseslint.config(
     },
 
     // ui/ is the other side of that boundary: importing from core is exactly what it is meant to do.
-    // tests/ sits outside it altogether — it exercises both sides, so the direction rule doesn't
+    // tests/ sits outside it altogether: it exercises both sides, so the direction rule doesn't
     // apply: a test for a ui/ helper has to import that helper.
     {
         files: ['ui/**/*.ts', 'tests/**/*.ts', 'index.ts'],

@@ -17,7 +17,7 @@ internal sealed class AddProjectArgs
     public string ProjectPath { get; set; }
 }
 
-/// <summary>MCP tool: add an existing project to the open solution — Solution Explorer's
+/// <summary>MCP tool: add an existing project to the open solution: Solution Explorer's
 /// "Add → Existing Project".</summary>
 internal sealed class AddProjectTool : McpTool<AddProjectArgs>
 {

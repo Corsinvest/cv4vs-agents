@@ -51,7 +51,7 @@ function applyTheme(theme: Theme): void {
 }
 
 // Applies the VS Options category (init payload's `vsOptions` and the standalone
-// `vs_settings` re-push share this — both carry the full VsOptionsDto).
+// `vs_settings` re-push share this: both carry the full VsOptionsDto).
 function applyVsOptions(o: VsOptionsDto): void {
     state.ui = o;
     logger.setLevel(state.ui.logLevel ?? 0);
@@ -75,7 +75,7 @@ function wireBridgeHandlers(): void {
         if (data.vsOptions) {
             applyVsOptions(data.vsOptions);
             // The welcome screen reads appVersion/appCopyright from state at render time, but
-            // state.ui is not observable — it was rendered once before this payload arrived, so
+            // state.ui is not observable: it was rendered once before this payload arrived, so
             // without a nudge it keeps the empty seed until some other event re-renders it (which
             // is why New Session made the copyright appear). Re-render it now.
             (
@@ -109,7 +109,7 @@ function wireBridgeHandlers(): void {
         state.remoteControlAtStartup = c.remoteControlAtStartup === true;
         state.remoteControlAvailable = c.remoteControlAvailable !== false;
         // Custom spinner verbs from settings (replace/append the defaults). Migrated
-        // from vsOptions into cliState — applied here rather than in applyVsOptions.
+        // from vsOptions into cliState, applied here rather than in applyVsOptions.
         setVerbsConfig(c.spinnerVerbsConfig ?? null);
     });
 
@@ -136,7 +136,7 @@ function wireBridgeHandlers(): void {
 
     // Host asks to focus the pane's input (session switch, or "Go to pane" from an attention
     // notification). If an ask/permission is open, land on it (its first choice) so the user can
-    // answer immediately — the textarea is hidden while a permission is pending.
+    // answer immediately: the textarea is hidden while a permission is pending.
     bridge.onNotification(Msg.toWebView.ui.focusInput, () => {
         if (state.pendingPermission) {
             const banner = document.querySelector('cv-permission-banner') as
@@ -186,14 +186,14 @@ function wireBridgeHandlers(): void {
         }
     });
 
-    // A key the composition control dropped, claimed by the pane on our behalf — see host-keys.ts.
+    // A key the composition control dropped, claimed by the pane on our behalf; see host-keys.ts.
     bridge.onNotification<HostKeyNotification>(Msg.toWebView.ui.hostKey, (data) => {
         if (data?.key) {
             applyHostKey(data);
         }
     });
 
-    // Rebuilt as File objects so the composer attaches them through its own path — allow-list and
+    // Rebuilt as File objects so the composer attaches them through its own path: allow-list and
     // rejection notice stay in one place.
     bridge.onNotification<FilesDroppedNotification>(Msg.toWebView.ui.filesDropped, (data) => {
         const files = (data?.files ?? []).map((f) => {
@@ -211,11 +211,11 @@ function wireBridgeHandlers(): void {
     // Esc: VS routed its Cancel command to the pane (ChatPaneWindow claims it so VS
     // doesn't move focus to an open editor). Mirror the in-WebView Esc behaviour.
     bridge.onNotification(Msg.toWebView.ui.escape, () => {
-        // A modal <dialog> (opened with showModal) only auto-closes on a REAL Esc — a
+        // A modal <dialog> (opened with showModal) only auto-closes on a REAL Esc: a
         // synthetic keydown can't trigger it. Since VS ate the real key, close the open
         // dialog ourselves. Each dialog registers its close() in an open-dialog stack
         // (dialog-focus.ts), so this works whether the <fluent-dialog> is in the light
-        // DOM or a component's shadow root — no global querySelector needed.
+        // DOM or a component's shadow root: no global querySelector needed.
         if (closeTopDialog()) {
             return;
         }
@@ -223,7 +223,7 @@ function wireBridgeHandlers(): void {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     });
 
-    // Both selectors switch optimistically and the host echoes back what the CLI really holds —
+    // Both selectors switch optimistically and the host echoes back what the CLI really holds:
     // on success the same value, on failure the previous one, which rolls the UI back. The
     // permission one also arrives unprompted, when the CLI changes mode by itself (a plan
     // approved, Shift+Tab from a remote terminal): same message, no caller waiting for it.
@@ -237,7 +237,7 @@ function wireBridgeHandlers(): void {
     );
 
     bridge.onNotification<ModelChangedNotification>(Msg.toWebView.cli.modelChanged, (data) => {
-        // Unlike the mode, an empty model is meaningful — it is "Default" — so only a missing
+        // Unlike the mode, an empty model is meaningful (it is "Default") so only a missing
         // payload is ignored, never a null value.
         if (data) {
             state.currentModel = data.model || null;
@@ -261,7 +261,7 @@ function wireBridgeHandlers(): void {
     });
 
     // Rich slash-command list from the CLI's `commands_changed` (name +
-    // description + hint). Replaces the cached list — the CLI re-pushes the
+    // description + hint). Replaces the cached list: the CLI re-pushes the
     // full set on every change, so we never merge.
     bridge.onNotification<SlashCommandsNotification>(Msg.toWebView.chat.slashCommands, (data) => {
         state.slashCommands = Array.isArray(data?.commands) ? data.commands : [];
@@ -291,7 +291,7 @@ export function init(): void {
     bridge.start();
 
     // Tell the host the app has mounted and painted its first frame, so it can hide the native
-    // "Initializing…" placeholder exactly when the chat is visible underneath — no white gap, no
+    // "Initializing…" placeholder exactly when the chat is visible underneath: no white gap, no
     // double placeholder. Two frames, because the first only schedules the initial render.
     // Announced from here rather than on receiving ui_init: the host now answers this signal WITH
     // ui_init, and waiting for the payload to declare ourselves ready would deadlock the pair.

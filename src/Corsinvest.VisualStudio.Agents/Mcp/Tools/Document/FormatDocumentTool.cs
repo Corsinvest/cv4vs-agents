@@ -17,7 +17,7 @@ internal sealed class FormatDocumentArgs
 
 /// <summary>MCP tool: format a file using VS's built-in
 /// <c>Edit.FormatDocument</c> command. Same engine the user invokes
-/// with Ctrl+K, Ctrl+D — respects .editorconfig, analyzer rules, and
+/// with Ctrl+K, Ctrl+D: respects .editorconfig, analyzer rules, and
 /// the language-specific formatter. Works on any language VS knows.
 /// Side effect: the file is opened in the editor (single tab).</summary>
 internal sealed class FormatDocumentTool : McpTool<FormatDocumentArgs>

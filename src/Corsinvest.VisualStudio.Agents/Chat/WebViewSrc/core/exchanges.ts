@@ -7,12 +7,12 @@ import type { UiEntry } from './types';
  * Group a transcript into exchanges: each user message opens one, and whatever precedes the first
  * user message (a history page boundary) gets its own leading group.
  *
- * A message still in the queue is the exception — it heads no turn, since the CLI has not been
+ * A message still in the queue is the exception: it heads no turn, since the CLI has not been
  * given it. Opening an exchange for it would end the running turn's <section> early, and the
  * sticky user bubble pins only within its own section (.cv-exchange in chat.css): that turn's
  * header would come unstuck while its reply is still arriving. It opens its own group once sent.
  *
- * Pure and derived — cv-app calls this from a memoised getter instead of holding the groups as
+ * Pure and derived: cv-app calls this from a memoised getter instead of holding the groups as
  * state, so the groups can never drift from the entries they are built from.
  */
 export function buildGroups(
@@ -43,7 +43,7 @@ export function buildGroups(
 
 /**
  * Tool rows that stay on screen when tool calls are hidden: each is something the user took part in
- * or that is addressed to them, not the work in between — their answers (AskUserQuestion), the plan
+ * or that is addressed to them, not the work in between: their answers (AskUserQuestion), the plan
  * they approved or sent back (ExitPlanMode), the task list (TodoWrite, and the TaskCreate/TaskUpdate
  * that replaced it), and prose the model sends them (Brief, still SendUserMessage on the wire).
  */
@@ -59,8 +59,8 @@ const KEPT_WHEN_TOOL_CALLS_HIDDEN: ReadonlySet<string> = new Set([
 
 /**
  * Whether the "hide tool calls" filter hides this entry. Only tool rows ever are, and not the kinds
- * kept above, nor the call awaiting the user's approval: its row is where what they are approving —
- * the edit, the command — is spelled out.
+ * kept above, nor the call awaiting the user's approval: its row is where what they are approving (
+ * the edit, the command) is spelled out.
  */
 export function isHiddenToolCall(e: UiEntry, pendingToolUseId?: string | null): boolean {
     return (
@@ -72,8 +72,8 @@ export function isHiddenToolCall(e: UiEntry, pendingToolUseId?: string | null): 
 
 /**
  * Whether Focus folds this entry into its run: the tool rows the hide filter would take, plus
- * thinking. Everything else — prose, the tools the user took part in, the call awaiting their
- * approval — stays out and ends the run it interrupts.
+ * thinking. Everything else (prose, the tools the user took part in, the call awaiting their
+ * approval) stays out and ends the run it interrupts.
  */
 export function isFolded(e: UiEntry, pendingToolUseId?: string | null): boolean {
     return isHiddenToolCall(e, pendingToolUseId) || (e.kind === 'text' && e.role === 'thinking');
@@ -94,7 +94,7 @@ export interface FoldRun {
 
 const foldKey = (e: UiEntry): string => (e.kind === 'tool' ? `t${e.toolUseId}` : `e${e.id}`);
 
-/** The runs of a response, keyed by the index of their first entry — the slot the fold row rides in. */
+/** The runs of a response, keyed by the index of their first entry: the slot the fold row rides in. */
 export function buildFoldRuns(
     response: readonly UiEntry[],
     pendingToolUseId?: string | null,
@@ -137,7 +137,7 @@ export function buildFoldRuns(
     return runs;
 }
 
-/** The fold row's settled text — the same wording as the VS Code extension's Focus view. */
+/** The fold row's settled text: the same wording as the VS Code extension's Focus view. */
 export function foldLabel(run: FoldRun): string {
     if (run.toolCount > 0) {
         const calls = `${run.toolCount} tool call${run.toolCount === 1 ? '' : 's'}`;

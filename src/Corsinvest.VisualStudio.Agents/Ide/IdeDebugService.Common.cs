@@ -39,11 +39,11 @@ internal sealed partial class IdeDebugService
     private static int _stoppedThreadId;
 
     /// <summary>Forget which thread the break landed on, before resuming. Called by whatever lets
-    /// the program run — the next break may be on another thread and can get there before anything
+    /// the program run: the next break may be on another thread and can get there before anything
     /// reads the debugger again, which would leave the note naming the thread we left.</summary>
     private static void LeavingBreak() => _stoppedThreadId = 0;
 
-    /// <summary>Reported instead of a real mode by the transitions that do not block — start, stop
+    /// <summary>Reported instead of a real mode by the transitions that do not block: start, stop
     /// and detach all return before VS has moved. A null mode there reads as "something went
     /// wrong"; this says the transition is in flight and debug_get_state has the answer.</summary>
     private const string PendingMode = "pending";
@@ -57,13 +57,13 @@ internal sealed partial class IdeDebugService
     };
 
     /// <summary>Where execution is paused: file + 1-based line, from the TOP frame of the stopped
-    /// thread — not the selected one, which debug_select_frame moves to inspect a caller. Those are
+    /// thread, not the selected one, which debug_select_frame moves to inspect a caller. Those are
     /// two different questions: this one is where the program stopped, and it does not change
     /// because someone is reading a caller's locals.
     /// <para>The caret is the fallback, for frames that carry no position of their own. It is not
     /// the first choice because run_to_line and set_next_statement move it themselves (the VS
     /// commands work off the selection), so after either of those it named the line we had just put
-    /// there — measured: a break on line 19 reported as line 17, a comment.</para></summary>
+    /// there, measured: a break on line 19 reported as line 17, a comment.</para></summary>
     private static (string file, int line) CurrentLocation()
     {
         var fromFrame = FrameLocation(TopFrame());
@@ -79,8 +79,8 @@ internal sealed partial class IdeDebugService
         catch (Exception ex)
         {
             // Not a per-item probe: this is where the debugger stopped, and it feeds StepAsync and
-            // GetCallStackAsync. Degrading to (null, 0) reads as "no location" — the same answer a
-            // session with no active document gives — so without this the COM failure behind it
+            // GetCallStackAsync. Degrading to (null, 0) reads as "no location" (the same answer a
+            // session with no active document gives) so without this the COM failure behind it
             // would leave nothing to read.
             OutputWindowLogger.Global.LogException("IdeDebugService.CurrentLocation", ex);
             return (null, 0);
@@ -89,7 +89,7 @@ internal sealed partial class IdeDebugService
 
     /// <summary>Frame 0 of the thread the break landed on: where execution actually is.
     /// <para>Neither selection can be trusted for this. Debugger.CurrentStackFrame follows
-    /// debug_select_frame, and Debugger.CurrentThread follows debug_select_thread — both move while
+    /// debug_select_frame, and Debugger.CurrentThread follows debug_select_thread: both move while
     /// the caller reads a caller's locals or another thread's stack, and neither should change the
     /// answer to "where did the program stop". VS exposes no "thread that broke", so the id is
     /// recorded on the way in; see <see cref="StoppedThread"/>. StackFrames is 1-based.</para></summary>

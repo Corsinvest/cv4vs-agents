@@ -23,7 +23,7 @@ function upsert(list: UiEntry[], entry: UiEntry, key: (e: UiEntry) => string): U
  *
  * Lit compares properties by reference, so a mutated object never triggers an update. Every
  * mutating method here replaces the entry it touches AND rebuilds every object on the path from
- * the root down to it — the entries array, each ancestor's `children`, `children.items`. Branches
+ * the root down to it: the entries array, each ancestor's `children`, `children.items`. Branches
  * that did not change keep their identity, so Lit skips them. By construction, not by convention:
  * no caller has to remember to re-create the path itself.
  */
@@ -37,18 +37,18 @@ export class Transcript {
      *
      * Retraction means an id can disappear mid-session, and a key left behind outside this class
      * is either events written into an entry that is gone or a Map that never shrinks. Rather than
-     * expect every caller to remember the cleanup, the removal announces itself — this class still
+     * expect every caller to remember the cleanup, the removal announces itself: this class still
      * knows nothing about who listens or what they keyed.
      */
     onRemoved?: (ids: readonly number[]) => void;
 
     /**
-     * Called when every id in the tree stops being valid at once — a session switch or a history
+     * Called when every id in the tree stops being valid at once: a session switch or a history
      * page swapped in.
      *
      * Separate from onRemoved rather than passing the whole id list: the listener only ever wants
      * to drop everything, so walking the tree to hand it an array it would immediately ignore buys
-     * nothing. Two callbacks, two meanings — some ids died, or all of them did.
+     * nothing. Two callbacks, two meanings: some ids died, or all of them did.
      */
     onCleared?: () => void;
 
@@ -80,7 +80,7 @@ export class Transcript {
      *
      * Matching is uuid equality and nothing else, so it is safe to apply blind: a uuid naming
      * nothing removes nothing, and calling it twice with the same list is the same as calling it
-     * once. That is the contract the CLI relies on — the per-message `supersedes` and the
+     * once. That is the contract the CLI relies on: the per-message `supersedes` and the
      * end-of-turn `retracted_message_uuids` overlap on purpose.
      *
      * At every depth, not just the top: a uuid names a MESSAGE, not a position, and a sub-agent's
@@ -145,7 +145,7 @@ export class Transcript {
      * Move the top-level entry with `uuid` to the end.
      *
      * A message typed during a turn is echoed at once but only sent when that turn ends, so its
-     * bubble sits above a reply it did not prompt — and `buildGroups` opens an exchange on every
+     * bubble sits above a reply it did not prompt, and `buildGroups` opens an exchange on every
      * user message, so that reply is grouped under the wrong question. Moving it on dispatch also
      * matches the order the .jsonl records, so the live view and a reopened session agree.
      *
@@ -165,7 +165,7 @@ export class Transcript {
     /**
      * Replace the entry with `id` by `fn(entry)`, rebuilding every object on the path down to it.
      *
-     * Returns false when the id is no longer in the tree — an async callback (a sub-agent fetch, a
+     * Returns false when the id is no longer in the tree: an async callback (a sub-agent fetch, a
      * compact summary) can resolve after /clear or a session switch, and must then do nothing.
      */
     update<T extends UiEntry>(id: number, fn: (e: T) => T): boolean {
@@ -181,7 +181,7 @@ export class Transcript {
             return false;
         }
         this._entries = next;
-        // A caller may hand over a whole new children list rather than append one at a time —
+        // A caller may hand over a whole new children list rather than append one at a time:
         // "Show all" swaps the kept three for the fetched transcript. Those entries never went
         // through appendChild, so nothing indexed them: a live event for one of them would find
         // no path, or the stale path of the child it replaced, and update the wrong branch.
@@ -247,7 +247,7 @@ export class Transcript {
     replaceAll(entries: UiEntry[]): void {
         // Deliberately does NOT fire onCleared, unlike clear(). The caller builds the replacement
         // entries before handing them over, and building them is what refills the id-keyed maps for
-        // the replayed turns — an invalidation at this point would wipe what the replay had just
+        // the replayed turns: an invalidation at this point would wipe what the replay had just
         // written. The history listener drops the old ids before it starts replaying, which is the
         // only moment where "these ids are dead" and "these ids are being written" don't overlap.
         this._entries = entries;
@@ -260,7 +260,7 @@ export class Transcript {
         this._reindex();
     }
 
-    /** Update several entries at once — the streaming messages a turn ends with. */
+    /** Update several entries at once: the streaming messages a turn ends with. */
     updateMany(ids: number[], fn: (e: UiEntry) => UiEntry): void {
         for (const id of ids) {
             this.update(id, fn);

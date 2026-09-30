@@ -14,10 +14,10 @@
 }
 
 /* Sticky, not absolute: it is the scroller's own last child, so sticking it to the bottom edge
- * keeps it in view as the content moves under it — no wrapper, which cv-app's light DOM can't
+ * keeps it in view as the content moves under it: no wrapper, which cv-app's light DOM can't
  * take. float:right pulls it out of the flow so it adds no height of its own.
  * Fluent's default appearance, not outline: this floats over the transcript, and an outline
- * button is near-transparent — the text underneath showed straight through it. */
+ * button is near-transparent: the text underneath showed straight through it. */
 #jump-to-bottom {
     position: sticky;
     float: right;
@@ -83,7 +83,7 @@
     gap: 4px;
     margin-bottom: 4px;
 }
-/* The composer's outer wrapper — rendered by cv-app (light DOM), holding the
+/* The composer's outer wrapper, rendered by cv-app (light DOM), holding the
  * permission banner + <cv-prompt>. The prompt's own chrome is Shadow DOM.
  * No rule and no fill of its own: the field inside carries the one border in the
  * composer, and a second line above it would say the same thing twice. Sitting on
@@ -127,8 +127,8 @@ cv-fold-row[hidden] {
  * in the exchange, and the containment content-visibility applies would pin them to their own box.
  *
  * The size is the median of a real transcript (p25 650, median 1121, p75 1552 px). It only ever
- * applies to a block that has never been laid out — `auto` means the real height is remembered
- * from the first render on, viewport or not — so it matters for the first pass through a chat and
+ * applies to a block that has never been laid out: `auto` means the real height is remembered
+ * from the first render on, viewport or not, so it matters for the first pass through a chat and
  * for scrollHeight, which _prependWithAnchor anchors history loading on. Measured: 400/800/1550px
  * are indistinguishable once the chat has been scrolled through, which is what that `auto` says. */
 .cv-exchange > .cv-response {
@@ -137,14 +137,14 @@ cv-fold-row[hidden] {
 }
 /* Set by _prependWithAnchor for the length of a history prepend. The anchor holds a distance
  * against scrollHeight, and the estimates above make that total jump the moment a block is
- * measured for the first time — 504px over twelve blocks on a real transcript, straight into the
+ * measured for the first time: 504px over twelve blocks on a real transcript, straight into the
  * resting position. Laying them out for real costs one full layout per page loaded, against a
  * visible drop of a couple of paragraphs every time. */
 #messages.anchoring > .cv-exchange > .cv-response {
     content-visibility: visible;
 }
 /* A message typed while a turn was running: the bubble is there because the user wrote it, but
- * the CLI has not been given it yet. Faded rather than badged — in a column of full-strength
+ * the CLI has not been given it yet. Faded rather than badged: in a column of full-strength
  * bubbles a pale one reads at a glance, and the bubble already carries copy/fork actions on hover
  * without another icon competing. The transition is what makes the hand-off legible: the bubble
  * fills in as it drops into place. */
@@ -173,7 +173,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 /* Pinned, the bubble is the exchange's header rather than a message in the flow, so it takes the
- * full column back — an 85% header would leave the scrolling answer visible past its edge. */
+ * full column back: an 85% header would leave the scrolling answer visible past its edge. */
 @container scroll-state(stuck: top) {
     .cv-message.user {
         max-width: 100%;
@@ -201,7 +201,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     background: linear-gradient(transparent, var(--colorNeutralBackground4));
 }
 
-/* "Show more / Show less" for long user messages — inside the bubble, below the clipped text,
+/* "Show more / Show less" for long user messages, inside the bubble, below the clipped text,
  * with a margin so it never sits flush against the truncated last line. Link-like, theme-aware. */
 .cv-show-more {
     border: 0;
@@ -284,7 +284,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 /* The dot is a box one text-line tall that centers a crisp 7px circle (its
  * ::before). The box height lines the circle up with the first text line even
  * when the detail wraps; the circle itself is the original solid 7×7
- * (border-radius, not a fuzzy gradient — so it isn't visually larger).
+ * (border-radius, not a fuzzy gradient, so it isn't visually larger).
  * In lh, not a fixed 18px: the same dot also flags an assistant reply, whose
  * text is taller. */
 .cv-tool-row-dot {
@@ -364,7 +364,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     padding-left: 8px;
     margin-top: 2px;
 }
-/* Only the scrolling area is capped — the actions footer is a sibling below it (outside this box)
+/* Only the scrolling area is capped: the actions footer is a sibling below it (outside this box)
  * so Copy + timestamp stay visible without scrolling. Collapsed caps the last-3 view so one long
  * child (a big tool output) can't dominate; show-all is uncapped (the full transcript is the point). */
 .cv-children-scroll.cv-children-collapsed {
@@ -396,7 +396,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     text-decoration: underline;
     color: inherit;
 }
-/* "path:line" file link inside rendered markdown — opens in VS on click. Appears both in prose
+/* "path:line" file link inside rendered markdown, opens in VS on click. Appears both in prose
  * (the fileLink marked extension) and inside an inline code span whose whole content is a
  * reference, where it keeps the span's monospace and only takes the link colour. */
 .cv-file-link {
@@ -409,7 +409,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 
 /* The chevron toggle is a fluent-button (icon-only). Hidden at rest, revealed on row
- * hover — except .always-shown (Agent), kept visible so a near-empty collapsed row reads
+ * hover, except .always-shown (Agent), kept visible so a near-empty collapsed row reads
  * as expandable. The button rotates 180° when open. */
 .cv-tool-row-chev {
     flex-shrink: 0;
@@ -441,7 +441,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     position: relative;
 }
 
-/* The content already sits in .cv-tool-body-box, which is bordered on all four sides —
+/* The content already sits in .cv-tool-body-box, which is bordered on all four sides:
    a rule down the left of it only doubles up. */
 .cv-tool-body {
     margin: 2px 0 4px 0;
@@ -529,7 +529,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     color: var(--colorNeutralForeground3);
 }
 
-/* AskUserQuestion body — one block per question, each with a header chip,
+/* AskUserQuestion body: one block per question, each with a header chip,
  * the question text and the offered options. The option the user picked is
  * highlighted (`.chosen`). */
 .cv-question-list {
@@ -604,7 +604,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 .cv-question-opt.chosen .cv-question-opt-mark {
     color: var(--colorBrandBackground);
-    /* ● renders smaller than ○ at the same size — bump it to match visually. */
+    /* ● renders smaller than ○ at the same size: bump it to match visually. */
     font-size: 22px;
 }
 .cv-question-opt-text {
@@ -632,7 +632,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     background: var(--colorNeutralBackground1);
 }
 /* IN/OUT label above its block, not beside it: a 44px gutter plus its gap cost every row 52px
-   of width for two three-letter words, and width is what a docked tool window hasn't got —
+   of width for two three-letter words, and width is what a docked tool window hasn't got:
    height scrolls. A labelless row (Write: the body IS the file) needs no special case now. */
 .cv-tool-body-row {
     display: grid;
@@ -678,7 +678,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     background: var(--colorNeutralBackground4);
 }
 /* Actions row: cv-msg-actions sits below the bubble, on the chat background (a sibling of the
- * bubble inside the light-DOM cv-message host — NOT inside the .cv-message.user dark box). The slot
+ * bubble inside the light-DOM cv-message host, NOT inside the .cv-message.user dark box). The slot
  * is reserved (min-height) so revealing it on hover never shifts the layout. */
 .cv-msg-actions {
     display: flex;
@@ -719,7 +719,7 @@ cv-message[msg-role="user"] .cv-msg-actions {
 .cv-response:focus-within .cv-response-actions {
     opacity: 1;
 }
-/* Same row at the bottom of a sub-agent transcript — reveals on hovering the children box. */
+/* Same row at the bottom of a sub-agent transcript: reveals on hovering the children box. */
 .cv-children:hover .cv-children-actions,
 .cv-children:focus-within .cv-children-actions {
     opacity: 1;
@@ -740,10 +740,10 @@ cv-message[msg-role="user"] .cv-msg-actions {
     color: var(--colorNeutralForeground2);
     font-weight: 600;
 }
-/* Status messages — a whole assistant turn that is ONLY italic text (e.g.
+/* Status messages: a whole assistant turn that is ONLY italic text (e.g.
  * "*Thinking…*"): small and greyed. The `:has` must match a message whose
  * entire body is a single italic paragraph, NOT any message that merely
- * contains an <em> somewhere — otherwise normal answers with an italic word
+ * contains an <em> somewhere; otherwise normal answers with an italic word
  * get greyed out wholesale. */
 .cv-message.assistant .md:has(> p:only-child > em:only-child) {
     color: var(--colorNeutralForeground3);
@@ -756,7 +756,7 @@ cv-message[msg-role="user"] .cv-msg-actions {
     color: var(--colorNeutralForeground3);
     padding: 2px 4px;
 }
-/* A slash command's own output (/config, /model, "Unknown command"…) — the CLI's raw terminal
+/* A slash command's own output (/config, /model, "Unknown command"…): the CLI's raw terminal
  * text. Rendered as a preformatted monospace block (left-aligned, wraps), faithful to the terminal
  * (no markdown reinterpretation, which would break /config's aligned key=value list). A subtle left
  * rail + muted colour marks it as command output, not conversation. stderr tints red. */
@@ -835,7 +835,7 @@ cv-message[msg-role="user"] .cv-msg-actions {
 }
 
 /* "Switched to <model>" notice: a centered berry/purple pill (echoes the
- * slash-cmd band and the diff-in-VS icon — the "special action" colour),
+ * slash-cmd band and the diff-in-VS icon: the "special action" colour),
  * with hairline rules either side. No status dot. */
 .cv-model-switch {
     display: flex;
@@ -861,12 +861,12 @@ cv-message[msg-role="user"] .cv-msg-actions {
 }
 
 /* Elapsed time on a running Agent row (the dot handles the spinner). */
-/* The finished Agent's totals, which take the running clock's place in the row — cv-elapsed carries
+/* The finished Agent's totals, which take the running clock's place in the row: cv-elapsed carries
  * the same three properties on its own :host. */
 .cv-agent-time { margin-left: 4px; font-size: 11px; opacity: 0.7; }
 /* A finished Agent's totals reveal on hover, unlike the running clock next to them: several
  * sub-agents in a row put near-identical figures one under the other, and read as a wall of
- * numbers you can't skip past. The running badge stays — it is the only sign the row is alive. */
+ * numbers you can't skip past. The running badge stays: it is the only sign the row is alive. */
 .cv-agent-totals {
     opacity: 0;
     transition: opacity 0.15s;

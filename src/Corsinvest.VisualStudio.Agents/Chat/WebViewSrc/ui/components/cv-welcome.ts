@@ -9,7 +9,7 @@ import { state as appState } from '../../core/state';
 /**
  * Empty-chat welcome screen: logo, title, version, a "get started" line and the
  * project/company links. Shown by cv-app when the conversation has no entries.
- * Shadow DOM; the external links use target=_blank — WebView2's
+ * Shadow DOM; the external links use target=_blank: WebView2's
  * NewWindowRequested opens them in the system browser (WebViewBridge), so no
  * click handler is needed.
  */

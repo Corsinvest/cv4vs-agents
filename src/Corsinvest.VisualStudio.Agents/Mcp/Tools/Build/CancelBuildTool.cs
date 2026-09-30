@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 /// <summary>MCP tool: stop the build that is running, so a build left going by a
-/// timed-out build_solution — or one the user started by hand — does not block the next one.</summary>
+/// timed-out build_solution (or one the user started by hand) does not block the next one.</summary>
 internal sealed class CancelBuildTool : McpTool<NoArgs>
 {
     public override string Name => "build_cancel";

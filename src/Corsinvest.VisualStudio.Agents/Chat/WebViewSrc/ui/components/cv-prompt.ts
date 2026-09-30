@@ -95,7 +95,7 @@ const THUMB_PX = 24;
 const RESET_COMMANDS = new Set(['/clear', '/compact']);
 
 /** Downscale an image data-URL to a tiny PNG data-URL for the chip. Resolves to undefined on
- *  any failure (decode error, unsupported codec) — the chip then falls back to its file icon. */
+ *  any failure (decode error, unsupported codec), the chip then falls back to its file icon. */
 function makeThumb(dataUrl: string): Promise<string | undefined> {
     return new Promise((resolve) => {
         const img = new Image();
@@ -209,7 +209,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 flex-direction: column;
             }
             /* display:flex above beats the UA [hidden] rule (id specificity), so hide explicitly
-               while an ask/permission is pending — the composer stays mounted (draft preserved). */
+               while an ask/permission is pending: the composer stays mounted (draft preserved). */
             #box[hidden] {
                 display: none;
             }
@@ -225,10 +225,10 @@ export class CvPrompt extends LitElement implements CommandHost {
                 transition: border-color 0.15s;
             }
             /* While the textarea has focus, the border reflects the active permission
-             * mode — quick visual feedback for Shift+Tab cycling. The mode colour IS the focus
+             * mode, quick visual feedback for Shift+Tab cycling. The mode colour IS the focus
              * state; a separate accent would only fight it for the same border. */
             #box[data-permission-mode='default'] #field:focus-within {
-                /* Peach (a light warm orange) — lighter and clearly apart from the Red
+                /* Peach (a light warm orange), lighter and clearly apart from the Red
                  * used by 'auto', which Pumpkin/DarkOrange sat too close to. */
                 border-color: var(--colorPalettePeachBorderActive);
             }
@@ -295,12 +295,12 @@ export class CvPrompt extends LitElement implements CommandHost {
                 gap: 4px;
             }
             /* One row for everything, so the left side has to be able to shrink: min-width:0 lets
-               it go below its content width, and the file chip — the only elastic thing in it —
+               it go below its content width, and the file chip (the only elastic thing in it)
                is what gives way. The right side keeps its buttons at full size. */
             #toolbar-left {
                 min-width: 0;
             }
-            /* Everything on the left keeps its size except the file chip — it is the one carrying
+            /* Everything on the left keeps its size except the file chip: it is the one carrying
                text that can be shortened, so it absorbs whatever the row runs out of. */
             #toolbar-left > *:not(cv-ide-context-badge) {
                 flex-shrink: 0;
@@ -319,7 +319,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 margin-block-end: 6px;
             }
             /* Busy = "Stop": red like the mic's recording state (same "click to stop the live
-               action" pattern) — the one state Fluent has no appearance for. It changes in place:
+               action" pattern), the one state Fluent has no appearance for. It changes in place:
                send and stop are one button, and it never moves between them. */
             #send.is-busy {
                 background: var(--colorPaletteRedBackground3);
@@ -330,7 +330,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 border-color: var(--colorPaletteRedForeground1);
             }
             /* Inside the field, on its own band above the text: a long list pushes the textarea
-               down instead of eating its first line. Fill and padding separate it — no rule, the
+               down instead of eating its first line. Fill and padding separate it: no rule, the
                field's border is meant to be the only line here. */
             #attachments {
                 display: flex;
@@ -350,7 +350,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         text: string;
         attachments: Attachment[];
         uuid: string;
-        /** Entries sharing this leave as one message — Alt+Enter sets it. Absent means "on its
+        /** Entries sharing this leave as one message: Alt+Enter sets it. Absent means "on its
          *  own", which is every entry queued with Enter. */
         groupId?: string;
     }> = [];
@@ -375,7 +375,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     // Hidden while a permission/question prompt is pending (answered in overlay).
     @state() private _pendingPermission = appState.pendingPermission != null;
     // Reusable notice shown above the textarea (e.g. unsupported upload, rate limit).
-    // Notices (rate limit, CLI informational, upload errors) accumulate INSIDE cv-notice-stack — it
+    // Notices (rate limit, CLI informational, upload errors) accumulate INSIDE cv-notice-stack: it
     // owns the queue, the dedup, the cap and the auto-dismiss; we just push into it.
     @query('cv-notice-stack') private _noticeStack!: CvNoticeStack | null;
     @state() private _subagentTasks: SubagentTask[] = appState.subagentTasks;
@@ -442,7 +442,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         super.connectedCallback();
         // Seed the ↑/↓ prompt history. The host loads it in the background after
         // the initial render and pushes it via chat_prompt_history. Replace, not
-        // append — the history is per-session.
+        // append: the history is per-session.
         this._offHistory = bridge.onNotification<PromptHistoryNotification>(
             Msg.toWebView.chat.promptHistory,
             (data) => {
@@ -457,7 +457,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._promptHistory = [];
             this._resetHistoryNav();
             // Close any composer overlay left open (model list / @-mention / command menu) so a
-            // session switch starts clean — the assignments are no-ops when already closed.
+            // session switch starts clean: the assignments are no-ops when already closed.
             this._modelListOpen = false;
             this._permissionListOpen = false;
             this._atOpen = false;
@@ -520,7 +520,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         document.addEventListener('pointerdown', this._onDocPointerDown, true);
         // Esc closes any open composer menu (model / command / @). At document level because the
         // menu's own search box holds focus (not the textarea), and VS's Esc arrives as a synthetic
-        // document keydown (ui_escape) — neither reaches the textarea's @keydown across the shadow.
+        // document keydown (ui_escape); neither reaches the textarea's @keydown across the shadow.
         document.addEventListener('keydown', this._onDocKeyDown, true);
     }
 
@@ -561,7 +561,7 @@ export class CvPrompt extends LitElement implements CommandHost {
      *  toggles, so ignore clicks on it (it handles itself). */
     private _onDocPointerDown = (e: PointerEvent): void => {
         // Outside-click closes the model list (clicks on it are handled by its rows). As with the
-        // mode list, the toolbar trigger toggles itself — closing here too would reopen-then-close.
+        // mode list, the toolbar trigger toggles itself: closing here too would reopen-then-close.
         if (this._modelListOpen) {
             const onListOrTrigger = e
                 .composedPath()
@@ -574,7 +574,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 this._modelListOpen = false;
             }
         }
-        // Same for the mode list — but the trigger toggles itself, so a click on it
+        // Same for the mode list, but the trigger toggles itself, so a click on it
         // must not also close here (that would reopen-then-close on every click).
         if (this._permissionListOpen) {
             const onListOrTrigger = e
@@ -613,7 +613,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     /** Move keyboard focus to the prompt textarea (host ui_focus_input).
-     *  `preventScroll` because the host calls this while VS is still relaying the pane out — after
+     *  `preventScroll` because the host calls this while VS is still relaying the pane out, after
      *  an InfoBar closes, say. The browser would measure a textarea that is momentarily outside the
      *  viewport and scroll to it, and a frame later the layout settles: the scroll was pointless but
      *  visible as a jump. The composer is pinned to the bottom and always in view anyway. */
@@ -692,7 +692,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._cmdQuery = '';
         }
         // Live `@` trigger: popover open while caret sits inside an `@token`. Typing the `@` is
-        // not enough — it has to start a token, or an email address would open the menu. Asking
+        // not enough: it has to start a token, or an email address would open the menu. Asking
         // _getAtQuery is what decides that, so the two can never disagree.
         const query = this._getAtQuery();
         if (e.data === '@' && query !== null) {
@@ -753,7 +753,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 this._atUnavailable = data?.unavailable ?? null;
             })
             .catch(() => {
-                /* timeout — leave current items */
+                /* timeout: leave current items */
             });
     }
 
@@ -773,7 +773,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     /** Returns chars typed after the last `@` token in the current text, or null. The `@` must
-     *  start a token (preceded by start-of-text or whitespace), the same rule `/` follows above —
+     *  start a token (preceded by start-of-text or whitespace), the same rule `/` follows above,
      *  and, more to the point, the rule the CLI itself applies when it looks for attachments
      *  (`/(^|\s)@([^\s]+)\b/` in its own attachment parser). Without it an email address opens the
      *  menu and queries the host for a file the CLI will never attach, and Enter picks a suggestion
@@ -789,7 +789,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     /** Close the @ menu on blur. Menu items use mousedown.preventDefault, so
-     *  suggestion clicks don't fire this — only true outside-clicks. */
+     *  suggestion clicks don't fire this: only true outside-clicks. */
     private _onTextareaBlur = (): void => {
         if (this._atOpen) {
             this._atOpen = false;
@@ -925,7 +925,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             }
         }
         // Prompt history (shell-style ↑/↓): ↑ recalls an older prompt only from the
-        // first visual line, ↓ goes forward only from the last one — so navigating a
+        // first visual line, ↓ goes forward only from the last one, so navigating a
         // multi-line draft with the arrows still works. No modifiers. The key is NOT
         // swallowed here: _historyOnArrow needs the caret to move first to tell the
         // two cases apart, and decides once the default has run.
@@ -971,7 +971,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         // like VS Code), so the textarea no longer handles it here.
     };
 
-    /** Cycle through the modes the selector actually offers — same source, so the gates hold
+    /** Cycle through the modes the selector actually offers, same source, so the gates hold
      *  here too (model support for `auto`, VS option + CLI policy for `bypassPermissions`).
      *  A hardcoded list ignored them, and stranded whoever was in a mode it left out. */
     private _cyclePermissionMode(): void {
@@ -996,7 +996,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             return;
         }
         // Replace the current `@xxx` token with the pick. Matched the same way _getAtQuery finds
-        // it — from an `@` that STARTS a token, not the last `@` in the text: in "mario@rossi"
+        // it, from an `@` that STARTS a token, not the last `@` in the text: in "mario@rossi"
         // that one sits inside a word, and replacing from there would rewrite the word.
         const caret = ta.selectionStart ?? ta.value.length;
         const before = ta.value.slice(0, caret);
@@ -1064,10 +1064,10 @@ export class CvPrompt extends LitElement implements CommandHost {
         // Client-minted uuid: the CLI reuses it for the JSONL entry, so
         // fork_session works on live messages too (not just replayed ones).
         const uuid = crypto.randomUUID();
-        // For the bubble's chip only — the tag the model reads is composed host-side, where the
+        // For the bubble's chip only: the tag the model reads is composed host-side, where the
         // selected code is, so nothing here has to match its wording.
         // A slash command never carries IDE context (matches the VS Code webview:
-        // ct = enabled && !startsWith('/')) — the file/selection chip would be noise on /model etc.
+        // ct = enabled && !startsWith('/')): the file/selection chip would be noise on /model etc.
         const ctx =
             appState.ideContextEnabled && !text.startsWith('/') ? appState.ideContext : null;
         const ideRefs: IdeContextRef[] = !ctx?.filePath
@@ -1081,7 +1081,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         const editing = this._editingUuid;
         if (editing) {
             // Replace in place, keeping the entry's own uuid: it never left the queue, so its
-            // position is kept and its bubble — already in the transcript — stays the right one.
+            // position is kept and its bubble (already in the transcript) stays the right one.
             // Re-echoing would put a second bubble up for the same message.
             this._editingUuid = null;
             this._setQueue(
@@ -1117,7 +1117,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._historyDraft = '';
     }
 
-    /** ↑/↓ drive the prompt history, but only from the first/last **visual** line —
+    /** ↑/↓ drive the prompt history, but only from the first/last **visual** line;
      *  anywhere else they must still move the caret, recalled prompt included: a long
      *  one is there to be edited, and losing it to the next history entry on the first
      *  ↑ is the same bug in the other direction. Soft wrap has no `\n` to look for, and
@@ -1127,10 +1127,10 @@ export class CvPrompt extends LitElement implements CommandHost {
     private _historyOnArrow(dir: -1 | 1): void {
         const ta = this._ta;
         if (ta.selectionStart !== ta.selectionEnd) {
-            return; // a selection collapses instead of moving — not a line change
+            return; // a selection collapses instead of moving, not a line change
         }
         const before = ta.selectionStart ?? 0;
-        // Read the caret only once the default action has moved it — keydown fires
+        // Read the caret only once the default action has moved it: keydown fires
         // before that. A macrotask is the way to land after it: a microtask drains at
         // the end of THIS task and would always see the caret unmoved, and rAF ties
         // the read to the paint cycle, which has nothing to do with the caret.
@@ -1140,7 +1140,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             // NOT a reliable second signal: ↓ from a long line onto a short last one
             // ends at value.length having genuinely changed line, and a recalled prompt
             // starts there to begin with. So the caret sitting mid-line on the edge row
-            // costs one extra keypress to reach the history — the way a shell behaves,
+            // costs one extra keypress to reach the history, the way a shell behaves,
             // and the harmless way to be wrong: the draft is never lost.
             if ((ta.selectionStart ?? 0) !== before) {
                 return;
@@ -1165,7 +1165,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         } else if (this._historyIdx > 0) {
             this._historyIdx--;
         } else {
-            return true; // at the oldest — swallow the key, stay put
+            return true; // at the oldest: swallow the key, stay put
         }
         this._applyHistoryEntry(this._promptHistory[this._historyIdx], -1);
         return true;
@@ -1174,7 +1174,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     /** ↓: go forward toward the live draft. Returns true if it handled the key. */
     private _historyNext(): boolean {
         if (this._historyIdx === -1) {
-            return false; // not navigating — let ↓ move the cursor.
+            return false; // not navigating: let ↓ move the cursor.
         }
         if (this._historyIdx < this._promptHistory.length - 1) {
             this._historyIdx++;
@@ -1255,7 +1255,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     /**
-     * Replace the queue and mirror its uuids into the shared state — how cv-app knows which
+     * Replace the queue and mirror its uuids into the shared state, how cv-app knows which
      * bubbles are on screen without having been sent.
      *
      * Every write goes through here, so the two cannot drift. The payloads stay with the component
@@ -1268,7 +1268,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     /**
-     * Drop what is still queued and take its bubbles with it — on Stop, and when the session is
+     * Drop what is still queued and take its bubbles with it, on Stop, and when the session is
      * swapped out from under it. They were echoed on submit but never reached the CLI, so leaving
      * them on screen would show the model messages it has never been told about: the same
      * divergence a retraction causes, from our own side.
@@ -1314,10 +1314,10 @@ export class CvPrompt extends LitElement implements CommandHost {
 
     /** Bring a queued message back into the composer to be fixed.
      *  <para>The entry is NOT removed: it holds its place and stops the queue there. Taking it out
-     *  would let a turn ending mid-edit send whatever follows, and your message — no longer queued —
+     *  would let a turn ending mid-edit send whatever follows, and your message (no longer queued)
      *  would arrive last or not at all.</para>
      *  <para>Opening a second entry while one is open reads as cancelling the first: its unsaved
-     *  edits go, the queue stops at the new one instead. No prompt — the entry itself is untouched
+     *  edits go, the queue stops at the new one instead. No prompt: the entry itself is untouched
      *  in the queue, so what is lost is only what had just been typed over it.</para> */
     private _onEditQueued = (e: CustomEvent<{ uuid: string }>): void => {
         const entry = this._queue.find((q) => q.uuid === e.detail.uuid);
@@ -1326,7 +1326,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
         // What is in the box is only a draft worth keeping if it is something being typed. While
         // another entry is open it is that entry's own text, and treating it as a draft would
-        // stack the two — click twice and the message is in there twice.
+        // stack the two: click twice and the message is in there twice.
         const draft = this._editingUuid ? '' : (this._ta?.value ?? '');
         this._editingUuid = entry.uuid;
         this._attachments = [...(entry.attachments ?? [])];
@@ -1359,7 +1359,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         // Alt+Enter groups entries that go out as one message; the whole group leaves together.
         const group = next.groupId ? this._queue.filter((q) => q.groupId === next.groupId) : [next];
         // A recalled entry holds its place and the queue waits on it. Skipping ahead would reorder
-        // what was queued — recall the second of three and the third goes out before it. For a
+        // what was queued: recall the second of three and the third goes out before it. For a
         // group it matters more: it leaves as ONE message, so sending it a part short would send
         // something incomplete rather than something partial.
         if (group.some((q) => q.uuid === this._editingUuid)) {
@@ -1368,7 +1368,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._setQueue(this._queue.filter((q) => !group.includes(q)));
         this._dispatchGroup(group);
         // The state above unfades the bubbles; this says WHICH ones left, so cv-app can move them
-        // below the reply they had been sitting above — all of them, in order, or a group would
+        // below the reply they had been sitting above: all of them, in order, or a group would
         // leave its tail stranded further up.
         this.dispatchEvent(
             new CustomEvent('queued-sent', {
@@ -1402,7 +1402,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     /** A group leaves as ONE message: texts joined, attachments concatenated, a single dispatch.
-     *  Merging here rather than host-side is what keeps the IDE context block single —
+     *  Merging here rather than host-side is what keeps the IDE context block single:
      *  BuildIdeContextBlock runs once per send, so two sends would carry it twice. */
     private _dispatchGroup(group: typeof this._queue): void {
         if (group.length === 1) {
@@ -1466,7 +1466,7 @@ export class CvPrompt extends LitElement implements CommandHost {
 
     /** Send a prompt straight to the CLI (used by builtins like /clear, /compact
      *  and dynamic prompt-commands). Mirrors a user submit of that text. With `echo`,
-     *  the text is also shown as a user bubble (slash commands picked from the menu) —
+     *  the text is also shown as a user bubble (slash commands picked from the menu),
      *  same uuid as the dispatch so fork works on it. */
     sendPrompt(text: string, echo = false): void {
         const uuid = crypto.randomUUID();
@@ -1475,7 +1475,7 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._echoUserMessage(payload);
         }
         // A builtin that resets the session is also the way out of a stuck one, so it must not
-        // queue behind the very turn it is meant to clear — the CLI takes these mid-turn.
+        // queue behind the very turn it is meant to clear: the CLI takes these mid-turn.
         if (this._isBusy && !RESET_COMMANDS.has(text.trim().split(/\s+/, 1)[0])) {
             this._setQueue([...this._queue, payload]);
         } else {
@@ -1518,7 +1518,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._insert(ta, ta.value.length, ta.value.length, text, separator);
     }
 
-    /** Replace start..end with text, separated from what comes before by `separator` — so an `@`
+    /** Replace start..end with text, separated from what comes before by `separator`, so an `@`
      *  token parses fresh instead of gluing onto a word, and a block starts on a line of its own.
      *  Whitespace already there counts towards it: `' '` is satisfied by any, `'\n\n'` only adds
      *  the line breaks that are missing. */
@@ -1669,7 +1669,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     };
 
     /** kind, not an image/ mime: a pasted PDF then meets the same allow-list as drop and the
-     *  picker, which either takes it or says why — instead of vanishing. */
+     *  picker, which either takes it or says why, instead of vanishing. */
     private _onPaste = (e: ClipboardEvent): void => {
         const files = Array.from(e.clipboardData?.items ?? [])
             .filter((i) => i.kind === 'file')
@@ -1684,7 +1684,7 @@ export class CvPrompt extends LitElement implements CommandHost {
 
     /** Stop the turn: interrupt the CLI, drop anything queued behind it, free the UI.
      *  Public because Esc (handled globally in cv-app) is the same gesture as the Stop
-     *  button — it must not stop halfway and leave the queue to fire on the next flush. */
+     *  button: it must not stop halfway and leave the queue to fire on the next flush. */
     stop(): void {
         bridge.sendNotification(Msg.fromWebView.cli.stop, {});
         // Queued prompts were meant to follow the turn being stopped; flushing them after an
@@ -1750,7 +1750,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         bridge.sendNotification<SetModelNotification>(Msg.fromWebView.cli.setModel, {
             model: e.detail.value,
         });
-        // Bubble up to cv-app so it can render the "Switched to X" notice — the
+        // Bubble up to cv-app so it can render the "Switched to X" notice: the
         // notice only fires for a user-driven menu pick, never for the ui_init
         // seed or a runtime cli_model_changed.
         this.dispatchEvent(
@@ -1786,7 +1786,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._permissionListOpen = !this._permissionListOpen;
         // Arrow/Enter navigation lives on the textarea's keydown (that's where the other
         // menus are driven from), but clicking the toolbar trigger leaves focus on the
-        // button — put it back so the list is keyboard-navigable straight away.
+        // button: put it back so the list is keyboard-navigable straight away.
         if (this._permissionListOpen) {
             this._ta?.focus({ preventScroll: true });
         }
@@ -1828,7 +1828,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     /** Says the composer holds a queued message rather than a new one, and how many are held up
-     *  behind it — the queue stops at the entry being edited, and with the turn over this is the
+     *  behind it: the queue stops at the entry being edited, and with the turn over this is the
      *  only thing left saying the queue is still there and still waiting. */
     private _renderEditingBar() {
         if (!this._editingUuid) {
@@ -1841,7 +1841,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                 message${waiting > 0 ? ` · ${waiting} waiting behind it` : ''}</span
             >
             <!-- A cross, like the one that takes an entry out of the list: the word was the only
-                 button here spelled out, and this closes the edit rather than destroying anything —
+                 button here spelled out, and this closes the edit rather than destroying anything,
                  the entry is still in the queue, untouched. -->
             <fluent-button
                 class="editing-cancel"
@@ -1857,7 +1857,7 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     override render() {
-        // While a permission/question prompt is pending, hide the composer — the user answers it
+        // While a permission/question prompt is pending, hide the composer: the user answers it
         // in the overlay above; typing the next message isn't allowed until then. Hide via CSS
         // (?hidden), NOT by unmounting: the textarea is uncontrolled, so unmounting would drop any
         // in-progress draft the user had typed while the turn was running.
@@ -1883,7 +1883,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                             placeholder=${
                                 this._isBusy
                                     ? // Alt+Enter only once there is something to join, which is
-                                      // the same guard the key handler has — and the only moment
+                                      // the same guard the key handler has, and the only moment
                                       // it is worth the room. Esc gives way to it there: that one
                                       // is learnt in the first turn, this one is discovered by
                                       // nobody.

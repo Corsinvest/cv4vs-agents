@@ -13,7 +13,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
 /// <summary>Tool window hosting the Statistics dashboard. Statistics owns no file: it renders what
 /// StatsService aggregates, and there is nothing to save, rename or reopen from the recent list.
-/// A document tab is the wrong shape for that — it needs a moniker, so the earlier version opened a
+/// A document tab is the wrong shape for that: it needs a moniker, so the earlier version opened a
 /// placeholder .cv4vsstats file just to have one, and then fought the shell over the tab caption.
 /// Single-instance: reopening from the menu focuses this one.</summary>
 [Guid("6f2e9a71-4c58-4b0e-9d3a-1e8b5c7a2d64")]

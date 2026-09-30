@@ -155,7 +155,7 @@ public partial class ProfilesControl : UserControl
 
     private void OnProfileEnabledClick(object sender, RoutedEventArgs e) =>
         // The list checkbox is TwoWay-bound directly to Profile.Enabled, so the value
-        // is already updated by the time this fires — just persist it.
+        // is already updated by the time this fires; just persist it.
         PersistProfiles();
 
     private void OnNameChanged(object sender, TextChangedEventArgs e)
@@ -175,7 +175,7 @@ public partial class ProfilesControl : UserControl
     }
 
     /// <summary>Name must be non-blank and unique (OrdinalIgnoreCase) among the
-    /// other profiles. Only flags the problem inline (red border/text) — it does not block
+    /// other profiles. Only flags the problem inline (red border/text); it does not block
     /// Apply, because UIElementDialogPage.OnApply has no supported way to cancel the
     /// Apply/close. AgentsProfilesPage.OnApply is what actually refuses to persist.</summary>
     private void ValidateName()
@@ -199,7 +199,7 @@ public partial class ProfilesControl : UserControl
 
     // The columns bind with UpdateSourceTrigger=PropertyChanged, so the edited EnvRow
     // is already current when CellEditEnding fires; RowEditEnding fires after the (new)
-    // row is committed to the ItemsSource. Write back synchronously — deferring to a
+    // row is committed to the ItemsSource. Write back synchronously: deferring to a
     // Background dispatcher tick risked OnApply reading page.Profiles before the tick ran
     // (user clicks the Options OK button right after editing), silently dropping the last edit.
     private void OnEnvGridCellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
@@ -225,7 +225,7 @@ public partial class ProfilesControl : UserControl
     private void OnEnvVarsLinkClick(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
     {
         try { System.Diagnostics.Process.Start(e.Uri.AbsoluteUri); }
-        catch (Exception) { /* no browser / blocked — ignore, not worth a dialog */ }
+        catch (Exception) { /* no browser / blocked; ignore, not worth a dialog */ }
         e.Handled = true;
     }
 

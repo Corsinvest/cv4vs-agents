@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 // Human labels for a failed turn. The host sends `errorKind` from the result's
-// `terminal_reason` when present, else its `subtype` — both vocabularies land here.
+// `terminal_reason` when present, else its `subtype`: both vocabularies land here.
 
 const LABELS: Record<string, string> = {
     // result subtypes
@@ -35,7 +35,7 @@ export function turnErrorLabel(kind: string): string {
 }
 
 /** Reasons that are the user's own doing. The CLI flags them is_error like any other failure, but
- *  pressing stop is not a failure — and the transcript already shows "[Request interrupted by
+ *  pressing stop is not a failure, and the transcript already shows "[Request interrupted by
  *  user]", so a red notice on top of it reads as though something went wrong. */
 const USER_ABORTED = new Set(['aborted_streaming', 'aborted_tools']);
 

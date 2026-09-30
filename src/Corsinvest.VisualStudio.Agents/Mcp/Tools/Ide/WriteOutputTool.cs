@@ -23,7 +23,7 @@ internal sealed class WriteOutputArgs
     public bool Activate { get; set; }
 }
 
-/// <summary>MCP tool: write a line into an Output pane, creating it when needed — a place to
+/// <summary>MCP tool: write a line into an Output pane, creating it when needed, a place to
 /// leave progress or a note where the user will see it, without a dialog.</summary>
 internal sealed class WriteOutputTool : McpTool<WriteOutputArgs>
 {

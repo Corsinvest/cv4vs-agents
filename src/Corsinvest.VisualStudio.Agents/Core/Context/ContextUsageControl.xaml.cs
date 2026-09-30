@@ -32,7 +32,7 @@ public partial class ContextUsageControl : UserControl
     private readonly Dictionary<string, GetContextUsageResponse> _cache = new();
     // Cancels the in-flight fetch when the selection changes.
     private CancellationTokenSource _cts;
-    // The selected session's working directory — memory-file paths are shown relative to it.
+    // The selected session's working directory: memory-file paths are shown relative to it.
     private string _currentCwd;
 
     public ContextUsageControl()
@@ -128,7 +128,7 @@ public partial class ContextUsageControl : UserControl
     private void OnScopeSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         if (e.NewValue is not StatsTreeNode node) { return; }
-        // BuildTree's programmatic IsSelected re-selects the node it just stored — ignore that echo.
+        // BuildTree's programmatic IsSelected re-selects the node it just stored; ignore that echo.
         if (ReferenceEquals(node, _selNode)) { return; }
         _selNode = node;
         _sel = node.Selection;

@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Client;
 
-// Data the CLI reports about itself — the client's own shapes, deliberately NOT the generated
+// Data the CLI reports about itself: the client's own shapes, deliberately NOT the generated
 // Contracts DTOs: those describe what we send to the WebView, and this layer talks to the process,
 // not to the UI. The pane maps between the two. Event payloads live in Events.cs.
 
@@ -50,7 +50,7 @@ public sealed class SpinnerVerbs
 }
 
 /// <summary>Per-model totals of a finished turn (`result.modelUsage`, keyed by model id). Cost is
-/// the CLI's own figure — we never compute it, so a provider with its own pricing stays correct.
+/// the CLI's own figure: we never compute it, so a provider with its own pricing stays correct.
 /// NOT the same shape as `message.usage`, which is snake_case and carries the four token counts
 /// only: the wire is inconsistent here on purpose, so the two do not share a type.</summary>
 public sealed class ModelUsage
@@ -65,7 +65,7 @@ public sealed class ModelUsage
     public int MaxOutputTokens { get; set; }
 }
 
-/// <summary>Subscription rate-limit state (`rate_limit_event`). Only claude.ai plans emit it —
+/// <summary>Subscription rate-limit state (`rate_limit_event`). Only claude.ai plans emit it:
 /// an API-key or 3P provider session never sees one.</summary>
 public sealed class RateLimitInfo
 {
@@ -80,7 +80,7 @@ public sealed class RateLimitInfo
     /// the CLI adds plan types, and an unknown one must not break the banner.</summary>
     public string RateLimitType { get; set; }
 
-    /// <summary>Fraction of the window consumed (0..1). Null when unreported — distinct from 0%.</summary>
+    /// <summary>Fraction of the window consumed (0..1). Null when unreported: distinct from 0%.</summary>
     public double? Utilization { get; set; }
 }
 
@@ -108,7 +108,7 @@ public sealed class ModelInfo
     public string Value { get; set; }
 
     /// <summary>The served model id this entry maps to (e.g. "claude-opus-5[1m]"). Several entries
-    /// can share one — "default" is usually an alias of a named row.</summary>
+    /// can share one: "default" is usually an alias of a named row.</summary>
     public string ResolvedModel { get; set; }
 
     public string DisplayName { get; set; }

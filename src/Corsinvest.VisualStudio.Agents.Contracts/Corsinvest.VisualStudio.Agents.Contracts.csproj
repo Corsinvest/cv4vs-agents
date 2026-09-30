@@ -3,7 +3,7 @@
   <!--
     Wire contracts (DTOs) shared C#<->TS. Kept in a separate, dependency-free
     netstandard2.0 project so TypeGen (net10 CLI) can reflect over a small clean
-    DLL — the main VSIX assembly drags in WPF/EnvDTE/VS-Toolkit which the tool
+    DLL: the main VSIX assembly drags in WPF/EnvDTE/VS-Toolkit which the tool
     can't load in isolation. This project is also not locked while the extension
     runs, so it rebuilds independently for codegen.
   -->

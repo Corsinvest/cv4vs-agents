@@ -28,8 +28,8 @@ internal static class PromptDispatcher
     public static void Append(string text)
         => Dispatch(new SetComposerNotification { Append = true, Text = text });
 
-    /// <summary>With several panes open it goes to the last activated — the one being worked in,
-    /// where the first by SeqNo would just be the oldest — and brings it forward, or the prompt
+    /// <summary>With several panes open it goes to the last activated (the one being worked in,
+    /// where the first by SeqNo would just be the oldest) and brings it forward, or the prompt
     /// lands in a tool window nobody is looking at.</summary>
     private static void Dispatch(SetComposerNotification composer)
     {
@@ -46,7 +46,7 @@ internal static class PromptDispatcher
         }
 
         // Text first, activation second. Bringing the pane forward makes it the active window, and
-        // the IDE context that rides along with the turn is read from the active document — so
+        // the IDE context that rides along with the turn is read from the active document, so
         // activating first sends the prompt with no file behind it.
         target.SetComposerAction(composer);
         target.ActivateAction?.Invoke();

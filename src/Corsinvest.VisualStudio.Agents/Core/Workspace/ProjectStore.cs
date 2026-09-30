@@ -15,7 +15,7 @@ using System.Text;
 namespace Corsinvest.VisualStudio.Agents.Core.Workspace;
 
 /// <summary>Our per-project data folder: what it is called, and the file that says which project it
-/// holds. The two belong together — the name carries a hash and cannot be read back, so a folder
+/// holds. The two belong together: the name carries a hash and cannot be read back, so a folder
 /// that loses its descriptor is anonymous for good.
 /// <para>The name used to be the whole working directory with its separators replaced, which ran
 /// past the 248 characters .NET Framework allows a directory: the stats cache then failed to save
@@ -25,8 +25,8 @@ internal static class ProjectStore
 {
     private const string DescriptorFile = "project.json";
 
-    /// <summary>Longest tail kept in the folder name. The tail is there to be recognised by eye —
-    /// the hash is what makes the name unique — so it only has to be long enough for that.</summary>
+    /// <summary>Longest tail kept in the folder name. The tail is there to be recognised by eye;
+    /// the hash is what makes the name unique, so it only has to be long enough for that.</summary>
     private const int MaxTail = 30;
 
     /// <summary>Hash characters kept. Eight hex digits, with the tail already telling most projects
@@ -34,7 +34,7 @@ internal static class ProjectStore
     private const int HashChars = 8;
 
     /// <summary>The folder name for a working directory: its last segment, plus a hash of the whole
-    /// path. Pure — touches nothing.
+    /// path. Pure: touches nothing.
     /// <para>The tail, where the CLI truncates from the head: projects on one machine share a long
     /// prefix and differ at the end, so cutting from the front would leave them looking identical.
     /// The hash covers the full path, so two projects with the same tail under different roots
@@ -71,7 +71,7 @@ internal static class ProjectStore
         return folder;
     }
 
-    /// <summary>The project a folder belongs to. Null when the descriptor is missing or unreadable —
+    /// <summary>The project a folder belongs to. Null when the descriptor is missing or unreadable:
     /// there is no other way back, the name being a one-way hash.</summary>
     public static string PathOf(string projectFolder)
     {
@@ -91,7 +91,7 @@ internal static class ProjectStore
     }
 
     /// <summary>Every project folder on disk. For inspection, and for pruning the ones whose project
-    /// is gone — which nothing does yet.</summary>
+    /// is gone, which nothing does yet.</summary>
     public static IEnumerable<string> All()
         => Directory.Exists(AppPaths.ProjectsRoot)
             ? Directory.GetDirectories(AppPaths.ProjectsRoot)

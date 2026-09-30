@@ -26,10 +26,10 @@ type Tab = 'installed' | 'available' | 'marketplaces';
 // slice client-side). A search narrows the full list first, then the same cap applies.
 const AVAILABLE_LIMIT = 30;
 
-// Anthropic's official marketplace — flagged with a hippo to set it apart from user-added ones.
+// Anthropic's official marketplace, flagged with a hippo to set it apart from user-added ones.
 const OFFICIAL_MARKETPLACE = 'claude-plugins-official';
 
-// Strip the CLI's leading ✔/✘ (and stray whitespace) — the message-bar icon already conveys it.
+// Strip the CLI's leading ✔/✘ (and stray whitespace): the message-bar icon already conveys it.
 function cleanOpMessage(msg: string): string {
     return msg.replace(/^[✔✘✓✗]\s*/u, '').trim();
 }
@@ -93,7 +93,7 @@ function pluginUrl(p: AvailablePluginDto, marketplaces: MarketplaceDto[]): strin
 }
 
 /**
- * "Manage Plugins" dialog — 3 tabs (Installed / Available / Marketplaces). Backed by
+ * "Manage Plugins" dialog: 3 tabs (Installed / Available / Marketplaces). Backed by
  * `claude plugin … --json` one-shot processes (via the host's PluginService), because the live
  * chat process rejects plugin ops. List uses request/response; ops send a notification and the
  * host re-broadcasts a "plugins changed" banner to all chats. Create-on-open via dialog-host.
@@ -198,7 +198,7 @@ export class CvPluginManager extends CvDialogBase {
             .card .title {
                 font-weight: var(--fontWeightSemibold);
             }
-            /* Available card head: name left, install count right — popularity is the
+            /* Available card head: name left, install count right: popularity is the
              * secondary signal, so it must not push the name around. */
             .av-head {
                 display: flex;
@@ -216,7 +216,7 @@ export class CvPluginManager extends CvDialogBase {
                 font-size: var(--fontSizeBase200);
                 color: var(--colorNeutralForeground3);
                 margin-top: 2px;
-                /* Full text — wrap freely, no clamp: the description is what the user
+                /* Full text: wrap freely, no clamp: the description is what the user
                  * decides on, so a truncated one is worse than a taller card. */
                 overflow-wrap: anywhere;
             }
@@ -782,7 +782,7 @@ export class CvPluginManager extends CvDialogBase {
         if (!source) {
             return;
         }
-        // No client-side URL validation — the CLI validates (clones the repo, checks marketplace.json)
+        // No client-side URL validation: the CLI validates (clones the repo, checks marketplace.json)
         // and reports failure via the op result; a second rule here would only reject sources it accepts.
         this._send(Msg.fromWebView.plugins.marketplaceAdd, { source });
         this._addSource = '';

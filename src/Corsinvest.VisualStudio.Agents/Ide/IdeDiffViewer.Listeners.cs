@@ -39,7 +39,7 @@ internal sealed partial class IdeDiffViewer
             return VSConstants.S_OK;
         }
 
-        // Other RDT events — uninteresting for us.
+        // Other RDT events: uninteresting for us.
         int IVsRunningDocTableEvents3.OnAfterFirstDocumentLock(uint docCookie, uint dwRDTLockType, uint dwReadLocksRemaining, uint dwEditLocksRemaining) => VSConstants.S_OK;
         int IVsRunningDocTableEvents3.OnBeforeLastDocumentUnlock(uint docCookie, uint dwRDTLockType, uint dwReadLocksRemaining, uint dwEditLocksRemaining) => VSConstants.S_OK;
         int IVsRunningDocTableEvents3.OnAfterAttributeChange(uint docCookie, uint grfAttribs) => VSConstants.S_OK;
@@ -73,7 +73,7 @@ internal sealed partial class IdeDiffViewer
         : IVsWindowFrameNotify3, IVsWindowFrameNotify2, IVsWindowFrameNotify
     {
         /// <summary>Resolve the pending diff, then drop the temps this frame owned. Best effort:
-        /// OnClose runs before the frame is really gone, so VS may still hold a handle — a file
+        /// OnClose runs before the frame is really gone, so VS may still hold a handle: a file
         /// left behind is the old behaviour, not a regression worth an exception.</summary>
         private void Closed()
         {
@@ -127,7 +127,7 @@ internal sealed partial class IdeDiffViewer
         }
 
         /// <summary>Create + attach the InfoBar to the frame's InfoBar host.
-        /// Returns null (no-op) if the host or factory isn't available — the
+        /// Returns null (no-op) if the host or factory isn't available; the
         /// save/close gestures still resolve the diff, so the InfoBar is a
         /// visible convenience, never the only path.</summary>
         public static DiffInfoBar TryAttach(IVsWindowFrame frame, string fileName, Action onAccept, Action onReject)

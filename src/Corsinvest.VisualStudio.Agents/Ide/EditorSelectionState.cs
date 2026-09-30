@@ -81,7 +81,7 @@ internal sealed class EditorSelectionState
         }
         catch (Exception ex)
         {
-            // Nothing to recover — the events are gone either way — but a throw here means the
+            // Nothing to recover (the events are gone either way) but a throw here means the
             // teardown is not what we think it is.
             OutputWindowLogger.Global.Warn($"[ide-context] detach from a torn-down view: {ex.Message}");
         }

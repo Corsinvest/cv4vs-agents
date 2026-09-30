@@ -7,7 +7,7 @@
 
   A menu opens in its own popup window, outside the UserControl's visual tree, so
   Themes.UseVsTheme never reaches it and the stock WPF template comes up in the Windows light
-  theme — a white popup over a dark IDE. These styles bind the surfaces to EnvironmentColors
+  theme: a white popup over a dark IDE. These styles bind the surfaces to EnvironmentColors
   instead.
 
   Implicit (no x:Key) so every menu under the dictionary inherits them, items added at runtime

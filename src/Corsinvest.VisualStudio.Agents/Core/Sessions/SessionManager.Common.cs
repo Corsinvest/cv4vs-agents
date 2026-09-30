@@ -19,7 +19,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Sessions;
 internal sealed partial class SessionManager
 {
     /// <summary>Read up to <see cref="LiteReadWindowBytes"/> from <paramref name="offset"/>,
-    /// decode UTF-8 once (single block — no chunk seams to corrupt multi-byte chars),
+    /// decode UTF-8 once (single block, no chunk seams to corrupt multi-byte chars),
     /// and return the complete lines. When <paramref name="dropPartialFirstLine"/> the
     /// leading partial line (cut by the window start) is discarded.</summary>
     private static string[] ReadWindow(FileStream fs, long offset, bool dropPartialFirstLine)
@@ -81,7 +81,7 @@ internal sealed partial class SessionManager
     }
 
     /// <summary>The id the UI knows a line by. For a queued prompt that is the uuid it was sent
-    /// with (source_uuid), which the live replay uses too — the line's own uuid appears nowhere
+    /// with (source_uuid), which the live replay uses too: the line's own uuid appears nowhere
     /// else the UI could have seen it.</summary>
     private static bool IsLineFor(JObject line, string uuid)
         => line.Val("uuid", "") == uuid
@@ -99,7 +99,7 @@ internal sealed partial class SessionManager
         if (content is JArray arr)
         {
             // NOT simply the first text block: the editor-context block cv-prompt prepends is
-            // one, so stopping there yields the tag, which the strip below empties out — and
+            // one, so stopping there yields the tag, which the strip below empties out, and
             // the prompt drops out of the ↑/↓ history. Take the first block that still holds
             // something once the tag is gone.
             foreach (var item in arr)
@@ -123,12 +123,12 @@ internal sealed partial class SessionManager
 
     /// <summary>Read a string field from a JSONL line's top-level toolUseResult, or null.
     /// toolUseResult is often a plain string (e.g. error results), so a direct
-    /// indexer access would throw — this guards the object shape.</summary>
+    /// indexer access would throw: this guards the object shape.</summary>
     internal static string ToolUseResultField(JObject line, string field)
         => (line?["toolUseResult"] as JObject)?[field]?.Value<string>();
 
     /// <summary>What an Agent run cost, from the totals the CLI writes on its tool_result. Takes
-    /// the toolUseResult object itself, like <see cref="ToolUseResultPatch"/> — live holds one,
+    /// the toolUseResult object itself, like <see cref="ToolUseResultPatch"/>: live holds one,
     /// history reads it off the line.
     /// All zero when the run has no totals, which is the normal shape for an INTERRUPTED agent:
     /// there toolUseResult is a bare string ("User rejected tool use", "Error: [Request interrupted
@@ -141,14 +141,14 @@ internal sealed partial class SessionManager
                toolUseResult.Val("totalToolUseCount", 0));
 
     /// <summary>The hunks the CLI computed for an edit, verbatim. Null when the result carries no
-    /// patch — a Write on a new file has none — and also when it reports an empty one, which is
+    /// patch (a Write on a new file has none) and also when it reports an empty one, which is
     /// how "nothing changed" arrives: rendering that as a diff would draw an empty box.
     /// <para>The jump the file link makes is derived from these too, WebView-side
     /// (editRangeFromHunks): one patch, one answer, so the jump and the diff cannot disagree.</para></summary>
     internal static JArray ToolUseResultPatch(JObject toolUseResult)
         => toolUseResult?["structuredPatch"] is JArray hunks && hunks.Count > 0 ? hunks : null;
 
-    /// <summary>A path token (sessionId/agentId) is safe only if it's a plain id —
+    /// <summary>A path token (sessionId/agentId) is safe only if it's a plain id:
     /// letters, digits, '-' and '_'. Blocks separators and '..' traversal.</summary>
     internal static bool IsSafePathToken(string s)
     {

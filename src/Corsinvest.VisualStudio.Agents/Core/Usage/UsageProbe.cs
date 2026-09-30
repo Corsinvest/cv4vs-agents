@@ -15,11 +15,11 @@ namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 
 /// <summary>Fetches a profile's live usage with a throwaway claude.exe: start it with the profile's
 /// env, send get_usage, map the result, then dispose it. The Usage tab has no live pane of its own,
-/// so each profile gets its own short-lived process. No IDE MCP server (SsePort=0) — usage doesn't
-/// use the bridge — and none of the user's either: connecting them would be most of what the process
+/// so each profile gets its own short-lived process. No IDE MCP server (SsePort=0); usage doesn't
+/// use the bridge, and none of the user's either: connecting them would be most of what the process
 /// spends its short life on. We do NOT wait for system/init: that arrives only after a real user turn
 /// (the CLI only emits it once a prompt is sent), and get_usage is a plain control_request that works
-/// as soon as the transport is up — so we send it directly without spending a turn.</summary>
+/// as soon as the transport is up, so we send it directly without spending a turn.</summary>
 internal static class UsageProbe
 {
     private static readonly TimeSpan StartTimeout = TimeSpan.FromSeconds(15);
@@ -53,7 +53,7 @@ internal static class UsageProbe
             });
 
             // StartupAsync sends `initialize` on its own; its control_response carries the account
-            // (email/org/apiProvider) — no user turn needed (that's system/init, which we don't wait
+            // (email/org/apiProvider): no user turn needed (that's system/init, which we don't wait
             // for). Wait for Account to land, then ask usage.
             await WaitForAccountAsync(client, ct);
 

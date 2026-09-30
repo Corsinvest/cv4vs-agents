@@ -13,7 +13,7 @@ namespace Corsinvest.VisualStudio.Agents;
 /// <summary>Writes to the extension's pane in the VS Output window.
 /// <para>Instances differ only by the tag they prepend: <see cref="For"/> gives a per-session one
 /// (<c>[chat#2]</c>) so several open panes can be told apart in what is a single stream, and
-/// <see cref="Global"/> writes untagged for everything that belongs to no session — MCP, IDE,
+/// <see cref="Global"/> writes untagged for everything that belongs to no session: MCP, IDE,
 /// package, and any static member with no instance to reach.</para>
 /// <para>The pane itself is process-wide, so it stays on the static side: one pane, created once.</para>
 /// </summary>
@@ -81,7 +81,7 @@ internal sealed class OutputWindowLogger
         public void Dispose() { }
     }
 
-    // Always logs (bypasses LogLevel) — losing exceptions silently would
+    // Always logs (bypasses LogLevel): losing exceptions silently would
     // make the extension impossible to diagnose in production.
     public void LogException(string context, Exception ex)
     {
@@ -139,7 +139,7 @@ internal sealed class OutputWindowLogger
         if (Package.GetGlobalService(typeof(SVsOutputWindow)) is not IVsOutputWindow outputWindow) { return; }
 
         var guid = new Guid("A1B2C3D4-E5F6-7890-ABCD-EF1234567890");
-        // fInitVisible=1, fClearWithSolution=0 — keep logs across solution open/close
+        // fInitVisible=1, fClearWithSolution=0: keep logs across solution open/close
         outputWindow.CreatePane(ref guid, AppConstants.AppName, 1, 0);
         outputWindow.GetPane(ref guid, out _pane);
     }

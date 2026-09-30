@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 
-/// <summary>WebViewMessageHandler: the ExitPlanMode plan — opening it in the editor, answering with
+/// <summary>WebViewMessageHandler: the ExitPlanMode plan, opening it in the editor, answering with
 /// what the editor holds, and telling the banner when the plan file is saved.</summary>
 internal sealed partial class WebViewMessageHandler
 {
@@ -46,10 +46,10 @@ internal sealed partial class WebViewMessageHandler
         }
 
         // Answered already, or a CLI that names no file: the plan as it was in THAT call, read-only.
-        // The file has moved on since — a later plan in the same session is written over it.
+        // The file has moved on since: a later plan in the same session is written over it.
         if (input == null)
         {
-            // The sub-agent transcript first when there is one, then the main file — as HandleDiffDialog.
+            // The sub-agent transcript first when there is one, then the main file, as HandleDiffDialog.
             var agentId = p.AgentId ?? "";
             foreach (var lookIn in string.IsNullOrEmpty(agentId) ? [null] : new[] { agentId, null })
             {
@@ -61,7 +61,7 @@ internal sealed partial class WebViewMessageHandler
         if (plan.Length == 0)
         {
             // Two different misses: the call is not in the transcript at all, or it is and carries no
-            // plan — the model left plan mode without writing a plan file, so the CLI injected none.
+            // plan: the model left plan mode without writing a plan file, so the CLI injected none.
             var reason = input == null ? "Plan not found in the transcript" : "Claude sent no plan with this request";
             log.Warn($"[plan] can't open the plan of {toolUseId} — {reason}");
             // Not NoticeOpenFailed: that one names a file, and there is none here (its GetFileName also
@@ -88,7 +88,7 @@ internal sealed partial class WebViewMessageHandler
         {
             // Out of the WebView2 message callback first: a save that raises a dialog (read-only file,
             // encoding) would otherwise pump a nested message loop inside it. Mode-before-allow still
-            // holds — set_permission_mode reached stdin before this message was even dispatched.
+            // holds: set_permission_mode reached stdin before this message was even dispatched.
             await Task.Yield();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             var path = PlanApproval.PlanFilePathOf(input);
@@ -106,7 +106,7 @@ internal sealed partial class WebViewMessageHandler
                 }
                 else if (PlanApproval.IsEdited(snapshot, await ReadPlanTextAsync(path)))
                 {
-                    // Not saved on a deny — that is the autosave hook's call, under the user's option. But
+                    // Not saved on a deny: that is the autosave hook's call, under the user's option. But
                     // the model keeps planning from its own copy unless it is told the file changed.
                     response.DenyMessage += $" The user edited the plan file {path} in the editor; read it before revising the plan.";
                 }
@@ -120,8 +120,8 @@ internal sealed partial class WebViewMessageHandler
             Ide.IdeContextService.Instance.CloseDiffFor(toolUseId);
         }).FileAndForget(nameof(WebViewMessageHandler));
 
-    /// <summary>The plan as the user sees it: the editor buffer when the file is open — unsaved edits
-    /// included, and decoded whatever encoding the file is in — the file otherwise. Null when neither
+    /// <summary>The plan as the user sees it: the editor buffer when the file is open (unsaved edits
+    /// included, and decoded whatever encoding the file is in), the file otherwise. Null when neither
     /// can be read, which leaves the CLI to its own read.</summary>
     private async Task<string> ReadPlanTextAsync(string path)
     {
@@ -137,7 +137,7 @@ internal sealed partial class WebViewMessageHandler
 
     /// <summary>Hear saves in the IDE, from the first editable plan open until the pane closes.
     /// Stateless: which save matters is asked of the client when it happens, and the client already
-    /// drops a request on answer, cancel, exit and respawn — so nothing here unsubscribes along the way.</summary>
+    /// drops a request on answer, cancel, exit and respawn, so nothing here unsubscribes along the way.</summary>
     private void EnsurePlanSaveListener()
     {
         ThreadHelper.ThrowIfNotOnUIThread();

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
-/// <summary>MCP tool: detach the debugger and leave the program running — the half of "stop
+/// <summary>MCP tool: detach the debugger and leave the program running, the half of "stop
 /// debugging" that does not kill the process.</summary>
 internal sealed class DetachDebugTool : McpTool<NoArgs>
 {

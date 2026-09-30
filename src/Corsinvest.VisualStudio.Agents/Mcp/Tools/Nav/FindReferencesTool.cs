@@ -23,7 +23,7 @@ internal sealed class FindReferencesArgs
     public string SymbolName { get; set; }
 }
 
-/// <summary>MCP tool: find all REFERENCES to a symbol (semantic, not text search) — every
+/// <summary>MCP tool: find all REFERENCES to a symbol (semantic, not text search): every
 /// place it's used across the solution, excluding the symbol's own definition (that's
 /// nav_go_to_definition). Works without opening the editor. Multi-language where the VS language
 /// service supports it (C#/VB and others); returns supported=false otherwise so the model

@@ -21,7 +21,7 @@ import { CvDialogBase } from './cv-dialog-base';
 export class CvLightbox extends CvDialogBase {
     /** Enough for the header on one line: file name (~90px) + copy and close (~56px) + padding. */
     private static readonly MIN_PX = 200;
-    /** Title row plus the body's vertical padding — the height the image does not get. Matches the
+    /** Title row plus the body's vertical padding, the height the image does not get. Matches the
      *  same subtraction in `.img`'s max-height below; both are the dialog minus its chrome. */
     private static readonly HEADER_PX = 96;
 
@@ -48,7 +48,7 @@ export class CvLightbox extends CvDialogBase {
                 gap: 4px;
             }
             /* fit-content, not the block default: a block fills the width it is given, so the frame
-               stayed as wide as the cap however narrow the image was — and the dialog with it. */
+               stayed as wide as the cap however narrow the image was, and the dialog with it. */
             .frame {
                 display: block;
                 width: fit-content;
@@ -59,7 +59,7 @@ export class CvLightbox extends CvDialogBase {
             }
             /* Capped to what is left of the dialog's own 92vw/92vh once its chrome is taken out:
                24px of body padding each side, and the header above. The two caps used to be set
-               independently — 88vw against the dialog's 92vw — which on a narrow pane left the
+               independently (88vw against the dialog's 92vw), which on a narrow pane left the
                image wider than the room the dialog could give it, and the overflow came off the
                right-hand padding, so the image sat flush against that edge and was clipped. */
             .img {
@@ -86,12 +86,12 @@ export class CvLightbox extends CvDialogBase {
     /** Size the dialog to the image once it has loaded.
      *
      *  CSS alone cannot do this. `.frame` is a block, so it fills whatever width it is allowed and
-     *  the dialog follows it — a 661×1385 screenshot, 247px wide once fitted, still opened a 769px
+     *  the dialog follows it: a 661×1385 screenshot, 247px wide once fitted, still opened a 769px
      *  dialog. Nor can the dialog be told to follow its content: `fluent-dialog` is a native
      *  `<dialog>` in the top layer, its host box measures 0, and `width: fit-content` on the inner
      *  part collapses it to 48px instead of tracking the image. The width has to be computed.
      *
-     *  So it is handed one — as an expression rather than a pixel count, so the browser keeps
+     *  So it is handed one, as an expression rather than a pixel count, so the browser keeps
      *  re-evaluating it and the dialog tracks the pane on a resize. A number would only be right
      *  until the pane changed width: widen it and the image grows into its new cap while the dialog
      *  stays where it was, and what no longer fits is clipped. MIN_PX keeps the header (file name
@@ -111,7 +111,7 @@ export class CvLightbox extends CvDialogBase {
             : 0;
         // Three candidates, smallest wins, mirroring what the CSS caps below do to the image
         // itself: its natural size, the width the viewport leaves, and the width its aspect ratio
-        // allows once the height cap bites — a tall image is limited by height, and asking for its
+        // allows once the height cap bites: a tall image is limited by height, and asking for its
         // full width would pad the dialog out around a picture that never got that wide.
         // !important: Fluent's own width rule on the part would otherwise win.
         const ratio = img.naturalWidth / img.naturalHeight;
@@ -131,7 +131,7 @@ export class CvLightbox extends CvDialogBase {
         }
         const src = r.src;
         const name = r.name || 'Image';
-        // The clipboard only accepts image/png for a ClipboardItem — a jpeg/webp write is rejected
+        // The clipboard only accepts image/png for a ClipboardItem: a jpeg/webp write is rejected
         // (silent catch = no checkmark). Draw the image onto a canvas and re-encode as PNG so any
         // source format copies.
         const fetchBlob = (): Promise<Blob> =>
@@ -157,7 +157,7 @@ export class CvLightbox extends CvDialogBase {
                 img.src = src;
             });
         // Standard dialog chrome (like the diff dialog): title + copy in the header, the ✕ in the
-        // close slot — all ABOVE the image, never overlaid on it.
+        // close slot: all ABOVE the image, never overlaid on it.
         return html`
             <fluent-dialog type="modal" aria-label="Image preview" @toggle=${this._onDialogToggle}>
                 <fluent-dialog-body>

@@ -16,7 +16,7 @@ internal sealed class GetThreadCallStackArgs
     public int ThreadId { get; set; }
 }
 
-/// <summary>MCP tool: another thread's call stack without selecting that thread — the read that
+/// <summary>MCP tool: another thread's call stack without selecting that thread, the read that
 /// debug_select_thread + debug_get_callstack would do at the cost of moving the debugger.</summary>
 internal sealed class GetThreadCallStackTool : McpTool<GetThreadCallStackArgs>
 {

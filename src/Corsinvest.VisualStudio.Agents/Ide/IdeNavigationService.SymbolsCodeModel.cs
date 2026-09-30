@@ -23,7 +23,7 @@ internal sealed partial class IdeNavigationService
     /// <para>Null (not empty) when the file has no code model, so the caller can tell "this
     /// language has no outline" from "this file has no symbols".</para>
     /// <para>A C++ member declared in a header reports the line of its definition in the .cpp, the
-    /// way F12 navigates — so an outline of a header can hand back lines that belong to another
+    /// way F12 navigates, so an outline of a header can hand back lines that belong to another
     /// file, and they are not wrong.</para></summary>
     private static async Task<DocSymbol[]> GetCodeModelSymbolsAsync(string filePath, CancellationToken ct)
     {
@@ -34,7 +34,7 @@ internal sealed partial class IdeNavigationService
             var item = dte?.Solution?.FindProjectItem(filePath);
 
             // Reading this starts the language's parse, so besides returning null it also throws
-            // while the parser is still coming up — C++ in particular.
+            // while the parser is still coming up, C++ in particular.
             var codeModel = item?.FileCodeModel;
             if (codeModel?.CodeElements == null) { return null; }
 
@@ -47,7 +47,7 @@ internal sealed partial class IdeNavigationService
         }
     }
 
-    /// <summary>Same ordering as the Roslyn path — line, then name — so an outline reads the same
+    /// <summary>Same ordering as the Roslyn path (line, then name) so an outline reads the same
     /// whichever side produced it.</summary>
     private static DocSymbol[] MapCodeElements(CodeElements elements, CancellationToken ct)
     {
@@ -89,7 +89,7 @@ internal sealed partial class IdeNavigationService
     }
 
     /// <summary>CodeElement itself has no Members: only CodeNamespace and CodeType declare one,
-    /// and CodeType is the base of class, interface, struct, enum and delegate — so those two
+    /// and CodeType is the base of class, interface, struct, enum and delegate, so those two
     /// cases cover every container, including the C++ shapes with no C# equivalent to name.
     /// </summary>
     private static CodeElements GetMembers(CodeElement element)
@@ -105,7 +105,7 @@ internal sealed partial class IdeNavigationService
     }
 
     /// <summary>The same kind names the Roslyn path reports, so a caller cannot tell which side
-    /// answered. Null for the enum's other 23 members, which are not declarations at all —
+    /// answered. Null for the enum's other 23 members, which are not declarations at all:
     /// statements inside a body, parameters, attributes, `#include` lines, the IDL family.
     /// </summary>
     private static string MapElementKind(vsCMElement kind)

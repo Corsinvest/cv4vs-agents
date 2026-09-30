@@ -8,7 +8,7 @@
     <!-- ChatWebView derives from WebView2CompositionControl, which renders through
          Windows.UI.Composition inside the WPF visual tree instead of a child HWND, so VS's
          floating tool windows can draw over the chat (a child HWND always wins the z-order
-         against WPF — the airspace issue). The subclass adds back the caret keys that
+         against WPF: the airspace issue). The subclass adds back the caret keys that
          composition rendering drops. -->
     <chat:ChatWebView x:Name="WebView" />
     <!-- Fills the pane and is opaque on purpose: the WebView is transparent until its first paint
@@ -17,7 +17,7 @@
     <Grid x:Name="StatusPanel" Background="{DynamicResource VsBrush.Window}" Visibility="Visible">
       <!-- Text only, no progress bar: EnsureCoreWebView2Async blocks the UI thread for ~2s while
            the composition controller and the browser processes come up (measured), so an
-           indeterminate bar would sit frozen for most of the wait — worse than saying nothing. -->
+           indeterminate bar would sit frozen for most of the wait: worse than saying nothing. -->
       <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
                  Foreground="{DynamicResource VsBrush.WindowText}" FontSize="13"
                  Text="Initializing..."/>

@@ -17,8 +17,8 @@ public static class ClaudeCliLauncher
     /// Single layer of quoting so install-path spaces survive <c>CreateProcess</c>.
     /// When <paramref name="mcpPort"/>/<paramref name="mcpAuthToken"/> are supplied, also
     /// registers our in-process MCP server as a second "vs" server via --mcp-config so the
-    /// CLI sees the full custom tool surface (mcp__vs__*) — the --ide channel alone is
-    /// filtered by the CLI to just executeCode/getDiagnostics — and pre-approves them with
+    /// CLI sees the full custom tool surface (mcp__vs__*; the --ide channel alone is
+    /// filtered by the CLI to just executeCode/getDiagnostics) and pre-approves them with
     /// --allowedTools (every MCP tool otherwise prompts on each call). Returns <c>null</c>
     /// if the binary is missing.</summary>
     public static string BuildConPtyCommandLine(bool ide, int mcpPort, string mcpAuthToken)

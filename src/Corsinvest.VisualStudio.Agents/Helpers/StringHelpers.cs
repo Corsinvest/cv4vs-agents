@@ -14,7 +14,7 @@ internal static class StringHelpers
 
     /// <summary>Collapse a block of text onto one line, then truncate it. For anything shown in a
     /// menu, a tab or a list row: a session title falls back to the last prompt, which is a whole
-    /// message — newlines and all — and one of those in a MenuItem breaks the row rather than
+    /// message (newlines and all) and one of those in a MenuItem breaks the row rather than
     /// wrapping. Truncating alone would not do: the cut would land inside the first line and drop
     /// the rest silently.</summary>
     public static string ToSingleLine(string s, int max)

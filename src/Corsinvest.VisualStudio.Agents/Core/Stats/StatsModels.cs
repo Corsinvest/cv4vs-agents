@@ -8,7 +8,7 @@ using System.Collections.Generic;
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
 // Internal aggregation model (NOT the wire DTO). Mirrors the CLI's stats.ts aggregation:
-// tokens per model, per-day activity, sessions/messages — computed from the local .jsonl.
+// tokens per model, per-day activity, sessions/messages: computed from the local .jsonl.
 
 /// <summary>Token totals for one model.</summary>
 internal sealed class ModelTokens
@@ -20,7 +20,7 @@ internal sealed class ModelTokens
 
     public long Total => InputTokens + OutputTokens;
 
-    /// <summary>All tokens incl. cache — the meaningful "how much did this day cost" measure, since
+    /// <summary>All tokens incl. cache: the meaningful "how much did this day cost" measure, since
     /// cache read/creation dwarf raw input/output.</summary>
     public long GrandTotal => InputTokens + OutputTokens + CacheReadTokens + CacheCreationTokens;
 
@@ -57,7 +57,7 @@ internal sealed class DayActivity
     }
 }
 
-/// <summary>Aggregate of a SINGLE .jsonl file — the cache entry's payload. Merged into the
+/// <summary>Aggregate of a SINGLE .jsonl file: the cache entry's payload. Merged into the
 /// total by summing. A subagent file contributes tokens/tool-calls but is not a session.</summary>
 internal sealed class FileAggregate
 {
@@ -70,7 +70,7 @@ internal sealed class FileAggregate
     public Dictionary<string, ModelTokens> ModelUsage { get; } = new();
     // dateKey (yyyy-MM-dd) → activity
     public Dictionary<string, DayActivity> Days { get; } = new();
-    // The hour (0-23) of the session's first message — for the peak-hour metric (main sessions).
+    // The hour (0-23) of the session's first message: for the peak-hour metric (main sessions).
     public int FirstHour { get; set; } = -1;
     // Extra metrics collected in the same pass (cost ~0): attachments + tool usage.
     public int ImageCount { get; set; }
@@ -78,7 +78,7 @@ internal sealed class FileAggregate
     public Dictionary<string, int> ToolCallsByName { get; } = new();
 }
 
-/// <summary>The summed aggregate over a scope+range — what the dialog renders.</summary>
+/// <summary>The summed aggregate over a scope+range: what the dialog renders.</summary>
 internal sealed class StatsTotals
 {
     public int TotalSessions { get; set; }

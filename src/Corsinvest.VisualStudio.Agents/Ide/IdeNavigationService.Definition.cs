@@ -71,7 +71,7 @@ internal sealed partial class IdeNavigationService
         }
     }
 
-    /// <summary>Resolve the metadata-as-source path — the second half of VS's own F12, which turns
+    /// <summary>Resolve the metadata-as-source path, the second half of VS's own F12, which turns
     /// a symbol with no source in the solution into a generated file on disk. Everything here is
     /// optional: failing leaves go-to-definition exactly as it was.</summary>
     private bool EnsureMetadataProbed()
@@ -85,7 +85,7 @@ internal sealed partial class IdeNavigationService
             var serviceType = VsReflection.FindType("Microsoft.CodeAnalysis.MetadataAsSource.IMetadataAsSourceFileService");
             if (serviceType == null) { return ProbeFailed(step); }
 
-            // A plain [Export], so the same MEF hop as VisualStudioWorkspace — not a per-document
+            // A plain [Export], so the same MEF hop as VisualStudioWorkspace, not a per-document
             // language service like the rest of this file.
             step = "IMetadataAsSourceFileService instance";
             var compModel = Package.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
@@ -204,7 +204,7 @@ internal sealed partial class IdeNavigationService
 
     /// <summary>The definition of a symbol that has no source in the solution: Roslyn writes the
     /// decompiled (or SourceLink-fetched) declaration to a file under %TEMP% and hands back its
-    /// path. Empty on anything unexpected — the caller then reports "no definition" as before.
+    /// path. Empty on anything unexpected; the caller then reports "no definition" as before.
     /// <para>
     /// Needs an <c>ISymbol</c>, which only exists where the document has a semantic model, so this
     /// answers for C#/VB and stays out of the way elsewhere. That is not a shortcut past an
@@ -279,7 +279,7 @@ internal sealed partial class IdeNavigationService
     private static string MetadataSourceKind(string path)
         => path.IndexOf("PdbSourceDocument", StringComparison.OrdinalIgnoreCase) >= 0 ? "source" : "decompiled";
 
-    /// <summary>The text of a 1-based line, trimmed — the preview for a file we have no offset
+    /// <summary>The text of a 1-based line, trimmed: the preview for a file we have no offset
     /// into (FileOffsetToLineCol works the other way round).</summary>
     private static string SourceLineAt(string filePath, int line)
     {

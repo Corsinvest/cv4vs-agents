@@ -29,7 +29,7 @@ function fmtDuration(ms: number): string {
 }
 
 function getMemory(): MemoryInfo | null {
-    // performance.memory is Chromium-only (WebView2 has it). It measures the JS heap only —
+    // performance.memory is Chromium-only (WebView2 has it). It measures the JS heap only:
     // the DOM lives in native memory, so the node counts below are the better size signal.
     const perf = performance as Performance & { memory?: MemoryInfo };
     return perf.memory ?? null;
@@ -80,7 +80,7 @@ function rowKind(el: Element): RowKind {
 }
 
 interface DomStats {
-    /** Elements in the page, shadow roots included — the number that tracks chat weight.
+    /** Elements in the page, shadow roots included: the number that tracks chat weight.
      *  A plain querySelectorAll stops at each shadow boundary and misses most of them. */
     nodes: number;
     shadowRoots: number;
@@ -166,7 +166,7 @@ interface Snapshot {
          *  numbers differently from one opened a minute ago. */
         uptime: string;
     };
-    /** What the CLI is running with — the first question on any "it answered wrong" report. */
+    /** What the CLI is running with: the first question on any "it answered wrong" report. */
     cli: {
         model: string | null;
         permissionMode: string;
@@ -205,7 +205,7 @@ interface Snapshot {
 function snapshot(): Snapshot {
     const mem = getMemory();
     const u = state.contextUsage;
-    // The gauge's own sum, so the dialog and the ring can never disagree — note it leaves out
+    // The gauge's own sum, so the dialog and the ring can never disagree: note it leaves out
     // outputTokens, which are not in the window yet when the reading is taken.
     const used = u ? consumedTokens(u) : 0;
     const win = state.contextWindow;
@@ -317,7 +317,7 @@ function info(): void {
     console.groupEnd();
 }
 
-/** Diagnostic report as plain text — for reading in the console, where markdown pipes and
+/** Diagnostic report as plain text, for reading in the console, where markdown pipes and
  *  dashes are noise. Counts and flags only, never cv-message content. */
 function dump(): string {
     const s = snapshot();
@@ -335,7 +335,7 @@ function dump(): string {
     return lines.join('\n');
 }
 
-/** Diagnostic report as markdown — for pasting into an issue, where the tables render and a
+/** Diagnostic report as markdown, for pasting into an issue, where the tables render and a
  *  `<details>` keeps it from burying the actual report. */
 function dumpMarkdown(): string {
     const s = snapshot();
@@ -369,7 +369,7 @@ function dumpMarkdown(): string {
  *
  * `info` reads in the console, `dump` is the same report as plain text, `markdown` is the shape
  * an issue renders. No copy helper: the pane's Info dialog already has a Copy button, and it is
- * `dump()` that it shows — see ChatPaneControl.ExtraSessionSections, which calls it BY NAME
+ * `dump()` that it shows; see ChatPaneControl.ExtraSessionSections, which calls it BY NAME
  * through ExecuteScriptAsync. Renaming these silently empties that dialog's last section.
  */
 export function installDebugApi(): void {

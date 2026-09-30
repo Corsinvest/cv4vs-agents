@@ -10,7 +10,7 @@
     <License>LICENSE</License>
     <!-- A URL rather than a file: the release workflow publishes each version's CHANGELOG section
          there, so the link stays current without the manifest naming a version. The schema fixes
-         the order of these elements — ReleaseNotes belongs after License, not before. -->
+         the order of these elements: ReleaseNotes belongs after License, not before. -->
     <ReleaseNotes>https://github.com/Corsinvest/cv4vs-agents/releases</ReleaseNotes>
     <!-- 128x128, the size the Marketplace states for the extension page and tile: it downscales a
          larger file but upscales a smaller one, and Resources\icon.png is 16x16 because the .vsct
@@ -21,7 +21,7 @@
     <!-- Search hints, capped at 100 characters. copilot/chat/mcp/assistant are what people
          actually type when looking for this kind of extension, not what it is called.
          Semicolons, not commas: that is what the schema delimits on, and VsixPublisher takes a
-         comma-separated string as ONE tag — which then trips the Marketplace's 50-character
+         comma-separated string as ONE tag, which then trips the Marketplace's 50-character
          per-tag limit and fails the publish, as v1.1.0 did. -->
     <Tags>claude;anthropic;ai;claude-code;llm;agent;agentic;coding-agent;copilot;chat;mcp;assistant</Tags>
   </Metadata>

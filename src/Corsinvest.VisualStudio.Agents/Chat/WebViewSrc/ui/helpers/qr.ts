@@ -7,7 +7,7 @@ import { encodeQR } from '@paulmillr/qr';
 /**
  * QR code for `text` as an inline SVG string.
  *
- * The library's own `svg` output emits one `<rect>` per module — ~700 elements and 24 KB for a
+ * The library's own `svg` output emits one `<rect>` per module: ~700 elements and 24 KB for a
  * session URL. One `<path>` says the same in a third of the bytes and a single node.
  *
  * Black on white, not theme tokens: a scanner needs the real contrast, and the quiet zone has to

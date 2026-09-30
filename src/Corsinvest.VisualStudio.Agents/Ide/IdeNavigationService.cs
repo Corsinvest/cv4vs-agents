@@ -20,7 +20,7 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 /// <para>
 /// Multi-language IDE navigation (go-to-definition, find-references, file symbols, rename)
 /// without opening the editor. Works for ANY language whose VS language service registers the
-/// relevant per-document service (C#, VB, F#, C++, TS, …) — VS exposes these through Roslyn's
+/// relevant per-document service (C#, VB, F#, C++, TS, …): VS exposes these through Roslyn's
 /// <c>Project.Services.GetService&lt;TLanguageService&gt;()</c>, but the service interfaces
 /// (e.g. INavigableItemsService) are <c>internal</c> to Microsoft.CodeAnalysis.
 /// </para>
@@ -30,7 +30,7 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 /// loaded. No NuGet package is referenced (which would risk version conflicts with the host VS
 /// edition); we bind to whatever Roslyn the running VS provides. If the expected types/members
 /// aren't found (a future VS reshaped them), every call degrades to "not supported" instead of
-/// throwing — the caller (MCP tool) then reports that to the model.
+/// throwing; the caller (MCP tool) then reports that to the model.
 /// </para>
 /// <para>
 /// This file holds the shared core (workspace + GetService&lt;T&gt; probing, type/offset
@@ -52,7 +52,7 @@ internal sealed partial class IdeNavigationService
         public string Preview { get; set; } // the source line's text, trimmed
 
         /// <summary>Null for a file of the solution. Set when the definition lives in a referenced
-        /// assembly and had to be generated: "decompiled" (rebuilt from IL — locals renamed,
+        /// assembly and had to be generated: "decompiled" (rebuilt from IL: locals renamed,
         /// syntax re-emitted) or "source" (the real thing, via SourceLink).</summary>
         public string Source { get; set; }
     }
@@ -60,7 +60,7 @@ internal sealed partial class IdeNavigationService
     // Shared reflection handles, resolved once (feature-detection). Null ⇒ unsupported.
 
     /// <summary><para>Guards every EnsureXxxProbed in the partials. They all follow the same
-    /// shape — set the "probed" flag, then do the work, then set "available" — which reads as
+    /// shape (set the "probed" flag, then do the work, then set "available"), which reads as
     /// run-once but is not safe against a second caller: two nav tools invoked in parallel had the
     /// second see probed=true while the first was still resolving, and answer "not available in
     /// this Visual Studio" for a service that works. Two calls to the same tool, seconds apart,
@@ -87,7 +87,7 @@ internal sealed partial class IdeNavigationService
             _probed = true;
             try
             {
-                // Resolve types by scanning loaded assemblies — Type.GetType("…, AsmName")
+                // Resolve types by scanning loaded assemblies: Type.GetType("…, AsmName")
                 // doesn't bind these VS/Roslyn assemblies (partial assembly name).
                 // `step` names the last thing probed, logged once if a future VS reshapes things.
                 string step = "workspaceType";
@@ -146,7 +146,7 @@ internal sealed partial class IdeNavigationService
         => ((IEnumerable)VsReflection.GetProp(CurrentSolution, "Projects")).Cast<object>();
 
     /// <summary>A project's LanguageServices, under either of the two names Roslyn has given that
-    /// property — which is the whole reason this is a method and not a read.</summary>
+    /// property, which is the whole reason this is a method and not a read.</summary>
     private static object LanguageServicesOf(object project)
         => VsReflection.GetPropOrNull(project, "Services")
            ?? VsReflection.GetPropOrNull(project, "LanguageServices");
@@ -159,7 +159,7 @@ internal sealed partial class IdeNavigationService
             ? null
             : _getServiceGeneric.MakeGenericMethod(serviceType).Invoke(services, null);
 
-    /// <summary>document.Project.Services.GetService&lt;serviceType&gt;() — the per-language
+    /// <summary>document.Project.Services.GetService&lt;serviceType&gt;(): the per-language
     /// service hop. Null if this language doesn't register the service.</summary>
     private object GetLanguageService(object document, Type serviceType)
         => GetServiceFrom(LanguageServicesOf(VsReflection.GetProp(document, "Project")), serviceType);
@@ -215,7 +215,7 @@ internal sealed partial class IdeNavigationService
         public System.Collections.Generic.Dictionary<string, bool> Services { get; set; } = [];
     }
 
-    /// <summary>Source files a project holds that its own language service does not answer for —
+    /// <summary>Source files a project holds that its own language service does not answer for:
     /// extension → how many. A .csproj carrying .ts and .sql files is a C# project as far as the
     /// workspace is concerned, and the services all report true, but none of them will say a word
     /// about those files. Without this the coverage report is true and still misleading.</summary>
@@ -233,7 +233,7 @@ internal sealed partial class IdeNavigationService
         public bool Supported { get; set; }
         public string Reason { get; set; }
         public LanguageCoverage[] Languages { get; set; } = [];
-        /// <summary>Projects of the solution that are in no Roslyn workspace at all — C++ and the
+        /// <summary>Projects of the solution that are in no Roslyn workspace at all: C++ and the
         /// like. None of the services below can be asked about them, whatever those answer;
         /// get_document_symbols is the one tool that still answers, through the project system.
         /// Carries the extensions too: the project name alone says a project is out of reach
@@ -246,13 +246,13 @@ internal sealed partial class IdeNavigationService
     }
 
     /// <summary><para>Which languages this solution holds, and which navigation services each of
-    /// them registers — measured, not assumed.</para>
+    /// them registers; measured, not assumed.</para>
     /// <para>The two questions have different answers and different consequences. A language absent
     /// from <c>CurrentSolution.Projects</c> is outside the Roslyn workspace entirely (C++), and no
     /// amount of asking will help: reaching it needs a separate backend. A language that is present
     /// but whose <c>GetService&lt;T&gt;()</c> returns null for one interface simply lacks that one
     /// feature. Both surface as <c>supported=false</c> from a nav tool, which is why they were
-    /// indistinguishable until this was written — the answer took four throwaway projects and a
+    /// indistinguishable until this was written: the answer took four throwaway projects and a
     /// round of manual calls to work out the first time.</para></summary>
     public CoverageResult GetCoverage()
     {
@@ -328,7 +328,7 @@ internal sealed partial class IdeNavigationService
     /// "what is not covered": the projects the Roslyn workspace never saw, and the source files
     /// sitting inside covered projects that their project's language does not answer for.</para>
     /// <para>Read through the IDE-context walk, which recurses solution folders and drops the
-    /// Miscellaneous Files node — a flat pass over DTE's Solution.Projects gets both of those
+    /// Miscellaneous Files node: a flat pass over DTE's Solution.Projects gets both of those
     /// wrong, as an earlier attempt at this in Search.cs found out by reporting "File esterni".
     /// </para></summary>
     private (ForeignFiles[] Outside, ForeignFiles[] Uncovered) WalkSolution(
@@ -348,7 +348,7 @@ internal sealed partial class IdeNavigationService
                 if (!inWorkspace.TryGetValue(project.Name, out var language))
                 {
                     // Nothing in there is reachable, so every source file counts, not just the
-                    // ones foreign to a language — there is no language to be foreign to.
+                    // ones foreign to a language: there is no language to be foreign to.
                     outside.Add(new ForeignFiles
                     {
                         Project = project.Name,
@@ -402,12 +402,12 @@ internal sealed partial class IdeNavigationService
     }
 
     /// <summary><para>Whether a project of <paramref name="language"/> is the one that answers for
-    /// files with this extension — asked of Roslyn, which maps a content type back to the language
+    /// files with this extension, asked of Roslyn, which maps a content type back to the language
     /// name it uses, rather than kept as a table here.</para>
     /// <para><c>IContentTypeLanguageService</c> is the reverse of what the name suggests: it is a
     /// per-language service, so asking the language for its content type and comparing is how the
     /// mapping is read in that direction. A language that does not register one (or a file VS has
-    /// no content type for) answers true — an unknown pairing is not evidence of a gap, and
+    /// no content type for) answers true: an unknown pairing is not evidence of a gap, and
     /// over-reporting would be the worse mistake here.</para></summary>
     private bool SpeaksFor(string language, string extension)
     {
@@ -429,7 +429,7 @@ internal sealed partial class IdeNavigationService
     }
 
     /// <summary>The editor content type a Roslyn language name corresponds to, or null when this VS
-    /// does not say. Read from the language's own <c>IContentTypeLanguageService</c> — which exists
+    /// does not say. Read from the language's own <c>IContentTypeLanguageService</c>, which exists
     /// for exactly this and is cached per language, since the answer cannot change while VS runs.
     /// </summary>
     private string ContentTypeOf(string language)
@@ -462,7 +462,7 @@ internal sealed partial class IdeNavigationService
     private readonly System.Collections.Generic.Dictionary<string, string> _contentTypeByLanguage =
         new(StringComparer.Ordinal);
 
-    /// <summary><para>Whether this is a file VS treats as code — asked of the editor, which knows,
+    /// <summary><para>Whether this is a file VS treats as code, asked of the editor, which knows,
     /// rather than kept as a list of our own.</para>
     /// <para>An extension VS has a content type for is one some editor claims; one it does not is
     /// an asset. The content-type hierarchy answers the rest: everything textual derives from
@@ -470,7 +470,7 @@ internal sealed partial class IdeNavigationService
     /// Same reasoning as IconCacheService (extension → icon via IVsImageService2) and MimeTypes
     /// (extension → MIME via urlmon): the platform already keeps this in sync with whatever the
     /// user has installed, and a sixth extension list in this codebase would go stale the day
-    /// someone adds a language — see the extension-lists entry in docs/internal/TODO.md.</para>
+    /// someone adds a language; see the extension-lists entry in docs/internal/TODO.md.</para>
     /// <para>Best effort: if the registry cannot be reached, everything counts. Over-reporting a
     /// `.json` as uncovered is a smaller lie than silently dropping a language we do not know.
     /// </para></summary>
@@ -494,7 +494,7 @@ internal sealed partial class IdeNavigationService
     }
 
     /// <summary><para>File contents for the duration of one tool call, so a result list does not
-    /// re-read the same file once per hit — find-references answering fifty times out of one file
+    /// re-read the same file once per hit: find-references answering fifty times out of one file
     /// read it fifty times and walked it from the top each time.</para>
     /// <para>Deliberately not static: it lives as long as the call that created it, because a file
     /// edited between two calls has to be read again. Null means "no caching", which is what a

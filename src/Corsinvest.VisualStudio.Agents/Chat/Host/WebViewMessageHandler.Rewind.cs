@@ -12,7 +12,7 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 
 /// <summary>
 /// WebViewMessageHandler, rewind side: restoring the files to the snapshot the CLI took before a
-/// user message, and what the picker needs to offer that honestly — which messages have a snapshot
+/// user message, and what the picker needs to offer that honestly: which messages have a snapshot
 /// at all, what a given one would change, and a diff of one file against its backup.
 /// <para>Two of the three reads never reach the CLI: it records its snapshots in the session
 /// transcript, so which messages are rewindable and which backup belongs to which file are
@@ -21,12 +21,12 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 /// </summary>
 internal sealed partial class WebViewMessageHandler
 {
-    /// <summary>Rewind the files to the CLI's snapshot before a user message — or, with dryRun,
+    /// <summary>Rewind the files to the CLI's snapshot before a user message, or, with dryRun,
     /// only ask whether it could and with what. "No checkpoint for this message" is an ordinary
     /// answer here, not a failure: the CLI keeps file history per session, and on our path only
     /// because we start it with CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING.
     /// <para>async void because the switch that calls it is void, which is safe only because
-    /// RewindFilesAsync swallows its own failures and answers null — nothing here can throw into
+    /// RewindFilesAsync swallows its own failures and answers null: nothing here can throw into
     /// a context with no one to catch it.</para></summary>
     private async void HandleRewind(JObject data, int? id)
     {
@@ -36,7 +36,7 @@ internal sealed partial class WebViewMessageHandler
         var res = await client.RewindFilesAsync(uuid, p.DryRun);
 
         // Null means the request itself was refused (already logged). Everything else is the CLI's
-        // own verdict, error text included — pass it through rather than inventing wording.
+        // own verdict, error text included: pass it through rather than inventing wording.
         var reply = new Contracts.RewindResultNotification
         {
             MessageUuid = uuid,
@@ -64,10 +64,10 @@ internal sealed partial class WebViewMessageHandler
 
     /// <summary>Show what rewinding to a message would undo for one file: the copy the CLI took
     /// before that turn against the file as it stands now, in VS's own diff viewer.
-    /// <para>Both sides are read here, so no file content ever crosses the bridge — the WebView
+    /// <para>Both sides are read here, so no file content ever crosses the bridge: the WebView
     /// sends a path and gets nothing back.</para>
     /// <para>A file the turn CREATED has no backup to show: the CLI copies a file only before
-    /// overwriting one. There the left side is empty on purpose — rewinding deletes it, and an
+    /// overwriting one. There the left side is empty on purpose: rewinding deletes it, and an
     /// empty "before" says exactly that.</para></summary>
     private async void HandleRewindDiff(JObject data, int? id)
     {
@@ -81,7 +81,7 @@ internal sealed partial class WebViewMessageHandler
 
         // No backup at all, or one recorded as null: either way the file did not exist before this
         // message, and rewinding DELETES it rather than restoring anything. The CLI only copies a
-        // file it is about to OVERWRITE — a file it creates has nothing to copy — so the dry run
+        // file it is about to OVERWRITE (a file it creates has nothing to copy) so the dry run
         // lists it while no snapshot names it. An empty left-hand side is the honest picture of
         // that: everything on the right goes away.
         var before = "";

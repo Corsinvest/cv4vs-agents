@@ -54,7 +54,7 @@ export function parseIdeContextTags(text: string | undefined | null): {
 }
 
 /**
- * A user message with every injected block taken out — what the person actually typed.
+ * A user message with every injected block taken out: what the person actually typed.
  *
  * For the callers that want the words and nothing else: a copy to the clipboard, a queued bubble,
  * a one-line label in a picker.

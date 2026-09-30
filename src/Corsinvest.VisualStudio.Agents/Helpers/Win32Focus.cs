@@ -13,7 +13,7 @@ using System.Windows.Forms;
 namespace Corsinvest.VisualStudio.Agents.Helpers;
 
 /// <summary>Helpers for pane-attention notifications: whether VS has the OS focus (so we know
-/// whether an in-VS InfoBar is enough), and an OS toast when it doesn't — the toast is layout-proof
+/// whether an in-VS InfoBar is enough), and an OS toast when it doesn't: the toast is layout-proof
 /// (works with tiling window managers, second monitors, hidden taskbars) unlike a taskbar flash.</summary>
 internal static class Win32Focus
 {
@@ -47,7 +47,7 @@ internal static class Win32Focus
     }
 
     /// <summary>Raise an OS balloon toast. A short-lived tray NotifyIcon shows the balloon then
-    /// disposes itself — no persistent tray icon. Appears above everything regardless of window
+    /// disposes itself, no persistent tray icon. Appears above everything regardless of window
     /// layout, so it reaches the user in another app / tile / monitor. Clicking it brings VS to the
     /// front and runs <paramref name="onClick"/> (e.g. activate the owning pane).
     /// Returns a handle that takes the balloon down early (the user dealt with the pane before it
@@ -117,10 +117,10 @@ internal static class Win32Focus
     private static extern bool Shell_NotifyIcon(int dwMessage, ref NOTIFYICONDATA data);
 
     /// <summary>Takes a balloon that is still on screen down. Neither deleting the icon nor the
-    /// Visible off/on round-trip retracts one already showing (both verified on Windows 11 — it
+    /// Visible off/on round-trip retracts one already showing (both verified on Windows 11: it
     /// stays until it times out). What does is the documented call: NIM_MODIFY carrying NIF_INFO
     /// with an empty szInfo, which the shell reads as "no balloon for this icon". WinForms keeps
-    /// the hWnd/uID that call needs private, hence the reflection — field names are the .NET
+    /// the hWnd/uID that call needs private, hence the reflection: field names are the .NET
     /// Framework ones (`window`, `id`), which differ from .NET Core's.</summary>
     private sealed class ToastHandle(NotifyIcon icon) : IDisposable
     {

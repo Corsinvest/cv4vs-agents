@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 
 /// <summary>One pane's file listing for the `@` picker: built when the picker opens, shared by every
-/// keystroke until it opens again. No watcher, no expiry — reopening is the refresh.
+/// keystroke until it opens again. No watcher, no expiry: reopening is the refresh.
 /// <para>Called on the handler's thread; <c>list</c> runs synchronously there before it goes to the
 /// thread pool, so it may read VS options.</para></summary>
 internal sealed class FileIndex(Func<string, CancellationToken, Task<FileListing>> list) : IDisposable

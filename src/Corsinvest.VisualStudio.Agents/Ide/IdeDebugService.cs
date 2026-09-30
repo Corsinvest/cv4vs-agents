@@ -16,7 +16,7 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 /// <para>
 /// Debugger control + state via the PUBLIC <see cref="Debugger"/> API (no reflection
 /// needed, unlike the Roslyn-internal navigation tools). This first slice covers session
-/// control (start/stop), breakpoints, and reading the debug state — none of which need the
+/// control (start/stop), breakpoints, and reading the debug state, none of which need the
 /// debuggee to be paused. Live inspection (locals/call-stack/exception) comes later and only
 /// works in break mode.
 /// </para>
@@ -48,7 +48,7 @@ internal sealed partial class IdeDebugService
                 state.CurrentLine = line;
 
                 // If we're paused on an exception, $exception holds it (debugger pseudo-variable).
-                // Absent/invalid when the break is a plain breakpoint — leave the fields null.
+                // Absent/invalid when the break is a plain breakpoint: leave the fields null.
                 try
                 {
                     var exObj = dbg.GetExpression("$exception", false, 200);
@@ -81,12 +81,12 @@ internal sealed partial class IdeDebugService
             if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
             if (dbg.CurrentMode != dbgDebugMode.dbgDesignMode)
             {
-                // Already running or paused — don't relaunch.
+                // Already running or paused: don't relaunch.
                 return new DebugResult { Ok = true, Mode = ModeToString(dbg.CurrentMode), Reason = "Already debugging." };
             }
             dbg.Go(false); // false = don't block waiting for break/end
             // No Mode: Go() returns before the transition, so CurrentMode here is still the state we
-            // just left — reporting it said "design" for a session that had started. getDebugState
+            // just left: reporting it said "design" for a session that had started. getDebugState
             // is the one that knows, and the caller has to poll it anyway.
             return new DebugResult { Ok = true, Mode = PendingMode, Reason = "Debugging started — poll debug_get_state for the mode." };
         }
@@ -94,7 +94,7 @@ internal sealed partial class IdeDebugService
         {
             OutputWindowLogger.Global.LogException("IdeDebugService.StartAsync", ex);
             // VS refuses to start while it is still building or saving, and answers with a message
-            // that says which — swallowing it left the caller with "Failed to start debugging" and
+            // that says which: swallowing it left the caller with "Failed to start debugging" and
             // no idea that trying again a second later would work. The mode goes back too: on
             // failure it is the real one, not the "pending" a start that took would report.
             return new DebugResult
@@ -131,16 +131,16 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Move the instruction pointer to <paramref name="filePath"/>:<paramref name="line"/>
-    /// WITHOUT running what lies between — "Set Next Statement".
+    /// WITHOUT running what lies between: "Set Next Statement".
     /// <para>There is no API taking a path: the command works off the caret, so the file is opened,
     /// activated and the caret moved first. Stays in break mode, so nothing has to be awaited
     /// afterwards.</para>
-    /// <para>The one debug tool that can leave the program inconsistent — skipping an assignment
+    /// <para>The one debug tool that can leave the program inconsistent: skipping an assignment
     /// leaves the variable at whatever it was, and jumping backwards re-runs side effects.</para>
     /// <para>The file is checked against where execution is paused, because the command does NOT:
     /// it takes a caret position and resolves the line as an offset in the method it is already in.
     /// Asked to jump into another file it moves the pointer to that line NUMBER in the current
-    /// method — a different statement entirely, and a stack whose frame and instruction pointer
+    /// method: a different statement entirely, and a stack whose frame and instruction pointer
     /// disagree. Verified: VS accepts it without a word.</para></summary>
     public async Task<DebugResult> SetNextStatementAsync(string filePath, int line)
     {
@@ -179,7 +179,7 @@ internal sealed partial class IdeDebugService
             }
             sel.MoveToLineAndOffset(line, 1, false);
 
-            // Throws when VS judges the jump impossible — out of the current frame, into or out of
+            // Throws when VS judges the jump impossible: out of the current frame, into or out of
             // a handler. The message is the debugger's own, and more specific than anything we
             // could say about why this particular jump was refused.
             try { dte.ExecuteCommand("Debug.SetNextStatement", ""); }
@@ -204,11 +204,11 @@ internal sealed partial class IdeDebugService
     /// <summary>Run until execution reaches <paramref name="filePath"/>:<paramref name="line"/>,
     /// like "Run to Cursor".
     /// <para>Through VS's own command, off the caret, the way SetNextStatement works. The obvious
-    /// build — add a breakpoint, Go(), delete it — does not: Go() is non-blocking, so the delete
+    /// build (add a breakpoint, Go(), delete it) does not: Go() is non-blocking, so the delete
     /// runs while the program is still on its way and disarms the breakpoint before it is ever hit.
     /// Measured: execution sailed past the line, twice out of twice.</para>
     /// <para>Non-blocking like Go(): poll debug_get_state to see where it stopped, which may not be
-    /// the requested line — anything on the way there pauses it first.</para></summary>
+    /// the requested line: anything on the way there pauses it first.</para></summary>
     public async Task<DebugResult> RunToLineAsync(string filePath, int line)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -251,14 +251,14 @@ internal sealed partial class IdeDebugService
     /// <summary><para>How many times a breakpoint has actually been hit.</para>
     /// <para>
     /// The breakpoint in <c>Debugger.Breakpoints</c> is the one that was *asked for*; when the
-    /// debugger binds it, the hits land on the bound children it creates — one per address the
+    /// debugger binds it, the hits land on the bound children it creates: one per address the
     /// location resolved to. Reading the parent's own CurrentHits therefore answers 0 for a
     /// breakpoint that has been hit five hundred times, which is worse than not reporting it at
     /// all. Must be called on the UI thread.
     /// </para></summary>
     /// <summary>How many code locations a breakpoint resolved to, or null outside a session.
     /// <para>Children is the binding: one child per address the debugger resolved. Read here rather
-    /// than after Breakpoints.Add because binding is asynchronous — measured, every breakpoint reads
+    /// than after Breakpoints.Add because binding is asynchronous: measured, every breakpoint reads
     /// as 0 in the instant after it is created, whether or not it goes on to bind, so the answer is
     /// only worth anything once some time has passed.</para></summary>
     private static int? BoundCount(Breakpoint bp, Debugger dbg)
@@ -267,7 +267,7 @@ internal sealed partial class IdeDebugService
         try
         {
             // Nothing binds in design mode, and 0 there would read as "broken" for every breakpoint
-            // set before the session starts — which is the normal way to set one.
+            // set before the session starts, which is the normal way to set one.
             if (dbg == null || dbg.CurrentMode == dbgDebugMode.dbgDesignMode) { return null; }
             if (bp is not EnvDTE80.Breakpoint2 bp2) { return null; }
             return bp2.Children?.Count ?? 0;
@@ -281,7 +281,7 @@ internal sealed partial class IdeDebugService
 
     /// <summary>Where the breakpoints just created by Breakpoints.Add actually sit. Falls back to
     /// what was requested when the collection can't be read, so a failure here never turns a
-    /// breakpoint that VS did create into a reported failure — at worst the caller loses the
+    /// breakpoint that VS did create into a reported failure: at worst the caller loses the
     /// warning about a moved line. Must be called on the UI thread.</summary>
     private static (string File, int? Line) LandedAt(Breakpoints added, string requestedFile)
     {
@@ -342,7 +342,7 @@ internal sealed partial class IdeDebugService
     };
 
     /// <summary>Translate a hit-count rule into the EnvDTE pair. A count of 0 means "break every
-    /// time", which is <c>None</c> — the type is ignored then, so an unknown name is only reported
+    /// time", which is <c>None</c>: the type is ignored then, so an unknown name is only reported
     /// when a count was actually given.</summary>
     private static (dbgHitCountType Type, string Error) HitCountRule(int hitCount, string hitCountType)
     {
@@ -398,7 +398,7 @@ internal sealed partial class IdeDebugService
                 HitCountType: hitType);
 
             // Report the line back so the caller can reason about the breakpoint it got rather than
-            // the one it asked for. Measured: for a file breakpoint the two always match — VS
+            // the one it asked for. Measured: for a file breakpoint the two always match; VS
             // rejects a line it cannot use (see the catch) instead of moving it elsewhere.
             var (landedFile, landedLine) = LandedAt(added, filePath);
             return new DebugResult
@@ -413,8 +413,8 @@ internal sealed partial class IdeDebugService
         // (blank, comment, a type declaration) instead of moving it to the next executable one.
         // Under the generic message below it read as "the debugger is broken", when the fix is to
         // pick another line. VS's own text is localized, so it goes to the log, not into Reason.
-        // Measured, against the obvious guess: a method's opening brace IS accepted — it carries the
-        // entry sequence point — and so is an expression-bodied member.
+        // Measured, against the obvious guess: a method's opening brace IS accepted (it carries the
+        // entry sequence point) and so is an expression-bodied member.
         catch (System.Runtime.InteropServices.COMException ex)
         {
             OutputWindowLogger.Global.Warn(
@@ -434,7 +434,7 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Add a breakpoint that triggers on entry to a function by NAME (e.g.
-    /// "MyNamespace.MyClass.Calculate"), instead of a file/line — handy when you know the method
+    /// "MyNamespace.MyClass.Calculate"), instead of a file/line, handy when you know the method
     /// but not the line. Optional condition. Works in any mode.</summary>
     public async Task<DebugResult> SetFunctionBreakpointAsync(string functionName, string condition,
                                                               int hitCount, string hitCountType)
@@ -467,7 +467,7 @@ internal sealed partial class IdeDebugService
                 HitCount: Math.Max(0, hitCount),
                 HitCountType: hitType);
 
-            // Which file and line the name resolved to — the caller asked by name and has no other
+            // Which file and line the name resolved to: the caller asked by name and has no other
             // way to learn where it landed, and an overload or a same-named method in another type
             // is exactly the case worth seeing. Both stay null until symbols load.
             var (landedFile, landedLine) = LandedAt(added, null);
@@ -526,7 +526,7 @@ internal sealed partial class IdeDebugService
             var what = byFunction ? functionName : $"{System.IO.Path.GetFileName(filePath)}:{line}";
             var state = enabled ? "enabled" : "disabled";
             // "Found nothing" and "found it, already that way" read the same when they share a
-            // message, and the first one is a mistake the caller has to fix — most often a line
+            // message, and the first one is a mistake the caller has to fix, most often a line
             // number VS moved: a breakpoint asked for on a blank line binds to the next statement,
             // and that new line is the one this matches on. debug_list_breakpoints has the real one.
             if (matched == 0)
@@ -697,7 +697,7 @@ internal sealed partial class IdeDebugService
             foreach (Process proc in dbg.LocalProcesses)
             {
                 // Process.Name is a full path. The filter still runs over it, so a folder narrows
-                // the list too, but what comes back as Name is the file alone — the same shape
+                // the list too, but what comes back as Name is the file alone: the same shape
                 // debug_list_debugged_processes reports, since the two get cross-referenced.
                 var path = proc.Name ?? "";
                 if (!string.IsNullOrEmpty(nameFilter)
@@ -777,7 +777,7 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>The modules loaded into the debugged process, with their symbol state. This is what
-    /// answers "why does my breakpoint not bind" — an unbound breakpoint is nearly always a module
+    /// answers "why does my breakpoint not bind": an unbound breakpoint is nearly always a module
     /// whose symbols the debugger never loaded.</summary>
     public async Task<ModulesResult> ListModulesAsync(bool userCodeOnly)
     {
@@ -964,7 +964,7 @@ internal sealed partial class IdeDebugService
             if (dbg == null) { return new DebugResult { Ok = false, Reason = "Debugger not available." }; }
             if (dbg.CurrentMode == dbgDebugMode.dbgDesignMode)
             {
-                // Nothing to restart — just start.
+                // Nothing to restart: just start.
                 dbg.Go(false);
                 return new DebugResult { Ok = true, Reason = "Was not debugging; started — poll debug_get_state for the mode." };
             }
@@ -982,7 +982,7 @@ internal sealed partial class IdeDebugService
 
     /// <summary>Start the program without the debugger (Ctrl+F5). If projectName is given, sets
     /// it as the startup project first via IdeContextService.</summary>
-    /// <summary>Detach the debugger and leave the program running — Debug ▸ Detach All. Different
+    /// <summary>Detach the debugger and leave the program running: Debug ▸ Detach All. Different
     /// from <see cref="StopAsync"/>, which kills the process: after attaching to something the
     /// user did not launch, killing it is rarely what was meant.</summary>
     public async Task<DebugResult> DetachAsync()
@@ -998,7 +998,7 @@ internal sealed partial class IdeDebugService
             }
 
             // Collected before detaching: once it is off the debugger's list, the pid is gone with
-            // it — and the pid is the whole point of the message, since the process outlives the
+            // it, and the pid is the whole point of the message, since the process outlives the
             // session and whoever wants it gone has to find it by hand otherwise.
             var pids = new List<int>();
             foreach (EnvDTE.Process p in dbg.DebuggedProcesses)
@@ -1027,7 +1027,7 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Which exceptions are set to break, per group. Reports only what was changed from
-    /// the group default — the full list runs to thousands of types and says nothing.</summary>
+    /// the group default: the full list runs to thousands of types and says nothing.</summary>
     public async Task<(bool Ok, List<ExceptionBreakSetting> Settings, string Reason)> GetExceptionSettingsAsync(string group)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -1093,7 +1093,7 @@ internal sealed partial class IdeDebugService
     /// <summary>Apply pending code edits to the running/paused program WITHOUT restarting it
     /// (Hot Reload / Edit-and-Continue). Changes the code, not just values. Only meaningful during
     /// a debug session; some edits ("rude edits": signature changes, etc.) can't be applied and
-    /// require a restart — VS reports that in the output. Reads the result from the build/output.</summary>
+    /// require a restart: VS reports that in the output. Reads the result from the build/output.</summary>
     public async Task<DebugResult> ApplyHotReloadAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -1108,8 +1108,8 @@ internal sealed partial class IdeDebugService
             }
 
             // Whether anything is actually pending cannot be asked. Commands.Item(...).IsAvailable
-            // was tried and answers True for the whole debug session, edits or not — measured, not
-            // assumed — and there is no public API for the EnC state behind it; it is Roslyn's own.
+            // was tried and answers True for the whole debug session, edits or not (measured, not
+            // assumed) and there is no public API for the EnC state behind it; it is Roslyn's own.
             // So Ok here means the command ran, not that code changed, and the caller is told to
             // read the output rather than left to infer it from a true.
             dte.ExecuteCommand("Debug.ApplyCodeChanges", "");
@@ -1145,7 +1145,7 @@ internal sealed partial class IdeDebugService
             }
 
             // Cast, not reflection: DTE.Debugger hands back an RCW typed on the base interface, so
-            // GetProperty("ExceptionGroups") — a Debugger3 member — found nothing and every call
+            // GetProperty("ExceptionGroups") (a Debugger3 member) found nothing and every call
             // failed as "not available", whatever the solution. Debugger3 is a GUID'd COM interface,
             // so it answers to QueryInterface and not to a lookup by name.
             var groups = (dbg as EnvDTE90.Debugger3)?.ExceptionGroups;
@@ -1164,7 +1164,7 @@ internal sealed partial class IdeDebugService
             {
                 // Naming the groups matters more here than elsewhere: groupName is the default set
                 // above when the caller passed none, so the bare message blamed a string the caller
-                // never wrote — and these names follow the IDE's language.
+                // never wrote, and these names follow the IDE's language.
                 return new DebugResult { Ok = false, Reason = $"Exception group '{groupName}' not found. Groups: {GroupNames(groups)}" };
             }
 
@@ -1173,7 +1173,7 @@ internal sealed partial class IdeDebugService
             catch (Exception)
             {
                 // VS only lists a well-known subset, so a correctly-named application exception is
-                // absent — which is exactly the type worth breaking on. NewException adds the
+                // absent, which is exactly the type worth breaking on. NewException adds the
                 // setting, the same as typing it into the Exception Settings window.
                 try { exItem = exGroup.NewException(exceptionName, 0); }
                 catch (Exception ex)
@@ -1202,8 +1202,8 @@ internal sealed partial class IdeDebugService
     /// hundreds, and the point is to recognise a name that was nearly right.</summary>
     private const int AttachMissSample = 15;
 
-    /// <summary>A process's file name, or its pid as a fallback. Process.Name is a full path — the
-    /// listing tool shortens it the same way — and a process the debugger cannot fully see throws
+    /// <summary>A process's file name, or its pid as a fallback. Process.Name is a full path: the
+    /// listing tool shortens it the same way, and a process the debugger cannot fully see throws
     /// instead of answering.</summary>
     private static string SafeProcessName(Process p)
     {

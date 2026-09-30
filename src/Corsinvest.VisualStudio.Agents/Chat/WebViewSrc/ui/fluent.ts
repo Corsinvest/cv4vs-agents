@@ -11,7 +11,7 @@ import '@fluentui/web-components/counter-badge.js';
 import '@fluentui/web-components/dialog.js';
 import '@fluentui/web-components/dialog-body.js';
 import '@fluentui/web-components/link.js';
-// Trial: the rewind dialog's second list. Both are needed together — an option outside a listbox
+// Trial: the rewind dialog's second list. Both are needed together: an option outside a listbox
 // has no selection to belong to.
 import '@fluentui/web-components/listbox.js';
 import '@fluentui/web-components/option.js';
@@ -47,8 +47,8 @@ export function applyFluentTheme(isDark: boolean): void {
 }
 
 // Fluent's default type ramp (px). The base step (Base300) is the document base;
-// the user's chat-font-size scales the whole ramp off it so everything — chat,
-// composer, fluent-* controls — grows together.
+// the user's chat-font-size scales the whole ramp off it so everything (chat,
+// composer, fluent-* controls) grows together.
 const FONT_RAMP: Record<string, { size: number; line: number }> = {
     100: { size: 10, line: 14 },
     200: { size: 12, line: 16 },
@@ -65,7 +65,7 @@ const FONT_MAX = 28; // above this the chat is unusable in a tool window
  * Scale the whole Fluent type ramp by the user's chat font size. setTheme()
  * writes the tokens into an adoptedStyleSheet on `html`; an inline style on
  * documentElement outranks it and survives later setTheme() calls, so we only
- * re-run this when the option changes — not on every theme swap.
+ * re-run this when the option changes, not on every theme swap.
  *
  * The size is clamped (and NaN/≤0 falls back to the base) so a bad option value
  * can't shrink the UI to nothing or blow it up.

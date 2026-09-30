@@ -13,9 +13,9 @@ namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 
 /// <summary>Offers a chat when the debugger stops on something the user didn't plan for. Raises the
 /// break InfoBar over the file it happened in; pressing it asks a chat pane about the break. The
-/// press is the consent — nothing here starts a turn on its own.
+/// press is the consent; nothing here starts a turn on its own.
 /// <para>An exception is a surprise and worth an offer. A breakpoint is not: the user placed it and
-/// knows why they are there, so it is opt-in. Steps never notify — one bar per F10 is noise — and a
+/// knows why they are there, so it is opt-in. Steps never notify (one bar per F10 is noise) and a
 /// break landing where the previous one did is dropped, or a breakpoint inside a loop raises the
 /// same bar on every iteration.</para></summary>
 internal static class DebugBreakService
@@ -27,7 +27,7 @@ internal static class DebugBreakService
     private static int _generation;
 
     /// <summary>The debugger entered break mode on something other than a step. Reads the location
-    /// through <see cref="IdeDebugService"/> — the same view the debug tools report — so the bar and
+    /// through <see cref="IdeDebugService"/> (the same view the debug tools report) so the bar and
     /// the model can't disagree. A break carrying no exception is a breakpoint.</summary>
     public static async Task NotifyBreakAsync(bool notifyOnBreakpoint)
     {
@@ -35,7 +35,7 @@ internal static class DebugBreakService
         var state = await ReadSettledStateAsync(generation);
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
 
-        // Resumed while the location was being read — this answer is about a break already over.
+        // Resumed while the location was being read: this answer is about a break already over.
         if (generation != _generation) { return; }
         if (state == null || !string.Equals(state.Mode, "break", StringComparison.Ordinal)) { return; }
 
@@ -57,7 +57,7 @@ internal static class DebugBreakService
     }
 
     /// <summary>The break location, once the debugger agrees with itself about it. Asked the instant
-    /// the event fires it answers mid-settle — the opening brace rather than the throwing line, and
+    /// the event fires it answers mid-settle: the opening brace rather than the throwing line, and
     /// no $exception yet, which reads as "no exception" and would drop the very break worth
     /// offering. So it retries briefly, and takes the first answer carrying one.</summary>
     private static async Task<IdeDebugService.DebugState> ReadSettledStateAsync(int generation)
@@ -110,7 +110,7 @@ internal static class DebugBreakService
         return state.CurrentLine > 0 ? $" at {name}:{state.CurrentLine}" : $" in {name}";
     }
 
-    /// <summary>Last segment of a namespace-qualified type — the bar has one line to spend, and
+    /// <summary>Last segment of a namespace-qualified type: the bar has one line to spend, and
     /// "DivideByZeroException" identifies it as well as the full name does.</summary>
     private static string Short(string type)
     {
@@ -124,7 +124,7 @@ internal static class DebugBreakService
         ThreadHelper.ThrowIfNotOnUIThread();
         try
         {
-            // The prompt is complete the moment the break happens — exception, file, line — so it
+            // The prompt is complete the moment the break happens (exception, file, line) so it
             // runs rather than waiting on an Enter that has nothing left to add.
             Editor.PromptDispatcher.Send(Prompt(state), sendImmediately: true);
         }
@@ -141,7 +141,7 @@ internal static class DebugBreakService
     /// in this break watching it.</para></summary>
     private static string Prompt(IdeDebugService.DebugState state)
     {
-        // On a breakpoint "why did this happen" answers itself — the user put it there.
+        // On a breakpoint "why did this happen" answers itself: the user put it there.
         var ask = string.IsNullOrEmpty(state.ExceptionType)
             ? "The debugger is paused. Look at it and tell me what is going on here."
             : "The debugger is paused on an exception. Look at it and tell me why.";

@@ -41,7 +41,7 @@ internal static class SchemaBuilder
         foreach (var prop in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
             if (!prop.CanRead || !prop.CanWrite) { continue; }
-            // JsonProperty wins over camelCase — needed for the snake_case
+            // JsonProperty wins over camelCase, needed for the snake_case
             // wire names the Claude CLI uses on a few tools (e.g. old_file_path).
             var jsonAttr = prop.GetCustomAttribute<JsonPropertyAttribute>();
             var name = jsonAttr?.PropertyName ?? ToCamelCase(prop.Name);
@@ -85,7 +85,7 @@ internal static class SchemaBuilder
         if (jsonType == "object" && type != typeof(object))
         {
             var nested = _cache.GetOrAdd(type, BuildObjectSchema);
-            // Inline rather than $ref — not all MCP clients honor $ref.
+            // Inline rather than $ref: not all MCP clients honor $ref.
             if (nested is IDictionary<string, object> dict)
             {
                 foreach (var kv in dict) { meta[kv.Key] = kv.Value; }
@@ -153,7 +153,7 @@ internal static class SchemaBuilder
     }
 }
 
-/// <summary>Optional human-readable description for a property — surfaces
+/// <summary>Optional human-readable description for a property, surfaces
 /// in the JSON Schema as the <c>description</c> field, which the model
 /// uses to decide what to put in each argument.</summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]

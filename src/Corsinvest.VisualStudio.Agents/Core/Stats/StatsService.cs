@@ -30,7 +30,7 @@ internal enum StatsRange { All, Last30d, Last7d }
 /// </summary>
 internal static class StatsService
 {
-    // Single in-flight indexing pass at a time. We keep NO data or Task in memory — just this
+    // Single in-flight indexing pass at a time. We keep NO data or Task in memory, just this
     // flag (0 = idle, 1 = running). The heavy work (reading every .jsonl → per-project cache on
     // disk) runs once; concurrent callers see IsIndexing and read the current cache instead of
     // launching a duplicate pass. Reading is always cache-only (Aggregate), never in RAM.
@@ -47,7 +47,7 @@ internal static class StatsService
     /// <summary>Run one full indexing pass over EVERY profile (the WPF tree spans all profiles).
     /// Single-flight; no-op (false) if a pass is already in flight. Refreshes each project's on-disk
     /// cache; holds no result in memory. force=true ignores the existing cache and re-reads every
-    /// .jsonl from scratch (the Refresh button — picks up moved files / changed cwd).</summary>
+    /// .jsonl from scratch (the Refresh button: picks up moved files / changed cwd).</summary>
     public static bool StartIndexing(bool force = false)
     {
         if (System.Threading.Interlocked.CompareExchange(ref _indexing, 1, 0) != 0) { return false; }
@@ -56,7 +56,7 @@ internal static class StatsService
             try
             {
                 // Both lists: `false` is the one to index (native profile included, disabled ones
-                // dropped), `true` adds back the disabled — this pass also decides which data
+                // dropped), `true` adds back the disabled: this pass also decides which data
                 // folders are still claimed, and a profile that is merely switched off will want
                 // its own back when it is switched on again.
                 var live = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -104,7 +104,7 @@ internal static class StatsService
     /// <summary>Profiles collapsed by config-dir: two profiles (e.g. Claude + a GLM override) can
     /// share the same ~/.claude, hence the same .jsonl. They'd otherwise be double-counted in All
     /// and appear as duplicate tree nodes. Returns one entry per distinct config-dir: a representative
-    /// profile (any of the group — same paths) and a label joining every profile name that uses it.</summary>
+    /// profile (any of the group: same paths) and a label joining every profile name that uses it.</summary>
     private static IEnumerable<(Profile profile, string label)> DistinctConfigs() => ProfileStore.Load(forEdit: false)
             .GroupBy(p => ClaudePaths.ForProfile(p).ConfigId, StringComparer.OrdinalIgnoreCase)
             .Select(g => (
@@ -112,7 +112,7 @@ internal static class StatsService
                 label: string.Join(", ", g.Select(p => string.IsNullOrEmpty(p.Name) ? "(profile)" : p.Name))));
 
     /// <summary>Build the navigation tree (All → Profile → Folder… → Project → Day → Session),
-    /// reading only the filesystem/cache — no .jsonl parse. The range hides sessions (and the days /
+    /// reading only the filesystem/cache: no .jsonl parse. The range hides sessions (and the days /
     /// projects / folders that become empty) worked outside it; "All time" shows everything. Every
     /// node carries the <see cref="StatsSelection"/> its level aggregates.</summary>
     public static StatsTreeNode BuildTree(StatsRange range = StatsRange.All, bool includeDays = true)
@@ -168,7 +168,7 @@ internal static class StatsService
 
     // Build a real nested folder tree from the projects' working directories, then attach it under
     // the profile node. Single-child folder chains are collapsed (…\source\repos shows as one node
-    // until it branches), and every folder node is clickable — it aggregates every project beneath it.
+    // until it branches), and every folder node is clickable: it aggregates every project beneath it.
     private static void BuildFolderTree(StatsTreeNode profileNode, Profile profile,
         List<(string dir, string cwd, bool? hasData, Dictionary<string, DateTime> lastActivity, string label)> projects,
         DateTime minDay, bool includeDays)
@@ -177,7 +177,7 @@ internal static class StatsService
         foreach (var p in projects)
         {
             // Walked to the folder the project IS, not to the one above it. A project whose cwd also
-            // has projects beneath it — a user profile folder, with AppData and source under it —
+            // has projects beneath it (a user profile folder, with AppData and source under it)
             // would otherwise be filed one level up while its own name branched separately, showing
             // the same folder twice. Filed here, it meets that branch and ToFolderNode folds the two
             // into the single node a folder with nothing under it already produces.
@@ -229,7 +229,7 @@ internal static class StatsService
         }
 
         // The project filed here IS this folder, so its Days and Sessions hang off this node rather
-        // than off a child repeating the same name — which is what a folder with nothing else under
+        // than off a child repeating the same name, which is what a folder with nothing else under
         // it already looked like. More than one only happens when two profiles share a cwd; the
         // extras stay as children, since there is one node to be absorbed into.
         StatsTreeNode self = null;
@@ -296,7 +296,7 @@ internal static class StatsService
 
         // Sessions: whatever SessionManager considers a session, so this branch and the chat's own
         // picker agree on what one IS. Enumerating the .jsonl directly counted every file the CLI
-        // ever opened — sessions with no prompt in them, and sub-agent transcripts — which is how a
+        // ever opened (sessions with no prompt in them, and sub-agent transcripts), which is how a
         // project came to list a thousand undated rows. Load() drops both (no title of any kind →
         // no prompt was ever sent; IsSidechain → a sub-agent) and brings the title along.
         // Placed by cached last-activity, NOT the file's mtime: SetAiTitle and a rename touch the
@@ -318,7 +318,7 @@ internal static class StatsService
         };
 
         // Days branch: only in the Statistics tree. The Context tree (includeDays=false) has no
-        // calendar level — get_context_usage needs a session, not a date.
+        // calendar level: get_context_usage needs a session, not a date.
         if (includeDays && days.Count > 0)
         {
             var daysNode = new StatsTreeNode
@@ -398,7 +398,7 @@ internal static class StatsService
         return seen;
     }
 
-    // The project's real sessions, read live via SessionManager — the same list the chat's picker
+    // The project's real sessions, read live via SessionManager: the same list the chat's picker
     // shows, titles included. Empty when the working directory is unknown (not indexed yet, so the
     // cache holds no cwd) or the folder is missing; the tree then shows the project's Days only.
     private static List<Sessions.SessionInfo> SessionsFor(ClaudePaths paths, string cwd)
@@ -465,7 +465,7 @@ internal static class StatsService
     }
 
     /// <summary>The working directory of a project, for a --resume that needs a real cwd. Read from
-    /// the sessions themselves, so it answers for a project that was never indexed too — where the
+    /// the sessions themselves, so it answers for a project that was never indexed too, where the
     /// cache it used to come from would have been empty.</summary>
     public static string CwdForProject(Profile profile, string projectDir)
     {
@@ -518,18 +518,18 @@ internal static class StatsService
 
     // The projectDir is the CLI's dir (source of .jsonl); the cache lives in OUR data folder, named
     // after the project's real working directory. That path is not recoverable from the CLI folder
-    // name — the separators are gone — so it comes from the `cwd` a session record carries. A
+    // name (the separators are gone), so it comes from the `cwd` a session record carries. A
     // project with no readable session falls back to the CLI folder name: a cache under an odd name
     // beats no cache at all.
     private static string CacheFileFor(ClaudePaths paths, string projectDir)
         => AppPaths.ProjectProfileFile(paths, ProjectCwdOf(projectDir) ?? projectDir, "stats-cache.json");
 
     /// <summary>Remove the data folders no project claimed during a full pass. What is left there is
-    /// either from the old naming scheme — every folder was the whole path with its separators
-    /// replaced, before they grew past what Windows allows — or belongs to a project that is gone.
+    /// either from the old naming scheme (every folder was the whole path with its separators
+    /// replaced, before they grew past what Windows allows) or belongs to a project that is gone.
     /// <para>Only ever called after the pass that visits every profile, enabled or not: a partial
     /// pass would report folders as unclaimed simply because nobody looked for them. And skipped
-    /// entirely when that pass found nothing at all, which is what a failure looks like from here —
+    /// entirely when that pass found nothing at all, which is what a failure looks like from here:
     /// deleting everything because the profiles could not be read is the one outcome worth guarding
     /// against.</para></summary>
     private static void PruneUnclaimedFolders(HashSet<string> claimed)
@@ -552,10 +552,10 @@ internal static class StatsService
     }
 
     /// <summary>The working directory a CLI project folder's sessions ran in, from the first file
-    /// that says. This answers before the cache path is known — the cache lives at a path derived
-    /// from it — so it cannot ask the cache.
+    /// that says. This answers before the cache path is known: the cache lives at a path derived
+    /// from it, so it cannot ask the cache.
     /// <para>Memoised for the process: CacheFileFor asks on every call, an indexing pass calls it
-    /// once per project per profile, and the answer cannot change while we run — a session's cwd is
+    /// once per project per profile, and the answer cannot change while we run: a session's cwd is
     /// written when it starts. Without this the pass reopens the same .jsonl a dozen times.</para>
     /// </summary>
     private static string ProjectCwdOf(string projectDir)
@@ -645,7 +645,7 @@ internal static class StatsService
             .Select(kv => new Contracts.StatsDayModelDto
             {
                 Date = kv.Key,
-                // The stacked chart wants a meaningful per-model daily total — GrandTotal (incl. cache),
+                // The stacked chart wants a meaningful per-model daily total: GrandTotal (incl. cache),
                 // since raw input/output is tiny next to cache read/creation.
                 TokensByModel = kv.Value.TokensByModel.ToDictionary(x => x.Key, x => x.Value.GrandTotal),
             })
@@ -713,7 +713,7 @@ internal static class StatsService
     }
 
     /// <summary>Aggregate for the given tree selection, reading ONLY the on-disk cache (no file
-    /// re-read — that's StartIndexing's job). All folds every profile; Profile folds all of one
+    /// re-read: that's StartIndexing's job). All folds every profile; Profile folds all of one
     /// profile's projects; Project one project; Day the sessions of one calendar day; Session one
     /// file. Returns whatever the cache holds, so an un-indexed project yields empty totals.</summary>
     public static StatsTotals Aggregate(StatsSelection sel, StatsRange range)
@@ -746,7 +746,7 @@ internal static class StatsService
         }
 
         // Day: every session of the project, but only that one calendar day's tokens (a multi-day
-        // session contributes just its slice) — narrow the date window to the day, keep all sessions.
+        // session contributes just its slice): narrow the date window to the day, keep all sessions.
         if (sel.Scope == StatsScope.Day)
         {
             return AggregateProject(paths, sel.ProjectDir, null, sel.Date, sel.Date, new StatsTotals());
@@ -770,7 +770,7 @@ internal static class StatsService
 
     private const int DonutTopN = 7;
 
-    /// <summary>The token breakdown of a node by its children — the donut data. Aggregates each
+    /// <summary>The token breakdown of a node by its children: the donut data. Aggregates each
     /// slice-child from the cache; keeps the top N and rolls the rest into "Others". Empty only for a
     /// leaf (a single day/session, no children); a single child renders as a full 100% ring.</summary>
     public static List<DonutSlice> ChildBreakdown(StatsTreeNode node, StatsRange range)
@@ -835,7 +835,7 @@ internal static class StatsService
         return slices;
     }
 
-    // Generic path: one Aggregate per child (profiles / projects — few, so a cache Load each is fine).
+    // Generic path: one Aggregate per child (profiles / projects: few, so a cache Load each is fine).
     private static List<DonutSlice> BreakdownGeneric(List<StatsTreeNode> children, StatsRange range)
     {
         var slices = new List<DonutSlice>();
@@ -904,7 +904,7 @@ internal static class StatsService
     }
 
     // Merge one project's cached file aggregates into totals. ids = null aggregates every session;
-    // a set narrows to those session ids (+ their subagents). Reads only the cache — never the .jsonl.
+    // a set narrows to those session ids (+ their subagents). Reads only the cache, never the .jsonl.
     private static StatsTotals AggregateProject(ClaudePaths paths, string projectDir, HashSet<string> ids,
         string fromDate, string toDate, StatsTotals totals)
     {
@@ -960,7 +960,7 @@ internal static class StatsService
 
     /// <summary>Re-aggregate a file only if changed: same mtime → reuse; grown (append) → delta
     /// from the cached size; shrunk/rewritten → recompute; new → full. Returns the fresh entry and
-    /// the session's cwd (null when the file was reused unchanged — its cwd isn't cached).</summary>
+    /// the session's cwd (null when the file was reused unchanged: its cwd isn't cached).</summary>
     private static (StatsCache.Entry entry, string cwd) RefreshFile(FileInfo file, StatsCache.Entry cached)
     {
         long mtime = new DateTimeOffset(file.LastWriteTimeUtc).ToUnixTimeMilliseconds();
@@ -1009,7 +1009,7 @@ internal static class StatsService
             foreach (var m in f.ModelUsage.Values) { totals.SubagentTokens += m.Total; }
         }
 
-        // Attachments + tool usage (whole-file, gated by range membership — the per-day split
+        // Attachments + tool usage (whole-file, gated by range membership: the per-day split
         // isn't tracked for these, so range applies at file granularity).
         if (fileInRange)
         {

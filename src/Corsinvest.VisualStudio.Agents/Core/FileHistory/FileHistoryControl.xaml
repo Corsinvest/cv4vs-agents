@@ -11,7 +11,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <!-- The file list's context menu opens in its own popup, outside this control's visual
-             tree, where UseVsTheme cannot reach it — without these it comes up white on a dark
+             tree, where UseVsTheme cannot reach it; without these it comes up white on a dark
              IDE. Shared with the pane toolbar. -->
         <ResourceDictionary Source="/Corsinvest.VisualStudio.Agents;component/Themes/MenuStyles.xaml" />
       </ResourceDictionary.MergedDictionaries>
@@ -114,7 +114,7 @@
       </StackPanel>
 
       <!-- Column headers for the tree below. A TreeView has no columns of its own, so these are
-           buttons over a Grid whose widths match the item template's — the ordering lives here
+           buttons over a Grid whose widths match the item template's: the ordering lives here
            rather than in a toolbar combo because a click also has to say WHICH way, and an arrow
            on the sorted column says it where the reader is already looking.
            Sorting, never filtering: a 7/30-day filter would hide exactly the old sessions this
@@ -258,7 +258,7 @@
              out unreadable on a dark theme.
              The options pages get away with a bare DataGrid because VS themes the Options dialog
              around them; a tool window paints nothing for us, and UseVsTheme does not reach a
-             DataGrid — so the surfaces are bound here, from the same EnvironmentColors the rest of
+             DataGrid, so the surfaces are bound here, from the same EnvironmentColors the rest of
              the pane uses. Read-only: nothing in this grid is editable. -->
         <DataGrid x:Name="FilesList" Visibility="Collapsed"
                   AutoGenerateColumns="False"

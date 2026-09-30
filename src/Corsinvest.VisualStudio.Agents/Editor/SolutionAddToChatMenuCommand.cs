@@ -18,7 +18,7 @@ namespace Corsinvest.VisualStudio.Agents.Editor;
 /// </para>
 /// <para>
 /// Two commands, not one placed twice, for the reason the Error List and Output have two: a
-/// context-menu command is not told which menu it came from, and the two read different things —
+/// context-menu command is not told which menu it came from, and the two read different things:
 /// the tree's selection, the tab's document.
 /// </para></summary>
 internal static class SolutionAddToChatMenuCommand

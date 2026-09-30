@@ -28,7 +28,7 @@ internal sealed partial class IdeDiffViewer
     private static readonly Lazy<IdeDiffViewer> _instance = new(() => new IdeDiffViewer());
     public static IdeDiffViewer Instance => _instance.Value;
 
-    /// <summary>Diff resolution status strings — the exact wire tokens the Claude
+    /// <summary>Diff resolution status strings: the exact wire tokens the Claude
     /// CLI's openDiff handler expects. FileSaved = applied (user saved the
     /// proposal); TabClosed = closed without saving;
     /// Rejected = error / explicit reject. (2.1.169 maps TabClosed → rejected on
@@ -40,7 +40,7 @@ internal sealed partial class IdeDiffViewer
     /// <summary>Pending interactive diffs keyed by the temp "right" path.
     /// The RDT save listener and the frame-close listener look up the
     /// pending entry here and resolve its TCS. Same dictionary used by
-    /// both listeners — concurrent resolution is fine because TCS
+    /// both listeners: concurrent resolution is fine because TCS
     /// rejects the second TrySetResult.</summary>
     private readonly Dictionary<string, PendingDiff> _pending =
         new(StringComparer.OrdinalIgnoreCase);
@@ -55,7 +55,7 @@ internal sealed partial class IdeDiffViewer
 
     /// <summary>Diffs opened by the chat, keyed by the tool_use they preview. Separate from
     /// <see cref="_openFrames"/> because close_tab addresses that one by tab name: the two hold
-    /// the same frames for different questions — "which tab?" vs "which request?".</summary>
+    /// the same frames for different questions: "which tab?" vs "which request?".</summary>
     private readonly Dictionary<string, IVsWindowFrame> _chatDiffs =
         new(StringComparer.Ordinal);
 
@@ -70,9 +70,9 @@ internal sealed partial class IdeDiffViewer
     /// <summary>MCP-style entry point: existing file on disk + proposed
     /// new content. Used by the Claude CLI's <c>openDiff</c>. The
     /// returned task completes when the user resolves the diff:
-    ///   • FILE_SAVED   — user saved the proposed (right) file
-    ///   • TAB_CLOSED   — user closed the diff window without saving
-    ///   • DIFF_REJECTED — error or service unavailable
+    ///   • FILE_SAVED:   user saved the proposed (right) file
+    ///   • TAB_CLOSED:   user closed the diff window without saving
+    ///   • DIFF_REJECTED: error or service unavailable
     /// </summary>
     /// <summary>Result of an interactive diff: status string + (when
     /// FILE_SAVED) the user's actual saved content so the CLI can apply
@@ -97,7 +97,7 @@ internal sealed partial class IdeDiffViewer
         try
         {
             // Match the original's line endings before writing. The proposed content arrives with
-            // whatever the CLI put in the JSON — LF, as a rule — and a CRLF file diffed against it
+            // whatever the CLI put in the JSON (LF, as a rule) and a CRLF file diffed against it
             // makes VS open a MODAL "inconsistent line endings, normalise?" dialog. That blocks the
             // UI thread, and with it every other MCP tool, until somebody answers: a diff that
             // looked hung for ten minutes was this box waiting behind the editor.
@@ -158,7 +158,7 @@ internal sealed partial class IdeDiffViewer
 
             // Register the pending diff and wire both resolution paths
             // (frame-close + RDT save). The TCS is awaited below; both
-            // listeners race to TrySetResult — first one wins.
+            // listeners race to TrySetResult: first one wins.
             var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
             var pending = new PendingDiff
             {
@@ -172,7 +172,7 @@ internal sealed partial class IdeDiffViewer
             EnsureRdtAdvised();
             HookFrameClose(frame, tempPath);
 
-            // Accept/Reject InfoBar — explicit alternative to the save/close
+            // Accept/Reject InfoBar: explicit alternative to the save/close
             // gestures (both still work).
             pending.InfoBar = DiffInfoBar.TryAttach(
                 frame,
@@ -203,8 +203,8 @@ internal sealed partial class IdeDiffViewer
             _pending.Remove(tempPath);
             if (pending.RegistryKey != null) { _openFrames.Remove(pending.RegistryKey); }
 
-            // Delete the proposed side ourselves. It is NOT passed as VSDIFFOPT_RightFileIsTemporary
-            // — that would have VS remove it the moment the window closes, and the read above needs
+            // Delete the proposed side ourselves. It is NOT passed as VSDIFFOPT_RightFileIsTemporary;
+            // that would have VS remove it the moment the window closes, and the read above needs
             // it alive to carry the user's edits back.
             try { File.Delete(tempPath); }
             catch (Exception ex) { OutputWindowLogger.Global.Warn($"[diff] could not delete the temp file: {ex.Message}"); }
@@ -220,7 +220,7 @@ internal sealed partial class IdeDiffViewer
 
     /// <summary>WebView-style entry point: the chat has BOTH contents in memory. Both sides go to
     /// temp. Clicking the same <paramref name="toolUseId"/> twice closes it (toggle); a different
-    /// one replaces it — keying on the file path would make two edits to the same file the
+    /// one replaces it: keying on the file path would make two edits to the same file the
     /// same diff.
     /// <para>The pane labels default to a pending edit ("Original" / "Proposed") because that is
     /// what this shows most of the time. A rewind preview passes its own: there the right-hand side
@@ -282,7 +282,7 @@ internal sealed partial class IdeDiffViewer
     }
 
     /// <summary>Close a specific diff frame by tab name. Lookup is against the open-frames
-    /// registry — never against VS window captions.
+    /// registry, never against VS window captions.
     /// <para>Returns whether a frame was actually closed. It used to return nothing and the tool
     /// answered success either way, so "closed it", "that one is already gone" and "that is the
     /// user's own document, not mine to touch" were the same reply.</para></summary>
@@ -304,7 +304,7 @@ internal sealed partial class IdeDiffViewer
 
     /// <summary>Close every diff frame currently in our open-frames
     /// registry. Returns the number of frames closed. Does NOT touch
-    /// other VS windows — even ones whose caption happens to contain
+    /// other VS windows, even ones whose caption happens to contain
     /// "Diff" or "Claude Code".</summary>
     public async Task<int> CloseAllAsync()
     {
@@ -355,7 +355,7 @@ internal sealed partial class IdeDiffViewer
         }
     }
 
-    /// <summary>Close a frame and drop it from BOTH indexes — left in _openFrames it would be a
+    /// <summary>Close a frame and drop it from BOTH indexes: left in _openFrames it would be a
     /// dead entry that close_all later tries to close again.</summary>
     private void CloseChatFrame(string toolUseId, IVsWindowFrame frame)
     {
@@ -385,7 +385,7 @@ internal sealed partial class IdeDiffViewer
 
     /// <summary>Mark a frame so its close event resolves the matching
     /// pending diff to TAB_CLOSED. Each frame gets its own listener
-    /// instance — VS supports a single notify per frame, but our
+    /// instance: VS supports a single notify per frame, but our
     /// listener is just a thin pass-through.</summary>
     private void HookFrameClose(IVsWindowFrame frame, string tempPath, params string[] ownedTemps)
     {
@@ -396,7 +396,7 @@ internal sealed partial class IdeDiffViewer
 
     /// <summary>Resolve a pending diff to <paramref name="status"/> if
     /// it's still pending. Called from both the RDT save listener and
-    /// the frame close listener — first wins.</summary>
+    /// the frame close listener; first wins.</summary>
     internal void TryResolve(string tempPath, string status)
     {
         if (string.IsNullOrEmpty(tempPath)) { return; }
@@ -459,12 +459,12 @@ internal sealed partial class IdeDiffViewer
                 }
             }
         }
-        catch { /* DTE COM hiccup — treat as not dirty */ }
+        catch { /* DTE COM hiccup: treat as not dirty */ }
         return false;
     }
 
     /// <summary>One side of a comparison, on disk. The prefix is what identifies these as ours in
-    /// %TEMP% — the IDE-context filter recognises them by name, having no list of paths.</summary>
+    /// %TEMP%: the IDE-context filter recognises them by name, having no list of paths.</summary>
     private static string WriteTemp(string content, string namedFor)
     {
         var temp = Path.Combine(Path.GetTempPath(),
@@ -475,7 +475,7 @@ internal sealed partial class IdeDiffViewer
 
     /// <summary>Rewrite <paramref name="content"/> with the line endings <paramref name="modelPath"/>
     /// uses, so the two sides of a diff agree and VS has nothing to ask about.
-    /// <para>Decided by counting: a file with a mixture — and they exist — gets whichever it has
+    /// <para>Decided by counting: a file with a mixture (and they exist) gets whichever it has
     /// more of, which is the same answer the editor's own status bar gives. A file with no line
     /// break at all, or one we cannot read, leaves the content alone: guessing CRLF on a one-line
     /// file would be a change made for nothing.</para></summary>

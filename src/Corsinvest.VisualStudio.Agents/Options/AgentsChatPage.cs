@@ -11,21 +11,21 @@ namespace Corsinvest.VisualStudio.Agents.Options;
 
 /// <summary>Permission mode a new chat session starts in; maps to the CLI's
 /// <c>--permission-mode</c> (see Core/Client/PermissionMode.cs). The CLI also accepts
-/// `manual` as an alias for `default` — one behaviour under two names, so it is deliberately
+/// `manual` as an alias for `default`: one behaviour under two names, so it is deliberately
 /// not repeated here ("Manual" is already the label of Default). `auto` stays toolbar-only:
 /// it depends on the model supporting it, which isn't known until the catalogue arrives.</summary>
 public enum InitialPermissionMode
 {
-    /// <summary>Manual — approval required for each edit (prudent default). The name stays
+    /// <summary>Manual: approval required for each edit (prudent default). The name stays
     /// `Default` because it is what goes on the wire and what VS serializes into the settings
     /// store: renaming it would invalidate the saved preference of everyone who already chose
     /// a mode. "Manual" is only the user-facing label.</summary>
     Default,
-    /// <summary>Edit automatically — accept Edit/Write without asking.</summary>
+    /// <summary>Edit automatically: accept Edit/Write without asking.</summary>
     AcceptEdits,
-    /// <summary>Plan — explore and present a plan before editing.</summary>
+    /// <summary>Plan: explore and present a plan before editing.</summary>
     Plan,
-    /// <summary>Bypass permissions — nothing is ever asked. Requires
+    /// <summary>Bypass permissions: nothing is ever asked. Requires
     /// <see cref="AgentsChatPage.AllowDangerouslySkipPermissions"/>: without it the mode is
     /// hidden from the selector, so starting in it would leave the session in a mode the user
     /// cannot see or leave. Falls back to Default in that case.</summary>

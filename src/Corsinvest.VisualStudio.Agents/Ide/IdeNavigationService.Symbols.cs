@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Ide;
 
-// File outline (classes/methods/…) via the per-language INavigationBarItemService — the same
+// File outline (classes/methods/…) via the per-language INavigationBarItemService, the same
 // service behind the editor's navigation dropdown.
 internal sealed partial class IdeNavigationService
 {
@@ -39,7 +39,7 @@ internal sealed partial class IdeNavigationService
     private MethodInfo _getNavBarItemsAsync;         // on the service
 
     // Roslyn declares the same interface name twice, in two layers, and a language may register
-    // only one of them: C#/VB both, F# and TypeScript only the editor one (measured — F# answers
+    // only one of them: C#/VB both, F# and TypeScript only the editor one (measured: F# answers
     // there with items while the Features layer has no service at all). Asking Features alone is
     // what made those two report "this language has no navigation-bar service".
     private Type _editorNavBarServiceType;           // Microsoft.CodeAnalysis.Editor.INavigationBarItemService
@@ -132,7 +132,7 @@ internal sealed partial class IdeNavigationService
 
     /// <summary>The file's nav-bar items, from whichever layer this language registers: the
     /// Features one first (C#/VB), then the editor one (F#, TypeScript). Null when neither
-    /// answers — which is the only case that is really "not supported".</summary>
+    /// answers, which is the only case that is really "not supported".</summary>
     private async Task<IEnumerable> GetNavBarItemsAsync(object document, CancellationToken ct)
     {
         var service = GetLanguageService(document, _navBarServiceType);
@@ -149,7 +149,7 @@ internal sealed partial class IdeNavigationService
         if (editorService == null) { return null; }
 
         // The overload takes the ITextVersion its spans are relative to, which only exists for a
-        // file open in an editor buffer — and these tools read closed files. It serves callers that
+        // file open in an editor buffer, and these tools read closed files. It serves callers that
         // re-map spans onto a buffer that has moved on since; a one-shot read never does, and the
         // items come back carrying a version of their own. So pass what we have, null included,
         // rather than open the document to manufacture one.
@@ -178,7 +178,7 @@ internal sealed partial class IdeNavigationService
         {
             var text = await GetTextAsync(document, ct).ConfigureAwait(false);   // SourceText
             var container = VsReflection.GetProp(text, "Container");
-            // Microsoft.CodeAnalysis.Text.Extensions.TryGetTextBuffer(container) — an extension
+            // Microsoft.CodeAnalysis.Text.Extensions.TryGetTextBuffer(container): an extension
             // method on the editor side, so it is reached by name rather than on the instance.
             var extensions = VsReflection.FindType("Microsoft.CodeAnalysis.Text.Extensions");
             var tryGet = extensions?.GetMethod("TryGetTextBuffer");
@@ -204,9 +204,9 @@ internal sealed partial class IdeNavigationService
             int line = 0;
 
             // The two layers carry the position differently, and which one answered depends on the
-            // language: RoslynNavigationBarItem (Features — C#/VB) keeps it in
-            // Location.InDocumentInfo, SimpleNavigationBarItem (editor — F#, TypeScript) in Spans.
-            // Everything else — Text, Glyph, ChildItems — is named the same on both.
+            // language: RoslynNavigationBarItem (Features: C#/VB) keeps it in
+            // Location.InDocumentInfo, SimpleNavigationBarItem (editor: F#, TypeScript) in Spans.
+            // Everything else (Text, Glyph, ChildItems) is named the same on both.
             var loc = VsReflection.GetField(item, "Location");
             var inDoc = loc == null ? null : VsReflection.GetField(loc, "InDocumentInfo"); // nullable tuple
             var navSpan = inDoc == null ? null : VsReflection.GetField(inDoc, "Item2");    // navigationSpan
@@ -220,7 +220,7 @@ internal sealed partial class IdeNavigationService
                 line = OffsetToLine(sourceText, VsReflection.GetProp<int>(navSpan, "Start"));
             }
 
-            // Glyph (enum) names the kind, e.g. "ClassPublic", "MethodProtected" — strip the
+            // Glyph (enum) names the kind, e.g. "ClassPublic", "MethodProtected": strip the
             // trailing accessibility so we report just "Class"/"Method"/… (any language).
             var glyph = Member(item, "Glyph");
             var kind = NormalizeGlyph(glyph?.ToString());

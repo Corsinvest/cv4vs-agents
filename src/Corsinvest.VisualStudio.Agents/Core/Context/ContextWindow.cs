@@ -14,7 +14,7 @@ using System.Runtime.InteropServices;
 namespace Corsinvest.VisualStudio.Agents.Core.Context;
 
 /// <summary>Tool window showing a session's context breakdown, fetched with an ephemeral --resume
-/// CLI. Owns no file — see StatisticsWindow for why that makes a tool window the right shape.
+/// CLI. Owns no file: see StatisticsWindow for why that makes a tool window the right shape.
 /// Single-instance.</summary>
 [Guid("b1a45c38-6d92-4e7b-8f03-2a9e5d1c84b7")]
 public sealed class ContextWindow : ToolWindowPane

@@ -33,7 +33,7 @@ public enum EffortLevelDto
     Xhigh,
 }
 
-// ToWebView wire DTOs (host C# → WebView) — single source of truth. The .ts interfaces
+// ToWebView wire DTOs (host C# → WebView): single source of truth. The .ts interfaces
 // are generated from these by TypeGen (see BridgeGenerationSpec). Plain POCOs, no TypeGen
 // attributes here (the spec lists what to export), so the shape stays clean. Serialized
 // camelCase on the wire (Newtonsoft CamelCasePropertyNamesContractResolver). The opposite
@@ -159,7 +159,7 @@ public class SubagentEndedNotification
 }
 
 /// <summary>Which sub-agents are running in the background, as ids (background_tasks_changed).
-/// <para>Ids only, deliberately: the rows themselves — description, tools, tokens, duration —
+/// <para>Ids only, deliberately: the rows themselves (description, tools, tokens, duration)
 /// come from the task_started/task_progress pair and are already tracked. This says which of
 /// those to file under "background", nothing more.</para>
 /// <para>REPLACE semantics: the whole set every time, so the receiver swaps rather than merges.
@@ -173,7 +173,7 @@ public class BackgroundTasksNotification
 /// <summary>A change to a sub-agent already being tracked (task_updated): a new status, or a
 /// renamed description.
 /// <para>A patch on the task the started/progress pair already built, not a new one. Fields the
-/// CLI did not send stay null — the wire patch carries only what changed.</para>
+/// CLI did not send stay null: the wire patch carries only what changed.</para>
 /// <para>The patch also carries is_backgrounded, which is NOT taken: it only ever describes a
 /// foreground task being pushed down, and the CLI's asynchronous agents are background from
 /// birth, so it never arrives for them. BackgroundTasksNotification is what says which are.</para></summary>
@@ -222,7 +222,7 @@ public class ToolPermissionCancelNotification
 }
 
 /// <summary>A pending plan was saved in the editor (chat_plan_updated): show the new text on the
-/// banner whose tool_use matches. Edited says whether it differs from the plan the CLI sent — decided
+/// banner whose tool_use matches. Edited says whether it differs from the plan the CLI sent: decided
 /// by the host with the rule it answers by, so the banner and the approval never disagree.</summary>
 public class PlanUpdatedNotification
 {
@@ -232,7 +232,7 @@ public class PlanUpdatedNotification
 }
 
 /// <summary>What an Agent run cost, from the totals the CLI writes on its tool_result. Absent while
-/// it runs, and for an INTERRUPTED run — there the CLI reports no figures at all, so the row shows
+/// it runs, and for an INTERRUPTED run: there the CLI reports no figures at all, so the row shows
 /// none rather than a number that would understate what it spent.</summary>
 public class AgentRunTotalsDto
 {
@@ -244,7 +244,7 @@ public class AgentRunTotalsDto
 /// <summary>One hunk of the patch the CLI computed when it applied an edit, verbatim from
 /// toolUseResult.structuredPatch. Line numbers are the file's, which is the whole point: an
 /// Edit's input carries only the two fragments, so a patch computed from those starts at 1.
-/// `Lines` are unified-diff rows — first char '-', '+' or ' ', then the text.</summary>
+/// `Lines` are unified-diff rows: first char '-', '+' or ' ', then the text.</summary>
 public class PatchHunkDto
 {
     public int OldStart { get; set; }
@@ -257,7 +257,7 @@ public class PatchHunkDto
 /// <summary><para>
 /// The fields only one tool family reads, grouped so adding another one touches this class
 /// and its renderer instead of widening the notification, the entry, the host and two call sites.
-/// Null when the tool reports none — which is most of them.
+/// Null when the tool reports none, which is most of them.
 /// </para>
 /// <para>
 /// agentId and fullLineCount deliberately stay OUT: the first is routing (the transcript lookup and
@@ -278,9 +278,9 @@ public class ToolResultNotification
     public string Result { get; set; }
     public bool IsError { get; set; }
     public string ParentToolUseId { get; set; }
-    // The sub-agent this row spawned — Agent.
+    // The sub-agent this row spawned: Agent.
     public string AgentId { get; set; }
-    // Untruncated non-empty line count — the count-only renderers (Grep/Glob/WebSearch).
+    // Untruncated non-empty line count: the count-only renderers (Grep/Glob/WebSearch).
     public int FullLineCount { get; set; }
     // Per-tool fields; null for a tool that reports none.
     public ToolResultExtrasDto Extras { get; set; }
@@ -295,7 +295,7 @@ public class RateLimitNotification
     public string Message { get; set; }
 }
 
-/// <summary>A notice for one of the two notice stacks (chat_notice) — today CLI advisories
+/// <summary>A notice for one of the two notice stacks (chat_notice): today CLI advisories
 /// (system/informational). Key dedups repeats of the same advisory; severity maps the CLI's level;
 /// position picks the stack (absent = top, i.e. session scope).</summary>
 public class NoticeNotification
@@ -310,7 +310,7 @@ public class NoticeNotification
     /// <summary>Bridge message name the action button sends (fromWebView), e.g.
     /// open_ide_output_window. Ignored without ActionLabel.</summary>
     public string ActionMessage { get; set; }
-    /// <summary>True for a notice that must stay until the host clears it (a dead CLI process) —
+    /// <summary>True for a notice that must stay until the host clears it (a dead CLI process):
     /// it isn't auto-dismissed even at info severity.</summary>
     public bool Sticky { get; set; }
 }
@@ -343,7 +343,7 @@ public class UserImageDto
 
     /// <summary>Tiny inline PNG preview (data-URI) for the attachment chip, so the image
     /// is visible without fetching the full bytes. Null when the thumbnail couldn't be
-    /// built (unsupported codec / corrupt data) — the chip then shows its file-type icon.</summary>
+    /// built (unsupported codec / corrupt data), the chip then shows its file-type icon.</summary>
     public string Preview { get; set; }
 }
 
@@ -410,7 +410,7 @@ public class GetHistoryResponse
 
 /// <summary>The host pushed a fresh history page unprompted (chat_history_loaded): sent on
 /// session open/resume, CLI respawn, and settings-reload re-render. NOTIFICATION (no request),
-/// so no Prepend — an unprompted load always replaces/appends, never prepends.</summary>
+/// so no Prepend: an unprompted load always replaces/appends, never prepends.</summary>
 public class HistoryLoadedNotification
 {
     public HistoryEventDto[] Events { get; set; }
@@ -455,7 +455,7 @@ public class SetComposerNotification
     public bool Append { get; set; }
 
     /// <summary>File references, written by the page with the same token its @ menu writes, so a
-    /// reference reads the same whichever way it got into the composer — one per line. Several in
+    /// reference reads the same whichever way it got into the composer: one per line. Several in
     /// one message because a multi-selection in Solution Explorer is one click: sent one by one,
     /// each would open a pane of its own when none is open. Null for plain text.</summary>
     public ComposerMention[] Mentions { get; set; }
@@ -481,7 +481,7 @@ public class ComposerMention
 /// <summary>A keystroke the host claimed on the WebView's behalf (ui_host_key).
 /// <para>WebView2CompositionControl renders through Windows.UI.Composition, and its
 /// CoreWebView2CompositionController exposes SendMouseInput/SendPointerInput but no keyboard
-/// equivalent — so the keys it drops never reach the browser, and WPF hands them to Visual Studio
+/// equivalent, so the keys it drops never reach the browser, and WPF hands them to Visual Studio
 /// instead. The pane claims those and forwards them here for the page to act on.</para></summary>
 public class HostKeyNotification
 {
@@ -534,7 +534,7 @@ public class RemoteControlNotification
     public string Url { get; set; }
     public string Detail { get; set; }
     /// <summary>Started by remoteControlAtStartup, not by the user: no link/QR card in the
-    /// transcript — nobody is reaching for a phone, and every respawn would post another one.</summary>
+    /// transcript: nobody is reaching for a phone, and every respawn would post another one.</summary>
     public bool AutoStarted { get; set; }
 }
 
@@ -607,13 +607,13 @@ public class AssistantTextNotification
     public string Text { get; set; }
     public string ParentToolUseId { get; set; }
     // The message's wire uuid, so an entry can be addressed after the fact. Every block of one
-    // assistant message carries the same one — the CLI derives per-block uuids for its own
+    // assistant message carries the same one: the CLI derives per-block uuids for its own
     // retraction lists, but what reaches us here is the message's. Always present: the CLI writes
     // it unconditionally on both assistant lanes and SDKAssistantMessage.uuid is non-optional.
     // The permission banner's synthetic message is the one caller that passes none, and it only
-    // ever emits tool_use blocks — never the text block this rides on.
+    // ever emits tool_use blocks, never the text block this rides on.
     public string Uuid { get; set; }
-    // Why the API call failed, when it did — a closed enum from the CLI (overloaded, rate_limit,
+    // Why the API call failed, when it did: a closed enum from the CLI (overloaded, rate_limit,
     // authentication_failed, …). An API failure arrives as an assistant message whose TEXT is the
     // error, so without this the chat renders it as an ordinary answer, grey dot included. Null on
     // every normal message: the CLI omits the field rather than sending an empty one.
@@ -627,7 +627,7 @@ public class AssistantTextNotification
 /// <summary><para>
 /// Messages the CLI retracted (chat_evict_messages): they were delivered to us but are no
 /// longer part of the conversation, so the model does not have them. Leaving them on screen is what
-/// makes the transcript diverge from the model's context — the user reads a partial answer and
+/// makes the transcript diverge from the model's context: the user reads a partial answer and
 /// reasons about it, while the model never saw it.
 /// </para>
 /// <para>
@@ -648,7 +648,7 @@ public class SpinnerVerbsConfigDto
 }
 
 /// <summary>The {config} block of the init payload: pane config the WebView boots with.
-/// WorkingDirectory is always set host-side (?? ""). Model/PermissionMode live in CliStateDto —
+/// WorkingDirectory is always set host-side (?? ""). Model/PermissionMode live in CliStateDto:
 /// they're CLI state, not pane config. Slash commands arrive over chat_slash_commands
 /// (initialize catalogue / commands_changed), not here.</summary>
 public class InitConfigDto
@@ -686,7 +686,7 @@ public class VsOptionsDto
     public bool FileCheckpoints { get; set; }
 
     /// <summary>Whether the selected code itself rides along with the prompt, or only its file and
-    /// line numbers. The host composes the tag either way — the WebView is told so the context chip
+    /// line numbers. The host composes the tag either way: the WebView is told so the context chip
     /// can show WHICH of the two is going out.</summary>
     public bool SendSelectionText { get; set; }
     public string[] AllowedUploadExtensions { get; set; }
@@ -697,7 +697,7 @@ public class VsOptionsDto
     public int LogLevel { get; set; }
 }
 
-/// <summary>The init payload (ui_init): what the host knows on its own — pane config and VS
+/// <summary>The init payload (ui_init): what the host knows on its own, pane config and VS
 /// options. Sent as soon as the WebView is up, before any history, so the first rows already
 /// have the working directory they need to shorten paths against.
 /// <para>The CLI's own state travels separately, on cli_state: it is not available until
@@ -709,7 +709,7 @@ public class InitPayloadNotification
     public VsOptionsDto VsOptions { get; set; }
 }
 
-/// <summary>The CLI's startup state (cli_state), from initialize + get_settings — model, effort,
+/// <summary>The CLI's startup state (cli_state), from initialize + get_settings: model, effort,
 /// toggles. Sent on every startup, so a respawn re-seeds the UI without re-sending pane config
 /// and VS options that did not change.</summary>
 public class CliStateNotification
@@ -750,7 +750,7 @@ public class ExchangeEndedNotification
     public long MaxOutputTokens { get; set; }
 
     /// <summary>Why the turn failed (only with IsError): the CLI's own message. May be empty
-    /// even on a failure — the label below is what always identifies the cause.</summary>
+    /// even on a failure: the label below is what always identifies the cause.</summary>
     public string ErrorText { get; set; } = "";
 
     /// <summary>Machine-readable failure cause for the notice label: `terminal_reason` when the
@@ -760,7 +760,7 @@ public class ExchangeEndedNotification
 
 /// <summary>Answer to a rewind request (rewind_result).
 /// <para>The two calls answer differently, and the caller knows which it asked for. A dry run
-/// reports what WOULD change — <see cref="FilesChanged"/>, <see cref="Insertions"/>,
+/// reports what WOULD change: <see cref="FilesChanged"/>, <see cref="Insertions"/>,
 /// <see cref="Deletions"/>. A real rewind carries only the outcome: observed on the wire as
 /// <c>{"canRewind": true, "skippedLinks": 0}</c>, with the statistics absent. So a zero here after
 /// a real rewind means "not reported", not "nothing changed".</para>
@@ -772,7 +772,7 @@ public class RewindResultNotification
     public string MessageUuid { get; set; }
     public bool CanRewind { get; set; }
 
-    /// <summary>Why not, when CanRewind is false — the CLI's own wording.</summary>
+    /// <summary>Why not, when CanRewind is false: the CLI's own wording.</summary>
     public string Error { get; set; } = "";
 
     /// <summary>What the rewind would touch, when the CLI reported it (probe only). Absolute paths.

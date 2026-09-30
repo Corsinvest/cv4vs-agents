@@ -24,7 +24,7 @@ public class SessionInfo
     public string CliVersion { get; set; }
     public string Model { get; set; }
     public int MessageCount { get; set; }
-    /// <summary>True if any scanned line is a sub-agent sidechain entry — such
+    /// <summary>True if any scanned line is a sub-agent sidechain entry: such
     /// sessions aren't shown in the list. Internal scan state, not serialized.</summary>
     internal bool IsSidechain { get; set; }
 }

@@ -23,7 +23,7 @@ internal sealed class GoToDefinitionArgs
     public string SymbolName { get; set; }
 }
 
-/// <summary>MCP tool: resolve where a symbol is DEFINED (file + line), semantically — not a
+/// <summary>MCP tool: resolve where a symbol is DEFINED (file + line), semantically, not a
 /// text search. Works without opening the editor. Multi-language where the VS language
 /// service supports it (C#/VB and others); returns "not supported" otherwise so the model
 /// can fall back to grep.</summary>

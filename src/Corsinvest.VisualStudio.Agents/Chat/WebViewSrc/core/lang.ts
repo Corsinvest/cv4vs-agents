@@ -17,8 +17,8 @@ import hljs from 'highlight.js';
  * Map a fence label, a file extension, or a whole filename to a hljs-supported language.
  * Add an entry here when authors hit a "no highlighting" fence in the wild.
  *
- * One map rather than two: the keys never collide — extensions on one side, extensionless
- * filenames on the other — and splitting them meant every caller had to know which of the two to
+ * One map rather than two: the keys never collide (extensions on one side, extensionless
+ * filenames on the other), and splitting them meant every caller had to know which of the two to
  * ask, so most asked neither. Not exported for the same reason: `langForFile` and `resolveLang`
  * are the two questions worth asking, and a caller reaching past them into the table is a caller
  * about to get a dotfile or a suffixed name wrong.
@@ -94,7 +94,7 @@ const LANGS: Record<string, string> = {
     txt: 'plaintext',
 
     // Whole filenames, for files that carry no extension at all. `containerfile` is up with the
-    // container entries above — it reads as an extension too, and one entry serves both.
+    // container entries above: it reads as an extension too, and one entry serves both.
     // Taken from GitHub Linguist's `filenames`, keeping the ones a .NET/web/Windows repo actually
     // holds: its full list runs to 130 names, most of them ecosystems nobody opens in this IDE.
     dockerfile: 'dockerfile',
@@ -130,7 +130,7 @@ const LANGS: Record<string, string> = {
 };
 
 /**
- * The keys of LANGS that are whole filenames rather than extensions — the ones a suffix can be
+ * The keys of LANGS that are whole filenames rather than extensions, the ones a suffix can be
  * appended to (`Dockerfile.prod`) and still name the same kind of file. Kept apart because the map
  * holds both kinds and a stem lookup against all of it would read `env.config` as an `env` file.
  */
@@ -154,7 +154,7 @@ const WHOLE_FILE_NAMES = new Set([
 
 /**
  * Resolve a fence label or extension to a hljs language name.
- * Returns the lowercase input itself when no alias matches — hljs handles
+ * Returns the lowercase input itself when no alias matches: hljs handles
  * the unknown-language fallback.
  */
 export function resolveLang(label: string | undefined | null): string {
@@ -163,12 +163,12 @@ export function resolveLang(label: string | undefined | null): string {
 }
 
 /**
- * The hljs language for a file path — the question every caller actually has, asked once here
+ * The hljs language for a file path: the question every caller actually has, asked once here
  * instead of four times as "what is the extension?".
  *
  * Three shapes, in the order that makes them unambiguous:
- *  - a whole filename (`Dockerfile`, `Makefile`) — has no extension to find;
- *  - a dotfile (`.gitignore`, `.editorconfig`) — where `lastIndexOf('.')` is 0, so the name IS
+ *  - a whole filename (`Dockerfile`, `Makefile`), has no extension to find;
+ *  - a dotfile (`.gitignore`, `.editorconfig`), where `lastIndexOf('.')` is 0, so the name IS
  *    the key, with the leading dot dropped;
  *  - an extension (`Foo.csproj`).
  *
@@ -187,7 +187,7 @@ export function langForFile(filePath: string | undefined | null): string {
         return byName;
     }
     const dot = base.lastIndexOf('.');
-    // A suffixed filename — `Dockerfile.prod`, `Makefile.am` — is still that file, so the stem is
+    // A suffixed filename (`Dockerfile.prod`, `Makefile.am`) is still that file, so the stem is
     // worth a look before the suffix is taken for an extension. Only against the names, though:
     // `env` and `config` are both keys, and reading `env.config` by its stem would answer for the
     // wrong half of it.
@@ -202,21 +202,21 @@ export function langForFile(filePath: string | undefined | null): string {
 
 // Bounded like the markdown one, and for the same reason: the callers are Lit render() bodies, so
 // a tool row re-highlights its whole body whenever anything about the row changes. Only settled
-// text benefits — a growing code fence is a new key on every pass, so the streaming path (which
+// text benefits: a growing code fence is a new key on every pass, so the streaming path (which
 // goes through renderMarkdown's own cache) neither hits this nor thrashes it.
 const HL_CACHE_MAX = 100;
 const _hlCache = new Map<string, string | null>();
 
-/** Drop the memoized highlights. Paired with clearMarkdownCache() — same lifetime, same reason. */
+/** Drop the memoized highlights. Paired with clearMarkdownCache(): same lifetime, same reason. */
 export function clearHighlightCache(): void {
     _hlCache.clear();
 }
 
 /**
  * Highlight `code` as `label` (a fence label or a file extension), returning HTML.
- * Null when the language is unknown or hljs throws — the caller then renders the text
+ * Null when the language is unknown or hljs throws: the caller then renders the text
  * plain, which is what an unhighlighted file should look like anyway.
- * Memoized by code+language — see HL_CACHE_MAX.
+ * Memoized by code+language; see HL_CACHE_MAX.
  */
 export function highlightCode(code: string, label: string | undefined | null): string | null {
     const language = resolveLang(label);

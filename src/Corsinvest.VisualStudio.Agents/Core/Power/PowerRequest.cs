@@ -13,7 +13,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Power;
 /// <para>Not SetThreadExecutionState: that is per-thread state on the VS UI thread, which we share
 /// with the shell and every other extension, and anything in the process can reset it under us. A
 /// power request is a handle we own, the OS drops it when the process dies, and
-/// <c>powercfg /requests</c> shows the reason string — so a user whose machine stops sleeping can
+/// <c>powercfg /requests</c> shows the reason string, so a user whose machine stops sleeping can
 /// see who is holding it.</para></summary>
 internal sealed class PowerRequest : IDisposable
 {

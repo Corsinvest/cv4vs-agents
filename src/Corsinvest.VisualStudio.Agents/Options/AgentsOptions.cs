@@ -16,8 +16,8 @@ public static class AgentsOptions
     internal static void RaiseApplied() => Applied?.Invoke();
 
     /// <summary>Raised when <see cref="SetViewMode"/> changes the setting from a chat's / menu.
-    /// Not <see cref="Applied"/>: that one makes every chat reload its transcript from disk — which
-    /// drops the older pages already scrolled in, and is skipped mid-turn — while a view mode only
+    /// Not <see cref="Applied"/>: that one makes every chat reload its transcript from disk, which
+    /// drops the older pages already scrolled in, and is skipped mid-turn, while a view mode only
     /// needs the new value pushed to each WebView.</summary>
     public static event System.Action ViewModeChanged;
 
@@ -54,7 +54,7 @@ public static class AgentsOptions
     /// <para>A <see cref="Microsoft.VisualStudio.Shell.DialogPage"/> constructor reaches through
     /// ThreadHelper.JoinableTaskContext to the global service provider, which exists only when
     /// Visual Studio is the host process. In a unit test that throws FileNotFoundException on
-    /// Microsoft.Internal.VisualStudio.Interop — so the construction is guarded, and what is handed
+    /// Microsoft.Internal.VisualStudio.Interop, so the construction is guarded, and what is handed
     /// back instead is an instance whose property initialisers never ran: LogLevel.None and
     /// EnablePerfLog false, which is what an unconfigured page would have said anyway.</para></summary>
     private static class Defaults<T> where T : Microsoft.VisualStudio.Shell.DialogPage, new()

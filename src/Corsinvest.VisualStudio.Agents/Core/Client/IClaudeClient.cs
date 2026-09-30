@@ -21,7 +21,7 @@ public interface IClaudeClient : IDisposable
     string SessionId { get; }
     string Model { get; }
     string PermissionMode { get; }
-    /// <summary>Whether THIS process is keeping file snapshots — read from the environment at
+    /// <summary>Whether THIS process is keeping file snapshots, read from the environment at
     /// launch, so it does not follow a change to the option until the next chat.</summary>
     bool FileCheckpoints { get; }
     bool IsRunning { get; }
@@ -53,7 +53,7 @@ public interface IClaudeClient : IDisposable
     Task NewSessionAsync();
     Task ResumeSessionAsync(string sessionId, string permissionMode = null);
 
-    // Hot-swap operations — these must never respawn the process.
+    // Hot-swap operations: these must never respawn the process.
     Task SetModelAsync(string model);
     Task SetPermissionModeAsync(string mode);
     /// <summary>Turn Remote Control on or off on the live session. Returns the claude.ai
@@ -77,11 +77,11 @@ public interface IClaudeClient : IDisposable
     Task<JObject> GetSettingsAsync();
     /// <summary>Restore the files to the snapshot the CLI took before that user message. With
     /// dryRun it only reports whether it could, and with what (canRewind, filesChanged, insertions,
-    /// deletions) — the one way to know a checkpoint exists. Null when the CLI refused.</summary>
+    /// deletions): the one way to know a checkpoint exists. Null when the CLI refused.</summary>
     Task<JObject> RewindFilesAsync(string userMessageId, bool dryRun);
     Task StopTaskAsync(string taskId);
 
-    /// <summary>Detach a running task from the turn — keyed by tool_use_id, unlike the stop above.
+    /// <summary>Detach a running task from the turn, keyed by tool_use_id, unlike the stop above.
     /// One-way: nothing brings it back.</summary>
     Task DetachTaskAsync(string toolUseId = null);
 
@@ -100,12 +100,12 @@ public interface IClaudeClient : IDisposable
 
     /// <summary>Responds to a ToolPermissionRequested event, correlating by the
     /// stable <c>tool_use_id</c> (not the internal control request_id). Supports
-    /// concurrent permission prompts — each tool maps to its own pending request.
+    /// concurrent permission prompts: each tool maps to its own pending request.
     /// Returns false when the tool_use_id has no pending request (already answered
     /// or unknown).</summary>
     bool RespondToToolPermission(string toolUseId, ToolPermissionResponse response);
 
-    /// <summary>The tool and input of a can_use_tool still waiting for its answer — the CLI's own
+    /// <summary>The tool and input of a can_use_tool still waiting for its answer: the CLI's own
     /// copy, as it asked. False once it is answered or cancelled, or its process is gone.</summary>
     bool TryGetPendingToolRequest(string toolUseId, out string toolName, out JObject input);
 
@@ -117,7 +117,7 @@ public interface IClaudeClient : IDisposable
     /// that hears every save in the IDE.</summary>
     bool HasPendingPlan { get; }
 
-    /// <summary>True while any tool permission is waiting on the user — the CLI is blocked on a
+    /// <summary>True while any tool permission is waiting on the user: the CLI is blocked on a
     /// human, not computing. Tracked here because this is where the pending requests already live,
     /// cleared on answer, on cancel and on process exit alike.</summary>
     bool HasPendingToolPermission { get; }
@@ -136,11 +136,11 @@ public interface IClaudeClient : IDisposable
     event EventHandler<UserMessageEventArgs> UserMessageReceived;
     event EventHandler<ResultEventArgs> ResultReceived;
     event EventHandler<ToolPermissionRequestEventArgs> ToolPermissionRequested;
-    /// <summary>The CLI cancelled a pending can_use_tool (interrupt / superseded turn) — the
+    /// <summary>The CLI cancelled a pending can_use_tool (interrupt / superseded turn): the
     /// permission banner for that tool_use must be dismissed.</summary>
     event EventHandler<ToolPermissionCancelledEventArgs> ToolPermissionCancelled;
-    /// <summary>A pending permission was answered. The CLI sends nothing back for it — the answer
-    /// is outbound — so a listener that tracks "is this pane blocked on the user" has no other way
+    /// <summary>A pending permission was answered. The CLI sends nothing back for it: the answer
+    /// is outbound, so a listener that tracks "is this pane blocked on the user" has no other way
     /// to learn the wait is over.</summary>
     event EventHandler<string> ToolPermissionResolved;
 
@@ -149,7 +149,7 @@ public interface IClaudeClient : IDisposable
     event EventHandler ActivityObserved;
     event EventHandler<HookCallbackEventArgs> HookCallbackRequested;
     event EventHandler<RateLimitEventArgs> RateLimitReceived;
-    /// <summary>`system/bridge_state` — Remote Control connection state changes on the live session.</summary>
+    /// <summary>`system/bridge_state`: Remote Control connection state changes on the live session.</summary>
     event EventHandler<BridgeStateEventArgs> BridgeStateChanged;
     event EventHandler<AssistantTextDeltaEventArgs> AssistantTextDelta;
     event EventHandler<AssistantThinkingDeltaEventArgs> AssistantThinkingDelta;

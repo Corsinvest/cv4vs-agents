@@ -4,7 +4,7 @@
  */
 // The bottom actions row shared by a normal response (cv-app) and a sub-agent transcript
 // (cv-tool-row): a Copy button, an optional Read-aloud button, and the "x ago" timestamp. Pure
-// render — no state, no component.
+// render: no state, no component.
 
 import { html, nothing, type TemplateResult } from 'lit';
 import type { ContextUsageDto } from '../../core/types';
@@ -27,10 +27,10 @@ export interface TurnMetrics {
  *  Cache reads are deliberately left out of the input count: they are context replayed, not tokens
  *  this turn spent, and counting them puts a five-figure number next to an answer that cost two.
  *  Cache CREATION is the opposite and is counted: it is content entering the context for the first
- *  time here — an attachment, a freshly read file — billed above the base input rate. Left out, a
+ *  time here (an attachment, a freshly read file) billed above the base input rate. Left out, a
  *  turn that pushed 540k tokens of video into the cache reported `↑ 2`, which is what `input_tokens`
  *  alone is once caching takes the rest.
- *  Every part is dropped when zero rather than shown as "0" — a replayed turn has its token counts
+ *  Every part is dropped when zero rather than shown as "0": a replayed turn has its token counts
  *  but no cost or duration (those ride `result`, which the JSONL has no line for), so it renders
  *  the tokens alone instead of "$0 · … · 0.0s". */
 function formatMetrics(m: TurnMetrics) {
@@ -54,9 +54,9 @@ function formatMetrics(m: TurnMetrics) {
     return parts.flatMap((p, i) => (i ? [html` · `, p] : [p]));
 }
 
-/** Copy button (+ optional Read-aloud when `speak`) + "x ago" timestamp, and — when the turn's
- *  figures are known and the option is on — cost/tokens/duration pushed to the far end. Hover-gating
- *  is CSS: `.cv-response-actions` has base opacity 0 and a hover rule on the container reveals it —
+/** Copy button (+ optional Read-aloud when `speak`) + "x ago" timestamp, and (when the turn's
+ *  figures are known and the option is on) cost/tokens/duration pushed to the far end. Hover-gating
+ *  is CSS: `.cv-response-actions` has base opacity 0 and a hover rule on the container reveals it;
  *  pass that container's reveal class in `extraClass`. ts=0 hides the timestamp. `speak` adds the
  *  TTS button (prose answers want it; a tool transcript doesn't). */
 export function renderActionsRow(

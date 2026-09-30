@@ -14,7 +14,7 @@ using System.Runtime.InteropServices;
 namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 
 /// <summary>Tool window showing the plan's usage and rate limits, fetched live from the CLI. Owns no
-/// file — see StatisticsWindow for why that makes a tool window the right shape. Single-instance.</summary>
+/// file: see StatisticsWindow for why that makes a tool window the right shape. Single-instance.</summary>
 [Guid("3d7c14e9-8b26-4a5f-9e01-7c4a8d2b6f35")]
 public sealed class UsageWindow : ToolWindowPane
 {

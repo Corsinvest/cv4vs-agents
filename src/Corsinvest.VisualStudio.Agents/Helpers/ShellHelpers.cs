@@ -30,12 +30,12 @@ internal static class ShellHelpers
         }
     }
 
-    /// <summary>A themed message box, in place of System.Windows.MessageBox — WPF's own dialog is
+    /// <summary>A themed message box, in place of System.Windows.MessageBox: WPF's own dialog is
     /// drawn by Windows and knows nothing about the IDE, so on a dark theme it opens white.
     /// <para>Not Community.VisualStudio.Toolkit's VS.MessageBox: it makes the same
     /// VsShellUtilities call underneath, but its ShowWarning shows OK/Cancel rather than OK, and
     /// its ShowConfirm hardcodes Yes as the default button (see <see cref="Confirm"/>).</para>
-    /// <para>UI thread only — the shell cannot raise a dialog from anywhere else.</para></summary>
+    /// <para>UI thread only: the shell cannot raise a dialog from anywhere else.</para></summary>
     public static void ShowMessage(string text, string title, bool warning)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -49,7 +49,7 @@ internal static class ShellHelpers
     }
 
     /// <summary>A themed Yes/No prompt; true when the user picked Yes.
-    /// <para>Defaults to No, so a stray Enter or Esc cancels rather than confirms — every caller
+    /// <para>Defaults to No, so a stray Enter or Esc cancels rather than confirms: every caller
     /// guards something irreversible. This is the one reason not to use the toolkit's
     /// ShowConfirm, which defaults to Yes and offers no way to change it.</para></summary>
     public static bool Confirm(string text, string title)

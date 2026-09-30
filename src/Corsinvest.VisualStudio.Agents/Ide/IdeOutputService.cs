@@ -16,7 +16,7 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 
 /// <summary>
 /// Read the VS Output window panes (Build, Debug, the running program's output, …) via the
-/// public EnvDTE API. Useful when a command's output doesn't flow through the shell — e.g. the
+/// public EnvDTE API. Useful when a command's output doesn't flow through the shell, e.g. the
 /// debuggee's Console writes, or the build log. All on the UI thread; never throws.
 /// </summary>
 internal sealed class IdeOutputService
@@ -47,7 +47,7 @@ internal sealed class IdeOutputService
     }
 
     /// <summary>The built-in panes, by the English name a caller would ask for. VS localises the
-    /// displayed names — on an Italian IDE the Build pane is called "Compilazione" — so matching
+    /// displayed names (on an Italian IDE the Build pane is called "Compilazione") so matching
     /// the name alone never finds them outside an English install. The GUIDs don't change.</summary>
     private static readonly Dictionary<string, Guid> WellKnownPanes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -62,7 +62,7 @@ internal sealed class IdeOutputService
     /// string, so the match is on identity and never on the localised display name.
     /// </para>
     /// <para>
-    /// The IVsOutputWindow round-trip is only there for the pane that does not exist yet — VS
+    /// The IVsOutputWindow round-trip is only there for the pane that does not exist yet: VS
     /// creates them lazily, and CreatePane materialises one without bringing the window forward.
     /// Returns null for panes with no stable GUID; those are found by name. Must be called on the
     /// UI thread.
@@ -102,7 +102,7 @@ internal sealed class IdeOutputService
     }
 
     /// <summary>Locate a pane by name (case-insensitive) and collect the sorted list of all
-    /// pane names. Returns null when no match — the caller reports availablePanes so the model
+    /// pane names. Returns null when no match; the caller reports availablePanes so the model
     /// can retry. Must be called on the UI thread.</summary>
     private static OutputWindowPane FindPane(OutputWindow ow, string paneName, out string[] allPaneNames)
     {
@@ -127,7 +127,7 @@ internal sealed class IdeOutputService
     /// <para>
     /// A pane that has never been shown answers E_FAIL here: it is listed, and it holds the text
     /// the build wrote, but the document behind it is realised together with the window. Activating
-    /// the pane realises it, so the failure is retried once that way rather than reported — the
+    /// the pane realises it, so the failure is retried once that way rather than reported: the
     /// alternative is a caller that cannot tell "no output" from "output you haven't looked at".
     /// Activating brings the Output window forward, which is why it is done only on that branch.
     /// </para>
@@ -158,12 +158,12 @@ internal sealed class IdeOutputService
 
     /// <summary><para>
     /// The text the user is looking at in the Output window: their selection, or the last
-    /// <paramref name="tailLines"/> lines of the active pane when they selected nothing — a build
+    /// <paramref name="tailLines"/> lines of the active pane when they selected nothing: a build
     /// error is read without being selected first, and a menu entry that greys out unless you
     /// highlight something would be useless exactly when it is wanted.
     /// </para>
     /// <para>
-    /// Returns null when there is nothing to read. UI thread; never throws — it runs from a menu
+    /// Returns null when there is nothing to read. UI thread; never throws; it runs from a menu
     /// query, where an exception would take the context menu down with it.
     /// </para></summary>
     public string GetActivePaneText(int tailLines)
@@ -255,7 +255,7 @@ internal sealed class IdeOutputService
 
             // A pane's text ends with the newline that closed its last line, so Split leaves an
             // empty element after it. Counted, it made totalLines one too many; tailed, it WAS the
-            // answer — tailLines:1 returned "" instead of the last line anyone had written. An
+            // answer: tailLines:1 returned "" instead of the last line anyone had written. An
             // empty pane is the same artefact at zero: "" splits to one empty element, and the
             // pane reported a line it did not have.
             var allLines = text.Length == 0
@@ -323,7 +323,7 @@ internal sealed class IdeOutputService
         }
     }
 
-    /// <summary>Write text to a pane, creating a custom one by that name if it doesn't exist —
+    /// <summary>Write text to a pane, creating a custom one by that name if it doesn't exist:
     /// the built-in panes are owned by VS, but a caller writing progress or a note of its own
     /// wants a pane to appear rather than an error. Appends a newline unless the text ends in one,
     /// so consecutive writes don't run together.</summary>
@@ -353,7 +353,7 @@ internal sealed class IdeOutputService
         }
     }
 
-    /// <summary>Bring a pane to the foreground (case-insensitive) so the user sees it — used at
+    /// <summary>Bring a pane to the foreground (case-insensitive) so the user sees it, used at
     /// debug checkpoints. Ok=false when the pane isn't found.</summary>
     public async Task<OutputResult> ActivateAsync(string paneName)
     {

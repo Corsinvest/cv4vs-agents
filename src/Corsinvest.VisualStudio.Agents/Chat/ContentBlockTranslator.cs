@@ -15,7 +15,7 @@ namespace Corsinvest.VisualStudio.Agents.Chat;
 /// <summary>
 /// <para>
 /// The per-tool fields the CLI writes on a tool_result, gathered in one place instead of one
-/// EmitUser parameter each — every tool that reports something of its own would otherwise widen
+/// EmitUser parameter each: every tool that reports something of its own would otherwise widen
 /// that signature, and both callers would grow another extraction.
 /// </para>
 /// <para>
@@ -32,7 +32,7 @@ internal sealed class ToolResultExtras
     public Contracts.PatchHunkDto[] Patch { get; set; }
 
     /// <summary>What an Agent run cost. Null while it runs, for every other tool, and for an
-    /// interrupted run — the CLI reports no totals there.</summary>
+    /// interrupted run: the CLI reports no totals there.</summary>
     public Contracts.AgentRunTotalsDto AgentTotals { get; set; }
 
     /// <summary>Read them off a live toolUseResult. Null-safe: the object is a bare string on an
@@ -48,18 +48,18 @@ internal sealed class ToolResultExtras
     /// flat for the scalars on purpose: that JObject goes into the history page and is read back
     /// with Val(), so nesting there would mean serializing a sub-object inside another document.
     /// <para>The patch is the exception, and earns it: what travels is the CLI's own JSON verbatim,
-    /// not an object of ours being serialized — and there is no flat shape for a list of hunks that
+    /// not an object of ours being serialized, and there is no flat shape for a list of hunks that
     /// wouldn't amount to inventing one.</para></summary>
     public static ToolResultExtras FromMessage(JObject msg) => new()
     {
-        // The one lifted value that isn't a scalar — see the lift in SessionManager.History.
+        // The one lifted value that isn't a scalar: see the lift in SessionManager.History.
         Patch = (msg["diffPatch"] as JArray)?.ToObject<Contracts.PatchHunkDto[]>(),
         AgentTotals = TotalsOrNull((msg.Val("agentDurationMs", 0L),
                                     msg.Val("agentTokens", 0L),
                                     msg.Val("agentToolUses", 0))),
     };
 
-    /// <summary>The totals as a DTO, or null when the run reported none — a zero duration is how
+    /// <summary>The totals as a DTO, or null when the run reported none: a zero duration is how
     /// both sources say "nothing to report", and a DTO full of zeros would claim otherwise.</summary>
     private static Contracts.AgentRunTotalsDto TotalsOrNull((long DurationMs, long Tokens, int ToolUses) t)
         => t.DurationMs > 0
@@ -72,7 +72,7 @@ internal sealed class ToolResultExtras
             : null;
 
     /// <summary>The wire shape: each group present only when the tool reported it, and the whole
-    /// object null when it reported neither — so the WebView tests for presence, never for a zero
+    /// object null when it reported neither, so the WebView tests for presence, never for a zero
     /// that could also mean "ran for 0ms".</summary>
     public Contracts.ToolResultExtrasDto ToDto() => AgentTotals == null && Patch == null
             ? null
@@ -201,7 +201,7 @@ internal static class ContentBlockTranslator
 
         // A user message can carry a BARE-STRING content (not a block array): slash commands
         // (/compact, <command-name>…), command output (<local-command-stdout>…), etc. Treat it as
-        // the user text — the meta filter below drops the real meta (stdout/tick/…), and the WebView
+        // the user text: the meta filter below drops the real meta (stdout/tick/…), and the WebView
         // parses/renders slash commands itself (parseSlashCommand). Array content flows as before.
         if (content is JValue { Type: JTokenType.String } bareString)
         {
@@ -224,7 +224,7 @@ internal static class ContentBlockTranslator
                         // the user: a trailing handle ("agentId: … use SendMessage to continue this
                         // agent" + counters the UI already gets structured from task_progress), and
                         // sometimes a leading harness warning about instruction-shaped output. Both
-                        // belong to the hand-off, not to the sub-agent — the transcript the history
+                        // belong to the hand-off, not to the sub-agent: the transcript the history
                         // path reads has neither. Its report is the last block before the handle;
                         // keeping just that one makes live and history show the same thing.
                         text = agentId != null && texts.Count > 1
@@ -240,7 +240,7 @@ internal static class ContentBlockTranslator
                     {
                         ToolUseId = item.Val("tool_use_id", ""),
                         // The sub-agent's report is a message to read whole, not a tool output to
-                        // preview — the history path shows it in full, from the transcript. Every
+                        // preview: the history path shows it in full, from the transcript. Every
                         // other tool stays capped and opens in full on demand.
                         Result = agentId == null ? TruncateLines(text, previewLines) : text,
                         IsError = item.Val("is_error", false),
@@ -255,7 +255,7 @@ internal static class ContentBlockTranslator
                 else if (type == "text")
                 {
                     // Join, don't overwrite: one submitted string can arrive as several text
-                    // blocks — the IDE-context tag gets one of its own. The newline is the one
+                    // blocks: the IDE-context tag gets one of its own. The newline is the one
                     // the split consumed.
                     var blockText = item.Val("text", "");
                     userText = userText == null ? blockText : userText + "\n" + blockText;
@@ -285,7 +285,7 @@ internal static class ContentBlockTranslator
         }
 
         // Drop CLI meta-injections (task-notification, local-command output, ticks…) that ride
-        // in a role:user line but aren't the user's turn — for both live and history (this is the
+        // in a role:user line but aren't the user's turn, for both live and history (this is the
         // single Emit path). The WebView then never receives them and needs no filter of its own.
         // A meta line has only text (no images/files); one with attachments is a real turn.
         if (images.Count == 0 && files.Count == 0 && MetaInjection.IsMetaText(userText))

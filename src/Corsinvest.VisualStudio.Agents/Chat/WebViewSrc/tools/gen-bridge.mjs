@@ -23,7 +23,7 @@ const src = readFileSync(csFile, 'utf8');
  * - their nested `public static class <Domain>` blocks
  * - the `public const string Name = "value";` lines inside each domain
  *
- * Brace counting is enough here — the file has no string literals with `{` or `}`.
+ * Brace counting is enough here: the file has no string literals with `{` or `}`.
  */
 function parse() {
     const out = { fromWebView: {}, toWebView: {} };
@@ -61,7 +61,7 @@ function parse() {
             continue;
         }
 
-        // Brace tracking — count after recognizing structural lines so
+        // Brace tracking: count after recognizing structural lines so
         // class headers don't include their own opening brace yet.
         for (const ch of line) {
             if (ch === '{') {

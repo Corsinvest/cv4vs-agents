@@ -37,7 +37,7 @@ internal sealed partial class WebViewMessageHandler
             // server-side HasMore is needed here.
             var page = await Task.Run(() => Sessions.ReadSubagentHistory(
                 sessionId, agentId, fullFile: !subP.Preview));
-            // Replay every message into typed events. No parentToolUseId here — the WebView routes
+            // Replay every message into typed events. No parentToolUseId here: the WebView routes
             // all children under the Agent found by agentId.
             var events = HistoryReplay.ReplayPage(page.Messages, AgentsOptions.Chat.PreviewLines);
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -106,12 +106,12 @@ internal sealed partial class WebViewMessageHandler
         {
             // Fetch the raw /usage (experimental control req) and decode it ONCE here into the typed
             // UsageDto (windows + behaviours + the account from init). Both the WebView dialog and the
-            // WPF Usage tab render the same DTO — no re-parsing on the client.
+            // WPF Usage tab render the same DTO: no re-parsing on the client.
             var raw = await client.GetUsageAsync();
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             var usage = Core.Usage.UsageMapper.Build(raw, Core.Usage.UsageMapper.ToAccountDto(client.Account));
             bridge.SendResponse(BridgeMessages.ToWebView.Chat.Usage, usageReqId, usage);
-            // A fresh answer for the status bar too — but not a failed one, which Build turns into "no limits".
+            // A fresh answer for the status bar too, but not a failed one, which Build turns into "no limits".
             if (raw != null) { Core.Usage.UsageStatusService.Instance.OnUsageFetched(entry, usage); }
         }).FileAndForget(nameof(WebViewMessageHandler));
     }
@@ -152,7 +152,7 @@ internal sealed partial class WebViewMessageHandler
         if (id is not int statsReqId) { return; }
         {
             // Evaluate everything that reads the pane state HERE, synchronously on the Handle
-            // thread — the registry entry can be dropped by the time a fire-and-forget RunAsync
+            // thread: the registry entry can be dropped by the time a fire-and-forget RunAsync
             // job runs (e.g. the pane is reloading), which would NRE inside PaneClaudePaths.
             var statsPaths = PaneClaudePaths;
             var statsWd = entry.WorkingDirectory;
@@ -175,7 +175,7 @@ internal sealed partial class WebViewMessageHandler
             ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
             {
                 // Read-only: aggregate from the on-disk cache (fast). The background index is
-                // NOT started here — that would loop (index done → re-read → GetStats → index …).
+                // NOT started here: that would loop (index done → re-read → GetStats → index …).
                 // The WebView kicks the index once on open via StartStatsIndex.
                 var dto = await Task.Run(
                     () => Core.Stats.StatsService.BuildResponse(statsSel, statsRange));
@@ -265,12 +265,12 @@ internal sealed partial class WebViewMessageHandler
                                                                          try
                                                                          {
                                                                              // The composer reads every attachment as base64 (one code path), text files
-                                                                             // included — so the bytes are never written back out as text.
+                                                                             // included, so the bytes are never written back out as text.
                                                                              WriteTempAndOpen(name, base64, p.MediaType ?? "", isBase64: true);
                                                                          }
                                                                          catch (Exception ex)
                                                                          {
-                                                                             // Nothing opens and the click looks dead otherwise — say why.
+                                                                             // Nothing opens and the click looks dead otherwise: say why.
                                                                              log.LogException($"[chat] open attachment '{name}'", ex);
                                                                          }
                                                                      }).FileAndForget(nameof(WebViewMessageHandler));

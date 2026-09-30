@@ -19,7 +19,7 @@ import type { CommandHost } from '../../core/commands/base';
  * Thinking toggle in the composer's settings row. Icon only: thinking is on or off, so unlike the
  * effort and model selectors there is no value worth spelling out beside the glyph.
  *
- * Wraps ThinkingCommand — the same object the menu's Thinking row uses — so the two can never
+ * Wraps ThinkingCommand (the same object the menu's Thinking row uses) so the two can never
  * disagree about the label, the description, when the toggle applies, or what gets sent to the CLI.
  *
  * Note this state is per-process, not persisted: the CLI takes it over set_max_thinking_tokens and
@@ -44,7 +44,7 @@ export class CvThinkingToggle extends LitElement {
     ];
 
     /** cv-prompt, which owns setMaxThinkingTokens. A property because cv-prompt renders into a
-     *  shadow root — the same way cv-command-menu and cv-model-list receive it. */
+     *  shadow root, the same way cv-command-menu and cv-model-list receive it. */
     @property({ attribute: false }) host!: CommandHost;
 
     @state() private _enabled = appState.thinkingEnabled;

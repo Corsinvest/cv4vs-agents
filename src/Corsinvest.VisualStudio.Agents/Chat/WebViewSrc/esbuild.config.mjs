@@ -17,12 +17,12 @@ const dev = watch || process.argv.includes('--dev');
 // Hot-reload without a full MSBuild: the running extension serves the WebView (virtual host
 // cv4vs.invalid) from the WebView2/ folder NEXT TO its loaded assembly. In the experimental VS
 // (F5, /rootsuffix Exp) that assembly lives under
-// %LOCALAPPDATA%\Microsoft\VisualStudio\<ver>Exp\Extensions\...\WebView2 — NOT bin/<Config>.
+// %LOCALAPPDATA%\Microsoft\VisualStudio\<ver>Exp\Extensions\...\WebView2, NOT bin/<Config>.
 // A bare `npm run build` only writes dist/, so a freshly opened chat pane would load the stale
 // copy there. Mirror dist/ into every WebView2 folder that already holds a build of this
 // extension: (1) bin/<Config>/WebView2 (dev builds), (2) each *Exp Extensions .../WebView2
 // (what F5 actually runs). Then closing+reopening a chat pane picks up the new bundle without
-// F5. Only existing folders are touched — CI/first build is untouched. Runs after every
+// F5. Only existing folders are touched: CI/first build is untouched. Runs after every
 // (re)build, including --watch.
 async function mirrorTargets() {
     const targets = [];
@@ -38,7 +38,7 @@ async function mirrorTargets() {
             for (const inst of await readdir(vsRoot)) {
                 if (!inst.endsWith('Exp')) { continue; }
                 // The publisher folder is the manifest Publisher, which changed from
-                // "Corsinvest" to "Corsinvest Srl" for the Marketplace — don't hardcode it.
+                // "Corsinvest" to "Corsinvest Srl" for the Marketplace: don't hardcode it.
                 // Scan every publisher for a "cv4vs Agents\<ver>\WebView2".
                 const exts = path.join(vsRoot, inst, 'Extensions');
                 if (!existsSync(exts)) { continue; }
@@ -58,7 +58,7 @@ async function mirrorTargets() {
 }
 
 // esbuild only writes, never deletes: a .map left by an earlier --dev build would survive a
-// Release one and be mirrored — and packaged — alongside a bundle that no longer references it.
+// Release one and be mirrored (and packaged) alongside a bundle that no longer references it.
 async function dropStaleMaps() {
     if (dev || !existsSync('dist')) { return; }
     for (const name of await readdir('dist')) {
@@ -94,8 +94,8 @@ const config = {
     format: 'iife',
     target: 'es2020',
     // External, not inline: inline pushes the bundle from 1.8mb to 9.5mb and the WebView pays
-    // that on every pane open. A .map next to it leaves the bundle alone — DevTools fetches it
-    // only when the panel is open — and mirrorTargets copies the whole dist/, so it follows the
+    // that on every pane open. A .map next to it leaves the bundle alone: DevTools fetches it
+    // only when the panel is open, and mirrorTargets copies the whole dist/, so it follows the
     // bundle into the Exp hives on its own. Off in Release: a minified stack there is the price
     // of not shipping the sources.
     sourcemap: dev ? true : false,
@@ -118,7 +118,7 @@ const config = {
 };
 
 // Anything missing here reaches the user as a package that installs cleanly and misbehaves at
-// runtime — no index.html throws DirectoryNotFoundException, no logo shows a broken image.
+// runtime: no index.html throws DirectoryNotFoundException, no logo shows a broken image.
 // Skipping the copy quietly (`if (existsSync(src))`) is what let two of those ship: the build
 // stayed green and a stale dist/ from an earlier run hid the gap until someone cleaned it.
 async function copyRequired(src, dest) {
@@ -133,7 +133,7 @@ async function copyStatic() {
     await mkdir('dist', { recursive: true });
     await copyRequired('index.html', path.join('dist', 'index.html'));
 
-    // highlight.js themes — loaded as <link> in index.html, toggled via the
+    // highlight.js themes, loaded as <link> in index.html, toggled via the
     // `disabled` attribute on theme change. Copy them out of node_modules
     // so the VSIX content can pick them up.
     for (const f of ['vs.min.css', 'vs2015.min.css']) {
@@ -141,7 +141,7 @@ async function copyStatic() {
     }
 
     // Images the WebView loads by relative path (cv-welcome's logo). Copy the whole folder rather
-    // than naming files: a list means a new image silently stays out of dist/ — and out of the VSIX,
+    // than naming files: a list means a new image silently stays out of dist/, and out of the VSIX,
     // since the .csproj packages dist/ wholesale. Resources/ is the single source of truth, shared
     // with the WPF side, which embeds the same files in the assembly for pack:// URIs.
     const resources = path.join('..', '..', 'Resources');

@@ -29,7 +29,7 @@ public partial class SessionManagerControl : UserControl
     public event Action<string> SessionSelected;
 
     /// <summary>Raised when the user dismisses the picker with Esc. The popup's light-dismiss
-    /// only covers clicking away — with focus inside the search box Esc reaches this control,
+    /// only covers clicking away; with focus inside the search box Esc reaches this control,
     /// not the popup.</summary>
     public event Action Cancelled;
 
@@ -43,7 +43,7 @@ public partial class SessionManagerControl : UserControl
     /// <paramref name="paths"/> is the pane's profile config-dir, <paramref name="workingDirectory"/>
     /// its workdir, <paramref name="activeSessionId"/> the session to mark with a ✓ (null = none).
     /// A constructor (vs. setters) makes them mandatory and rules out the ordering trap that showed
-    /// sessions as empty. The disk read is deferred to Loaded — no I/O until the popup is shown.</summary>
+    /// sessions as empty. The disk read is deferred to Loaded: no I/O until the popup is shown.</summary>
     public SessionManagerControl(ClaudePaths paths, string workingDirectory, string activeSessionId)
     {
         InitializeComponent();
@@ -69,7 +69,7 @@ public partial class SessionManagerControl : UserControl
         }
     }
 
-    /// <summary>Reload the session list from disk, off the UI thread — a workdir worked on daily
+    /// <summary>Reload the session list from disk, off the UI thread: a workdir worked on daily
     /// runs to a couple of thousand sessions, one file opened each, and doing that synchronously
     /// froze Visual Studio for as long as it took.
     /// <para>Safe to call on popup open or after a rename/delete: late results are dropped
@@ -156,7 +156,7 @@ public partial class SessionManagerControl : UserControl
 
     /// <summary>Esc dismisses the picker. Handled while tunneling: the TextBox (and the rename
     /// edit box) swallow Escape before it ever bubbles up as KeyDown. The rename box is the one
-    /// exception — there Esc reverts the edit, so it's left alone.</summary>
+    /// exception: there Esc reverts the edit, so it's left alone.</summary>
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape || _allSessions.Any(r => r.IsEditing)) { return; }
@@ -166,7 +166,7 @@ public partial class SessionManagerControl : UserControl
 
     /// <summary>Handle Esc when it reaches us from the host rather than from the keyboard: in VS,
     /// Esc is routed through IOleCommandTarget and never fires PreviewKeyDown on the popup. Returns
-    /// true if a rename edit was open and got reverted — the caller must then NOT dismiss the
+    /// true if a rename edit was open and got reverted: the caller must then NOT dismiss the
     /// picker, so Esc exits the edit and leaves the list up. Returns false when nothing was being
     /// edited, so the caller closes the picker as before.</summary>
     public bool TryCancelInlineEdit()
@@ -178,7 +178,7 @@ public partial class SessionManagerControl : UserControl
     }
 
     /// <summary>Leave inline-edit mode and put focus back on the search box, or the keystroke goes
-    /// nowhere — the edit TextBox is collapsing and the picker keeps typing. Deferred so the focus
+    /// nowhere: the edit TextBox is collapsing and the picker keeps typing. Deferred so the focus
     /// lands after the collapse.</summary>
     private void CancelEditAndRefocus(SessionRow row)
     {
@@ -205,7 +205,7 @@ public partial class SessionManagerControl : UserControl
         }
         else if (e.Key == Key.Enter && _filtered.Count > 0)
         {
-            // Pick the first filtered session — fastest selection path.
+            // Pick the first filtered session: fastest selection path.
             SessionSelected?.Invoke(_filtered[0].Id);
             e.Handled = true;
         }
@@ -227,7 +227,7 @@ public partial class SessionManagerControl : UserControl
         }
     }
 
-    /// <summary>Focus the search box. Call AFTER the popup is laid out —
+    /// <summary>Focus the search box. Call AFTER the popup is laid out:
     /// Focus() on a non-visible element silently fails.</summary>
     public void FocusSearch() =>
         // Render priority: the popup is up and the TextBox visible by then.
@@ -341,7 +341,7 @@ public partial class SessionManagerControl : UserControl
         if (sender is not FrameworkElement el || el.Tag is not SessionRow row) { return; }
 
         // The picker lives in a StaysOpen=false Popup, which light-dismisses the instant it loses
-        // focus. A modal MessageBox takes that focus, so the Popup — and the dialog with it —
+        // focus. A modal MessageBox takes that focus, so the Popup (and the dialog with it)
         // vanishes before the user can answer. Pin the Popup open across the prompt.
         var hostPopup = FindAncestorPopup();
         var wasStaysOpen = hostPopup?.StaysOpen ?? true;

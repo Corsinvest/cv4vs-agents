@@ -90,7 +90,7 @@ jobs:
         run: msbuild cv4vs-agents.slnx -t:Build -p:Configuration=Release -p:DeployExtension=false -v:minimal
 
       # Also in the quality workflow, and worth the second run: a release is published to the
-      # Marketplace and cannot be taken back, while this costs a second. After the build — the test
+      # Marketplace and cannot be taken back, while this costs a second. After the build: the test
       # project references the built DLL, not the sources.
       - name: Unit tests
         run: dotnet test tests/Corsinvest.VisualStudio.Agents.Tests/Corsinvest.VisualStudio.Agents.Tests.csproj -c Release --no-build -v minimal
@@ -180,16 +180,16 @@ jobs:
 
       # Stable only: the Marketplace rejects a -rc suffix, and previews are distributed as the
       # attached .vsix instead. Runs after the GitHub release so a Marketplace failure leaves the
-      # release page standing rather than the reverse — the upload can be retried by hand, an
+      # release page standing rather than the reverse: the upload can be retried by hand, an
       # already-published version cannot be re-tagged.
       #
       # vs-publish.json is the listing itself, not just credentials: publishing overwrites the
       # Marketplace's categories, tags, overview and Q&A with whatever it says. It was filled in
-      # from what the portal already showed, so keep the two in step — a field edited on the portal
+      # from what the portal already showed, so keep the two in step: a field edited on the portal
       # and not here is reverted by the next release.
       #
       # VS_MARKETPLACE_TOKEN is a Marketplace PAT with Acquire + Manage, scoped to all accessible
-      # organizations — a narrower scope authenticates and then fails on the upload.
+      # organizations: a narrower scope authenticates and then fails on the upload.
       - name: Publish to the Marketplace
         if: steps.version.outputs.prerelease == 'false'
         uses: madskristensen/publish-marketplace@v2

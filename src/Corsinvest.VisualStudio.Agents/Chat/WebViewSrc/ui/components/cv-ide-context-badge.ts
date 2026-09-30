@@ -87,7 +87,7 @@ export class CvIdeContextBadge extends LitElement {
                 display: block;
             }
             /* A ceiling, not a width: a short name takes the room it needs and a long one stops
-               here. The ellipsis goes at the START — a truncated name keeps its extension and last
+               here. The ellipsis goes at the START: a truncated name keeps its extension and last
                words, which is what tells one file from another, while the head is usually a shared
                prefix. rtl flips which end is cut; bdi keeps the text itself in reading order
                (without it "Chat.cs" would render as "sc.tahC"). */
@@ -96,7 +96,7 @@ export class CvIdeContextBadge extends LitElement {
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
-                /* No max of its own — it shrinks to whatever the chip's ceiling leaves once the
+                /* No max of its own: it shrinks to whatever the chip's ceiling leaves once the
                    icon and the range have taken theirs. min-width:0 is what allows a flex item
                    to go below its content width at all. */
                 min-width: 0;
@@ -156,7 +156,7 @@ export class CvIdeContextBadge extends LitElement {
             return nothing;
         }
         // The whole chip is the toggle: the file is already open in VS (it's why
-        // it's here), so there's no "open file" action — only share on/off.
+        // it's here), so there's no "open file" action: only share on/off.
         // Paused dims the chip rather than hiding it, so it can be switched back on.
         const cls = `badge${this._enabled ? '' : ' is-disabled'}`;
         // Editor-style `:start-end` range, shown only for a real selection
@@ -176,7 +176,7 @@ export class CvIdeContextBadge extends LitElement {
             >
                 <!-- Only when paused. Sharing is the normal state and the file icon and name
                      already say which file is in play; a second glyph beside them adds nothing.
-                     Not being sent is the exception, and the one worth marking — otherwise the
+                     Not being sent is the exception, and the one worth marking; otherwise the
                      chip reads as "this file is going along" when it isn't. -->
                 ${
                     this._enabled
@@ -187,7 +187,7 @@ export class CvIdeContextBadge extends LitElement {
                 <span class="name"><bdi>${ctx.fileName}</bdi></span>
                 ${lineInfo ? html`<span class="info">${lineInfo}</span>` : nothing}
                 <!-- An indicator, not a second button: the chip has one action and it is the eye.
-                     Dropped while paused — nothing is going out to describe. -->
+                     Dropped while paused: nothing is going out to describe. -->
                 ${
                     this._enabled
                         ? html`<span class="what"
@@ -199,7 +199,7 @@ export class CvIdeContextBadge extends LitElement {
             <!-- The path, not the bare name the chip already shows: it says WHICH file, through
                  displayPathUi so it follows "Show relative paths" like the tool rows and falls back
                  to the full path outside the workdir. That line is the data, so it keeps tip-name;
-                 the second is where the trailing glyph gets its words — an icon on its own is a
+                 the second is where the trailing glyph gets its words: an icon on its own is a
                  riddle. Not "click to stop": clicking a toggle is what a toggle is for. -->
             <fluent-tooltip anchor="ide-badge" positioning="after">
                 <span class="tip-name">${displayPathUi(ctx.filePath)}${lineInfo}</span>

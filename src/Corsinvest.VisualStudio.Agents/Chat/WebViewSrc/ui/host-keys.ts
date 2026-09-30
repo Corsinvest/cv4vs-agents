@@ -4,7 +4,7 @@
  */
 // Keys the host claimed for us: the WebView2 composition control has no way to hand a key to the
 // browser (SendMouseInput/SendPointerInput exist, no keyboard counterpart), so ChatWebView claims
-// the ones it drops and we act on them here. Only keys verified as dropped are forwarded —
+// the ones it drops and we act on them here. Only keys verified as dropped are forwarded;
 // arrows, PageUp/PageDown and Ctrl+Left/Right already reach the browser and are left alone.
 import type { HostKeyNotification } from '../core/types';
 
@@ -15,7 +15,7 @@ type TextField = HTMLInputElement | HTMLTextAreaElement;
 /** Input types that carry a caret. `selectionStart` throws on number/email/date. */
 const CARET_INPUT_TYPES = new Set(['text', 'search', 'url', 'tel', 'password']);
 
-/** The focused text field, looking through shadow roots — most of the chat's inputs live in
+/** The focused text field, looking through shadow roots: most of the chat's inputs live in
  *  component shadow DOM, where `document.activeElement` stops at the host element. */
 function focusedField(): TextField | null {
     let el: Element | null = document.activeElement;
@@ -39,7 +39,7 @@ function lineEnd(value: string, pos: number): number {
     return nl < 0 ? value.length : nl;
 }
 
-/** Act on a key the host claimed. One case per forwarded key — an unknown one is dropped rather
+/** Act on a key the host claimed. One case per forwarded key: an unknown one is dropped rather
  *  than guessed at, since the host only forwards what it was told to claim. */
 export function applyHostKey(e: HostKeyNotification): void {
     switch (e.key) {
@@ -50,7 +50,7 @@ export function applyHostKey(e: HostKeyNotification): void {
         case 'Enter':
             // Alt+Enter only: VS reads it as Properties, so unlike the others here it never got
             // to the browser at all rather than arriving and doing the wrong thing. Replayed as a
-            // real event on the focused field, so the composer's own handler decides — it knows
+            // real event on the focused field, so the composer's own handler decides: it knows
             // whether there is a queue to group with, this does not.
             if (e.alt) {
                 replayAltEnter();
@@ -63,7 +63,7 @@ export function applyHostKey(e: HostKeyNotification): void {
  *  <para>Not on the focused field, the way the other host keys work: VS consumed the chord as its
  *  Properties command, so by the time this arrives the focus is no longer where it was and
  *  focusedField() answers null. The composer is the only thing that has ever wanted this key, so
- *  it is addressed directly — through a real event rather than a method call, because the rule for
+ *  it is addressed directly: through a real event rather than a method call, because the rule for
  *  when grouping applies lives in cv-prompt's handler and should stay in one place.</para> */
 function replayAltEnter(): void {
     const prompt = document.querySelector('cv-prompt');

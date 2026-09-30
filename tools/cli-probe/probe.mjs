@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-// CLI probe — ispeziona cosa ritorna claude.exe sul protocollo stream-json,
+// CLI probe: ispeziona cosa ritorna claude.exe sul protocollo stream-json,
 // usando gli STESSI flag del nostro ClaudeClient.cs. Strumento di debug:
 // utile per verificare il messaggio init, get_settings, get_context_usage,
 // e in generale qualsiasi control_request, quando cambia il CLI o un modello.
@@ -48,7 +48,7 @@ const args = [
     '--include-partial-messages',
     '--setting-sources', 'user,project,local',
 ];
-// Optional: resume an existing session — check what the CLI restores in `init` (model,
+// Optional: resume an existing session: check what the CLI restores in `init` (model,
 // permissionMode). PROBE_RESUME=<sessionId>
 if (process.env.PROBE_RESUME) {
     args.push('--resume', process.env.PROBE_RESUME);

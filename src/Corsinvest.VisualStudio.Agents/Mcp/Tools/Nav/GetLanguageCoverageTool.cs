@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 /// <summary>MCP tool: which languages of the open solution the nav_* tools can answer for, and
-/// which of them they cannot — asked once, instead of discovered one supported=false at a time.
+/// which of them they cannot; asked once, instead of discovered one supported=false at a time.
 /// </summary>
 internal sealed class GetLanguageCoverageTool : McpTool<NoArgs>
 {

@@ -20,7 +20,7 @@ internal sealed class SetConfigurationArgs
 }
 
 /// <summary>MCP tool: switch the active solution configuration. Separate from build_solution
-/// because it changes the IDE for the user and leaves it changed — a build must not have that
+/// because it changes the IDE for the user and leaves it changed: a build must not have that
 /// as a side effect.</summary>
 internal sealed class SetConfigurationTool : McpTool<SetConfigurationArgs>
 {

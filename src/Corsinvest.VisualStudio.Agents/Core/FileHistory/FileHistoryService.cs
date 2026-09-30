@@ -17,11 +17,11 @@ namespace Corsinvest.VisualStudio.Agents.Core.FileHistory;
 /// session in `projects/`; this one answers "what takes up space and can be deleted", and only
 /// sessions with a `file-history/&lt;id&gt;/` folder have any. On a real config-dir that is a few
 /// dozen against a couple of thousand, so reusing the indexed tree would mean building all of it to
-/// then prune it — and it could never show an ORPHAN, a backup folder whose transcript is gone,
+/// then prune it, and it could never show an ORPHAN, a backup folder whose transcript is gone,
 /// because a tree built from `projects/` has no node for a session that no longer has a .jsonl.</para>
 /// <para>No indexer and no cache: the sizes come from the filesystem, which already knows them.
 /// The per-file detail (which real path each hashed copy belongs to) lives in the transcript and is
-/// read on demand, one session at a time — see <see cref="Sessions.SessionManager.ReadAllFileBackups"/>.</para>
+/// read on demand, one session at a time: see <see cref="Sessions.SessionManager.ReadAllFileBackups"/>.</para>
 /// </summary>
 internal static class FileHistoryService
 {
@@ -34,13 +34,13 @@ internal static class FileHistoryService
         public string Folder { get; set; }
 
         /// <summary>The project folder under `projects/` whose transcript names this session, or
-        /// null when nothing does — an orphan, kept and shown rather than hidden.</summary>
+        /// null when nothing does: an orphan, kept and shown rather than hidden.</summary>
         public string ProjectDir { get; set; }
 
         /// <summary>Copies on disk. A file edited over several turns has one per version.</summary>
         public int CopyCount { get; set; }
 
-        /// <summary>Distinct files behind those copies — the `@vN` suffix stripped. Counted from the
+        /// <summary>Distinct files behind those copies: the `@vN` suffix stripped. Counted from the
         /// names, so it holds even when the transcript is gone.</summary>
         public int FileCount { get; set; }
 
@@ -57,7 +57,7 @@ internal static class FileHistoryService
     {
         public ClaudePaths Paths { get; set; }
 
-        /// <summary>The profiles resolving to this config-dir — several may share one, which is why
+        /// <summary>The profiles resolving to this config-dir: several may share one, which is why
         /// the tree is rooted on the directory and not on the profile.</summary>
         public List<Profile> Profiles { get; } = [];
 
@@ -68,7 +68,7 @@ internal static class FileHistoryService
 
     /// <summary>Scan every config-dir in use. Pure filesystem: directory listings and file lengths,
     /// no transcript is opened, so this is fast enough to run on the UI thread's behalf without a
-    /// progress indicator — but the caller still does it off-thread, since a config-dir may sit on
+    /// progress indicator, but the caller still does it off-thread, since a config-dir may sit on
     /// a network share.</summary>
     public static List<ConfigDirBackups> Scan()
     {
@@ -133,7 +133,7 @@ internal static class FileHistoryService
 
     /// <summary>The copies are named `&lt;hash-of-path&gt;@v&lt;n&gt;`, so dropping the suffix
     /// groups every version of one file together. A name without one counts as its own file rather
-    /// than being skipped — the naming is the CLI's, and it is free to change it.</summary>
+    /// than being skipped: the naming is the CLI's, and it is free to change it.</summary>
     private static string StripVersion(FileInfo file)
     {
         var name = file.Name;
@@ -159,7 +159,7 @@ internal static class FileHistoryService
         return map;
     }
 
-    /// <summary>Delete one session's backup folder. Returns false and logs when it fails — a copy
+    /// <summary>Delete one session's backup folder. Returns false and logs when it fails: a copy
     /// held open by a running CLI is the case that actually happens.</summary>
     public static bool Delete(SessionBackups session)
     {

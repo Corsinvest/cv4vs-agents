@@ -13,8 +13,8 @@ namespace Corsinvest.VisualStudio.Agents.Helpers;
 
 /// <summary>
 /// Late-binding helpers for VS/Roslyn types that are loaded in-process but not referenced at
-/// compile time (referencing them would pin Roslyn/VB-only assemblies — see the "multi-language"
-/// rule — or not bind at all with a partial assembly-qualified name). Centralizes the reflection
+/// compile time (referencing them would pin Roslyn/VB-only assemblies, see the "multi-language"
+/// rule, or not bind at all with a partial assembly-qualified name). Centralizes the reflection
 /// idioms duplicated across the Ide/ services. A missing member throws; the typed overloads use a
 /// hard <c>(T)</c> cast. Callers that tolerate a missing member must null-check the returned
 /// <see cref="object"/>.
@@ -23,7 +23,7 @@ internal static class VsReflection
 {
     // Resolved types are cached: scanning every loaded assembly (hundreds in VS) is costly, and the
     // set of loaded VS/Roslyn assemblies is stable for the session, so both hits AND misses (null)
-    // are permanent — a type absent now won't appear later. Value can be null (cached miss).
+    // are permanent: a type absent now won't appear later. Value can be null (cached miss).
     private static readonly ConcurrentDictionary<string, Type> _typeCache = new();
 
     /// <summary>Resolve a type by full name across all loaded assemblies. Type.GetType with a
@@ -53,7 +53,7 @@ internal static class VsReflection
     /// <summary>Typed property read with a hard (T) cast.</summary>
     public static T GetProp<T>(object obj, string name) => (T)GetProp(obj, name);
 
-    /// <summary>Property read that tolerates a MISSING property, returning null — used by the
+    /// <summary>Property read that tolerates a MISSING property, returning null, used by the
     /// <c>GetProp(a) ?? GetProp(b)</c> "try alternate name" fallbacks. Note: a present property
     /// whose value is null also yields null, so the two cases are indistinguishable.</summary>
     public static object GetPropOrNull(object obj, string name)
@@ -62,7 +62,7 @@ internal static class VsReflection
     /// <summary>Property read off an object whose concrete type declares the name more than once.
     /// <para><see cref="GetPropOrNull"/> throws AmbiguousMatchException there, and VS hands out
     /// plenty of such objects: one implementation wearing several interfaces that share member
-    /// names. Pass <paramref name="declaring"/> — the interface the contract actually belongs to —
+    /// names. Pass <paramref name="declaring"/> (the interface the contract actually belongs to)
     /// and the choice never arises; an implementation that later grows another face cannot break
     /// the read. Without it, an ambiguous name falls back to the first match, since the faces of
     /// one object agree on the value.</para>
@@ -78,7 +78,7 @@ internal static class VsReflection
     }
 
     // Property lookups for GetPropThroughInterfaces, keyed by concrete type and name. That one is
-    // called per result inside a loop, and its slow path walks every interface the type wears —
+    // called per result inside a loop, and its slow path walks every interface the type wears,
     // while the objects in one loop are all the same type and the names are constants, so from the
     // second item on this is a dictionary hit. Misses are cached too (null value).
     private static readonly ConcurrentDictionary<(Type, string), PropertyInfo> _interfacePropCache = new();
@@ -87,7 +87,7 @@ internal static class VsReflection
     /// GetType() finds nothing there, so the interfaces are searched too. Roslyn hands out results
     /// as private nested types whose members exist only on the interface, and the plain read
     /// silently yields null on those.</para>
-    /// <para>Cached per (type, name) — this is the one reflection path here that runs per item
+    /// <para>Cached per (type, name): this is the one reflection path here that runs per item
     /// rather than once per call.</para></summary>
     public static object GetPropThroughInterfaces(object obj, string name)
     {
@@ -114,7 +114,7 @@ internal static class VsReflection
     /// method on an implementation that wears several interfaces is ambiguous, while the interface
     /// that declares it is unambiguous and is the contract being relied on.
     /// <para>Returns null when the method is not there. Unlike <see cref="InvokeAsync"/> it does not
-    /// swallow what the call itself throws — a service failing is the caller's to interpret.</para></summary>
+    /// swallow what the call itself throws: a service failing is the caller's to interpret.</para></summary>
     public static async Task<object> InvokeAsyncOn(Type declaring, object obj, string method, params object[] args)
     {
         var mi = declaring?.GetMethod(method);
@@ -131,7 +131,7 @@ internal static class VsReflection
         return obj.GetType().GetProperty("Item", types).GetValue(obj, index);
     }
 
-    /// <summary>obj.GetType().GetMethod(name).Invoke(obj, args) — name-only overload resolution.</summary>
+    /// <summary>obj.GetType().GetMethod(name).Invoke(obj, args): name-only overload resolution.</summary>
     public static object Invoke(object obj, string method, params object[] args)
         => obj.GetType().GetMethod(method).Invoke(obj, args);
 

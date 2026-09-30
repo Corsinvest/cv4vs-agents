@@ -18,7 +18,7 @@
       <Setter Property="Padding" Value="12,8" />
       <Setter Property="Margin" Value="0,0,10,10" />
     </Style>
-    <!-- Value on top (big), label under it (small) — KPI-card order, like the WebView dialog. -->
+    <!-- Value on top (big), label under it (small): KPI-card order, like the WebView dialog. -->
     <Style x:Key="TileValueStyle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="22" />
       <Setter Property="FontWeight" Value="SemiBold" />
@@ -252,7 +252,7 @@
             </StackPanel>
           </Border>
         </UniformGrid>
-        <!-- Activity heatmap (GitHub-style) — same look as the WebView dialog. -->
+        <!-- Activity heatmap (GitHub-style): same look as the WebView dialog. -->
         <TextBlock Text="ACTIVITY" Style="{StaticResource SectionHeadStyle}" Margin="0,10,0,10" />
         <stats:CvHeatmap x:Name="Heatmap" HorizontalAlignment="Left" />
         <!-- Token breakdown of the selected node by its children (donut). Hidden for a leaf / <2. -->

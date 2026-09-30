@@ -160,7 +160,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <!-- Manage-usage link — only meaningful for the first-party Claude AI account. -->
+            <!-- Manage-usage link: only meaningful for the first-party Claude AI account. -->
             <TextBlock x:Name="ManageLink" Margin="0,16,0,0" Visibility="Collapsed">
               <Hyperlink NavigateUri="https://claude.ai/settings/usage" RequestNavigate="OnLinkNavigate">
                 Manage usage on claude.ai

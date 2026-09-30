@@ -22,7 +22,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
 {
     // Built in the constructor, not here: a field initializer runs before _log is assigned, so the
     // first transport would lose the pane tag. Volatile because StartProcess swaps it on respawn
-    // while MCP worker threads are reading it to write — without it they can go on addressing the
+    // while MCP worker threads are reading it to write: without it they can go on addressing the
     // disposed instance. Readers that then USE it must copy it to a local first: the field can
     // change between two reads of it.
     private volatile NdjsonTransport _transport;
@@ -33,7 +33,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     private int _requestCounter;
 
     // The pending can_use_tool per tool_use_id: the control request_id to answer, plus the tool and
-    // the input the CLI asked about. That input is the CLI's own copy — ExitPlanMode's planFilePath
+    // the input the CLI asked about. That input is the CLI's own copy: ExitPlanMode's planFilePath
     // and plan snapshot are read from here, never from what the WebView sends back.
     private readonly ConcurrentDictionary<string, PendingToolRequest> _toolRequestIds = new();
 
@@ -42,10 +42,10 @@ internal sealed partial class ClaudeClient : IClaudeClient
     // net48 has none.
     private record struct PendingToolRequest(string RequestId, string ToolName, JObject Input);
 
-    // Last options used — replayed on auto-restart when the process dies.
+    // Last options used, replayed on auto-restart when the process dies.
     private ClientOptions _lastOptions;
 
-    // Profile env from the original StartAsync/Prepare — preserved across every respawn
+    // Profile env from the original StartAsync/Prepare, preserved across every respawn
     // (NewSession/Resume/WorkingDirectoryChange/auto-restart) the same way Model/SsePort
     // are, so a profiled pane never silently reverts to native Claude.
     private IReadOnlyDictionary<string, string> _env;
@@ -54,14 +54,14 @@ internal sealed partial class ClaudeClient : IClaudeClient
     // `cwd` worth reading back. Reset per process, so a respawn takes the CLI's answer again.
     private bool _initCwdPending;
 
-    /// <summary>The directory the process was LAUNCHED in — what a respawn (<c>--resume</c>, auto-restart)
+    /// <summary>The directory the process was LAUNCHED in: what a respawn (<c>--resume</c>, auto-restart)
     /// has to be given again, so it stays fixed for the client's life.
     /// <para>To find a session's files, take the pane's <c>Entry.WorkingDirectory</c> instead: same value
     /// for a pane's own client, but it also holds for the probes, which have no pane.</para></summary>
     public string WorkingDirectory { get; private set; }
     public string SessionId { get; private set; }
 
-    /// <summary>Whether THIS process was launched with file checkpointing on — not what the option
+    /// <summary>Whether THIS process was launched with file checkpointing on, not what the option
     /// says now. The CLI reads it from the environment at startup, so changing the option leaves a
     /// running session as it was, and the UI has to follow the process rather than the setting.</summary>
     public bool FileCheckpoints => _lastOptions?.FileCheckpoints ?? false;
@@ -85,11 +85,11 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public event EventHandler<UserMessageEventArgs> UserMessageReceived;
     public event EventHandler<ResultEventArgs> ResultReceived;
     public event EventHandler<ToolPermissionRequestEventArgs> ToolPermissionRequested;
-    /// <summary>The CLI cancelled a pending can_use_tool (interrupt / superseded turn) — the
+    /// <summary>The CLI cancelled a pending can_use_tool (interrupt / superseded turn): the
     /// permission banner for that tool_use must be dismissed.</summary>
     public event EventHandler<ToolPermissionCancelledEventArgs> ToolPermissionCancelled;
-    /// <summary>A pending permission was answered. The CLI sends nothing back for it — the answer
-    /// is outbound — so a listener that tracks "is this pane blocked on the user" has no other way
+    /// <summary>A pending permission was answered. The CLI sends nothing back for it: the answer
+    /// is outbound, so a listener that tracks "is this pane blocked on the user" has no other way
     /// to learn the wait is over.</summary>
     public event EventHandler<string> ToolPermissionResolved;
     /// <summary>Any inbound frame that is not an answer to one of our own control requests, i.e.
@@ -175,7 +175,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
             throw new DirectoryNotFoundException($"Working directory not found: {options.WorkingDirectory}");
         }
 
-        // If the process is currently running and the workdir changed, kill it — the next
+        // If the process is currently running and the workdir changed, kill it: the next
         // send will respawn with the new options. Model/permission-mode changes don't need this.
         if (_transport.IsRunning && !string.Equals(WorkingDirectory, options.WorkingDirectory, StringComparison.OrdinalIgnoreCase))
         {
@@ -199,20 +199,20 @@ internal sealed partial class ClaudeClient : IClaudeClient
     private void StartProcess(ClientOptions options)
     {
         // Disposed clients start nothing. The transport refuses to Start once disposed, but the
-        // rotation below hands us a FRESH one that knows nothing of it — so without this a caller
+        // rotation below hands us a FRESH one that knows nothing of it, so without this a caller
         // holding a dead client (the pane keeps its reference through teardown) would launch a
         // claude.exe for a pane that is already gone.
         if (_disposed) { _log.Debug(() => "=== start refused: client disposed"); return; }
         if (_transport.IsRunning) { return; }
 
-        // Transport instances are not reusable after Dispose — rotate to a fresh one and
+        // Transport instances are not reusable after Dispose: rotate to a fresh one and
         // detach listeners from the old one so its late Exited event doesn't bubble up.
         DetachTransportEvents();
         try { _transport.Dispose(); } catch { }
         _transport = new NdjsonTransport(_log);
         AttachTransportEvents();
         // The old process's permission requests died with it, but on a respawn (new session, resume,
-        // fork) its late Exited was just detached above, so nothing else would drop them — and a
+        // fork) its late Exited was just detached above, so nothing else would drop them, and a
         // stale plan would still be found by path, and answered to a process that never asked.
         _toolRequestIds.Clear();
         // The next system/init is this process's first: the one init whose `cwd` still describes
@@ -231,7 +231,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         var args = "--output-format stream-json --verbose --input-format stream-json --include-partial-messages";
         // Without it a prompt typed on claude.ai through Remote Control shows only its answer here.
         // Our own prompts come back too (the WebView drops them, core/sent-prompts.ts), and so do
-        // our control_responses — HandleControlResponse ignores ids it did not issue.
+        // our control_responses: HandleControlResponse ignores ids it did not issue.
         args += " --replay-user-messages";
         // --setting-sources: headless mode loads NO settings by default; re-enable so the user's
         // ~/.claude/settings.json permissions.allow/deny apply (else CLI asks can_use_tool for every tool).
@@ -239,7 +239,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // With no --mcp-config beside it this loads no MCP servers at all.
         if (options.NoMcpServers) { args += " --strict-mcp-config"; }
         // Auto-approve our in-process IDE MCP tools so Claude can call them without a
-        // permission prompt (acceptEdits does NOT auto-approve MCP tools — per SDK docs).
+        // permission prompt (acceptEdits does NOT auto-approve MCP tools, per SDK docs).
         if (!string.IsNullOrEmpty(SdkMcpServerName))
         {
             args += $" --allowedTools mcp__{SdkMcpServerName}__*";
@@ -263,17 +263,17 @@ internal sealed partial class ClaudeClient : IClaudeClient
         else if (mode == Client.PermissionMode.BypassPermissions) { args += " --permission-mode bypassPermissions"; }
 
         // ALWAYS, whatever the mode. Verified on CLI 2.1.220: without this flag the CLI drops
-        // AskUserQuestion from the session entirely — the turn ends `success` and the question is
+        // AskUserQuestion from the session entirely: the turn ends `success` and the question is
         // never emitted, on either channel. So the flag doesn't merely carry permission prompts,
         // it registers the interactive tool: a session in bypass could otherwise not ask anything.
         args += " --permission-prompt-tool stdio";
 
-        // Profile env goes FIRST, our required keys LAST — a profile (e.g. z.ai/GLM base
+        // Profile env goes FIRST, our required keys LAST: a profile (e.g. z.ai/GLM base
         // URL + token) must never be able to override what makes the IDE integration work.
         var env = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         if (options.Env != null) { foreach (var kv in options.Env) { env[kv.Key] = kv.Value; } }
         // CLAUDE_CODE_ENTRYPOINT=claude-vscode tells the CLI it runs inside an IDE
-        // extension, so its `initialize` returns the FULL model catalogue — including
+        // extension, so its `initialize` returns the FULL model catalogue, including
         // unavailable_models (e.g. Fable, shown greyed in the picker). Without it the
         // CLI replies in headless mode and omits the disabled models. (Verified with
         // tools/cli-probe: this env var alone flips unavailable_models on.)
@@ -281,12 +281,12 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // Without this the CLI takes no file snapshots at all on our path, so there is nothing to
         // rewind to. It keeps file history unconditionally when it runs its own REPL, but a
         // stream-json session is "non-interactive" to it and there the feature is opt-in through
-        // this variable — which is how the VS Code extension gets it too: it passes
+        // this variable, which is how the VS Code extension gets it too: it passes
         // `enableFileCheckpointing: true` to the Agent SDK, and the SDK sets exactly this.
         // NOT forced past a user who turned checkpointing off: the CLI reads this one only while
         // CLAUDE_CODE_DISABLE_FILE_CHECKPOINTING is unset, and that is the right way round. Whoever
         // set the disable meant it, and the cost of ignoring them is copies of their files on disk.
-        // Off leaves the variable unset rather than setting it false — that is what "not asked for"
+        // Off leaves the variable unset rather than setting it false: that is what "not asked for"
         // looks like to the CLI, and it keeps the profile's own env the only other voice.
         if (options.FileCheckpoints) { env["CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING"] = "true"; }
         _transport.Start(ClaudeInstall.ResolveExecutable(), args, options.WorkingDirectory, env,
@@ -301,7 +301,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
         // Register a PreToolUse hook for Edit|Write|Read so the host can save a
         // dirty file before Claude touches it (the "autosave" feature). The hook
-        // is harmless if the feature is off — the host's HookCallback handler
+        // is harmless if the feature is off: the host's HookCallback handler
         // decides whether to actually save. Best-effort: if the CLI rejects the
         // initialize, autosave simply won't fire (no crash, CLI keeps running).
         SendInitializeHooks();
@@ -333,7 +333,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
                 },
             });
             // errors maps failed-server name → reason. A non-empty entry means our IDE tools
-            // won't reach the CLI (mcp__<name>__* calls fail) — surface it instead of a silent drop.
+            // won't reach the CLI (mcp__<name>__* calls fail): surface it instead of a silent drop.
             if (resp?["errors"] is JObject errors && errors.HasValues)
             {
                 _log.Warn($"[client] SDK MCP server '{name}' registration failed: {JsonExtensions.ToIndentedString(errors)}");
@@ -361,7 +361,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     private void SendInitializeHooks() =>
         // `initialize` carries the model catalogue + rich slash commands (→ ModelsReceived) and the
         // fast-mode state; get_settings adds the model + Model-menu toggles. Together they seed the UI
-        // WITHOUT a user turn — system/init only arrives on the first turn, too late to enable the
+        // WITHOUT a user turn: system/init only arrives on the first turn, too late to enable the
         // toolbar. Fired on every StartProcess (open + respawn).
         _ = StartupAsync();
 
@@ -369,10 +369,10 @@ internal sealed partial class ClaudeClient : IClaudeClient
     {
         try
         {
-            // Capture the permission mode for THIS startup up front — before the awaits below let a
+            // Capture the permission mode for THIS startup up front, before the awaits below let a
             // rapid respawn reassign the field (the CLI never reports permissionMode; it's ours).
             var permissionMode = PermissionMode;
-            // Declare SDK MCP servers inside `initialize` (not via mcp_set_servers after init) —
+            // Declare SDK MCP servers inside `initialize` (not via mcp_set_servers after init):
             // the JS SDK's flow; the CLI uses this to build the full reply (incl. unavailable_models).
             var sdkServers = !string.IsNullOrEmpty(SdkMcpServerName) && McpMessageHandler != null
                 ? new[] { SdkMcpServerName }
@@ -477,7 +477,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
             AllowBypassPermissions = _lastOptions.AllowBypassPermissions,
             FileCheckpoints = _lastOptions.FileCheckpoints,
             SsePort = _lastOptions.SsePort,   // keep talking to the same MCP server after a restart
-            // Keep the profile's provider across respawns — else the pane silently reverts to native Claude.
+            // Keep the profile's provider across respawns; else the pane silently reverts to native Claude.
             Env = _env ?? _lastOptions?.Env,
         };
         _log.Info($"=== auto-restart workdir={replay.WorkingDirectory} session={replay.ResumeSessionId ?? "(none)"}");
@@ -492,7 +492,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     /// <summary>Starts a new empty session in the same working directory. Kills the current process and spawns a fresh one.
     /// Logs its own failure rather than leaving it to the caller: the pane starts this and drops the
-    /// Task, and by then the transcript is already cleared — a silent failure leaves an empty pane
+    /// Task, and by then the transcript is already cleared: a silent failure leaves an empty pane
     /// with no process behind it, which reads as "still loading" instead of as an error.</summary>
     public async Task NewSessionAsync()
     {
@@ -522,10 +522,10 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     /// <summary>Resumes an existing session by id. Requires respawn. The
     /// caller passes the session's own mode (read from its JSONL) so the
-    /// respawned CLI runs on the SAME mode shown in the selector — not
+    /// respawned CLI runs on the SAME mode shown in the selector, not
     /// whatever the client happened to hold. Null falls back to the current.
     /// Model is not passed: the CLI's init re-emits the session's own model on --resume.
-    /// Logs its own failure, like NewSessionAsync — and here it matters more: the caller has already
+    /// Logs its own failure, like NewSessionAsync, and here it matters more: the caller has already
     /// pushed the history into the WebView, so a silent failure shows the right transcript over a
     /// process that isn't there, and looks like it worked until the first prompt goes nowhere.</summary>
     public async Task ResumeSessionAsync(string sessionId, string permissionMode = null)
@@ -555,11 +555,11 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     private void KillForRespawn() => _transport.DisposeIntentional();
 
-    // Hot-swap operations — these must never respawn the process.
+    // Hot-swap operations: these must never respawn the process.
 
     /// <summary>Logs its own failure like the rest, so no caller has to wonder whether this one
     /// reports for itself. The property advances only after the ack, which is what lets the caller
-    /// echo the real value back and roll an optimistic selector onto it — that echo has to stay at
+    /// echo the real value back and roll an optimistic selector onto it: that echo has to stay at
     /// the call site, where the bridge is.</summary>
     public async Task SetModelAsync(string model)
     {
@@ -575,7 +575,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         Model = model;
     }
 
-    /// <summary>Same as SetModelAsync — and the echo matters more here: a selector left reading
+    /// <summary>Same as SetModelAsync, and the echo matters more here: a selector left reading
     /// "Plan" while the CLI is still in bypass is the one lie that costs files.</summary>
     public async Task SetPermissionModeAsync(string mode)
     {
@@ -602,7 +602,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
             var resp = await SendControlRequestAsync(
                 ClientMessages.ControlSubtype.RemoteControl, new { enabled });
             // Whole payload: we map session_url only, and bridge_epoch is the one field that
-            // could tell a reconnect from a fresh bridge — see the bridge_state log.
+            // could tell a reconnect from a fresh bridge; see the bridge_state log.
             _log.Debug(() => $"[client] remote_control enabled={enabled} → {resp.ToIndentedString()}");
             // Identifies the bridge this call created, so a late `failed` from an earlier one
             // can be told apart. Cleared on disable: no bridge, nothing to match.
@@ -623,7 +623,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     }
 
     /// <summary>Logs its own failure: the WebView frees itself the moment it asks (it can't wait on
-    /// a wedged CLI), so a failed interrupt is invisible from the UI — it reads as stopped while the
+    /// a wedged CLI), so a failed interrupt is invisible from the UI: it reads as stopped while the
     /// turn runs on. Callers fire and forget, and the 10s request timeout would fault this into
     /// silence, so the log is the only place the divergence can surface.</summary>
     public async Task InterruptAsync()
@@ -640,7 +640,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     }
 
     /// <summary>Structured /usage data: session cost + claude.ai plan rate-limit
-    /// windows. Experimental in the SDK (shape may change) — returned raw so the
+    /// windows. Experimental in the SDK (shape may change), returned raw so the
     /// webview can render defensively. Null on error.</summary>
     public async Task<JObject> GetUsageAsync()
     {
@@ -675,7 +675,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     /// OFF = budget 0. display is omitted when null so the CLI keeps the session mode.
     /// <para>Logs its own failure, like the other fire-and-forget hot-swaps: the caller drops the
     /// Task, and unlike the model and permission selectors there is no echo back to roll the UI
-    /// onto what the CLI really holds — the toggle would simply keep showing a setting that never
+    /// onto what the CLI really holds: the toggle would simply keep showing a setting that never
     /// took.</para></summary>
     public async Task SetMaxThinkingTokensAsync(int maxThinkingTokens, string display)
     {
@@ -702,7 +702,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     /// <summary>Restore the files to the CLI's snapshot taken before <paramref name="userMessageId"/>.
     /// <para>With <paramref name="dryRun"/> nothing is written: the CLI answers whether it *could*
-    /// rewind to that message, and with what — <c>canRewind</c>, plus <c>filesChanged</c>,
+    /// rewind to that message, and with what: <c>canRewind</c>, plus <c>filesChanged</c>,
     /// <c>insertions</c> and <c>deletions</c>. That is the only way to know whether a checkpoint
     /// exists for a message, so it is what a UI asks before offering the action.</para>
     /// <para>The response is returned rather than dropped: an error here ("File rewinding is not
@@ -718,7 +718,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         catch (Exception ex)
         {
             // A refusal comes back as an error response, and "no checkpoint here" is a normal
-            // answer for a probe — log it and let the caller read canRewind=false.
+            // answer for a probe: log it and let the caller read canRewind=false.
             _log.Warn($"[client] rewind_files failed (uuid={userMessageId}, dryRun={dryRun}): {ex.Message}");
             return null;
         }
@@ -729,7 +729,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     /// <summary>Detach a running task from the turn: the blocking tool call returns at once and the
     /// turn carries on, while the task keeps going and reports its end as usual.
-    /// <para>Keyed by tool_use_id, not task_id — that is what the CLI takes here. Omitting it
+    /// <para>Keyed by tool_use_id, not task_id: that is what the CLI takes here. Omitting it
     /// detaches every foreground task, which is what Ctrl+B does in the terminal.</para>
     /// <para>One-way: there is no request that brings a task back into the turn.</para></summary>
     public Task DetachTaskAsync(string toolUseId = null)
@@ -753,10 +753,10 @@ internal sealed partial class ClaudeClient : IClaudeClient
 
     /// <summary>
     /// Sets the session's user-facing title through the live CLI, which persists it to the JSONL
-    /// itself (a <c>custom-title</c> entry — the same shape <see cref="SessionManager.Rename"/>
+    /// itself (a <c>custom-title</c> entry: the same shape <see cref="SessionManager.Rename"/>
     /// writes). Going through the CLI keeps it the single writer of a file it holds open, and
     /// leaves its in-memory title in step with what is on disk.
-    /// Returns false when the CLI rejects the request — a version that predates the subtype —
+    /// Returns false when the CLI rejects the request (a version that predates the subtype)
     /// so the caller can fall back to writing the file directly.
     /// </summary>
     public async Task<bool> RenameSessionAsync(string title)
@@ -793,7 +793,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         return status;
     }
 
-    /// <summary>Asks the live CLI for the model catalogue — the same list `initialize` seeds us with
+    /// <summary>Asks the live CLI for the model catalogue, the same list `initialize` seeds us with
     /// (the CLI builds both from getModelOptions), but askable at any time, which `initialize` is not:
     /// the catalogue follows the account/provider/settings cascade and the CLI never pushes a change.
     /// Empty when the CLI predates the subtype or answers without models.
@@ -814,7 +814,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     }
 
     /// <summary>Maps the wire rows of the slash-command list onto <see cref="SlashCommand"/>.
-    /// Nameless rows are dropped — they would render as an unclickable blank in the palette.
+    /// Nameless rows are dropped: they would render as an unclickable blank in the palette.
     /// internal, unlike the model parse: `commands_changed` carries the same shape and is handled in
     /// the pane, which parses it through here rather than growing a second reader of the wire.</summary>
     internal static IReadOnlyList<SlashCommand> ParseCommands(JArray commands)
@@ -853,7 +853,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
             };
 
     /// <summary>Maps `result.modelUsage` (an object keyed by model id) onto its typed form. These
-    /// keys are camelCase, unlike the snake_case of `message.usage` — the wire is inconsistent by
+    /// keys are camelCase, unlike the snake_case of `message.usage`: the wire is inconsistent by
     /// design, so don't reuse one reader for both.</summary>
     internal static IReadOnlyDictionary<string, ModelUsage> ParseModelUsage(JObject modelUsage)
         => modelUsage?.Properties()
@@ -871,7 +871,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
             });
 
     /// <summary>Maps the wire rows of a model catalogue onto <see cref="ModelInfo"/>. The capability
-    /// flags are absent (not false) when unsupported — the CLI omits them — so every one defaults off.</summary>
+    /// flags are absent (not false) when unsupported: the CLI omits them, so every one defaults off.</summary>
     private static IReadOnlyList<ModelInfo> ParseModels(JArray models)
         => models == null
             ? []
@@ -940,7 +940,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         object payload;
         if (response.Allow)
         {
-            // ALWAYS send updatedInput (a record, never undefined — that triggered the
+            // ALWAYS send updatedInput (a record, never undefined: that triggered the
             // CLI's ZodError) and updatedPermissions (the chosen permission_suggestion
             // for "allow for this session", or empty for a one-time allow).
             payload = new
@@ -997,7 +997,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public bool HasPendingPlan => _toolRequestIds.Any(kv => kv.Value.ToolName == PlanApproval.ToolName);
 
     /// <summary>True while any tool permission is waiting on the user. Several can overlap, and
-    /// this dictionary is already cleared on cancel and on process exit — a count kept elsewhere
+    /// this dictionary is already cleared on cancel and on process exit: a count kept elsewhere
     /// would drift out of step on exactly those paths.</summary>
     public bool HasPendingToolPermission => !_toolRequestIds.IsEmpty;
 

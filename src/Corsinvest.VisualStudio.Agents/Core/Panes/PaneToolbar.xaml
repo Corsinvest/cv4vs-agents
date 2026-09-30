@@ -9,7 +9,7 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <!-- VS chrome for the menus below: they open in their own popup, where UseVsTheme cannot
-             reach them. Shared with the Storage pane — see the dictionary for why. -->
+             reach them. Shared with the Storage pane: see the dictionary for why. -->
         <ResourceDictionary Source="/Corsinvest.VisualStudio.Agents;component/Themes/MenuStyles.xaml" />
       </ResourceDictionary.MergedDictionaries>
 
@@ -59,12 +59,12 @@
 
       <!-- Right-pinned group: Session History, Hide tool calls, New Session, More (⋯).
            In a DockPanel docked Right, the first-declared sits furthest
-           right — so the visual left-to-right order is History, Hide tool calls,
+           right, so the visual left-to-right order is History, Hide tool calls,
            New Session, More. These act on THIS pane's conversation (distinct from
            the left 'New' which opens a new pane); Hide tool calls is the exception,
            a view setting shared by every chat. -->
 
-      <!-- More (⋯) kebab — furthest right. -->
+      <!-- More (⋯) kebab: furthest right. -->
       <Button x:Name="BtnMore" DockPanel.Dock="Right"
               Style="{StaticResource CommandBarButton}" ToolTip="More" Click="OnMore_Click">
         <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Ellipsis}" />
@@ -84,7 +84,7 @@
         </Button.ContextMenu>
       </Button>
 
-      <!-- New Session (this pane) — fresh conversation here. AddComment is a
+      <!-- New Session (this pane): fresh conversation here. AddComment is a
            speech-bubble + plus, reading as "new conversation". -->
       <Button x:Name="BtnNewSession" DockPanel.Dock="Right"
               Style="{StaticResource CommandBarButton}" ToolTip="New Session" Click="OnNewSession_Click">
@@ -99,7 +99,7 @@
 
       <!-- Left group: New pane (+ split) and Open panes. -->
       <StackPanel Orientation="Horizontal">
-        <!-- [+ New ▾] split — opens a new INSTANCE (pane), not a new session. -->
+        <!-- [+ New ▾] split: opens a new INSTANCE (pane), not a new session. -->
         <Button x:Name="BtnNew" Style="{StaticResource CommandBarButton}"
                 ToolTip="New Instance (default)" Click="OnNew_Click">
           <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Add}" />
@@ -133,7 +133,7 @@
         </Button>
       </StackPanel>
 
-      <!-- Current session title — fills the space between the left group and the
+      <!-- Current session title: fills the space between the left group and the
            right buttons, sitting just left of the Session History (clock) icon.
            Always an editable TextBox: borderless at rest (reads as a label), border
            on hover/focus to signal it's editable. Enter or focus-loss saves a

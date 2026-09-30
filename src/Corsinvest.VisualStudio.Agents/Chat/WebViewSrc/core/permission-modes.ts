@@ -28,7 +28,7 @@ export interface PermissionItem {
 }
 
 const PERMISSION_ITEMS: PermissionItem[] = [
-    // Descriptions say what happens to your files and what still gets asked — that's what
+    // Descriptions say what happens to your files and what still gets asked: that's what
     // you need to choose. No "Claude will": the subject is obvious in a chat with it, and
     // the spare width is better spent on the limits of each mode (verified in the CLI:
     // acceptEdits only auto-approves writes inside the working directory).
@@ -74,13 +74,13 @@ const PERMISSION_ITEMS: PermissionItem[] = [
  *  `bypassPermissions` only when the option is enabled. Before the model catalogue
  *  arrives we cannot know, and the two ways to be wrong are not equal: offering `auto`
  *  to a model that refuses it makes the row vanish from under the cursor, while hiding
- *  it costs nothing the user notices — unless it is the mode they are already in, which
+ *  it costs nothing the user notices, unless it is the mode they are already in, which
  *  is why that one case keeps it. */
 export function permissionItems(): PermissionItem[] {
     const value = resolveModelValue(appState.currentModel);
     const m = appState.models.find((x) => x.value === value);
     const autoOk = m ? m.supportsAutoMode : appState.permissionMode === PERMISSION_MODE.auto;
-    // Two gates: our own VS option AND the CLI's effective settings — an org can
+    // Two gates: our own VS option AND the CLI's effective settings: an org can
     // forbid the mode via managed settings. Without the second one we would offer a mode the CLI
     // then refuses. Note the different sources: `ui.*` is a VS Option, the other is CLI state.
     const bypassOk =

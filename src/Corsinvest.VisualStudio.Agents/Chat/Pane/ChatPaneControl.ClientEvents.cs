@@ -90,7 +90,7 @@ public partial class ChatPaneControl
 
     /// <summary>PreToolUse/PostToolUse hooks (Edit/Write/[Multi]Edit/Read): autosave (save the target
     /// file if it's open dirty, so Claude sees live edits) plus post-edit diagnostics (baseline on
-    /// PreToolUse, new-diagnostics check on PostToolUse — always on). async void because
+    /// PreToolUse, new-diagnostics check on PostToolUse, always on). async void because
     /// the diagnostics check awaits the Error List settling; the try/catch guarantees a response is
     /// always sent so our failure never blocks Claude's tool.</summary>
     private async void OnHookCallback(object sender, HookCallbackEventArgs e)
@@ -110,7 +110,7 @@ public partial class ChatPaneControl
                     var save = IdeContextService.Instance.SaveIfDirtyAsync(filePath);
                     var saveTimedOut = await Task.WhenAny(save, Task.Delay(3000)) != save;
                     // await only the completed task: on timeout `save` is left running unobserved,
-                    // which is fine — it swallows its own exceptions.
+                    // which is fine: it swallows its own exceptions.
                     var saved = !saveTimedOut && await save;
                     if (!saved)
                     {
@@ -142,11 +142,11 @@ public partial class ChatPaneControl
                 if (!string.IsNullOrEmpty(filePath))
                 {
                     // Bound our own work: if the diagnostics read wedges (e.g. a main-thread stall),
-                    // don't leave Claude waiting on the CLI's 60s hook timeout — respond {continue}
+                    // don't leave Claude waiting on the CLI's 60s hook timeout: respond {continue}
                     // and drop the feedback. The inner wait is already ≤1.5s, so 3s only trips on a hang.
                     var work = DiagnosticsContextAsync(e.ToolUseId, filePath);
                     // await the completed task (not .Result) to avoid a sync-wait deadlock (VSTHRD002).
-                    // If this times out, `work` is left running unobserved — that's fine: it only wraps
+                    // If this times out, `work` is left running unobserved; that's fine: it only wraps
                     // IsFileVisible + ReadFileDiagnosticsAsync, and the latter already swallows its own
                     // exceptions, so there's no unobserved-exception fallout from abandoning it here.
                     var timedOut = await Task.WhenAny(work, Task.Delay(3000)) != work;
@@ -181,8 +181,8 @@ public partial class ChatPaneControl
     }
 
     // The CLI's startup state (initialize + get_settings, gathered by ClaudeClient.StartupAsync
-    // WITHOUT a user turn — system/init only arrives on the first turn, too late to enable the
-    // toolbar). Fired on every startup (open + respawn). PermissionMode isn't in the CLI's reply —
+    // WITHOUT a user turn: system/init only arrives on the first turn, too late to enable the
+    // toolbar). Fired on every startup (open + respawn). PermissionMode isn't in the CLI's reply:
     // we pass it via --permission-mode, so it's read from the client here.
     // Its own message, not ui_init: this lands seconds after the pane opens, and the config the
     // WebView needs to render its first history cannot wait for it.
@@ -198,8 +198,8 @@ public partial class ChatPaneControl
                 {
                     // Empty model → the webview shows "Default"; get_settings usually fills it in.
                     Model = e.Model ?? "",
-                    // The startup reply doesn't carry permissionMode — it's ours, passed as
-                    // --permission-mode — so it's read from the client here, captured at this
+                    // The startup reply doesn't carry permissionMode (it's ours, passed as
+                    // --permission-mode), so it's read from the client here, captured at this
                     // startup so a respawn can't stale it. Later changes DO come from the CLI,
                     // on system/status (OnPermissionModeChanged).
                     PermissionMode = e.PermissionMode ?? "default",
@@ -312,7 +312,7 @@ public partial class ChatPaneControl
     private void OnUserMessage(object sender, UserMessageEventArgs e)
         => Dispatcher.Invoke(() =>
         {
-            // CLI meta entries (local-command-caveat etc.) are model-only —
+            // CLI meta entries (local-command-caveat etc.) are model-only:
             // never surface them in the chat UI.
             if (e.IsMeta) { return; }
             var previewLines = AgentsOptions.Chat.PreviewLines;
@@ -332,12 +332,12 @@ public partial class ChatPaneControl
         {
             TurnInFlight = false;
             // NOTE: do NOT clear active sub-agents here. `result` ends the main turn, but
-            // background agents (run_in_background / async) outlive it and keep running —
+            // background agents (run_in_background / async) outlive it and keep running:
             // clearing here would hide the chip while they still work. Each agent sends its
             // own task_notification (→ subagent_ended) when it actually finishes.
             // Any pending "needs input" bar is stale now the turn ended.
             PaneAttentionService.Clear(Entry);
-            // Notify "finished" only when no background agents are still running — an async agent
+            // Notify "finished" only when no background agents are still running: an async agent
             // makes the main turn's `result` arrive early; the real end comes with the later `result`
             // once background_tasks_changed has emptied.
             if (!HasBackgroundTasks) { PaneAttentionService.NotifyFinished(Pane, Entry); }
@@ -345,7 +345,7 @@ public partial class ChatPaneControl
             // context-window limits. Ship both so the gauge has numerator AND
             // denominator from one message (no static table, no extra round-trip).
             // modelUsage is keyed by the served id ("claude-opus-4-8[1m]"), but _client.Model
-            // holds the catalogue value the UI sent via set_model ("opus[1m]") — they match only
+            // holds the catalogue value the UI sent via set_model ("opus[1m]"), they match only
             // on a fresh init. After any model switch the exact-key lookup misses, so fall back to
             // the single entry (a turn is single-model on the wire) to keep the gauge denominator.
             var mu = e.ModelUsage;
@@ -394,7 +394,7 @@ public partial class ChatPaneControl
     // title from the first prompt and save it as the AI title. Done
     // once per session and only while the CLI is alive (the only time we can ask);
     // SetAiTitle no-ops if the user already set a custom title. The session list
-    // (WPF) picks it up from disk next time it loads — no live refresh needed.
+    // (WPF) picks it up from disk next time it loads: no live refresh needed.
     private void MaybeGenerateTitle()
     {
         var client = _client;
@@ -403,7 +403,7 @@ public partial class ChatPaneControl
         _titledSessionId = sid;
 
         // The pane's directory: it outlives a client swap, and unlike the client's it does not
-        // follow the CLI process when a Bash call `cd`s elsewhere — the transcript stays where
+        // follow the CLI process when a Bash call `cd`s elsewhere: the transcript stays where
         // the session was launched.
         var sessions = new SessionManager(PaneClaudePaths, Entry.WorkingDirectory, _log);
         // Skip the CLI round-trip entirely if the session already has a title
@@ -420,14 +420,14 @@ public partial class ChatPaneControl
             var title = await client.GenerateSessionTitleAsync(firstPrompt, persist: false);
             if (!string.IsNullOrWhiteSpace(title))
             {
-                // SetAiTitle no-ops (returns true) if a title already exists — e.g. the user
+                // SetAiTitle no-ops (returns true) if a title already exists, e.g. the user
                 // renamed the session while generation was in flight. Don't overwrite the toolbar
                 // in that case: read back what actually stuck.
                 var wasNoOp = sessions.SetAiTitle(sid, title);
                 var effective = wasNoOp ? sessions.ScanTitle(sid) : title;
 
                 // Push it to this pane's toolbar now. The turn-end RefreshTitleOnTurnEnd already
-                // ran and found nothing — the title is only written here, and asynchronously, so
+                // ran and found nothing: the title is only written here, and asynchronously, so
                 // without this a brand-new session shows no title until it is reopened. Guarded on
                 // the session id so a client swap mid-generation cannot mistitle the new session.
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -476,7 +476,7 @@ public partial class ChatPaneControl
         => Dispatcher.Invoke(() => AwaitingPermission = _client?.HasPendingToolPermission == true);
 
     // BeginInvoke, not Invoke like the rest: these three fire once per streamed token, and a
-    // synchronous marshal parks the NDJSON reader until the UI thread answers — under a build that
+    // synchronous marshal parks the NDJSON reader until the UI thread answers, under a build that
     // backs up into claude.exe's pipe. Order still holds: one reader thread, one dispatcher queue,
     // same priority.
     private void OnAssistantTextDelta(object sender, AssistantTextDeltaEventArgs e)
@@ -517,7 +517,7 @@ public partial class ChatPaneControl
                 var status = obj.Val("status", "") ?? "";
 
                 // `status` has two emitters in the CLI, and only one of them is a turn. The other
-                // echoes a permission-mode change — it carries `permissionMode` and a null status,
+                // echoes a permission-mode change: it carries `permissionMode` and a null status,
                 // and arrives on a pane that may be doing nothing at all. Opening a turn on it
                 // would hold the machine awake until the watchdog, with `powercfg` claiming a turn
                 // that never ran. `setSDKStatus` never sends that field, so its presence is the
@@ -542,7 +542,7 @@ public partial class ChatPaneControl
             else if (subtype == ClientMessages.SystemSubtype.CompactBoundary)
             {
                 // The LIVE wire uses snake_case (compact_metadata/trigger/pre_tokens); the .jsonl
-                // persists the same as camelCase (compactMetadata/preTokens — see SessionManager.History).
+                // persists the same as camelCase (compactMetadata/preTokens; see SessionManager.History).
                 // Read the live snake_case names here, else trigger/tokens fall back to auto/0.
                 var meta = obj["compact_metadata"] as JObject;
                 _bridge.Send(BridgeMessages.ToWebView.Chat.Compacted, new Contracts.CompactedNotification
@@ -586,7 +586,7 @@ public partial class ChatPaneControl
             }
             else if (subtype == ClientMessages.SystemSubtype.TaskUpdated)
             {
-                // A patch on a task the chip is already showing — backgrounding does not start a
+                // A patch on a task the chip is already showing: backgrounding does not start a
                 // new one. Only what the chip renders is forwarded; the rest of the patch
                 // (end_time, total_paused_ms, error) has nowhere to go yet.
                 //
@@ -611,7 +611,7 @@ public partial class ChatPaneControl
             else if (subtype == ClientMessages.SystemSubtype.CommandsChanged)
             {
                 // Runtime refresh of the slash-command list (e.g. a new .md command file appears,
-                // a plugin toggles). Same shape as the `initialize` catalogue — re-publish over the
+                // a plugin toggles). Same shape as the `initialize` catalogue: re-publish over the
                 // same bridge channel; the WebView replaces its list.
                 if (obj["commands"] is JArray commands)
                 {
@@ -649,7 +649,7 @@ public partial class ChatPaneControl
                                  new Contracts.EvictMessagesNotification { Uuids = uuids });
                 }
                 // The selector still shows the model the user picked, while the CLI is answering
-                // with another one — the same kind of lie as a permission mode that reads "Plan"
+                // with another one: the same kind of lie as a permission mode that reads "Plan"
                 // over a session running in bypass. The client has already followed the switch
                 // (HandleSystem), so this is the same echo the model picker does after an ack:
                 // same message, same listener, nothing new on the wire.
@@ -660,13 +660,13 @@ public partial class ChatPaneControl
             {
                 // Authoritative active-agent list. Track whether any are running so a `result` that
                 // ends the MAIN turn (while async agents outlive it) doesn't fire a premature
-                // "finished" — we notify only when this is empty (updates on finish AND on cancel).
+                // "finished": we notify only when this is empty (updates on finish AND on cancel).
                 var tasks = obj["tasks"] as JArray;
                 HasBackgroundTasks = tasks != null && tasks.Count > 0;
 
                 // Forwarded as a set of ids, which is all it carries. task_updated's
                 // is_backgrounded covers only a foreground task being pushed down, and the agents
-                // the CLI launches asynchronously never make that transition — they are background
+                // the CLI launches asynchronously never make that transition: they are background
                 // from birth, so that flag never arrived and the chip filed them under the wrong
                 // heading. This list has them from the first moment.
                 _bridge.Send(BridgeMessages.ToWebView.Chat.BackgroundTasks, new Contracts.BackgroundTasksNotification
@@ -785,7 +785,7 @@ public partial class ChatPaneControl
     private void OnBridgeStateChanged(object sender, BridgeStateEventArgs e)
         => Dispatcher.Invoke(() =>
         {
-            // `reconnecting` is not a failure — the bridge is retrying.
+            // `reconnecting` is not a failure: the bridge is retrying.
             if (e.State != "failed") { return; }
             // A `failed` from a bridge we already replaced (turned off, then on again) must not
             // take down the live one. An event without an epoch is accepted, as VS Code does:
@@ -825,13 +825,13 @@ public partial class ChatPaneControl
         });
 
     /// <summary><para>
-    /// A line the CLI wrote on stderr. It reaches the chat only if the process is gone —
+    /// A line the CLI wrote on stderr. It reaches the chat only if the process is gone:
     /// a CLI that is still running is warning, not failing, and rendering that as the red banner
     /// says the session broke when it didn't.
     /// </para>
     /// <para>
     /// Measured 2026-08-06 on an untrusted workspace: the CLI writes "Ignoring 1 permissions.allow
-    /// entry … this workspace has not been trusted", carries on, and answers the turn normally —
+    /// entry … this workspace has not been trusted", carries on, and answers the turn normally,
     /// while we showed an error over a working chat. Node's own DeprecationWarnings came out the
     /// same way. VS Code reads the child's stderr into a 2KB diagnostic tail and never surfaces it
     /// (verified in the SDK's ProcessTransport), which is why the same warning is invisible there.
@@ -839,7 +839,7 @@ public partial class ChatPaneControl
     /// <para>
     /// Deliberately not a match on the message text: that would mean chasing the CLI's wording
     /// release by release. Whether the process survived is the CLI's own verdict on how bad the
-    /// line was. Nothing is lost either way — every line is already logged as Warn by
+    /// line was. Nothing is lost either way: every line is already logged as Warn by
     /// NdjsonTransport, and a process that dies raises its own banner through OnProcessExited.
     /// </para></summary>
     private void OnClientError(object sender, string msg)
@@ -856,14 +856,14 @@ public partial class ChatPaneControl
             Entry.ActiveSessionId = e.SessionId;
 
             // Nothing the previous process was doing survives into this one, and the CLI announces
-            // none of it at startup — the background-task signal only speaks when membership
+            // none of it at startup: the background-task signal only speaks when membership
             // CHANGES, so a leftover set would stand until the next task started. Also covers an
             // auto-restart, which reaches here without anyone having decided to respawn.
             AbandonTurnState();
             _bridge.Send(BridgeMessages.ToWebView.Chat.BackgroundTasks,
                          new Contracts.BackgroundTasksNotification());
 
-            // The banner only needs the "process is back up" signal to clear its error — it reads
+            // The banner only needs the "process is back up" signal to clear its error: it reads
             // no payload, so send a bare notification.
             _bridge.Send(BridgeMessages.ToWebView.Cli.Started, null);
         });

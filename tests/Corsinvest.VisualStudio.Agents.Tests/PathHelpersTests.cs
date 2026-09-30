@@ -10,7 +10,7 @@ namespace Corsinvest.VisualStudio.Agents.Tests;
 /// <summary>The path shapes handed to the CLI.
 /// <para>These matter because the CLI compares strings, not paths: it matches its own
 /// <c>process.cwd()</c> against the lock file's <c>workspaceFolders</c> case-sensitively, so an
-/// upper-case drive letter does not fail loudly — IDE discovery just never happens.</para></summary>
+/// upper-case drive letter does not fail loudly: IDE discovery just never happens.</para></summary>
 public class PathHelpersTests
 {
     [Theory]
@@ -49,7 +49,7 @@ public class PathHelpersTests
     [Theory]
     [InlineData(@"C:\proj\demo\File.cs", "file:///c:/proj/demo/File.cs")]
     [InlineData(@"c:\proj\demo\File.cs", "file:///c:/proj/demo/File.cs")]
-    // Only the drive letter is lowered — the rest of the path keeps its case.
+    // Only the drive letter is lowered; the rest of the path keeps its case.
     [InlineData(@"C:\Proj\Demo\MyFile.cs", "file:///c:/Proj/Demo/MyFile.cs")]
     public void ToFileUri_produces_the_shape_the_CLI_expects(string path, string expected)
         => Assert.Equal(expected, PathHelpers.ToFileUri(path));

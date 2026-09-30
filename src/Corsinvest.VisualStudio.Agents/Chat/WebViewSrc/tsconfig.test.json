@@ -1,5 +1,5 @@
 // Tests run straight off the .ts through `node --test` (Node strips the types), never through
-// esbuild — so they import with an explicit .ts extension, which the bundle's own imports must
+// esbuild, so they import with an explicit .ts extension, which the bundle's own imports must
 // not carry. That is the one setting this config adds; everything else is the app's.
 {
     "extends": "./tsconfig.json",

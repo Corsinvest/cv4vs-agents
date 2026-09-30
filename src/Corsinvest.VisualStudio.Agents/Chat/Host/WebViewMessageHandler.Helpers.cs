@@ -20,7 +20,7 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 
 /// <summary>
 /// WebViewMessageHandler shared helpers: JSONL tool-input/result lookup and projection, temp-file
-/// naming, VS open/format utilities, and stats scope/range mapping — used across the Handle*
+/// naming, VS open/format utilities, and stats scope/range mapping, used across the Handle*
 /// dispatchers. The dispatch switch, the two single-case handlers, and lifecycle live in
 /// WebViewMessageHandler.cs.
 /// </summary>
@@ -28,7 +28,7 @@ internal sealed partial class WebViewMessageHandler
 {
     /// <summary>Project a tool's raw input JSON to the text shown when opening its IN:
     /// the tool's main field for the verbose ones (Agent→prompt, Bash→command, Write→content),
-    /// else the whole indented JSON. Mirrors the per-tool renderers on the WebView side — a tool
+    /// else the whole indented JSON. Mirrors the per-tool renderers on the WebView side: a tool
     /// missing here opens as JSON with its content escaped onto one line.</summary>
     private static string ProjectInput(string toolName, JObject input)
     {
@@ -46,7 +46,7 @@ internal sealed partial class WebViewMessageHandler
     // constructor parameter isn't in scope in a static member (CS9105).
 
     /// <summary>The transcript holding a tool call: the session file, or the sub-agent's own when
-    /// agentId names one. Null when anything is missing or unsafe — sessionId and agentId compose a
+    /// agentId names one. Null when anything is missing or unsafe: sessionId and agentId compose a
     /// path and come from the WebView, so they are checked for traversal here, once, instead of at
     /// each lookup.</summary>
     private static string TranscriptPathFor(string workingDirectory, string sessionId, string toolUseId,
@@ -64,7 +64,7 @@ internal sealed partial class WebViewMessageHandler
 
     /// <summary>What a tool was called with: the text to show, and the file it names when it names
     /// one. Both come off the same `input` object, so reading it twice would mean scanning the
-    /// JSONL twice. FilePath is null for the tools that write no file — Bash, Grep, most MCP.</summary>
+    /// JSONL twice. FilePath is null for the tools that write no file: Bash, Grep, most MCP.</summary>
     private static (string Content, string FilePath) FindToolInput(string workingDirectory,
                                                                    string sessionId,
                                                                    string toolUseId,
@@ -100,8 +100,8 @@ internal sealed partial class WebViewMessageHandler
         catch (Exception ex) { OutputWindowLogger.Global.LogException("FindToolInput/Result", ex); }
         return default;
     }
-    /// <summary>The tool call's raw `input` object. FindToolInput projects it for display — for an
-    /// Edit that means the whole JSON as one string — and a diff needs the fields apart, so this
+    /// <summary>The tool call's raw `input` object. FindToolInput projects it for display (for an
+    /// Edit that means the whole JSON as one string) and a diff needs the fields apart, so this
     /// returns the object itself. Null when the transcript has no such tool_use.</summary>
     private static JObject FindToolInputRaw(string workingDirectory,
                                             string sessionId,
@@ -205,7 +205,7 @@ internal sealed partial class WebViewMessageHandler
     }
 
     /// <summary>Indent <paramref name="content"/> when it is JSON, untouched when it is not: a
-    /// tool that answers prose reads worse reflowed. Parsing is the only way to tell — a result is
+    /// tool that answers prose reads worse reflowed. Parsing is the only way to tell: a result is
     /// a string either way.</summary>
     private static string TryIndentJson(string content)
     {
@@ -217,19 +217,19 @@ internal sealed partial class WebViewMessageHandler
     }
 
     /// <summary><para>
-    /// Name for the temp file a tool's IN/OUT is opened from — readable in the tab, and
+    /// Name for the temp file a tool's IN/OUT is opened from: readable in the tab, and
     /// carrying an extension the editor can colour.
     /// </para>
     /// <para>
     /// The temp is the right thing to open here and not a stand-in for the real file: clicking the
-    /// row's TITLE already goes to the file. Clicking the content asks a different question — what
-    /// was written in THAT turn — and the file on disk answers it wrongly three turns later, while
+    /// row's TITLE already goes to the file. Clicking the content asks a different question: what
+    /// was written in THAT turn, and the file on disk answers it wrongly three turns later, while
     /// a temp cannot change under you.
     /// </para></summary>
     private static string TempFileName(string toolName, string which, string filePath, string toolUseId)
     {
-        // Last few chars of the tool_use_id: enough to keep two temps apart — two writes to
-        // same-named files in different folders, or the same command run twice — without turning
+        // Last few chars of the tool_use_id: enough to keep two temps apart; two writes to
+        // same-named files in different folders, or the same command run twice, without turning
         // the tab into a guid nobody can read back to a row.
         var id = SanitizeFileName(toolUseId ?? "");
         if (id.Length > 6) { id = id.Substring(id.Length - 6); }
@@ -252,7 +252,7 @@ internal sealed partial class WebViewMessageHandler
         // a language and stdout is text.
         var fallbackExt = toolName != null && toolName.StartsWith("mcp__", StringComparison.Ordinal)
             ? ".json"
-            // A shell tool's IN is the command — script, so give it the script's extension, with
+            // A shell tool's IN is the command: script, so give it the script's extension, with
             // PowerShell told apart from Bash: .ps1 is what VS colours, and calling it .sh on
             // Windows highlights it as the wrong language.
             : which == "in"
@@ -317,7 +317,7 @@ internal sealed partial class WebViewMessageHandler
         _ => Core.Stats.StatsRange.All,
     };
     /// <summary>Open <paramref name="filePath"/> in the text editor, or null when VS won't.
-    /// A file the solution itself owns — the .csproj of a loaded project — is not the shell's to
+    /// A file the solution itself owns (the .csproj of a loaded project) is not the shell's to
     /// hand out: it throws "already open as a project or solution", and asking for the primary
     /// view instead throws the same. There is no view kind that opens it, so that case is reported
     /// rather than retried; unloading the project to satisfy a chat link would be worse than the
@@ -342,7 +342,7 @@ internal sealed partial class WebViewMessageHandler
     }
 
     /// <summary>Say that a click did not open the file. The Output window is gated behind a log
-    /// level that defaults to None, so the Warn is invisible where it matters — this lands in the
+    /// level that defaults to None, so the Warn is invisible where it matters: this lands in the
     /// chat. Short on purpose: the reader wants to know the click failed, not how VS treats project
     /// files; the Warn keeps the detail for whoever is debugging. Keyed on the path so clicking the
     /// same dead link twice doesn't stack.</summary>
@@ -376,7 +376,7 @@ internal sealed partial class WebViewMessageHandler
         {
             if (AgentsOptions.Chat.SelectLinesOnOpen && endLine >= startLine && endLine > 0)
             {
-                // Anchored at the END and extended upwards, so the caret — and with it the view —
+                // Anchored at the END and extended upwards, so the caret (and with it the view)
                 // lands on the first line. A range names a block by where it begins: selecting
                 // downwards leaves the caret at the bottom, and an 80-line range then scrolls its
                 // own first line off the top of the screen, which is the one the model meant.

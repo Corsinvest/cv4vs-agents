@@ -25,7 +25,7 @@ internal sealed partial class WebViewMessageHandler
                                                                   if (filePath == null)
                                                                   {
                                                                       // Nothing was found anywhere ResolveFilePath looks, so name the path the link
-                                                                      // carried rather than one we resolved — that is what the user can act on. The
+                                                                      // carried rather than one we resolved: that is what the user can act on. The
                                                                       // reason stays open: moved, renamed, deleted, or a temp file Windows cleared out
                                                                       // are all the same miss from here.
                                                                       NoticeOpenFailed(raw, "not found");
@@ -45,7 +45,7 @@ internal sealed partial class WebViewMessageHandler
                                                                      var agentId = p.AgentId;
                                                                      var toolName = p.ToolName ?? "";
                                                                      if (string.IsNullOrEmpty(toolUseId)) { return; }
-                                                                     // Read full content from the JSONL — the WebView only holds preview-capped text, so
+                                                                     // Read full content from the JSONL: the WebView only holds preview-capped text, so
                                                                      // this gives the untruncated output. The fallback below is for the Agent ROW: it
                                                                      // carries an agentId (it needs one to fetch its children) while its OWN result lives
                                                                      // in the main transcript, so the sub-agent file has no match for it.
@@ -117,7 +117,7 @@ internal sealed partial class WebViewMessageHandler
         var toolUseId = p.ToolUseId ?? "";
         if (string.IsNullOrEmpty(toolUseId)) { return; }
 
-        // The sub-agent transcript first when there is one, then the main file — same order and
+        // The sub-agent transcript first when there is one, then the main file: same order and
         // same reason as HandleToolOutput: an Agent row carries an agentId while its own tool_use
         // lives in the main transcript, so neither file alone answers for every row.
         var agentId = p.AgentId ?? "";

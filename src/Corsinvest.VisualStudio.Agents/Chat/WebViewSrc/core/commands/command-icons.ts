@@ -19,7 +19,7 @@ import Bot16Regular from '@fluentui/svg-icons/icons/bot_16_regular.svg';
 import ArrowRepeatAll16Regular from '@fluentui/svg-icons/icons/arrow_repeat_all_16_regular.svg';
 
 // Icons for slash commands the CLI reports via `initialize` (no icon of their own).
-// Hand-curated: keyed by the bare command name (no leading "/"). Add entries as needed —
+// Hand-curated: keyed by the bare command name (no leading "/"). Add entries as needed:
 // an unmapped name simply renders without an icon. Reused by the context gauge for /compact.
 // Names that overlap a built-in command reuse the SAME icon as builtin-commands.ts.
 const COMMAND_ICONS: Readonly<Record<string, string>> = {

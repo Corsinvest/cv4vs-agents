@@ -15,7 +15,7 @@ using System.Windows.Shapes;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
-/// <summary>Vertical stacked bar chart of per-day tokens (no plotting library — plain WPF shapes).
+/// <summary>Vertical stacked bar chart of per-day tokens (no plotting library: plain WPF shapes).
 /// Each bar stacks one segment per model, coloured from the shared palette (same as the MODELS
 /// list). A Y axis with "nice" ticks + gridlines and ~8 X date labels frame it, like the WebView
 /// chart. Layout: [ Y-ticks | plot(gridlines + bars) ] over a row of date labels.</summary>
@@ -92,7 +92,7 @@ internal sealed class CvBarChart : Grid
         foreach (var b in bars)
         {
             // Each column is a Grid with two layers: the bar stack, and a transparent overlay in
-            // FRONT of it. The overlay is the hover/tooltip target — being on top, its highlight
+            // FRONT of it. The overlay is the hover/tooltip target: being on top, its highlight
             // tint + outline draw over the bar, and it spans the full column height so the whole
             // column (not just a short bar) responds, like a heatmap cell.
             var cell = new Grid { Margin = new Thickness(0.5, 0, 0.5, 0) };
@@ -125,7 +125,7 @@ internal sealed class CvBarChart : Grid
 
         // X axis: ~8 evenly spaced date labels, each centred on its bar.
         //
-        // A grid column per bar would be the obvious thing, and was — but a column is one bar wide,
+        // A grid column per bar would be the obvious thing, and was, but a column is one bar wide,
         // a few pixels, and the date is cut off inside it however few labels are drawn. Laying them
         // out by hand lets each one spill over its neighbours, which is free: the bars either side
         // of a labelled one have no label of their own.

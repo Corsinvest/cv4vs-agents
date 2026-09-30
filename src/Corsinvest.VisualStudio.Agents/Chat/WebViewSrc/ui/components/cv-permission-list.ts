@@ -15,7 +15,7 @@ import type { CvPopoverList } from './cv-popover-list';
 
 /**
  * Permission-mode picker shown ABOVE the textarea, like the `/` command menu and the model
- * picker — the three "pick one from a list" menus now open the same way (an anchored popover
+ * picker: the three "pick one from a list" menus now open the same way (an anchored popover
  * was the odd one out next to the model picker in the same toolbar). A thin wrapper over
  * cv-popover-list: supplies the modes + a renderRow (icon + label + description + a check on
  * the active one) and re-emits `select-permission`. Parent-controlled (cv-prompt): forwards

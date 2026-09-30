@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 // The file-reference parser: every shape docs/file-links.md promises, and the non-cases the
-// allow-list exists to block. Written against CURRENT behaviour — a failure here is either a bug or
+// allow-list exists to block. Written against CURRENT behaviour: a failure here is either a bug or
 // a promise in the doc the code doesn't keep, and the two must be told apart.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -212,7 +212,7 @@ test('plausible-path accepts a path with no line', () => {
     assert.deepEqual(r?.lines, []);
 });
 
-// firstRefHint: the contract with marked. It must be a LOWER bound — never past the real start, or
+// firstRefHint: the contract with marked. It must be a LOWER bound: never past the real start, or
 // the tokenizer is never offered that position and the ref vanishes silently.
 
 test('the hint never goes past the real start of the ref', () => {

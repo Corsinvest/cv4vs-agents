@@ -61,7 +61,7 @@ internal sealed partial class IdeContextService
     /// with, whatever casing or separator style it came in as.
     /// <para>Goes through the frames for the reason the enumeration exists: DTE.Documents misses
     /// tabs whose buffer is not materialised yet. A preview tab reported "not open" from there while
-    /// checkDocumentDirty, which does use the frames, said it was open AND dirty — for exactly the
+    /// checkDocumentDirty, which does use the frames, said it was open AND dirty, for exactly the
     /// file whose buffer differs from disk, which is the one case worth asking about.</para></summary>
     private static string OpenDocumentMoniker(string path)
     {

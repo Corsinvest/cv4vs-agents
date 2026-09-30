@@ -24,7 +24,7 @@ const ICONS: Record<Notice['severity'], string> = {
 
 /**
  * A stack of dismissible notices (fluent-message-bar), newest last, that OWNS its queue: callers just
- * `push()` and forget — dedup by key, the FIFO cap, the auto-dismiss timers and the ✕ are all handled
+ * `push()` and forget: dedup by key, the FIFO cap, the auto-dismiss timers and the ✕ are all handled
  * here. `dismissByKey` is for a condition that clears upstream (a rate limit lifting).
  *
  * Each instance is an independent queue, so the same component hosts two separate places: the
@@ -41,12 +41,12 @@ export class CvNoticeStack extends LitElement {
             flex-direction: column;
             gap: 4px;
         }
-        /* Only layout on the fluent element (fluent-pure rule) — no colours/borders. */
+        /* Only layout on the fluent element (fluent-pure rule): no colours/borders. */
         fluent-message-bar {
             width: 100%;
         }
         /* Single-line layout keeps the action button in row (compact), but the CLI's advisories can be
-         * a full sentence — let the text wrap instead of being clipped. */
+         * a full sentence; let the text wrap instead of being clipped. */
         .msg {
             white-space: normal;
             overflow-wrap: anywhere;
@@ -55,7 +55,7 @@ export class CvNoticeStack extends LitElement {
             display: inline-flex;
             align-items: center;
         }
-        /* The Fluent svg paths carry no fill, so they'd paint black — take the span's colour, which
+        /* The Fluent svg paths carry no fill, so they'd paint black: take the span's colour, which
          * the severity rules below set (the same approach Fluent's own message-bar demo uses). */
         .ico svg {
             width: 16px;
@@ -78,7 +78,7 @@ export class CvNoticeStack extends LitElement {
         }
     `;
 
-    /** How many rows are kept — the oldest falls off when a new one arrives beyond this. */
+    /** How many rows are kept: the oldest falls off when a new one arrives beyond this. */
     @property({ type: Number }) max = 3;
     /** Auto-dismiss delay. Applies to whatever the notice doesn't pin with `sticky`. */
     @property({ type: Number }) autoDismissMs = 7000;
@@ -132,7 +132,7 @@ export class CvNoticeStack extends LitElement {
         }
     }
 
-    /** Drop every row except the given keys — for a scope change (a new session) that invalidates
+    /** Drop every row except the given keys, for a scope change (a new session) that invalidates
      *  most rows but not the ones tracking something outside it (a dead CLI process). */
     dismissExcept(...keepKeys: string[]): void {
         for (const row of this._queue) {
@@ -153,15 +153,15 @@ export class CvNoticeStack extends LitElement {
     }
 
     /** The action button sends its bridge message to the host (e.g. open the Output window) and
-     *  leaves the row up — the host clears it when the condition resolves. */
+     *  leaves the row up: the host clears it when the condition resolves. */
     private _runAction(n: Notice): void {
         if (n.actionMessage) {
             bridge.sendNotification(n.actionMessage, n.actionPayload ?? {});
         }
     }
 
-    /** The ✕. Kept apart from `_remove`, which also serves the auto-dismiss timer and `dismissByKey`
-     *  — neither of those is the user deciding they have read the thing. Only this one is worth
+    /** The ✕. Kept apart from `_remove`, which also serves the auto-dismiss timer and `dismissByKey`:
+     *  neither of those is the user deciding they have read the thing. Only this one is worth
      *  telling the caller about: one that re-pushes the same key on a schedule it doesn't control
      *  (the CLI re-sends `rate_limit_info` every turn) has no other way to know to stop. */
     private _dismissByUser(n: Notice): void {
@@ -198,7 +198,7 @@ export class CvNoticeStack extends LitElement {
                     (n) => html`
                         <!-- Default (single-line) layout: the text and the action button stay on one
                              row. multiline would push the action onto its own line and nearly double
-                             the height — too much in a narrow tool window. -->
+                             the height, too much in a narrow tool window. -->
                         <fluent-message-bar intent=${n.severity}>
                             <span slot="icon" class="ico ${n.severity}"
                                 >${unsafeHTML(n.icon ?? ICONS[n.severity])}</span

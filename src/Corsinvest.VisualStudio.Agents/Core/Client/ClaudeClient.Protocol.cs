@@ -33,7 +33,7 @@ internal sealed partial class ClaudeClient
             // The gauge asks for this as the pane opens, which is exactly when the CLI is busiest:
             // resuming a large session it answers nothing for tens of seconds, then drains its
             // queue at once. Ten seconds lost the answer to a request the CLI did go on to serve.
-            // Safe to wait on — it reads, changes nothing, and an empty gauge is the only cost.
+            // Safe to wait on: it reads, changes nothing, and an empty gauge is the only cost.
             "get_context_usage" => InitializeTimeout,
             "generate_session_title" => LongRunningTimeout,
             "rewind_files" => LongRunningTimeout,
@@ -42,7 +42,7 @@ internal sealed partial class ClaudeClient
 
     /// <summary>
     /// Send a typed control_request. <paramref name="extra"/> can be a
-    /// <see cref="JObject"/> or any anonymous/POCO object — it gets merged
+    /// <see cref="JObject"/> or any anonymous/POCO object; it gets merged
     /// flat into the `request` envelope alongside the mandatory `subtype`.
     /// </summary>
     private Task<JObject> SendControlRequestAsync(string subtype, object extra, TimeSpan? timeout = null)
@@ -110,7 +110,7 @@ internal sealed partial class ClaudeClient
     private string NextRequestId()
     {
         var n = Interlocked.Increment(ref _requestCounter);
-        // GUID suffix (first 8 hex chars) for uniqueness — just a correlation id, no crypto needed.
+        // GUID suffix (first 8 hex chars) for uniqueness: just a correlation id, no crypto needed.
         return $"req_{n}_{Guid.NewGuid():N}".Substring(0, $"req_{n}_".Length + 8);
     }
 
@@ -215,21 +215,21 @@ internal sealed partial class ClaudeClient
                 // An MCP server asks the user for structured input (form) or to open a URL (OAuth).
                 // We have no elicitation UI, so we decline cleanly with {action:"decline"}: a
                 // decline is the protocol's expected "unsupported" answer; an error would be a bug.
-                // Warn (not silent): from the user's side an MCP action silently didn't happen —
+                // Warn (not silent): from the user's side an MCP action silently didn't happen;
                 // this line is the only trace of why (e.g. an MCP login that never prompts).
                 _log.Warn($"[client] elicitation from MCP server '{req.Val("mcp_server_name", "?")}' declined — no elicitation UI");
                 SendControlResponse(rid, success: true, response: new { action = "decline" });
                 break;
 
             default:
-                // Unknown subtype — respond with error so CLI doesn't hang.
+                // Unknown subtype: respond with error so CLI doesn't hang.
                 SendControlResponse(rid, success: false, error: $"unknown subtype: {sub}");
                 break;
         }
     }
 
     /// <summary>The CLI aborts one of its own in-flight control_requests to us (top-level
-    /// `request_id`) — typically a can_use_tool whose turn was interrupted/superseded. No response
+    /// `request_id`), typically a can_use_tool whose turn was interrupted/superseded. No response
     /// is expected; we just drop the matching UI (the permission banner) so it doesn't hang.</summary>
     private void HandleCancelRequest(JObject obj)
     {
@@ -269,7 +269,7 @@ internal sealed partial class ClaudeClient
             {
                 var responseJson = await handler(message.ToString(Newtonsoft.Json.Formatting.None));
                 // A null response means a JSON-RPC notification (no reply expected),
-                // but mcp_message always wants a response envelope — send an empty one.
+                // but mcp_message always wants a response envelope: send an empty one.
                 var mcpResponse = string.IsNullOrEmpty(responseJson)
                     ? (object)new { }
                     : JObject.Parse(responseJson);
@@ -293,7 +293,7 @@ internal sealed partial class ClaudeClient
         }
 
         // Only the FIRST init of a process gets to correct the working directory. `cwd` reports
-        // where the process is NOW, and a Bash `cd` moves it — while the session's .jsonl stays in
+        // where the process is NOW, and a Bash `cd` moves it, while the session's .jsonl stays in
         // the folder derived from where it was launched, so every later init would point the
         // respawn options at a directory the CLI never writes to. The first one still earns its
         // read: it is the CLI's own answer about the directory it was given (a canonicalized
@@ -326,7 +326,7 @@ internal sealed partial class ClaudeClient
 
     /// <summary>Every `system` message, sorted by subtype in one place. `init` is the client's own
     /// business and stops here; everything else is read for the state this class owns and then
-    /// passed on — a pane shouldn't have to remember to tell the client what the client's own
+    /// passed on: a pane shouldn't have to remember to tell the client what the client's own
     /// model is.</summary>
     private void HandleSystem(JObject obj)
     {
@@ -336,7 +336,7 @@ internal sealed partial class ClaudeClient
                 HandleInit(obj);
                 return;
 
-            // The model refused on safety grounds and the CLI switched to another one — and the
+            // The model refused on safety grounds and the CLI switched to another one, and the
             // swap is persistent for the session, not a one-turn detour (sdk.d.ts:3989). `Model`
             // follows the CLI everywhere else (it only advances once `set_model` is acked, and
             // init reads it back), so it follows here too: leaving it behind would show the old
@@ -353,7 +353,7 @@ internal sealed partial class ClaudeClient
                     break;
                 }
 
-            // Every mutation of the CLI's permission mode is announced here — the ExitPlanMode
+            // Every mutation of the CLI's permission mode is announced here: the ExitPlanMode
             // dialog approving a plan, Shift+Tab or /plan from a remote terminal, a rewind, our own
             // set_permission_mode: the CLI registers a single listener on the mode diff, so no path
             // escapes it. Approving a plan is the case that bites: the CLI leaves `plan` for
@@ -421,11 +421,11 @@ internal sealed partial class ClaudeClient
             ToolUseResult = obj["tool_use_result"] as JObject,
             ParentToolUseId = obj.Val("parent_tool_use_id"),
             // The compaction summary ("This session is being continued…") rides as a role:user
-            // line with plain-string content — skip it like a meta entry (shown lazily in the
+            // line with plain-string content: skip it like a meta entry (shown lazily in the
             // compact banner, never as a user bubble). Since EmitUser now renders bare-string
             // content (slash commands), without this it would leak through as a user bubble.
             // On the live wire this is isSynthetic (the SDK folds isMeta || isVisibleInTranscriptOnly
-            // into it — sdk.d.ts SDKUserMessage). The .jsonl-only isCompactSummary flag is handled
+            // into it: sdk.d.ts SDKUserMessage). The .jsonl-only isCompactSummary flag is handled
             // separately in SessionManager.History (it never rides the live stream).
             IsMeta = obj.Val("isMeta", false) || obj.Val("isSynthetic", false),
         });

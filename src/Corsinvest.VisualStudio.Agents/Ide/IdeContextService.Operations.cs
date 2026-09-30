@@ -39,7 +39,7 @@ internal sealed partial class IdeContextService
 
     /// <summary>Friendly name of the running IDE for the lock file's
     /// <c>ideName</c> field. Maps DTE's numeric version to the marketing
-    /// name when known — users see "Visual Studio 2026" instead of
+    /// name when known: users see "Visual Studio 2026" instead of
     /// "Visual Studio 18.0".</summary>
     public async Task<string> GetIdeNameAsync()
     {
@@ -73,7 +73,7 @@ internal sealed partial class IdeContextService
     /// </para>
     /// <para>
     /// The blocking overloads (WaitForBuildToFinish: true) are a synchronous COM call that never
-    /// pumps: called from the UI thread — which every DTE access has to be — they freeze the whole
+    /// pumps: called from the UI thread (which every DTE access has to be) they freeze the whole
     /// IDE for the length of the build. Ctrl+Shift+B doesn't, which is what gives it away as a
     /// defect rather than a constraint. The tool still can't return until the build ends (it owes
     /// the caller LastBuildInfo plus the Error List); what changes is that the user no longer waits
@@ -108,7 +108,7 @@ internal sealed partial class IdeContextService
     // 30 minutes: past any real build, short enough that a wedged one still answers.
     private const int BuildPollMaxTries = 30 * 60 * 1000 / BuildPollMs;
     // 15 seconds: a cancel stops at the first target boundary, so it either lands quickly or the
-    // build is wedged — waiting the full build cap would only delay saying so.
+    // build is wedged: waiting the full build cap would only delay saying so.
     private const int CancelPollMaxTries = 15 * 1000 / BuildPollMs;
 
     private static string BuildTimedOutMessage(string verb) =>
@@ -117,7 +117,7 @@ internal sealed partial class IdeContextService
 
     /// <summary>Build the whole solution (projectName null) or a single project, then report success
     /// plus the Error List down to <paramref name="severity"/>. Kicks the build without waiting and
-    /// polls SolutionBuild.BuildState, so the IDE stays live while it runs — see
+    /// polls SolutionBuild.BuildState, so the IDE stays live while it runs; see
     /// <see cref="WaitForBuildAsync"/>.</summary>
     public async Task<BuildResult> BuildAsync(string projectName, string severity)
     {
@@ -160,14 +160,14 @@ internal sealed partial class IdeContextService
             var failed = sb.LastBuildInfo;
             // MSBuild updates the Error List after the build state has already gone back to done,
             // in both directions: a failed build read straight away came back with an empty list,
-            // and a successful one came back still holding the previous build's errors — measured
+            // and a successful one came back still holding the previous build's errors, measured
             // surviving three green builds in a row, so "it clears itself next time" is not
             // something to rely on. Waiting for the list to agree with LastBuildInfo covers both.
             await WaitForErrorListAsync(dte, expectErrors: failed > 0);
             var (errors, skipped) = await CollectBuildErrorsAsync(dte, severity);
             var message = failed == 0 ? "Build succeeded." : $"Build failed: {failed} project(s).";
             // What was filtered out gets a line of its own. Without it a green build reads as
-            // "errors: [] — nothing to see", when there may be a hundred warnings behind it and no
+            // "errors: [], nothing to see", when there may be a hundred warnings behind it and no
             // hint that asking would show them.
             if (skipped > 0)
             {
@@ -191,7 +191,7 @@ internal sealed partial class IdeContextService
 
     /// <summary>Clean the solution (delete bin/obj outputs) and wait for it, polling like
     /// <see cref="BuildAsync"/> so the IDE stays live. No error collection: unlike a build, a clean
-    /// produces no diagnostics — <c>LastBuildInfo</c> is the only outcome there is.</summary>
+    /// produces no diagnostics: <c>LastBuildInfo</c> is the only outcome there is.</summary>
     public async Task<BuildResult> CleanAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -226,7 +226,7 @@ internal sealed partial class IdeContextService
     /// <summary><para>Ask the running build to stop and wait for it to actually stop.</para>
     /// <para>
     /// The cancel goes through <c>IVsSolutionBuildManager</c>: <c>EnvDTE.SolutionBuild</c> can start,
-    /// clean and query a build but has no way to stop one — there is no <c>Cancel</c> anywhere in
+    /// clean and query a build but has no way to stop one: there is no <c>Cancel</c> anywhere in
     /// EnvDTE, not on <c>SolutionBuild2</c> either. State is still read from <c>SolutionBuild</c>,
     /// which is what the rest of this file polls.
     /// </para>
@@ -234,7 +234,7 @@ internal sealed partial class IdeContextService
     /// Cancelling only requests the stop: MSBuild finishes the targets already in flight before the
     /// state leaves <c>vsBuildStateInProgress</c>, so returning right after the call would report a
     /// stop that hasn't happened. Polling here is what lets the caller learn whether the IDE is free
-    /// again — otherwise the next build stacks on top of one still running.
+    /// again; otherwise the next build stacks on top of one still running.
     /// </para>
     /// <para>
     /// The wait is capped far below <see cref="BuildPollMaxTries"/>: a cancel that hasn't taken
@@ -278,7 +278,7 @@ internal sealed partial class IdeContextService
                 if (sb.BuildState != vsBuildState.vsBuildStateInProgress)
                 {
                     // LastBuildInfo counts projects that did not build. After a cancel that count is
-                    // whatever the build had reached, not a verdict on the code — so it is reported
+                    // whatever the build had reached, not a verdict on the code, so it is reported
                     // for information and never turned into Ok=false.
                     return new BuildResult
                     {
@@ -305,14 +305,14 @@ internal sealed partial class IdeContextService
     /// <summary>Wait for the Error List to catch up with the build that just ended, or give up
     /// quietly. <paramref name="expectErrors"/> says which way: a failed build waits for errors to
     /// appear, a successful one for the previous build's to go.
-    /// <para>The build being over is not the same as the list having been updated — MSBuild does
+    /// <para>The build being over is not the same as the list having been updated: MSBuild does
     /// that after <c>BuildState</c> is already back to done, in both directions. Reading
     /// immediately gave a failed build an empty list, whose errors then showed up in the NEXT
     /// build's result; and gave a green build the errors of the one before it, measured surviving
     /// three green builds in a row.</para>
     /// <para>Giving up after the cap leaves the old behaviour rather than holding the caller: a
     /// list that disagrees with the build is wrong, but so is a tool that never answers. A failure
-    /// with genuinely nothing to report — a project that would not load — pays the full cap, which
+    /// with genuinely nothing to report (a project that would not load) pays the full cap, which
     /// is why it is seconds rather than longer.</para></summary>
     private static async Task WaitForErrorListAsync(DTE dte, bool expectErrors)
     {
@@ -333,7 +333,7 @@ internal sealed partial class IdeContextService
     private const int ErrorListPollMaxTries = 3000 / ErrorListPollMs;
 
     /// <summary>Read the Error List after a build, down to <paramref name="severity"/>: "error"
-    /// (the default), "warning", or "all" — each level meaning that one and everything worse, the
+    /// (the default), "warning", or "all": each level meaning that one and everything worse, the
     /// way a log level does. Reports how many were left out, so a caller taking the default still
     /// learns there is more to ask for.</summary>
     private static async Task<(List<BuildError> items, int skipped)> CollectBuildErrorsAsync(DTE dte, string severity)
@@ -344,7 +344,7 @@ internal sealed partial class IdeContextService
         var items = (dte as DTE2)?.ToolWindows?.ErrorList?.ErrorItems;
         if (items == null) { return (list, 0); }
 
-        // EnvDTE orders these the other way round — High(4) is an error, Low(2) an info — so the
+        // EnvDTE orders these the other way round: High(4) is an error, Low(2) an info, so the
         // floor is a minimum level, not a maximum.
         var floor = severity switch
         {
@@ -405,7 +405,7 @@ internal sealed partial class IdeContextService
     /// <para>
     /// This changes the IDE for the user, not just for the call: the toolbar dropdown moves and
     /// stays moved, and their next manual build follows it. That is why it is a tool of its own
-    /// rather than an argument on build_solution — a build that quietly flipped the configuration
+    /// rather than an argument on build_solution: a build that quietly flipped the configuration
     /// and left it there would be a side effect nobody asked for.
     /// </para></summary>
     public async Task<(bool Ok, string Configuration, string Reason)> SetConfigurationAsync(string configuration)
@@ -455,7 +455,7 @@ internal sealed partial class IdeContextService
         }
     }
 
-    /// <summary>The startup project's display name, or null when none is set — or when more than
+    /// <summary>The startup project's display name, or null when none is set, or when more than
     /// one is, which is a multi-startup solution this cannot describe in one name.
     /// <para>StartupProjects holds UNIQUE names ("src\App\App.csproj"), while the name every
     /// other tool takes and reports is the display one ("App"). Translating here keeps the pair
@@ -484,7 +484,7 @@ internal sealed partial class IdeContextService
         }
     }
 
-    /// <summary>Depth-first match on UniqueName, descending solution folders — a project nested in
+    /// <summary>Depth-first match on UniqueName, descending solution folders: a project nested in
     /// one is not in Solution.Projects at the top level.</summary>
     private static Project FindByUniqueName(Project project, string unique)
     {
@@ -501,8 +501,8 @@ internal sealed partial class IdeContextService
     }
 
     /// <summary><para>
-    /// The solution's configurations as sorted "name|platform" strings, and — when
-    /// <paramref name="wanted"/> is given — the one matching it, by full form or by bare name.
+    /// The solution's configurations as sorted "name|platform" strings, and, when
+    /// <paramref name="wanted"/> is given, the one matching it, by full form or by bare name.
     /// </para>
     /// <para>
     /// The set is not a tidying-up: SolutionConfigurations repeats a configuration once per
@@ -531,7 +531,7 @@ internal sealed partial class IdeContextService
         return names;
     }
 
-    /// <summary>Add an existing project file to the solution — Solution Explorer's "Add →
+    /// <summary>Add an existing project file to the solution: Solution Explorer's "Add →
     /// Existing Project". The project file must already exist; this does not scaffold one.</summary>
     public async Task<(bool Ok, string Project, string Reason)> AddProjectToSolutionAsync(string projectPath)
     {
@@ -556,7 +556,7 @@ internal sealed partial class IdeContextService
         }
     }
 
-    /// <summary>Remove a project from the solution, leaving its files on disk — the project stops
+    /// <summary>Remove a project from the solution, leaving its files on disk: the project stops
     /// being built, it is not deleted.</summary>
     public async Task<(bool Ok, string Project, string Reason)> RemoveProjectFromSolutionAsync(string projectName)
     {
@@ -590,7 +590,7 @@ internal sealed partial class IdeContextService
     /// them in already, and is reported as such rather than being handed a duplicate item.
     /// </para>
     /// <para>
-    /// The file must exist — this includes, it does not create. Writing the file and telling the
+    /// The file must exist: this includes, it does not create. Writing the file and telling the
     /// project about it are separate steps, and merging them would give two ways to write a
     /// file.
     /// </para></summary>
@@ -634,7 +634,7 @@ internal sealed partial class IdeContextService
         }
     }
 
-    /// <summary>Remove a file from a project without deleting it from disk — <c>ProjectItem.Remove</c>,
+    /// <summary>Remove a file from a project without deleting it from disk: <c>ProjectItem.Remove</c>,
     /// not <c>Delete</c>. Taking a file out of the build and destroying it are different intents, and
     /// only the first is reversible.</summary>
     public async Task<(bool Ok, string Project, string Reason)> RemoveFileFromProjectAsync(string projectName, string filePath)
@@ -655,7 +655,7 @@ internal sealed partial class IdeContextService
             if (item == null)
             {
                 // The project name was validated just above, so reaching here means the project is
-                // right and the file is wrong — the one case where naming the items settles it.
+                // right and the file is wrong: the one case where naming the items settles it.
                 return (false, proj.Name, $"'{filePath}' is not an item of '{proj.Name}'. {ItemsHint(proj, filePath)}");
             }
             item.Remove();
@@ -721,7 +721,7 @@ internal sealed partial class IdeContextService
     /// the one that was nearly right.</summary>
     private const int ItemsHintSample = 12;
 
-    /// <summary>Every file an item tree holds, flattened. Mirrors FindProjectItem's walk — same
+    /// <summary>Every file an item tree holds, flattened. Mirrors FindProjectItem's walk: same
     /// depth guard, same tolerance for an item that will not report its files.</summary>
     private static void CollectProjectItemPaths(ProjectItems items, List<string> into, int depth = 0)
     {
@@ -769,7 +769,7 @@ internal sealed partial class IdeContextService
         return null;
     }
 
-    /// <summary>The platform of a solution configuration, read from its first project context —
+    /// <summary>The platform of a solution configuration, read from its first project context:
     /// SolutionConfiguration exposes no platform of its own. Empty when it has no projects.</summary>
     private static string PlatformOf(SolutionConfiguration c)
     {
@@ -817,7 +817,7 @@ internal sealed partial class IdeContextService
         if (IsMiscellaneousFiles(p)) { return; }
         names.Add(p.Name);
         // Three spellings, because a caller has three plausible ones to hand: the display name, the
-        // solution-relative UniqueName, and the project file's own name — which differs from the
+        // solution-relative UniqueName, and the project file's own name, which differs from the
         // display name whenever the .csproj was renamed in the solution but not on disk.
         if (match == null && NameMatchesProject(p, target)) { match = p; }
     }
@@ -839,7 +839,7 @@ internal sealed partial class IdeContextService
         }
     }
 
-    /// <summary>Whether a project answers to <paramref name="name"/> — by display name, by
+    /// <summary>Whether a project answers to <paramref name="name"/>: by display name, by
     /// UniqueName, or by its project file name without the extension.</summary>
     private static bool NameMatchesProject(Project p, string name)
     {
@@ -884,17 +884,17 @@ internal sealed partial class IdeContextService
             }
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.GetProjectStructureAsync", ex); }
-        // Solution enumeration order is not a stable contract — sort for a repeatable result.
+        // Solution enumeration order is not a stable contract: sort for a repeatable result.
         result.Projects.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
         return result;
     }
 
-    // vsProjectKindSolutionItems / vsProjectKindMisc: a "solution folder" — it has
+    // vsProjectKindSolutionItems / vsProjectKindMisc: a "solution folder": it has
     // no real project, but its ProjectItems may nest sub-projects, so recurse.
     private const string SolutionFolderKind = "{66A26720-8FB5-11D2-AA7E-00C04F688DDE}";
 
     /// <summary><para>
-    /// "Miscellaneous Files" — where VS files anything opened from outside the solution
+    /// "Miscellaneous Files", where VS files anything opened from outside the solution
     /// (decompiled sources, the temp files a diff runs on). A Project by type, but not one anybody
     /// can build or add to, so it is no use as an answer to "which project did you mean".
     /// </para>
@@ -908,7 +908,7 @@ internal sealed partial class IdeContextService
     private const string MiscellaneousFilesUniqueName = "<MiscFiles>";
 
     // A solution folder can nest sub-projects, and nothing stops a hand-written .sln from making
-    // that graph cyclic. A StackOverflowException is NOT catchable in .NET — it would take down
+    // that graph cyclic. A StackOverflowException is NOT catchable in .NET: it would take down
     // devenv.exe, while every other failure here degrades to a clean JSON-RPC error. The visited
     // set also stops a project reachable by two paths from being reported twice.
     private const int MaxProjectDepth = 32;
@@ -926,7 +926,7 @@ internal sealed partial class IdeContextService
             }
             return;
         }
-        // Miscellaneous Files holds whatever was opened from outside the solution — a decompiled
+        // Miscellaneous Files holds whatever was opened from outside the solution: a decompiled
         // source, the temp files behind an open diff. Listing it as a project puts paths under
         // %TEMP% in an answer about the solution's layout.
         if (IsMiscellaneousFiles(p)) { return; }
@@ -938,7 +938,7 @@ internal sealed partial class IdeContextService
             Files = [],
         };
         // A file reachable twice (linked item, an item exposing the same path through several
-        // FileNames indices) would otherwise be listed twice — seen in a real solution.
+        // FileNames indices) would otherwise be listed twice, seen in a real solution.
         var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try { CollectFiles(p.ProjectItems, files, 0); }
         catch { /* partial tree is fine */ }
@@ -949,7 +949,7 @@ internal sealed partial class IdeContextService
     }
 
     /// <summary>Identity for the visited set. <c>UniqueName</c> is the stable one, but it throws
-    /// on projects in a transient state (unloaded, still loading) — fall back to the path, then
+    /// on projects in a transient state (unloaded, still loading): fall back to the path, then
     /// the name, so a hiccup can't make two distinct projects collide on the same empty key.</summary>
     private static string ProjectIdentity(Project p)
     {
@@ -997,14 +997,14 @@ internal sealed partial class IdeContextService
     //  Workspace folders (lock file + getWorkspaceFolders)
 
     /// <summary>Folders that define the "workspace" for the CLI. VS
-    /// doesn't have multi-root workspaces — we return the single
+    /// doesn't have multi-root workspaces: we return the single
     /// solution folder (or empty when no solution is open, which falls
     /// back to the CLI's own CWD).</summary>
     public async Task<IReadOnlyList<string>> GetWorkspaceFoldersAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         // The package already holds the resolved folder and keeps it current through the solution
-        // events — reading DTE.Solution.FullName here would mean re-deriving it, and getting it
+        // events: reading DTE.Solution.FullName here would mean re-deriving it, and getting it
         // wrong wherever that property isn't a .sln path (Open Folder mode hands back the folder
         // itself, so taking its directory yields the PARENT).
         var folder = AgentsPackage.Instance?.CurrentSolutionFolder;
@@ -1017,7 +1017,7 @@ internal sealed partial class IdeContextService
     //  Selection (MCP getCurrentSelection)
 
     /// <summary>The active editor's selection for the MCP tool. Projects the same tracked state as
-    /// the badge and the notifications — the DTE reading this replaced reported display columns
+    /// the badge and the notifications: the DTE reading this replaced reported display columns
     /// (tabs counted as their tab stop) on a different base than every other caller.</summary>
     public async Task<EditorSelection> GetCurrentSelectionAsync()
     {
@@ -1077,7 +1077,7 @@ internal sealed partial class IdeContextService
     private const string SolutionLevelUri = "vs-solution:diagnostics";
 
     /// <summary>Read the IDE's Error List in the LSP shape the Claude CLI
-    /// expects (DiagnosticFile[] — see <c>parseDiagnosticResult</c>
+    /// expects (DiagnosticFile[], see <c>parseDiagnosticResult</c>
     /// in the CLI source). Optional URI filter restricts to one file;
     /// <paramref name="severityFilter"/> ("Error"/"Warning"/"Info") drops the
     /// other levels, and <paramref name="maxResults"/> caps the diagnostics
@@ -1099,7 +1099,7 @@ internal sealed partial class IdeContextService
             if (item == null) { continue; }
             // No file name: a project- or solution-level entry (an unresolved reference, a project
             // that would not load a file). Dropping those lost 14 of 232 items on this solution,
-            // and they are the ones a caller cannot find any other way — file-level diagnostics at
+            // and they are the ones a caller cannot find any other way: file-level diagnostics at
             // least surface again when that file is opened. They group under a marker URI rather
             // than an empty one, which the CLI's parseDiagnosticResult would treat as a real path.
             var file = item.FileName ?? "";
@@ -1144,7 +1144,7 @@ internal sealed partial class IdeContextService
             if (!string.IsNullOrEmpty(fileUriFilter) && !PathHelpers.UrisEquivalent(fileUriFilter, uri)) { continue; }
             result.Add(new DiagnosticFile { Uri = uri, Diagnostics = kv.Value });
         }
-        // Dictionary iteration order is unspecified — sort by file for a stable result.
+        // Dictionary iteration order is unspecified: sort by file for a stable result.
         result.Sort((a, b) => string.CompareOrdinal(a.Uri, b.Uri));
         // Cap after sorting so truncation is deterministic, and count diagnostics
         // rather than files: one file can carry hundreds on its own.
@@ -1176,7 +1176,7 @@ internal sealed partial class IdeContextService
         _ => "Info",
     };
 
-    /// <summary>True if the file is open in a visible document-window frame — drives the post-edit
+    /// <summary>True if the file is open in a visible document-window frame: drives the post-edit
     /// diagnostics wait timing (visible editors settle faster than background ones). Reuses the same
     /// frame enumeration as GetOpenEditorsAsync/SaveDocumentAsync; any failure degrades to false
     /// (the caller then falls back to the slower, safe single-wait timing).</summary>
@@ -1210,7 +1210,7 @@ internal sealed partial class IdeContextService
 
     /// <summary>Open a file in the editor. Optionally selects a range
     /// matching <paramref name="startText"/> through <paramref name="endText"/>
-    /// (text-pattern selection — what the CLI uses to point at code
+    /// (text-pattern selection: what the CLI uses to point at code
     /// it's discussing).</summary>
     public async Task<bool> OpenFileAsync(
         string filePath, int startLine, int endLine, bool activate)
@@ -1264,18 +1264,18 @@ internal sealed partial class IdeContextService
     /// can later be closed by request rather than by "whichever was last".
     /// <para>The labels are the caller's because the same viewer serves two questions: a pending
     /// edit is "Original" against "Proposed", while a rewind preview is the copy from before a
-    /// message against what is on disk now — calling that one "Proposed" would say the opposite of
+    /// message against what is on disk now: calling that one "Proposed" would say the opposite of
     /// the truth.</para></summary>
     public Task ShowDiffAsync(string toolUseId, string filePath, string oldContent, string newContent, string leftLabel, string rightLabel)
         => IdeDiffViewer.Instance.ShowFromContentsAsync(toolUseId, filePath, oldContent, newContent, leftLabel, rightLabel);
 
     /// <summary>Close the diff opened for a given tool_use, if any. Used when its permission is
-    /// answered — a diff the user opened themselves is never touched.</summary>
+    /// answered: a diff the user opened themselves is never touched.</summary>
     public void CloseDiffFor(string toolUseId) => IdeDiffViewer.Instance.CloseDiffFor(toolUseId);
 
     /// <summary>Close a specific diff tab by its <paramref name="tabName"/>.
     /// Looks up the frame in <see cref="IdeDiffViewer"/>'s open-frames
-    /// registry — we never match by caption (which would risk closing
+    /// registry; we never match by caption (which would risk closing
     /// one of our own panes or any other tab whose title happens to
     /// contain "Claude Code").</summary>
     public Task<bool> CloseTabAsync(string tabName)
@@ -1289,7 +1289,7 @@ internal sealed partial class IdeContextService
     //  Format / organize (MCP formatDocument / organizeImports)
 
     /// <summary>Run VS's <c>Edit.FormatDocument</c> command on the given
-    /// file. Identical to the user pressing Ctrl+K, Ctrl+D — respects
+    /// file. Identical to the user pressing Ctrl+K, Ctrl+D, respects
     /// .editorconfig, analyzer rules, and language-specific formatters.
     /// Opens the file if it isn't already to give the formatter a live
     /// document to act on.</summary>
@@ -1306,14 +1306,14 @@ internal sealed partial class IdeContextService
     /// <summary>Run VS's Code Cleanup on a file (Ctrl+K, Ctrl+E), applying the
     /// fixers of the user's default cleanup profile. The profile isn't
     /// selectable here: <c>ExecuteCommand</c> always runs the default one.
-    /// Which fixers actually exist depends on the language — rich for C#/VB,
-    /// little to nothing elsewhere — so success only means the command ran.</summary>
+    /// Which fixers actually exist depends on the language: rich for C#/VB,
+    /// little to nothing elsewhere, so success only means the command ran.</summary>
     public Task<(bool Ok, string Reason)> RunCleanupAsync(string filePath)
         => RunOnActiveDocumentAsync(filePath, "Edit.CodeCleanup");
 
     /// <summary>True when the path lies inside the open solution's folder. These commands rewrite
     /// the file, and File.Exists alone would let any path on disk through: a wrong guess that
-    /// happens to exist — a same-named file in another repo — would be reformatted with nothing to
+    /// happens to exist (a same-named file in another repo) would be reformatted with nothing to
     /// show for it. Compares canonical paths, or <c>solution\..\..\elsewhere</c> would pass.</summary>
     private static bool IsInsideSolution(DTE dte, string filePath)
     {
@@ -1330,7 +1330,7 @@ internal sealed partial class IdeContextService
         }
         catch (Exception ex)
         {
-            // A malformed path can't be shown to be inside the solution — treat it as outside.
+            // A malformed path can't be shown to be inside the solution; treat it as outside.
             OutputWindowLogger.Global.LogException("Ide.IsInsideSolution", ex);
             return false;
         }
@@ -1362,8 +1362,8 @@ internal sealed partial class IdeContextService
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException($"Ide.{dteCommand}", ex);
-            // VS refuses a command it cannot run right now — no cleanup profile configured, the
-            // language service without that fixer, a modal dialog in the way — and the message it
+            // VS refuses a command it cannot run right now: no cleanup profile configured, the
+            // language service without that fixer, a modal dialog in the way, and the message it
             // throws with is the only account of which.
             return (false, $"{dteCommand} did not run: {ex.Message}");
         }

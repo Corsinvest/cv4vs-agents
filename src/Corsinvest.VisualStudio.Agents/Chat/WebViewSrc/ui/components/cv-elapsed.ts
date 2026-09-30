@@ -13,7 +13,7 @@ import { onTick, type UnsubscribeTick } from '../../core/tick';
  * It has to tick on its own: the sub-agent's own figures only move when it reports a tool use, and
  * those can be ten seconds apart, so a badge fed from them sits still long enough to read as stuck.
  *
- * This exists as an element for the same reason `cv-time-ago` does — the tick must change rendered
+ * This exists as an element for the same reason `cv-time-ago` does: the tick must change rendered
  * text, and the only safe way to do that is to let Lit render it again. Writing `textContent` onto
  * a span that holds a `${...}` binding destroys that ChildPart's markers, after which every later
  * render of the whole chat throws `Cannot set properties of null (setting 'data')` and the pane
@@ -21,8 +21,8 @@ import { onTick, type UnsubscribeTick } from '../../core/tick';
  * corrupted node was replaced when the Agent finished.
  *
  * Owning the timer here is also what makes re-rendering cheap enough to be an option at all:
- * `requestUpdate` on the tool row would rebuild the whole row — body, IN/OUT, highlighted code,
- * nested children — sixty times a minute for a number. Here it re-renders one span.
+ * `requestUpdate` on the tool row would rebuild the whole row: body, IN/OUT, highlighted code,
+ * nested children, sixty times a minute for a number. Here it re-renders one span.
  */
 @customElement('cv-elapsed')
 export class CvElapsed extends LitElement {
@@ -40,7 +40,7 @@ export class CvElapsed extends LitElement {
      *
      *  There is deliberately no fallback to the task's own `usage.durationMs`: that is the total the
      *  sub-agent REPORTS, which only moves when it reports a tool use, and rendering it here would
-     *  put a stalled number where a running clock is expected — the very thing this badge exists to
+     *  put a stalled number where a running clock is expected, the very thing this badge exists to
      *  avoid. Elapsed is derived from startedAt or it is not shown. */
     @property({ type: Number }) startedAt = 0;
 
@@ -67,8 +67,8 @@ export class CvElapsed extends LitElement {
 
     private _sync(): void {
         if (this.startedAt > 0 && !this._unsubscribeTick) {
-            // The shared clock, not one of our own: a running sub-agent draws this badge twice —
-            // transcript row and chip — and two intervals started seconds apart showed the same
+            // The shared clock, not one of our own: a running sub-agent draws this badge twice (
+            // transcript row and chip) and two intervals started seconds apart showed the same
             // task as 28s in one place and 29s in the other.
             this._unsubscribeTick = onTick(() => {
                 this._now = Date.now();

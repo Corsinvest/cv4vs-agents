@@ -131,7 +131,7 @@ internal sealed partial class McpServerHost
             });
             IdeContextService.Instance.ContextChanged += OnEditorContextChanged;
             // Re-sync the locks when the profile list changes (Options → Profiles Apply): add locks
-            // for new profiles' config-dirs, remove those of deleted ones — no server restart needed.
+            // for new profiles' config-dirs, remove those of deleted ones; no server restart needed.
             Options.AgentsOptions.Applied += OnProfilesChanged;
 
             _ = Task.Run(() => AcceptLoopAsync(_cts.Token));
@@ -313,7 +313,7 @@ internal sealed partial class McpServerHost
 
     private async Task HandleContextAsync(HttpListenerContext ctx, CancellationToken ct)
     {
-        // Bearer token check: loopback alone isn't enough — any local process could connect.
+        // Bearer token check: loopback alone isn't enough; any local process could connect.
         var auth = ctx.Request.Headers["x-claude-code-ide-authorization"]
                    ?? ctx.Request.Headers["Authorization"];
         if (string.IsNullOrEmpty(auth) || !auth.EndsWith(_authToken, StringComparison.Ordinal))
@@ -392,7 +392,7 @@ internal sealed partial class McpServerHost
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("Mcp.ClientLoop", ex);
-            // WebSocket exceptions wrap the real cause in InnerException — unwrap for diagnostics.
+            // WebSocket exceptions wrap the real cause in InnerException: unwrap for diagnostics.
             var inner = ex.InnerException;
             int depth = 0;
             while (inner != null && depth++ < 5)
@@ -424,7 +424,7 @@ internal sealed partial class McpServerHost
     /// <summary>Send a one-shot selection_changed to a freshly handshook client so its first prompt
     /// has the current file's context.
     /// <para>After a pause, which gives the CLI time to reach 'connected' and register its
-    /// useIdeSelection handler — sent sooner it fires into the void.</para></summary>
+    /// useIdeSelection handler: sent sooner it fires into the void.</para></summary>
     private async Task SendInitialContextAsync(ClientConn conn)
     {
         await Task.Delay(1000);
@@ -440,7 +440,7 @@ internal sealed partial class McpServerHost
         catch (Exception ex) { OutputWindowLogger.Global.LogException("Mcp.SendInitialContext", ex); }
     }
 
-    /// <summary>The wire form of an editor context, live or on connect — both go through here so a
+    /// <summary>The wire form of an editor context, live or on connect: both go through here so a
     /// client that arrives mid-selection is told the same thing the next change will tell it.
     /// <para><c>null</c> means no active document: the CLI drops its cached selection on the empty
     /// text. VS counts lines from 1 and LSP/MCP from 0, hence the subtraction and the floor under
@@ -478,7 +478,7 @@ internal sealed partial class McpServerHost
 
     private void BroadcastNotification(string json)
     {
-        // Snapshot under lock — broadcasting while holding it would serialize sends and block new connections.
+        // Snapshot under lock: broadcasting while holding it would serialize sends and block new connections.
         ClientConn[] snapshot;
         lock (_clientsLock)
         {

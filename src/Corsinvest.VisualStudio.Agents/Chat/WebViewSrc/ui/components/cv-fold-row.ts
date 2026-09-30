@@ -9,7 +9,7 @@ import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regu
 
 /**
  * Focus view: one row standing for a run of tool calls and thinking the view folds away. It only
- * reports and toggles — the folded rows themselves stay in the transcript, hidden in place, and
+ * reports and toggles: the folded rows themselves stay in the transcript, hidden in place, and
  * cv-app shows them when this one is open. Same markup as a tool row's chrome (tool-renderers/
  * base.ts), so chat.css draws both alike.
  */

@@ -21,7 +21,7 @@ internal sealed class RemoveFileFromProjectArgs
     public string FilePath { get; set; }
 }
 
-/// <summary>MCP tool: take a file out of a project without deleting it — the reverse of
+/// <summary>MCP tool: take a file out of a project without deleting it: the reverse of
 /// project_add_file.</summary>
 internal sealed class RemoveFileFromProjectTool : McpTool<RemoveFileFromProjectArgs>
 {

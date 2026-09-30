@@ -213,7 +213,7 @@
               <Setter TargetName="BtnDelete" Property="Visibility" Value="Visible" />
             </DataTrigger>
             <!-- Order matters: this trigger comes AFTER the hover one so
-                 it wins when both are active — entering edit mode hides
+                 it wins when both are active: entering edit mode hides
                  the action buttons even if the mouse is still over the row. -->
             <DataTrigger Binding="{Binding IsEditing}" Value="True">
               <Setter TargetName="BtnRename" Property="Visibility" Value="Collapsed" />

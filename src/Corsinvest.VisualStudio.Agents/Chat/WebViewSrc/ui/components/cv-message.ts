@@ -44,14 +44,14 @@ import type {
 export class CvMessage extends LitElement {
     // reflect: the sticky-user CSS keys off [msg-role="user"] to pin only real user bubbles,
     // never a leading assistant/tool group that a history page split off from its user.
-    // NOT `role`: that is the ARIA attribute, and 'status' is a real ARIA role — reflecting it
+    // NOT `role`: that is the ARIA attribute, and 'status' is a real ARIA role: reflecting it
     // made every status bubble a live region nested inside cv-app's aria-live #messages.
     @property({ reflect: true, attribute: 'msg-role' }) role: MessageRole = 'assistant';
     // Typed during a turn and still waiting for it to end: reflected so chat.css can fade the
     // bubble, since an unsent message that looks sent is the whole reason this exists.
     @property({ type: Boolean, reflect: true }) queued = false;
     @property() text = '';
-    // role:'compact' only — header fields (trigger/tokens) + the lazily-fetched summary,
+    // role:'compact' only: header fields (trigger/tokens) + the lazily-fetched summary,
     // shown in the expandable <details> body. `loaded` gates the fetch (cached after).
     @property() trigger = '';
     @property({ type: Number }) preTokens = 0;
@@ -61,11 +61,11 @@ export class CvMessage extends LitElement {
     @property({ type: Boolean }) streaming = false;
     // Message time (epoch ms) for the actions row's "x ago"; 0 = none (hide it).
     @property({ type: Number }) timestamp = 0;
-    // role:'slash-result' only — true for <local-command-stderr> (rendered red).
+    // role:'slash-result' only: true for <local-command-stderr> (rendered red).
     @property({ type: Boolean }) isError = false;
     @property({ attribute: false }) images: UiImage[] = [];
     @property({ attribute: false }) files: UiFile[] = [];
-    /** Editor context for this turn, extracted by buildUserEntry — `text` never carries the
+    /** Editor context for this turn, extracted by buildUserEntry: `text` never carries the
      *  `<ide_*>` block any more. */
     @property({ attribute: false }) ideRefs: IdeContextRef[] = [];
 
@@ -75,7 +75,7 @@ export class CvMessage extends LitElement {
     // decision must be recomputed. updated() alone fires on property change, not on resize.
     private _unobserve?: () => void;
     private readonly _subs = new StateSubscriptions(this);
-    // Last observed width — the observer fires on our own max-height writes too, so re-measure only
+    // Last observed width: the observer fires on our own max-height writes too, so re-measure only
     // when the WIDTH actually changed (that's what re-wraps the text). Avoids a feedback loop.
     private _lastWidth = 0;
 
@@ -101,7 +101,7 @@ export class CvMessage extends LitElement {
      *
      * Markdown before the last blank line cannot be changed by what comes after, so it is parsed
      * once and appended to `_stableHtml`; each pass then only parses the tail. Without this the
-     * cost climbs with the answer — measured 2.5ms per pass over the first third of a 22k-char
+     * cost climbs with the answer: measured 2.5ms per pass over the first third of a 22k-char
      * reply against 8.2ms over the last.
      *
      * The stable prefix is dropped whenever the text stops extending what we saw (a re-render from
@@ -175,7 +175,7 @@ export class CvMessage extends LitElement {
         // Only what can change the measured height. _measure() writes maxHeight and then reads
         // scrollHeight, which is a synchronous layout: doing it on every update meant one forced
         // reflow per user bubble per pass. Width changes come from the ResizeObserver below, and
-        // previewLines — the cap itself, which lives in the options and not in a property — from
+        // previewLines (the cap itself, which lives in the options and not in a property) from
         // the state subscription in connectedCallback.
         if (changed.has('text') || changed.has('expanded') || changed.has('role')) {
             this._measure();
@@ -188,7 +188,7 @@ export class CvMessage extends LitElement {
                 this._unobserve = observeSize(el, (entry) => {
                     const w = entry.contentRect.width;
                     if (Math.abs(w - this._lastWidth) < 1) {
-                        return; // height-only change (our own max-height write) — skip
+                        return; // height-only change (our own max-height write); skip
                     }
                     this._lastWidth = w;
                     this._measure();
@@ -231,7 +231,7 @@ export class CvMessage extends LitElement {
 
     /**
      * Bottom hover actions row (user messages): Copy + Fork (only with a uuid, i.e. replayed from
-     * JSONL history — live messages have none) + "x ago" timestamp. Inline — cv-copy-btn is the
+     * JSONL history: live messages have none) + "x ago" timestamp. Inline: cv-copy-btn is the
      * shared icon button; Fork is a plain .trigger (styled in chat.css). Expand is NOT here: long
      * messages get an always-visible "Show more" button on the fade instead (see the user render).
      */
@@ -277,7 +277,7 @@ export class CvMessage extends LitElement {
 
     // Delegated click on the rendered markdown: a "path:line" file link (added by the fileLink
     // marked extension). Route by kind: a standalone document (an .html/.htm report, or anything the
-    // model wrote with a file:// scheme) opens in the default browser via the shell — you want it
+    // model wrote with a file:// scheme) opens in the default browser via the shell: you want it
     // rendered, not its source. Everything else (code/text) opens in VS at the line; the host
     // resolves the path (absolute/relative to the workdir, else searched by name in the workspace).
     private _onMdClick = (e: Event): void => {
@@ -319,7 +319,7 @@ export class CvMessage extends LitElement {
         this.expanded = !this.expanded;
         // On expand, scroll to the top ONLY if the now-taller message doesn't
         // fully fit in the viewport. If it's already fully visible, don't move
-        // the view — scrolling when unneeded is jarring.
+        // the view: scrolling when unneeded is jarring.
         if (!wasExpanded) {
             void this.updateComplete.then(() => {
                 const rect = this.getBoundingClientRect();
@@ -415,7 +415,7 @@ export class CvMessage extends LitElement {
         switch (this.role) {
             case 'slash-result':
                 // A slash command's own output (<local-command-stdout>/stderr>, already parsed into
-                // `text` by buildUserEntry) — a preformatted monospace block, not a user bubble. No
+                // `text` by buildUserEntry), a preformatted monospace block, not a user bubble. No
                 // per-message copy: the exchange's single end-of-response actions row copies it too.
                 return this.text
                     ? html`<div class="cv-message slash-result${this.isError ? ' error' : ''}">
@@ -477,8 +477,8 @@ export class CvMessage extends LitElement {
             }
 
             case 'assistant': {
-                // Red when the API refused the turn. The frame looks like any other answer — the
-                // CLI puts the error in the TEXT of a synthetic assistant — so the grey dot would
+                // Red when the API refused the turn. The frame looks like any other answer: the
+                // CLI puts the error in the TEXT of a synthetic assistant, so the grey dot would
                 // read as "answered fine". Same class the tool rows use for a failed tool.
                 const dotClass = this.streaming
                     ? 'spinning'
@@ -526,7 +526,7 @@ export class CvMessage extends LitElement {
                     : this.summary
                       ? html`<div class="cv-compact-summary">${this.summary}</div>`
                       : html`<div class="cv-compact-summary">(no summary)</div>`;
-                // Always an expandable <details> (closed by default, like VS Code) — the chevron is
+                // Always an expandable <details> (closed by default, like VS Code): the chevron is
                 // always shown, even before the summary is fetched. @toggle fires on open only
                 // (not on collapse) and dispatches compact-expand for cv-app to fetch/cache.
                 return html`<details
