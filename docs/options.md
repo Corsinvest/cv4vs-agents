@@ -65,6 +65,7 @@ bar rather than one per iteration.
 | Show tool errors inline | bool | `false` | Show the tool error inline below the diff/output; off = alert icon only (click to open in VS). |
 | Compact Ask answers | bool | `true` | After an `AskUserQuestion`, show only the chosen option per question (compact); off = all options with the pick highlighted. |
 | Use Ctrl+Enter to send | bool | `false` | On: Ctrl+Enter sends, Enter = newline. Off: Enter sends, Shift+Enter = newline. |
+| Spell check in the composer | bool | `false` | Underline misspelled words while you type. Off by default: code names, paths, `@` mentions and `/` commands are what the composer mostly holds, and the spell checker flags all of them. The underline marks the word; correcting it is up to you. |
 | Initial permission mode | `Default` / `AcceptEdits` / `Plan` | `Default` | Mode every new chat starts in (changeable per-session from the toolbar). `Default` = ask before edits. |
 | Allow dangerously skip permissions | bool | `false` | Enables the toolbar's "Bypass permissions" (never asks — even for dangerous commands). |
 | Respect `.gitignore` | bool | `true` | Also hide from the `@` picker what the workspace's `.gitignore` files (at every level inside it, none above it) and git's global excludes (`core.excludesFile`) match — inside a git repository or not. Off: only the Ignored patterns below apply. |
