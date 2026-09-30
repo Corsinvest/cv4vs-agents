@@ -42,6 +42,7 @@ internal sealed partial class WebViewBridge
             StickyUserMessages = chat.StickyUserMessages,
             ShowInlineToolErrors = chat.ShowInlineToolErrors,
             UseCtrlEnterToSend = chat.UseCtrlEnterToSend,
+            SpellCheckComposer = chat.SpellCheckComposer,
             CompactOutputAskAnswers = chat.CompactOutputAskAnswers,
             AllowDangerouslySkipPermissions = chat.AllowDangerouslySkipPermissions,
             FileCheckpoints = chat.FileCheckpoints,

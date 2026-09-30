@@ -676,6 +676,7 @@ public class VsOptionsDto
     public bool StickyUserMessages { get; set; }
     public bool ShowInlineToolErrors { get; set; }
     public bool UseCtrlEnterToSend { get; set; }
+    public bool SpellCheckComposer { get; set; }
     public bool CompactOutputAskAnswers { get; set; }
     public bool AllowDangerouslySkipPermissions { get; set; }
 
