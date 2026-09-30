@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   looked.** It re-read the whole project on every keystroke and gave up after 20,000 files, so in a
   big solution a file you typed by its exact name could still be missing. The list is now read once
   when the menu opens, in the background, with no limit, and filtered as you type.
+- **The composer underlined half of every prompt in red.** Code names, file paths, `@` and `/`
+  tokens and anything not in English were flagged by the browser's spell checker, which offered no
+  way to fix them either. Spell checking in the composer is now off by default, with an option
+  (Options → Chat → Spell check in the composer) for anyone who wants the underlines back.
 
 ## [1.12.0] - 2026-09-27
 
