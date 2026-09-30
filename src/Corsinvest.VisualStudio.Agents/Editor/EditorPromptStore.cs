@@ -16,7 +16,7 @@ namespace Corsinvest.VisualStudio.Agents.Editor;
 /// <summary><para>Loads/saves the context menus' prompts as a plain JSON file
 /// (<see cref="AppPaths.PromptsFile"/>), one list per <see cref="PromptScope"/>, like
 /// <c>ProfileStore</c> and for the same reason: the menus are queried by VS long before any Options
-/// page exists. Tolerant on read — a missing or corrupt file falls back to <see cref="Defaults"/>
+/// page exists. Tolerant on read: a missing or corrupt file falls back to <see cref="Defaults"/>
 /// rather than an empty menu.</para>
 /// <para>
 /// An object of lists rather than one array with a scope on each row, because it tells "never
@@ -61,7 +61,7 @@ internal static class EditorPromptStore
         ],
         // Sent on click, as the single "Explain" entry these menus had always was. "For each": a
         // batch of unrelated rows asked about as one invites a single story tying them together,
-        // where each needs its own cause — and one row reads the same either way.
+        // where each needs its own cause, and one row reads the same either way.
         PromptScope.ErrorList =>
         [
             new EditorPrompt
@@ -73,7 +73,7 @@ internal static class EditorPromptStore
             new EditorPrompt { Title = "Fix", Prompt = "Fix these errors.", SendImmediately = true },
         ],
         // Asked flat: the active pane is as likely to be Debug or the program's own output as a
-        // failed build, so naming a failure would invent one where there is none — and where there
+        // failed build, so naming a failure would invent one where there is none, and where there
         // is one, explaining it covers the cause without being told to.
         PromptScope.Output =>
         [
@@ -83,7 +83,7 @@ internal static class EditorPromptStore
     };
 
     /// <summary>The prompts a menu shows. Cached: VS re-queries the menus on every keystroke, and
-    /// re-reading the file each time would put disk IO on that path. Blank titles are dropped —
+    /// re-reading the file each time would put disk IO on that path. Blank titles are dropped:
     /// a nameless row in the JSON would render as an empty menu item.</summary>
     public static IReadOnlyList<EditorPrompt> Items(PromptScope scope)
     {

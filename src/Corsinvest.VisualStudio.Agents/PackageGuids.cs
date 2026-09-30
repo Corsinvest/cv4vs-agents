@@ -18,7 +18,7 @@ internal static class PackageGuids
 
 internal static class PackageIds
 {
-    // 0x0100 seeds the dynamic profile range, which grows with the profile count — the global
+    // 0x0100 seeds the dynamic profile range, which grows with the profile count: the global
     // entries start at 0x0200 so they can never collide with it.
     public const int ShowToolWindowCommandId = 0x0100;
 
@@ -42,11 +42,11 @@ internal static class PackageIds
     public const int SolutionAddReferenceToChatCommandId = 0x0212;
     public const int TabAddReferenceToChatCommandId = 0x0213;
 
-    // Seeds the dynamic open-panes range, which grows with the number of open panes — its own
+    // Seeds the dynamic open-panes range, which grows with the number of open panes: its own
     // 0x0300 block, clear of the fixed ids above.
     public const int ActiveSessionCommandId = 0x0300;
 
-    // Seeds the editor context menu's prompt range, which grows with the configured prompts —
+    // Seeds the editor context menu's prompt range, which grows with the configured prompts:
     // 0x0400, clear of the panes range that grows under it.
     public const int EditorPromptCommandId = 0x0400;
 

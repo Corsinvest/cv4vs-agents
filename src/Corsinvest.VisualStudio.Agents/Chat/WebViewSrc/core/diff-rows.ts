@@ -20,7 +20,7 @@ export type Row = {
 
 /**
  * Only word-diff a pair that is mostly the same line. A replaced block is rarely one line for
- * one, so pairing by position alone hands unrelated lines to the word-diff — which then marks
+ * one, so pairing by position alone hands unrelated lines to the word-diff, which then marks
  * both of them end to end, saying nothing at all.
  */
 const WORD_DIFF_THRESHOLD = 0.5;
@@ -60,7 +60,7 @@ function segmentsOf(oldLine: string, newLine: string, side: 'del' | 'ins'): Seg[
 const whole = (text: string): Seg[] => [{ text, changed: false }];
 
 /**
- * Rows from hunks somebody else computed — the CLI's own, carried on the tool result. Preferred
+ * Rows from hunks somebody else computed: the CLI's own, carried on the tool result. Preferred
  * over buildRows: those hunks know the file's real line numbers and bring the context around the
  * change, neither of which an Edit's two input fragments can give.
  */
@@ -122,7 +122,7 @@ export function rowsFromHunks(hunks: readonly PatchHunkDto[] | null | undefined)
 /**
  * Rows from two strings we diff ourselves. Only for an edit whose result has not arrived yet:
  * the tool's input carries the two fragments and nothing else, so the hunks come out numbered
- * from 1 — true of the fragment, false of the file. The caller drops the numbers there.
+ * from 1: true of the fragment, false of the file. The caller drops the numbers there.
  */
 export function buildRows(
     oldStr: string | undefined | null,
@@ -142,13 +142,13 @@ export function buildRows(
 
 /**
  * Where an edit landed, for the jump the file link makes: the first and last line the change
- * ADDED, not the hunk's own span — that spans the context too, and selecting it would highlight
+ * ADDED, not the hunk's own span: that spans the context too, and selecting it would highlight
  * three untouched lines either side.
  *
  * Walks the first hunk only: MultiEdit yields several non-contiguous ones, and the first is where
  * the change starts, which is where to jump. '+' and context lines both exist in the file after
- * the edit and advance the counter; '-' lines are gone and do not. A hunk with no '+' at all —
- * a pure deletion — falls back to its own span, which is the closest thing to a location it has.
+ * the edit and advance the counter; '-' lines are gone and do not. A hunk with no '+' at all (
+ * a pure deletion) falls back to its own span, which is the closest thing to a location it has.
  */
 export function editRangeFromHunks(
     hunks: readonly PatchHunkDto[] | null | undefined,

@@ -16,7 +16,7 @@ internal sealed class GetExceptionSettingsArgs
     public string Group { get; set; }
 }
 
-/// <summary>MCP tool: which exceptions the debugger is set to break on — the read side of
+/// <summary>MCP tool: which exceptions the debugger is set to break on, the read side of
 /// debug_set_exception_breakpoint.</summary>
 internal sealed class GetExceptionSettingsTool : McpTool<GetExceptionSettingsArgs>
 {

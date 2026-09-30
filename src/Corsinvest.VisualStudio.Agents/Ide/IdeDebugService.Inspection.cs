@@ -43,7 +43,7 @@ internal sealed partial class IdeDebugService
             dbg.Go(false);
             LeavingBreak();
             // No Mode: Go() returns before the transition, so this reads the state being left. It
-            // happened to be right — "run" either way — which is why it outlived the same fix on
+            // happened to be right ("run" either way) which is why it outlived the same fix on
             // start/stop/restart/break.
             return new DebugResult { Ok = true, Reason = "Resumed — poll debug_get_state for where it stops next." };
         }
@@ -55,14 +55,14 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>How long to wait for a step to land before answering without a position. Long
-    /// enough for a step over a slow call, short enough that a step which will not finish — into a
-    /// blocking read, say — does not hold the caller.</summary>
+    /// enough for a step over a slow call, short enough that a step which will not finish (into a
+    /// blocking read, say) does not hold the caller.</summary>
     private static readonly TimeSpan StepSettleTimeout = TimeSpan.FromSeconds(10);
 
     /// <summary>Step over/into/out (only while paused), waiting for it to land so the location is
     /// where it arrived.
     /// <para>The wait is the whole point. StepOver(false) and friends return immediately, and
-    /// reading the position straight after gave the one it STARTED from, every time — the mode came
+    /// reading the position straight after gave the one it STARTED from, every time; the mode came
     /// back "run" for the same reason. Measured on a step out of a method with a second of work
     /// left: it answered Seed.cs:64 while the program went on to Program.cs:19.</para></summary>
     public async Task<StepResult> StepAsync(string direction)
@@ -78,7 +78,7 @@ internal sealed partial class IdeDebugService
             }
 
             // An unknown direction is refused rather than treated as "over". The schema declares
-            // the three values, but nothing enforces it on the way in — and stepping over a line
+            // the three values, but nothing enforces it on the way in, and stepping over a line
             // when the caller asked to step into it is a wrong answer disguised as a right one.
             switch ((direction ?? "over").ToLowerInvariant())
             {
@@ -119,7 +119,7 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Wait for the debugger to be back in break, or give up. Yields the UI thread between
-    /// looks — the transition is processed there, so holding it would stop the very thing being
+    /// looks: the transition is processed there, so holding it would stop the very thing being
     /// waited for. Returns false on timeout.</summary>
     private static async Task<bool> WaitForBreakAsync(TimeSpan timeout)
     {
@@ -131,14 +131,14 @@ internal sealed partial class IdeDebugService
             var dbg = GetDebugger();
             if (dbg == null) { return false; }
             if (dbg.CurrentMode == dbgDebugMode.dbgBreakMode) { return true; }
-            // Design mode: the program ended while stepping — nothing left to land on.
+            // Design mode: the program ended while stepping; nothing left to land on.
             if (dbg.CurrentMode == dbgDebugMode.dbgDesignMode) { return false; }
         }
         return false;
     }
 
     /// <summary>The call stack of one thread by id, WITHOUT selecting it. Reading another thread's
-    /// stack otherwise means debug_select_thread first, which moves the debugger's current thread —
+    /// stack otherwise means debug_select_thread first, which moves the debugger's current thread:
     /// the user's Call Stack and Locals windows follow it, and nothing puts them back.</summary>
     public async Task<CallStackResult> GetThreadCallStackAsync(int threadId)
     {
@@ -276,7 +276,7 @@ internal sealed partial class IdeDebugService
                 foreach (Expression e in source)
                 {
                     if (budget.Expired()) { break; }
-                    // Top-level statements report `args` in BOTH collections, so it arrived twice —
+                    // Top-level statements report `args` in BOTH collections, so it arrived twice:
                     // once flagged as an argument, once not, which reads as a bug in the tool.
                     // Arguments are collected first and win: knowing a name is a parameter says
                     // more than knowing it is in scope.
@@ -321,7 +321,7 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>The threads of the program being debugged (only while paused). Everything else here
-    /// reads one thread — the current one — and until this there was no way to learn that the others
+    /// reads one thread (the current one) and until this there was no way to learn that the others
     /// existed, let alone name them.</summary>
     public async Task<ThreadsResult> GetThreadsAsync()
     {
@@ -375,7 +375,7 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Make <paramref name="threadId"/> the thread the call stack and the inspection tools
-    /// read. The frame selection resets with it — frames belong to a thread.</summary>
+    /// read. The frame selection resets with it: frames belong to a thread.</summary>
     public async Task<ThreadActionResult> SelectThreadAsync(int threadId)
         => await WithThreadAsync(threadId, (dbg, t) =>
         {
@@ -427,7 +427,7 @@ internal sealed partial class IdeDebugService
         }
     }
 
-    /// <summary>A thread's id, or 0 when it can't be read — CurrentThread is null between some
+    /// <summary>A thread's id, or 0 when it can't be read: CurrentThread is null between some
     /// transitions, and asking a dead thread for its id throws.</summary>
     private static int SafeThreadId(EnvDTE.Thread t)
     {
@@ -453,7 +453,7 @@ internal sealed partial class IdeDebugService
 
     /// <summary>Point the inspection tools at another frame of the current call stack (only while
     /// paused). Locals belong to a frame, so stopped inside a callee the caller's variables are out
-    /// of scope until this moves the selection — the debugger's own Call Stack window does the same
+    /// of scope until this moves the selection; the debugger's own Call Stack window does the same
     /// on a double click.</summary>
     public async Task<SelectFrameResult> SelectFrameAsync(int index)
     {
@@ -499,7 +499,7 @@ internal sealed partial class IdeDebugService
             OutputWindowLogger.Global.LogException("IdeDebugService.SelectFrameAsync", ex);
             // InBreak stays true: we got past the mode check to reach here, and reporting false
             // would send the caller off to wait for a break it is already in. VS refuses a frame it
-            // has no symbols for — a runtime or OS frame — and its own message is the only thing
+            // has no symbols for (a runtime or OS frame) and its own message is the only thing
             // that says which frame and why.
             return new SelectFrameResult
             {
@@ -550,7 +550,7 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Evaluate an expression and walk its members, so an object comes back as a tree
-    /// instead of a type name. Same evaluation as <see cref="EvaluateAsync"/> — and the same
+    /// instead of a type name. Same evaluation as <see cref="EvaluateAsync"/>, and the same
     /// caveat: reading a property runs its getter in the debuggee.</summary>
     public async Task<ExpandResult> ExpandAsync(string expression, int depth, int maxMembers)
     {
@@ -581,7 +581,7 @@ internal sealed partial class IdeDebugService
             }
 
             // A null reference has nothing to walk, but the debugger still hands back the type's
-            // "Static members" node — so this used to answer ok with one phantom entry and no sign
+            // "Static members" node, so this used to answer ok with one phantom entry and no sign
             // that the object was null. Said outright instead.
             if (IsNullValue(root.Value))
             {
@@ -620,7 +620,7 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Whether two StackFrame wrappers stand for the same frame. Object identity does not
-    /// answer this — not ReferenceEquals, and not IUnknown either, which came back different for
+    /// answer this: not ReferenceEquals, and not IUnknown either, which came back different for
     /// the frame that was selected. So it compares what a frame is made of: the function, the
     /// module, and the return type that separates two overloads of the same name.</summary>
     private static bool SameFrame(StackFrame a, StackFrame b)
@@ -635,7 +635,7 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Why an expression didn't resolve. Naming the frame separates the three ways this
-    /// fails — a wrong name, a variable not declared yet, and one that is alive a frame up — which
+    /// fails: a wrong name, a variable not declared yet, and one that is alive a frame up, which
     /// otherwise read the same, and the third is the common case when stopped inside a callee.</summary>
     private static string NotInScopeReason(Debugger dbg)
     {
@@ -650,21 +650,21 @@ internal sealed partial class IdeDebugService
     /// reports the result as truncated.
     /// <para>depth and maxMembers bound the shape of the walk, which is not the same as bounding
     /// its cost: reading <c>Expression.Value</c> or <c>DataMembers</c> evaluates properties inside
-    /// the debuggee, synchronously, on this thread. One getter that blocks — a lazy load, a lock, a
-    /// remote call — and a walk well within its node limits still hangs the IDE. This is the ceiling
+    /// the debuggee, synchronously, on this thread. One getter that blocks (a lazy load, a lock, a
+    /// remote call) and a walk well within its node limits still hangs the IDE. This is the ceiling
     /// that counts what the nodes cost rather than how many were asked for.</para></summary>
     private static readonly TimeSpan WalkDeadline = TimeSpan.FromMilliseconds(2000);
 
     /// <summary>How long GetExpression may take on the expression itself, in milliseconds. The same
     /// hazard as <see cref="WalkDeadline"/> one level up: evaluating the root runs a getter too, and
-    /// -1 — the value this used to pass — means "no limit", so one that blocks parks the UI thread
+    /// -1 (the value this used to pass) means "no limit", so one that blocks parks the UI thread
     /// with nothing to end the wait.</summary>
     private const int EvalTimeoutMs = 2000;
 
     /// <summary>One level of members, recursing while <paramref name="depth"/> is left. Sorted by
     /// name like the locals list, so two reads of the same object line up.
     /// <para><paramref name="budget"/> is created by the caller and shared by every branch of one
-    /// capture — including a sibling walk over another collection — so the deadline applies to the
+    /// capture (including a sibling walk over another collection) so the deadline applies to the
     /// capture as a whole and a slow first group cannot spend the whole budget unnoticed.
     /// <paramref name="level"/> feeds the truncation message only: depth counts what is left, not
     /// how far the walk actually got before a branch stopped early.</para></summary>
@@ -701,9 +701,9 @@ internal sealed partial class IdeDebugService
     /// <summary>What one capture spent, and why it stopped short. Replaces the pair
     /// (<c>Stopwatch</c>, <c>ref bool truncated</c>) that used to be threaded through the walk:
     /// the same state, plus what it takes to say where the walk gave up.
-    /// <para>The two ways a walk truncates need different moves from the caller — a member cap is
+    /// <para>The two ways a walk truncates need different moves from the caller: a member cap is
     /// raised with maxMembers, an exhausted budget is not, and there the answer is to expand one
-    /// path instead of all of them — so reporting both as one flag left the model guessing which
+    /// path instead of all of them, so reporting both as one flag left the model guessing which
     /// it was looking at.</para></summary>
     private sealed class WalkBudget
     {
@@ -751,8 +751,8 @@ internal sealed partial class IdeDebugService
     }
 
     /// <summary>Whether an expression has members worth expanding.
-    /// <para>Not just <c>DataMembers.Count > 0</c>: a null reference still reports one member — the
-    /// "Static members" node VS shows for the TYPE — so an InnerException that is null came back
+    /// <para>Not just <c>DataMembers.Count > 0</c>: a null reference still reports one member (the
+    /// "Static members" node VS shows for the TYPE) so an InnerException that is null came back
     /// saying it could be expanded, and expanding it answered with that one phantom entry. Reading
     /// the value is the only way to tell, since the debugger renders a null reference as the string
     /// "null" whatever its declared type is.</para></summary>

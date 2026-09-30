@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 //
-// driver.mjs — "build + drive" harness for cv4vs-agents (VS 2022 extension).
+// driver.mjs: "build + drive" harness for cv4vs-agents (VS 2022 extension).
 //
 // This extension is NOT headless-launchable: the real UI (the Chat/CLI tool windows)
 // lives inside a Visual Studio instance (devenv /rootsuffix Exp) that only a human

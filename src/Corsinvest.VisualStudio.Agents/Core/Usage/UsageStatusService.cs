@@ -26,7 +26,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 /// Keeps the status bar's picture of plan usage current, for the profile of the pane last worked in.
 /// <para>Numbers come from the cheapest source that has them. A chat pane on that profile answers
 /// get_usage from its own running claude.exe after each of its turns, and its rate_limit_events arrive
-/// for free. Only with no such pane open is a short-lived claude.exe started — and then only when the
+/// for free. Only with no such pane open is a short-lived claude.exe started, and then only when the
 /// numbers are older than the configured interval while VS is in front, when the popup opens on old
 /// numbers, or on Refresh.</para>
 /// <para>UI thread throughout; only the probe itself runs elsewhere.</para>
@@ -82,7 +82,7 @@ internal sealed class UsageStatusService
 
     /// <summary>The profile to show: <see cref="_current"/> while a pane still runs it, else the
     /// newest one that has a pane. <see cref="OnPaneClosed"/> moves off a profile whose last pane
-    /// went, but it only runs if that close was seen — a frame VS keeps alive past the user closing
+    /// went, but it only runs if that close was seen: a frame VS keeps alive past the user closing
     /// or floating it reports nothing, and the bar would name a profile with no session behind it.
     /// Resolving again here cannot be skipped that way. Read-only on purpose: <see cref="_current"/>
     /// is written from Track/SetCurrent, and a write from a getter would race the timers reading it.</summary>
@@ -199,7 +199,7 @@ internal sealed class UsageStatusService
         if (!ReferenceEquals(updated, windows)) { Publish(snapshot.WithWindows(updated)); }
     }
 
-    /// <summary>A pane fetched usage for its own reasons — the chat's Account &amp; Usage dialog — which is
+    /// <summary>A pane fetched usage for its own reasons (the chat's Account &amp; Usage dialog), which is
     /// a fresh answer for the status bar as well.</summary>
     public void OnUsageFetched(PaneEntry entry, UsageDto usage)
     {
@@ -209,7 +209,7 @@ internal sealed class UsageStatusService
     }
 
     /// <summary>The popup opened: numbers a couple of minutes old are replaced, background refresh or
-    /// not — the user is looking.</summary>
+    /// not: the user is looking.</summary>
     public void OnPopupOpened()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -242,7 +242,7 @@ internal sealed class UsageStatusService
     }
 
     /// <summary>A pane closed. Only Track moves the shown profile, and it fires when one of our panes
-    /// becomes the active frame — closing one raises nothing, so a profile whose last pane has just
+    /// becomes the active frame: closing one raises nothing, so a profile whose last pane has just
     /// gone would stay on the bar with no session behind it. Move to a profile that still has one;
     /// with none left the host takes the item away and this does not matter.</summary>
     public void OnPaneClosed()
@@ -259,7 +259,7 @@ internal sealed class UsageStatusService
     }
 
     // Only our own panes move the status bar to another profile; focus going to the editor or anything
-    // else leaves it on the last pane's — but it does change whether the profile name is worth showing,
+    // else leaves it on the last pane's, but it does change whether the profile name is worth showing,
     // so every frame change is recorded even when the shown profile stays put.
     private void Track(IVsWindowFrame frame)
     {
@@ -278,12 +278,12 @@ internal sealed class UsageStatusService
     /// <summary>Whether the item should spell out which profile the figures belong to. Only when
     /// there is something to tell it apart from: with every open pane on the same profile the name
     /// answers a question nobody can ask, and the status bar is short of room. With several, it is
-    /// dropped only while one of our panes has the focus — that pane's caption already carries it,
+    /// dropped only while one of our panes has the focus: that pane's caption already carries it,
     /// and anywhere else (the editor, Solution Explorer) nothing on screen would say.</summary>
     public bool ShowProfileName => !_paneFocused && DistinctLiveProfiles() > 1;
 
     // A pane opened or closed: how many profiles are in play may have changed, and with it whether
-    // the name is shown. Redraw only — which profile is current stays Track's and OnPaneClosed's.
+    // the name is shown. Redraw only: which profile is current stays Track's and OnPaneClosed's.
     private void OnPanesChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
         if (!_started) { return; }

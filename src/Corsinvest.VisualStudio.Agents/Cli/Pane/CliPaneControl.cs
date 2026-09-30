@@ -19,7 +19,7 @@ namespace Corsinvest.VisualStudio.Agents.Cli.Pane;
 /// Hosts a real interactive Claude CLI (<c>claude --ide</c>) inside a VS tool
 /// window. Bridges <see cref="TerminalControl"/>
 /// (rendering, input) and <see cref="TerminalProcess"/> (ConPTY-attached
-/// child process). Each pane owns its OWN process — opening multiple CLI
+/// child process). Each pane owns its OWN process: opening multiple CLI
 /// panes spawns multiple independent <c>claude</c> sessions.
 /// </para>
 /// <para>
@@ -162,14 +162,14 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         }
         else
         {
-            // Forward to ConPTY. Thread-safe — TerminalProcess.Resize locks internally.
+            // Forward to ConPTY. Thread-safe: TerminalProcess.Resize locks internally.
             _process?.Resize(cols, r);
         }
     }
 
     void ITerminalConnection.Close()
     {
-        // Lifecycle is owned by this UserControl — nothing to do here.
+        // Lifecycle is owned by this UserControl, nothing to do here.
     }
 
     private async System.Threading.Tasks.Task StartOrRestartAsync(short cols = 120, short rows = 40)
@@ -194,7 +194,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
             Entry.ActiveSessionId = _activeSessionId;
         }
         // Start the in-process MCP server (idempotent) so we know the port+token BEFORE building
-        // the command line — the CLI needs them in the --mcp-config "vs" server entry.
+        // the command line: the CLI needs them in the --mcp-config "vs" server entry.
         var ssePort = Mcp.McpServerHost.Instance.EnsureStarted();
         var mcpToken = Mcp.McpServerHost.Instance.AuthToken;
         var cmd = BuildCommand(ssePort, mcpToken);
@@ -218,16 +218,16 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
             _process = new TerminalProcess();
             _process.OutputReceived += OnOutputReceived;
             _process.ProcessExited += OnProcessExited;
-            // FORCE_CODE_TERMINAL=1: CLI's documented "IDE-supported terminal" flag — auto-connect,
+            // FORCE_CODE_TERMINAL=1: CLI's documented "IDE-supported terminal" flag; auto-connect,
             // PID-ancestry disambiguation across VS windows, no onboarding dialogs.
             // CLAUDE_CODE_SSE_PORT: hand the CLI THIS VS's MCP port (auto-connect trigger).
-            // CLAUDE_CODE_ENTRYPOINT=claude-vscode: match the chat path — full model catalogue (the
+            // CLAUDE_CODE_ENTRYPOINT=claude-vscode: match the chat path, full model catalogue (the
             // server keys off the cc_entrypoint header) + first-party auth.
             // Injected PER-PROCESS via the ConPTY env block (not the parent/global env): a global
             // SetEnvironmentVariable save/restore races when a Chat pane and a CLI pane start at
             // the same time, and would let a profile's env leak into an unrelated process. Profile
-            // env is applied first so these three keys — required for the IDE integration to work
-            // — always win. (ssePort resolved above, before BuildCommand.)
+            // env is applied first so these three keys (required for the IDE integration to work)
+            // always win. (ssePort resolved above, before BuildCommand.)
             var env = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             if (Entry.Profile.Env != null) { foreach (var kv in Entry.Profile.Env) { env[kv.Key] = kv.Value; } }
             env["FORCE_CODE_TERMINAL"] = "1";

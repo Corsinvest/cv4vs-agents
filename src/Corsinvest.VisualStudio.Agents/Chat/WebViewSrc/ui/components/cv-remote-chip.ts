@@ -35,7 +35,7 @@ export class CvRemoteChip extends LitElement {
             /* Filled like the mic while recording, so "on" reads at a glance rather than as one
                more grey glyph. Brand rather than red: red in this row is already Stop and the
                recording mic, and a third permanent red would say urgency where there is none.
-               No pulse — the mic earns one by being transient, this stays until switched off. */
+               No pulse: the mic earns one by being transient, this stays until switched off. */
             .trigger,
             .trigger:hover {
                 background: var(--colorBrandBackground);

@@ -72,7 +72,7 @@ internal static class ConPty
     /// <paramref name="cols"/>×<paramref name="rows"/>, in <paramref name="workingDirectory"/>.
     /// When <paramref name="env"/> has entries the child runs with a per-process environment
     /// (the parent's env overlaid with <paramref name="env"/>) rather than inheriting the
-    /// parent's — this is what lets two panes on different profiles (e.g. Chat/Claude and
+    /// parent's: this is what lets two panes on different profiles (e.g. Chat/Claude and
     /// CLI/z.ai) coexist without a shared-env race. The returned session owns all handles.
     /// </summary>
     public static Session Create(string command, string workingDirectory, short cols, short rows,
@@ -104,7 +104,7 @@ internal static class ConPty
             var flags = EXTENDED_STARTUPINFO_PRESENT;
             try
             {
-                // Materialised once — read below to decide whether a block is needed, and again to
+                // Materialised once: read below to decide whether a block is needed, and again to
                 // build it; a lazy sequence must not answer those two differently.
                 var drop = dropEnv?.ToArray();
                 // Dropping an inherited variable takes an environment of our own just as overlaying
@@ -210,7 +210,7 @@ internal static class ConPty
 
     /// <summary>Builds the UTF-16, double-null-terminated environment block CreateProcessW expects.
     /// Windows REPLACES the whole environment when lpEnvironment is set, so we start from the parent's
-    /// full env and overlay the caller's keys — otherwise the child loses PATH/SystemRoot/… and won't
+    /// full env and overlay the caller's keys; otherwise the child loses PATH/SystemRoot/… and won't
     /// launch. <paramref name="drop"/> is removed from the inherited set first, so an overlay key
     /// survives its own drop list. Keys are sorted so the block is byte-for-byte reproducible across
     /// launches. The caller owns the returned pointer (Marshal.FreeHGlobal).</summary>

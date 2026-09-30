@@ -17,7 +17,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 
 /// <summary>
 /// Low-level NDJSON transport: owns the claude.exe process and reads/writes one
-/// JSON object per line on stdin/stdout. No protocol logic — caller dispatches lines.
+/// JSON object per line on stdin/stdout. No protocol logic: caller dispatches lines.
 /// </summary>
 internal sealed class NdjsonTransport : IDisposable
 {
@@ -60,7 +60,7 @@ internal sealed class NdjsonTransport : IDisposable
     }
 
     /// <param name="dropEnv">Inherited variables to remove before <paramref name="extraEnv"/> goes
-    /// on — see <see cref="ClaudeInstall.InheritedSessionEnvVars"/> for which, and why.</param>
+    /// on: see <see cref="ClaudeInstall.InheritedSessionEnvVars"/> for which, and why.</param>
     public void Start(string exePath, string arguments, string workingDirectory,
         System.Collections.Generic.IReadOnlyDictionary<string, string> extraEnv,
         System.Collections.Generic.IEnumerable<string> dropEnv = null)
@@ -90,7 +90,7 @@ internal sealed class NdjsonTransport : IDisposable
             foreach (var key in dropEnv) { psi.EnvironmentVariables.Remove(key); }
         }
         // Extra env (profile keys, CLAUDE_CODE_ENTRYPOINT, …) overlaid on the inherited
-        // parent env — honoured since UseShellExecute=false.
+        // parent env, honoured since UseShellExecute=false.
         if (extraEnv != null)
         {
             foreach (var kv in extraEnv) { psi.EnvironmentVariables[kv.Key] = kv.Value; }
@@ -123,7 +123,7 @@ internal sealed class NdjsonTransport : IDisposable
 
     /// <summary>
     /// Serialise <paramref name="message"/> as a single NDJSON line on stdin.
-    /// Accepts any object — anonymous types, POCOs, or already-built JObjects.
+    /// Accepts any object: anonymous types, POCOs, or already-built JObjects.
     /// </summary>
     public void Write(object message)
     {
@@ -134,7 +134,7 @@ internal sealed class NdjsonTransport : IDisposable
             // Lock so a worker-thread MCP response and a UI-thread write can't
             // interleave into one corrupt NDJSON line. The liveness check belongs
             // INSIDE it: checked outside, Dispose() can null _stdin in between, and
-            // the write then dies in the catch below — silently, as far as the caller
+            // the write then dies in the catch below, silently, as far as the caller
             // is concerned, leaving a SendControlRequestAsync to wait out its timeout
             // instead of failing now.
             lock (_writeLock)
@@ -185,7 +185,7 @@ internal sealed class NdjsonTransport : IDisposable
         }
         catch (Exception ex)
         {
-            // Closed stdout on a disposed respawn is expected — don't log it as a fault.
+            // Closed stdout on a disposed respawn is expected: don't log it as a fault.
             if (_disposed) { _log.Debug(() => $"--- transport read loop ended (disposed): {ex.GetType().Name}"); }
             else { _log.LogException("transport.ReadLoop", ex); }
         }

@@ -20,7 +20,7 @@ import './cv-popover-list';
 import type { CvPopoverList, ListSection } from './cv-popover-list';
 
 /**
- * Unified command palette for the input toolbar — typing `/` and the attach menu's
+ * Unified command palette for the input toolbar: typing `/` and the attach menu's
  * "Slash command" item both open this.
  * A wrapper over cv-popover-list: it owns the DOMAIN logic (fuzzy filter with Fuse, per-section
  * grouping, the heterogeneous trailing controls) and passes the grouped commands + a renderRow to
@@ -66,7 +66,7 @@ export class CvCommandMenu extends LitElement {
         }));
     }
 
-    /** Fuse config: label/aliases/id weigh more than description — you search for a command by
+    /** Fuse config: label/aliases/id weigh more than description: you search for a command by
      *  its name, and the descriptions are long enough to swamp it otherwise. */
     private _fuseSearch(commands: ChatCommand[], query: string): ChatCommand[] {
         const docs = commands.map((c) => ({

@@ -27,7 +27,7 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
     private readonly FileIndex _fileIndex = new((root, ct) =>
         WorkspaceFileLister.ListAsync(root, Options.AgentsOptions.Chat.UseGitIgnore, ct));
 
-    /// <summary>This session's Claude paths, from the pane's entry (always set — created by
+    /// <summary>This session's Claude paths, from the pane's entry (always set: created by
     /// PaneLauncher before the pane loads, so it never NREs). Evaluate on the ORIGIN thread
     /// (before/outside any Task.Run), not on a background thread.</summary>
     private ClaudePaths PaneClaudePaths => entry.ClaudePaths;
@@ -242,7 +242,7 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
         Core.Stats.StatsService.IndexingCompleted += OnStatsIndexingCompleted;
     }
 
-    // Named (not a lambda) so DisposeHandler can -= it — otherwise the static StatsService event
+    // Named (not a lambda) so DisposeHandler can -= it: otherwise the static StatsService event
     // keeps this handler (and the WebView bridge) alive after the pane closes.
     private void OnStatsIndexingCompleted()
         => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>

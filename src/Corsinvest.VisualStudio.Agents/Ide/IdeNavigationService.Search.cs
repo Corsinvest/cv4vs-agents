@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Ide;
 
-// Workspace-wide symbol search via the per-language INavigateToSearchService — same service
+// Workspace-wide symbol search via the per-language INavigateToSearchService, same service
 // behind VS "Navigate To" (Ctrl+,). Internal Roslyn API → reflection like the other partials.
 internal sealed partial class IdeNavigationService
 {
@@ -73,7 +73,7 @@ internal sealed partial class IdeNavigationService
 
                 // One call covers the whole solution. Roslyn 5.x: SearchProjectsAsync(solution,
                 // projects, priorityDocuments, searchPattern, kinds, activeDocument, onResultsFound,
-                // onProjectCompleted, ct). Matched by name only — the arguments are mapped by
+                // onProjectCompleted, ct). Matched by name only; the arguments are mapped by
                 // parameter type in BuildSearchArguments, so a reordering doesn't silently misfire.
                 step = "SearchProjectsAsync";
                 _searchProjectsAsync = _navigateToServiceType.GetMethods()
@@ -116,7 +116,7 @@ internal sealed partial class IdeNavigationService
             var byService = new Dictionary<object, List<object>>();
 
             // Names of the projects actually searched, to compare against the solution's own list
-            // below. A project drops out for either of two reasons — its language registers no
+            // below. A project drops out for either of two reasons: its language registers no
             // NavigateTo provider, or (the C++ case) it is not a Roslyn project at all, so it never
             // appears in this loop to begin with.
             var searchedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -172,7 +172,7 @@ internal sealed partial class IdeNavigationService
     /// when it covered them all.</para>
     /// <para>The comparison has to be against the solution's own project list, read through DTE:
     /// a C++ project is not in the Roslyn workspace at all, so iterating
-    /// <c>CurrentSolution.Projects</c> never sees it — it is missing rather than skipped, and
+    /// <c>CurrentSolution.Projects</c> never sees it: it is missing rather than skipped, and
     /// counting only what that loop rejected would report nothing while half the solution went
     /// unsearched.</para>
     /// <para>Kept to a handful of names: a solution can hold dozens of C++ projects, and the point
@@ -183,8 +183,8 @@ internal sealed partial class IdeNavigationService
         try
         {
             // Reuses the IDE-context walk rather than iterating DTE here: that one already recurses
-            // into solution folders — where these probe projects live, and a flat pass over
-            // Solution.Projects would miss them — and already drops the Miscellaneous Files node,
+            // into solution folders (where these probe projects live, and a flat pass over
+            // Solution.Projects would miss them) and already drops the Miscellaneous Files node,
             // which is a Project by type but nobody's code (it surfaced as "File esterni" on an
             // Italian IDE the first time this was written without the filter).
             var structure = await IdeContextService.Instance.GetProjectStructureAsync().ConfigureAwait(false);
@@ -239,7 +239,7 @@ internal sealed partial class IdeNavigationService
     }
 
     /// <summary>Map the arguments onto whatever parameters this Roslyn declares, by type rather
-    /// than by position. Returns null if a parameter can't be satisfied — better no results than
+    /// than by position. Returns null if a parameter can't be satisfied: better no results than
     /// a call built on a wrong guess.</summary>
     private object[] BuildSearchArguments(
         object svc, object solution, List<object> projects, string query, HitCollector collector, CancellationToken ct)
@@ -288,7 +288,7 @@ internal sealed partial class IdeNavigationService
            && type.GetGenericArguments()[0] == typeof(string)
            && type.Name.Contains("Set");
 
-    // Func<ImmutableArray<INavigateToSearchResult>, Task> — the results are pushed in batches.
+    // Func<ImmutableArray<INavigateToSearchResult>, Task>: the results are pushed in batches.
     private bool IsResultsCallback(Type type)
         => type.IsGenericType
            && type.GetGenericTypeDefinition() == typeof(Func<,>)
@@ -310,13 +310,13 @@ internal sealed partial class IdeNavigationService
 
     /// <summary>Receives the batches NavigateTo pushes and maps them to <see cref="SymbolHit"/>.
     /// The callback is <c>Func&lt;ImmutableArray&lt;INavigateToSearchResult&gt;, Task&gt;</c>, and
-    /// that element type is internal to Roslyn — so <see cref="OnResultsFound"/> is generic and
+    /// that element type is internal to Roslyn, so <see cref="OnResultsFound"/> is generic and
     /// gets closed over it by reflection to build a delegate of the exact expected shape.</summary>
     private sealed class HitCollector(int maxHits)
     {
         private readonly List<SymbolHit> _hits = [];
 
-        // One collector spans the whole search, batches included, and hits cluster by file — so
+        // One collector spans the whole search, batches included, and hits cluster by file, so
         // the cache belongs here rather than per batch.
         private readonly FileTextCache _fileText = new();
         private CancellationTokenSource _stopWhenFull;
@@ -362,7 +362,7 @@ internal sealed partial class IdeNavigationService
             var kind = (string)VsReflection.GetPropThroughInterfaces(item, "Kind");
 
             // AdditionalInformation is the container as VS shows it ("in ClienteRepository
-            // (project X)") — already localized by the language service, so it is taken as is.
+            // (project X)"), already localized by the language service, so it is taken as is.
             var container = (string)VsReflection.GetPropThroughInterfaces(item, "AdditionalInformation");
 
             // NavigableItem carries the position: Document.FilePath + SourceSpan.Start.

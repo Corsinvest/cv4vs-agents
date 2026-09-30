@@ -25,13 +25,13 @@ internal static class BridgeMessages
             public const string Fork = "fork_session";
 
             /// <summary>Ask the CLI to restore the files to the snapshot it took before a user
-            /// message, or — with dryRun — only whether it could and with what. The probe is what
+            /// message, or (with dryRun) only whether it could and with what. The probe is what
             /// tells a checkpoint apart from none: the CLI keeps file history per session, and in
             /// SDK mode only when it was started with it enabled.</summary>
             public const string Rewind = "rewind_files";
 
             /// <summary>Open VS's diff viewer on one file a rewind would touch: its copy from
-            /// before the message against what is on disk now. Fire-and-forget — the answer is the
+            /// before the message against what is on disk now. Fire-and-forget: the answer is the
             /// diff tab, not a response.</summary>
             public const string RewindDiff = "rewind_diff";
 
@@ -62,7 +62,7 @@ internal static class BridgeMessages
             /// honoured by the MCP server when broadcasting selection_changed.</summary>
             public const string SetSendSelection = "set_cli_send_selection";
             /// <summary>Merge keys into the CLI flag-settings layer (effortLevel,
-            /// alwaysThinkingEnabled, fastMode) — Model menu toggles/slider.</summary>
+            /// alwaysThinkingEnabled, fastMode): Model menu toggles/slider.</summary>
             public const string ApplyFlagSettings = "apply_cli_flag_settings";
             /// <summary>Thinking toggle → runtime set_max_thinking_tokens (separate from the
             /// flag-settings layer; takes effect immediately, not merged into settings).</summary>
@@ -92,7 +92,7 @@ internal static class BridgeMessages
         }
 
         /// <summary>Manage Claude Code plugins via `claude plugin` one-shot processes
-        /// (the live chat process rejects plugin ops — only reload_plugins is in the protocol).</summary>
+        /// (the live chat process rejects plugin ops: only reload_plugins is in the protocol).</summary>
         public static class Plugins
         {
             public const string List = "plugins_list";
@@ -119,7 +119,7 @@ internal static class BridgeMessages
             public const string GetContextUsage = "get_chat_context_usage";
             public const string GetStats = "get_chat_stats";
             /// <summary>Fire-and-forget: start the background stats indexing pass (once, on dialog
-            /// open). Single-flight host-side — a no-op if one is already running.</summary>
+            /// open). Single-flight host-side: a no-op if one is already running.</summary>
             public const string StartStatsIndex = "start_stats_index";
             public const string GetSubagent = "get_subagent";
             public const string SubagentCancel = "subagent_cancel";
@@ -133,7 +133,7 @@ internal static class BridgeMessages
         /// <summary>WebView app-level signals to the host.</summary>
         public static class Ui
         {
-            /// <summary>The app mounted and painted its first frame — hide the
+            /// <summary>The app mounted and painted its first frame: hide the
             /// native "Initializing…" placeholder now. The host answers it with ui_init.</summary>
             public const string Ready = "webview_ready";
 
@@ -157,7 +157,7 @@ internal static class BridgeMessages
             public const string Suggestions = "file_suggestions";
         }
 
-        /// <summary>Answer to a rewind request — the probe's verdict, or the outcome of a real one.</summary>
+        /// <summary>Answer to a rewind request: the probe's verdict, or the outcome of a real one.</summary>
         public static class Session
         {
             public const string RewindResult = "rewind_result";
@@ -199,7 +199,7 @@ internal static class BridgeMessages
             public const string ToolResult = "chat_tool_result";
             public const string ExchangeEnded = "chat_exchange_ended";
             public const string Compacted = "chat_compacted";
-            /// <summary>Notification: drop these messages from the transcript — the CLI retracted
+            /// <summary>Notification: drop these messages from the transcript, the CLI retracted
             /// them (refusal fallback), so the model no longer has them. Idempotent: uuids that
             /// name nothing on screen are a no-op.</summary>
             public const string EvictMessages = "chat_evict_messages";
@@ -214,26 +214,26 @@ internal static class BridgeMessages
             public const string StatsIndexDone = "chat_stats_index_done";
             public const string RateLimit = "chat_rate_limit";
             /// <summary>A CLI advisory (system/informational) shown as a session notice at the top of
-            /// the chat — e.g. "session model X isn't recognized by this version".</summary>
+            /// the chat, e.g. "session model X isn't recognized by this version".</summary>
             public const string Notice = "chat_notice";
             /// <summary>Remote Control state + session URL for the top banner.</summary>
             public const string RemoteControl = "chat_remote_control";
             public const string Models = "chat_models";
             /// <summary>Response to get_subagent: full sub-agent transcript (all blocks).</summary>
             public const string SubagentLoaded = "subagent_loaded";
-            /// <summary>A sub-agent (Agent/Skill/Task) started — show it as active.</summary>
+            /// <summary>A sub-agent (Agent/Skill/Task) started: show it as active.</summary>
             public const string SubagentStarted = "subagent_started";
             /// <summary>Sub-agent progress: last tool, summary, usage (tokens/tools/duration).</summary>
             public const string SubagentProgress = "subagent_progress";
-            /// <summary>A sub-agent ended (status: completed|failed|stopped) — remove it.</summary>
+            /// <summary>A sub-agent ended (status: completed|failed|stopped): remove it.</summary>
             public const string SubagentEnded = "subagent_ended";
-            /// <summary>Turn ended — clear all active sub-agents (safety against a missed end).</summary>
+            /// <summary>Turn ended: clear all active sub-agents (safety against a missed end).</summary>
             public const string SubagentClear = "subagent_clear";
             /// <summary>A tracked sub-agent changed: a new status, or a new description. A patch
             /// on an existing one, not a new task.</summary>
             public const string SubagentUpdated = "subagent_updated";
             /// <summary>The ids of the sub-agents currently running in the background. The whole
-            /// set every time — replace, do not merge.</summary>
+            /// set every time: replace, do not merge.</summary>
             public const string BackgroundTasks = "background_tasks";
             /// <summary>Response to get_compact_summary: a compaction's full summary text.</summary>
             public const string CompactSummaryResult = "compact_summary_result";
@@ -243,7 +243,7 @@ internal static class BridgeMessages
         public static class Ui
         {
             public const string Init = "ui_init";
-            /// <summary>Standalone push of the VS Options block (VsOptionsDto) — e.g. Tools &gt;
+            /// <summary>Standalone push of the VS Options block (VsOptionsDto), e.g. Tools &gt;
             /// Options changes applied live, without a full re-init.</summary>
             public const string VsSettings = "vs_settings";
             public const string ThemeChanged = "ui_theme_changed";

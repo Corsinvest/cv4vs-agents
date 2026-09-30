@@ -99,7 +99,7 @@ public abstract class PaneWindowBase : ToolWindowPane
     internal PaneEntry Entry => PaneControl?.Entry;
 
     /// <summary>True when this pane's frame is VS's active window frame (the user is looking at it).
-    /// VS hands out distinct COM proxies for the same window, so ReferenceEquals is unreliable —
+    /// VS hands out distinct COM proxies for the same window, so ReferenceEquals is unreliable:
     /// compare the hosted DocView object instead.</summary>
     internal bool IsActiveFrame()
     {
@@ -177,8 +177,8 @@ public abstract class PaneWindowBase : ToolWindowPane
 
     /// <summary><para>
     /// Focus the input when the frame is shown. Clicking a docked pane's TAB goes through
-    /// neither path that already focuses — ActivatePane (InfoBar, toast, the toolbar's pane list)
-    /// and the toolbar buttons — so focus landed on the first focusable child, the More button, and
+    /// neither path that already focuses: ActivatePane (InfoBar, toast, the toolbar's pane list)
+    /// and the toolbar buttons, so focus landed on the first focusable child, the More button, and
     /// Space opened a menu instead of typing.
     /// </para>
     /// <para>
@@ -211,7 +211,7 @@ public abstract class PaneWindowBase : ToolWindowPane
             {
                 // Deferred like ActivatePane's: OnShow runs mid-activation, so focusing inline is
                 // overwritten by the shell a moment later. The IsActiveFrame gate is evaluated in
-                // the same continuation — asking during OnShow can still name the previous frame.
+                // the same continuation: asking during OnShow can still name the previous frame.
                 owner.FocusInputIfActive();
             }
             return next?.OnShow(fShow) ?? VSConstants.S_OK;
@@ -276,8 +276,8 @@ public abstract class PaneWindowBase : ToolWindowPane
 
     /// <summary><para>Focus the pane's input once the shell has finished activating the frame.</para>
     /// <para>
-    /// The delay is the whole point. Focusing inline works on a pane that is already visible —
-    /// Show() does no real work there — which is why this defect only ever showed on a HIDDEN pane:
+    /// The delay is the whole point. Focusing inline works on a pane that is already visible;
+    /// Show() does no real work there, which is why this defect only ever showed on a HIDDEN pane:
     /// there the activation is real, and VS gives focus to the frame's first focusable child (the
     /// toolbar's More button) when it completes, overwriting ours. Yielding to Background puts our
     /// focus last. The same applies to any other caller that focuses around an activation.
@@ -329,7 +329,7 @@ public abstract class PaneWindowBase : ToolWindowPane
 
     /// <summary>Single teardown path for ALL pane kinds: on frame dispose (real
     /// close), release the control's resources and drop its registry entry. Kept
-    /// here, not per window — Chat once tore down on WPF Unloaded, which VS also
+    /// here, not per window: Chat once tore down on WPF Unloaded, which VS also
     /// fires on hide, dropping a live instance from the "open panes" list.</summary>
     protected override void Dispose(bool disposing)
     {

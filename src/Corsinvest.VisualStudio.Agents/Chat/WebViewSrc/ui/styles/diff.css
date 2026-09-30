@@ -4,7 +4,7 @@
  */
 
 /* The custom element itself must be a block so offsetWidth tracks its
- * column width — without this it defaults to inline and ResizeObserver
+ * column width: without this it defaults to inline and ResizeObserver
  * sees a stuck/zero width on the host. */
 cv-diff-preview {
     display: block;
@@ -32,7 +32,7 @@ cv-diff-preview {
     font-size: var(--fontSizeBase200);
 }
 
-/* Inline diff rows. The grid keeps the gutter aligned while the text wraps —
+/* Inline diff rows. The grid keeps the gutter aligned while the text wraps:
  * nothing here owns a horizontal scroll. */
 .cv-diff-row {
     display: grid;

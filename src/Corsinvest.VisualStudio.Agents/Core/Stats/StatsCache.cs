@@ -64,7 +64,7 @@ internal static class StatsCache
     }
 
     /// <summary>Persist the cache atomically (temp + replace) so a crash mid-write can't corrupt
-    /// it. Concurrent writers (two panes on the same project) are last-write-wins — the aggregate
+    /// it. Concurrent writers (two panes on the same project) are last-write-wins: the aggregate
     /// is deterministic, so a re-write is idempotent.</summary>
     public static void Save(string cacheFile, Dictionary<string, Entry> entries)
     {

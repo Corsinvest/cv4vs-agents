@@ -18,12 +18,12 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 
 /// <summary>
 /// The Test Explorer, reached through its own services rather than around them: the tests it has
-/// discovered, the runs it performs, and the failures it recorded — the IDE's build and its active
+/// discovered, the runs it performs, and the failures it recorded: the IDE's build and its active
 /// configuration, not a second opinion from an external runner.
 /// <para><b>All late-bound, and not by preference.</b> The types live in
 /// <c>Microsoft.VisualStudio.TestWindow.Interfaces</c>, which is unreferenceable here: it wants
 /// <c>Microsoft.VisualStudio.GraphModel 18.0</c> while the VS SDK package pins 17.0, and MSBuild
-/// settles that by dropping the reference — silently, since MSB3277 is a message in this project.
+/// settles that by dropping the reference, silently, since MSB3277 is a message in this project.
 /// Most of what is needed is <c>internal</c> anyway. At runtime the assembly is in VS's AppDomain
 /// with the version it wants, so everything here goes through <see cref="VsReflection"/>.</para>
 /// <para>One probe decides availability once, and every entry point returns
@@ -111,7 +111,7 @@ internal static class IdeTestService
     /// of <paramref name="filters"/>.
     /// <para>Not <c>Activator.CreateInstance</c>: TestQuery's parameterless constructor is PRIVATE,
     /// so that throws "no parameterless constructor defined". The empty query is reached through the
-    /// static <c>AllTests</c> instead — which is what the Test Explorer itself uses — and a filtered
+    /// static <c>AllTests</c> instead (which is what the Test Explorer itself uses) and a filtered
     /// one through the public <c>(TestPropertyType, IEnumerable&lt;string&gt;, FilterMatchKind)</c>
     /// constructor.</para></summary>
     private static object BuildQuery(IEnumerable<string> filters)
@@ -127,11 +127,11 @@ internal static class IdeTestService
 
         // Match on the fully-qualified name, the one identifier a caller can reasonably know: a
         // filter is a substring of it, so "FactorialTests" takes a class and a full name takes one
-        // test. Values go in together — the query ORs them, which is what several filters mean.
+        // test. Values go in together: the query ORs them, which is what several filters mean.
         var propertyType = VsReflection.FindType(Ns + "TestPropertyType");
         var matchKind = VsReflection.FindType(Ns + "FilterMatchKind");
         // NonPublic as well: that constructor is `internal`, so GetConstructors() alone finds
-        // nothing and the query silently comes back null — which the service then dereferences.
+        // nothing and the query silently comes back null, which the service then dereferences.
         var ctor = _testQueryType.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                                  .FirstOrDefault(c => c.GetParameters().Length == 3);
         if (ctor == null)
@@ -146,7 +146,7 @@ internal static class IdeTestService
         ]);
     }
 
-    /// <summary>The tests the Test Explorer has discovered — its tree, not a fresh discovery run.
+    /// <summary>The tests the Test Explorer has discovered: its tree, not a fresh discovery run.
     /// Sorted by project, then class, then name, because the window's own order is not stable and a
     /// caller diffing two listings should not see phantom moves.</summary>
     public static async Task<IReadOnlyList<TestInfo>> ListTestsAsync(
@@ -183,7 +183,7 @@ internal static class IdeTestService
         try { return await VsReflection.InvokeAsyncOn(Face(interfaceName), _service, method, args); }
         catch (Exception ex)
         {
-            // The Test Explorer throws from inside its own Task when it is not ready — a
+            // The Test Explorer throws from inside its own Task when it is not ready: a
             // NullReferenceException out of GetTestsAsync before any discovery has run. Nothing
             // here can fix that, but letting it surface as a raw MCP error tells the caller
             // "something broke" where the truth is "ask again once tests exist".
@@ -208,11 +208,11 @@ internal static class IdeTestService
         TargetFramework = Read(node, "TargetFramework") as string ?? "",
     };
 
-    /// <summary>Run the matching tests and wait for the run to end — the Task completes when the
+    /// <summary>Run the matching tests and wait for the run to end: the Task completes when the
     /// Test Explorer is done, not when it starts, so the caller decides how long to wait through
     /// <paramref name="ct"/>. Cancelling the token stops the run: there is no separate cancel call.
     /// <para><paramref name="debug"/> runs them under the IDE's debugger, which is the one thing no
-    /// external runner can offer — the debug_* tools take over wherever it breaks.</para></summary>
+    /// external runner can offer; the debug_* tools take over wherever it breaks.</para></summary>
     public static async Task<TestRunOutcome> RunTestsAsync(
         IEnumerable<string> filters = null, bool debug = false, CancellationToken ct = default)
     {
@@ -228,12 +228,12 @@ internal static class IdeTestService
         var method = debug ? "DebugTestsAsync" : "RunTestsAsync";
         var started = await CallAsync("IVsTestService", method, query, ct);
         // The service answers bool: false is "the run did not start" (nothing matched the filter, a
-        // build failed, a run already going) — not "tests failed", which the results tell.
+        // build failed, a run already going), not "tests failed", which the results tell.
         return new TestRunOutcome { Supported = true, Started = started as bool? ?? false };
     }
 
     /// <summary>The last run's outcome per test: what failed, why, and where. The counts alone
-    /// ("2 failed") are not actionable — this is the part that lets the caller go to the code.
+    /// ("2 failed") are not actionable; this is the part that lets the caller go to the code.
     /// <para>Failures first, then the rest: on a red run that is the whole point of asking, and a
     /// caller reading only the first entries still gets what matters.</para></summary>
     public static async Task<IReadOnlyList<TestOutcome>> GetResultsAsync(
@@ -245,7 +245,7 @@ internal static class IdeTestService
         var query = BuildQuery(filters);
         if (query == null) { return null; }
 
-        // The details hang off IVsTestServiceInternal, which the same object implements — its own
+        // The details hang off IVsTestServiceInternal, which the same object implements: its own
         // interface because it carries the per-test failures the public one does not expose.
         var nodes = await CallAsync("IVsTestService", "GetTestsAsync", query, ct);
         var results = new List<TestOutcome>();
@@ -265,13 +265,13 @@ internal static class IdeTestService
             }
             catch (Exception ex)
             {
-                // One unreadable test must not lose the other results — the run is what it is, and
+                // One unreadable test must not lose the other results: the run is what it is, and
                 // silence here would read as "this test passed".
                 OutputWindowLogger.Global.Warn($"[test] no result details for {name}: {ex.GetType().Name}: {ex.Message}");
                 continue;
             }
 
-            // The outcome comes off the NODE, which also implements ITestNodeRunDetails — the enum
+            // The outcome comes off the NODE, which also implements ITestNodeRunDetails: the enum
             // the test platform itself uses. Reading it from ErrorMessage instead would call a
             // skipped test failed: the reason a test was skipped is carried in that same field.
             var outcome = Read(node, "Outcome", Face("ITestNodeRunDetails"))?.ToString();
@@ -285,7 +285,7 @@ internal static class IdeTestService
                     FullyQualifiedName = name,
                     DisplayName = Read(r, "DisplayName") as string ?? name,
                     Project = Read(node, "ProjectName") as string ?? "",
-                    // The platform's own word — Passed / Failed / Skipped / NotFound / None —
+                    // The platform's own word (Passed / Failed / Skipped / NotFound / None)
                     // rather than a boolean that would have to guess what "not passed" meant.
                     Outcome = outcome ?? "Unknown",
                     Failed = failed,
@@ -301,7 +301,7 @@ internal static class IdeTestService
     }
 
     /// <summary>One test's outcome from the last run. The stack trace is the CLI's own text, which
-    /// carries file and line — the caller reads them from there rather than being handed a parse.</summary>
+    /// carries file and line: the caller reads them from there rather than being handed a parse.</summary>
     public sealed class TestOutcome
     {
         public string FullyQualifiedName { get; set; }
@@ -315,7 +315,7 @@ internal static class IdeTestService
         public long DurationMs { get; set; }
     }
 
-    /// <summary>How a run ended. `Started` false means the Test Explorer declined to run at all —
+    /// <summary>How a run ended. `Started` false means the Test Explorer declined to run at all:
     /// read `Message`, then the results, to tell that apart from a run whose tests failed.</summary>
     public sealed class TestRunOutcome
     {
@@ -333,7 +333,7 @@ internal static class IdeTestService
         public string Project { get; set; }
         public string Namespace { get; set; }
         public string ClassName { get; set; }
-        /// <summary>The container it was found in — the built assembly.</summary>
+        /// <summary>The container it was found in: the built assembly.</summary>
         public string Source { get; set; }
         public string TargetFramework { get; set; }
     }

@@ -29,7 +29,7 @@ internal static class PaneLauncher
     /// behind them) alive. Used while a closing solution might still be a reload coming back: the
     /// panes have to look gone straight away, but closing them would kill the session for good.
     /// Hide leaves the dock position untouched, so <see cref="ShowExisting"/> brings them back where
-    /// they were. Main thread only — IVsWindowFrame is not free-threaded.</summary>
+    /// they were. Main thread only: IVsWindowFrame is not free-threaded.</summary>
     public static void HideExisting()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -55,14 +55,14 @@ internal static class PaneLauncher
     /// <summary><para>
     /// Re-show the panes the registry already knows about, without creating any. VS holds a
     /// separate window layout for design time and run time, so panes opened while writing code are
-    /// missing from the run-time one and look closed when the debugger starts — the frames are alive,
+    /// missing from the run-time one and look closed when the debugger starts: the frames are alive,
     /// they are simply not in that layout. Called on debugger mode changes, and after a solution
     /// reload to bring back what <see cref="HideExisting"/> put away.
     /// </para>
     /// <para>
     /// create: false throughout: a pane the user closed is gone from the registry and must stay
     /// closed, and a frame we cannot find is not one to conjure up.
-    /// Main thread only — IVsWindowFrame is not free-threaded.
+    /// Main thread only: IVsWindowFrame is not free-threaded.
     /// </para></summary>
     public static void ShowExisting()
     {
@@ -87,7 +87,7 @@ internal static class PaneLauncher
         }
     }
 
-    /// <summary>Bring one open pane forward — what the Active sessions menu does. Unlike
+    /// <summary>Bring one open pane forward: what the Active sessions menu does. Unlike
     /// <see cref="ShowExisting"/> this shows even an already-visible pane, so picking a session
     /// buried under its siblings' tabs raises it. Main thread only.</summary>
     public static void Activate(PaneEntry entry)
@@ -106,7 +106,7 @@ internal static class PaneLauncher
     }
 
     /// <summary>The window frame hosting an open pane, or null when VS no longer has it.
-    /// create: false — this only ever finds what is already there.</summary>
+    /// create: false; this only ever finds what is already there.</summary>
     private static object Frame(AgentsPackage pkg, PaneEntry entry)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -115,7 +115,7 @@ internal static class PaneLauncher
 
     /// <summary>The pane's working directory: the open solution's folder (or the open folder, in
     /// Open-Folder mode), else the user profile (so claude.exe always has a real cwd). Resolved
-    /// once here, then injected into the entry and constant for the pane's life — a solution
+    /// once here, then injected into the entry and constant for the pane's life: a solution
     /// change closes the pane rather than moving it.</summary>
     private static string ResolveWorkdir()
         => AgentsPackage.Instance?.CurrentSolutionFolder
@@ -127,13 +127,13 @@ internal static class PaneLauncher
 
     /// <summary>Find the next free instance id for the pane kind and ask VS to
     /// create + show it. Each call gives a brand-new pane. <paramref name="profile"/>
-    /// is handed to the pane before it's shown — always a concrete profile (the native
+    /// is handed to the pane before it's shown: always a concrete profile (the native
     /// "Claude" included); callers pass the chosen or inherited one. When
     /// <paramref name="forkSessionId"/> is set (Chat only), the new pane opens resumed on
     /// that forked session instead of fresh, filling the composer with
     /// <paramref name="initialComposer"/> (the forked-at message). When
     /// <paramref name="resumeSessionId"/> is set (workspace restore, either kind), the new
-    /// pane opens resumed on that session instead of fresh — a separate case from the fork,
+    /// pane opens resumed on that session instead of fresh: a separate case from the fork,
     /// with no pre-filled prompt. A fresh chat pane takes <paramref name="initialComposer"/> too:
     /// what a context-menu entry had for a chat that was not open yet.</summary>
     public static void OpenNew(PaneKind kind, Profile profile, string forkSessionId = null, Contracts.SetComposerNotification initialComposer = null, string resumeSessionId = null)
@@ -158,7 +158,7 @@ internal static class PaneLauncher
                     var pane = pkg.FindToolWindow(paneType, id, create: true);
                     if (pane == null) { OutputWindowLogger.Global.Warn($"PaneLauncher: FindToolWindow null for {paneType.Name} #{id}"); return; }
                     // VS doesn't always sync VSFPROPID_MultiInstanceToolNum
-                    // before OnToolWindowCreated — pass the id we know for sure.
+                    // before OnToolWindowCreated: pass the id we know for sure.
                     if (pane is PaneWindowBase paneWindow)
                     {
                         // Create the entry BEFORE AssignPaneId: AssignPaneId → RegisterInstance →
@@ -171,7 +171,7 @@ internal static class PaneLauncher
 
                     // A forked chat pane starts on the forked session (chat-only; forks aren't a CLI
                     // concept). A restored pane (workspace restore, either kind) starts on its saved
-                    // session instead — a separate case from the fork, kept as its own branch.
+                    // session instead: a separate case from the fork, kept as its own branch.
                     var isFork = pane is ChatPaneWindow && !string.IsNullOrEmpty(forkSessionId);
                     if (isFork)
                     {
@@ -193,7 +193,7 @@ internal static class PaneLauncher
                     }
                     else if (pane is ChatPaneWindow freshChat && initialComposer != null)
                     {
-                        // A prompt with no session to start from — the context menus. Both
+                        // A prompt with no session to start from: the context menus. Both
                         // branches above need one, so without this the prompt would be dropped.
                         freshChat.SetStartupSession(null, initialComposer);
                     }

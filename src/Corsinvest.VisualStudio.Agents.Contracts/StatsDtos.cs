@@ -6,7 +6,7 @@
 namespace Corsinvest.VisualStudio.Agents.Contracts;
 
 // Wire DTOs for the Statistics dialog (chat_stats). Aggregated from the local .jsonl by
-// StatsService — shape is stable, so we type it end-to-end.
+// StatsService: shape is stable, so we type it end-to-end.
 
 /// <summary>Aggregation scope. Generated as a TS union (wire values lowercase).</summary>
 public enum StatsScopeDto

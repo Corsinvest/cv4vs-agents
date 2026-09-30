@@ -19,14 +19,14 @@ export const iconStyles = css`
         fill: none;
     }
     /* Fluent's small icon-only button scales its glyph to 20px; pin it to 14, the size every
-     * action icon in the chat is drawn at. Only icon-only buttons — labelled ones keep theirs. */
+     * action icon in the chat is drawn at. Only icon-only buttons: labelled ones keep theirs. */
     fluent-button[icon-only] svg {
         width: 14px;
         height: 14px;
     }
 `;
 
-/** Icon-only `<fluent-button>` cut to the app's density — even `size="small"` is padded for a
+/** Icon-only `<fluent-button>` cut to the app's density: even `size="small"` is padded for a
  *  control standing on its own. Layout only, so the rest still comes from Fluent. */
 export const iconTriggerStyles = css`
     .trigger {
@@ -37,10 +37,10 @@ export const iconTriggerStyles = css`
 
 /**
  * Shared tooltip for the composer's triggers. A `title` attribute is drawn by the OS, so it keeps
- * the system's light/dark whatever theme VS is in — `fluent-tooltip` is themed like the rest.
+ * the system's light/dark whatever theme VS is in: `fluent-tooltip` is themed like the rest.
  *
  * Nearly every tooltip here is one bare line: a trigger showing an icon needs naming, one showing a
- * value needs only the part it had to shorten, and a trigger that opens a list needs neither —
+ * value needs only the part it had to shorten, and a trigger that opens a list needs neither:
  * the list carries a description per row already. Never a line for what clicking does, either;
  * that is what the trigger being a button says.
  *
@@ -48,7 +48,7 @@ export const iconTriggerStyles = css`
  */
 export const tooltipStyles = css`
     /* :popover-open, not the bare tag: fluent-tooltip is a popover, and a closed popover is hidden
-       by a UA display:none that a plain display:flex here would override — which left the tooltip
+       by a UA display:none that a plain display:flex here would override, which left the tooltip
        on screen permanently. Layout only applies once it opens. */
     fluent-tooltip:popover-open {
         display: flex;

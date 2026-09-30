@@ -54,13 +54,13 @@ internal sealed class DayBar
     public long Total => Info?.Total ?? 0;
 }
 
-/// <summary>Ports the WebView dialog's chart math to C# (no plotting library — the WPF UI draws the
+/// <summary>Ports the WebView dialog's chart math to C# (no plotting library: the WPF UI draws the
 /// squares/bars itself). buildHeatmap mirrors cv-stats-dialog's percentile bucketing; BuildBars
 /// gives the per-day token totals for the bar chart.</summary>
 internal static class StatsChart
 {
     /// <summary>Per-date DayInfo, cross-joining activity (messages/sessions/tools) with the per-model
-    /// token segments — the single source both the heatmap and the bar chart read for their tooltips.</summary>
+    /// token segments: the single source both the heatmap and the bar chart read for their tooltips.</summary>
     public static Dictionary<string, DayInfo> BuildDayInfos(StatsResponse r)
     {
         var infos = new Dictionary<string, DayInfo>();

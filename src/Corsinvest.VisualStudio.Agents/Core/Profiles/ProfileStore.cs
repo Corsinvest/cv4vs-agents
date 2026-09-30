@@ -14,13 +14,13 @@ using System.Linq;
 namespace Corsinvest.VisualStudio.Agents.Core.Profiles;
 
 /// <summary>Loads/saves the profile list as a plain JSON file
-/// (<see cref="AppPaths.ProfilesFile"/>), NOT the VS settings store — so the menu and
+/// (<see cref="AppPaths.ProfilesFile"/>), NOT the VS settings store, so the menu and
 /// launch path read profiles without materializing the Options page first. Tolerant on
 /// read (missing/corrupt file → empty list) so a bad file never blocks the extension.</summary>
 internal static class ProfileStore
 {
     /// <summary>The profiles. <paramref name="forEdit"/> = true returns EXACTLY what's on disk (no
-    /// synthetic native, disabled included) — for the Options page, which edits then persists (the
+    /// synthetic native, disabled included), for the Options page, which edits then persists (the
     /// native must never be written back). = false returns the list for USE: the native "Claude"
     /// prepended and only enabled, non-blank-named profiles kept, in saved order.</summary>
     public static IReadOnlyList<Profile> Load(bool forEdit)
@@ -73,7 +73,7 @@ internal static class ProfileStore
 
     /// <summary>The native "Claude" profile: a normal profile created on the fly (never persisted
     /// to profiles.json), prepended to the list by <see cref="WithNative"/>. Env is the delta over
-    /// the inherited process env — at most the system CLAUDE_CONFIG_DIR so the extension reads the
+    /// the inherited process env: at most the system CLAUDE_CONFIG_DIR so the extension reads the
     /// right config-dir; empty otherwise (the CLI then uses ~/.claude). Everything else is inherited
     /// by claude.exe from the parent.</summary>
     private static Profile NativeProfile()
@@ -85,7 +85,7 @@ internal static class ProfileStore
     }
 
     /// <summary>The saved profiles with the native "Claude" prepended (unless the user already has
-    /// a profile named "Claude" — that one wins). Used by <see cref="Load"/> for the non-edit case;
+    /// a profile named "Claude": that one wins). Used by <see cref="Load"/> for the non-edit case;
     /// the native entry is created on the fly and never part of what Save writes.</summary>
     private static IReadOnlyList<Profile> WithNative(IReadOnlyList<Profile> profiles)
     {

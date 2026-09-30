@@ -8,7 +8,7 @@ import { structuredPatch } from 'diff';
 import { patchPathFor } from './diff';
 
 /**
- * Lines actually added and removed, counted from the hunks — not the net
+ * Lines actually added and removed, counted from the hunks, not the net
  * difference in line count. Replacing 14 lines with 1 is `+1 -14`, which is
  * what git reports; the net (`-13`) describes no real edit.
  */

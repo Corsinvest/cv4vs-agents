@@ -17,7 +17,7 @@ import { formatAbsolute, formatTimeAgo } from '../helpers/format';
  * This exists as an element, rather than the plain template it used to be, for one reason: the
  * hover must change rendered text, and the only safe way to do that is to let Lit render it again.
  * The previous version wrote `textContent` onto the span holding the `${...}` binding, which
- * destroyed that ChildPart's markers — after which every later render of the whole chat threw
+ * destroyed that ChildPart's markers, after which every later render of the whole chat threw
  * `Cannot set properties of null (setting 'data')` and the pane stopped updating entirely.
  */
 @customElement('cv-time-ago')

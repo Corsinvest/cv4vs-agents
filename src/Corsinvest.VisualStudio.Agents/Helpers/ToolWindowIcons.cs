@@ -19,8 +19,8 @@ namespace Corsinvest.VisualStudio.Agents.Helpers;
 /// every tab of ours would read the same.
 /// </para>
 /// <para>
-/// The glyph is the one the window already carries elsewhere — its menu entry, or the toolbar's list of
-/// open panes — so the tab agrees with what the user clicked to open it.
+/// The glyph is the one the window already carries elsewhere: its menu entry, or the toolbar's list of
+/// open panes, so the tab agrees with what the user clicked to open it.
 /// </para></summary>
 internal static class ToolWindowIcons
 {

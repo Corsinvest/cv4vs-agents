@@ -32,7 +32,7 @@ export function truncate(s: string | undefined | null, max: number): string {
     return s.length <= max ? s : s.slice(0, max) + '\n…';
 }
 
-/** "20 minutes ago", "2 hours ago", "yesterday" — localized. `now` is injectable so the caller
+/** "20 minutes ago", "2 hours ago", "yesterday", localized. `now` is injectable so the caller
  *  can re-render the same stamp against a later clock without reaching into the DOM. */
 export function formatTimeAgo(ms: number, now: number = Date.now()): string {
     const diff = ms - now; // negative = in the past
@@ -50,7 +50,7 @@ export function formatAbsolute(ms: number): string {
     return new Date(ms).toLocaleString();
 }
 
-/** How long something took, in the one shape the chat uses everywhere — the turn spinner, the
+/** How long something took, in the one shape the chat uses everywhere: the turn spinner, the
  *  response row, a thinking block, a sub-agent, a tool: "0.2s", "45s", "1m 23s". The decimal shows
  *  only below one second, so a 200ms turn doesn't read as "0s" while a counter ticking by the
  *  second never shows a pointless ".0". Not localized on purpose: these sit inside dense metric
@@ -71,7 +71,7 @@ export function formatDurationSec(sec: number): string {
 }
 
 /** Compact token formatter: 12 → "12", 1500 → "1.5k", 357000 → "357k", 1_200_000 → "1.2M". Bare,
- *  for the places that label the number themselves — a table with a "Tokens" column header, or a
+ *  for the places that label the number themselves: a table with a "Tokens" column header, or a
  *  tooltip already naming what it counts. */
 export function formatTokens(n: number): string {
     if (n >= 1_000_000) {
@@ -84,7 +84,7 @@ export function formatTokens(n: number): string {
 }
 
 /** A token count where the unit has to travel with it: "84 tok", "1.2k tok". `estimated` prefixes a
- *  tilde — the CLI measures the response counts but only estimates the thinking ones, and the two
+ *  tilde: the CLI measures the response counts but only estimates the thinking ones, and the two
  *  sit close enough together that they have to be told apart. */
 export function formatTokenCount(n: number, estimated = false): string {
     return `${estimated ? '~' : ''}${formatTokens(n)} tok`;

@@ -37,7 +37,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
     @property({ type: Number }) fullLineCount = 0;
     /** Per-tool fields from the result: the edit's line range (what clicking the path jumps to),
      *  what an Agent run cost. Null until the tool finishes, and for a tool that reports neither.
-     *  attribute:false — it is an object, which an attribute could not carry.
+     *  attribute:false; it is an object, which an attribute could not carry.
      *
      *  Lit dirty-checks by REFERENCE, so this only re-renders when a new object arrives. That holds
      *  because the entry is rebuilt rather than edited (applyToolResult spreads, Transcript.update
@@ -48,12 +48,12 @@ export class CvToolRow extends LitElement implements ToolRowState {
     @property({ attribute: false }) childItems: UiEntry[] = [];
     /** More children exist on disk beyond the (≤3) kept in `childItems`. */
     @property({ type: Boolean }) hasMore = false;
-    /** The sub-agent this row SPAWNED (Agent tool only) — the transcript to fetch on expand. */
+    /** The sub-agent this row SPAWNED (Agent tool only): the transcript to fetch on expand. */
     @property() agentId = '';
     /** The transcript this row LIVES in, i.e. which agent-<id>.jsonl holds its untruncated
      *  text. Empty in the main session. A nested Agent row has both, and they differ. */
     @property() containerAgentId = '';
-    /** Show-all — owned by cv-app (UiToolEntry.showAll), read here. True shows the full
+    /** Show-all, owned by cv-app (UiToolEntry.showAll), read here. True shows the full
      *  list; false shows the last 3. NOT the row open/closed state (that's `_expanded`). */
     @property({ type: Boolean }) showAll = false;
 
@@ -141,7 +141,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
     };
 
     /** Header action for the Agent row: Show all / Reduce only. Copy lives in the children
-     *  footer (renderChildren) instead — next to where the transcript ends, matching a normal
+     *  footer (renderChildren) instead, next to where the transcript ends, matching a normal
      *  response's bottom actions row. Expand is always offered while the box is expanded: even
      *  with ≤3 children the collapsed view caps the height and scrolls, so the user still needs
      *  a way to lift the cap and see the whole transcript. */
@@ -166,7 +166,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
 
     /** Nested child rows/messages (Agent tool today; generic). Lit-owned, so it stays in the
      *  component; the host exposes it to the renderer via renderChildren().
-     *  Children live in the transcript we opened (or, for a plain tool, in ours) — that is what
+     *  Children live in the transcript we opened (or, for a plain tool, in ours): that is what
      *  routes their open-output. Their own agentId stays untouched: a nested Agent row must keep
      *  the transcript IT opens, or expanding it would reopen us. */
     renderChildren() {
@@ -229,7 +229,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
 
     /** Footer actions for the whole sub-agent transcript: Copy (the full transcript) + the last
      *  child's "x ago" timestamp. Sits at the bottom of the children box and mirrors a normal
-     *  response's bottom actions row — hover-gated via CSS (.cv-children-actions). */
+     *  response's bottom actions row, hover-gated via CSS (.cv-children-actions). */
     private _renderChildrenActions() {
         // The last child carries the freshest timestamp; entries without one (e.g. thinking) → 0.
         const ts = this.childItems.reduce(

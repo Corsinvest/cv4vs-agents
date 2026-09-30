@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 // Context-window arithmetic + model-label helpers. Model metadata (the catalogue, effort
-// levels, context window) is NOT stored here — it comes from the CLI at runtime
+// levels, context window) is NOT stored here: it comes from the CLI at runtime
 // via `chat_models` and the result's modelUsage (see state.models /
 // state.contextWindow). No static model table. How a token count is WRITTEN is display, not
 // arithmetic: that lives in ui/helpers/format.
@@ -13,7 +13,7 @@ import { state as appState } from './state';
 
 /** Resolve a served model id to a catalogue `value`. The CLI reports the served id
  *  (e.g. `claude-opus-4-8[1m]`), which the catalogue keys (`default`, `opus[1m]`, …)
- *  don't match directly — but each catalogue entry carries a `resolvedModel` (the served id
+ *  don't match directly, but each catalogue entry carries a `resolvedModel` (the served id
  *  it maps to). We match on that (exact, then without the [1m] suffix), preferring a NAMED entry
  *  over `default` when several share the same resolvedModel. No family-name guessing, so
  *  alternative providers work too. */
@@ -58,7 +58,7 @@ export function modelLabel(value: string | null | undefined): string {
 
 /** Short form of modelLabel() for the composer toolbar, where the full name ("Opus (1M context)",
  *  "Default (recommended)") would eat the row. Drops a trailing parenthesised qualifier and any
- *  [1m] tag — a shape rule, not a name list, so provider-supplied labels shorten too. Falls back to
+ *  [1m] tag: a shape rule, not a name list, so provider-supplied labels shorten too. Falls back to
  *  the full label when the trim would leave nothing. Pair it with the full name in a title. */
 export function modelLabelShort(value: string | null | undefined): string {
     const full = modelLabel(value);
@@ -70,7 +70,7 @@ export function modelLabelShort(value: string | null | undefined): string {
 }
 
 /** Tokens that occupy the prompt window. `output_tokens` is GENERATED,
- *  not part of the input — it doesn't count towards the limit. */
+ *  not part of the input: it doesn't count towards the limit. */
 export function consumedTokens(u: ContextUsageDto): number {
     return u.inputTokens + u.cacheReadTokens + u.cacheCreationTokens;
 }
@@ -78,7 +78,7 @@ export function consumedTokens(u: ContextUsageDto): number {
 const CACHE_TTL_MS: Record<string, number> = { '5m': 5 * 60 * 1000, '1h': 60 * 60 * 1000 };
 
 /** How long before expiry the cache counts as expiring: long enough to finish a thought and send
- *  it. A fifth of the 5m TTL rather than the same five minutes — that would have it expiring from
+ *  it. A fifth of the 5m TTL rather than the same five minutes: that would have it expiring from
  *  the moment it was written. */
 const CACHE_EXPIRING_MS: Record<string, number> = { '5m': 60 * 1000, '1h': 5 * 60 * 1000 };
 
@@ -121,8 +121,8 @@ export function cacheState(
         : { kind: 'warm', minutesLeft };
 }
 
-/** Milliseconds until `cacheState` next changes on its own — into expiring, then each minute of the
- *  countdown it shows, then into cold — or null when only a new message can change it. Nothing
+/** Milliseconds until `cacheState` next changes on its own (into expiring, then each minute of the
+ *  countdown it shows, then into cold) or null when only a new message can change it. Nothing
  *  re-renders the gauge while the user is idle, and idle is exactly when the cache runs out: this is
  *  when to look again. Minute by minute only while expiring: a handful of renders, not one an hour. */
 export function msUntilCacheChange(
@@ -143,7 +143,7 @@ export function msUntilCacheChange(
 }
 
 /** Percent of the context window consumed. 0 until the window is known (no
- *  result yet). Clamped to [0, 100] — the CLI can report >100 on batches. */
+ *  result yet). Clamped to [0, 100]: the CLI can report >100 on batches. */
 export function contextPercent(u: ContextUsageDto): number {
     const limit = appState.contextWindow;
     if (limit <= 0) {

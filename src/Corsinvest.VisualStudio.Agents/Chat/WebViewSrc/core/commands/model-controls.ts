@@ -36,7 +36,7 @@ function currentModelInfo() {
 }
 
 /** Effort levels the current model supports (from the CLI), or null when the
- *  model has no effort (e.g. Haiku) — the slider is then hidden. Exported so the
+ *  model has no effort (e.g. Haiku): the slider is then hidden. Exported so the
  *  composer's effort chip hides on exactly the same condition as this row. */
 export function currentEffortLevels(): EffortSliderLevel[] | null {
     const m = currentModelInfo();
@@ -127,7 +127,7 @@ export class EffortCommand extends ChatCommand {
     override readonly aliases = ['effort', 'reasoning', 'thinking'];
 
     /** The slider's effort stops for the current model (from the CLI), then an
-     *  "ultracode" stop when the model supports xhigh — ultracode is xhigh plus a
+     *  "ultracode" stop when the model supports xhigh: ultracode is xhigh plus a
      *  flag, so without that level there is no stop to offer. */
     private stopValues(): string[] {
         const levels = currentEffortLevels() ?? [];
@@ -178,7 +178,7 @@ export class EffortCommand extends ChatCommand {
         const ultra = this.ultraIdx(stops);
         return {
             kind: 'slider',
-            // false: a stop is labelled by its own value — the ultracode stop already IS
+            // false: a stop is labelled by its own value; the ultracode stop already IS
             // ULTRACODE_VALUE, so it needs no flag to be named.
             stops: stops.map((lvl, i) => ({
                 label: effortLabel(lvl, false),

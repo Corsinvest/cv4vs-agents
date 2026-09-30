@@ -58,7 +58,7 @@ export class BridgeToolHost implements ToolHost {
     get diffPatch(): PatchHunkDto[] | null {
         return this.row.extras?.patch ?? null;
     }
-    /** Where the edit landed, derived from the CLI's own hunks — the same patch the preview
+    /** Where the edit landed, derived from the CLI's own hunks, the same patch the preview
      *  renders, so the jump and the diff can never disagree about the same edit. */
     get editStartLine(): number {
         return editRangeFromHunks(this.row.extras?.patch)[0];
@@ -117,7 +117,7 @@ export class BridgeToolHost implements ToolHost {
             return;
         }
         // The lines come from the patch the CLI computed applying the edit, carried on the tool
-        // result — no searching the file for text that may well have changed since. 0 while the
+        // result: no searching the file for text that may well have changed since. 0 while the
         // tool is still running, or when it created a new file: then it just opens.
         this.openFile(filePath, this.editStartLine, this.editEndLine);
     }
@@ -149,8 +149,8 @@ export class BridgeToolHost implements ToolHost {
     }
 
     openPlan(): void {
-        // Ids only: whether the request is still pending — and so whether the live file or a
-        // snapshot opens — is the host's to know, and the path comes from the CLI's own request.
+        // Ids only: whether the request is still pending (and so whether the live file or a
+        // snapshot opens) is the host's to know, and the path comes from the CLI's own request.
         bridge.sendNotification<OpenPlanNotification>(Msg.fromWebView.open.plan, {
             toolUseId: this.toolUseId,
             agentId: this.containerAgentId,
@@ -179,7 +179,7 @@ export function cleanResult(result: string, isError: boolean): string {
         }
     }
     // Large outputs arrive wrapped in the CLI's <persisted-output> envelope; show
-    // only the preview body — the full output opens on click (persistedOutputPath).
+    // only the preview body: the full output opens on click (persistedOutputPath).
     const persisted = r.match(PERSISTED_OUTPUT_RE);
     if (persisted) {
         r = persisted[1].replace(/\n\.\.\.\n$/, '\n');

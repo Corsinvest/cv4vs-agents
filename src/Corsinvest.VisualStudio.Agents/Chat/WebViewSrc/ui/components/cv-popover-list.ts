@@ -16,8 +16,8 @@ export interface ListSection<T> {
 
 /**
  * Generic navigable list popover (the engine behind cv-at-menu / cv-command-menu / cv-model-list,
- * and future lists like history/pin/media). It OWNS the behaviour — anchored popover, ↑/↓
- * wrap-around navigation, scroll-into-view, active state, optional search box — and DELEGATES the
+ * and future lists like history/pin/media). It OWNS the behaviour: anchored popover, ↑/↓
+ * wrap-around navigation, scroll-into-view, active state, optional search box, and DELEGATES the
  * row content to the caller via the `renderRow` render-prop. Callers stay thin: data + renderRow
  * + their own select event.
  *
@@ -82,7 +82,7 @@ export class CvPopoverList extends LitElement {
                 font-weight: var(--fontWeightSemibold);
             }
             /* The optional band below the list: outside the scroller like the header, so it stays
-               in view — for a control that acts on the whole list rather than on one row. */
+               in view, for a control that acts on the whole list rather than on one row. */
             .footer {
                 display: flex;
                 align-items: center;
@@ -135,12 +135,12 @@ export class CvPopoverList extends LitElement {
                 background: var(--colorBrandBackground);
                 color: var(--colorNeutralForegroundOnBrand);
             }
-            /* subtleActive: the cursor without the brand fill — see the property. */
+            /* subtleActive: the cursor without the brand fill; see the property. */
             :host([subtleactive]) .row.selected {
                 background: var(--colorNeutralBackground1Hover);
                 color: var(--colorNeutralForeground2Hover);
             }
-            /* isGrouped: rows handled as one. A rule down the left rather than merging them —
+            /* isGrouped: rows handled as one. A rule down the left rather than merging them:
                they stay separate rows, each keeping its own actions. */
             .row.grouped {
                 border-left: 2px solid var(--colorBrandStroke1);
@@ -297,23 +297,23 @@ export class CvPopoverList extends LitElement {
     ];
 
     /** Optional band above the list, supplied by the caller. A TemplateResult rather than a string
-     *  because what goes there is not always only a title — the queue puts its clear button beside
+     *  because what goes there is not always only a title: the queue puts its clear button beside
      *  the count. Like renderRow: the caller says what, this owns where. */
     @property({ attribute: false }) header?: TemplateResult;
     /** Optional band below the list, the header's twin: the caller says what, this owns where. */
     @property({ attribute: false }) footer?: TemplateResult;
     /** Mark the cursor row with the hover tint instead of the brand fill. For a list you act ON
      *  rather than pick FROM: the fill announces "this is what Enter takes", which is wrong for a
-     *  row that carries its own buttons — and a solid blue behind them leaves a red one no longer
+     *  row that carries its own buttons, and a solid blue behind them leaves a red one no longer
      *  reading as a warning. */
     @property({ type: Boolean }) subtleActive = false;
     /** Which items belong together, when some of them do. Rows answering true get a rule down
-     *  their left, saying they are handled as one — the queue's Alt+Enter groups leave as a single
+     *  their left, saying they are handled as one: the queue's Alt+Enter groups leave as a single
      *  message. The caller knows what "together" means; this only draws it. */
     @property({ attribute: false }) isGrouped?: (item: unknown) => boolean;
     /** All items to SHOW (including non-navigable ones, e.g. disabled models). */
     @property({ attribute: false }) items: unknown[] = [];
-    /** Render-prop for a row's content (the shell — selected state, click — is ours). */
+    /** Render-prop for a row's content (the shell, meaning selected state and click, is ours). */
     @property({ attribute: false }) renderRow!: (
         item: unknown,
         selected: boolean,
@@ -324,7 +324,7 @@ export class CvPopoverList extends LitElement {
     @property({ attribute: false }) sections?: ListSection<unknown>[];
     @property() emptyText = 'No results';
     /** Ask for the search box. Shown only when there is something to choose between (more than
-     *  one item), and kept for the rest of the open once shown — a filter narrowing the caller's
+     *  one item), and kept for the rest of the open once shown: a filter narrowing the caller's
      *  items down to one must not take the box away while the user is typing in it. */
     @property({ type: Boolean }) searchable = false;
     @property() searchPlaceholder = 'Search…';
@@ -339,7 +339,7 @@ export class CvPopoverList extends LitElement {
     @query('.list') private _list?: HTMLDivElement;
     @query('.search') private _search?: HTMLElement & { value: string };
 
-    /** The flat list of navigable items, in display order — what ↑/↓ and pickActive index into. */
+    /** The flat list of navigable items, in display order, what ↑/↓ and pickActive index into. */
     private get _nav(): unknown[] {
         const nav = this.isNavigable;
         const items = this._filter(this.items);
@@ -361,8 +361,8 @@ export class CvPopoverList extends LitElement {
         }
         // Reset the cursor to the first navigable row when the visible SET changes
         // (filter typed, results replaced). But items/sections are rebuilt as fresh
-        // array refs on every parent re-render — e.g. toggling a trailing switch/slider
-        // calls requestUpdate — so a plain changed.has('items') fires on cosmetic
+        // array refs on every parent re-render (e.g. toggling a trailing switch/slider
+        // calls requestUpdate) so a plain changed.has('items') fires on cosmetic
         // re-renders too and snaps the highlight back to the top. Reset only when the
         // navigable set actually differs (by count + identity signature), not on ref churn.
         if (changed.has('query') || changed.has('items') || changed.has('sections')) {

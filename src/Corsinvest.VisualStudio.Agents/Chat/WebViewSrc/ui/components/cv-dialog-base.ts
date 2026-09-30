@@ -15,7 +15,7 @@ import { property, query } from 'lit/decorators.js';
  * `protected` so each child's render() can wire `this._dlg` / `this._onDialogToggle` / `this._close`.
  */
 export abstract class CvDialogBase extends LitElement {
-    // NOTE: render root is NOT set here — each dialog owns its Shadow DOM (`static styles`).
+    // NOTE: render root is NOT set here: each dialog owns its Shadow DOM (`static styles`).
     // Setting it here would centralize what each concrete dialog already declares itself.
 
     @property({ type: Boolean, reflect: true }) open = false;
@@ -24,7 +24,7 @@ export abstract class CvDialogBase extends LitElement {
 
     override updated(changed: Map<string, unknown>): void {
         // Create-on-open: the dialog element only exists while open (render returns nothing when
-        // closed). After it renders, showModal so Esc/backdrop close it — @toggle then fires and we
+        // closed). After it renders, showModal so Esc/backdrop close it: @toggle then fires and we
         // propagate `close`, dropping it from the DOM (dialog-host removes it on the `close` event).
         if (changed.has('open') && this.open) {
             void this.updateComplete.then(() => this._dlg?.show?.());

@@ -29,7 +29,7 @@ public enum PaneKind
 
 /// <summary>
 /// The data of one live pane (CLI or Chat). Created by PaneLauncher BEFORE the window, so the
-/// hosting control holds it readonly and non-null — no attach/dispose gap, no NRE reading the
+/// hosting control holds it readonly and non-null: no attach/dispose gap, no NRE reading the
 /// profile. Sealed (no kind-specific subclass): nothing differs between CLI and Chat entries.
 /// </summary>
 public sealed class PaneEntry
@@ -45,10 +45,10 @@ public sealed class PaneEntry
         ClaudePaths = ClaudePaths.ForProfile(profile);
     }
 
-    /// <summary>Which kind this pane is (single source — the control no longer duplicates it).</summary>
+    /// <summary>Which kind this pane is (single source: the control no longer duplicates it).</summary>
     public PaneKind Kind { get; }
 
-    /// <summary>The pane's environment profile — ALWAYS set (native "Claude" included). Single source
+    /// <summary>The pane's environment profile: ALWAYS set (native "Claude" included). Single source
     /// for the pane's provider identity: the caption/title and the Claude paths (MCP lock, sessions,
     /// stats) all derive from it.</summary>
     public Profile Profile { get; }
@@ -65,7 +65,7 @@ public sealed class PaneEntry
 
     /// <summary>The pane's working directory (solution folder, else the user profile). Constant for
     /// the pane's life: a solution change closes the pane (CloseAll) rather than moving it, so this is
-    /// resolved once in PaneLauncher and injected here — the single source every reader uses.</summary>
+    /// resolved once in PaneLauncher and injected here: the single source every reader uses.</summary>
     public string WorkingDirectory { get; }
 
     /// <summary>Id of the session currently attached (null = fresh). Drives the History picker's ✓.</summary>
@@ -90,27 +90,27 @@ public sealed class PaneEntry
     /// <summary>Invoked to bring this pane to front (toolbar open-panes switch). Set by the window.</summary>
     internal Action ActivateAction { get; set; }
 
-    /// <summary>Opens this pane's session picker — the toolbar's History popup. Set by the window,
+    /// <summary>Opens this pane's session picker: the toolbar's History popup. Set by the window,
     /// so the chat's "Resume conversation" command reaches the same UI as the toolbar button.</summary>
     internal Action ShowHistoryAction { get; set; }
 
     /// <summary>Dismisses the session picker if it's open, and reports whether it was. Lets the
-    /// pane's Esc handler give the popup priority instead of forwarding Esc to the WebView —
+    /// pane's Esc handler give the popup priority instead of forwarding Esc to the WebView:
     /// VS routes Esc through IOleCommandTarget, so it never reaches the popup on its own.</summary>
     internal Func<bool> DismissHistoryAction { get; set; }
 
     /// <summary>Fills or adds to this pane's composer, for the context menus and the
-    /// debugger-break offer. Chat panes only — the CLI pane has no composer of ours to fill.</summary>
+    /// debugger-break offer. Chat panes only: the CLI pane has no composer of ours to fill.</summary>
     internal Action<SetComposerNotification> SetComposerAction { get; set; }
 
     /// <summary>Asks this pane's own claude.exe for plan usage, so the status bar needn't start one.
-    /// Chat panes only. Answers null while the CLI hasn't finished init, or when get_usage failed —
+    /// Chat panes only. Answers null while the CLI hasn't finished init, or when get_usage failed:
     /// never a usage without limits in place of an error.</summary>
     internal Func<Task<UsageDto>> FetchUsageAction { get; set; }
 
     /// <summary>The single-source display title, used by BOTH the pane caption and the toolbar's
     /// open-panes list: e.g. "Chat 3 (Claude)". Computed once in the ctor (all inputs immutable).
-    /// Profile.Name is always non-empty — ProfileStore.Load(forEdit:false) filters out blank-named profiles,
+    /// Profile.Name is always non-empty: ProfileStore.Load(forEdit:false) filters out blank-named profiles,
     /// and the native profile is named "Claude".</summary>
     public string Title { get; }
 

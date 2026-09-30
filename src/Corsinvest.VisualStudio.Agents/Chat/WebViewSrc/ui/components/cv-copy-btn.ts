@@ -16,7 +16,7 @@ import { iconStyles, iconTriggerStyles } from '../styles/shared';
  * written as a `ClipboardItem` (pasteable as a real image).
  *
  * Callers that position it (the hover-reveal over a <pre>/patch) reach the button via
- * `::part(button)` — the shadow boundary blocks plain descendant selectors.
+ * `::part(button)`: the shadow boundary blocks plain descendant selectors.
  */
 @customElement('cv-copy-btn')
 export class CvCopyBtn extends LitElement {

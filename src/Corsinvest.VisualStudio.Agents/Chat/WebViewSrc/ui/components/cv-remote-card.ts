@@ -11,12 +11,12 @@ import { iconStyles } from '../styles/shared';
 import './cv-copy-btn';
 
 /**
- * The Remote Control session link, posted into the transcript when the bridge comes up — the
+ * The Remote Control session link, posted into the transcript when the bridge comes up, the
  * same thing the CLI does. In the conversation rather than a banner: the link matters for a few
  * seconds, and a row pinned above the chat would spend a line of a narrow tool window on it
  * forever.
  *
- * The QR is the point. On the desktop the link is redundant — the session is already on screen;
+ * The QR is the point. On the desktop the link is redundant: the session is already on screen;
  * what is missing is a way to reach it from the phone, and scanning beats copying a URL.
  */
 @customElement('cv-remote-card')
@@ -74,7 +74,7 @@ export class CvRemoteCard extends LitElement {
             .url {
                 overflow-wrap: anywhere;
             }
-            /* Copying beats selecting a wrapped URL by hand — the link is how you send the
+            /* Copying beats selecting a wrapped URL by hand: the link is how you send the
                session to someone else, which is the one thing the QR cannot do. Aligned to the
                first line so the button stays put as the URL wraps. */
             .link-row {

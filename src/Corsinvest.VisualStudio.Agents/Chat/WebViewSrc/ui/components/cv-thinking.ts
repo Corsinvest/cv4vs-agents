@@ -15,10 +15,10 @@ import ChevronUp16Regular from '@fluentui/svg-icons/icons/chevron_up_16_regular.
 /**
  * The model's reasoning block. Collapsed `<details>` by default; the token badge is the only
  * activity indicator while streaming (no spinner). `redacted` (cipher-only, no text) or empty
- * text renders as a static, non-expandable label — there is nothing to show inside.
+ * text renders as a static, non-expandable label: there is nothing to show inside.
  */
 // Value props (not a single `entry` object): Lit dirty-checks by reference, so the entry is mutated
-// in place during streaming — passing individual values makes each delta actually re-render.
+// in place during streaming: passing individual values makes each delta actually re-render.
 @customElement('cv-thinking')
 export class CvThinking extends LitElement {
     @property({ type: String }) text = '';
@@ -27,7 +27,7 @@ export class CvThinking extends LitElement {
     @property({ type: Number }) durationMs = 0;
     @property({ type: Boolean }) redacted = false;
     /** When the block started (epoch ms), so the label can count up while it streams instead of
-     *  only reporting the total at the end. The entry carries it already — cv-app stamps it on
+     *  only reporting the total at the end. The entry carries it already: cv-app stamps it on
      *  creation and subtracts it on thinkingEnded to get durationMs. */
     @property({ type: Number }) startedAt = 0;
 
@@ -43,7 +43,7 @@ export class CvThinking extends LitElement {
     }
 
     /** Subscribes only while the block is open-ended: a finished thought has durationMs and needs
-     *  no clock, and the element outlives the streaming (it stays in the transcript) — so this
+     *  no clock, and the element outlives the streaming (it stays in the transcript), so this
      *  follows `streaming`, not the element's lifetime. */
     override updated(): void {
         const wants = this.streaming && this.startedAt > 0;
@@ -92,7 +92,7 @@ export class CvThinking extends LitElement {
             }
             .chevron {
                 /* Full opacity so it stays visible against the dimmed (0.8) italic summary.
-                   Down when collapsed, up when open — same single-chevron toggle as the tool
+                   Down when collapsed, up when open: same single-chevron toggle as the tool
                    rows and expandable messages (no double chevron, no tree-style rotation). */
                 opacity: 1;
                 display: inline-flex;
@@ -130,7 +130,7 @@ export class CvThinking extends LitElement {
     override render() {
         // While streaming the count comes from startedAt (the tick above only forces the re-render);
         // once done, from the durationMs the entry was stamped with. `_now` is read here so Lit sees
-        // the dependency — without it the tick would fire against nothing.
+        // the dependency: without it the tick would fire against nothing.
         const live =
             this.streaming && this.startedAt > 0 ? (this._now || Date.now()) - this.startedAt : 0;
         const label = this.streaming
@@ -141,14 +141,14 @@ export class CvThinking extends LitElement {
               ? `Thought for ${formatDuration(this.durationMs)}`
               : 'Thinking';
         // Blue blinking while thinking; once done it just drops `.active` and stays neutral gray (no
-        // `.done` class — a finished thought isn't a "success", so no green).
+        // `.done` class: a finished thought isn't a "success", so no green).
         const dot = html`<span class="cv-dot ${this.streaming ? 'active' : ''}"></span>`;
         // redacted or no text → static, non-expandable (matches VS Code).
         if (this.redacted || !this.text?.trim()) {
             return html`<div class="static">${dot}${label}</div>`;
         }
         // Token estimate stays visible after the turn too (e.g. "Thought for 1s · ~88 tok"), not only
-        // while streaming — a short think would otherwise flash the count and lose it. Same unit as
+        // while streaming: a short think would otherwise flash the count and lose it. Same unit as
         // every other count in the chat, tilde included: the CLI sends this one as
         // `estimated_tokens`, so it is not the measured figure the response row shows.
         const tokens = this.tokens

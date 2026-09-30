@@ -5,7 +5,7 @@
 // Shared WebView state: a Proxy over a private data object. Read/write via
 // natural property syntax; writes notify subscribers (state.on), skipping
 // no-op assignments. Defaults below mirror AgentsOptions.cs (most fields
-// arrive via the host `init` payload) — keep the two in sync.
+// arrive via the host `init` payload): keep the two in sync.
 
 import type {
     ContextUsageDto,
@@ -47,7 +47,7 @@ export interface AppState {
     switchModelsOnFlag: boolean;
     /** An org policy (CLI settings) forbids the bypass mode → the selector must not offer it. */
     bypassPermissionsDisabled: boolean;
-    /** Remote Control: mirrors what the host tells us — the CLI never reports it back, so it
+    /** Remote Control: mirrors what the host tells us: the CLI never reports it back, so it
      *  resets on every respawn. */
     remoteControl: {
         status: 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -65,7 +65,7 @@ export interface AppState {
     subagentTasks: SubagentTask[];
     // Uuids of messages typed while a turn was running: echoed as bubbles at once, but not handed
     // to the CLI until that turn ends. Mirrored from cv-prompt's queue, which keeps the payloads
-    // themselves (text + attachments) since it is the one that sends them — cv-app needs only the
+    // themselves (text + attachments) since it is the one that sends them: cv-app needs only the
     // uuids, to fade a bubble that is on screen without having been sent.
     queuedUuids: string[];
 
@@ -83,7 +83,7 @@ export interface AppState {
     // sub-agents), in the CLI wire format. `null` until the first one arrives.
     contextUsage: ContextUsageDto | null;
 
-    // When the cache behind `contextUsage` was written (epoch ms) — the carrying message's own
+    // When the cache behind `contextUsage` was written (epoch ms): the carrying message's own
     // timestamp, not arrival time: a resumed session replays old messages, and stamping those on
     // arrival would report a days-cold cache as fresh.
     cacheAnchorMs: number | null;
@@ -96,11 +96,11 @@ export interface AppState {
     // effort slider. Includes disabled models. Empty until the first init.
     models: ModelInfoDto[];
     // Current model's context window + max output, from the result's modelUsage.
-    // 0 until the first turn completes — the gauge stays hidden until then.
+    // 0 until the first turn completes: the gauge stays hidden until then.
     contextWindow: number;
     maxOutputTokens: number;
 
-    // IDE context — driven by `ide_selection_changed` from the host.
+    // IDE context: driven by `ide_selection_changed` from the host.
     // `ideContextEnabled` is the eye-toggle on the badge: when false the
     // badge is hidden and the next prompt won't carry an <ide_*> tag.
     ideContext: IdeContextNotification | null;
@@ -117,7 +117,7 @@ type OnFn<T extends object> = <K extends keyof T>(key: K, fn: Listener<T[K]>) =>
 
 /**
  * Internal store: holds the private data, dispatches change notifications.
- * Consumers don't touch this directly — they go through the Proxy below.
+ * Consumers don't touch this directly: they go through the Proxy below.
  */
 class StoreImpl<T extends object> {
     private _data: T;
@@ -153,7 +153,7 @@ class StoreImpl<T extends object> {
 
     /**
      * Subscribe to changes of a key. Returns an unsubscribe function.
-     * The callback is NOT invoked with the current value — only with
+     * The callback is NOT invoked with the current value; only with
      * future changes; read `state.<key>` if you need the current value.
      */
     on: OnFn<T> = (key, fn) => {

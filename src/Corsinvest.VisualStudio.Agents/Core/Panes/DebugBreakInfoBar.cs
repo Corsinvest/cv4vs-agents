@@ -12,8 +12,8 @@ using System;
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 
 /// <summary>A debugger-break InfoBar: "Paused on &lt;exception&gt; at &lt;file&gt;:&lt;line&gt;" with an
-/// "Ask cv4vs Agents" action. Hosted on the window frame of the file the break happened in — the user is
-/// looking at that editor, not at the top of the shell — and falls back to the main window when
+/// "Ask cv4vs Agents" action. Hosted on the window frame of the file the break happened in (the user is
+/// looking at that editor, not at the top of the shell) and falls back to the main window when
 /// that document isn't open. <see cref="DebugBreakService"/> decides when one is worth raising.</summary>
 internal sealed class DebugBreakInfoBar : IVsInfoBarUIEvents
 {

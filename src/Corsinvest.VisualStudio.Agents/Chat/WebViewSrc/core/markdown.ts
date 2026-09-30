@@ -26,7 +26,7 @@ const renderer = new marked.Renderer() as Renderer & {
 };
 
 // Inline `code` that is a file reference and nothing else becomes a link inside the span. marked
-// tokenizes code spans before any extension runs, so the fileLink tokenizer below never sees them —
+// tokenizes code spans before any extension runs, so the fileLink tokenizer below never sees them,
 // which is the right rule for a fence and the wrong one here, since the model backticks a filename
 // precisely because it is one. The decision lives in codespan-link.ts so it can be tested.
 renderer.codespan = function (token: Tokens.Codespan): string {
@@ -73,7 +73,7 @@ renderer.link = function (token: Tokens.Link): string {
     if (/^(https?|mailto):/.test(href)) {
         return `<a href="${escapeHtml(href)}" title="${escapeHtml(title)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     }
-    // A markdown link to a local file — the model writes [X.cs:192](src/.../X.cs:192). If the href
+    // A markdown link to a local file: the model writes [X.cs:192](src/.../X.cs:192). If the href
     // parses as a file ref, render a clickable file link (cv-message routes the click to VS) using
     // the LABEL text as-is. Otherwise fall back to plain text.
     // 'plausible-path', not the prose allow-list: the model wrote this AS a link, so any extension is
@@ -88,7 +88,7 @@ renderer.link = function (token: Tokens.Link): string {
 };
 
 // Inline extension: turn a bare "path:line" reference (ClientEvents.cs:208, Core/x.ts:45) into a
-// clickable link that cv-message routes to VS. It runs on inline TEXT only — marked tokenizes fenced
+// clickable link that cv-message routes to VS. It runs on inline TEXT only: marked tokenizes fenced
 // code and inline `code` first, so those are never touched, and http(s) autolinks are consumed by
 // marked's own inline link/url rules before this. The heavy lifting (which substrings qualify, the
 // allow-list, the :line[:col] suffix shapes) lives in findFileRefs; here we just anchor it to the
@@ -96,13 +96,13 @@ renderer.link = function (token: Tokens.Link): string {
 const fileLinkExtension = {
     name: 'fileLink',
     level: 'inline' as const,
-    // Where marked should jump to next — a potential index, per marked's contract. firstRefHint
+    // Where marked should jump to next: a potential index, per marked's contract. firstRefHint
     // shares ANCHOR/BACK with the parser so it can't drift: a hint that misses a shape silently
     // stops the tokenizer from ever being offered that position.
     start: firstRefHint,
     tokenizer(src: string) {
         // A file-ref only counts if it starts at the cursor (offset 0 of the remaining src). Only the
-        // first ref can qualify — findFileRefs returns them in order — so stop at it.
+        // first ref can qualify: findFileRefs returns them in order, so stop at it.
         const ref = findFileRefs(src)[0];
         if (!ref || ref.start !== 0) {
             return undefined;
@@ -175,7 +175,7 @@ export function clearMarkdownCache(): void {
 /**
  * Render markdown to sanitized HTML for `unsafeHTML` (DOMPurify has run).
  * On parse failure, falls back to escaped plaintext instead of a blank bubble.
- * Memoized by input text — see MD_CACHE_MAX.
+ * Memoized by input text; see MD_CACHE_MAX.
  */
 export function renderMarkdown(text: string | undefined | null): string {
     const key = text ?? '';
@@ -218,7 +218,7 @@ export function renderMarkdown(text: string | undefined | null): string {
  */
 export function closeOpenMarkdown(text: string): string {
     // Walk lines tracking whether we're inside a fenced code block. A line that
-    // *starts* with ``` flips the state — so ``` that appear as content (not at
+    // *starts* with ``` flips the state, so ``` that appear as content (not at
     // line start, or while already inside a block) don't throw off the count.
     // This is the key difference from a naive `/^```/gm` tally, which miscounts
     // a code block whose content shows other fences (markdown-in-markdown).

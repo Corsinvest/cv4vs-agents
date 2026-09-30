@@ -12,7 +12,7 @@ using Task = System.Threading.Tasks.Task;
 namespace Corsinvest.VisualStudio.Agents.Editor;
 
 /// <summary><para>A context menu's prompts: one item per configured prompt, handed to a chat pane.
-/// One instance per menu — the code window, the Error List, the Output window — each with its own
+/// One instance per menu (the code window, the Error List, the Output window), each with its own
 /// dynamic range, so an item knows its menu by its id: VS routes a context-menu command without
 /// saying which menu it came from.</para>
 /// <para>
@@ -79,7 +79,7 @@ internal sealed class EditorPromptsMenuCommand : OleMenuCommand
         cmd.MatchedCommandId = 0;
     }
 
-    /// <summary>The editor's prompt goes alone — the file and selection travel with it through the
+    /// <summary>The editor's prompt goes alone: the file and selection travel with it through the
     /// IDE context. The other windows' prompts carry what they are about below them.</summary>
     private static void OnInvoke(object sender, EventArgs e)
     {

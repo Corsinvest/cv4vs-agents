@@ -16,7 +16,7 @@ export interface SliderStop<V = unknown> {
 }
 
 /**
- * Segmented slider — a track with N evenly-spaced stops and a knob that snaps
+ * Segmented slider: a track with N evenly-spaced stops and a knob that snaps
  * to the active one (the "Effort (High)" control style). Pointer drag and
  * Left/Right/Home/End keys move the knob; each settle fires a `change` event
  * carrying the selected stop's `value`.
@@ -28,7 +28,7 @@ export interface SliderStop<V = unknown> {
  *       @change=${onPick}
  *   ></cv-segmented-slider>
  *
- * Shadow DOM (own `<div>` markup + CSS) — not a restyled `<fluent-*>`.
+ * Shadow DOM (own `<div>` markup + CSS), not a restyled `<fluent-*>`.
  */
 @customElement('cv-segmented-slider')
 export class CvSegmentedSlider<V = unknown> extends LitElement {
@@ -48,7 +48,7 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
              * family in either theme: a transparent track outlined in StrokeAccessible, filled with
              * CompoundBrand, and a thumb that is Foreground3 over the track and ForegroundInverted
              * over the fill. Previously --vscode-* names, which exist in VS Code's webview and
-             * nowhere here — every one fell through to a hard-coded dark default, so the track
+             * nowhere here: every one fell through to a hard-coded dark default, so the track
              * stayed charcoal on a light theme. The host row can still override them. */
             --cv-slider-track: var(--colorTransparentBackground);
             --cv-slider-fill: var(--colorCompoundBrandBackground);
@@ -213,7 +213,7 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
         // knob/fill position as a percentage of the padded track span
         const pos = n > 1 ? (idx / (n - 1)) * 100 : 0;
         const knobPx = `calc(11px + (100% - 22px) * ${pos / 100})`;
-        // The fill runs past the knob, like fluent-switch — but it is measured from the track's own
+        // The fill runs past the knob, like fluent-switch, but it is measured from the track's own
         // edges, not from the knob: derived from knobPx it inherited the 11px padding the knob is
         // inset by, so at the last stop it stopped short of the right edge and left a sliver of
         // bare track. 22px is the knob's centre (11px) plus half the track's height, so the fill ends

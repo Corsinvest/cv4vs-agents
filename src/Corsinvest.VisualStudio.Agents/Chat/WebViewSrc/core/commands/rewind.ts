@@ -7,7 +7,7 @@ import { ChatCommand, type CommandHost, type CommandSection } from './base';
 import { state } from '../state';
 
 /**
- * Context · Rewind — restore the files to the state the CLI captured before a chosen message.
+ * Context · Rewind: restore the files to the state the CLI captured before a chosen message.
  *
  * Files only: the conversation stays as it is. Undoing the conversation too is what /clear and the
  * fork action are for, and folding three different retreats into one command would make each of

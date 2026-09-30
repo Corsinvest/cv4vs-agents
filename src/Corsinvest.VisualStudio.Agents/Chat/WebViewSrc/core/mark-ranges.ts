@@ -9,7 +9,7 @@ export type Range = { start: number; end: number };
 
 /**
  * Entities the highlighter emits. Each stands for one character of the source, which is what the
- * ranges are counted in — advancing by their literal length would drift the offsets.
+ * ranges are counted in: advancing by their literal length would drift the offsets.
  */
 const ENTITY = /^&(?:lt|gt|amp|quot|#x27|#39);/;
 
@@ -19,7 +19,7 @@ const ENTITY = /^&(?:lt|gt|amp|quot|#x27|#39);/;
  * A mark is closed and reopened around any tag that falls inside it: a <mark> spanning a
  * `<span>` boundary would nest the two badly, and the browser's recovery moves the text.
  *
- * Ranges must be sorted and non-overlapping — what diffWords produces.
+ * Ranges must be sorted and non-overlapping: what diffWords produces.
  */
 export function markRanges(html: string, ranges: readonly Range[]): string {
     if (!ranges.length) {

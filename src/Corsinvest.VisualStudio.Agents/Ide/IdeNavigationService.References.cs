@@ -29,7 +29,7 @@ internal sealed partial class IdeNavigationService
     private object _classificationOptionsDefault;    // ClassificationOptions.Default boxed
 
     /// <summary>Resolve the find-references types/members. The one parameter we must still
-    /// supply to FindReferencesAsync is an OptionsProvider&lt;ClassificationOptions&gt; — we
+    /// supply to FindReferencesAsync is an OptionsProvider&lt;ClassificationOptions&gt;: we
     /// fulfil it with a tiny RealProxy returning ClassificationOptions.Default. All internal,
     /// all feature-detected.</summary>
     /// <summary>Lay the four values we have into the parameter list the method actually declares,
@@ -60,7 +60,7 @@ internal sealed partial class IdeNavigationService
     /// <summary><para>One of IFindUsagesService's two entry points, by name.</para>
     /// <para>
     /// Deliberately not pinned to an arity. It used to require exactly five parameters, and when
-    /// one of the two grew a sixth the tool reported "not available in this Visual Studio" — which
+    /// one of the two grew a sixth the tool reported "not available in this Visual Studio", which
     /// reads as an edition limit and sent everyone looking in the wrong place, while its sibling
     /// went on working from the same interface. If the shape ever changes for real, the invoke
     /// below fails with a message naming the mismatch, which is a better account than a probe that
@@ -90,7 +90,7 @@ internal sealed partial class IdeNavigationService
                 _findReferencesAsync = FindUsagesMethod("FindReferencesAsync");
                 if (_findReferencesAsync == null) { return ProbeFailed(step); }
 
-                // Sibling method, same shape — powers goToImplementation. Optional: if a future VS
+                // Sibling method, same shape; powers goToImplementation. Optional: if a future VS
                 // drops it we just disable implementations, references still work.
                 _findImplementationsAsync = FindUsagesMethod("FindImplementationsAsync");
 
@@ -127,7 +127,7 @@ internal sealed partial class IdeNavigationService
         => RunFindUsagesAsync(() => _findReferencesAsync, "references", wantsDefinitions: false,
                               filePath, line, symbolName, ct);
 
-    /// <summary>Find all implementations of the symbol on that line — concrete classes/members that
+    /// <summary>Find all implementations of the symbol on that line: concrete classes/members that
     /// implement an interface, or override a virtual/abstract member (Go To Implementation).
     /// Different from references (callers) and definition (declaration). Multi-language; never
     /// throws. Uses the sibling FindImplementationsAsync of the same IFindUsagesService.</summary>
@@ -137,11 +137,11 @@ internal sealed partial class IdeNavigationService
 
     /// <summary>Shared driver for the two IFindUsagesService entry points. <paramref name="kind"/>
     /// flavours the messages; <paramref name="wantsDefinitions"/> picks which of the buffered
-    /// context's two builders holds the answer — see <see cref="ReadBufferedResults"/>, where
+    /// context's two builders holds the answer; see <see cref="ReadBufferedResults"/>, where
     /// getting that wrong cost go-to-implementation every result it ever had.
     /// <para>The method arrives as a function, not as a MethodInfo, because the field it comes from
-    /// is filled by the probe below. Passed directly it was read at the call site — before the probe
-    /// had run — so the very first find-references of a session saw null and answered "the internal
+    /// is filled by the probe below. Passed directly it was read at the call site, before the probe
+    /// had run, so the very first find-references of a session saw null and answered "the internal
     /// API has moved", then worked ever after. A one-off failure that read like a version problem
     /// and cleared itself on retry, which is the worst way for it to look.</para></summary>
     private async Task<NavResult> RunFindUsagesAsync(
@@ -179,7 +179,7 @@ internal sealed partial class IdeNavigationService
             var optionsProvider = OptionsProviderProxy.Create(_optionsProviderType, _classificationOptionsDefault);
 
             // Built from the signature rather than assumed: the parameter list has changed shape
-            // across VS versions, and the four values below are the only ones we have to give —
+            // across VS versions, and the four values below are the only ones we have to give:
             // anything else the method wants gets its own default rather than shifting the rest
             // out of position.
             var args = BuildFindUsagesArgs(findMethod, context, document, offset, optionsProvider, ct);
@@ -212,7 +212,7 @@ internal sealed partial class IdeNavigationService
     /// SourceReferenceItems through OnReferencesFoundAsync into <c>_state.References</c>, while
     /// <c>FindImplementationsAsync</c> streams DefinitionItems through OnDefinitionFoundAsync into
     /// <c>_state.Definitions</c>. Reading References for both is why go-to-implementation used to
-    /// answer "none found" for every symbol in every language — an empty list, reported as a
+    /// answer "none found" for every symbol in every language: an empty list, reported as a
     /// successful search.
     /// </para></summary>
     private static NavLocation[] ReadBufferedResults(object context, bool definitions)
@@ -227,7 +227,7 @@ internal sealed partial class IdeNavigationService
         foreach (var item in items.Cast<object>())
         {
             // SourceReferenceItem carries one SourceSpan; DefinitionItem carries SourceSpans, an
-            // array — one symbol can be declared in several places (a partial class, a C++ header
+            // array: one symbol can be declared in several places (a partial class, a C++ header
             // and its .cpp), and all of them are answers.
             foreach (var span in SpansOf(item, definitions))
             {
@@ -265,7 +265,7 @@ internal sealed partial class IdeNavigationService
     /// OptionsProvider&lt;ClassificationOptions&gt; required by FindReferencesAsync: its
     /// GetOptionsAsync(languageServices, ct) returns ValueTask&lt;ClassificationOptions&gt;
     /// wrapping ClassificationOptions.Default. RealProxy (not DispatchProxy) so we stay on
-    /// the .NET Framework base — no extra package — and can target the internal interface
+    /// the .NET Framework base (no extra package) and can target the internal interface
     /// type at runtime via GetTransparentProxy(Type).</summary>
     private sealed class OptionsProviderProxy : System.Runtime.Remoting.Proxies.RealProxy
     {

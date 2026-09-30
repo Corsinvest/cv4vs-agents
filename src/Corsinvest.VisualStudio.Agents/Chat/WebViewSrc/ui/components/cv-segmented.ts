@@ -21,7 +21,7 @@ export interface SegOption<V extends string = string> {
 
 /**
  * Segmented control: a row of `<fluent-button>`s joined into one bar, exactly one
- * active. Fluent stays pure — the active button is `appearance="primary"` (filled
+ * active. Fluent stays pure: the active button is `appearance="primary"` (filled
  * accent) and the rest `subtle`; only layout (join + end radii) is styled here.
  *
  * Buttons size to their content. Emits `change` (CustomEvent, `detail.value`) on
@@ -47,7 +47,7 @@ export class CvSegmented<V extends string = string> extends LitElement {
                 display: inline-flex;
             }
             /* Join the buttons: square inner corners, rounded outer ends only, and tighten the
-           default small-button padding so segments hug their content (only layout — Fluent pure). */
+           default small-button padding so segments hug their content (only layout, Fluent pure). */
             .seg fluent-button::part(control) {
                 border-radius: 0;
                 min-width: auto;
@@ -114,7 +114,7 @@ export class CvSegmented<V extends string = string> extends LitElement {
             >
                 ${this.options.map((o) => {
                     // A fluent-tooltip anchored by id gives a reliable tooltip (the button's own
-                    // `title` attribute isn't surfaced across the shadow boundary). Always show it —
+                    // `title` attribute isn't surfaced across the shadow boundary). Always show it:
                     // it's essential icon-only, and a nicety for short labels (30d → "Last 30 days").
                     const id = `seg-${o.value}`;
                     const tip = o.title ?? o.label;

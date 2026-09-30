@@ -15,12 +15,12 @@ using System.Linq;
 namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 
 /// <summary>Turns the CLI's experimental get_usage payload (+ the account from init) into the typed
-/// <see cref="UsageDto"/>. Read defensively — every field is optional, a missing one falls back
+/// <see cref="UsageDto"/>. Read defensively: every field is optional, a missing one falls back
 /// rather than throwing. Mirrors the WebView dialog's wording (cv-usage-dialog) so both views match.</summary>
 internal static class UsageMapper
 {
     /// <summary>The window kinds <see cref="RateWindowDto.Kind"/> carries, whichever payload shape they
-    /// came from — what a client matches a window by, instead of its label.</summary>
+    /// came from: what a client matches a window by, instead of its label.</summary>
     public const string SessionKind = "session";
     public const string WeeklyKind = "weekly";
     public const string WeeklyScopedKind = "weekly_scoped";
@@ -138,7 +138,7 @@ internal static class UsageMapper
     private static int Clamp(int percent) => Math.Max(0, Math.Min(100, percent));
 
     // An ISO time as the views take it. The transport reads every line with JObject.Parse, which turns
-    // such a string into a Date token whose plain string form is local time with no offset — and
+    // such a string into a Date token whose plain string form is local time with no offset, and
     // ResetsIn below parses that as UTC. Round-tripping the token keeps the offset.
     private static string ReadIso(JObject o, string key) => (o[key] as JValue)?.Value switch
     {

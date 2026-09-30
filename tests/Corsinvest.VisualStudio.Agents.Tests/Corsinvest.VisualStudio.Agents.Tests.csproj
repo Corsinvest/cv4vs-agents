@@ -18,7 +18,7 @@
     <!-- The extension project is a VSIX; nothing here should try to deploy one. -->
     <DeployExtension>false</DeployExtension>
     <!-- MSB3277: the extension drags in the VS SDK's own assemblies, several of which ship in more
-         than one version. VS itself resolves them at runtime and these tests never load them —
+         than one version. VS itself resolves them at runtime and these tests never load them;
          they exercise string and path helpers. Left on, the conflict list is hundreds of lines and
          buries anything real, which is the failure mode the threading warnings already demonstrate. -->
     <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
@@ -50,8 +50,8 @@
     </Reference>
   </ItemGroup>
 
-  <!-- The wire DTOs. A ProjectReference would be fine here — this one is SDK-style and builds on
-       its own — but it is read from the same output folder as the assembly above so both always
+  <!-- The wire DTOs. A ProjectReference would be fine here (this one is SDK-style and builds on
+       its own), but it is read from the same output folder as the assembly above so both always
        come from the one build, rather than from two that could be a compile apart. -->
   <ItemGroup>
     <Reference Include="Corsinvest.VisualStudio.Agents.Contracts">

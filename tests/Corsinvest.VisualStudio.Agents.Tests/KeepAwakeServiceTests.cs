@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Corsinvest.VisualStudio.Agents.Tests;
 
-/// <summary>What keeps the machine awake, and — the part that matters — what lets it sleep again.
+/// <summary>What keeps the machine awake, and (the part that matters) what lets it sleep again.
 /// <para>A leaked block is invisible: nothing in the UI shows it, and the machine simply stops
 /// sleeping until Visual Studio exits. Every test here is a way out of "busy".</para></summary>
 public class KeepAwakeServiceTests
@@ -96,7 +96,7 @@ public class KeepAwakeServiceTests
         var (guard, requests, _) = Create();
         guard.SetBusy(1, true);
 
-        // An id nobody registered must not release the request the other pane is holding — the
+        // An id nobody registered must not release the request the other pane is holding: the
         // set makes this a no-op where a counter would have decremented.
         guard.SetBusy(99, false);
         guard.Forget(99);
@@ -174,7 +174,7 @@ public class KeepAwakeServiceTests
         guard.SetBusy(1, true);
         guard.SetBusy(1, false);
 
-        // It tried and recovered — without the attempt count this would also pass if the service
+        // It tried and recovered; without the attempt count this would also pass if the service
         // had never called the factory at all.
         Assert.Equal(1, requests.Attempted);
         Assert.Equal(0, requests.Created);
@@ -216,7 +216,7 @@ public class KeepAwakeServiceTests
         var (guard, requests, now) = Create();
         guard.SetBusy(1, true);
 
-        // Compaction is genuinely silent, so it buys a longer limit — not an exemption.
+        // Compaction is genuinely silent, so it buys a longer limit, not an exemption.
         guard.RelaxWatchdog(1, true);
         now[0] = KeepAwakeService.SilenceLimitMs + 1;
         guard.CheckSilence();
@@ -233,7 +233,7 @@ public class KeepAwakeServiceTests
     {
         var (guard, requests, now) = Create();
 
-        // A compacting status can arrive for a pane the service is not holding — the option is off,
+        // A compacting status can arrive for a pane the service is not holding: the option is off,
         // or the turn already ended. Recording it anyway would leave an id in the relaxed set that
         // only the pane's next turn happens to clear.
         guard.RelaxWatchdog(1, true);

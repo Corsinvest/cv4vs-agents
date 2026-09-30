@@ -15,9 +15,9 @@ namespace Corsinvest.VisualStudio.Agents.Core.Plugins;
 /// Runs <c>claude plugin &lt;subcommand&gt; --json</c> as a one-shot headless process and parses
 /// the output. Plugins are global (~/.claude), so no session/control-protocol is involved: the
 /// live chat process rejects plugin ops (verified: <c>list_plugins</c>/<c>install_plugin</c> as a
-/// control_request return "Unsupported control request subtype" — only <c>reload_plugins</c> is
+/// control_request return "Unsupported control request subtype": only <c>reload_plugins</c> is
 /// accepted), so every plugin action spawns its own process. Success is detected by exit code 0
-/// (✔); failure by exit code 1 (✘) — the CLI never emits JSON on error.
+/// (✔); failure by exit code 1 (✘): the CLI never emits JSON on error.
 /// </summary>
 internal static class PluginService
 {
@@ -47,7 +47,7 @@ internal static class PluginService
         return [.. arr.Select(MapMarketplace)];
     }
 
-    // The installed list carries only the fused id "name@marketplace" — split on the LAST '@'
+    // The installed list carries only the fused id "name@marketplace": split on the LAST '@'
     // (marketplace names can't contain '@', plugin names shouldn't, but be defensive).
     private static PluginDto MapInstalled(JToken t)
     {
@@ -151,7 +151,7 @@ internal static class PluginService
     }
 
     // The --json output is a single JSON value, but action commands print progress lines around
-    // it. Find the first '[' or '{' that parses to the end — that's the JSON payload.
+    // it. Find the first '[' or '{' that parses to the end: that's the JSON payload.
     private static JToken ExtractJson(string stdout)
     {
         var s = stdout?.TrimEnd();
@@ -180,14 +180,14 @@ internal static class PluginService
     {
         var exe = Core.Client.ClaudeInstall.ResolveExecutable();
         if (exe == null) { OutputWindowLogger.Global.Warn("[plugins] claude.exe not found — plugin operations unavailable"); return Task.FromResult((false, "", "claude.exe not found")); }
-        // Plugins are global, so CWD doesn't affect the result — just need a valid one.
+        // Plugins are global, so CWD doesn't affect the result; just need a valid one.
         var cwd = AgentsPackage.Instance?.CurrentSolutionFolder
                   ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         return Task.Run(() =>
         {
             var psi = new ProcessStartInfo(exe)
             {
-                // .NET Framework 4.8 has no ProcessStartInfo.ArgumentList — build the string,
+                // .NET Framework 4.8 has no ProcessStartInfo.ArgumentList: build the string,
                 // quoting each arg (plugin ids/sources/paths may contain spaces or special chars).
                 Arguments = string.Join(" ", args.Select(Helpers.StringHelpers.QuoteProcessArgument)),
                 UseShellExecute = false,

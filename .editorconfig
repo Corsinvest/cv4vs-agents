@@ -14,7 +14,7 @@ insert_final_newline = true
 spelling_languages = en-us
 
 [*.cs]
-# Require accessibility modifiers (private, public, etc.) — except on interface members, where
+# Require accessibility modifiers (private, public, etc.), except on interface members, where
 # public is implied and writing it is noise. `always` flagged 76 of them across the three
 # interfaces as errors.
 dotnet_style_require_accessibility_modifiers = for_non_interface_members:error
@@ -34,7 +34,7 @@ csharp_prefer_braces = true:error
 # File-scoped namespaces (205 of the 253 declarations; the block ones are XAML code-behind).
 csharp_style_namespace_declarations = file_scoped:suggestion
 
-# usings sit above the namespace and are sorted as one alphabetical run — System included, not
+# usings sit above the namespace and are sorted as one alphabetical run, System included, not
 # hoisted to the top. Stating it keeps Remove-and-Sort (Ctrl+R, Ctrl+G) from reordering whatever
 # file someone happens to touch.
 csharp_using_directive_placement = outside_namespace:silent

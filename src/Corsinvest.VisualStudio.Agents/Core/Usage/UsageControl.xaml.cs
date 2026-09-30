@@ -17,7 +17,7 @@ using System.Windows.Controls;
 namespace Corsinvest.VisualStudio.Agents.Core.Usage;
 
 /// <summary>The Usage document-tab UI: pick a profile on the left, its live usage (plan / rate-limit
-/// windows) is fetched via a throwaway CLI and shown on the right — same content as the WebView's
+/// windows) is fetched via a throwaway CLI and shown on the right: same content as the WebView's
 /// Account &amp; Usage dialog. Fetch is per-select + Refresh, with a spinner; a new select cancels the
 /// one in flight.</summary>
 public partial class UsageControl : UserControl
@@ -49,7 +49,7 @@ public partial class UsageControl : UserControl
 
         Loaded += (_, _) =>
         {
-            // Loaded fires again on every tab re-activation — populate + fetch ONLY the first time,
+            // Loaded fires again on every tab re-activation: populate + fetch ONLY the first time,
             // or switching back to the tab would re-fetch (a fresh CLI) each time.
             if (_loaded) { return; }
             _loaded = true;
@@ -90,7 +90,7 @@ public partial class UsageControl : UserControl
         }
         catch (OperationCanceledException)
         {
-            // Superseded — the newer fetch owns the UI.
+            // Superseded: the newer fetch owns the UI.
         }
         catch (Exception ex)
         {

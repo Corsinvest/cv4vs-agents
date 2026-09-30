@@ -6,7 +6,7 @@ import DataUsage16Regular from '@fluentui/svg-icons/icons/data_usage_16_regular.
 import { ChatCommand, type CommandSection } from './base';
 import { openContextDialog } from '../dialog-host';
 
-/** Model · Context usage — opens the modal dialog with the current session's
+/** Model · Context usage: opens the modal dialog with the current session's
  *  context-window breakdown (categories, memory-map, per-message detail, tree)
  *  from the CLI's get_context_usage. Distinct from /usage (plan/account). */
 export class ContextCommand extends ChatCommand {

@@ -18,7 +18,7 @@ import './cv-heatmap';
 import type { HeatmapCell } from './cv-heatmap';
 import { CvDialogBase } from './cv-dialog-base';
 
-// Combo option lists — value is the wire DTO union, label the UI string.
+// Combo option lists: value is the wire DTO union, label the UI string.
 // Short labels for the segmented control; `title` carries the full wording as a tooltip.
 const SCOPES: ReadonlyArray<{ value: StatsScopeDto; label: string; title: string }> = [
     { value: 'all', label: 'All', title: 'All chats' },
@@ -53,7 +53,7 @@ interface DayRow {
     color?: string;
 }
 
-/** Everything one day's hover card needs — shared by the heatmap and the chart so both cards are
+/** Everything one day's hover card needs, shared by the heatmap and the chart so both cards are
  *  identical: activity counts + the per-model token rows. */
 interface DayInfo {
     date: string;
@@ -102,7 +102,7 @@ const formatAxis = (n: number): string => {
 };
 
 // X-axis date label: short day+month in the UI locale (e.g. "12 dic"). Input is "yyyy-mm-dd"
-// (or the Monday of an ISO week when bucketed weekly) — parse as local, not UTC.
+// (or the Monday of an ISO week when bucketed weekly): parse as local, not UTC.
 const formatDay = (iso: string): string => {
     const [y, m, dd] = iso.split('-').map(Number);
     if (!y || !m || !dd) {
@@ -194,7 +194,7 @@ function buildHeatmap(
 /**
  * Statistics dialog: historical usage aggregated from the local session .jsonl
  * (tokens, sessions, messages, active days, streaks, per-model breakdown, heatmap).
- * Two combos — scope (all/project/session) + range (all/30d/7d) — refetch on change.
+ * Two combos, scope (all/project/session) + range (all/30d/7d), refetch on change.
  * Ours, not the CLI's; distinct from /usage (plan) and /context (current window).
  * First "all" aggregation is heavy; the host caches per-project after.
  *
@@ -207,13 +207,13 @@ export class CvStatsDialog extends CvDialogBase {
         dialogStyles,
         iconStyles,
         css`
-            /* Widen past Fluent's 600px default — the card grid + heatmap need room. */
+            /* Widen past Fluent's 600px default: the card grid + heatmap need room. */
             fluent-dialog::part(dialog) {
                 width: 620px;
                 max-width: 92vw;
             }
             /* Single indeterminate loading bar under the tabs. Always laid out (keeps its
-             * ~2px row so the grid never shifts); hidden — not removed — when idle. */
+             * ~2px row so the grid never shifts); hidden (not removed) when idle. */
             .loading {
                 display: block;
                 margin-bottom: 8px;
@@ -228,11 +228,11 @@ export class CvStatsDialog extends CvDialogBase {
                 gap: 8px;
                 margin-bottom: 12px;
             }
-            /* Tabs (Overview / Models) — fluent-tablist stays pure; only spacing below it. */
+            /* Tabs (Overview / Models): fluent-tablist stays pure; only spacing below it. */
             .tabs {
                 margin-bottom: 12px;
             }
-            /* Overview card grid — 4 columns (16 cards → 4×4), matching the WPF Statistics tab. */
+            /* Overview card grid: 4 columns (16 cards → 4×4), matching the WPF Statistics tab. */
             .grid {
                 display: grid;
                 grid-template-columns: repeat(4, 1fr);
@@ -256,7 +256,7 @@ export class CvStatsDialog extends CvDialogBase {
             }
             /* Stacked bar chart: tokens per period, one segment per model. Bars grow from the
              * baseline; each is a bottom-up flex column of colored segments by token share.
-             * Grid layout: [Y-axis | plot] on top, [pad | X-axis] below — so the Y labels sit
+             * Grid layout: [Y-axis | plot] on top, [pad | X-axis] below, so the Y labels sit
              * left of the bars and the date labels sit under them, aligned to each bar column. */
             .chart {
                 margin-bottom: 14px;
@@ -323,7 +323,7 @@ export class CvStatsDialog extends CvDialogBase {
             }
             /* Bar tooltip (fluent-tooltip): the card content comes from _dayTip with inline styles
              * (it also renders inside cv-heatmap's shadow, so it can't rely on classes here). DON'T
-             * set display on the fluent-tooltip host — it toggles none↔visible for show/hide. */
+             * set display on the fluent-tooltip host: it toggles none↔visible for show/hide. */
             fluent-tooltip {
                 padding: 6px 8px;
             }
@@ -381,7 +381,7 @@ export class CvStatsDialog extends CvDialogBase {
                 color: var(--colorNeutralForeground2);
                 font-variant-numeric: tabular-nums;
             }
-            /* fluent-progress-bar stays pure — only vertical spacing around the share bar. */
+            /* fluent-progress-bar stays pure: only vertical spacing around the share bar. */
             .model-bar {
                 display: block;
                 margin: 4px 0;
@@ -439,7 +439,7 @@ export class CvStatsDialog extends CvDialogBase {
     override willUpdate(changed: Map<string, unknown>): void {
         // Refetch on open and whenever a combo changes. Only the very first open clears to "—"
         // (no data yet); a combo change keeps the previous numbers on screen and swaps them in
-        // place when the new ones arrive, so the layout never collapses/flickers — the loading
+        // place when the new ones arrive, so the layout never collapses/flickers: the loading
         // bar signals the refresh instead.
         const firstOpen = changed.has('open') && this.open;
         if (firstOpen || changed.has('_scope') || changed.has('_range')) {
@@ -451,10 +451,10 @@ export class CvStatsDialog extends CvDialogBase {
 
     // Bumped on every _load so a stale response (combo changed, or dialog reopened) is
     // ignored. The bridge request itself keeps running host-side and still populates the
-    // cache — so closing the dialog mid-aggregation isn't wasted work, just not shown.
+    // cache, so closing the dialog mid-aggregation isn't wasted work, just not shown.
     private _reqSeq = 0;
 
-    // `clear` blanks the grid to "—" first (combo change / initial open — the old data is for a
+    // `clear` blanks the grid to "—" first (combo change / initial open: the old data is for a
     // different scope). A background-index refresh passes clear:false so the current numbers stay
     // put and just update in place → no flicker while re-reading on each stats_index_done.
     private _load({ clear }: { clear: boolean }): void {
@@ -535,7 +535,7 @@ export class CvStatsDialog extends CvDialogBase {
         `;
     }
 
-    // Overview grid. `d` is null while (re)loading — the layout stays put and every value
+    // Overview grid. `d` is null while (re)loading, the layout stays put and every value
     // shows a "—" placeholder, so changing a combo never resizes the dialog.
     private _renderOverview(d: StatsResponse | null): TemplateResult {
         const dash = '—';
@@ -577,8 +577,8 @@ export class CvStatsDialog extends CvDialogBase {
     /** The rich per-day hover card, identical for the heatmap and the chart (mirrors the WPF
      *  StatsTooltip): full date, an activity line (messages · sessions · tools), then one coloured
      *  row per model (dot · name · tokens · share-of-day), largest first.
-     *  Styles are INLINE (not classes): this card renders inside two different shadow roots — the
-     *  dialog and cv-heatmap — so it can't rely on either host's stylesheet. */
+     *  Styles are INLINE (not classes): this card renders inside two different shadow roots: the
+     *  dialog and cv-heatmap, so it can't rely on either host's stylesheet. */
     private _dayTip(info: DayInfo): TemplateResult {
         const total = info.rows.reduce((s, r) => s + r.tok, 0);
         const rows = [...info.rows].sort((a, b) => b.tok - a.tok);
@@ -679,7 +679,7 @@ export class CvStatsDialog extends CvDialogBase {
      *  by ISO week when there are many days, so it stays readable across ranges. Order of models
      *  matches the breakdown (so colors line up with the bars below); native tooltip per bar. */
     // Returns a keyed directive (not a bare TemplateResult) so the chart subtree is rebuilt on
-    // scope/range change — see the keyed() call for why (fluent-tooltip anchor re-binding).
+    // scope/range change; see the keyed() call for why (fluent-tooltip anchor re-binding).
     private _renderModelChart(d: StatsResponse): unknown {
         const days = d.dailyModelTokens ?? [];
         if (days.length === 0) {
@@ -844,7 +844,7 @@ export class CvStatsDialog extends CvDialogBase {
         if (this._error) {
             return html`<div class="status">Statistics unavailable.</div>`;
         }
-        // Pass _data (may be null while loading) straight through — the tab renderers show
+        // Pass _data (may be null while loading) straight through: the tab renderers show
         // "—" placeholders in the fixed layout, so a combo change never collapses the dialog.
         return this._tab === 'overview'
             ? this._renderOverview(this._data)

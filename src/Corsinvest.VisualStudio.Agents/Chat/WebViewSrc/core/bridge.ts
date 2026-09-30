@@ -4,7 +4,7 @@
  */
 // Bridge between the WebView and the C# host. Two kinds of traffic (JSON-RPC-style):
 //   - sendNotification()/onNotification(): fire-and-forget, no reply (the bulk).
-//   - sendRequest(): correlated request/response — a monotonic `id` rides the envelope,
+//   - sendRequest(): correlated request/response: a monotonic `id` rides the envelope,
 //     the host echoes it on the response, and a single _pending map resolves the Promise.
 // start() wires the listener once. Handlers run in try/catch so one bad handler can't kill
 // the dispatcher.
@@ -17,7 +17,7 @@ import type { RequestType } from './request-types';
 // gets an error instead of an eternal spinner.
 const REQUEST_TIMEOUT_MS = 30_000;
 
-// chrome.webview is injected by WebView2 at runtime — not in lib.dom.
+// chrome.webview is injected by WebView2 at runtime, not in lib.dom.
 interface WebViewMessageEvent {
     data: unknown;
 }
@@ -152,7 +152,7 @@ class Bridge {
                 parsed = JSON.parse(raw);
             } catch {
                 // A non-JSON message on the wire is unexpected (everything should be JSON), so keep
-                // it a direct console.warn — visible even at LogLevel=None, not gated as mere noise.
+                // it a direct console.warn, visible even at LogLevel=None, not gated as mere noise.
                 console.warn('[bridge] non-JSON message ignored:', raw);
                 return;
             }
@@ -166,7 +166,7 @@ class Bridge {
             logger.trace(`bridge ← host ${parsed.type}`, truncate(parsed.data));
         }
         // A message carrying an id is a request/response. Resolve/reject the pending Promise and
-        // ALWAYS return — it must never fall through to the notification handlers (a response
+        // ALWAYS return: it must never fall through to the notification handlers (a response
         // channel like chat_history/subagent_loaded may still have onNotification listeners).
         if (parsed.id != null) {
             const p = this._pending.get(parsed.id);
@@ -179,7 +179,7 @@ class Bridge {
                     p.resolve(parsed.data);
                 }
             } else {
-                // id present but not pending: timed-out, duplicate, or stale response. Drop it —
+                // id present but not pending: timed-out, duplicate, or stale response. Drop it:
                 // do NOT reinterpret as a notification (would re-mutate the UI after the fact).
                 logger.warn(
                     `bridge: response for unknown/expired id ${parsed.id} (${parsed.type}) — dropped`,

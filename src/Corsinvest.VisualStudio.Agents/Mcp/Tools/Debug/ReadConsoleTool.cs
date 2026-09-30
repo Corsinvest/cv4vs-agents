@@ -17,7 +17,7 @@ internal sealed class ReadConsoleArgs
     public int ProcessId { get; set; }
 }
 
-/// <summary>MCP tool: read the real console of a debugged console app — its stdout, which the
+/// <summary>MCP tool: read the real console of a debugged console app: its stdout, which the
 /// Debug output pane never sees.</summary>
 internal sealed class ReadConsoleTool : McpTool<ReadConsoleArgs>
 {

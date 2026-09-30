@@ -18,7 +18,7 @@ using System.Windows.Shapes;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Context;
 
-/// <summary>The Context panel rendering — the WPF twin of cv-context-dialog's _renderBody. Data-driven
+/// <summary>The Context panel rendering: the WPF twin of cv-context-dialog's _renderBody. Data-driven
 /// (built in code, not XAML data-templates): header + gauge-bar + memory-map + category table (with an
 /// expandable Messages breakdown) + the five expandable trees + footer.</summary>
 public partial class ContextUsageControl
@@ -26,7 +26,7 @@ public partial class ContextUsageControl
     private static string Tok(long tokens) => StatsFormat.FormatTokens(tokens);
 
     // A theme separator line (the tool-window border brush), applied as a DynamicResource so it
-    // follows a live light/dark switch — like the Statistics separators.
+    // follows a live light/dark switch, like the Statistics separators.
     private static Border Separator(Thickness thickness, Thickness margin = default, Thickness padding = default)
     {
         var b = new Border { BorderThickness = thickness, Margin = margin, Padding = padding };
@@ -83,7 +83,7 @@ public partial class ContextUsageControl
     }
 
     // The segmented gauge-bar: one coloured cell per category, width ∝ tokens/maxTokens. Free space
-    // (and zero-width slices) are skipped — the track shows through as the "empty" tail.
+    // (and zero-width slices) are skipped: the track shows through as the "empty" tail.
     private UIElement BuildBar(GetContextUsageResponse d)
     {
         var bar = new Grid
@@ -255,14 +255,14 @@ public partial class ContextUsageControl
         }
         if (d.SlashCommands != null && d.SlashCommands.TotalCommands > 0)
         {
-            // No per-command detail from the CLI — a flat count/tokens row.
+            // No per-command detail from the CLI: a flat count/tokens row.
             host.Children.Add(GroupHeader($"Slash commands", d.SlashCommands.TotalCommands, d.SlashCommands.Tokens));
         }
         return host;
     }
 
     // Group a tree's items by key: with ≥2 keys, a collapsible sub-group per key; with one key, a flat
-    // list (no pointless chevron). Sorted by tokens desc, then name — like the TS _groupedBody.
+    // list (no pointless chevron). Sorted by tokens desc, then name, like the TS _groupedBody.
     private UIElement Grouped<T>(IEnumerable<T> items, Func<T, string> keyOf, Func<T, int> tokensOf, Func<T, UIElement> row)
     {
         var list = items.ToList();
@@ -330,7 +330,7 @@ public partial class ContextUsageControl
     }
 
     // Path relative to the working directory (Windows separators), or the full path when it's not
-    // under it — ports the WebView's relPath/displayPath.
+    // under it; ports the WebView's relPath/displayPath.
     private static string RelPath(string path, string cwd)
     {
         if (string.IsNullOrEmpty(path)) { return ""; }

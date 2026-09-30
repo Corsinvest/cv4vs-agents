@@ -19,7 +19,7 @@ public sealed class EditorPrompt
 {
     public string Title { get; set; }
 
-    /// <summary>The instruction alone — no code in it: the selection reaches the CLI on its own,
+    /// <summary>The instruction alone, no code in it: the selection reaches the CLI on its own,
     /// through the IDE context the pane already sends.</summary>
     public string Prompt { get; set; }
 

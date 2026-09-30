@@ -42,7 +42,7 @@ internal sealed class ListTestsTool : McpTool<ListTestsArgs>
         if (tests.Count > 0) { return new { supported = true, count = tests.Count, tests }; }
 
         // An empty list is not an answer on its own: unfiltered, it reads as "this solution has no
-        // tests" when it usually means discovery has not finished — it runs in the background after
+        // tests" when it usually means discovery has not finished: it runs in the background after
         // a build, so an early answer is empty. Under a filter, though, empty is a real answer, and
         // blaming discovery there sends the caller chasing a problem that is not theirs.
         var filtered = args?.Filter?.Any(f => !string.IsNullOrWhiteSpace(f)) == true;

@@ -37,7 +37,7 @@ const EFFORT_LEVEL_LABELS: Readonly<Record<EffortSliderLevel, string>> = {
 };
 
 /** Slider-stop value for ultracode. Deliberately NOT a key of EFFORT_LEVEL_LABELS: ultracode is not
- *  an effort level the CLI accepts — it is effort=xhigh plus a separate flag, so putting it in the
+ *  an effort level the CLI accepts: it is effort=xhigh plus a separate flag, so putting it in the
  *  union would make a state representable that the wire has no value for. Lowercase because it is
  *  an identifier, not display text (VS Code keeps the same split). */
 export const ULTRACODE_VALUE = 'ultracode';
@@ -48,7 +48,7 @@ const ULTRACODE_LABEL = 'Ultracode';
 /** The one place that turns effort state into display text, so the composer chip and the menu's
  *  slider can never word it differently. `ultracode` is required, not defaulted: the flag is what
  *  separates ultracode from a plain xhigh (both store effortLevel='xhigh'), so every caller has to
- *  say which it means — the slider's own ultracode stop is recognised by value instead. Anything
+ *  say which it means: the slider's own ultracode stop is recognised by value instead. Anything
  *  with no label of its own shows its raw value. */
 export function effortLabel(level: string, ultracode: boolean): string {
     if (ultracode || level === ULTRACODE_VALUE) {
@@ -58,32 +58,32 @@ export function effortLabel(level: string, ultracode: boolean): string {
 }
 
 /** A model as reported by the CLI's `initialize` response (via `chat_models`).
- *  Shape generated from C# (Contracts.ModelInfoDto) by TypeGen — re-exported here.
+ *  Shape generated from C# (Contracts.ModelInfoDto) by TypeGen, re-exported here.
  *  `supportedEffortLevels` is empty for models without effort (e.g. Haiku);
  *  `disabled` is true for unavailable_models (e.g. Fable): greyed, not selectable. */
 export type { ModelInfoDto } from './generated/ModelInfoDto';
 
-/** CLI-sourced settings (model, permission mode, effort, toggles, spinner verbs) — the
+/** CLI-sourced settings (model, permission mode, effort, toggles, spinner verbs), the
  *  single-source-of-truth category of the init payload, also re-applied via `cli_state_changed`.
- *  Generated from C# (Contracts.CliStateDto) by TypeGen — re-exported here. */
+ *  Generated from C# (Contracts.CliStateDto) by TypeGen, re-exported here. */
 export type { CliStateDto } from './generated/CliStateDto';
 
 /** A CLI/skill slash command with its metadata (`chat_slash_commands`).
- *  Generated from C# (Contracts.SlashCommandDto) by TypeGen — re-exported here.
+ *  Generated from C# (Contracts.SlashCommandDto) by TypeGen, re-exported here.
  *  `aliases` are searchable alternate names (e.g. `/loop` ↔ `proactive`). */
 export type { SlashCommandDto } from './generated/SlashCommandDto';
 
 /** A file/dir suggestion for the @-mention picker (`file_suggestions`).
- *  Generated from C# (Contracts.AtItemDto) by TypeGen — re-exported here. */
+ *  Generated from C# (Contracts.AtItemDto) by TypeGen, re-exported here. */
 export type { AtItemDto } from './generated/AtItemDto';
 
 /** Lazily-fetched image bytes for a stripped chat image block (`chat_image_data`).
- *  Generated from C# (Contracts.ImageDataResponseDto) by TypeGen — re-exported here. */
+ *  Generated from C# (Contracts.ImageDataResponseDto) by TypeGen, re-exported here. */
 export type { GetImageResponse } from './generated/GetImageResponse';
 export type { GetImageRequest } from './generated/GetImageRequest';
 
 /** Sub-agent lifecycle events (`subagent_started` / `_progress` / `_ended`).
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { SubagentStartedNotification } from './generated/SubagentStartedNotification';
 export type { SubagentProgressNotification } from './generated/SubagentProgressNotification';
 export type { SubagentEndedNotification } from './generated/SubagentEndedNotification';
@@ -92,19 +92,19 @@ export type { BackgroundTasksNotification } from './generated/BackgroundTasksNot
 export type { SubagentUsageDto } from './generated/SubagentUsageDto';
 
 /** Context compaction (`chat_compacted`, header-only: uuid/trigger/preTokens) and CLI process
- *  exit (`cli_exited`). Generated from C# by TypeGen — re-exported here. */
+ *  exit (`cli_exited`). Generated from C# by TypeGen, re-exported here. */
 export type { CompactedNotification } from './generated/CompactedNotification';
 export type { EvictMessagesNotification } from './generated/EvictMessagesNotification';
 export type { StatusNotification } from './generated/StatusNotification';
 export type { CliExitedNotification } from './generated/CliExitedNotification';
 
 /** Lazily-fetched compaction summary (`get_compact_summary` / `compact_summary_result`).
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { GetCompactSummaryRequest } from './generated/GetCompactSummaryRequest';
 export type { GetCompactSummaryResponse } from './generated/GetCompactSummaryResponse';
 
 /** A tool call's result (`chat_tool_result`).
- *  Generated from C# (Contracts.ToolResultNotification) by TypeGen — re-exported here. */
+ *  Generated from C# (Contracts.ToolResultNotification) by TypeGen, re-exported here. */
 export type { ToolResultNotification } from './generated/ToolResultNotification';
 /** Per-tool fields on a tool_result, grouped so adding another one touches the DTO and its
  *  renderer instead of every layer in between. Each member is null when its tool didn't report. */
@@ -112,18 +112,18 @@ export type { ToolResultExtrasDto } from './generated/ToolResultExtrasDto';
 export type { AgentRunTotalsDto } from './generated/AgentRunTotalsDto';
 
 /** Rate-limit notice (`chat_rate_limit`) + its severity union.
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { RateLimitNotification } from './generated/RateLimitNotification';
 export type { NoticeNotification } from './generated/NoticeNotification';
 export type { NoticeVariantDto } from './generated/NoticeVariantDto';
 export type { NoticePositionDto } from './generated/NoticePositionDto';
 
 /** Remote Control connection status (`chat_remote_control`).
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { RemoteControlNotification } from './generated/RemoteControlNotification';
 
 /** Active model / permission mode changed (`cli_model_changed` / `cli_permission_mode_changed`).
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { ModelChangedNotification } from './generated/ModelChangedNotification';
 export type { PermissionModeChangedNotification } from './generated/PermissionModeChangedNotification';
 
@@ -131,25 +131,25 @@ export type { PermissionModeChangedNotification } from './generated/PermissionMo
 export type { CliErrorNotification } from './generated/CliErrorNotification';
 
 /** A user message echo (`chat_user_text`) + its stripped image/document placeholders.
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { UserTextNotification };
 export type { UserImageDto } from './generated/UserImageDto';
 export type { UserFileDto } from './generated/UserFileDto';
 
 /** A tool_use surfaced for the tool row / permission banner (`chat_tool_permission`).
  *  `input` and `permissionSuggestions` are opaque (tool args / CLI PermissionUpdate).
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { ToolPermissionNotification } from './generated/ToolPermissionNotification';
-/** The CLI cancelled a pending permission (chat_tool_permission_cancel) — dismiss its banner.
- *  Generated from C# by TypeGen — re-exported here. */
+/** The CLI cancelled a pending permission (chat_tool_permission_cancel): dismiss its banner.
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { ToolPermissionCancelNotification } from './generated/ToolPermissionCancelNotification';
-/** A pending plan was saved in the editor (chat_plan_updated) — the banner shows the new text.
- *  Generated from C# by TypeGen — re-exported here. */
+/** A pending plan was saved in the editor (chat_plan_updated): the banner shows the new text.
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { PlanUpdatedNotification } from './generated/PlanUpdatedNotification';
 
 /** History page as replayed typed events / sub-agent transcript (chat_history /
  *  subagent_loaded). `HistoryEventDto.data` is opaque (a DTO), cast by `type`.
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { HistoryEventDto } from './generated/HistoryEventDto';
 export type { GetHistoryResponse } from './generated/GetHistoryResponse';
 export type { HistoryLoadedNotification } from './generated/HistoryLoadedNotification';
@@ -165,7 +165,7 @@ export type { HostKeyNotification } from './generated/HostKeyNotification';
 export type { FilesDroppedNotification } from './generated/FilesDroppedNotification';
 
 /** Prompt history, slash-command catalogue, streamed text delta, tool-progress tick,
- *  CLI-started notice. Generated from C# by TypeGen — re-exported here. */
+ *  CLI-started notice. Generated from C# by TypeGen, re-exported here. */
 export type { PromptHistoryNotification } from './generated/PromptHistoryNotification';
 export type { SlashCommandsNotification } from './generated/SlashCommandsNotification';
 export type { AssistantTextDeltaNotification } from './generated/AssistantTextDeltaNotification';
@@ -174,20 +174,20 @@ export type { ThinkingEndedNotification } from './generated/ThinkingEndedNotific
 export type { ToolProgressNotification } from './generated/ToolProgressNotification';
 
 /** Theme flip, @-mention suggestions wrapper, model-catalogue wrapper.
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { ThemeChangedNotification } from './generated/ThemeChangedNotification';
 export type { GetSuggestionsResponse } from './generated/GetSuggestionsResponse';
 export type { ModelsNotification } from './generated/ModelsNotification';
 
 /** A full assistant-text block (`chat_assistant_text`) with first-block usage.
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { AssistantTextNotification } from './generated/AssistantTextNotification';
 
 /** Turn finished (`chat_exchange_ended`): cost/duration + context-window info.
- *  Generated from C# by TypeGen — re-exported here. */
+ *  Generated from C# by TypeGen, re-exported here. */
 export type { ExchangeEndedNotification } from './generated/ExchangeEndedNotification';
 
-// Init payload from the host — generated from C# (Contracts.InitPayloadNotification and its
+// Init payload from the host: generated from C# (Contracts.InitPayloadNotification and its
 // nested InitConfigDto/VsOptionsDto) by TypeGen. Same names as the C# side, so a DTO stays
 // greppable across both languages; do not hand-edit the generated files.
 export type { VsOptionsDto } from './generated/VsOptionsDto';
@@ -197,7 +197,7 @@ export type { InitPayloadNotification } from './generated/InitPayloadNotificatio
 export type { CliStateNotification } from './generated/CliStateNotification';
 
 /** The five modes the picker offers. The CLI reports others too (`dontAsk`, and whatever a future
- *  version adds): they travel as their raw string rather than being coerced into one of these —
+ *  version adds): they travel as their raw string rather than being coerced into one of these:
  *  a mode shown wrong is worse than a mode shown ugly. `string & {}` keeps the completions. */
 export type PermissionMode =
     'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' | (string & {});
@@ -206,7 +206,7 @@ export type PermissionMode =
 export type ViewMode = 'full' | 'focus' | 'hideToolCalls';
 
 /** The mode names as values. `string & {}` in the type above means a typo still compiles, so a
- *  comparison written by hand is unchecked — these give the compiler something to check. The
+ *  comparison written by hand is unchecked: these give the compiler something to check. The
  *  strings are the CLI's, not ours: renaming one here renames nothing on the wire. */
 export const PERMISSION_MODE = {
     default: 'default',
@@ -216,7 +216,7 @@ export const PERMISSION_MODE = {
     bypassPermissions: 'bypassPermissions',
 } as const satisfies Record<string, PermissionMode>;
 
-// FromWebView input payloads (WebView → C#) — generated from C# (Contracts.*InputDto) by
+// FromWebView input payloads (WebView → C#): generated from C# (Contracts.*InputDto) by
 // TypeGen. Used to type the bridge.post(...) call sites so a payload that diverges from the
 // C# DTO fails at compile time. Opposite direction of the ToWebView DTOs above.
 export type { SendPromptNotification } from './generated/SendPromptNotification';
@@ -234,7 +234,7 @@ export type { RewindDiffNotification } from './generated/RewindDiffNotification'
 export type { RewindPointsNotification } from './generated/RewindPointsNotification';
 
 /** One user message as the rewind dialog needs it: what to show, and what to rewind to. Not a wire
- *  type — it is built from the transcript, which is why it lives here and not in generated/. */
+ *  type: it is built from the transcript, which is why it lives here and not in generated/. */
 export interface RewindPoint {
     uuid: string;
     text: string;
@@ -276,14 +276,14 @@ export type { OpenOptionsNotification } from './generated/OpenOptionsNotificatio
 
 /** Global signal that a permission prompt is active (cv-prompt reads its
  *  presence to disable sending). The banner itself holds the full request
- *  details locally — only id/name are needed here. */
+ *  details locally: only id/name are needed here. */
 export interface PendingPermission {
     id: string;
     name: string;
 }
 
 /** Editor selection / active file (`ide_selection_changed`), drives the composer
- *  IDE-context badge. Generated from C# by TypeGen — re-exported here. */
+ *  IDE-context badge. Generated from C# by TypeGen, re-exported here. */
 export type { IdeContextNotification } from './generated/IdeContextNotification';
 
 // Bare reference to a file open/selected in the IDE; the UI layer turns each one into a chip.
@@ -301,7 +301,7 @@ export interface UserTextEcho extends UserTextNotification {
     ideRefs?: IdeContextRef[];
 }
 
-/** Token usage of a single assistant turn — generated from C# (Contracts.ContextUsageDto)
+/** Token usage of a single assistant turn: generated from C# (Contracts.ContextUsageDto)
  *  by TypeGen. Re-exported here so it sits with the other shared types; do not hand-edit
  *  the generated file. Context consumed = input + cache_read + cache_creation. */
 export type { ContextUsageDto } from './generated/ContextUsageDto';
@@ -330,15 +330,15 @@ export interface SubagentTask {
     taskId: string;
     description: string;
     toolUseId?: string;
-    recentTools: string[]; // last 3 tool names — at(-1) is what it is doing now
+    recentTools: string[]; // last 3 tool names: at(-1) is what it is doing now
     summary?: string;
     usage: SubagentUsageDto;
     /** Running in the background, so it outlives the turn that launched it. Set from the
      *  authoritative id list (background_tasks_changed), not from task_updated's is_backgrounded:
      *  that flag only ever describes a foreground task being pushed down, and the agents the CLI
-     *  launches asynchronously are background from birth — measured, they never emit it. */
+     *  launches asynchronously are background from birth: measured, they never emit it. */
     background?: boolean;
-    /** Last status the CLI reported for it — 'paused' and 'killed' have no other way in. Undefined
+    /** Last status the CLI reported for it: 'paused' and 'killed' have no other way in. Undefined
      *  until a patch carries one. */
     status?: string;
     /** The task that launched this one, undefined at top level. The wire carries no parent link,
@@ -346,7 +346,7 @@ export interface SubagentTask {
      *  row has arrived (the task can beat it by a few ms). */
     parentTaskId?: string;
     /** When we saw the task start (epoch ms). `usage.durationMs` only advances when the sub-agent
-     *  reports a tool use — it can sit still for ten seconds on a long call — so the running badge
+     *  reports a tool use: it can sit still for ten seconds on a long call, so the running badge
      *  counts from here instead, and falls back to the reported figure once the task ends. */
     startedAt?: number;
 }
@@ -379,7 +379,7 @@ export interface UiImage extends UiAttachment {
     preview?: string;
 }
 
-/** File attachment shown as a chip. Same shape as UiAttachment (name + lazy) — the
+/** File attachment shown as a chip. Same shape as UiAttachment (name + lazy): the
  *  named alias keeps `files: UiFile[]` distinct from `images` at call sites. Click
  *  fetches the stripped document (lazy); attachments carry no file-path/line. */
 export type UiFile = UiAttachment;
@@ -409,11 +409,11 @@ export interface UiUserEntry extends UiEntryBase {
 export interface UiAssistantEntry extends UiEntryBase {
     role: 'assistant';
     streaming?: boolean;
-    /** The message's wire uuid — what lets an entry be addressed after it has been rendered.
+    /** The message's wire uuid: what lets an entry be addressed after it has been rendered.
      *  Absent on a synthetic message (the permission banner's) and on older .jsonl lines. */
     uuid?: string;
     /** Why the API call failed, when it did (`overloaded`, `rate_limit`, …). An API failure reaches
-     *  us as an assistant message whose text IS the error, so this is what tells the two apart —
+     *  us as an assistant message whose text IS the error, so this is what tells the two apart:
      *  without it the turn renders as an answer, grey dot and all. Absent on a normal message, and
      *  on history: the .jsonl keeps no such field. */
     error?: string;
@@ -446,7 +446,7 @@ export interface UiCompactEntry extends UiEntryBase {
 }
 
 /** A slash command's local output (<local-command-stdout>/<stderr>), parsed TS-side from a user
- *  message — a ViewModel-only role (no DTO/SDK peer). Rendered as a preformatted monospace block. */
+ *  message: a ViewModel-only role (no DTO/SDK peer). Rendered as a preformatted monospace block. */
 export interface UiSlashResultEntry extends UiEntryBase {
     role: 'slash-result';
     isError: boolean;
@@ -458,14 +458,14 @@ export interface UiSimpleTextEntry extends UiEntryBase {
 }
 
 /** The Remote Control session link and its QR code, posted into the transcript when the bridge
- *  comes up — like the CLI, which prints the URL in the conversation. A role of its own because
+ *  comes up, like the CLI, which prints the URL in the conversation. A role of its own because
  *  the QR is an inline SVG, which the markdown pipeline strips. `text` carries the URL. */
 export interface UiRemoteControlEntry extends UiEntryBase {
     role: 'remote-control';
 }
 
 /** One AskUserQuestion entry, narrowed from the opaque tool input (the CLI's
- *  AskUserQuestion tool has no generated DTO — it rides inside
+ *  AskUserQuestion tool has no generated DTO: it rides inside
  *  ToolPermissionNotification.input). The permission banner writes/reads it and the
  *  tool-renderer shows it read-only, both defensively. */
 export interface AskQuestion {
@@ -480,7 +480,7 @@ export interface AskQuestion {
 export interface ToolChildren {
     /** The kept child rows/messages (≤3 collapsed, the full list once "Show all" fetched). */
     items: UiEntry[];
-    /** True once a 4th child arrived: more exist beyond the kept items. A flag, not a count —
+    /** True once a 4th child arrived: more exist beyond the kept items. A flag, not a count:
      *  the "…" only signals "more", never the number. */
     hasMore: boolean;
     /** Show-all: `items` holds the full transcript and the view renders all of it, vs the
@@ -502,10 +502,10 @@ export interface UiToolEntry {
     fullLineCount: number;
     elapsedSec: number;
     /** Per-tool fields from the result: the edit's line range, what an Agent run cost. Absent until
-     *  the tool finishes, and for a tool that reports neither — which is most of them. */
+     *  the tool finishes, and for a tool that reports neither, which is most of them. */
     extras?: ToolResultExtrasDto | null;
     /** Nested children (Agent tool today; any tool with children). Present only when the tool
-     *  has children — undefined for a normal leaf tool. NOT the row open/closed state: that's
+     *  has children: undefined for a normal leaf tool. NOT the row open/closed state: that's
      *  the component's local `_expanded`, which every tool has whether or not it has children. */
     children?: ToolChildren;
 }
@@ -542,7 +542,7 @@ export interface Notice {
     actionMessage?: string;
     /** Payload for that message, when it takes one (which Options page to open). */
     actionPayload?: Record<string, unknown>;
-    /** Stays until the host clears it (a dead CLI process) — never auto-dismissed. */
+    /** Stays until the host clears it (a dead CLI process), never auto-dismissed. */
     sticky?: boolean;
     /** Hide the ✕. For a notice that mirrors live state rather than reporting an event: dismissing
      *  it would leave the state on with nothing on screen saying so. Implies `sticky`. */

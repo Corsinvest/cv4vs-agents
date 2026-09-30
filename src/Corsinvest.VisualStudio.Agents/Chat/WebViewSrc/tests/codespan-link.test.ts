@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 // What an inline `code span` does: it links when the content IS a reference, it stays text when
-// it also contains anything else. The rule holds on the whole content — there are no partial links.
+// it also contains anything else. The rule holds on the whole content: there are no partial links.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderCodespanInner as render } from '../core/codespan-link.ts';

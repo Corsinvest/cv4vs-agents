@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildRows, similarity, editRangeFromHunks, rowsFromHunks } from '../core/diff-rows.ts';
 
-/** Marked text of a row, "«x»" around the changed segments — readable in an assert. */
+/** Marked text of a row, "«x»" around the changed segments, readable in an assert. */
 function marked(segs: { text: string; changed: boolean }[]): string {
     return segs.map((s) => (s.changed ? `«${s.text}»` : s.text)).join('');
 }

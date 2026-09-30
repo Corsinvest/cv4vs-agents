@@ -34,7 +34,7 @@
 
       <!-- Active sessions: one entry per open pane, to bring it forward. Between the profiles
            (which open a pane) and Analytics (which reads their data): open, go to, then look at.
-           No DynamicVisibility on the menu itself — nothing would drive it, since submenus have no
+           No DynamicVisibility on the menu itself: nothing would drive it, since submenus have no
            command behind them. VS hides a submenu whose every item is invisible, and the dynamic
            range below reports exactly that when no pane is open. -->
       <Menu guid="guidAgentsCommandSet" id="ActiveSessionsSubMenu" priority="0x0170" type="Menu">
@@ -70,7 +70,7 @@
       </Menu>
 
       <!-- The same submenu in the Error List and the Output window: one each rather than one placed
-           twice, so every command inside knows its window by its id — VS routes a context-menu
+           twice, so every command inside knows its window by its id: VS routes a context-menu
            command without saying which menu it came from. -->
       <Menu guid="guidAgentsCommandSet" id="ErrorListSubMenu" priority="0x0100" type="Menu">
         <Parent guid="guidAgentsCommandSet" id="ErrorListContextGroup"/>
@@ -146,7 +146,7 @@
         <Parent guid="guidAgentsCommandSet" id="AnalyticsSubMenu"/>
       </Group>
       <!-- Global (not per-pane) entries. Separate groups because VS draws the separators
-           between groups — no <Separator> needed. -->
+           between groups: no <Separator> needed. -->
       <Group guid="guidAgentsCommandSet" id="GlobalGroup" priority="0x0200">
         <Parent guid="guidAgentsCommandSet" id="ProfilesSubMenu"/>
       </Group>
@@ -159,7 +159,7 @@
       </Group>
       <!-- Anchors our submenu in the code window's context menu. The only thing this extension
            puts inside the editor: everything else hangs off the View menu.
-           Low priority so it lands at the top, where Copilot puts its own actions — the point of
+           Low priority so it lands at the top, where Copilot puts its own actions: the point of
            the entry is to be reached without hunting through twenty items. -->
       <Group guid="guidAgentsCommandSet" id="EditorContextGroup" priority="0x0050">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_CODEWIN"/>
@@ -173,11 +173,11 @@
         <Parent guid="guidAgentsCommandSet" id="EditorPromptsSubMenu"/>
       </Group>
       <!-- The two windows that show a failure. Same low priority as the editor's, for the same
-           reason — it is reached without hunting.
+           reason: it is reached without hunting.
            The Output pane's context menu is IDM_VS_CTXT_RESULTSLIST, which does not read like it:
            vsshlids.h has no IDM_VS_CTXT_OUTPUTWINDOW, and the groups inside this one are the
            IDG_VS_RESULTSLIST* block it heads "Output Window Pane Context menu groups".
-           IDM_VS_TOOL_OUTPUTWINDOW is NOT it — that is the window's toolbar, and anchoring there
+           IDM_VS_TOOL_OUTPUTWINDOW is NOT it: that is the window's toolbar, and anchoring there
            puts the entry somewhere the right-click never shows. -->
       <Group guid="guidAgentsCommandSet" id="OutputContextGroup" priority="0x0050">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_RESULTSLIST"/>
@@ -201,7 +201,7 @@
       <!-- Solution Explorer: a file here; a folder, a project and a multi-selection through the
            CommandPlacements below, since a Group carries one Parent. At the top like the others:
            each of those menus has its own groups at its own priorities, so anything in between
-           lands in a different place per menu — the top is the one position that is the same in
+           lands in a different place per menu: the top is the one position that is the same in
            all of them. -->
       <Group guid="guidAgentsCommandSet" id="SolutionContextGroup" priority="0x0050">
         <Parent guid="guidSHLMainMenu" id="IDM_VS_CTXT_ITEMNODE"/>
@@ -229,7 +229,7 @@
            profile prepended (unless a profile is itself named "Claude"). Seeded by DynamicItemStart.
            NO <Icon> here, deliberately: "a dynamic command cannot have an icon associated with it"
            (MS docs on dynamically adding menu items), and OleMenuCommand exposes no image property
-           either. Adding one decorates the SEED item only and leaves every generated profile bare —
+           either. Adding one decorates the SEED item only and leaves every generated profile bare:
            an asymmetry that reads as a bug. Per-item icons would mean dropping DynamicItemStart for
            N pre-declared Buttons (fixed ceiling on profiles) or a WPF picker, as VS itself does for
            its branch picker; not worth it for a cosmetic. Tried and reverted 2026-07. -->
@@ -460,7 +460,7 @@
       <IDSymbol name="TabAddToChatGroup" value="0x1089" />
       <IDSymbol name="HelpDocsGroup" value="0x1080" />
       <IDSymbol name="HelpContactGroup" value="0x1090" />
-      <!-- Must match PackageIds.cs — a mismatch is silent: the entry just never appears. -->
+      <!-- Must match PackageIds.cs; a mismatch is silent: the entry just never appears. -->
       <IDSymbol name="ShowToolWindowCommandId" value="0x0100" />
       <IDSymbol name="SettingsCommandId" value="0x0200" />
       <IDSymbol name="DataFolderCommandId" value="0x0201" />

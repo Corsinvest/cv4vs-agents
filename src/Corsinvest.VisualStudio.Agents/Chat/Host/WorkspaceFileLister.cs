@@ -41,7 +41,7 @@ internal sealed class FileListing
 /// workspace (never above it) plus git's global excludes, then the picker's own rules where those say
 /// nothing. Sorted, forward-slashed, relative to the workspace.
 /// <para>FindFirstFileEx rather than Directory.EnumerateFiles: on .NET Framework the latter asks for
-/// 8.3 names, fetches in small batches and validates every path — 2.6 s against 0.3 s for the same
+/// 8.3 names, fetches in small batches and validates every path: 2.6 s against 0.3 s for the same
 /// 120,000 files. Folders are read level by level on the thread pool, since matching the rules is
 /// the CPU part.</para></summary>
 internal static class WorkspaceFileLister
@@ -175,7 +175,7 @@ internal static class WorkspaceFileLister
                 var isDir = (data.dwFileAttributes & FileAttributeDirectory) != 0;
                 // Junctions and directory links are not followed: two pointing back up make the walk
                 // branch at every level and never end, and one pointing outside pulls another tree
-                // in. Other reparse points stay — OneDrive and cloud-file folders are ones.
+                // in. Other reparse points stay: OneDrive and cloud-file folders are ones.
                 if (isDir && (data.dwFileAttributes & FileAttributeReparsePoint) != 0
                     && (data.dwReserved0 == IoReparseTagMountPoint || data.dwReserved0 == IoReparseTagSymlink))
                 {

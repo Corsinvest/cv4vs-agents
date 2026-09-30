@@ -34,7 +34,7 @@ import { RemoteControlAtStartupCommand } from './remote-control-at-startup';
 import { SlashCommand } from './slash';
 
 /**
- * Static commands we own the wiring for. Unordered here — the menu groups by
+ * Static commands we own the wiring for. Unordered here: the menu groups by
  * section and sorts by each command's `order` (then label). Add a command by
  * dropping a file in this folder and listing its class below; it appears in its
  * section automatically. Dynamic `/name` commands are NOT here (see below).
@@ -83,7 +83,7 @@ export const SECTIONS: ReadonlyArray<{ id: CommandSection; label: string }> = [
  *  are kept and remapped to our dialogs inside SlashCommand.run(). */
 const STATIC_SLASH_NAMES = new Set<string>();
 
-/** Build the dynamic `/name` commands from app state — the rich list from the CLI's
+/** Build the dynamic `/name` commands from app state: the rich list from the CLI's
  *  `initialize` catalogue / `commands_changed` (name + description + hint + aliases). */
 export function dynamicSlashCommands(): SlashCommand[] {
     return state.slashCommands
@@ -109,7 +109,7 @@ export interface CommandGroup {
  *  ascending then A–Z.
  *
  *  `preserveOrder` (a relevance-ranked query result, like VS Code): the incoming
- *  order is kept BOTH within a section AND across sections — a section appears at
+ *  order is kept BOTH within a section AND across sections: a section appears at
  *  the rank of its first matching command. So filtering "usage" floats Slash
  *  Commands (with /usage) above Model (Account & usage), matching VS Code. */
 export function groupCommands(commands: ChatCommand[], preserveOrder = false): CommandGroup[] {

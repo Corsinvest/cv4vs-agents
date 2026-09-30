@@ -2,7 +2,7 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-// Small built-in commands — each is a one-line host action. Grouped here since
+// Small built-in commands: each is a one-line host action. Grouped here since
 // they're trivial; richer commands with their own UI (e.g. Usage, and future
 // Effort/Thinking/Rewind) stay in their own files.
 

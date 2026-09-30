@@ -32,7 +32,7 @@ public partial class ChatPaneControl : PaneControlBase
     /// <summary>Re-read the freshest title (custom/ai/last-prompt) for the current
     /// session from its JSONL. Called on load/fork and at turn end so a generated
     /// or refined ai-title shows up. A user rename writes a custom-title, which the
-    /// scan returns with top priority — so this never clobbers a manual rename.</summary>
+    /// scan returns with top priority, so this never clobbers a manual rename.</summary>
     private void RefreshTitleFromDisk()
     {
         var sid = _client?.SessionId;
@@ -46,7 +46,7 @@ public partial class ChatPaneControl : PaneControlBase
         var sid = _client?.SessionId;
         if (string.IsNullOrEmpty(sid) || string.IsNullOrWhiteSpace(newTitle)) { return; }
 
-        // Show it straight away — the write below is the slow part, and it can't fail in a way
+        // Show it straight away: the write below is the slow part, and it can't fail in a way
         // the user could act on.
         SetSessionTitle(newTitle);
 
@@ -87,7 +87,7 @@ public partial class ChatPaneControl : PaneControlBase
         AbandonTurnState();
         // The new session keeps the pane's current model/mode (NewSessionAsync reuses the
         // client's Model/PermissionMode); the respawn's system/init re-arms the gate, which
-        // re-populates the selector — no seed push needed here.
+        // re-populates the selector: no seed push needed here.
         _ = _client?.NewSessionAsync();
         // Nothing else focuses the composer here: the pane is already active, so the frame doesn't
         // change and PaneWindowBase's activation path never runs. Without this the user has to
@@ -117,7 +117,7 @@ public partial class ChatPaneControl : PaneControlBase
                 // is disk + JSON parse (~200ms on a big session).
                 var (mode, page, info) = await Task.Run(() => ReadSessionState(sessionId));
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                // Superseded by a later pick, or the pane torn down while we read — either way
+                // Superseded by a later pick, or the pane torn down while we read; either way
                 // nobody is looking at this session any more.
                 if (generation != _loadGeneration || _disposed) { return; }
                 SendHistoryPage(page, sessionId);
@@ -138,10 +138,10 @@ public partial class ChatPaneControl : PaneControlBase
 
     /// <summary>Read a session once: its permission mode (the CLI doesn't restore this from
     /// --resume, so it must be re-sent explicitly), plus the first transcript page and its info.
-    /// Model is NOT read here — it comes from the CLI's own init re-emit on resume, via the gate.
+    /// Model is NOT read here: it comes from the CLI's own init re-emit on resume, via the gate.
     /// The caller decides WHEN to push each piece to the WebView (order differs between InitAsync
     /// and LoadSession). Shared so auto-resume and fork restore the same state a menu-picked
-    /// session does. Reads the workdir off the entry (constant, valid even before _client exists —
+    /// session does. Reads the workdir off the entry (constant, valid even before _client exists:
     /// InitAsync calls this pre-client).</summary>
     private (string mode, SessionManager.HistoryPage page, SessionInfo info) ReadSessionState(string sessionId)
     {
@@ -150,7 +150,7 @@ public partial class ChatPaneControl : PaneControlBase
         return (mode, page, info);
     }
 
-    /// <summary>Push the boot state the host owns outright — pane config and VS options. Neither
+    /// <summary>Push the boot state the host owns outright: pane config and VS options. Neither
     /// waits on claude.exe, so this goes out the moment the WebView is up, ahead of any history.
     /// The CLI's own state follows on cli_state when it answers.</summary>
     private void SendUiInit()
@@ -169,7 +169,7 @@ public partial class ChatPaneControl : PaneControlBase
     /// <summary>The VS Options as they apply to THIS pane. Everything comes straight from the
     /// options page except file checkpointing, which claude.exe reads from its environment at
     /// startup: a session keeps what it was launched with, so the flag has to report the process
-    /// rather than the setting — otherwise Rewind would be offered on a session with no snapshots
+    /// rather than the setting: otherwise Rewind would be offered on a session with no snapshots
     /// behind it.</summary>
     private Contracts.VsOptionsDto PaneVsOptions()
     {
@@ -180,13 +180,13 @@ public partial class ChatPaneControl : PaneControlBase
 
     /// <summary>Send a loaded history page to the WebView (messages + paging), then kick off the
     /// input ↑/↓ prompt history load in the background. Loading a session's transcript always loads
-    /// its prompt history too — same act; both read the entry's constant workdir.</summary>
+    /// its prompt history too: same act; both read the entry's constant workdir.</summary>
     private void SendHistoryPage(SessionManager.HistoryPage page, string sessionId)
     {
         if (page?.Messages == null) { return; }
         var events = HistoryReplay.ReplayPage(page.Messages, AgentsOptions.Chat.PreviewLines);
         // Sub-agent children are loaded lazily on expand (chevron → preview, Show all → full), the
-        // same for the initial page and scroll-up — no preview is pre-appended here anymore.
+        // same for the initial page and scroll-up: no preview is pre-appended here anymore.
         // Unprompted push (not a getHistory response) → notification channel, no id.
         _bridge?.Send(BridgeMessages.ToWebView.Chat.HistoryLoaded, new Contracts.HistoryLoadedNotification
         {
@@ -257,7 +257,7 @@ public partial class ChatPaneControl : PaneControlBase
     /// group with is known only inside the page, and asking across the bridge would make Exec
     /// wait on a round trip. Properties has nothing to say about a conversation anyway, and a key
     /// that works or opens a tool window depending on invisible state is worse than one that
-    /// always does the same thing. Returns false if the WebView isn't ready — then VS keeps
+    /// always does the same thing. Returns false if the WebView isn't ready: then VS keeps
     /// it.</para></summary>
     internal bool HandleAltEnter()
     {
@@ -272,7 +272,7 @@ public partial class ChatPaneControl : PaneControlBase
 
     /// <summary>The WebView processes behind this pane, for the info dialog (the CLI's own PID is
     /// the base's shared row). What a frozen or misbehaving chat comes down to is "which process is
-    /// mine" — with several panes open that is otherwise a command-line hunt in Task Manager, so
+    /// mine": with several panes open that is otherwise a command-line hunt in Task Manager, so
     /// the renderer is the pane's own, resolved by frame, not the browser's whole list.</summary>
     protected override async Task<IEnumerable<(string Label, string Value)>> ExtraSessionInfoAsync()
     {
@@ -284,10 +284,10 @@ public partial class ChatPaneControl : PaneControlBase
         ];
     }
 
-    /// <summary>The page's own diagnostic report — CLI state as the UI sees it, context usage, and
+    /// <summary>The page's own diagnostic report: CLI state as the UI sees it, context usage, and
     /// how heavy the transcript got in DOM nodes. None of it is reachable from here: it lives in
     /// the WebView, so the page is asked for it already formatted (`window.cv.dump()` in
-    /// ui/debug.ts — renaming that helper silently empties this section).</summary>
+    /// ui/debug.ts: renaming that helper silently empties this section).</summary>
     protected override async Task<IEnumerable<string>> ExtraSessionSectionsAsync()
     {
         if (_bridge == null) { return []; }
@@ -309,10 +309,10 @@ public partial class ChatPaneControl : PaneControlBase
         return await call.ConfigureAwait(true);
     }
 
-    /// <summary>Chat-only extras for the toolbar's "More" menu — the WebView DevTools and the
-    /// browser's task manager — on preview and Debug builds. Testers on a release candidate are
+    /// <summary>Chat-only extras for the toolbar's "More" menu (the WebView DevTools and the
+    /// browser's task manager) on preview and Debug builds. Testers on a release candidate are
     /// exactly who needs to inspect the WebView to report a bug, and so is anyone building the
-    /// extension — the DEBUG arm is what keeps them around once a version drops its -rc suffix,
+    /// extension: the DEBUG arm is what keeps them around once a version drops its -rc suffix,
     /// which is when they silently disappeared. A stable Marketplace build, which is neither, hides
     /// them unless the user opts in from Options: a chat that renders wrongly or stops taking input
     /// can only be diagnosed from the browser console, and that happens on stable builds too.
@@ -393,7 +393,7 @@ public partial class ChatPaneControl : PaneControlBase
     private int _loadGeneration;
 
     // When set (by PaneLauncher before the pane loads), this pane opens ON this
-    // session instead of a fresh one — used to land a fork in its own pane.
+    // session instead of a fresh one, used to land a fork in its own pane.
     private string _startupSessionId;
     // What to put in the composer once the pane loads: a fork's forked-at message, or what a
     // context-menu entry had for a chat that was not open yet.
@@ -432,7 +432,7 @@ public partial class ChatPaneControl : PaneControlBase
 
     /// <summary>A key <see cref="ChatWebView"/> claimed because composition rendering drops it:
     /// hand it to the page, which acts on whatever it has focused. Dropped silently before the
-    /// bridge is up — there is nothing focused to act on yet.</summary>
+    /// bridge is up: there is nothing focused to act on yet.</summary>
     private void OnHostKeyPressed(Contracts.HostKeyNotification key)
         => _bridge?.Send(BridgeMessages.ToWebView.Ui.HostKey, key);
 
@@ -494,7 +494,7 @@ public partial class ChatPaneControl : PaneControlBase
             VSColorTheme.ThemeChanged += OnVsThemeChanged;
 
             // Track active editor file + selection for the context badge / <ide_*> prompt tags.
-            // SubscribeToEditorEvents is owned by McpServerHost.Start — we just hook the event here.
+            // SubscribeToEditorEvents is owned by McpServerHost.Start: we just hook the event here.
             IdeContextService.Instance.ContextChanged += OnEditorContextChanged;
 
             // Workdir was resolved (solution vs home) once by PaneLauncher and lives on the entry.
@@ -504,7 +504,7 @@ public partial class ChatPaneControl : PaneControlBase
     /// <summary>Kind-specific release (the base handles _disposed guard, solution-events
     /// unadvise, and the registry drop). Unhook the theme + static Options subscriptions and
     /// dispose the client and the WebView. The IdeContextService singleton is owned by the package
-    /// (McpServerHost lifetime) — only unhook our handler, don't dispose it.</summary>
+    /// (McpServerHost lifetime): only unhook our handler, don't dispose it.</summary>
     protected override void DisposeCore()
     {
         VSColorTheme.ThemeChanged -= OnVsThemeChanged;
@@ -524,7 +524,7 @@ public partial class ChatPaneControl : PaneControlBase
         _bridge?.Dispose();
         // Nulled so the `_bridge?.` sends elsewhere no-op, NOT as the teardown signal: this only
         // happens at the end of DisposeCore, while `_disposed` is already true on entry. Work that
-        // resumes after an await asks that one — a null bridge also means "the WebView has not been
+        // resumes after an await asks that one: a null bridge also means "the WebView has not been
         // built yet", which is a different thing (see ShowFind, HandleEscape).
         _bridge = null;
     }
@@ -552,7 +552,7 @@ public partial class ChatPaneControl : PaneControlBase
     }
 
     /// <summary>A chat changed remoteControlAtStartup. Chats of the same profile only move their
-    /// switch — the setting is for new sessions, so nobody's Remote Control is touched.</summary>
+    /// switch: the setting is for new sessions, so nobody's Remote Control is touched.</summary>
     private void OnCliUserSettingChanged(string path, string key, JToken value)
     {
         if (key != RemoteControlStartup.SettingKey
@@ -570,19 +570,19 @@ public partial class ChatPaneControl : PaneControlBase
     /// <summary>Options → Apply. Send vs_settings (updates state.ui: font size, sticky, …)
     /// and re-render the transcript from history so the already-rendered messages/tool-rows
     /// pick up the new UI options (e.g. the "Open diff in VS" button). This only refreshes
-    /// the WebView — it does NOT touch CLI state (model/mode/toggles) or respawn the CLI.</summary>
+    /// the WebView: it does NOT touch CLI state (model/mode/toggles) or respawn the CLI.</summary>
     private void OnOptionsApplied()
     {
         var opts = PaneVsOptions();
         _bridge?.Send(BridgeMessages.ToWebView.Ui.VsSettings, opts);
 
         // The one explicit call left: here the OPTION changed, not the pane's activity, so no
-        // setter fires. Before the early returns below — unticking must free the machine now
+        // setter fires. Before the early returns below: unticking must free the machine now
         // rather than at the next turn boundary.
         ApplyActivityToPower();
 
         // Say so when the setting was just changed and this session cannot follow it: the option is
-        // read by claude.exe at startup. Without the notice the checkbox looks broken — ticked in
+        // read by claude.exe at startup. Without the notice the checkbox looks broken: ticked in
         // Options, and no Rewind in the menu.
         if (_client != null && AgentsOptions.Chat.FileCheckpoints != opts.FileCheckpoints)
         {
@@ -602,7 +602,7 @@ public partial class ChatPaneControl : PaneControlBase
 
         // Mid-turn the re-render would be destructive: the reply being streamed is not in the
         // .jsonl yet, so Cleared drops it and the page read back is the transcript as it stood
-        // before the turn — the running turn disappears from the chat while the CLI is still
+        // before the turn: the running turn disappears from the chat while the CLI is still
         // working on it. The options above are already applied; the rows rendered so far keep
         // the previous ones until the next re-render.
         if (TurnInFlight)
@@ -611,7 +611,7 @@ public partial class ChatPaneControl : PaneControlBase
             return;
         }
 
-        // Reload the transcript into the WebView only; do NOT call ResumeSessionAsync — re-rendering
+        // Reload the transcript into the WebView only; do NOT call ResumeSessionAsync: re-rendering
         // UI options needs no respawn, and respawning here is not safe.
         // Same generation counter as LoadSession: a session picked while this read is in flight
         // must win, or the options re-render paints the previous session over the chosen one.
@@ -646,7 +646,7 @@ public partial class ChatPaneControl : PaneControlBase
         using var _ = OutputWindowLogger.Global.PerfSpan($"InitAsync({workDir})");
 
         // Every "New Chat" pane starts FRESH (else N panes share one conversation). Exception: a
-        // forked or workspace-restored pane — _startupSessionId points at the JSONL to resume
+        // forked or workspace-restored pane: _startupSessionId points at the JSONL to resume
         // (set by SetStartupSession before load). Model isn't decided here: client-first, the CLI's
         // own system/init reports it (fresh pane picks the CLI default; resume re-emits the
         // session's model) and the gate ships it to the WebView. Permission mode comes from OUR
@@ -680,7 +680,7 @@ public partial class ChatPaneControl : PaneControlBase
 
         // Before the history, never after: those rows shorten their paths against the working
         // directory, and a row drawn without one keeps the absolute path it was born with. This
-        // is why ui_init no longer waits for the CLI — permMode below is what we pass via
+        // is why ui_init no longer waits for the CLI: permMode below is what we pass via
         // --permission-mode (the CLI doesn't report it), and the rest of the CLI's state follows
         // on cli_state when StartupAsync has gathered it, seconds later, enabling the toolbar.
         // Seed the resumed session's transcript + title (after Cleared, from the read above).
@@ -718,14 +718,14 @@ public partial class ChatPaneControl : PaneControlBase
             InitialPermissionMode = permMode,
             AllowBypassPermissions = allowBypass,
             // Read here rather than in ClaudeClient: the client is given its settings, it does not
-            // go looking for them — and this one is fixed for the life of the process anyway.
+            // go looking for them, and this one is fixed for the life of the process anyway.
             FileCheckpoints = AgentsOptions.Chat.FileCheckpoints,
             SsePort = ssePort,
             Env = Entry.Profile.Env,
         });
 
         // A fork's forked-at message, or a prompt from the editor context menu. Not gated on
-        // restoreState: the context menu opens a fresh pane, with a prompt but no session — which
+        // restoreState: the context menu opens a fresh pane, with a prompt but no session, which
         // is also what tells the two apart, a fork always brings the session it forked.
         if (_startupComposer != null && (!string.IsNullOrEmpty(_startupComposer.Text) || _startupComposer.Mentions?.Length > 0))
         {
@@ -744,7 +744,7 @@ public partial class ChatPaneControl : PaneControlBase
             _bridge?.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
             {
                 Key = "cli-update",
-                // Info, not warning: nothing is wrong and nothing is blocked — a newer release
+                // Info, not warning: nothing is wrong and nothing is blocked; a newer release
                 // exists, which is worth saying once and colouring like a fact.
                 // Sticky all the same: the chat may well be opened and left alone for a while, and
                 // a row that fades after a few seconds is easy to miss entirely.
@@ -778,7 +778,7 @@ public partial class ChatPaneControl : PaneControlBase
         _client = new ClaudeClient(_log)
         {
             // IDE tools exposed as in-process SDK MCP server (mcp_set_servers after init).
-            // Name must be "vs", NOT "ide" — the CLI reserves "ide" for its own internal
+            // Name must be "vs", NOT "ide": the CLI reserves "ide" for its own internal
             // integration and does not surface those tools to the model; a custom name
             // makes all our tools appear as mcp__vs__* (openFile, getCurrentSelection, …).
             SdkMcpServerName = "vs",
@@ -811,13 +811,13 @@ public partial class ChatPaneControl : PaneControlBase
                 SetReady(true);
                 // First open: focus the composer now, not earlier. A ui_focus_input sent during
                 // startup lands before the bundle has mounted cv-prompt, so the textarea it looks
-                // for isn't there yet and the call is a no-op — which is why the pane opened
+                // for isn't there yet and the call is a no-op, which is why the pane opened
                 // needing a click. Later activations work because they come from a frame change,
                 // long after this. Only on the pane that VS considers active, so opening a second
                 // chat in the background doesn't steal focus from the one being used.
                 if (Pane?.IsActiveFrame() == true) { FocusInput(); }
                 // Name this pane's page after the pane. The browser's task manager labels each row
-                // with the document title, and every chat ships the same index.html — so without
+                // with the document title, and every chat ships the same index.html, so without
                 // this they all read "cv4vs Agents" and none of them says which pane it is.
                 _bridge?.SetDocumentTitle(Entry?.Title);
                 // Seed the IDE-context badge with the already-open editor: we only subscribe to
@@ -826,7 +826,7 @@ public partial class ChatPaneControl : PaneControlBase
                 IdeContextService.Instance.ResendCurrentContext();
                 break;
 
-            // Everything else is chat protocol — hand it to the message handler.
+            // Everything else is chat protocol: hand it to the message handler.
             default:
                 _handler?.Handle(type, data, id);
                 break;

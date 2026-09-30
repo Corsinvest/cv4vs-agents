@@ -12,7 +12,7 @@ using System.IO;
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
 /// <summary>
-/// Aggregates usage statistics from the local session .jsonl files — the same computation the
+/// Aggregates usage statistics from the local session .jsonl files: the same computation the
 /// CLI's stats.ts / Claude Desktop do (there is no server API for per-user history stats).
 /// Reads line-by-line; supports resuming from a byte offset so a grown (append-only) file only
 /// costs its delta. Synthetic assistant turns are skipped; subagent files contribute tokens and
@@ -23,7 +23,7 @@ internal static class StatsAggregator
     private const string SyntheticModel = "<synthetic>";
 
     /// <summary>The working directory a session ran in, from the first record that carries one.
-    /// Stops there — the caller wants the project's identity, not its contents, and asks before the
+    /// Stops there: the caller wants the project's identity, not its contents, and asks before the
     /// cache path (which is derived from that identity) can be known, so aggregating first is not an
     /// option. Null when no record says, or on I/O error.</summary>
     public static string ReadCwd(string path)
@@ -60,7 +60,7 @@ internal static class StatsAggregator
     /// <paramref name="fromOffset"/> bytes. Pass a non-null <paramref name="seed"/> to accumulate
     /// onto an existing aggregate (append delta); null starts fresh. Returns the aggregate, the new
     /// byte length read, and the session's cwd (last record that carries one; null if none read this
-    /// pass) — or null on I/O error. The cwd isn't stored in the aggregate; the caller keeps only
+    /// pass), or null on I/O error. The cwd isn't stored in the aggregate; the caller keeps only
     /// the most recent session's for the project label.</summary>
     public static (FileAggregate agg, long newSize, string cwd)? AggregateFile(
         string path, bool isSubagent, long fromOffset, FileAggregate seed)
@@ -87,7 +87,7 @@ internal static class StatsAggregator
                 // Fast path: skip lines without a JSON parse via cheap substring checks. Only
                 // assistant turns carry tokens/model/tool_use; user turns matter only when they
                 // carry image/document attachments. Everything else (tool_result, system, stream
-                // deltas, plain user text) is skipped — parsing every line of a 16 MB file is the
+                // deltas, plain user text) is skipped: parsing every line of a 16 MB file is the
                 // dominant cost otherwise.
                 // Count both user and assistant turns as messages (like Claude Desktop's
                 // mainMessages.length), so keep any line that carries either type. Non-message
@@ -123,7 +123,7 @@ internal static class StatsAggregator
         var message = obj["message"] as JObject;
         var content = message?["content"] as JArray;
 
-        // The real working directory — keep the LAST record that carries one (a mid-session cd
+        // The real working directory: keep the LAST record that carries one (a mid-session cd
         // updates it). The project-dir name is a lossy encoding, so this is the only readable source.
         var cwdHere = obj.Val("cwd", "");
         if (!string.IsNullOrEmpty(cwdHere)) { cwd = cwdHere; }
@@ -140,7 +140,7 @@ internal static class StatsAggregator
             if (tsMs > agg.LastTimestampMs) { agg.LastTimestampMs = tsMs; }
         }
 
-        // Count the message (both roles) into the totals and per-day activity — matches
+        // Count the message (both roles) into the totals and per-day activity: matches
         // Claude Desktop's mainMessages.length.
         agg.Messages++;
         var dateKey = DateKey(tsMs);
@@ -236,8 +236,8 @@ internal static class StatsAggregator
         return DateKey(dt);
     }
 
-    /// <summary>The key a day's bucket is filed under. Nothing on disk uses this shape — the JSONL
-    /// carries an ISO timestamp, and this is what we index it by — so producer and readers only
+    /// <summary>The key a day's bucket is filed under. Nothing on disk uses this shape: the JSONL
+    /// carries an ISO timestamp, and this is what we index it by, so producer and readers only
     /// agree as long as they go through here. They used to each write the format out, which fails
     /// quietly: change one and the lookups simply return nothing. Empty heatmap, no exception.</summary>
     internal static string DateKey(DateTime local)

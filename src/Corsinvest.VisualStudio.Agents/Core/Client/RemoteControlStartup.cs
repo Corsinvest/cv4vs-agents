@@ -11,7 +11,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 
 /// <summary>Reads remoteControlAtStartup the way the CLI already resolved it. initialize computes
 /// <c>auto_enable = user-or-policy value ?? rollout default</c> (a project/local false winning) and
-/// <c>auto_on_by_default = auto_enable &amp;&amp; value was unset</c> — so an explicit, allowed true is
+/// <c>auto_on_by_default = auto_enable &amp;&amp; value was unset</c>, so an explicit, allowed true is
 /// exactly auto_enable and not by-default. The rollout default is left out on purpose: it is a
 /// server-side flag that changed twice in three weeks.</summary>
 internal static class RemoteControlStartup

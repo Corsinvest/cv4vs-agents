@@ -106,11 +106,11 @@ const AUTO_FILL_MAX_PAGES = 3;
  */
 @customElement('cv-app')
 export class CvApp extends LitElement {
-    /** Owns the transcript. Deliberately not reactive — _mutate() is the one place that tells
+    /** Owns the transcript. Deliberately not reactive: _mutate() is the one place that tells
      *  Lit something changed, so there is no second path that can forget to. */
     private _transcript = new Transcript();
     /** The only thing Lit watches for a transcript change. Lit re-renders on a reactive property
-     *  it sees change by identity, and the tree lives in a plain object it cannot see into — so
+     *  it sees change by identity, and the tree lives in a plain object it cannot see into, so
      *  _mutate() bumps this instead. A counter and not a flag: Lit compares the value from
      *  before the batch with the one after, so two invalidations in the same microtask would
      *  toggle a boolean back to where it started and the render would be skipped. */
@@ -137,24 +137,24 @@ export class CvApp extends LitElement {
     @state() private _awaitingUser = appState.pendingPermission != null;
     /** Chat → View mode, mirrored so a change re-renders (appState.ui is read, not observed).
      *  Hidden rows keep their place in the DOM: the transcript renders without keys, so taking one
-     *  out of the list would hand its element — open/closed state included — to the next row. */
+     *  out of the list would hand its element (open/closed state included) to the next row. */
     @state() private _viewMode: ViewMode = appState.ui.viewMode ?? 'full';
     /** Focus folds the user opened, by FoldRun.key. Per pane, never persisted. */
     @state() private _openFolds = new Set<string>();
     /** Folds opened while their run was still live: closed again when the turn settles, as the
-     *  VS Code Focus view does — the user looked at work in progress, not at the finished run. */
+     *  VS Code Focus view does: the user looked at work in progress, not at the finished run. */
     private _openedWhileLive = new Set<string>();
     /** The call whose permission prompt is open. Its row stays visible while tool calls are hidden:
      *  it is where what the prompt asks to run is spelled out. */
     @state() private _pendingToolUseId: string | null = appState.pendingPermission?.id ?? null;
-    /** Pages _fillIfUnscrollable has pulled in since the user last asked for more — see there. */
+    /** Pages _fillIfUnscrollable has pulled in since the user last asked for more; see there. */
     private _autoFillPages = 0;
     /** Observers of history pages still settling (_prependWithAnchor), so a tool-call flip can stop
      *  them re-applying a scroll position the flip has just moved. */
     private readonly _prependObservers = new Set<ResizeObserver>();
 
     @query('#messages') private _messagesEl!: HTMLDivElement;
-    /** Whether the "jump to the latest" button is showing — see _updateJump for the hysteresis. */
+    /** Whether the "jump to the latest" button is showing; see _updateJump for the hysteresis. */
     @state() private _showJump = false;
     private _jumpRaf = 0;
     @query('#system-notices') private _systemNotices!: CvNoticeStack | null;
@@ -169,9 +169,9 @@ export class CvApp extends LitElement {
      */
     private _streamingMsgs = new Map<string, number>();
     /** Currently-streaming thinking block, keyed by parentToolUseId (same nesting rule
-     *  as _streamingMsgs). Never persisted — cleared on session clear. */
+     *  as _streamingMsgs). Never persisted; cleared on session clear. */
     private _thinkingMsgs = new Map<string, number>();
-    /** What a finished turn cost, keyed by the id of its last text block — the entry the exchange's
+    /** What a finished turn cost, keyed by the id of its last text block: the entry the exchange's
      *  actions row renders against. Two writers: `assistantText` files the token counts (which the
      *  JSONL keeps, so they survive a replay), `exchangeEnded` adds cost and duration (which ride
      *  `result` and are live-only). A replayed turn therefore shows its tokens and nothing else. */
@@ -201,12 +201,12 @@ export class CvApp extends LitElement {
     }
 
     /**
-     * Forget ids the transcript has dropped — wired to its onRemoved, so a removal cannot land
+     * Forget ids the transcript has dropped: wired to its onRemoved, so a removal cannot land
      * without this running.
      *
      * Three maps here are keyed on entry ids, and none of them belongs in Transcript: they track
      * what is still streaming and what a turn cost, none of which is about the shape of the tree.
-     * What they do share is that an id leaving the tree strands them — deltas written into an entry
+     * What they do share is that an id leaving the tree strands them: deltas written into an entry
      * that is gone, or a Map that never shrinks. The clears at session switch and history push
      * cover the wholesale case; this is the piecemeal one.
      */
@@ -274,15 +274,15 @@ export class CvApp extends LitElement {
         this._transcript.onCleared = () => this._dropAllIds();
         // Global Esc-to-stop: interrupt generation regardless of focus, so stopping
         // never depends on where the caret is. Skipped when a permission/Ask prompt
-        // is open — there Esc cancels the prompt (the banner handles it, with stopPropagation).
+        // is open: there Esc cancels the prompt (the banner handles it, with stopPropagation).
         window.addEventListener('keydown', this._onGlobalEsc);
         // A nested Agent box toggled. Expand: fetch the full transcript (subagent_loaded
         // upserts it + sets expanded). Collapse: drop back to the last 3 here.
         this.addEventListener('subagent-toggle', this._onChildrenToggle as EventListener);
         // A compact separator's <details> opened for the first time: fetch the summary
-        // (lazy, cached via the entry's `loaded` flag — collapse/re-expand doesn't refetch).
+        // (lazy, cached via the entry's `loaded` flag: collapse/re-expand doesn't refetch).
         this.addEventListener('compact-expand', this._onCompactExpand as EventListener);
-        // User picked a model from the menu (cv-prompt) — the "Switched to X" notice
+        // User picked a model from the menu (cv-prompt): the "Switched to X" notice
         // fires ONLY here, never for the ui_init seed or a runtime cli_model_changed.
         this.addEventListener('model-switched', this._onModelSwitched as EventListener);
         // A queued message reached the CLI: its bubble moves down to where it was really sent (the
@@ -315,7 +315,7 @@ export class CvApp extends LitElement {
         );
 
         // The CLI process died: a sticky error with a "View logs" action, cleared when it restarts.
-        // (An intentional exit is a respawn we triggered — session switch/resume/workdir — not a crash.)
+        // (An intentional exit is a respawn we triggered: session switch/resume/workdir, not a crash.)
         this._offs.push(
             bridge.onNotification<CliExitedNotification>(Msg.toWebView.cli.exited, (d) => {
                 if (d?.intentional) {
@@ -353,7 +353,7 @@ export class CvApp extends LitElement {
             bridge.onNotification<UserTextEcho>(Msg.toWebView.chat.userText, (data) => {
                 // A replay of our own prompt is dropped, not merged: the bubble echoed before the send
                 // is the richer one (IDE chip, thumbnails, a group's separate bubbles). Only a prompt
-                // typed elsewhere — claude.ai, through Remote Control — adds a bubble.
+                // typed elsewhere (claude.ai, through Remote Control) adds a bubble.
                 if (data.uuid && !data.parentToolUseId && takeReplay(data.uuid)) {
                     return;
                 }
@@ -392,7 +392,7 @@ export class CvApp extends LitElement {
                                 // The final assistant notification carries the message time;
                                 // live fallback = now.
                                 timestamp: data?.timestamp ?? Date.now(),
-                                // Only this final notification names the message — the deltas that
+                                // Only this final notification names the message: the deltas that
                                 // built the entry carry no uuid, so it lands here or nowhere.
                                 uuid: data?.uuid ?? e.uuid,
                                 // Same: an API failure is only known once the frame arrives.
@@ -543,11 +543,11 @@ export class CvApp extends LitElement {
                     }
                     // Cost/tokens/duration are not a transcript entry: they belong to the exchange,
                     // not to the conversation, so they ride the hover actions row instead of taking
-                    // a permanent line under every answer. Keyed by the last entry id of the turn —
+                    // a permanent line under every answer. Keyed by the last entry id of the turn:
                     // exchanges are derived on the fly and have no id of their own, but that entry
                     // is the one the row renders against.
                     if (appState.ui.showCostAndDuration && data?.durationMs != null) {
-                        // Same key the row reads: the turn's last text block, not the last entry —
+                        // Same key the row reads: the turn's last text block, not the last entry:
                         // a turn ending on a tool row would otherwise file the figures under an id
                         // nothing renders against.
                         const lastText = [...this._transcript.entries]
@@ -589,8 +589,8 @@ export class CvApp extends LitElement {
                 // The rendered markdown belonged to the entries just dropped; keeping it would let
                 // a dead session's messages hold the cache slots the new one needs.
                 clearMarkdownCache();
-                // The transcript this turn belonged to is gone, so its `result` — the only thing
-                // that clears busy — would land on nothing. Without this the spinner outlives the
+                // The transcript this turn belonged to is gone, so its `result` (the only thing
+                // that clears busy) would land on nothing. Without this the spinner outlives the
                 // session that started it, with no message under it to explain what it is waiting for.
                 appState.isBusy = false;
                 // Anything queued was written for the session that just went; the isBusy above is
@@ -648,7 +648,7 @@ export class CvApp extends LitElement {
             bridge.onNotification<StatusNotification>(Msg.toWebView.chat.status, (data) => {
                 // Raw CLI work status; the spinner maps known values to a label (e.g. compacting).
                 appState.status = data?.status ?? '';
-                // A failed compaction otherwise ends in silence — the spinner just stops and the
+                // A failed compaction otherwise ends in silence: the spinner just stops and the
                 // chat is left un-compacted with no clue why. Surface it as a red centered notice.
                 if (data?.compactResult === 'failed') {
                     const why = data.compactError ? ` — ${data.compactError}` : '';
@@ -771,7 +771,7 @@ export class CvApp extends LitElement {
                 (data) => {
                     const events = data?.events ?? [];
                     // Before the replay, not after: a history push replaces the tree, so the ids
-                    // these were keyed on are gone — but building the replacement is what refills
+                    // these were keyed on are gone, but building the replacement is what refills
                     // them for the replayed turns, and clearing afterwards would drop that. This is
                     // why replaceAll leaves onCleared alone and the drop happens here instead.
                     this._dropAllIds();
@@ -844,7 +844,7 @@ export class CvApp extends LitElement {
                         usage: { totalTokens: 0, toolUses: 0, durationMs: 0 },
                         startedAt: Date.now(),
                         // Asked here rather than waited for: the list naming this task arrives
-                        // BEFORE the task itself — measured 19ms earlier — so a row that only ever
+                        // BEFORE the task itself (measured 19ms earlier) so a row that only ever
                         // got marked by a later list would sit under the wrong heading until one
                         // happened to come, and for the last task launched, never.
                         background: this._backgroundTaskIds.has(d.taskId),
@@ -853,7 +853,7 @@ export class CvApp extends LitElement {
                     this._publishSubagentTasks(m);
                     // The Agent row is usually created after this and reads the id in
                     // buildToolEntry; when it got in first, tag it here. Nothing marks the view
-                    // stale — the row was just appended, so its render is still pending and will
+                    // stale: the row was just appended, so its render is still pending and will
                     // read the id.
                     const row = d.toolUseId ? this._transcript.findTool(d.toolUseId) : null;
                     if (row && !row.agentId) {
@@ -904,7 +904,7 @@ export class CvApp extends LitElement {
                     if (!d?.taskId || !this._subagentTasks.has(d.taskId)) {
                         return;
                     }
-                    // The Agent row's own tool_result is launch metadata — it arrives at once and is
+                    // The Agent row's own tool_result is launch metadata: it arrives at once and is
                     // never is_error, so the row would settle green however the sub-agent ended. This
                     // notification carries the real outcome; 'stopped' is a cancellation the user
                     // asked for, so only 'failed' turns the row red.
@@ -956,7 +956,7 @@ export class CvApp extends LitElement {
                 (d) => {
                     // The authoritative set, so it is applied to every tracked task rather than
                     // merged: one that drops off the list is no longer in the background, and one
-                    // never seen here never was. Ids only — the row's own figures stay untouched.
+                    // never seen here never was. Ids only: the row's own figures stay untouched.
                     const ids = new Set(d?.taskIds ?? []);
                     // Kept for the tasks that have not arrived yet: this message beats
                     // subagent_started to the WebView, so the set has to outlive the call.
@@ -1028,7 +1028,7 @@ export class CvApp extends LitElement {
         if (document.querySelector(':popover-open')) {
             return;
         }
-        // Editing a queued message: Esc belongs to the edit. Ahead of the busy check on purpose —
+        // Editing a queued message: Esc belongs to the edit. Ahead of the busy check on purpose:
         // the turn is usually over by the time the queue is being edited, and there the interrupt
         // has nothing to stop while the edit still has something to close.
         const prompt = this.querySelector('cv-prompt');
@@ -1109,7 +1109,7 @@ export class CvApp extends LitElement {
                     const hit = d.toolUseId ? findTool(d.toolUseId) : null;
                     if (hit) {
                         // Replay builds a fresh list nothing is rendering yet, so writing into
-                        // the entry here is safe — it reaches the tree already folded.
+                        // the entry here is safe: it reaches the tree already folded.
                         Object.assign(hit, CvApp.applyToolResult(hit, d));
                     }
                     break;
@@ -1123,10 +1123,10 @@ export class CvApp extends LitElement {
             }
         }
 
-        // A tool_use with no matching tool_result on disk was never completed — the session
+        // A tool_use with no matching tool_result on disk was never completed: the session
         // ended while it was open (e.g. an AskUserQuestion the user closed without answering).
         // In replay nothing more is coming, so mark it interrupted (static red dot) instead of
-        // leaving it 'pending' — a spinning "in progress" dot that would never resolve.
+        // leaving it 'pending': a spinning "in progress" dot that would never resolve.
         for (const e of out) {
             if (e.kind === 'tool' && e.status === 'pending') {
                 e.status = 'error';
@@ -1149,7 +1149,7 @@ export class CvApp extends LitElement {
                 let children = childrenByParent.get(e.toolUseId);
                 if (children?.length) {
                     // The sub-agent's first message echoes the launch prompt, already shown as
-                    // the Agent row's IN — drop it here too, matching the live path (_appendEntry).
+                    // the Agent row's IN: drop it here too, matching the live path (_appendEntry).
                     // History replay bypasses that filter, so without this the echo reappears as
                     // a user bubble when a session is reopened.
                     const prompt = String(e.data?.input?.prompt ?? '').trim();
@@ -1183,7 +1183,7 @@ export class CvApp extends LitElement {
             return;
         }
         // Before the lazy-load guards below: those return early on most scrolls, and the jump
-        // button has to follow every one of them. This listener is already passive — a second one
+        // button has to follow every one of them. This listener is already passive: a second one
         // for the same event is what we are avoiding.
         this._queueJumpUpdate();
         if (!this._canLoadOlder() || el.scrollTop > 200) {
@@ -1234,7 +1234,7 @@ export class CvApp extends LitElement {
                     appState.loadingOlder = false;
                     return;
                 }
-                // The lock stays held across the prepend — _prependWithAnchor releases it once
+                // The lock stays held across the prepend: _prependWithAnchor releases it once
                 // Lit has flushed. Releasing here let the next scroll event fire a second fetch
                 // while the first page was still being anchored.
                 const out = this._applyHistoryPage(data, data?.events ?? []);
@@ -1267,7 +1267,7 @@ export class CvApp extends LitElement {
             requestAnimationFrame(() =>
                 requestAnimationFrame(() => {
                     const el = this._messagesEl;
-                    // 0 while WebView2 is suspended — nothing measured then is real.
+                    // 0 while WebView2 is suspended: nothing measured then is real.
                     if (!el || el.clientHeight === 0 || el.scrollHeight > el.clientHeight) {
                         return;
                     }
@@ -1282,8 +1282,8 @@ export class CvApp extends LitElement {
     }
 
     // Generic over the concrete text-entry type: call sites pass the type argument explicitly
-    // (e.g. _addText<UiAssistantEntry>({role:'assistant', …})) so `Omit` works on a single member
-    // — Omit over the whole union would collapse to the common keys and drop the role-specific ones.
+    // (e.g. _addText<UiAssistantEntry>({role:'assistant', …})) so `Omit` works on a single member;
+    // Omit over the whole union would collapse to the common keys and drop the role-specific ones.
     /** Returns the id, not the entry: the transcript replaces an entry on every change, so a
      *  reference kept by the caller would name something the tree no longer holds. */
     private _addText<E extends Extract<UiEntry, { kind: 'text' }>>(
@@ -1301,14 +1301,14 @@ export class CvApp extends LitElement {
 
     /** Append `entry` under the tool row `parentId`, or to the root list when there is no parent
      *  or it isn't in the tree. The ring of three and the upsert live in Transcript.appendChild;
-     *  what stays here is the one thing that is a rendering decision — dropping the sub-agent's
+     *  what stays here is the one thing that is a rendering decision: dropping the sub-agent's
      *  echo of its own launch prompt. */
     private _appendEntry(entry: UiEntry, parentId?: string): void {
         if (parentId) {
             const parent = this._transcript.findTool(parentId);
             if (parent) {
                 // The sub-agent's first message echoes the prompt the Agent tool was
-                // launched with — it's already shown as the Agent row's IN, so drop the duplicate.
+                // launched with: it's already shown as the Agent row's IN, so drop the duplicate.
                 if (
                     entry.kind === 'text' &&
                     entry.role === 'user' &&
@@ -1341,7 +1341,7 @@ export class CvApp extends LitElement {
             //  - Show all (preview=false): mark showAll; fetch the whole transcript only if there's
             //    more than we hold (hasMore = a history preview). Live/already-full → just show all.
             // The CLI writes the transcript as the agent runs, so a fetch mid-run returns
-            // everything that has happened so far — no need to special-case a running agent.
+            // everything that has happened so far: no need to special-case a running agent.
             const showAll = !preview;
             // Show all sets the flag; preview (chevron open) leaves it false → renderChildren shows ≤3.
             // Row open/closed is the component's own `_expanded`, not tracked here.
@@ -1370,7 +1370,7 @@ export class CvApp extends LitElement {
                     // own cells: the launch prompt (IN) and the closing report (OUT, from the
                     // tool_result the parent recorded). Both would read as duplicates among the
                     // sub-agent's steps. Their events carry no parentToolUseId, so the
-                    // _replayEvents post-pass filter doesn't reach them — drop them here.
+                    // _replayEvents post-pass filter doesn't reach them; drop them here.
                     const prompt = String(p.data?.input?.prompt ?? '').trim();
                     const report = (p.result ?? '').trim();
                     // Show all replaces the kept ≤3 with the whole transcript, in file order.
@@ -1404,7 +1404,7 @@ export class CvApp extends LitElement {
                     );
                 })
                 .catch(() => {
-                    /* timeout / not found — leave the kept children as-is */
+                    /* timeout / not found: leave the kept children as-is */
                 });
         } else {
             // "Reduce" (Show all → off): show the last 3 again, but KEEP the full list in memory so a
@@ -1447,11 +1447,11 @@ export class CvApp extends LitElement {
                 );
             })
             .catch(() => {
-                /* timeout / not found — leave "Loading…" as-is */
+                /* timeout / not found: leave "Loading…" as-is */
             });
     };
 
-    /** User picked a model from the menu (cv-prompt): show "Switched to X" — but only
+    /** User picked a model from the menu (cv-prompt): show "Switched to X", but only
      *  during a live chat, not on an empty transcript (nothing above it would be noise). */
     private _onModelSwitched = (e: CustomEvent<{ value: string }>): void => {
         const value = e.detail?.value;
@@ -1463,11 +1463,11 @@ export class CvApp extends LitElement {
 
     /**
      * A queued message went to the CLI: move its bubble below the reply it had been sitting above,
-     * so that reply keeps the question which actually prompted it. The fading is already handled —
-     * the uuid left `appState.queuedUuids` — so only the position is left.
+     * so that reply keeps the question which actually prompted it. The fading is already handled (
+     * the uuid left `appState.queuedUuids`) so only the position is left.
      *
      * Follows only if the view was already at the bottom, like every other path that changes the
-     * transcript. Someone reading further up — often the very reason they queued something — is
+     * transcript. Someone reading further up (often the very reason they queued something) is
      * left where they are, with the jump button to come back; someone at the bottom would otherwise
      * watch the bubble slide out of view and be left staring at the gap it came from.
      *
@@ -1519,7 +1519,7 @@ export class CvApp extends LitElement {
             return null;
         }
         const text = d.text ?? '';
-        // A slash command's local output (<local-command-stdout>/stderr>) is its own role — a centered
+        // A slash command's local output (<local-command-stdout>/stderr>) is its own role: a centered
         // pill, not a user bubble. Empty output (e.g. the /model picker) renders nothing.
         const lco = parseLocalCommandOutput(text);
         if (lco) {
@@ -1534,7 +1534,7 @@ export class CvApp extends LitElement {
                   }
                 : null;
         }
-        // Once, here — not at render time. Live the composer hands the refs over structured;
+        // Once, here: not at render time. Live the composer hands the refs over structured;
         // replayed they are still a tag inside the text, as in any session the terminal or VS
         // Code wrote.
         const { text: ownText, refs: parsedRefs } = parseIdeContextTags(text);
@@ -1596,7 +1596,7 @@ export class CvApp extends LitElement {
 
     /** ToolPermissionNotification → a pending tool row. An Agent row takes the id of the
      *  sub-agent it launched: task_started names both ids and lands just before this, whereas
-     *  the result only carries agentId in history — live it is null, and without it the row has
+     *  the result only carries agentId in history: live it is null, and without it the row has
      *  no transcript to open. */
     private buildToolEntry(d: ToolPermissionNotification): UiToolEntry {
         const input = (d.input ?? {}) as Record<string, unknown>;
@@ -1642,8 +1642,8 @@ export class CvApp extends LitElement {
     }
 
     /** Publish the running sub-agents, each linked to the task that launched it and ordered so a
-     *  child follows its parent. The wire has no parent link — task_started only names the Agent
-     *  row — so it is read off the tree, where nesting is the row's position. Recomputed on every
+     *  child follows its parent. The wire has no parent link (task_started only names the Agent
+     *  row) so it is read off the tree, where nesting is the row's position. Recomputed on every
      *  update: a task can beat its own row by a few ms and would otherwise stay flat. */
     private _publishSubagentTasks(tasks: Map<string, SubagentTask>): void {
         // The Agent row enclosing the one that launched this task. Descends carrying the current
@@ -1670,7 +1670,7 @@ export class CvApp extends LitElement {
                         }
                     }
                 }
-                return false; // not in this branch — distinct from "found, no container"
+                return false; // not in this branch: distinct from "found, no container"
             };
             const hit = walk(this._transcript.entries);
             return hit === false ? undefined : hit;
@@ -1693,7 +1693,7 @@ export class CvApp extends LitElement {
         const flatten = (parentTaskId?: string): SubagentTask[] =>
             childrenOf(parentTaskId).flatMap((t) => [t, ...flatten(t.taskId)]);
         const ordered = flatten(undefined);
-        // A task whose parent is gone (ended while the child runs) would vanish from the walk —
+        // A task whose parent is gone (ended while the child runs) would vanish from the walk:
         // keep it, at top level.
         const seen = new Set(ordered.map((t) => t.taskId));
         appState.subagentTasks = [...ordered, ...linked.filter((t) => !seen.has(t.taskId))];
@@ -1742,7 +1742,7 @@ export class CvApp extends LitElement {
 
     /**
      * Flip the tool-call filter without moving what the user is reading. At the bottom that means
-     * staying there. Further up, a row the flip never hides — a message or a thinking block — is
+     * staying there. Further up, a row the flip never hides (a message or a thinking block) is
      * held where it was painted, so the same element is there to measure afterwards. Not a user
      * bubble while it is pinned: it stays at the top whatever moves under it.
      *
@@ -1760,7 +1760,7 @@ export class CvApp extends LitElement {
             return;
         }
         // A history page still settling re-applies its distance from the bottom whenever a block
-        // resizes — which the flip is about to make every block do — and would undo the flip. Only
+        // resizes (which the flip is about to make every block do) and would undo the flip. Only
         // its observer goes: its timer still hands back scroll-behavior and the class.
         for (const ro of this._prependObservers) {
             ro.disconnect();
@@ -1848,12 +1848,12 @@ export class CvApp extends LitElement {
      *
      * We anchor on the DISTANCE FROM THE BOTTOM (`scrollHeight - scrollTop`), which is invariant
      * to content growing both above (the prepended page) and below (async-rendered markdown /
-     * lazy images) the viewport — unlike a one-shot `scrollTop += delta`, which slides as async
+     * lazy images) the viewport, unlike a one-shot `scrollTop += delta`, which slides as async
      * children settle. It has to be a measure of the list rather than a reference to a node in
      * it: the transcript renders without keys, so Lit rewrites the existing sections in place
      * and the node that was the joint holds different entries after the prepend.
      *
-     * That measure is only stable if the list is really laid out, hence the `anchoring` class —
+     * That measure is only stable if the list is really laid out, hence the `anchoring` class:
      * see the comment on it below.
      *
      * A ResizeObserver keeps re-applying the anchor while the prepended entries settle, so there
@@ -1874,7 +1874,7 @@ export class CvApp extends LitElement {
         // Lay the whole transcript out for real while we anchor against it. `content-visibility:
         // auto` counts a block that has never been on screen as its contain-intrinsic-size guess,
         // so scrollHeight moves by however wrong those guesses were the moment the blocks are
-        // measured — 504px over twelve blocks on a real transcript, which lands straight in the
+        // measured: 504px over twelve blocks on a real transcript, which lands straight in the
         // resting position. A class on the scroller rather than inline styles on the blocks:
         // #messages is ours, the blocks belong to Lit and it rewrites them on the next render.
         el.classList.add('anchoring');
@@ -1889,7 +1889,7 @@ export class CvApp extends LitElement {
 
         this._mutate(() => this._transcript.prepend(older));
         // Commit the DOM synchronously and re-anchor in the SAME task, before
-        // the browser can paint a frame at the stale scrollTop — that paint is
+        // the browser can paint a frame at the stale scrollTop: that paint is
         // the residual upward flicker. updateComplete then handles the async
         // children that settle over the following frames.
         this.performUpdate();
@@ -1898,13 +1898,13 @@ export class CvApp extends LitElement {
             anchor();
             // Re-anchor ONLY when the content height actually changes (async
             // markdown / lazy images settling). Anchoring every
-            // frame regardless — as a plain rAF loop would — rewrites scrollTop
+            // frame regardless (as a plain rAF loop would) rewrites scrollTop
             // against sub-pixel readback noise and produces a visible jitter.
             // A ResizeObserver fires precisely on the height changes we care
             // about; a timer just bounds how long we keep listening.
             // On the .cv-response blocks, not on #messages or its sections: the scroller is
             // `flex: 1` so its box never changes, and content-visibility contains the layout of
-            // each block inside it — a section does not resize when the block it wraps is finally
+            // each block inside it: a section does not resize when the block it wraps is finally
             // measured. The blocks are where the height actually moves.
             const ro = new ResizeObserver(() => anchor());
             for (const block of el.querySelectorAll('.cv-response')) {
@@ -1942,10 +1942,10 @@ export class CvApp extends LitElement {
     /**
      * Land at the bottom after content the browser is still sizing.
      *
-     * Wait for Lit to flush the DOM before measuring scrollHeight — scrolling in a microtask
+     * Wait for Lit to flush the DOM before measuring scrollHeight: scrolling in a microtask
      * (pre-render) lands short, leaving the last lines cut off. The two catch-up passes absorb
      * what keeps growing after the first paint: that is images (cv-message awaits fetchChatImage),
-     * NOT markdown or the diff preview — both are synchronous and already final when Lit is done.
+     * NOT markdown or the diff preview: both are synchronous and already final when Lit is done.
      *
      * `sustainFrames` keeps re-landing for that many frames, for callers that just swapped in a
      * whole page of transcript. Loading it in the caller instead multiplied these three passes by
@@ -1993,7 +1993,7 @@ export class CvApp extends LitElement {
     }
 
     /** The clicked row is held where it was painted: left to scroll anchoring, the browser may pin
-     *  something below it instead — the reply after the run — and the row flies off the top. */
+     *  something below it instead (the reply after the run) and the row flies off the top. */
     private _toggleFold(key: string, live: boolean, row: HTMLElement): void {
         const el = this._messagesEl;
         const before = row.getBoundingClientRect().top;
@@ -2022,7 +2022,7 @@ export class CvApp extends LitElement {
 
     // An exchange = the leading user message(s) then the response (assistant blocks + tool rows).
     // The response and its actions row are wrapped in .cv-response so the row reveals on hovering the
-    // RESPONSE only — hovering the user bubble must not light up the response's copy (they're
+    // RESPONSE only: hovering the user bubble must not light up the response's copy (they're
     // separate turns). Leading user entries render outside that wrapper (each has its own row).
     private renderExchange(group: UiEntry[]) {
         const isUser = (e: UiEntry): boolean => e.kind === 'text' && e.role === 'user';
@@ -2042,7 +2042,7 @@ export class CvApp extends LitElement {
                 runOf.set(r, run);
             }
         }
-        // Hidden in place, never left out of the list — see _viewMode.
+        // Hidden in place, never left out of the list; see _viewMode.
         const hides = (e: UiEntry, idx: number): boolean => {
             if (this._viewMode === 'hideToolCalls') {
                 return isHiddenToolCall(e, this._pendingToolUseId);
@@ -2055,7 +2055,7 @@ export class CvApp extends LitElement {
         // a history page can start on a group of tool rows alone. In Focus a fold row always shows.
         const responseHidden = !focus && response.length > 0 && response.every(hides);
         // Rides inside its run's first slot, never as a list item of its own: the list has no keys,
-        // so an extra item would hand every later row the element — and state — of the one before.
+        // so an extra item would hand every later row the element (and state) of the one before.
         const foldRow = (run: FoldRun) => {
             const live = liveTurn && run.start === lastRunStart;
             const liveLabel = live ? foldLiveLabel(run) : null;
@@ -2095,10 +2095,10 @@ export class CvApp extends LitElement {
     // (assistant answers AND slash-command outputs like /config) joined + "x ago" (the last block).
     // Nothing while the last assistant block still streams, or with no copyable text (e.g. a bare
     // tool-only response). A slash-result-only exchange (a command with no assistant reply) still
-    // gets the row — its output is worth copying.
+    // gets the row: its output is worth copying.
     //
     // Takes the WHOLE exchange (buildGroups' own array), not renderExchange's local `response`
-    // slice: that slice is a fresh array on every render, so keying the cache on it never hit —
+    // slice: that slice is a fresh array on every render, so keying the cache on it never hit:
     // every pass rebuilt the join. The full group is stable across renders (buildGroups keeps it
     // unless the transcript changes), and filtering by role here picks out the same blocks either
     // way, since a lead user entry never matches assistant/slash-result.
@@ -2116,14 +2116,14 @@ export class CvApp extends LitElement {
         }
         // Joining every block of every exchange on each pass is the kind of work that only shows up
         // once a chat is long. Keyed on the group array, which buildGroups rebuilds whenever the
-        // transcript changes and keeps otherwise — so any edit to any block gives a new key.
+        // transcript changes and keeps otherwise, so any edit to any block gives a new key.
         let text = this._joinCache.get(group);
         if (text === undefined) {
             text = blocks.map((b) => b.text).join('\n\n');
             this._joinCache.set(group, text);
         }
         const ts = last.timestamp ?? 0;
-        // Keyed on the last text block — the one entry both writers can name: `assistantText` has
+        // Keyed on the last text block, the one entry both writers can name: `assistantText` has
         // only the message it just closed, and `exchangeEnded` looks the same one up. Keying on the
         // group's last entry instead would miss a turn that ends on a tool row.
         const metrics = this._turnMetrics.get(last.id) ?? null;
@@ -2131,8 +2131,8 @@ export class CvApp extends LitElement {
     }
 
     /** File a finished message's token counts against its entry, for the actions row to show.
-     *  Called from both paths that build an assistant entry — the live notification and the
-     *  history replay — because the JSONL keeps `usage` on the assistant line and a replayed
+     *  Called from both paths that build an assistant entry (the live notification and the
+     *  history replay) because the JSONL keeps `usage` on the assistant line and a replayed
      *  turn should still show its tokens. Cost and duration ride `result`, which replay has no
      *  line for, so `exchangeEnded` fills those in later when the turn is live. Sub-agent
      *  messages are skipped: their figures belong to the Agent row, not to the exchange. */
@@ -2169,7 +2169,7 @@ export class CvApp extends LitElement {
         }
     }
 
-    /** The session link and its QR, in the transcript — on connect, and again whenever the toolbar
+    /** The session link and its QR, in the transcript: on connect, and again whenever the toolbar
      *  chip asks. Posting a second card rather than moving the first: the old one belongs to where
      *  the conversation was when it was asked for. */
     private _postRemoteControlCard(url: string): void {
@@ -2183,14 +2183,14 @@ export class CvApp extends LitElement {
         }
     };
 
-    /** Open the rewind dialog on this session's user messages, newest first — the order the list
+    /** Open the rewind dialog on this session's user messages, newest first: the order the list
      *  is read in, since a rewind is nearly always to something recent. Only messages with a uuid:
      *  it is what addresses a checkpoint, and one without cannot be a target. */
     private _onOpenRewind = (): void => {
         const points: RewindPoint[] = [];
         for (const e of this._transcript.entries) {
             if (e.kind === 'text' && e.role === 'user' && e.uuid) {
-                // The stored text carries whatever the composer prepended — the open file, the
+                // The stored text carries whatever the composer prepended: the open file, the
                 // editor selection. A row reading "<ide_opened_file>The user opened…" identifies
                 // nothing: what tells one restore point from another is the prompt itself.
                 const text = cleanMessageOnlyText(e.text);
@@ -2248,7 +2248,7 @@ export class CvApp extends LitElement {
         return html`
             <!-- Session/system notices at the top of the chat: a dead CLI process (with View logs),
                  CLI informational advisories (a session model this version no longer knows), … .
-                 Turn-scoped ones (rate limit, uploads) live above the composer in cv-prompt — each
+                 Turn-scoped ones (rate limit, uploads) live above the composer in cv-prompt: each
                  stack owns its own queue and keeps only its own position. -->
             <cv-notice-stack id="system-notices"></cv-notice-stack>
 
@@ -2260,7 +2260,7 @@ export class CvApp extends LitElement {
                 }
                 ${this._exchanges.map((group) => this.renderExchange(group))}
                 ${
-                    // Only the main turn. Sub-agents outliving it are the chip's job — it sits in
+                    // Only the main turn. Sub-agents outliving it are the chip's job: it sits in
                     // the composer with a live count whether or not a turn is running, and it says
                     // WHAT is working, which a spinner cannot. Lighting the spinner for them would
                     // promise a reply that is not coming.
@@ -2271,7 +2271,7 @@ export class CvApp extends LitElement {
                 <!-- Last child of the scroller, stuck to its bottom edge: position:sticky keeps it
                      in view without a wrapper. A wrapper would have been cleaner, but cv-app
                      renders into the light DOM, and re-parenting #messages moves nodes Lit holds
-                     markers into — the next update then writes a property onto a node that is
+                     markers into: the next update then writes a property onto a node that is
                      gone. -->
                 <fluent-button
                     id="jump-to-bottom"

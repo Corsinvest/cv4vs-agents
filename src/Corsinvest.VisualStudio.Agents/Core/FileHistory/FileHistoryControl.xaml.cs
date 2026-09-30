@@ -17,7 +17,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.FileHistory;
 /// The File history tool window. A left tree (config-dir → project → session) lists what the
 /// CLI's file backups occupy; the right panel lists the selected session's files, with a diff on
 /// double click. Checked sessions can be deleted.
-/// <para>Same shape as Context usage — tree, splitter, code-behind panel — but the tree is built
+/// <para>Same shape as Context usage (tree, splitter, code-behind panel), but the tree is built
 /// here from `file-history/` rather than by StatsService: see <see cref="FileHistoryService"/> for why.
 /// Nothing is indexed, so there is no loading overlay and no Recreate button.</para>
 /// </summary>
@@ -70,7 +70,7 @@ public partial class FileHistoryControl : UserControl
         Tree.ItemsSource = _roots;
     }
 
-    // An arrow on the sorted column only — three of them would say nothing about which one wins.
+    // An arrow on the sorted column only: three of them would say nothing about which one wins.
     private void ShowArrows()
     {
         var arrow = _descending ? "▾" : "▴";
@@ -79,7 +79,7 @@ public partial class FileHistoryControl : UserControl
         SizeArrow.Text = _sortBy == SortBy.Size ? arrow : "";
     }
 
-    // Scan off the UI thread — a config-dir can sit on a network share — then rebuild the tree.
+    // Scan off the UI thread (a config-dir can sit on a network share), then rebuild the tree.
     private void Reload()
     {
         RefreshButton.IsEnabled = false;
@@ -96,7 +96,7 @@ public partial class FileHistoryControl : UserControl
                 OutputWindowLogger.Global.LogException("FileHistoryControl.Reload", ex);
                 error = "Could not read the backup folders — see the output log.";
             }
-            // Back on the UI thread before touching anything WPF — including re-enabling the
+            // Back on the UI thread before touching anything WPF, including re-enabling the
             // button, which is why that isn't in a finally around the scan.
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             if (error != null) { ShowMessage(error); } else { BuildTree(scan); }
@@ -156,7 +156,7 @@ public partial class FileHistoryControl : UserControl
         ShowArrows();
 
         // Sessions with backups are the only rows here, and a session driven by an open pane is not
-        // deletable — say so once, rather than leaving a disabled checkbox unexplained.
+        // deletable: say so once, rather than leaving a disabled checkbox unexplained.
         var blocked = _roots.SelectMany(AllNodes)
                             .Count(n => n.Kind == FileHistoryNodeKind.Session && !n.CanDelete);
         LiveText.Visibility = blocked > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -165,7 +165,7 @@ public partial class FileHistoryControl : UserControl
             : $"{blocked} sessions are open in panes — not deletable";
     }
 
-    // Projects, then their sessions. Orphans — backups whose transcript is gone — get their own
+    // Projects, then their sessions. Orphans (backups whose transcript is gone) get their own
     // group: they are the primary target of a clean-up, and no project can hold them.
     private IEnumerable<FileHistoryTreeNode> GroupByProject(FileHistoryService.ConfigDirBackups config)
     {
@@ -221,8 +221,8 @@ public partial class FileHistoryControl : UserControl
         return groups;
     }
 
-    /// <summary>Apply the current header ordering in place. One method for every level of the tree
-    /// — sorting the sessions by date while their projects stayed by size read as a bug.
+    /// <summary>Apply the current header ordering in place. One method for every level of the tree:
+    /// sorting the sessions by date while their projects stayed by size read as a bug.
     /// <para>Size and date both fall back to the name when they tie, so two sessions of the same
     /// size keep a stable order between one sort and the next instead of swapping about.</para></summary>
     private void Sort(List<FileHistoryTreeNode> nodes)

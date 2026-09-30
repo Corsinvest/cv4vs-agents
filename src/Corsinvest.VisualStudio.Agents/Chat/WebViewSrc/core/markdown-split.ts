@@ -6,7 +6,7 @@
 // needs a DOM: this is string arithmetic and stays testable under plain node --test.
 
 /**
- * Offset of the last point in `text` that later text cannot change the meaning of — a blank line
+ * Offset of the last point in `text` that later text cannot change the meaning of: a blank line
  * outside a fenced block, or the line that closes one. Markdown separates blocks there, so
  * everything before it is settled and can be rendered once instead of on every delta.
  *
@@ -14,7 +14,7 @@
  * prefix), which tells the caller to render the whole thing. Deliberately conservative: cutting
  * inside a construct would break the render, so a missed opportunity is the safe failure.
  *
- * Fence tracking matches closeOpenMarkdown — a line *starting* with ``` flips the state, so fences
+ * Fence tracking matches closeOpenMarkdown: a line *starting* with ``` flips the state, so fences
  * appearing as content don't throw off the count.
  */
 export function stableMarkdownSplit(text: string): number {
@@ -28,7 +28,7 @@ export function stableMarkdownSplit(text: string): number {
             inFence = !inFence;
             // The line that CLOSES a fence settles the whole block: nothing later can reopen it.
             // Without this the open fence stays in the tail and every pass re-highlights all of
-            // it — the cost that grows with the block, on the content most likely to be long.
+            // it, the cost that grows with the block, on the content most likely to be long.
             if (!inFence) {
                 cut = pos + line.length + 1;
             }

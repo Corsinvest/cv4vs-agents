@@ -52,7 +52,7 @@ internal static class GlobalMenuCommands
     }
 
     /// <summary>Open a GitHub issue form. The template name must match a file in
-    /// .github/ISSUE_TEMPLATE — GitHub silently ignores an unknown one and opens a blank issue.
+    /// .github/ISSUE_TEMPLATE: GitHub silently ignores an unknown one and opens a blank issue.
     /// Query-string keys match the field ids in the YAML, so GitHub pre-fills them: the version is
     /// where every investigation starts, and asking the user to look it up is how it goes missing.</summary>
     private static void OpenIssue(string template, bool withVersion = false)

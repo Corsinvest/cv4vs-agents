@@ -9,7 +9,7 @@ import { state as appState } from '../core/state.ts';
 
 /**
  * Stand-in for a LitElement: enough of ReactiveControllerHost to drive the lifecycle by hand,
- * following what ReactiveElement itself does — connectedCallback calls hostConnected on every
+ * following what ReactiveElement itself does: connectedCallback calls hostConnected on every
  * controller, disconnectedCallback calls hostDisconnected.
  */
 class FakeHost implements ReactiveControllerHost {

@@ -23,7 +23,7 @@ public class RateWindowDto
     public string Severity { get; set; }
 }
 
-/// <summary>An insight in the "what's contributing to your limits usage?" section — the ready-to-show
+/// <summary>An insight in the "what's contributing to your limits usage?" section: the ready-to-show
 /// headline (with the % already filled in) and body advice. Composed on the C# side so clients don't
 /// carry the copy.</summary>
 public class UsageInsightDto
@@ -53,7 +53,7 @@ public class UsageBehaviorsDto
         (Skills?.Length ?? 0) + (Subagents?.Length ?? 0) + (Plugins?.Length ?? 0) + (McpServers?.Length ?? 0) > 0;
 }
 
-/// <summary>The typed usage shown in the Account &amp; Usage view — parsed once on the C# side from
+/// <summary>The typed usage shown in the Account &amp; Usage view: parsed once on the C# side from
 /// the CLI's experimental get_usage payload (+ the account fields from init), so both the WPF Usage
 /// tab and the WebView dialog can render it without each re-parsing the raw.</summary>
 public class UsageDto

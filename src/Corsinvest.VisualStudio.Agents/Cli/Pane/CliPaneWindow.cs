@@ -19,7 +19,7 @@ namespace Corsinvest.VisualStudio.Agents.Cli.Pane;
 [Guid("f5a6b7c8-d9e0-1234-fabc-ef4567890123")]
 public sealed class CliPaneWindow : PaneWindowBase
 {
-    // Kitty-keyboard-protocol escape sequence — same one VS's own
+    // Kitty-keyboard-protocol escape sequence: same one VS's own
     // TerminalWindowBase.EscKeyCode; keeps Esc routed to the CLI instead of
     // "close tool window".
     private const string EscKeySequence = "[27;1;27;1;0;1_";
@@ -29,7 +29,7 @@ public sealed class CliPaneWindow : PaneWindowBase
     protected override PaneKind Kind => PaneKind.Cli;
 
     /// <summary>Forward to the hosted control so the launcher can point the terminal at a session
-    /// before it starts (workspace restore). Content is a DockPanel, not the control — go through the
+    /// before it starts (workspace restore). Content is a DockPanel, not the control: go through the
     /// protected PaneControl (LoadSession is on IPaneControl, so no cast needed).</summary>
     internal void LoadSession(string sessionId) => PaneControl.LoadSession(sessionId);
 

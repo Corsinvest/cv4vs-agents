@@ -9,7 +9,7 @@ import { iconForCommandName } from './command-icons';
 // When true, the CLI's /usage and /context slash entries are intercepted to open our
 // dialog instead of being sent to the CLI. When false (default), the native slash commands
 // go straight to the CLI (they print their output in chat) and only our own static commands
-// ("Account & usage…", "Context usage…") open the dialogs — one behaviour per command origin.
+// ("Account & usage…", "Context usage…") open the dialogs: one behaviour per command origin.
 const REMAP_SLASH_TO_DIALOG = false;
 
 const REMAPPED: Record<string, () => void> = {
@@ -19,7 +19,7 @@ const REMAPPED: Record<string, () => void> = {
 
 /**
  * A CLI/skill slash command (`/name`). One instance per entry in the CLI's
- * command list. Running it sends `/name` as a prompt for the CLI to process —
+ * command list. Running it sends `/name` as a prompt for the CLI to process,
  * except the REMAPPED ones, which open our own dialog. Dynamic (discovered by the
  * CLI), so not in the static registry; the registry builds these at render time.
  */

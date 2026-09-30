@@ -14,8 +14,8 @@ using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Ide;
 
-// Rename via the per-language IEditorInlineRenameService — the same service the editor's inline
-// rename uses — but we only call its non-interactive compute methods (GetRenameInfoAsync →
+// Rename via the per-language IEditorInlineRenameService (the same service the editor's inline
+// rename uses) but we only call its non-interactive compute methods (GetRenameInfoAsync →
 // FindRenameLocationsAsync → GetReplacementsAsync) and apply the resulting Solution ourselves,
 // so no UI is shown.
 internal sealed partial class IdeNavigationService
@@ -35,7 +35,7 @@ internal sealed partial class IdeNavigationService
         public bool Applied { get; set; }
         public string NewName { get; set; }
         public RenameChange[] ChangedFiles { get; set; } = [];
-        /// <summary>Occurrences rewritten across every file — the sum of ChangedFiles' counts,
+        /// <summary>Occurrences rewritten across every file: the sum of ChangedFiles' counts,
         /// added so a rename that reached forty files does not have to be added up by hand.</summary>
         public int TotalOccurrences { get; set; }
         /// <summary>Where the rename couldn't be applied cleanly (unresolved conflicts).
@@ -51,7 +51,7 @@ internal sealed partial class IdeNavigationService
     private object _symbolRenameOptionsDefault;      // SymbolRenameOptions (default struct)
 
     /// <summary>Resolve the rename types/members. SymbolRenameOptions is a struct of flags
-    /// (overloads/strings/comments/file) — we use its default (all off).</summary>
+    /// (overloads/strings/comments/file); we use its default (all off).</summary>
     private bool EnsureRenameProbed()
     {
         lock (_probeGate)
@@ -153,7 +153,7 @@ internal sealed partial class IdeNavigationService
                     var kind = VsReflection.GetProp(r, "Kind").ToString();
                     if (kind != "UnresolvedConflict") { continue; }
                     if (docText == null && changedDoc != null) { docText = await GetTextAsync(changedDoc, ct).ConfigureAwait(false); }
-                    // OriginalSpan is in the OLD document — turn its start into a 1-based line.
+                    // OriginalSpan is in the OLD document: turn its start into a 1-based line.
                     var origSpan = VsReflection.GetProp(r, "OriginalSpan");
                     var start = VsReflection.GetProp<int>(origSpan, "Start");
                     conflicts.Add(new NavLocation { FilePath = path, Line = docText != null ? OffsetToLine(docText, start) : 0 });
@@ -186,7 +186,7 @@ internal sealed partial class IdeNavigationService
             // TryApplyChanges must run on the VS UI thread; the rest of the compute is fine on a
             // background thread, so we switch only for the apply.
             //
-            // Files that are not open take the change straight to disk — no dirty buffer, no
+            // Files that are not open take the change straight to disk: no dirty buffer, no
             // Ctrl+Z. That is the accepted behaviour, not an oversight. Opening them first was
             // tried: it does give dirty buffers, but it costs a focused tab per touched file (four
             // on a small solution-wide rename), and the undo it buys is lost anyway the moment

@@ -19,7 +19,7 @@ internal static class ClientMessages
         public const string ControlResponse = "control_response";
         // The CLI aborts one of ITS in-flight control_requests to us (typically a can_use_tool
         // whose turn was interrupted/superseded). We must drop the matching pending UI (the
-        // permission banner) — else it hangs as a zombie. `request_id` at top level.
+        // permission banner); else it hangs as a zombie. `request_id` at top level.
         public const string ControlCancelRequest = "control_cancel_request";
         public const string RateLimitEvent = "rate_limit_event";
         public const string StreamEvent = "stream_event";
@@ -47,13 +47,13 @@ internal static class ClientMessages
         public const string TaskUpdated = "task_updated";
         public const string TaskNotification = "task_notification";
         // Authoritative list of the session's active background tasks (agents). Empty `tasks` = none
-        // running — the reliable signal for "everything, main + agents, is finished".
+        // running: the reliable signal for "everything, main + agents, is finished".
         public const string BackgroundTasksChanged = "background_tasks_changed";
         // Authoritative cumulative thinking-token estimate for the in-flight thinking block.
         public const string ThinkingTokens = "thinking_tokens";
         // The model refused and the CLI fell back to another one. Carries
         // `retracted_message_uuids`: messages already delivered to us that are no longer part of
-        // the conversation — the model never saw them, so leaving them on screen makes what the
+        // the conversation: the model never saw them, so leaving them on screen makes what the
         // user reads diverge from what the model knows. Emitted AFTER the retraction, so it is an
         // eviction order, not a warning.
         public const string ModelRefusalFallback = "model_refusal_fallback";
@@ -89,11 +89,11 @@ internal static class ClientMessages
         public const string StopTask = "stop_task";
         // Detach a running task from the turn: the blocking tool call returns at once and the turn
         // carries on, while the task keeps going and reports its end as usual. With a tool_use_id,
-        // only that one; without, all of them — the CLI's own Ctrl+B.
+        // only that one; without, all of them, the CLI's own Ctrl+B.
         //
         // Named for what it does, because the wire value does not: "background_tasks" here is a
         // VERB (detach these), one underscore away from the background_tasks_changed EVENT (here
-        // is the list), and the two mean opposite things. One-way — nothing brings a task back.
+        // is the list), and the two mean opposite things. One-way: nothing brings a task back.
         public const string DetachTask = "background_tasks";
         public const string ApplyFlagSettings = "apply_flag_settings";
         public const string GetSettings = "get_settings";

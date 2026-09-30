@@ -26,7 +26,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 public partial class PaneToolbar : UserControl
 {
     // Set once by Attach (called in PaneWindowBase's ctor, before the toolbar renders or any
-    // handler can fire) and never cleared — non-null for every user interaction below.
+    // handler can fire) and never cleared: non-null for every user interaction below.
     private IPaneControl _pane;
     // Count of pane-specific items appended to the More menu, so reopening clears just those
     // and leaves the static entries alone.
@@ -53,7 +53,7 @@ public partial class PaneToolbar : UserControl
     // refresh (turn-end re-read) overwrite what the user is typing.
     private bool _titleFocused;
 
-    // Shown when a titleable pane has no title yet — a fresh chat, or one whose ai-title has not
+    // Shown when a titleable pane has no title yet: a fresh chat, or one whose ai-title has not
     // been generated (or written) yet. The box stays visible and editable rather than vanishing,
     // so there is always something to click to rename.
     private const string UntitledPlaceholder = "Untitled";
@@ -120,7 +120,7 @@ public partial class PaneToolbar : UserControl
         BtnSessionHistory.IsEnabled = ready;
     }
 
-    // The new pane inherits this pane's profile — same environment continues.
+    // The new pane inherits this pane's profile: same environment continues.
     private void OnNew_Click(object sender, RoutedEventArgs e)
         => PaneLauncher.OpenNew(DefaultKind(), _pane.Entry.Profile);
 
@@ -194,7 +194,7 @@ public partial class PaneToolbar : UserControl
 
     /// <summary>Open the session picker for this pane. Public because the chat's
     /// "Resume conversation" command reaches it through the bridge, not just the
-    /// toolbar button — same popup either way.</summary>
+    /// toolbar button: same popup either way.</summary>
     public void ShowSessionHistory()
     {
         var picker = new SessionManagerControl(ClaudePaths.ForProfile(_pane.Entry.Profile), _pane.Entry.WorkingDirectory, _pane.Entry.ActiveSessionId);
@@ -277,7 +277,7 @@ public partial class PaneToolbar : UserControl
         OpenContextMenu(BtnMore);
     }
 
-    // The dialog opens itself once the pane has gathered its rows — some of which come back from
+    // The dialog opens itself once the pane has gathered its rows, some of which come back from
     // a WebView that answers on this thread, so the handler starts the work and returns rather
     // than waiting on it. Failures are logged by ShowSessionInfoAsync's own catch.
     private void OnMenu_Info(object sender, RoutedEventArgs e)
@@ -288,7 +288,7 @@ public partial class PaneToolbar : UserControl
         try
         {
             // _pane is always attached here (the toolbar lives inside a live pane) and the entry's
-            // workdir is always set (solution folder or user profile) — no null/empty fallbacks needed.
+            // workdir is always set (solution folder or user profile): no null/empty fallbacks needed.
             var paths = ClaudePaths.ForProfile(_pane.Entry.Profile);
             var folder = paths.SessionFolder(_pane.Entry.WorkingDirectory);
             if (!System.IO.Directory.Exists(folder)) { folder = paths.ProjectsFolder; }

@@ -6,7 +6,7 @@ import DataPie16Regular from '@fluentui/svg-icons/icons/data_pie_16_regular.svg'
 import { ChatCommand, type CommandSection } from './base';
 import { openUsageDialog } from '../dialog-host';
 
-/** Model · Account & usage — opens the modal dialog (session cost + plan
+/** Model · Account & usage: opens the modal dialog (session cost + plan
  *  rate-limit windows from the CLI's experimental get_usage). */
 export class UsageCommand extends ChatCommand {
     readonly id = 'usage';

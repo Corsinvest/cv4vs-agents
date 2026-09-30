@@ -15,14 +15,14 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 
 /// <summary>Tracks per-file diagnostics across a Claude edit: capture a baseline on PreToolUse,
 /// then on PostToolUse re-read and report only the diagnostics the edit introduced. Diff is
-/// essential — without it Claude would be spammed with pre-existing errors it didn't cause.</summary>
+/// essential: without it Claude would be spammed with pre-existing errors it didn't cause.</summary>
 internal sealed class IdeDiagnosticsTracker
 {
     public static readonly IdeDiagnosticsTracker Instance = new();
 
     // tool_use_id → (baseline diagnostics task, captured-at). Keyed by tool_use_id (not file path):
     // PreToolUse and PostToolUse for the SAME tool call share the same tool_use_id on the wire, so this
-    // pairs them exactly. Keying by path would collide on two rapid edits of the same file — Pre(A)
+    // pairs them exactly. Keying by path would collide on two rapid edits of the same file: Pre(A)
     // then Pre(B) overwrites A's baseline, so Post(A) would consume B's baseline and report every
     // pre-existing diagnostic as new. The task is stored the instant capture starts (not after it
     // completes) so there is never a window where a lookup finds no entry; FindNewDiagnosticsAsync
@@ -39,7 +39,7 @@ internal sealed class IdeDiagnosticsTracker
     {
         if (string.IsNullOrEmpty(filePath)) { return; }
         EvictStale();
-        // Fallback to filePath when toolUseId is missing (edge case) — collision-prone but better
+        // Fallback to filePath when toolUseId is missing (edge case), collision-prone but better
         // than dropping the baseline outright.
         _baseline[Key(toolUseId ?? filePath)] = (ReadFileDiagnosticsAsync(filePath), DateTime.UtcNow);
         OutputWindowLogger.Global.Debug(() => $"[diag] baseline capture started for {filePath}");

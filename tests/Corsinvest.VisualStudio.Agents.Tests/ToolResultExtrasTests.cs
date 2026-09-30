@@ -10,8 +10,8 @@ using Xunit;
 namespace Corsinvest.VisualStudio.Agents.Tests;
 
 /// <summary>The extras that ride along with a tool result: an edit's hunks, an Agent run's totals.
-/// <para>Two sources have to agree — the live <c>toolUseResult</c> and the fields history lifts onto
-/// the message — because the same row is built from one or the other depending on whether you are
+/// <para>Two sources have to agree (the live <c>toolUseResult</c> and the fields history lifts onto
+/// the message) because the same row is built from one or the other depending on whether you are
 /// watching it happen or reopening the session. Drift between them shows up as a diff that renders
 /// live and vanishes on reload.</para></summary>
 public class ToolResultExtrasTests
@@ -73,7 +73,7 @@ public class ToolResultExtrasTests
     [Fact]
     public void FromToolUseResult_reports_no_totals_when_the_duration_is_zero()
     {
-        // A zero duration is how both sources say "nothing to report" — a running agent, an
+        // A zero duration is how both sources say "nothing to report": a running agent, an
         // interrupted one, any other tool. A DTO full of zeros would claim the run took no time.
         var result = new JObject
         {
@@ -99,7 +99,7 @@ public class ToolResultExtrasTests
     public void FromMessage_reads_back_what_history_lifted_onto_the_message()
     {
         // Replay: toolUseResult does not survive into the transcript, so the pieces travel flat on
-        // the message — except the patch, which stays the CLI's own JSON.
+        // the message, except the patch, which stays the CLI's own JSON.
         var msg = new JObject
         {
             ["diffPatch"] = new JArray { Hunk() },

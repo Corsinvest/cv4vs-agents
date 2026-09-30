@@ -27,7 +27,7 @@ export interface HeatmapLegend {
 /**
  * Generic square-grid heatmap: columns of equal-length cells, each a colored square with an
  * optional tooltip, plus an optional Less→More legend. The blue intensity scale (0–4) lives
- * inside the component — callers pass a semantic intensity, not a color. Shadow DOM + static
+ * inside the component: callers pass a semantic intensity, not a color. Shadow DOM + static
  * styles (Lit standard): the Fluent theme tokens still reach in as they're inherited CSS
  * custom properties.
  */
@@ -38,7 +38,7 @@ export class CvHeatmap extends LitElement {
             display: block;
         }
         /* Intensity scale (0 = none → 4 = busiest). Empty day = a light-grey square (theme
-         * token); active days climb a blue ramp with clear steps. Explicit hex — the brand
+         * token); active days climb a blue ramp with clear steps. Explicit hex: the brand
          * ramp's steps were too close to tell apart, and a dark first step blended into the
          * empty grey. The grid sits on the dialog's dark-ish surface, so fixed blues read fine. */
         :host {

@@ -14,7 +14,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Context;
 
 /// <summary>The context memory-map: a grid of small square cells, one per GridRows cell, coloured by
 /// its category (empty cells a neutral grey). Mirrors the WebView dialog's grid (_renderGrid). Not a
-/// heatmap (that's GitHub-style per-day) — this is a linear fill of the context window.</summary>
+/// heatmap (that's GitHub-style per-day): this is a linear fill of the context window.</summary>
 internal sealed class CvMemoryMap : Grid
 {
     public void SetData(ContextGridCellDto[][] rows)
@@ -24,7 +24,7 @@ internal sealed class CvMemoryMap : Grid
 
         var cols = rows[0]?.Length ?? 0;
         // The grid sits in a vertical StackPanel (no height given from outside), so square cells with
-        // a fixed size give the UniformGrid an intrinsic size — otherwise Stretch cells collapse to 0
+        // a fixed size give the UniformGrid an intrinsic size: otherwise Stretch cells collapse to 0
         // and the whole map is invisible.
         const double Cell = 18;
         var panel = new UniformGrid

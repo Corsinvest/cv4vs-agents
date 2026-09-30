@@ -14,11 +14,11 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 /// WebViewBridge, payload-building side: the pure static builders that assemble the DTOs sent
 /// to the WebView (the ui.init payload and its spinner-verbs/extension config) and the CLI
 /// content blocks from composer text + attachments. The WebView2 transport lives in
-/// WebViewBridge.cs. Stateless — also called from ChatPaneControl / WebViewMessageHandler.
+/// WebViewBridge.cs. Stateless: also called from ChatPaneControl / WebViewMessageHandler.
 /// </summary>
 internal sealed partial class WebViewBridge
 {
-    /// <summary>The VS Options block — the whole ui_init payload's VsOptions, and the standalone
+    /// <summary>The VS Options block: the whole ui_init payload's VsOptions, and the standalone
     /// vs_settings payload pushed on Options → Apply / at boot (no model/permission/CLI state; the
     /// live client is untouched).</summary>
     public static Contracts.VsOptionsDto BuildVsOptions()
@@ -59,7 +59,7 @@ internal sealed partial class WebViewBridge
         };
     }
 
-    /// <summary>Normalize extra linkable extensions to lowercase, WITHOUT the dot, de-duplicated —
+    /// <summary>Normalize extra linkable extensions to lowercase, WITHOUT the dot, de-duplicated:
     /// the shape `findFileRefs` compares against. A user entry may be written either way (`zig` or
     /// `.zig`), and a leading `*.` glob is tolerated too.</summary>
     private static string[] NormalizeBareExtensions(string[] exts)
@@ -79,7 +79,7 @@ internal sealed partial class WebViewBridge
     }
 
     /// <summary>Normalize allowed upload extensions to lowercase, dot-prefixed,
-    /// de-duplicated — so the webview can match `fileName.split('.').pop()` cleanly.</summary>
+    /// de-duplicated, so the webview can match `fileName.split('.').pop()` cleanly.</summary>
     private static string[] NormalizeExtensions(string[] exts)
     {
         if (exts == null) { return []; }
@@ -96,7 +96,7 @@ internal sealed partial class WebViewBridge
 
 
     /// <summary>The content blocks for one user turn: the IDE context (when there is any), then the
-    /// attachments, then the user's own text — LAST and in a block of its own.
+    /// attachments, then the user's own text: LAST and in a block of its own.
     /// <para>The split is load-bearing, not tidiness. The CLI decides a message is a slash command
     /// by looking at whether its text block starts with "/", so anything glued in front of the
     /// prompt hides the command: "/config" becomes an ordinary sentence, the CLI never runs it, and
@@ -113,7 +113,7 @@ internal sealed partial class WebViewBridge
             foreach (var att in attachments)
             {
                 // The webview sends base64 plus the browser's media type, and only extensions the
-                // user allowed get this far — so the type alone picks the block: image, text
+                // user allowed get this far, so the type alone picks the block: image, text
                 // (decoded back to characters), or a document carrying its own media type.
                 var name = att.Val("name", "");
                 var base64 = att.Val("base64", "");

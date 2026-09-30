@@ -40,10 +40,10 @@ export function relPath(
  * The `@…` token for a path, quoted when it contains a space.
  *
  * The CLI reads attachments with two patterns, `@"<path>"` and a bare `@<path>` that stops at
- * the first whitespace — so an unquoted path with a space in it silently references only the
+ * the first whitespace, so an unquoted path with a space in it silently references only the
  * part before the space. The user has no way to get this right by hand: it is the page that
  * writes the token. The `#L10-20` range goes inside the quotes: it is part of what the CLI parses,
- * and it reads only those lines. One line is `#L10` — the CLI takes `#L10-10` too, nobody writes it.
+ * and it reads only those lines. One line is `#L10`: the CLI takes `#L10-10` too, nobody writes it.
  */
 export function mentionToken(
     path: string,

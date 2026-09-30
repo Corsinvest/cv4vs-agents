@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Corsinvest.VisualStudio.Agents.Tests;
 
-/// <summary>Only an explicit, allowed choice starts a remote connection — never the rollout default.</summary>
+/// <summary>Only an explicit, allowed choice starts a remote connection, never the rollout default.</summary>
 public class RemoteControlStartupTests
 {
     private static JObject Init(bool? available, bool? autoEnable, bool? byDefault)

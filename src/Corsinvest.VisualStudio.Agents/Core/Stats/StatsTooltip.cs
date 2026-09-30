@@ -12,7 +12,7 @@ using System.Windows.Shapes;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Stats;
 
-/// <summary>The shared hover card for a day — identical whether you hover a heatmap square or a
+/// <summary>The shared hover card for a day: identical whether you hover a heatmap square or a
 /// chart bar: full date, the activity line (messages · sessions · tools), then a coloured row per
 /// model (dot · name · tokens · share-of-day), largest first.</summary>
 internal static class StatsTooltip

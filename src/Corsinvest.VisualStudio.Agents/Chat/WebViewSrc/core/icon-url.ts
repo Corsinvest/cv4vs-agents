@@ -6,7 +6,7 @@
 // Icons live on a virtual host; the C# side generates PNGs lazily from VS KnownMonikers and
 // caches them on disk.
 //
-// Must match AppPaths.IconHost, which is where the suffix is explained — a copy rather than a
+// Must match AppPaths.IconHost, which is where the suffix is explained: a copy rather than a
 // value we are told, because URLs are built on the first render, before any message from the
 // host could have arrived. Drift shows up as icons missing on the next run.
 

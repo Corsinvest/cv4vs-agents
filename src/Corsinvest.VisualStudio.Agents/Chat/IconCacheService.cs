@@ -43,7 +43,7 @@ internal static class IconCacheService
         var key = string.IsNullOrEmpty(iconKey) ? "file" : iconKey.ToLowerInvariant();
         // Keyed by the background the PNG is rendered against (see RenderMonikerToPng), not by the
         // theme's name: that colour is what decides the glyph, so two themes sharing a background
-        // can share the cache, and one that only LOOKS dark still gets its own — a flat cache would
+        // can share the cache, and one that only LOOKS dark still gets its own: a flat cache would
         // leave a dark-theme run's pale icons in place on white.
         // The light-/dark- prefix is for whoever opens the folder; the hex is what makes it correct.
         var themeBg = VSColorTheme.GetThemedColor(EnvironmentColors.ToolWindowBackgroundColorKey);
@@ -90,7 +90,7 @@ internal static class IconCacheService
         return m.Guid != Guid.Empty || m.Id != 0 ? m : KnownMonikers.Document;
     }
 
-    /// <summary>Render at the given background — the same colour the caller keyed the cache folder
+    /// <summary>Render at the given background: the same colour the caller keyed the cache folder
     /// on, so what is drawn and where it is filed can't drift apart.</summary>
     private static byte[] RenderMonikerToPng(ImageMoniker moniker, System.Drawing.Color themeBg)
     {

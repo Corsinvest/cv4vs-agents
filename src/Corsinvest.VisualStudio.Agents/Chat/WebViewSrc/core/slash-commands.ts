@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 // Parses a CLI slash-command envelope (<command-name>/<command-message>/<command-args>)
-// out of a user message and returns the display text "/name args" — rendered as a normal
+// out of a user message and returns the display text "/name args", rendered as a normal
 // user bubble by cv-message. A bare "/compact" string (no envelope) needs no parsing and
 // flows straight through as its own text.
 
@@ -24,7 +24,7 @@ export function renderSlashCommand(text: string): string | null {
     return args ? `${cmd} ${args}` : cmd;
 }
 
-/** Extract the inner text of a <local-command-stdout>/<local-command-stderr> envelope —
+/** Extract the inner text of a <local-command-stdout>/<local-command-stderr> envelope:
  *  a slash command's local output (e.g. "Set model to X"), rendered as a slash-result block.
  *  isError = stderr. ANSI SGR codes the CLI leaves in (e.g. dim) are stripped. Returns null
  *  when the text isn't a local-command output. */

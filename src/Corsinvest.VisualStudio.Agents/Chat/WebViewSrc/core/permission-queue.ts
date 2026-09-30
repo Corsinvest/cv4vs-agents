@@ -6,8 +6,8 @@
 /**
  * Which permission request is being answered, and which are waiting.
  *
- * The CLI can have several `can_use_tool` in flight at once — a turn firing parallel tools, or a
- * sub-agent asking while the main thread does — and the client tracks them all, keyed by
+ * The CLI can have several `can_use_tool` in flight at once (a turn firing parallel tools, or a
+ * sub-agent asking while the main thread does) and the client tracks them all, keyed by
  * tool_use_id (`ClaudeClient._toolRequestIds`, a ConcurrentDictionary). Holding only one would
  * drop a request the CLI still waits for, hanging that tool until the turn is interrupted.
  *
@@ -15,7 +15,7 @@
  * without a DOM. The component owns what a request LOOKS like; this owns which one is up.
  */
 
-/** The queue only ever needs the id — the component keeps the full request. */
+/** The queue only ever needs the id: the component keeps the full request. */
 interface Identified {
     id: string;
 }
@@ -40,7 +40,7 @@ export class PermissionQueue<T extends Identified> {
 
     /**
      * Take a request. Returns true when it goes straight on screen, false when it queues behind
-     * one already there — the caller uses that to decide whether to reset its per-request state.
+     * one already there: the caller uses that to decide whether to reset its per-request state.
      *
      * An id already known is ignored: the CLI re-sends a request whose turn was replayed, and
      * answering the same tool_use_id twice is worse than answering it once.
@@ -69,7 +69,7 @@ export class PermissionQueue<T extends Identified> {
     }
 
     /**
-     * Drop `id` wherever it sits. Returns the request now on screen — unchanged when the dropped
+     * Drop `id` wherever it sits. Returns the request now on screen: unchanged when the dropped
      * one was merely waiting, the promoted one when it was current, null when nothing is left.
      *
      * A queued request has to be droppable, not just the current one: the CLI cancels a
@@ -86,7 +86,7 @@ export class PermissionQueue<T extends Identified> {
 
     /**
      * Replace request `id` with `fn(request)` wherever it sits. Returns true only when the one on
-     * screen changed — the caller re-renders then; a waiting one shows its new version when its
+     * screen changed: the caller re-renders then; a waiting one shows its new version when its
      * turn comes.
      *
      * An unknown id is a no-op: an update can land after its request was answered, the answer's

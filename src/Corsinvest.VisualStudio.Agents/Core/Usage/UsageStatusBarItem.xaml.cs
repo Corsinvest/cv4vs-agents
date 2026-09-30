@@ -120,7 +120,7 @@ public partial class UsageStatusBarItem : UserControl
         var segments = UsageStatusFormat.Segments(snapshot, now);
 
         // The name is there to tell profiles apart, so it shows only when there are several and the
-        // focused pane isn't already saying which. The dash has to survive either way — without it
+        // focused pane isn't already saying which. The dash has to survive either way: without it
         // an unavailable profile would render as nothing at all.
         var named = UsageStatusService.Instance.ShowProfileName;
         ProfileText.Text = segments.Count > 0 ? (named ? snapshot.ProfileName + ":" : "")

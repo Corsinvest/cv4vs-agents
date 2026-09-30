@@ -23,7 +23,7 @@ internal interface IMcpTool
     string Name { get; }
 
     /// <summary>Human-readable description shown in the CLI's tool catalog.
-    /// Keep it short and action-oriented — the model uses it to decide when
+    /// Keep it short and action-oriented: the model uses it to decide when
     /// to call the tool.</summary>
     string Description { get; }
 
@@ -39,8 +39,8 @@ internal interface IMcpTool
     bool AlwaysLoad { get; }
 
     /// <summary><para>
-    /// MCP <c>readOnlyHint</c>: the tool changes nothing — no file written, no IDE state
-    /// touched, no process affected — so a client may run it without asking. The three hints are
+    /// MCP <c>readOnlyHint</c>: the tool changes nothing: no file written, no IDE state
+    /// touched, no process affected, so a client may run it without asking. The three hints are
     /// independent axes, not levels: a tool can be read-only AND idempotent, or destructive AND
     /// idempotent.
     /// </para>
@@ -52,7 +52,7 @@ internal interface IMcpTool
     bool ReadOnly { get; }
 
     /// <summary>MCP <c>destructiveHint</c>: the tool can destroy or interrupt something the user
-    /// would miss — a debug session, build outputs, a symbol's name across the solution. Only
+    /// would miss: a debug session, build outputs, a symbol's name across the solution. Only
     /// meaningful when <see cref="ReadOnly"/> is false. Default false.</summary>
     bool Destructive { get; }
 
@@ -63,14 +63,14 @@ internal interface IMcpTool
 
     /// <summary>Execute the tool and return the result payload as a POCO /
     /// anonymous type. The dispatcher serializes it into the standard MCP
-    /// <c>content</c> envelope — UNLESS it is a <see cref="RawMcpContent"/>,
+    /// <c>content</c> envelope, UNLESS it is a <see cref="RawMcpContent"/>,
     /// whose blocks become the <c>content</c> array verbatim.</summary>
     Task<object> InvokeAsync(JObject arguments);
 }
 
 /// <summary>Opt-out of the dispatcher's default single-text-block wrapping; the
 /// returned <see cref="Blocks"/> become the MCP <c>content</c> array as-is. Used
-/// when a tool must control that array directly — e.g. <c>openDiff</c>, whose CLI
+/// when a tool must control that array directly, e.g. <c>openDiff</c>, whose CLI
 /// client (<c>useDiffInIDE</c>) expects two text blocks
 /// (<c>["FILE_SAVED", &lt;content&gt;]</c>), not one serialized-JSON block.</summary>
 internal sealed class RawMcpContent(object[] blocks)

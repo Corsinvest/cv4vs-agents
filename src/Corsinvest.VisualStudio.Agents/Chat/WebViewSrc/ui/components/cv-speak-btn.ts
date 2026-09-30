@@ -10,7 +10,7 @@ import Pause16Regular from '@fluentui/svg-icons/icons/pause_16_regular.svg';
 import { iconStyles, iconTriggerStyles } from '../styles/shared';
 import { renderMarkdown } from '../../core/markdown';
 
-// Web Speech synthesis is a single global engine — only one utterance plays at a time. Track which
+// Web Speech synthesis is a single global engine: only one utterance plays at a time. Track which
 // button owns the current speech so a new click can stop the previous one and every button reflects
 // the real state (a click elsewhere, or speech ending, flips the icon back). speechSynthesis itself
 // is the source of truth; this set just lets active buttons re-render.
@@ -23,7 +23,7 @@ function stopAll(except?: CvSpeakBtn): void {
     }
 }
 
-/** Flatten markdown to speakable plain text — otherwise the engine reads "**", "##", backticks and
+/** Flatten markdown to speakable plain text; otherwise the engine reads "**", "##", backticks and
  *  link URLs aloud. Reuses the real markdown parser (marked) → HTML → textContent, so tables, nested
  *  lists, links (label kept, URL dropped) etc. all come out right. Code blocks are removed first: you
  *  don't want a fenced snippet recited character by character. */
@@ -39,7 +39,7 @@ function toSpeech(md: string): string {
 
 /**
  * Read-aloud icon button (Web Speech API `speechSynthesis`, native in WebView2, zero deps). Click the
- * speaker to read the `text`; while reading the icon is a pause — click it to pause, click again to
+ * speaker to read the `text`; while reading the icon is a pause: click it to pause, click again to
  * resume from where it left off. Starting another button stops this one. Hidden when the API is
  * unavailable. Shadow DOM + static styles; host is display:contents so it sits in the parent flex.
  */
@@ -63,7 +63,7 @@ export class CvSpeakBtn extends LitElement {
     @property() override title = 'Read aloud';
 
     // idle = not reading (speaker icon) · speaking = reading (pause icon) · paused = held mid-read
-    // (speaker icon — click resumes from where it left off).
+    // (speaker icon, click resumes from where it left off).
     @state() private _state: 'idle' | 'speaking' | 'paused' = 'idle';
 
     private static readonly _supported =
@@ -74,7 +74,7 @@ export class CvSpeakBtn extends LitElement {
         this._stopSpeaking();
     }
 
-    /** Back to idle, and out of `active` — which is what it means to no longer be reading. Leaving
+    /** Back to idle, and out of `active`, which is what it means to no longer be reading. Leaving
      *  a finished button in the set is what made it hold every button that had ever spoken. */
     private _toIdle(): void {
         this._state = 'idle';
@@ -82,7 +82,7 @@ export class CvSpeakBtn extends LitElement {
     }
 
     /** Fully stop this button's speech and reset to idle. Used when another button starts, or on
-     *  unmount. (cancel() clears the queue — only one utterance is ever queued.) */
+     *  unmount. (cancel() clears the queue: only one utterance is ever queued.) */
     _stopSpeaking(): void {
         if (this._state !== 'idle') {
             this._toIdle();
@@ -108,7 +108,7 @@ export class CvSpeakBtn extends LitElement {
         if (!text) {
             return;
         }
-        stopAll(this); // one engine — stop whatever else was reading
+        stopAll(this); // one engine: stop whatever else was reading
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);
         // Reset to idle when the engine finishes or errors so the icon never stays stuck on "pause".

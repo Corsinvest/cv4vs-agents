@@ -7,7 +7,7 @@
 
 import './ui/styles';
 
-// Components — order doesn't matter for registration.
+// Components: order doesn't matter for registration.
 import './ui/components/cv-spinner';
 import './ui/components/cv-time-ago';
 import './ui/components/cv-elapsed';

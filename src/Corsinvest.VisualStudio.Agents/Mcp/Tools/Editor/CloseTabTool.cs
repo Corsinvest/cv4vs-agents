@@ -18,7 +18,7 @@ internal sealed class CloseTabArgs
 
 /// <summary>MCP tool: close a single tab in the IDE by name (cleanup
 /// path used by useDiffInIDE after a diff preview).
-/// Tool name is snake_case (<c>close_tab</c>) — fixed by the CLI.</summary>
+/// Tool name is snake_case (<c>close_tab</c>), fixed by the CLI.</summary>
 internal sealed class CloseTabTool : McpTool<CloseTabArgs>
 {
     public override string Name => "editor_close_tab";

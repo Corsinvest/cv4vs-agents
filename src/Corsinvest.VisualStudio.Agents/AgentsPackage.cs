@@ -28,13 +28,13 @@ namespace Corsinvest.VisualStudio.Agents;
 [InstalledProductRegistration(AppConstants.AppName, AppConstants.AppDescription, "1.0")]
 [ProvideMenuResource("Menus.ctmenu", 1)]
 // Load at shell start (background) so the View → "cv4vs Agents" submenu populates its
-// dynamic per-profile entries immediately — without it the package loads only on first
+// dynamic per-profile entries immediately: without it the package loads only on first
 // pane open, and the submenu shows just the native "Claude" seed until then.
 [ProvideAutoLoad(VSConstants.UICONTEXT.ShellInitialized_string, PackageAutoLoadFlags.BackgroundLoad)]
 // Multi-instance per-session panes (each "New" spawns a fresh pane).
 // Docked against windows VS itself owns, rather than a GUID of our own: a private GUID gives VS a
 // dock area it only knows in the layout the pane was opened in, and design and debug layouts are
-// kept apart — so starting the debugger left our panes with nowhere to be and closed them, while
+// kept apart, so starting the debugger left our panes with nowhere to be and closed them, while
 // the built-in windows stayed put. These groups exist in every layout.
 // Chat beside Solution Explorer (tall and narrow, like the tree it sits with), CLI beside Output
 // (wide and short, where a terminal belongs and where VS users already look for one). That also
@@ -49,12 +49,12 @@ namespace Corsinvest.VisualStudio.Agents;
 [ProvideOptionPage(typeof(AgentsDebugPage), AppConstants.AppName, "Debug", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsProfilesPage), AppConstants.AppName, "Profiles", 0, 0, true)]
 [ProvideOptionPage(typeof(AgentsEditorPromptsPage), AppConstants.AppName, "Prompts", 0, 0, true)]
-// Statistics: a dashboard over StatsService, with no file behind it — a tool window, not a
+// Statistics: a dashboard over StatsService, with no file behind it, a tool window, not a
 // document. Single-instance, and NOT Transient: unlike the chat/CLI panes it holds no session and
 // no working directory, so there is nothing to go stale when a solution closes.
 // MDI docks it in the document area, which is where a full-width dashboard belongs (and it is the
 // only style that puts a tool window there). Window is deliberately absent: MDI ignores it.
-// This is the FIRST placement only — VS remembers wherever the user moves it afterwards.
+// This is the FIRST placement only: VS remembers wherever the user moves it afterwards.
 [ProvideToolWindow(typeof(Core.Stats.StatisticsWindow), Style = VsDockStyle.MDI)]
 [ProvideToolWindow(typeof(Core.Usage.UsageWindow), Style = VsDockStyle.MDI)]
 [ProvideToolWindow(typeof(Core.Context.ContextWindow), Style = VsDockStyle.MDI)]
@@ -87,12 +87,12 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     private const int ReloadWatchOpenMs = 120_000;
 
     // Hiding the panes is held back this long so a reload doesn't blink them off and on. Comfortably
-    // past the ~850 ms close→open gap, and the gap is the only thing being waited on here — it is
+    // past the ~850 ms close→open gap, and the gap is the only thing being waited on here: it is
     // timed from the close, so it doesn't grow with the solution the way the load does. On a real
     // close the panes linger for this long, which reads as part of the solution tearing down.
     private const int HidePanesDelayMs = 1_000;
 
-    // Assembly names the Open Folder workspace API ships under — see the AssemblyResolve
+    // Assembly names the Open Folder workspace API ships under: see the AssemblyResolve
     // handler below and RefreshCurrentSolutionFolder's use of IVsFolderWorkspaceService.
     private static readonly string[] OpenFolderApiAssemblies =
     [
@@ -136,20 +136,20 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     public static AgentsPackage Instance => _instance;
 
-    /// <summary>Folder of the open solution — or, in VS's "Open Folder" mode, the open folder
-    /// itself — cached for synchronous reads. Null if neither is open. Keeps VS's original
-    /// casing — normalize via IdeContextService for lock-file / cwd matching.</summary>
+    /// <summary>Folder of the open solution (or, in VS's "Open Folder" mode, the open folder
+    /// itself), cached for synchronous reads. Null if neither is open. Keeps VS's original
+    /// casing: normalize via IdeContextService for lock-file / cwd matching.</summary>
     public string CurrentSolutionFolder { get; private set; }
 
     /// <summary>Ensure the given <c>settings.json</c> has <c>"diffTool": "auto"</c> so Claude uses
     /// the IDE diff instead of a terminal prompt. Idempotent: only fills the key if missing. Called
-    /// per-pane for its profile's config-dir (see PaneWindowBase.Init), so every profile — the native
-    /// "Claude" and any with a custom CLAUDE_CONFIG_DIR — gets the IDE diff activated.</summary>
+    /// per-pane for its profile's config-dir (see PaneWindowBase.Init), so every profile (the native
+    /// "Claude" and any with a custom CLAUDE_CONFIG_DIR) gets the IDE diff activated.</summary>
     internal static void EnsureDiffToolAuto(string settingsPath)
     {
         try
         {
-            // Don't overwrite an explicit user choice — only fill the gap.
+            // Don't overwrite an explicit user choice: only fill the gap.
             var wrote = Core.Client.CliSettingsStore.Update(settingsPath, root =>
             {
                 if (root["diffTool"] != null) { return false; }
@@ -191,7 +191,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         => _reloadWatch?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
 
     /// <summary>Hide the panes shortly, unless a solution starts opening first. VS models a reload as
-    /// close-then-open, so hiding on the close alone blinks them off and back on for the whole load —
+    /// close-then-open, so hiding on the close alone blinks them off and back on for the whole load:
     /// on a reload nothing was going away, and nothing should have moved.</summary>
     private void ArmHidePanes()
     {
@@ -210,7 +210,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         => _hidePanesTimer?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
 
     /// <summary>No solution started opening in time: this was a real close, so take the panes off
-    /// screen — alive, so a later reload can still hand them back.</summary>
+    /// screen: alive, so a later reload can still hand them back.</summary>
     private void OnHidePanesElapsed()
         => JoinableTaskFactory.RunAsync(async () =>
         {
@@ -282,7 +282,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     /// (FindToolWindow create:true → WebView2 init, which pumps) synchronously during package
     /// InitializeAsync, or inside the OnAfterOpenSolution COM event, freezes VS: the shell is still
     /// bringing itself up / hasn't returned from its own event. StartOnIdle defers to the UI thread
-    /// once the shell has settled — the one safe moment to spawn panes on both entry paths.</summary>
+    /// once the shell has settled: the one safe moment to spawn panes on both entry paths.</summary>
     private void RestorePanesDeferred()
     {
         if (!AgentsOptions.General.RestorePanesOnSolutionOpen) { return; }
@@ -318,12 +318,12 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     /// <summary><para>
     /// Debugger mode changed. VS keeps window layouts per mode, so panes opened at design
-    /// time are absent from the run-time layout and look as though the debugger closed them — the
+    /// time are absent from the run-time layout and look as though the debugger closed them: the
     /// frames are still there, just not shown. Bring back the ones the registry knows are open.
     /// </para>
     /// <para>
     /// Only ever shows what was already open: a pane the user closed stays closed, because it is
-    /// not in the registry. StartOnIdle for the same reason as the solution-open restore — the
+    /// not in the registry. StartOnIdle for the same reason as the solution-open restore: the
     /// shell is mid-transition and showing a frame from inside its event freezes it.
     /// </para></summary>
     public int OnModeChange(DBGMODE dbgmodeNew)
@@ -348,8 +348,8 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     }
 
     /// <summary>Re-read the solution folder from <see cref="IVsSolution"/> into <see cref="CurrentSolutionFolder"/>; call on every solution-state change.
-    /// In VS's "Open Folder" mode <see cref="IVsSolution.GetSolutionInfo"/> reports no directory —
-    /// there is no .sln backing it — even though a solution-equivalent IS open, so that case falls
+    /// In VS's "Open Folder" mode <see cref="IVsSolution.GetSolutionInfo"/> reports no directory,
+    /// there is no .sln backing it, even though a solution-equivalent IS open, so that case falls
     /// through to <see cref="CurrentFolderWorkspaceLocation"/>.</summary>
     private void RefreshCurrentSolutionFolder()
     {
@@ -370,7 +370,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     }
 
     /// <summary>The open folder's root, when VS has one open directly (no .sln) instead of a
-    /// solution — null otherwise. <see cref="IVsFolderWorkspaceService"/> is MEF-exported, not a
+    /// solution, null otherwise. <see cref="IVsFolderWorkspaceService"/> is MEF-exported, not a
     /// COM service, hence going through <see cref="IComponentModel"/> rather than GetService.
     /// Called directly from <see cref="InitializeAsync"/> (no enclosing try/catch there), so this
     /// degrades to null on its own rather than fail package activation over an edition/workload
@@ -423,13 +423,13 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         _solution?.AdviseSolutionEvents(this, out _solutionEventsCookie);
 
         // VS keeps one window layout for design time and another for run time, and a pane opened
-        // while writing code is simply not in the run-time one — so starting the debugger appears
+        // while writing code is simply not in the run-time one, so starting the debugger appears
         // to close it. The frames are still alive, so bring them back up on the mode change.
         _debugger = await GetServiceAsync(typeof(SVsShellDebugger)) as IVsDebugger;
         _debugger?.AdviseDebuggerEvents(this, out _debuggerEventsCookie);
 
         // Only DTE reports why the debugger stopped: OnModeChange above sees a step, a breakpoint
-        // and a thrown exception all as DBGMODE_Break. Best effort — without it the panes still
+        // and a thrown exception all as DBGMODE_Break. Best effort: without it the panes still
         // follow the layout, there is just never a break offer.
         try
         {
@@ -444,10 +444,10 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             OutputWindowLogger.Global.LogException("Pkg.AdviseDteDebuggerEvents", ex);
         }
 
-        // Prime from current state: VS may already have a solution — or, in Open Folder mode, a
-        // folder — open before our package activates, so we'd miss OnAfterOpenSolution/
+        // Prime from current state: VS may already have a solution (or, in Open Folder mode, a
+        // folder) open before our package activates, so we'd miss OnAfterOpenSolution/
         // OnAfterOpenFolder. VSPROPID_IsSolutionOpen is documented as tracking a .sln file
-        // specifically, so it's not trusted alone for folder mode — check the folder-workspace
+        // specifically, so it's not trusted alone for folder mode: check the folder-workspace
         // API directly too rather than assume either way.
         var isSolutionOpen = _solution?.GetProperty((int)__VSPROPID.VSPROPID_IsSolutionOpen, out var isOpenObj) == VSConstants.S_OK
             && isOpenObj is bool isOpen && isOpen;
@@ -459,7 +459,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             RestorePanesDeferred();
         }
 
-        // Plan usage in the status bar. At shell idle, like the pane restore — building UI inside
+        // Plan usage in the status bar. At shell idle, like the pane restore: building UI inside
         // package load freezes VS. Either order works: with no pane yet the item stays away and the
         // registry's FirstSessionStarted brings it in, and a restore that got there first is already
         // counted when Sync runs.
@@ -499,7 +499,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.KeepAwake.Shutdown", ex); }
             Mcp.McpServerHost.Instance.Stop();
             AgentsOptions.Applied -= ProfilesMenuCommand.InvalidateCache;
-            // Unadvise the selection sink (MS pattern: at package dispose) — without it the
+            // Unadvise the selection sink (MS pattern: at package dispose), without it the
             // IVsMonitorSelection cookie leaks for the process lifetime.
             Ide.IdeContextService.Instance.Dispose();
         }
@@ -513,7 +513,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         RefreshCurrentSolutionFolder();
         DisarmReloadWatch();
         // Also here, for the rare load path that skips OnBeforeOpenSolution: a solution is open, so
-        // there is nothing left to hide for. Harmless when the timer already fired — ShowExisting
+        // there is nothing left to hide for. Harmless when the timer already fired: ShowExisting
         // below puts back whatever it took off screen.
         DisarmHidePanes();
         _closingSolutionFolder = null;
@@ -535,7 +535,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
                 catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.ShowPanesOnReload", ex); }
             });
         }
-        // Reopen the panes saved for THIS solution — minus the ones a reload just kept alive (see
+        // Reopen the panes saved for THIS solution, minus the ones a reload just kept alive (see
         // RestorePanesForCurrentSolution). Deferred to shell-idle (see RestorePanesDeferred):
         // spawning panes inside this COM event reenters solution state.
         RestorePanesDeferred();
@@ -547,17 +547,17 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         return VSConstants.S_OK;
     }
 
-    //  IVsSolutionLoadEvents — fires before IVsSolutionEvents (projects still
+    //  IVsSolutionLoadEvents: fires before IVsSolutionEvents (projects still
     //  loading), so toolbar buttons enable as soon as the solution path is known.
 
     int IVsSolutionLoadEvents.OnBeforeOpenSolution(string pszSolutionFilename)
     {
         OutputWindowLogger.Global.Debug(() => $"[reload] solution opening: {pszSolutionFilename ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         // Rearm rather than disarm: if this load fails or is cancelled, OnAfterOpenSolution never
-        // comes and no close event follows either — the solution was already closed — so the panes
+        // comes and no close event follows either (the solution was already closed) so the panes
         // would stay pinned forever.
         if (_closingSolutionFolder != null) { ArmReloadWatch(ReloadWatchOpenMs); }
-        // A solution is opening, so whatever closed was a reload — the panes belong on screen and
+        // A solution is opening, so whatever closed was a reload: the panes belong on screen and
         // were never taken off it. Unconditional: opening one from a state with no solution has
         // nothing armed to cancel.
         DisarmHidePanes();
@@ -582,7 +582,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     {
         OutputWindowLogger.Global.Debug(() => $"[reload] solution closed — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         CurrentSolutionFolder = null;
-        // Out of sight shortly, so closing a solution looks like it always did — but alive, so a
+        // Out of sight shortly, so closing a solution looks like it always did, but alive, so a
         // reload can hand them back with the session intact. Deferred rather than immediate because
         // a reload arrives here too, and hiding on the spot made the panes blink off and back on.
         ArmHidePanes();
@@ -597,7 +597,7 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
 
     // Project-level events stay no-ops. A project reload is an unload followed by a load (the SDK
     // has no reload event of its own), but SDK-style projects absorb an edited .csproj in place and
-    // never take that path — traced once and confirmed silent, so there is nothing to hook here.
+    // never take that path: traced once and confirmed silent, so there is nothing to hook here.
     int IVsSolutionEvents.OnAfterOpenProject(IVsHierarchy pHierarchy, int fAdded) => VSConstants.S_OK;
     int IVsSolutionEvents.OnQueryCloseProject(IVsHierarchy pHierarchy, int fRemoving, ref int pfCancel) => VSConstants.S_OK;
     int IVsSolutionEvents.OnBeforeCloseProject(IVsHierarchy pHierarchy, int fRemoved) => VSConstants.S_OK;
@@ -609,21 +609,21 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     {
         OutputWindowLogger.Global.Debug(() => $"[reload] solution closing: {CurrentSolutionFolder ?? "(none)"} — panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
         SaveWorkspace();
-        // Last point where the folder is still known — OnAfterCloseSolution clears it. The panes are
+        // Last point where the folder is still known: OnAfterCloseSolution clears it. The panes are
         // NOT closed here: a reload would take the live CLI down with them, losing the turn in flight.
         _closingSolutionFolder = CurrentSolutionFolder;
         return VSConstants.S_OK;
     }
 
-    //  IVsSolutionEvents7 — VS's "Open Folder" mode has no .sln, so it isn't modeled as a
+    //  IVsSolutionEvents7: VS's "Open Folder" mode has no .sln, so it isn't modeled as a
     //  classic solution open/close; this is the separate notification path VS uses for it
     //  instead. Rides the same _solutionEventsCookie as IVsSolutionEvents (VS QueryInterfaces
     //  the advised sink for it), so no extra Advise call is needed.
     //
     //  Deliberately narrower than the IVsSolutionEvents handlers above: only
     //  CurrentSolutionFolder and the MCP lock file are kept in sync here. The pane-lifecycle
-    //  machinery (reload-watch, hide/show, per-folder save/restore) stays solution-only for now
-    //  — folder close/open has no confirmed close-then-reopen "reload" quirk to work around,
+    //  machinery (reload-watch, hide/show, per-folder save/restore) stays solution-only for now:
+    //  folder close/open has no confirmed close-then-reopen "reload" quirk to work around,
     //  and guessing at that timer state machine risks panes closing unexpectedly or lingering.
 
     void IVsSolutionEvents7.OnAfterOpenFolder(string folderPath)

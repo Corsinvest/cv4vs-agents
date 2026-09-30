@@ -13,7 +13,7 @@ namespace Corsinvest.VisualStudio.Agents.Tests;
 
 /// <summary>The JSON Schema the CLI reads to learn how to call an MCP tool.
 /// <para>Wrong here means the model sends an argument under a name the tool never reads, or omits
-/// one it needs — and neither shows up as an error on our side: the tool simply behaves as though
+/// one it needs, and neither shows up as an error on our side: the tool simply behaves as though
 /// the caller had passed nothing.</para></summary>
 public class SchemaBuilderTests
 {

@@ -21,7 +21,7 @@ internal sealed class GetDiagnosticsArgs
 }
 
 /// <summary>MCP tool: read diagnostics from the IDE's Error List in the
-/// LSP-shape the Claude CLI expects (DiagnosticFile[] — see
+/// LSP-shape the Claude CLI expects (DiagnosticFile[], see
 /// <c>parseDiagnosticResult</c> in the CLI source).</summary>
 internal sealed class GetDiagnosticsTool : McpTool<GetDiagnosticsArgs>
 {

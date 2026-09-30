@@ -10,7 +10,7 @@ import { iconStyles } from '../styles/shared';
 
 /**
  * Attachment chip: an image icon + a name, optionally removable. Purely
- * presentational — whoever creates it knows the action, so the chip has no
+ * presentational: whoever creates it knows the action, so the chip has no
  * semantics: the click on the chip is native (bubbles to the host; the creator
  * binds @click to open the lightbox / VS file / IDE file). The only custom event
  * is `remove` (the ✕, when removable). `accent='brand'` gives the IDE-ref look.
@@ -58,7 +58,7 @@ export class CvAttachChip extends LitElement {
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
-            /* Remove ✕: floats over the top-right corner, only on hover — no inline
+            /* Remove ✕: floats over the top-right corner, only on hover; no inline
              * space reserved, so the chip stays as wide as the filename. */
             .remove {
                 position: absolute;

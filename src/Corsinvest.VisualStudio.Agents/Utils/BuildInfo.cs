@@ -10,7 +10,7 @@ namespace Corsinvest.VisualStudio.Agents;
 /// <summary>
 /// What this build is, read once from the assembly. The version comes from
 /// AssemblyInformationalVersion, which Directory.Build.targets generates from
-/// <c>Version</c> — the only attribute that carries a preview suffix, since
+/// <c>Version</c>: the only attribute that carries a preview suffix, since
 /// AssemblyVersion and the VSIX Identity Version take digits only.
 /// </summary>
 internal static class BuildInfo
@@ -25,7 +25,7 @@ internal static class BuildInfo
     public static bool IsPreRelease => !string.IsNullOrEmpty(PreRelease);
 
     /// <summary>Copyright line with the first-published year, e.g. <c>© Corsinvest Srl 2026</c>,
-    /// from the Copyright property in Directory.Build.props — one source, shared by the About
+    /// from the Copyright property in Directory.Build.props: one source, shared by the About
     /// dialog and the WebView welcome screen.</summary>
     public static string Copyright { get; }
 

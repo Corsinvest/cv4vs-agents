@@ -26,5 +26,5 @@ using System.Windows;
 [assembly: ComVisible(false)]
 
 // No version attributes here. This is a legacy csproj, which does not generate an AssemblyInfo,
-// so GenerateVersionAssemblyInfo (Directory.Build.targets) emits them into obj\ from Version —
+// so GenerateVersionAssemblyInfo (Directory.Build.targets) emits them into obj\ from Version:
 // one place to edit, and nothing here to drift out of step with Directory.Build.props.

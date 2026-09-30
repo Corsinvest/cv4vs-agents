@@ -4,7 +4,7 @@
  */
 // Typed request descriptors (vscode-jsonrpc RequestType<P,R> pattern): each couples a
 // channel with its params type and its result type, in ONE place. bridge.sendRequest(rt, params)
-// then infers the response type and constrains params — impossible to send the wrong payload
+// then infers the response type and constrains params: impossible to send the wrong payload
 // or expect the wrong result. The phantom fields carry the generics at compile time only.
 
 import { Msg } from './bridge-messages';
@@ -35,7 +35,7 @@ import type { PluginListResponse } from './generated/PluginListResponse';
 import type { MarketplaceListResponse } from './generated/MarketplaceListResponse';
 
 export class RequestType<TParams, TResult> {
-    // Phantom markers — never read at runtime; they exist so TS binds TParams/TResult.
+    // Phantom markers: never read at runtime; they exist so TS binds TParams/TResult.
     declare readonly __params: TParams;
     declare readonly __result: TResult;
     constructor(
@@ -86,7 +86,7 @@ export const GetSuggestionsReq = new RequestType<GetSuggestionsRequest, GetSugge
     Msg.toWebView.file.suggestions,
 );
 
-/** Restore the files to the CLI's snapshot before a user message — or, with `dryRun`, only ask
+/** Restore the files to the CLI's snapshot before a user message, or, with `dryRun`, only ask
  *  whether it could. The probe is what tells a message with a checkpoint from one without. */
 export const RewindReq = new RequestType<RewindRequest, RewindResultNotification>(
     Msg.fromWebView.session.rewind,

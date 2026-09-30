@@ -50,10 +50,10 @@ internal sealed partial class SessionManager
         }
 
         // Reverse-read: walk the JSONL backwards in 64 KB chunks, parsing only until we've
-        // collected `batchSize` messages — avoids the legacy forward scan parsing every line.
+        // collected `batchSize` messages: avoids the legacy forward scan parsing every line.
         const int ChunkBytes = 64 * 1024;
 
-        // Newest message first while we walk backward — reversed before return.
+        // Newest message first while we walk backward: reversed before return.
         var messagesNewestFirst = new List<JToken>();
         // Parallel list: byte offset (start of line) for each message in `messagesNewestFirst`.
         var offsetsNewestFirst = new List<long>();
@@ -72,10 +72,10 @@ internal sealed partial class SessionManager
             long tailFileOffset = pos;
 
             // Stop when we have the page's worth of messages AND (on the initial
-            // load) the session metadata — permissionMode/model can live beyond
+            // load) the session metadata: permissionMode/model can live beyond
             // the first `batchSize` messages, so keep scanning for them even
             // after the page is full, else LoadSession falls back to "default".
-            // (info is an `out` param, so the completeness check is inlined — it
+            // (info is an `out` param, so the completeness check is inlined: it
             // can't be captured by a local function.)
             var localInfo = info;
             // batchSize (50) is the MINIMUM per page; then keep scanning older lines until the
@@ -157,7 +157,7 @@ internal sealed partial class SessionManager
                     if (string.IsNullOrWhiteSpace(line)) { skippedLines++; continue; }
 
                     // Once the page is full, keep collecting until the oldest is a real user
-                    // prompt (opens the oldest exchange) — then stop adding.
+                    // prompt (opens the oldest exchange), then stop adding.
                     var pageFull = messagesNewestFirst.Count >= batchSize;
                     var oldestIsUser = messagesNewestFirst.Count == 0
                         || IsRealUserPrompt(messagesNewestFirst[messagesNewestFirst.Count - 1]);
@@ -306,18 +306,18 @@ internal sealed partial class SessionManager
                 // Skip CLI-injected meta entries (e.g. <local-command-caveat>).
                 if (obj.Val("isMeta", false)) { return false; }
                 // The compaction summary rides as a role:user line with a plain-string
-                // message.content (not the normal content array) — never add it as a
+                // message.content (not the normal content array): never add it as a
                 // transcript message (matches the live path's handling); the summary
                 // itself is lazy-fetched on demand, not captured here.
                 if (obj.Val("isCompactSummary", false)) { return false; }
                 if (obj["message"] is not JObject msg) { return false; }
-                // NOTE: keep user messages that carry only tool_result blocks — the WebView
+                // NOTE: keep user messages that carry only tool_result blocks; the WebView
                 // walks them to populate each assistant tool_use's OUT cell. cv-message guards
                 // against rendering an empty user bubble for them.
                 if (messagesNewestFirst != null)
                 {
                     // Heavy blocks (image/document strip, tool_result truncate) are handled by
-                    // EmitUser during HistoryReplay — the messages travel raw from here.
+                    // EmitUser during HistoryReplay: the messages travel raw from here.
                     // Lift the line's top-level uuid onto the message (internal replay tag,
                     // read by HistoryReplay; the message object has no native uuid).
                     var uuid = obj.Val("uuid");
@@ -331,20 +331,20 @@ internal sealed partial class SessionManager
                     // toolUseResult.agentId (camelCase on disk); a transcript has no
                     // toolUseResult at all, so there the link survives only in the sidecars.
                     // Not to be confused with the line's own top-level agentId, which names the
-                    // file the line sits in — a different question, answered WebView-side.
+                    // file the line sits in: a different question, answered WebView-side.
                     var agentId = subagent != null
                         ? subagent.SpawnedAgentIdFor(msg)
                         : ToolUseResultField(obj, "agentId");
                     if (!string.IsNullOrEmpty(agentId)) { msg["agentId"] = agentId; }
                     // Same lift for the patch: toolUseResult doesn't survive into the replay, so
                     // what HistoryReplay needs has to travel on the message itself. The one nested
-                    // value among these — the others are scalars on purpose — because it is the
+                    // value among these (the others are scalars on purpose), because it is the
                     // CLI's own JSON travelling verbatim, not an object of ours being serialised.
                     var patch = ToolUseResultPatch(obj["toolUseResult"] as JObject);
                     if (patch != null) { msg["diffPatch"] = patch; }
                     // Same lift again, for what an Agent run cost. Only a completed run has these:
                     // an interrupted one leaves toolUseResult a bare string, so nothing is lifted
-                    // and the row shows no figures — the same as live.
+                    // and the row shows no figures: the same as live.
                     var agentTotals = ToolUseResultAgentTotals(obj["toolUseResult"] as JObject);
                     if (agentTotals.DurationMs > 0)
                     {
@@ -356,7 +356,7 @@ internal sealed partial class SessionManager
                 }
 
                 // We walk newest→oldest, so the first entry seen is freshest: only set if unset.
-                // `info` is null on lazy-load pages — skip metadata accumulation then.
+                // `info` is null on lazy-load pages: skip metadata accumulation then.
                 if (info != null)
                 {
                     if (info.GitBranch == null)
@@ -410,7 +410,7 @@ internal sealed partial class SessionManager
                 if (systemSubtype == ClientMessages.SystemSubtype.CompactBoundary)
                 {
                     // sink is null once the page is full and we're only scanning older lines
-                    // for the opening user prompt/metadata — don't add a compact row then.
+                    // for the opening user prompt/metadata: don't add a compact row then.
                     if (messagesNewestFirst != null)
                     {
                         var meta = obj["compactMetadata"] as JObject;
@@ -492,7 +492,7 @@ internal sealed partial class SessionManager
 
     /// <summary>The messages worth offering as rewind targets: those the CLI recorded a file
     /// snapshot for, with at least one file in it.
-    /// <para>The CLI accepts ANY user message as a target — it answers canRewind:true for one that
+    /// <para>The CLI accepts ANY user message as a target: it answers canRewind:true for one that
     /// changed nothing, with an empty file list. VS Code lists them all for that reason, but there
     /// a rewind also forks the conversation, so a message with no file changes is still somewhere
     /// to go back to. Here it restores files and nothing else, which makes such a row a dead end.
@@ -528,19 +528,19 @@ internal sealed partial class SessionManager
     }
 
     /// <summary>Which backup each file would be restored from by a rewind to <paramref
-    /// name="messageUuid"/> — read from the `file-history-snapshot` records the CLI writes into the
+    /// name="messageUuid"/>: read from the `file-history-snapshot` records the CLI writes into the
     /// transcript.
     /// <para>This is what makes a rewind showable rather than only doable: `rewind_files` with
     /// dry_run answers WHICH files would change and by how much, but not what they held, while the
     /// snapshots name the copy on disk (`~/.claude/file-history/&lt;session&gt;/&lt;name&gt;`) so
     /// the two versions can be diffed.</para>
     /// <para><b>Not just the target's own snapshot.</b> A snapshot lists the files touched in THAT
-    /// turn, while a rewind restores everything that moved from that point onwards — so a file
+    /// turn, while a rewind restores everything that moved from that point onwards, so a file
     /// first edited three turns later is in the dry-run's list but not in the target's record. The
     /// scan therefore runs from the target forward and keeps, per file, the FIRST backup it meets:
     /// that copy predates the edit that introduced it, which is exactly the state being restored.
     /// </para>
-    /// <para>A null `backupFileName` means the file did not exist at that point — restoring it
+    /// <para>A null `backupFileName` means the file did not exist at that point: restoring it
     /// deletes it rather than writing an older copy, so it is kept rather than skipped.</para>
     /// <para>Empty when the message has no snapshot at all: the CLI keeps file history per session,
     /// and only when started with it enabled. Absence is an answer, not a failure.</para></summary>
@@ -553,7 +553,7 @@ internal sealed partial class SessionManager
         try
         {
             // Keyed by the path as the CLI spells it, so a file met again in a later turn does not
-            // overwrite the earlier — and older — backup that a rewind would actually use.
+            // overwrite the earlier (and older) backup that a rewind would actually use.
             var found = new Dictionary<string, FileBackupInfo>(StringComparer.OrdinalIgnoreCase);
             var reached = false;
             foreach (var line in File.ReadLines(path, Encoding.UTF8))
@@ -577,7 +577,7 @@ internal sealed partial class SessionManager
                     found[kv.Key] = new FileBackupInfo
                     {
                         // Relative to the working directory when the file sits under it, absolute
-                        // otherwise — the CLI shortens it on the way in.
+                        // otherwise: the CLI shortens it on the way in.
                         Path = kv.Key,
                         BackupFileName = b?.Val("backupFileName", (string)null),
                         Version = b?.Val("version", 0) ?? 0,
@@ -590,13 +590,13 @@ internal sealed partial class SessionManager
         return result;
     }
 
-    /// <summary>Every file the session ever backed up, with the LATEST copy of each — what the
+    /// <summary>Every file the session ever backed up, with the LATEST copy of each: what the
     /// Storage pane lists for a session it is not rewinding to any particular point.
     /// <para>The opposite keep-rule from the overload above, and deliberately so: a rewind wants the
     /// copy that predates the edit, while an archive wants the newest state that was preserved. So
     /// this one overwrites as it goes rather than keeping the first hit.</para>
     /// <para>Reads the whole transcript rather than the tail. The snapshot records are cumulative in
-    /// practice, but that is the CLI's behaviour and not its contract — a session whose early edits
+    /// practice, but that is the CLI's behaviour and not its contract: a session whose early edits
     /// stopped being repeated would silently lose files from the list. One pass over one file, for a
     /// panel the user opened on purpose, is worth not depending on that.</para></summary>
     public List<FileBackupInfo> ReadAllFileBackups(string sessionId)
@@ -617,7 +617,7 @@ internal sealed partial class SessionManager
                 {
                     var b = kv.Value as JObject;
                     var name = b?.Val("backupFileName", (string)null);
-                    // A null name records a file that did not exist yet — there is no copy on disk
+                    // A null name records a file that did not exist yet: there is no copy on disk
                     // to list or diff, so it is not an archive entry.
                     if (name == null) { continue; }
                     found[kv.Key] = new FileBackupInfo
@@ -669,7 +669,7 @@ internal sealed partial class SessionManager
 
     /// <summary>Build a HistoryPage from a flat array of JSONL lines (chronological order).
     /// Used by ReadSubagentHistory (forward pass). ReadHistoryRaw keeps its own reverse-scan
-    /// paginated reader — its algorithm can't share this simple forward builder.</summary>
+    /// paginated reader: its algorithm can't share this simple forward builder.</summary>
     private static HistoryPage BuildHistoryPageFromLines(string[] lines, SubagentContext subagent)
     {
         var messages = new List<JToken>();
@@ -684,7 +684,7 @@ internal sealed partial class SessionManager
     }
 
     /// <summary>Which Agent row spawned which sub-agent, keyed by tool_use_id. A transcript can't
-    /// say it: toolUseResult — where the main JSONL carries the id inline — never appears in one,
+    /// say it: toolUseResult (where the main JSONL carries the id inline) never appears in one,
     /// so the link survives only in the subagents/*.meta.json sidecars the CLI writes beside it.
     /// ~150 bytes each, read once per page.</summary>
     private sealed class SubagentContext
@@ -706,7 +706,7 @@ internal sealed partial class SessionManager
                     {
                         var toolUseId = JObject.Parse(File.ReadAllText(file, Encoding.UTF8)).Val("toolUseId");
                         if (string.IsNullOrEmpty(toolUseId)) { continue; }
-                        // The agentId IS the file name (agent-<id>.meta.json) — the same convention
+                        // The agentId IS the file name (agent-<id>.meta.json): the same convention
                         // the transcript uses, so it can be opened straight away.
                         var name = Path.GetFileNameWithoutExtension(file);   // agent-<id>.meta
                         ctx._spawnedByToolUse[toolUseId] =
@@ -748,7 +748,7 @@ internal sealed partial class SessionManager
         if (!File.Exists(path)) { return new HistoryPage { Messages = [] }; }
         try
         {
-            // fullFile reads the whole transcript (expand "show all") — ReadWindow caps
+            // fullFile reads the whole transcript (expand "show all"): ReadWindow caps
             // at LiteReadWindowBytes, which would silently drop the newest entries of a
             // file larger than 64 KB. The tail path keeps the cheap 64 KB window.
             string[] lines;

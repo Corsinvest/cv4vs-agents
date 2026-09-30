@@ -15,7 +15,7 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 
 /// <summary>
 /// <para>
-/// The real console of a debugged console application — what the program wrote to stdout and what
+/// The real console of a debugged console application: what the program wrote to stdout and what
 /// it is waiting to read from stdin. Not the Debug output pane: that only carries what goes through
 /// Debug.WriteLine, so a Console.WriteLine prompt, and the fact that the program is blocked on
 /// Console.ReadLine, are invisible there.
@@ -24,7 +24,7 @@ namespace Corsinvest.VisualStudio.Agents.Ide;
 /// Everything here goes through AttachConsole, which is a PER-PROCESS switch: while devenv is
 /// attached to the debuggee's console it is detached from its own. That is why every call holds a
 /// lock for the whole attach → act → detach sequence, why the detach sits in a finally, and why
-/// nothing inside that sequence awaits — a continuation resuming elsewhere would leave Visual
+/// nothing inside that sequence awaits: a continuation resuming elsewhere would leave Visual
 /// Studio without a console.
 /// </para>
 /// </summary>
@@ -40,7 +40,7 @@ internal sealed class IdeConsoleService
     private const int StdInputHandle = -10;
 
     /// <summary>Rows per ReadConsoleOutput call. The API writes into a single buffer the caller
-    /// sizes, and a tall scrollback in one go overflows it — reading in bands keeps each request
+    /// sizes, and a tall scrollback in one go overflows it: reading in bands keeps each request
     /// small whatever the buffer height.</summary>
     private const int RowsPerRead = 256;
 
@@ -55,7 +55,7 @@ internal sealed class IdeConsoleService
     }
 
     /// <summary>Read the console's visible buffer, keeping the last <paramref name="tailLines"/>
-    /// lines (0 for all). Trailing blank rows — the unused part of the buffer — are dropped.</summary>
+    /// lines (0 for all). Trailing blank rows (the unused part of the buffer) are dropped.</summary>
     public async Task<ConsoleResult> ReadAsync(int processId, int tailLines)
     {
         var (pid, reason) = await ResolveProcessIdAsync(processId);
@@ -213,7 +213,7 @@ internal sealed class IdeConsoleService
                 var err = Marshal.GetLastWin32Error();
                 OutputWindowLogger.Global.Warn($"[ide] AttachConsole({pid}) failed with Win32 error {err}");
                 // AttachConsole answers the same way whether the process is gone or merely has no
-                // console, so the two are told apart here — "not a console app" about a pid that
+                // console, so the two are told apart here: "not a console app" about a pid that
                 // never existed sends the caller looking at the wrong thing.
                 return Fail(pid, ProcessExists(pid)
                     ? $"Process {pid} has no console to attach to (Win32 error {err}). Only a console " +
@@ -245,7 +245,7 @@ internal sealed class IdeConsoleService
     private static ConsoleResult Fail(int pid, string reason)
         => new() { Ok = false, ProcessId = pid, Reason = reason };
 
-    /// <summary>Whether a process with that id is running at all — GetProcessById throws when it
+    /// <summary>Whether a process with that id is running at all: GetProcessById throws when it
     /// is not, which is the only cheap way to ask.</summary>
     private static bool ProcessExists(int pid)
     {
@@ -269,7 +269,7 @@ internal sealed class IdeConsoleService
     /// </para>
     /// <para>
     /// The character is what matters. A key record carrying only a virtual-key code and a NUL
-    /// UnicodeChar is delivered and counted — WriteConsoleInput reports success — but a program
+    /// UnicodeChar is delivered and counted (WriteConsoleInput reports success) but a program
     /// blocked in Console.ReadLine never sees it, because ReadLine reads characters. The arrow keys
     /// have no character, which is why they are the ones that only work against a program reading
     /// keys rather than lines.

@@ -17,7 +17,7 @@ namespace Corsinvest.VisualStudio.Agents.Tests;
 /// <summary>get_usage decoding, which the Usage tab and the chat's Account &amp; Usage dialog both render.
 /// <para>A reset time passes two readers before anything shows it: the transport's JObject.Parse, which
 /// turns an ISO string into a Date token, and the view's own parsing. Lose the offset in between and
-/// "Resets in" is off by however far the machine is from UTC — plausible enough on screen that nobody
+/// "Resets in" is off by however far the machine is from UTC: plausible enough on screen that nobody
 /// notices.</para>
 /// <para>The windows themselves come in two shapes: per-key (<c>five_hour</c>, <c>seven_day</c>, …) and
 /// a normalized <c>limits</c> list, the only one that carries a weekly limit scoped to one model. A

@@ -50,7 +50,7 @@ export class CvAttachMenu extends LitElement {
                 overflow: visible;
                 text-overflow: clip;
             }
-            /* Center the 16px icon in the item's 20px start cell — Fluent's default
+            /* Center the 16px icon in the item's 20px start cell: Fluent's default
              * hugs the cell edge, which looks too tight at compact density. */
             fluent-menu-item [slot='start'] {
                 display: inline-flex;
@@ -58,7 +58,7 @@ export class CvAttachMenu extends LitElement {
                 justify-content: center;
             }
             /* Wraps the glyph so it can be the tooltip's anchor while the button stays the menu's.
-               A real box (not display:contents) — an anchor has to be laid out to be anchored to. */
+               A real box (not display:contents): an anchor has to be laid out to be anchored to. */
             .tip-anchor {
                 display: inline-flex;
             }
@@ -74,7 +74,7 @@ export class CvAttachMenu extends LitElement {
         this.dispatchEvent(new CustomEvent('add-mention', { bubbles: true, composed: true }));
     };
 
-    /** "Slash command": the full palette with its own search box — the mouse path to the commands,
+    /** "Slash command": the full palette with its own search box, the mouse path to the commands,
      *  which typing `/` reaches from the keyboard. */
     private _onCommands = (): void => {
         this.dispatchEvent(new CustomEvent('open-commands', { bubbles: true, composed: true }));
@@ -85,7 +85,7 @@ export class CvAttachMenu extends LitElement {
             <fluent-menu>
                 <!-- A fluent-button, not the fluent-menu-button the docs show in this slot: that
                      one always draws a chevron beside the glyph, which on a toolbar icon is a
-                     second symbol for what the plus already says. The id is load-bearing —
+                     second symbol for what the plus already says. The id is load-bearing:
                      fluent-menu-list anchors itself to --menu-trigger, and the trigger's
                      anchor-name comes from its id, so any other id opens the list at 0,0. -->
                 <fluent-button
@@ -100,7 +100,7 @@ export class CvAttachMenu extends LitElement {
                 >
                     <!-- The tooltip anchors to this span, not to the button: fluent-tooltip writes
                          anchor-name onto whatever it points at, and on the button that overwrote
-                         the name fluent-menu-list needs — the list then opened at 0,0. -->
+                         the name fluent-menu-list needs: the list then opened at 0,0. -->
                     <span id="attach-tip" class="tip-anchor">${unsafeHTML(Add16Regular)}</span>
                 </fluent-button>
                 <fluent-menu-list>
@@ -122,7 +122,7 @@ export class CvAttachMenu extends LitElement {
                 </fluent-menu-list>
             </fluent-menu>
             <!-- Outside the menu: inside it the tooltip would be a menu child, and fluent-menu lays
-                 out only its trigger and its list. Anchored to the same id the list uses — one
+                 out only its trigger and its list. Anchored to the same id the list uses: one
                  names the anchor, the other looks the element up, and they don't collide. -->
             <!-- positioning=after, like the mic and the file chip along this row: the button is at
                  the left end of the toolbar, so opening before it would land off the pane.

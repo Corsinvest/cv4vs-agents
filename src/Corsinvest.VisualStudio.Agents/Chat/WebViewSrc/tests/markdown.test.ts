@@ -6,7 +6,7 @@
 // The edge cases of WHAT counts as a reference live in codespan-link.test.ts and file-links.test.ts.
 //
 // LIMIT, worth knowing before adding tests here: renderMarkdown ends with DOMPurify, which needs a
-// `window` and does not have one under node --test — `sanitize is not a function`, and the function
+// `window` and does not have one under node --test: `sanitize is not a function`, and the function
 // degrades to its error branch. So what is tested here is the TOKENIZER, i.e. which tokens marked
 // produces and with which renderer, not the final HTML. That would take jsdom (~10MB of
 // devDependency) to verify a sanitisation that is DOMPurify's, not ours.
@@ -78,7 +78,7 @@ test('table: the cells stay rendered by marked', () => {
 });
 
 test('table: a scroll level wraps the table, inside the button wrap', () => {
-    // Measured in the chat: a table never overflows the bubble, it compresses — at 12 columns every
+    // Measured in the chat: a table never overflows the bubble, it compresses; at 12 columns every
     // header wraps letter by letter (144px tall against 29). Hence two levels: the outer one stays
     // the positioning context so the copy button holds still, the inner one takes the overflow.
     // A single level and the button scrolls away with the columns.
@@ -187,7 +187,7 @@ test('streaming: empty text stays empty', () => {
 
 test('streaming: a half-written reference does not link, a complete one does', () => {
     // The case that matters on every token: the text grows under the render. A name without a line
-    // does not qualify (too noisy), so the link appears once the ref is really finished — and does
+    // does not qualify (too noisy), so the link appears once the ref is really finished, and does
     // not flicker while the digits arrive one at a time.
     assert.equal(links(md(closeOpenMarkdown('see `Foo.cs'))), 0, 'no line: no link');
     assert.equal(links(md(closeOpenMarkdown('see `Foo.cs:12`'))), 1, 'complete: link');

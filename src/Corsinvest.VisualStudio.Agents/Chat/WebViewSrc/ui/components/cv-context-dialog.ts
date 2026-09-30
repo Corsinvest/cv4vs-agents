@@ -24,7 +24,7 @@ import type {
 
 // Color per category. The CLI reuses color-symbols (System tools + its deferred both
 // "inactive"; System prompt + Free space both "promptBorder"), so we key on the stable
-// category NAME to give each a distinct swatch — like VS Code. Vivid, readable hues on both
+// category NAME to give each a distinct swatch, like VS Code. Vivid, readable hues on both
 // themes; Free space is the neutral "empty" grey (never a colored fill).
 const FREE_SPACE = 'var(--colorNeutralStroke1)';
 // Saturated, theme-aware swatches (Fluent *BorderActive tokens are the vivid pure hues).
@@ -49,7 +49,7 @@ function categoryColor(color: string | undefined, name?: string): string {
 /**
  * Context-usage dialog: a snapshot of how the CURRENT session fills its context
  * window (categories, memory-map, per-message breakdown, tree of memory/agents/
- * skills/mcp/commands). Fetches fresh on each open — the window changes per turn.
+ * skills/mcp/commands). Fetches fresh on each open: the window changes per turn.
  * Distinct from cv-usage-dialog (plan/account). Uses fluent-dialog (backdrop +
  * focus-trap + Esc for free); `open` drives show()/hide().
  */
@@ -76,7 +76,7 @@ export class CvContextDialog extends CvDialogBase {
                 height: 8px;
                 border-radius: var(--borderRadiusSmall);
                 overflow: hidden;
-                /* The unfilled tail is Free space — a visible neutral track, not a black gap. */
+                /* The unfilled tail is Free space: a visible neutral track, not a black gap. */
                 background: var(--colorNeutralStroke2);
                 margin-bottom: 10px;
             }
@@ -123,7 +123,7 @@ export class CvContextDialog extends CvDialogBase {
                 flex-direction: column;
                 overflow-x: hidden; /* long paths wrap; never scroll the dialog sideways */
             }
-            /* The list sits right under .colhead (already bordered) — only the trees
+            /* The list sits right under .colhead (already bordered); only the trees
              * block needs its own separator from the list above it. */
             .trees {
                 margin-top: 8px;
@@ -211,7 +211,7 @@ export class CvContextDialog extends CvDialogBase {
                 /* Wrap long names (paths, skill ids) mid-token instead of scrolling sideways. */
                 overflow-wrap: anywhere;
             }
-            /* Path button rendered inline like a link (was a fluent-link href="#" — that triggered the
+            /* Path button rendered inline like a link (was a fluent-link href="#": that triggered the
              * global navigation handler and opened the file twice). Layout-only; keeps fluent pure. */
             .path-link {
                 display: inline;
@@ -256,7 +256,7 @@ export class CvContextDialog extends CvDialogBase {
 
     override willUpdate(changed: Map<string, unknown>): void {
         if (changed.has('open') && this.open) {
-            // Fresh fetch each open — context changes every turn, no stale caching.
+            // Fresh fetch each open: context changes every turn, no stale caching.
             this._data = null;
             this._error = false;
             this._loading = true;

@@ -12,7 +12,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 
 /// <summary>Draws the user's attention to a pane that needs input or has just finished, when they're
 /// not looking at it. Always shows an InfoBar on the VS main window (with a "Go to pane" action);
-/// when VS doesn't have the OS focus, also raises an OS toast — layout-proof, so it reaches the user
+/// when VS doesn't have the OS focus, also raises an OS toast: layout-proof, so it reaches the user
 /// in another app / tile / monitor where the InfoBar alone would be missed. No-op when the pane is
 /// already the active frame. Chat panes only for now.</summary>
 internal static class PaneAttentionService
@@ -21,7 +21,7 @@ internal static class PaneAttentionService
     private static readonly Dictionary<int, PaneAttentionInfoBar> _bars = [];
 
     // The toast raised alongside it, same key. To the user the two are one notification, so they
-    // are taken down together — the balloon outlives its InfoBar otherwise, until it expires.
+    // are taken down together: the balloon outlives its InfoBar otherwise, until it expires.
     private static readonly Dictionary<int, IDisposable> _toasts = [];
 
     /// <summary>A pane is asking for input (blocking). Always notifies (unless the pane is active):
@@ -76,7 +76,7 @@ internal static class PaneAttentionService
         }
     }
 
-    /// <summary>Dismiss this pane's attention notification — InfoBar and toast alike (e.g. the user
+    /// <summary>Dismiss this pane's attention notification: InfoBar and toast alike (e.g. the user
     /// answered / navigated to it).</summary>
     public static void Clear(PaneEntry entry)
     {

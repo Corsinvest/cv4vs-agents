@@ -30,7 +30,7 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<ModelInfoDto>();
         AddInterface<SlashCommandDto>();
         // permissionMode stays a plain string in C# (the wire value from the CLI), but
-        // the WebView wants the narrowed union — point the member at the hand-written type.
+        // the WebView wants the narrowed union: point the member at the hand-written type.
         AddInterface<CliStateDto>()
             .Member(x => nameof(x.PermissionMode)).Type("PermissionMode", "../types")
             .Member(x => nameof(x.EffortLevel)).Null()
@@ -59,7 +59,7 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<CliExitedNotification>();
         AddInterface<AgentRunTotalsDto>();
         AddInterface<PatchHunkDto>();
-        // Every member is null for a tool that reports none — most of them.
+        // Every member is null for a tool that reports none, most of them.
         AddInterface<ToolResultExtrasDto>()
             .Member(x => nameof(x.AgentTotals)).Null()
             .Member(x => nameof(x.Patch)).Null();
@@ -93,7 +93,7 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<GetSuggestionsResponse>().Member(x => nameof(x.Unavailable)).Null();
         AddInterface<ModelsNotification>();
         // usage rides on the first block of a turn only (null afterwards) / is null when
-        // the result carried none — so it's genuinely nullable on the wire.
+        // the result carried none, so it's genuinely nullable on the wire.
         AddInterface<AssistantTextNotification>()
             .Member(x => nameof(x.ParentToolUseId)).Null()
             // Absent on every message that isn't an API failure, which is nearly all of them.

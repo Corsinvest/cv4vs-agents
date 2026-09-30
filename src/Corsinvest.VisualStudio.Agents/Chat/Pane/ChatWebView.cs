@@ -19,9 +19,9 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Pane;
 /// rather than reaching a child HWND. The forwarding is incomplete: CoreWebView2CompositionController
 /// has SendMouseInput and SendPointerInput but no keyboard counterpart, and the control leaves
 /// IKeyboardInputSink.TranslateAccelerator unimplemented. The dropped keys fall through to Visual
-/// Studio, which acts on them as its own commands — Home/End move the caret to the start/end of a
+/// Studio, which acts on them as its own commands: Home/End move the caret to the start/end of a
 /// document instead of a line.</para>
-/// <para>So claim them here and let the page act — the same shape as Esc, which
+/// <para>So claim them here and let the page act, the same shape as Esc, which
 /// <see cref="ChatPaneWindow"/> claims from VS and forwards over the bridge.</para>
 /// </summary>
 internal sealed class ChatWebView : WebView2CompositionControl
@@ -37,7 +37,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
         AllowDrop = true;
         // Never let the control reach 0x0: WebView2CompositionControl's private SizeChanged
         // handler passes the size straight to Direct3D11CaptureFramePool.Recreate, which throws
-        // E_INVALIDARG on zero and takes devenv down with it — the throw is inside WPF layout, so
+        // E_INVALIDARG on zero and takes devenv down with it: the throw is inside WPF layout, so
         // nothing of ours can catch it (WebView2Feedback#5485, open through 1.0.3967.48). VS hands
         // the pane a 0x0 pass when an auto-hidden window is expanded. 1 DIP stays >= 1px at every
         // scale, and a 1px sliver of a collapsed pane is invisible.
@@ -68,7 +68,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
     // Only keys verified as dropped. A key that already reaches the browser must stay out: claiming
     // it sets Handled and would take it away from the page, breaking what works today (arrows,
     // PageUp/PageDown and Ctrl+Left/Right all arrive fine). Esc and Ctrl+F are out for another
-    // reason — VS turns those into commands before any of this, and ChatPaneWindow already claims
+    // reason: VS turns those into commands before any of this, and ChatPaneWindow already claims
     // them through IOleCommandTarget.
     //
     // The value is the DOM KeyboardEvent.key name: the page then matches the same strings a real
@@ -85,7 +85,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
     {
         var mods = Keyboard.Modifiers;
         // Alt+Home/End is browser navigation (back/forward), not ours to take. Alt+Enter never
-        // reaches here at all — VS turns it into the Properties command first, so it is claimed
+        // reaches here at all: VS turns it into the Properties command first, so it is claimed
         // in ChatPaneWindow alongside Esc and Ctrl+F.
         if ((mods & ModifierKeys.Alt) != 0 || !ClaimedKeys.TryGetValue(e.Key, out var domKey))
         {
@@ -108,7 +108,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
     /// click, and the composition control forwards both MouseDown and MouseDoubleClick through
     /// SendMouseInput. So the browser gets three mousedown for two physical clicks, reads the third
     /// as a triple click and selects the block. Measured on the page: the second and third arrive
-    /// with the SAME timeStamp — one click delivered twice, not an extra one invented.</para></summary>
+    /// with the SAME timeStamp: one click delivered twice, not an extra one invented.</para></summary>
     protected override void OnMouseDoubleClick(MouseButtonEventArgs e)
     {
         // Empty on purpose, and no base call: OnMouseDown has already sent this click, with its own
@@ -123,17 +123,17 @@ internal sealed class ChatWebView : WebView2CompositionControl
     // The message-only window: a parent for things that must never be shown.
     private static readonly IntPtr HwndMessage = new(-3);
 
-    /// <summary>The browser's own task manager — the Edge one, with live memory/CPU per process.
+    /// <summary>The browser's own task manager: the Edge one, with live memory/CPU per process.
     /// It covers every pane on the user-data folder, panes in another VS instance included, which
     /// is what makes it worth having: a stray renderer or a process count that doesn't add up is a
     /// question about the whole browser, not about this pane.
     /// <para>Opened from a second controller, created windowed, because the window inherits the
     /// hosting mode of whoever asks: our own controller is a composition one, and the task manager
-    /// it opens comes up with no usable frame — Windows reserves the caption space but Chromium
+    /// it opens comes up with no usable frame: Windows reserves the caption space but Chromium
     /// paints over it, so no title bar ever shows (verified against SetWindowLong, RedrawWindow,
     /// resize, hide/show and reparenting). A windowed controller gets the window Chromium would
     /// have given a normal app. It shares this environment, so it is the same browser process and
-    /// the same process list — it just never shows a page of its own.</para></summary>
+    /// the same process list; it just never shows a page of its own.</para></summary>
     internal void OpenTaskManager() => _ = OpenTaskManagerAsync();
 
     private async Task OpenTaskManagerAsync()
@@ -144,7 +144,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
             if (core == null) { return; }
 
             // The browser only ever has one task manager: a second call just raises its window.
-            // HWND_MESSAGE is documented for exactly this — a WebView that never becomes visible —
+            // HWND_MESSAGE is documented for exactly this (a WebView that never becomes visible)
             // and keeps the child window the controller creates out of our pane, where it would
             // otherwise land and take part in the z-order.
             if (_taskManagerOwner == null)

@@ -26,12 +26,12 @@ internal static class AppPaths
     public static readonly string PromptsFile = Path.Combine(DataFolder, "prompts.json");
 
     /// <summary>The editor's prompts before <see cref="PromptsFile"/> existed: read once to carry
-    /// them over, never written — an older version reading it after a downgrade finds it intact.</summary>
+    /// them over, never written: an older version reading it after a downgrade finds it intact.</summary>
     public static readonly string EditorPromptsFile = Path.Combine(DataFolder, "editor-prompts.json");
 
     /// <summary>What the `@` file picker hides on top of the workspace's own rules. A file rather
-    /// than a settings-store value because the content IS a .gitignore — comments, sections, one
-    /// rule per line — which is a thing to read and copy between machines, not a preference.
+    /// than a settings-store value because the content IS a .gitignore (comments, sections, one
+    /// rule per line), which is a thing to read and copy between machines, not a preference.
     /// <para>Named `.gitignore` rather than `.json` so VS opens it with the editor that already
     /// colours the format, and so nothing has to be escaped into a JSON string.</para></summary>
     public static readonly string IgnoreRulesFile = Path.Combine(DataFolder, "picker-ignore.gitignore");
@@ -39,13 +39,13 @@ internal static class AppPaths
     /// <summary>The virtual hosts the WebView is served from: one for the bundle, one for the
     /// lazily-rasterised file icons.
     /// <para>The `.invalid` suffix is the load-bearing part. `.local` belongs to mDNS, so Windows
-    /// answers a name under it with a multicast query and waits ~2s for a reply that never comes —
+    /// answers a name under it with a multicast query and waits ~2s for a reply that never comes,
     /// before WebView2 serves the file from disk anyway. Measured here: 2551ms from responseEnd to
     /// domInteractive under `.local`, 397ms under `.invalid`, on an otherwise identical load. The
     /// WebView2 docs say the same ("using .local … can cause a delay during navigations. You should
     /// avoid using .local if you can") and point at RFC 6761's reserved names, of which this is
     /// one.</para>
-    /// <para>The WebView has its own copy of the icon host in `core/icon-url.ts` — it builds URLs
+    /// <para>The WebView has its own copy of the icon host in `core/icon-url.ts`: it builds URLs
     /// on the first render, before any message from us could have arrived. If the two ever drift
     /// apart the icons vanish on the next run, which is a loud enough failure.</para></summary>
     public const string WebViewHost = "cv4vs.invalid";
@@ -58,7 +58,7 @@ internal static class AppPaths
     /// </summary>
     public static readonly string IconCacheFolder = Path.Combine(DataFolder, "icons");
 
-    /// <summary>Where the per-project folders live. ProjectStore names what goes inside — it needs
+    /// <summary>Where the per-project folders live. ProjectStore names what goes inside: it needs
     /// the root without going back through ProjectFolder, which delegates to it.</summary>
     public static readonly string ProjectsRoot = Path.Combine(DataFolder, "data", "projects");
 
@@ -72,13 +72,13 @@ internal static class AppPaths
 
     /// <summary>Root of OUR per-project data: <ProjectsRoot>/<folder>/. This is the PER-SOLUTION
     /// scope (independent of profile): workspace.json lives here; per-profile files live in the
-    /// <config-id>/ subfolder below. ProjectStore names the folder and creates it — deliberately
+    /// <config-id>/ subfolder below. ProjectStore names the folder and creates it, deliberately
     /// not this class, which is otherwise all Path.Combine and touches nothing.</summary>
     public static string ProjectFolder(string workingDirectory)
         => Core.Workspace.ProjectStore.FolderFor(workingDirectory);
 
     /// <summary>The per-solution workspace file (open panes). Depends only on the solution folder,
-    /// not on any profile — the panes' profiles are stored inside the JSON.</summary>
+    /// not on any profile: the panes' profiles are stored inside the JSON.</summary>
     public static string WorkspaceFile(string workingDirectory)
         => Path.Combine(ProjectFolder(workingDirectory), "workspace.json");
 

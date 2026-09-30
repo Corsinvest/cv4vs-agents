@@ -37,7 +37,7 @@ test('markRanges: a range straddling a tag closes and reopens instead of nesting
 });
 
 test('markRanges: entities count as a single character', () => {
-    // Source text: 'a<b' — '<' is &lt; and counts as 1. The range 1..2 is that character.
+    // Source text: 'a<b', '<' is &lt; and counts as 1. The range 1..2 is that character.
     assert.equal(markRanges('a&lt;b', [{ start: 1, end: 2 }]), 'a<mark>&lt;</mark>b');
 });
 

@@ -14,7 +14,7 @@ import { effortLabel } from '../../core/types';
 /**
  * Model trigger in the input toolbar, next to the permission selector: shows the active model and
  * its effort, and asks cv-prompt to open the picker (cv-model-list, above the textarea), which
- * carries the effort slider below the models. The list, not this button, owns the menu — same split
+ * carries the effort slider below the models. The list, not this button, owns the menu: same split
  * as cv-permission-selector. The effort is left out when the model has none (Haiku), on the same
  * condition that hides the slider.
  *
@@ -33,11 +33,11 @@ export class CvModelSelector extends LitElement {
             }
             /* A provider can return a long id as the display name; cap it rather than
                letting the toolbar reflow. */
-            /* Flat at rest, relief on hover — appearance="subtle" is Fluent's own, so the hover,
+            /* Flat at rest, relief on hover: appearance="subtle" is Fluent's own, so the hover,
                pressed and focus states come with it in either theme rather than being written out
                here. No shape either: Fluent only has rules for circular and square, so the plain
                button already carries the radius size="small" gives it. No caret: this shows a
-               value, and a value reads as chosen, therefore changeable. Only the metrics are ours —
+               value, and a value reads as chosen, therefore changeable. Only the metrics are ours:
                even size="small" is padded for a control standing alone, and min-width holds a floor
                a word like "Opus" never reaches. Both live on the host (the template is a single
                content span), so no ::part is involved. */
@@ -91,7 +91,7 @@ export class CvModelSelector extends LitElement {
 
     override render() {
         // fluent-tooltip, not a title attribute: the native one is drawn by the OS, so it follows
-        // Windows' light/dark rather than the theme VS is in — and VS has themes (Blue, third-party
+        // Windows' light/dark rather than the theme VS is in, and VS has themes (Blue, third-party
         // ones) that neither of the two settings a WebView2 profile can be put in would match.
         // Same reason the gauge uses one.
         return html`
@@ -113,7 +113,7 @@ export class CvModelSelector extends LitElement {
                 }
             </fluent-button>
             <!-- The name of the control, like the permission trigger beside it. The full name, the
-                 [1m] variant and the description are all in cv-model-list, one row each — a click
+                 [1m] variant and the description are all in cv-model-list, one row each; a click
                  answers "which model is this exactly" better than a tooltip echoing the button. -->
             <fluent-tooltip anchor="model-trigger" positioning="above-end"
                 >Model and effort</fluent-tooltip

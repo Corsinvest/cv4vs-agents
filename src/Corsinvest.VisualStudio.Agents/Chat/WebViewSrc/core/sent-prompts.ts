@@ -7,7 +7,7 @@
  * Prompts sent to the CLI whose replay (--replay-user-messages) has not come back yet.
  *
  * Asked of this list, not of the transcript: /clear empties the transcript between the send and
- * the replay, and the menu's "Clear conversation" never echoes a bubble at all — a transcript
+ * the replay, and the menu's "Clear conversation" never echoes a bubble at all: a transcript
  * lookup would take either replay for a prompt typed elsewhere and show it.
  */
 const awaitingReplay = new Set<string>();

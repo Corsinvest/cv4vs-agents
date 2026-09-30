@@ -7,7 +7,7 @@ using System.Collections.Generic;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Workspace;
 
-/// <summary>Persisted per-solution workspace: which panes were open, in order. Extensible — future
+/// <summary>Persisted per-solution workspace: which panes were open, in order. Extensible: future
 /// per-solution state (pins, layout) adds sibling properties without breaking old files (see Version).</summary>
 public sealed class WorkspaceState
 {

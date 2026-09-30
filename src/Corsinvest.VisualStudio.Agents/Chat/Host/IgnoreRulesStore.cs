@@ -13,7 +13,7 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 /// (<see cref="AppPaths.IgnoreRulesFile"/>) rather than in the VS settings store: the content is
 /// a rule list with comments and sections, which is a thing to edit in a real editor and copy
 /// between machines, not a preference to toggle.
-/// <para>These apply only where the workspace's own ignore rules say nothing —
+/// <para>These apply only where the workspace's own ignore rules say nothing:
 /// <c>WorkspaceFileLister</c> asks the .gitignore stack first. They exist for the project
 /// that ships no rules at all: without them a repository with an unignored node_modules fills the
 /// menu with 2,000 rows of dependencies.</para>

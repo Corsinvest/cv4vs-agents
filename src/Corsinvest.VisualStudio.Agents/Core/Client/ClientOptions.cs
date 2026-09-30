@@ -17,7 +17,7 @@ public sealed class ClientOptions
     /// <summary>Whether this pane may ENTER <c>bypassPermissions</c> later (Options → Chat).
     /// Distinct from starting in it: the CLI refuses <c>set_permission_mode bypassPermissions</c>
     /// unless the process was launched with the allow- flag, so the capability has to be granted
-    /// up front — see the launch args in <see cref="ClaudeClient"/>.</summary>
+    /// up front; see the launch args in <see cref="ClaudeClient"/>.</summary>
     public bool AllowBypassPermissions { get; set; }
 
     /// <summary>Whether the CLI should snapshot files before editing them, so Rewind has something
@@ -29,7 +29,7 @@ public sealed class ClientOptions
 
     /// <summary>Loopback port of the IDE's MCP server. Carried here, but NOT read by this client:
     /// a stream-json session reaches the IDE tools through the in-process SDK MCP server, so it
-    /// needs no port (see the launch args in <see cref="ClaudeClient"/> — no <c>--ide</c> there).
+    /// needs no port (see the launch args in <see cref="ClaudeClient"/>; no <c>--ide</c> there).
     /// <para>The CLI pane, which does run <c>claude --ide</c>, sets <c>CLAUDE_CODE_SSE_PORT</c>
     /// itself from <c>McpServerHost.Instance</c> straight into its ConPTY env block; it does not
     /// come through here either.</para></summary>

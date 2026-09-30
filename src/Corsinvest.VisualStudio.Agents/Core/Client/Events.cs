@@ -19,9 +19,9 @@ public sealed class InitializedEventArgs
 }
 
 /// <summary>The CLI's full startup state, gathered from `initialize` (fast_mode_state) + `get_settings`
-/// (model + toggles) right after StartProcess — WITHOUT a user turn (system/init only arrives on the
+/// (model + toggles) right after StartProcess, WITHOUT a user turn (system/init only arrives on the
 /// first turn, so it can't seed the UI on open). The pane maps these onto the webview DTO and adds
-/// PermissionMode (which the CLI doesn't report — we pass it via --permission-mode). Fired on every
+/// PermissionMode (which the CLI doesn't report: we pass it via --permission-mode). Fired on every
 /// startup (open + respawn). Fields are null when get_settings fails.</summary>
 public sealed class CliStateReceivedEventArgs
 {
@@ -29,7 +29,7 @@ public sealed class CliStateReceivedEventArgs
     // already resolved to a served id). Empty/null → the webview shows "Default".
     public string Model { get; set; }
     // The permission mode WE passed at launch (--permission-mode from Options/.jsonl). The CLI doesn't
-    // report it, so the client captures its own value at startup — carried here so a rapid respawn
+    // report it, so the client captures its own value at startup, carried here so a rapid respawn
     // can't swap _client.PermissionMode out from under a late-firing event.
     public string PermissionMode { get; set; }
     // applied.effort (post-model-gate) ?? effective.effortLevel. Raw string ("low"|"medium"|"high"|"xhigh").
@@ -48,7 +48,7 @@ public sealed class CliStateReceivedEventArgs
     // initialize: the user explicitly chose remoteControlAtStartup=true and nothing overrides it
     // (see RemoteControlStartup.ShouldStart).
     public bool StartRemoteControl { get; set; }
-    // get_settings userSettings layer — what the menu switch shows (null = never set).
+    // get_settings userSettings layer: what the menu switch shows (null = never set).
     public bool? RemoteControlAtStartup { get; set; }
     // initialize.remote_control_available; false hides the switch.
     public bool? RemoteControlAvailable { get; set; }
@@ -70,7 +70,7 @@ public sealed class AssistantMessageEventArgs
     /// <summary><para>
     /// Why the API call failed, when it did. An API failure doesn't arrive as an error on
     /// the wire: the CLI fabricates a synthetic assistant whose TEXT is the error
-    /// (`utils/messages.ts:445-457`), so without this field it reads as an ordinary answer — which
+    /// (`utils/messages.ts:445-457`), so without this field it reads as an ordinary answer, which
     /// is why one turn can show up twice, once as a grey-dot reply and once as the red notice the
     /// `result` raises.
     /// </para>
@@ -78,11 +78,11 @@ public sealed class AssistantMessageEventArgs
     /// A closed enum, not free text: `SDKAssistantMessageError` (`sdk.d.ts:2846`) is
     /// authentication_failed | oauth_org_not_allowed | billing_error | rate_limit | overloaded |
     /// invalid_request | model_not_found | server_error | unknown | max_output_tokens. So it says
-    /// WHICH failure, not just that there was one — a notice can name the rate limit instead of
+    /// WHICH failure, not just that there was one: a notice can name the rate limit instead of
     /// saying "API error".
     /// </para>
     /// <para>
-    /// The frame also carries `is_api_error_message`, which is NOT in the SDK types — emitted
+    /// The frame also carries `is_api_error_message`, which is NOT in the SDK types, emitted
     /// without a contract, so not something to build on.
     /// </para></summary>
     public string Error { get; set; }
@@ -166,11 +166,11 @@ public sealed class ModelsReceivedEventArgs
     /// reads the same shape `list_models` returns (ClaudeClient.ParseModels builds both).</summary>
     public IReadOnlyList<ModelInfo> Models { get; set; }
 
-    /// <summary>Models the account cannot use — shown greyed out, not hidden.</summary>
+    /// <summary>Models the account cannot use, shown greyed out, not hidden.</summary>
     public IReadOnlyList<ModelInfo> UnavailableModels { get; set; }
 
     /// <summary>Slash commands (built-in, skills, plugins). Re-published on every init, unlike the
-    /// catalogue — they don't get dirtied by a --resume.</summary>
+    /// catalogue: they don't get dirtied by a --resume.</summary>
     public IReadOnlyList<SlashCommand> Commands { get; set; }
 }
 
@@ -189,7 +189,7 @@ public sealed class ToolPermissionRequestEventArgs
 }
 
 /// <summary>The CLI cancelled a pending can_use_tool (its turn was interrupted/superseded).
-/// The permission banner for this tool_use must be dismissed — no answer is expected anymore.</summary>
+/// The permission banner for this tool_use must be dismissed: no answer is expected anymore.</summary>
 public sealed class ToolPermissionCancelledEventArgs
 {
     public string ToolUseId { get; set; }
@@ -221,14 +221,14 @@ public sealed class ProcessExitedEventArgs
     public bool Intentional { get; set; }
 }
 
-/// <summary>`system/bridge_state` — Remote Control. <see cref="State"/> is one of
+/// <summary>`system/bridge_state`: Remote Control. <see cref="State"/> is one of
 /// ready|connected|reconnecting|failed; <see cref="Detail"/> is the CLI's own readable cause
 /// and is absent on ready/connected.</summary>
 public sealed class BridgeStateEventArgs
 {
     public string State { get; set; }
     public string Detail { get; set; }
-    /// <summary>Which bridge is speaking. Absent on `ready` — the event precedes the response
+    /// <summary>Which bridge is speaking. Absent on `ready`: the event precedes the response
     /// that carries the epoch.</summary>
     public int? BridgeEpoch { get; set; }
 }

@@ -20,14 +20,14 @@ import { iconStyles } from '../styles/shared';
 import './cv-time-ago';
 
 /**
- * "Rewind to…" — restore the files to the state the CLI captured before a chosen message.
+ * "Rewind to…": restore the files to the state the CLI captured before a chosen message.
  *
  * One dialog, two panes: the session's user messages above, and below them what rewinding to the
  * selected one would actually change. The impact comes from a `dry_run`, which reports the files
  * and the line counts without writing anything, so the answer to "what happens if I press this"
  * arrives before pressing it rather than after.
  *
- * Selecting a message never touches disk — only the Rewind button does. That separation is the
+ * Selecting a message never touches disk: only the Rewind button does. That separation is the
  * point: this list is meant to be browsed.
  */
 @customElement('cv-rewind-dialog')
@@ -60,14 +60,14 @@ export class CvRewindDialog extends CvDialogBase {
                 gap: 6px;
                 min-height: 0;
             }
-            /* Full width, past Fluent's own max-width — the same override cv-popover-list needs. */
+            /* Full width, past Fluent's own max-width, the same override cv-popover-list needs. */
             .search {
                 width: 100%;
                 max-width: none;
             }
             /* fluent-listbox brings the rows' look, their hover/selected states and the roles. Only
                the box it sits in is ours: it is built as a dropdown's popup, so on its own it comes
-               with a shadow and a width of its content — inside a dialog it has to be a plain block
+               with a shadow and a width of its content, inside a dialog it has to be a plain block
                that fills the width and scrolls. Layout only, no colours: the fill and the border
                stay the component's. */
             .list {
@@ -80,7 +80,7 @@ export class CvRewindDialog extends CvDialogBase {
                 box-sizing: border-box;
             }
             /* The two texts share the option's content cell and are spread apart inside it.
-               ::part(content) is a handle the component offers, and display:flex on it is layout —
+               ::part(content) is a handle the component offers, and display:flex on it is layout,
                unlike rewriting its grid areas, which is what putting the time in a slot of its own
                would have required. */
             .row::part(content) {
@@ -129,7 +129,7 @@ export class CvRewindDialog extends CvDialogBase {
                 flex-direction: column;
                 gap: 1px;
             }
-            /* A file opens VS's diff viewer — a link, because it navigates somewhere. */
+            /* A file opens VS's diff viewer, a link, because it navigates somewhere. */
             .file {
                 background: none;
                 border: none;
@@ -174,7 +174,7 @@ export class CvRewindDialog extends CvDialogBase {
     @state() private _impact: RewindResultNotification | null = null;
     @state() private _probing = false;
 
-    /** Uuids that have a file snapshot. Null until the host has answered — the list stays empty
+    /** Uuids that have a file snapshot. Null until the host has answered, the list stays empty
      *  until then rather than showing everything and taking rows away a moment later. */
     @state() private _rewindable: Set<string> | null = null;
 
@@ -194,7 +194,7 @@ export class CvRewindDialog extends CvDialogBase {
         }
     }
 
-    /** What the user typed in the filter box. Plain substring, case-insensitive — the prompts are
+    /** What the user typed in the filter box. Plain substring, case-insensitive: the prompts are
      *  their own words, so they are looked for as remembered, not fuzzy-matched. */
     @state() private _query = '';
 
@@ -244,7 +244,7 @@ export class CvRewindDialog extends CvDialogBase {
      *
      * Written here rather than taken from a component: `fluent-listbox` styles and tracks
      * selection but does no keyboard navigation (only dropdown, radio-group and slider do), and
-     * `fluent-dropdown`, which does, is a popup — inside a dialog whose list is already open that
+     * `fluent-dropdown`, which does, is a popup: inside a dialog whose list is already open that
      * is the wrong shape.
      */
     private _onListKey(e: KeyboardEvent): void {
@@ -256,7 +256,7 @@ export class CvRewindDialog extends CvDialogBase {
         let next: number;
         if (step !== 0) {
             const at = rows.findIndex((p) => p.uuid === this._selected);
-            // No selection yet: Down takes the first, Up the last. Clamped, not wrapped — a list
+            // No selection yet: Down takes the first, Up the last. Clamped, not wrapped: a list
             // that jumps from one end to the other loses you the sense of where you are.
             next =
                 at < 0
@@ -274,7 +274,7 @@ export class CvRewindDialog extends CvDialogBase {
         e.preventDefault();
         const row = rows[next];
         this._onPick(row);
-        // Scroll only — no focus to move: fluent-option carries no tabindex, so the focus stays on
+        // Scroll only: no focus to move: fluent-option carries no tabindex, so the focus stays on
         // whatever the user is typing in and the selected fill is what marks the row. Without this
         // the selection walks past the visible edge and the impact pane describes a row off screen.
         void this.updateComplete.then(() => {
@@ -285,7 +285,7 @@ export class CvRewindDialog extends CvDialogBase {
     }
 
     /** Open VS's diff viewer on one file: its copy from before the message against what is on disk
-     *  now. Only the path is sent — the host reads both sides itself. */
+     *  now. Only the path is sent: the host reads both sides itself. */
     private _openDiff(filePath: string): void {
         bridge.sendNotification<RewindDiffNotification>(Msg.fromWebView.session.rewindDiff, {
             messageUuid: this._selected,
@@ -310,7 +310,7 @@ export class CvRewindDialog extends CvDialogBase {
             return html`<div class="impact muted">${i.error || 'Nothing to restore here.'}</div>`;
         }
         const files = i.filesChanged ?? [];
-        // Every user message is a valid target — that is the CLI's model, not an accident — so a
+        // Every user message is a valid target (that is the CLI's model, not an accident) so a
         // message that changed nothing answers canRewind:true with an empty list. Saying "the code
         // has not changed" is the answer; a sentence counting zero lines would look like a failed read.
         if (!files.length) {
@@ -338,7 +338,7 @@ export class CvRewindDialog extends CvDialogBase {
                 )}
             </div>
             <!-- A count, not a list of paths: the CLI reports how many symlinks it left alone, not
-                 which. Worth saying anyway — it is the one case where a rewind is partial. -->
+                 which. Worth saying anyway: it is the one case where a rewind is partial. -->
             ${
                 i.skippedLinks > 0
                     ? html`<div class="warn">

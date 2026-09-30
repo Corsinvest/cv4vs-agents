@@ -5,7 +5,7 @@
     and kept in step with Directory.Build.props by a build check. Write them instead: Version is
     the only place to edit, and there is nothing left to drift.
 
-    Only the VSIX project needs this. Contracts is SDK-style and does it on its own — running both
+    Only the VSIX project needs this. Contracts is SDK-style and does it on its own: running both
     would define the attributes twice and fail to compile.
   -->
   <Target Name="GenerateVersionAssemblyInfo"
@@ -20,7 +20,7 @@
 
     <!-- AssemblyVersion and AssemblyFileVersion take digits only, hence VsixVersion; the
          informational one carries the whole thing, suffix included, and is what About and the
-         init payload read — the one place a release candidate can say it is one. -->
+         init payload read: the one place a release candidate can say it is one. -->
     <ItemGroup>
       <_VersionAttribute Include="// &lt;auto-generated /&gt; Written by GenerateVersionAssemblyInfo in Directory.Build.targets." />
       <_VersionAttribute Include="[assembly: System.Reflection.AssemblyVersion(&quot;$(VsixVersion).0&quot;)]" />
@@ -44,7 +44,7 @@
     Feeds the manifest its version instead of repeating it. source.extension.vsixmanifest says
       <Identity Version="|%CurrentProject%;GetVsixVersion|" …>
     and DetokenizeVsixManifestFile (Microsoft.VsSDK.targets) calls this target while writing the
-    resolved manifest to obj\ — the file under src\ keeps the token and is never rewritten, so a
+    resolved manifest to obj\: the file under src\ keeps the token and is never rewritten, so a
     build leaves the working tree clean.
 
     VsixVersion, not Version: an Identity version is digits only, so a preview suffix must never

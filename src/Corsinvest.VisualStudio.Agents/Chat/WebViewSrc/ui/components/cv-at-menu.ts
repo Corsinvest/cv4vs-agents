@@ -43,7 +43,7 @@ export class CvAtMenu extends LitElement {
     }
 
     /** Folder shown next to the file name: path relative to the working directory, minus filename.
-     *  Nothing for a directory row — its own label is the full path already. */
+     *  Nothing for a directory row: its own label is the full path already. */
     private _dirLabel(it: AtItemDto): string {
         if (it.isDir) {
             return '';
@@ -62,7 +62,7 @@ export class CvAtMenu extends LitElement {
         if (item.isDir) {
             // Trailing space, like a file: picking a folder finishes the token. It used to be left
             // open so the menu could be re-queried and walked into, which was the only way down
-            // when the search stopped at the first level — the recursive one finds a file wherever
+            // when the search stopped at the first level: the recursive one finds a file wherever
             // it sits, so the walk is gone and a folder is now a reference in its own right.
             const dirToken = rel && rel !== normPath(item.path) ? rel : fileName(item.path);
             // The trailing slash goes INSIDE the quotes: it is part of the path the CLI reads, and

@@ -22,7 +22,7 @@ internal sealed class AddFileToProjectArgs
 }
 
 /// <summary>MCP tool: add an existing file to a project, for project types that list their files
-/// explicitly — where writing the file to disk is not enough to get it compiled.</summary>
+/// explicitly, where writing the file to disk is not enough to get it compiled.</summary>
 internal sealed class AddFileToProjectTool : McpTool<AddFileToProjectArgs>
 {
     public override string Name => "project_add_file";

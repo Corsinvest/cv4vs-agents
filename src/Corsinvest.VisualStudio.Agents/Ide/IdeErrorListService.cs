@@ -14,23 +14,23 @@ using System.Collections.Generic;
 namespace Corsinvest.VisualStudio.Agents.Ide;
 
 /// <summary>Reads the rows the user has selected in the Error List, via the public EnvDTE80 API.
-/// Unlike the Output window this is not text but records — severity, file, line, project are
-/// separate fields — so the caller gets them formatted rather than scraped.</summary>
+/// Unlike the Output window this is not text but records: severity, file, line, project are
+/// separate fields, so the caller gets them formatted rather than scraped.</summary>
 internal sealed class IdeErrorListService
 {
     public static IdeErrorListService Instance { get; } = new();
 
     /// <summary>Cap on how many rows go into one prompt: selecting the whole list of a broken
-    /// build is one Ctrl+A, and the first rows are the ones worth asking about — the rest are
+    /// build is one Ctrl+A, and the first rows are the ones worth asking about; the rest are
     /// usually knock-on errors.</summary>
     private const int MaxRows = 40;
 
     /// <summary><para>
     /// The selected rows, one per line, as "Error in Foo.cs:12 (MyProj): text". Null when
-    /// nothing is selected — the entry greys out rather than explaining rows the user did not pick.
+    /// nothing is selected: the entry greys out rather than explaining rows the user did not pick.
     /// </para>
     /// <para>
-    /// UI thread; never throws — it runs from a menu query, where an exception would take the
+    /// UI thread; never throws; it runs from a menu query, where an exception would take the
     /// context menu down with it.
     /// </para></summary>
     public string GetSelectedText()
@@ -129,7 +129,7 @@ internal sealed class IdeErrorListService
 
         var parts = new List<string> { IdeContextService.SeverityToLsp(err.ErrorLevel) };
 
-        // A row can have no file behind it — a project-level error, as GetDiagnosticsAsync found.
+        // A row can have no file behind it: a project-level error, as GetDiagnosticsAsync found.
         var file = err.FileName;
         if (!string.IsNullOrEmpty(file))
         {

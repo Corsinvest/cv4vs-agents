@@ -16,7 +16,7 @@ namespace Corsinvest.VisualStudio.Agents.Menu;
 
 /// <summary>
 /// View-menu entry point: an always-present "cv4vs Agents" submenu listing one item per
-/// enabled profile (Options → Profiles) in the user's saved order — the native "Claude" profile
+/// enabled profile (Options → Profiles) in the user's saved order: the native "Claude" profile
 /// prepended by ProfileStore.WithNative is one of them. A single submenu + DynamicItemStart range
 /// avoids the fragile button↔submenu visibility toggle.
 /// </summary>
@@ -50,7 +50,7 @@ internal sealed class ProfilesMenuCommand : OleMenuCommand
     private static IReadOnlyList<Profile> _items;
 
     /// <summary>Submenu entries: the enabled profiles (native "Claude" prepended) in saved order.
-    /// Cached — VS's constant polling must not re-read the file each time (see InitializeAsync).</summary>
+    /// Cached: VS's constant polling must not re-read the file each time (see InitializeAsync).</summary>
     private static IReadOnlyList<Profile> Items() => _items ??= ProfileStore.Load(forEdit: false);
 
     private static PaneKind DefaultKind() =>
@@ -87,7 +87,7 @@ internal sealed class ProfilesMenuCommand : OleMenuCommand
         }
 
         // Reset so the next query re-derives MatchedCommandId from DynamicItemMatch
-        // instead of reusing this call's id — without this, VS keeps re-querying the
+        // instead of reusing this call's id; without this, VS keeps re-querying the
         // same matched id and only the first item in the range ever gets shown.
         cmd.MatchedCommandId = 0;
     }

@@ -10,7 +10,7 @@ using Task = System.Threading.Tasks.Task;
 namespace Corsinvest.VisualStudio.Agents.Editor;
 
 /// <summary>"Add to chat" at the foot of the Error List's and the Output window's submenus: what
-/// the window holds, added to the composer as a block of its own and never sent — the counterpart
+/// the window holds, added to the composer as a block of its own and never sent, the counterpart
 /// of the editor's "Add selection to chat". One command per window, so each knows its window by its
 /// id.</summary>
 internal static class WindowAddToChatMenuCommand

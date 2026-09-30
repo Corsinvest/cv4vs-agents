@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 // The host a ToolRenderer is bound to (implemented by CvToolRow). It exposes
-// the row's raw data plus the few actions that touch the bridge / VS — the
+// the row's raw data plus the few actions that touch the bridge / VS, the
 // only seam to the app. Renderers read data and call actions through `host`;
 // everything else (markup, row layout, string cleanup) lives in ToolRenderer.
-// No renderer imports bridge/state — only CvToolRow does.
+// No renderer imports bridge/state: only CvToolRow does.
 
 import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
 import type { TemplateResult, nothing } from 'lit';
@@ -29,9 +29,9 @@ export interface ToolRowState {
     readonly extras?: ToolResultExtrasDto | null;
     readonly elapsedSec: number;
     readonly expanded: boolean;
-    /** The sub-agent this row SPAWNED (Agent tool only) — the transcript to fetch on expand. */
+    /** The sub-agent this row SPAWNED (Agent tool only): the transcript to fetch on expand. */
     readonly agentId: string;
-    /** The transcript this row LIVES in — routes open-output to that agent-<id>.jsonl.
+    /** The transcript this row LIVES in, routes open-output to that agent-<id>.jsonl.
      *  Empty in the main session. */
     readonly containerAgentId: string;
     /** How many nested children this row holds (Agent tool today). 0 for a normal tool. */
@@ -47,14 +47,14 @@ export interface ToolRowState {
 }
 
 // What a renderer sees: everything the component provides (ToolRowState) plus the tool-scoped data
-// derived from it and the app actions that touch the bridge/VS. NO global user settings — those live
+// derived from it and the app actions that touch the bridge/VS. NO global user settings: those live
 // in appState.ui, read directly by the renderers.
 export interface ToolHost extends ToolRowState {
     readonly name: string;
     readonly input: Record<string, unknown>;
     readonly toolUseId: string;
     /** What a finished Agent run cost, or null: while it runs, for every other tool, and for an
-     *  interrupted run — the CLI reports no totals there. */
+     *  interrupted run: the CLI reports no totals there. */
     readonly agentTotals: AgentRunTotalsDto | null;
     /** The CLI's own hunks for an edit, or null until its result arrives. Unlike a patch built
      *  from the tool's two input fragments, these carry the file's real line numbers. */

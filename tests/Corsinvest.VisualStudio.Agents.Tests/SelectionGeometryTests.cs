@@ -10,7 +10,7 @@ namespace Corsinvest.VisualStudio.Agents.Tests;
 
 public class SelectionGeometryTests
 {
-    // "alpha\nbeta\ngamma" — starts 0, 6, 11; ends (excl. newline) 5, 10, 16
+    // "alpha\nbeta\ngamma": starts 0, 6, 11; ends (excl. newline) 5, 10, 16
     private static readonly int[] Starts = [0, 6, 11];
     private static readonly int[] Ends = [5, 10, 16];
 

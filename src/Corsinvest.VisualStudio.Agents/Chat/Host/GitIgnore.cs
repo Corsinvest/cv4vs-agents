@@ -141,14 +141,14 @@ internal static class GitIgnoreCache
 
 /// <summary>
 /// Lightweight `.gitignore` matcher: plain names, anchored <c>/</c>, dir-only trailing <c>/</c>,
-/// <c>*</c>/<c>?</c>/<c>**</c> globs, negations, and character classes. Skips brace expansions —
+/// <c>*</c>/<c>?</c>/<c>**</c> globs, negations, and character classes. Skips brace expansions:
 /// rare enough that a full gitignore implementation would not pay for itself here.
 /// <para>Paths are relative to the directory the rules came from, forward-slashed.</para>
 /// </summary>
 internal sealed class GitIgnore
 {
-    // Exclusions are bucketed rather than tried one regex per rule: a path no rule excludes — the
-    // common case, and the one that pays for every rule — costs a few hash lookups and at most two
+    // Exclusions are bucketed rather than tried one regex per rule: a path no rule excludes (the
+    // common case, and the one that pays for every rule) costs a few hash lookups and at most two
     // regex runs instead of ~250. Measured on 100,000 files: ~11 s per rule, ~1 s bucketed and
     // walked in parallel.
     private readonly Bucket _any = new();
@@ -170,7 +170,7 @@ internal sealed class GitIgnore
             .Distinct(StringComparer.OrdinalIgnoreCase)];
     }
 
-    /// <summary>The part of a glob before its first wildcard, trimmed to whole path segments —
+    /// <summary>The part of a glob before its first wildcard, trimmed to whole path segments:
     /// <c>src/Foo/Debug/**</c> gives <c>src/Foo/Debug</c>. Empty when the glob starts with a
     /// wildcard, which is the "could be anywhere" case and prunes nothing.</summary>
     private static string LiteralPrefix(string glob)
@@ -234,7 +234,7 @@ internal sealed class GitIgnore
                 line = line.Substring(0, line.Length - 1);
             }
 
-            // An anchored rule must be matched against the PATH, never against a bare name —
+            // An anchored rule must be matched against the PATH, never against a bare name:
             // `/build/` compared by name would hide Mcp/Tools/Build/ like the unanchored form.
             var anchored = line.StartsWith("/", StringComparison.Ordinal);
             if (anchored) { line = line.Substring(1); }
@@ -350,7 +350,7 @@ internal sealed class GitIgnore
 
     /// <summary>Index of the <c>]</c> closing the class opened at <paramref name="open"/>, or -1
     /// when there is none. A <c>]</c> in first position (after an optional negator) is a literal
-    /// member of the class, not its end — <c>[]]</c> matches a bracket.</summary>
+    /// member of the class, not its end: <c>[]]</c> matches a bracket.</summary>
     private static int IndexOfClassEnd(string glob, int open)
     {
         var i = open + 1;
@@ -404,7 +404,7 @@ internal sealed class GitIgnore
         }
 
         // Compiled: one regex per bucket, run for every path of every listing, so the IL is
-        // amortised — unlike ~250 per-rule regexes, each run a few times.
+        // amortised, unlike ~250 per-rule regexes, each run a few times.
         public void Seal()
         {
             const RegexOptions options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled;

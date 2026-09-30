@@ -11,12 +11,12 @@ namespace Corsinvest.VisualStudio.Agents.Tests;
 /// <summary>Where the CLI's files live.
 /// <para><see cref="ClaudePaths.ProjectFolderName"/> mirrors a rule that belongs to the CLI, not to
 /// us: it resolves the cwd and replaces every non-alphanumeric character with a dash. Drift here
-/// does not throw — it points at a folder that does not exist, and the session list comes back
+/// does not throw: it points at a folder that does not exist, and the session list comes back
 /// empty as though the project had never been used.</para></summary>
 public class ClaudePathsTests
 {
     [Theory]
-    // Every non-alphanumeric becomes a dash, case PRESERVED — including the dot in a username,
+    // Every non-alphanumeric becomes a dash, case PRESERVED, including the dot in a username,
     // which is the case that makes this look wrong until you check the CLI does the same.
     [InlineData(@"C:\Users\jane.doe", "C--Users-jane-doe")]
     [InlineData(@"C:\proj\demo", "C--proj-demo")]
@@ -30,7 +30,7 @@ public class ClaudePathsTests
     public void ProjectFolderName_resolves_a_relative_path_first()
     {
         // The CLI names the folder after the ABSOLUTE cwd, so a relative input must be resolved
-        // before the replace — otherwise the same project gets two folders.
+        // before the replace; otherwise the same project gets two folders.
         var expected = ClaudePaths.ProjectFolderName(Directory.GetCurrentDirectory());
 
         Assert.Equal(expected, ClaudePaths.ProjectFolderName("."));

@@ -17,7 +17,7 @@ internal sealed class RemoveProjectArgs
     public string ProjectName { get; set; }
 }
 
-/// <summary>MCP tool: take a project out of the solution without deleting it from disk — the
+/// <summary>MCP tool: take a project out of the solution without deleting it from disk: the
 /// reverse of solution_add_project.</summary>
 internal sealed class RemoveProjectTool : McpTool<RemoveProjectArgs>
 {

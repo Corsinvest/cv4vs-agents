@@ -20,7 +20,7 @@ public enum NewSessionKind
 }
 
 /// <summary>Which debugger pauses are worth offering a chat on. An exception is a surprise; a
-/// breakpoint is not — the user placed it and knows why they are there — so the two are separate
+/// breakpoint is not (the user placed it and knows why they are there), so the two are separate
 /// steps rather than one switch. Steps never notify at any setting.</summary>
 public enum DebugBreakNotify
 {
@@ -34,7 +34,7 @@ public enum DebugBreakNotify
     ExceptionsAndBreakpoints,
 }
 
-/// <summary>File picker limited to executables — the CLI path must be a real .exe (see the
+/// <summary>File picker limited to executables: the CLI path must be a real .exe (see the
 /// ClaudeExecutablePath comment). The filter only guides the dialog; a hand-typed path is still
 /// validated by the resolver.</summary>
 internal sealed class ExeFileNameEditor : System.Windows.Forms.Design.FileNameEditor
@@ -63,7 +63,7 @@ public class AgentsGeneralPage : AgentsOptionsPage
     [Description("Which kind of session the \"New\" button creates by default (the dropdown still lets you pick the other).")]
     public NewSessionKind DefaultNewSession { get; set; } = NewSessionKind.Chat;
 
-    // Only while a turn is actually running — an idle pane must not cost the user battery. CLI
+    // Only while a turn is actually running: an idle pane must not cost the user battery. CLI
     // panes are out entirely: a ConPTY terminal has no notion of a turn, and telling one apart from
     // an idle prompt would mean scraping its ANSI output.
     [DisplayName("Prevent the machine from sleeping while a session is running")]
@@ -72,7 +72,7 @@ public class AgentsGeneralPage : AgentsOptionsPage
 
     // Must be the real claude.exe: both panes launch it as a PE binary (ConPTY CreateProcess, and
     // ProcessStartInfo with UseShellExecute=false + redirected stdio), so a .cmd/.bat/.ps1 shim
-    // can't be launched — hence the .exe-only picker.
+    // can't be launched, hence the .exe-only picker.
     [DisplayName("Claude executable path")]
     [Description("Full path to claude.exe, to override auto-detection (PATH, native installer, npm). Leave empty to auto-detect. Must be the real claude.exe — .cmd/.bat/.ps1 shims cannot be launched.")]
     [Editor(typeof(ExeFileNameEditor), typeof(UITypeEditor))]

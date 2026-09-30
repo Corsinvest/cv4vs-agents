@@ -9,7 +9,7 @@ using Xunit;
 namespace Corsinvest.VisualStudio.Agents.Tests;
 
 /// <summary>The shorteners behind menu rows, tab captions and list items.
-/// <para>A session title falls back to the last prompt, which is a whole message — newlines and
+/// <para>A session title falls back to the last prompt, which is a whole message: newlines and
 /// all. One of those in a MenuItem breaks the row instead of wrapping, and the break looks like a
 /// layout bug rather than a string that was never collapsed.</para></summary>
 public class StringHelpersTests

@@ -103,7 +103,7 @@ export class CvContextGauge extends LitElement {
                 display: inline-flex;
                 align-items: center;
             }
-            /* Amber, not red: the next message costs more, but nothing is broken — and the ring's
+            /* Amber, not red: the next message costs more, but nothing is broken, and the ring's
                own red already means the context is nearly full. */
             .cache-warning {
                 display: inline-flex;
@@ -126,8 +126,8 @@ export class CvContextGauge extends LitElement {
                 padding: 3px;
                 min-width: 0;
             }
-            /* Wraps the ring so it can be the tooltip's anchor while the button stays the menu's
-               — see cv-attach-menu for what happens when they share one. */
+            /* Wraps the ring so it can be the tooltip's anchor while the button stays the menu's;
+               see cv-attach-menu for what happens when they share one. */
             .tip-anchor {
                 display: inline-flex;
             }
@@ -135,10 +135,10 @@ export class CvContextGauge extends LitElement {
                 display: block;
             }
             /* The reading at the top of the menu: not an action, so a plain div rather than a
-               menu-item — the focusgroup skips what has no menuitem role, and arrow keys land on
+               menu-item: the focusgroup skips what has no menuitem role, and arrow keys land on
                the four actions below. */
             /* Colour set here, not inherited: the div is slotted into fluent-menu-list, whose own
-               foreground doesn't reach a plain child — it would fall back to the UA black. */
+               foreground doesn't reach a plain child: it would fall back to the UA black. */
             .reading {
                 padding: 6px 10px 8px;
                 min-width: 280px;
@@ -150,7 +150,7 @@ export class CvContextGauge extends LitElement {
             .reading-head {
                 font-weight: var(--fontWeightSemibold);
             }
-            /* fluent-progress-bar stays pure — only vertical spacing (colour comes from
+            /* fluent-progress-bar stays pure: only vertical spacing (colour comes from
                validation-state, matching the donut's green/amber/red bands). */
             .bar {
                 margin: 8px 0 2px;
@@ -164,7 +164,7 @@ export class CvContextGauge extends LitElement {
             }
             /* Hung from the ring's right edge, not its left: Fluent aligns the list's start to the
                trigger's, which on the last control in the row throws 280px of menu out to the left
-               and leaves the pointer crossing open air to reach it. Flush with that edge — send
+               and leaves the pointer crossing open air to reach it. Flush with that edge: send
                used to sit past the ring and the list hung into its width, but send now lives inside
                the field and there is nothing to the right to lean on. */
             fluent-menu-list {
@@ -176,7 +176,7 @@ export class CvContextGauge extends LitElement {
                 margin: 4px 0;
                 background: var(--colorNeutralStroke2);
             }
-            /* Centre the glyph in the item's start cell — Fluent's default hugs the cell edge,
+            /* Centre the glyph in the item's start cell: Fluent's default hugs the cell edge,
                too tight at this density. Same rule as cv-attach-menu. */
             fluent-menu-item [slot='start'] {
                 display: inline-flex;
@@ -191,7 +191,7 @@ export class CvContextGauge extends LitElement {
     @state() private _cacheAnchor = appState.cacheAnchorMs;
     @state() private _cacheCompacted = appState.cacheCompactedMs;
 
-    // One timeout, aimed at the next moment the cache reading changes on its own — see
+    // One timeout, aimed at the next moment the cache reading changes on its own; see
     // msUntilCacheChange. Re-aimed after every render, so a new message moves it.
     private _cacheTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -232,7 +232,7 @@ export class CvContextGauge extends LitElement {
     private _onViewStats = (): void => openStatsDialog();
 
     /** Re-aim the one timeout: the next render is the moment the cache turns expiring or cold, which
-     *  no message announces — it happens while the user is idle, when nothing else redraws. */
+     *  no message announces: it happens while the user is idle, when nothing else redraws. */
     override updated(): void {
         clearTimeout(this._cacheTimer);
         const ms = msUntilCacheChange(
@@ -276,13 +276,13 @@ export class CvContextGauge extends LitElement {
         const window = autoCompactWindow();
 
         // The ring opens a menu: the reading at the top, then what you can do about it. Click, not
-        // hover — the items are actions, and a hover panel above the ring would vanish as the
+        // hover: the items are actions, and a hover panel above the ring would vanish as the
         // mouse travelled to them.
         return html`
             <fluent-menu>
                 <!-- id="menu-trigger" is load-bearing: fluent-menu-list anchors itself to
                      --menu-trigger, and the trigger's anchor-name comes from its id. The tooltip
-                     hangs off the span inside instead — anchoring it here would overwrite that
+                     hangs off the span inside instead: anchoring it here would overwrite that
                      name and drop the list at 0,0 (see cv-attach-menu). -->
                 <fluent-button
                     id="menu-trigger"
@@ -353,7 +353,7 @@ export class CvContextGauge extends LitElement {
                          it. A plain div, not fluent-divider: that one ships no package entry point
                          (only dist/esm), and a rule is a rule. -->
                     <div class="sep" role="separator"></div>
-                    <!-- Statistics, Usage, Context usage — the order and the icons of the VS
+                    <!-- Statistics, Usage, Context usage: the order and the icons of the VS
                          menu's own Analytics group, so the two ways in read the same. No trailing
                          ellipsis, for the same reason: these open a window, they don't ask for
                          anything first. -->
@@ -373,8 +373,8 @@ export class CvContextGauge extends LitElement {
             </fluent-menu>
             ${
                 // Beside the ring, not on it: the two readings answer different questions, and
-                // drawn over the arc neither survived. Not while the cache holds with time to spare
-                // — there is nothing to act on, and the tooltip says so for anyone who looks.
+                // drawn over the arc neither survived. Not while the cache holds with time to spare:
+                // there is nothing to act on, and the tooltip says so for anyone who looks.
                 cacheIcon
                     ? html`<span
                           id="cache-tip"
@@ -389,7 +389,7 @@ export class CvContextGauge extends LitElement {
             <!-- Named like the other triggers, because a ring on its own says nothing about what it
                  measures. "left" stays: the arc fills with what has been CONSUMED while the number
                  is what REMAINS, so a bare percentage would read as the opposite of the ring beside
-                 it. Before the first result there is no number and the name stands alone — an empty
+                 it. Before the first result there is no number and the name stands alone: an empty
                  ring already says there is nothing to read yet. Nothing about clicking either: this
                  is a menu trigger, and the menu says what it offers when it opens. -->
             <fluent-tooltip anchor="gauge-tip" positioning="above-end"

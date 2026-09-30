@@ -14,8 +14,8 @@ using Xunit;
 
 namespace Corsinvest.VisualStudio.Agents.Tests;
 
-/// <summary>The picker's `.gitignore` reading. Matching is bucketed for speed — literal names and
-/// extensions in hash sets, the rest in one regex per bucket — and must answer exactly as trying
+/// <summary>The picker's `.gitignore` reading. Matching is bucketed for speed (literal names and
+/// extensions in hash sets, the rest in one regex per bucket) and must answer exactly as trying
 /// every rule in turn did, which the reference below still does.</summary>
 public class GitIgnoreTests
 {

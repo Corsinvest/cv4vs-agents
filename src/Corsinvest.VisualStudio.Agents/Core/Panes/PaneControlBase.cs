@@ -38,7 +38,7 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     /// pane and push the caption.</summary>
     protected PaneWindowBase Pane { get; private set; }
 
-    /// <summary>This pane's entry — created by PaneLauncher and injected via Init BEFORE the pane
+    /// <summary>This pane's entry: created by PaneLauncher and injected via Init BEFORE the pane
     /// loads, so it is never null while the control lives (no attach/dispose gap → no NRE).
     /// Public getter to satisfy <see cref="IPaneControl.Entry"/> (toolbar/consumers read it there).</summary>
     public PaneEntry Entry { get; private set; }
@@ -50,7 +50,7 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     protected ClaudePaths PaneClaudePaths => Entry.ClaudePaths;
 
     /// <summary>Register this pane's (already-created) entry once VS assigned the id.
-    /// Called by AssignPaneId. The entry pre-exists (Init) — this only wires it to the frame.</summary>
+    /// Called by AssignPaneId. The entry pre-exists (Init): this only wires it to the frame.</summary>
     public void RegisterInstance(PaneWindowBase pane)
     {
         Pane = pane;
@@ -77,7 +77,7 @@ public abstract class PaneControlBase : UserControl, IPaneControl
         PaneRegistry.Instance.Remove(Entry);
         Pane = null;
         // Entry stays assigned (readonly-in-practice): in-flight DisposeCore/async reads it
-        // safely (Profile is immutable) — no null gap.
+        // safely (Profile is immutable), no null gap.
     }
 
     /// <summary>Kind-specific release: chat unsubs Options.Applied + editor context + disposes
@@ -85,7 +85,7 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     /// differs per kind). Runs before the base drops the registry entry.</summary>
     protected abstract void DisposeCore();
 
-    /// <summary>VS fires Unloaded on dock-toggle / hide while the pane is still alive — real
+    /// <summary>VS fires Unloaded on dock-toggle / hide while the pane is still alive: real
     /// teardown is DisposePane on frame close, so this is a deliberate no-op.</summary>
     protected static void OnUnloaded(object sender, RoutedEventArgs e) { }
 
@@ -113,14 +113,14 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     public virtual void RenameSession(string newTitle) { }
 
     /// <summary>OS process id of the claude CLI behind this pane, or 0 when it isn't running.
-    /// Both kinds have one — chat drives it over stdio, cli through the ConPTY — so the info
+    /// Both kinds have one (chat drives it over stdio, cli through the ConPTY) so the info
     /// dialog's row is built once here rather than duplicated per kind.</summary>
     protected abstract int CliProcessId { get; }
 
     /// <summary>Extra info rows for <see cref="ShowSessionInfoAsync"/>, appended after the shared
-    /// ones and after the CLI PID. Chat adds the WebView2 processes; the CLI pane adds none — its
+    /// ones and after the CLI PID. Chat adds the WebView2 processes; the CLI pane adds none: its
     /// process is the shared row. Kept as label/value pairs rather than formatted lines so the
-    /// base owns the column alignment — a longer label added here must not leave the whole dialog
+    /// base owns the column alignment: a longer label added here must not leave the whole dialog
     /// ragged.
     /// <para>Async for the same reason as <see cref="ExtraSessionSectionsAsync"/>: the chat's rows
     /// come from WebView2, which answers on the UI thread.</para></summary>
@@ -131,17 +131,17 @@ public abstract class PaneControlBase : UserControl, IPaneControl
     /// Separate from <see cref="ExtraSessionInfoAsync"/> because these are not label/value: the chat's
     /// WebView report is a block of its own with its own inner layout, and forcing it through the
     /// column alignment above would only mangle it.
-    /// <para>Async because a pane may have to ask something that answers on the UI thread — see
+    /// <para>Async because a pane may have to ask something that answers on the UI thread: see
     /// the chat's, which asks its WebView. Awaited before the dialog opens, never blocked on.</para></summary>
     protected virtual Task<IEnumerable<string>> ExtraSessionSectionsAsync()
         => Task.FromResult<IEnumerable<string>>([]);
 
     /// <summary>Read-only session info (id, session file, workdir, CLI) for debug and bug reports.
-    /// Built from <see cref="Entry"/>, which both pane kinds keep current — so the terminal gets the
-    /// same dialog as the chat, with no duplicated code — plus whatever
+    /// Built from <see cref="Entry"/>, which both pane kinds keep current, so the terminal gets the
+    /// same dialog as the chat, with no duplicated code, plus whatever
     /// <see cref="ExtraSessionInfoAsync"/> adds for the kind.
     /// <para>Async all the way to the dialog: what the chat pane contributes comes back from the
-    /// WebView, which delivers on this very thread. Blocking on it here — even with a deadline —
+    /// WebView, which delivers on this very thread. Blocking on it here (even with a deadline)
     /// deadlocks until that deadline and yields "(unknown)" rather than the answer.</para></summary>
     public async Task ShowSessionInfoAsync()
     {

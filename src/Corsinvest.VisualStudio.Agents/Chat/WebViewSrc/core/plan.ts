@@ -7,7 +7,7 @@
  * Whether an ExitPlanMode call carries anything to open in the editor.
  *
  * The CLI injects `plan` and `planFilePath` from the plan file it expects the model to have
- * written, and injects nothing when there is no such file — which is what happens when the model
+ * written, and injects nothing when there is no such file, which is what happens when the model
  * leaves plan mode without writing one. An "Open in editor" button there only leads to an error
  * notice, so the button follows this instead.
  */

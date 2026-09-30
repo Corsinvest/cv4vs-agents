@@ -27,7 +27,7 @@ public sealed class ChatPaneWindow : PaneWindowBase, IOleCommandTarget
     // active pane is asked first). We claim two and hand them to the chat's WebView instead of
     // letting VS act on them; everything else falls through unchanged (F5/build/Ctrl+S stay VS):
     //  - Find (Ctrl+F): VSStd97 Find → open the WebView2 find bar, not VS's Find dialog.
-    //  - Esc: VSStd97 cmdID 289 — claim it so VS doesn't move focus to an open editor;
+    //  - Esc: VSStd97 cmdID 289, claim it so VS doesn't move focus to an open editor;
     //    forward to the WebView (stop generation / close a menu). 289 verified by debugging
     //    QueryStatus; the named enum value didn't match, so pin the literal.
     //  - Alt+Enter (PropSheetOrProperties): the composer's "queue this with the previous message".
@@ -58,7 +58,7 @@ public sealed class ChatPaneWindow : PaneWindowBase, IOleCommandTarget
         {
             if (nCmdID == CmdidFind && ctl.ShowFind()) { return VSConstants.S_OK; }
             if (nCmdID == CmdidCancel && ctl.HandleEscape()) { return VSConstants.S_OK; }
-            // False when the page has nothing to group with — an empty queue, or no turn running.
+            // False when the page has nothing to group with: an empty queue, or no turn running.
             // Falling through then leaves Alt+Enter as VS's Properties, rather than swallowing it.
             if (nCmdID == CmdidPropSheetOrProperties && ctl.HandleAltEnter()) { return VSConstants.S_OK; }
         }

@@ -21,7 +21,7 @@ import type {
 
 /** A pulsing chip in the input row showing the count of active sub-agents.
  *  Hidden when none. Click opens a light-dismiss popover (like the permission
- *  selector — no backdrop) listing each agent with a Stop, plus a Stop-all.
+ *  selector, no backdrop) listing each agent with a Stop, plus a Stop-all.
  *  Shadow DOM + static styles (Lit standard). The button and popover live
  *  together in the same shadow root so CSS anchor-positioning resolves locally
  *  (both nodes share this render tree; a separate element wouldn't anchor). */
@@ -31,14 +31,14 @@ export class CvSubagentChip extends LitElement {
         iconStyles,
         statusDotStyles,
         css`
-            /* Relative host so the panel can be absolutely positioned above the chip — plain
+            /* Relative host so the panel can be absolutely positioned above the chip: plain
                position:absolute, not CSS anchor-positioning (position-area is unreliable in the VS
                WebView2's Chromium: the top-layer popover jumps to the viewport corner). */
             :host {
                 position: relative;
                 display: inline-flex;
             }
-            /* Chip is a <fluent-button> — keep it pure (only layout). */
+            /* Chip is a <fluent-button>: keep it pure (only layout). */
             .chip {
                 display: inline-flex;
                 align-items: center;
@@ -95,7 +95,7 @@ export class CvSubagentChip extends LitElement {
                 margin-top: 12px;
                 color: var(--colorNeutralForeground3);
             }
-            /* Nothing above it to be separated from — every task is in the background, which is
+            /* Nothing above it to be separated from: every task is in the background, which is
                the common case once the CLI has launched them all asynchronously. */
             .head.sub.first {
                 margin-top: 0;
@@ -145,7 +145,7 @@ export class CvSubagentChip extends LitElement {
                 color: var(--colorNeutralForeground3);
                 font-variant-numeric: tabular-nums;
             }
-            /* cv-elapsed carries its own badge styling for the transcript row it was written for —
+            /* cv-elapsed carries its own badge styling for the transcript row it was written for:
                a left margin and a dimmer size. Here it is a column in a grid-like row, so those
                are overridden rather than added to what .time already sets. */
             cv-elapsed.time {
@@ -153,14 +153,14 @@ export class CvSubagentChip extends LitElement {
                 font-size: 0.85em;
                 opacity: 1;
             }
-            /* Stop / Stop-all are <fluent-button> — keep them pure; only layout here. */
+            /* Stop / Stop-all are <fluent-button>: keep them pure; only layout here. */
             .stopall,
             .stop {
                 flex-shrink: 0;
             }
             /* Same stop glyph as the rows, next to the label: the icon alone is ambiguous, so
                pairing it with the word here teaches what the per-row squares mean. Spacing goes
-               on the svg — Fluent's own part styles win over a gap set on ::part(control). */
+               on the svg: Fluent's own part styles win over a gap set on ::part(control). */
             .stopall svg {
                 width: 16px;
                 height: 16px;
@@ -222,7 +222,7 @@ export class CvSubagentChip extends LitElement {
     }
 
     /** The CLI prefixes the description with its own status verb ("Running Run build…"), which
-     *  the live dot already conveys — strip it so the row reads as the task itself. */
+     *  the live dot already conveys; strip it so the row reads as the task itself. */
     private _desc(t: SubagentTask): string {
         const d = (t.description || '').trim();
         return d.replace(/^running\s+/i, '') || 'sub-agent';
@@ -242,7 +242,7 @@ export class CvSubagentChip extends LitElement {
         }
     }
 
-    /** Keyed by toolUseId, which is what the CLI's request takes — a task whose launching row
+    /** Keyed by toolUseId, which is what the CLI's request takes: a task whose launching row
      *  never arrived has none, and the button is not offered for it. */
     private _detach(toolUseId: string) {
         bridge.sendNotification<SubagentDetachNotification>(Msg.fromWebView.chat.subagentDetach, {
@@ -254,7 +254,7 @@ export class CvSubagentChip extends LitElement {
         this._open = !this._open;
     };
 
-    /** One task row. Identical for both sections — a backgrounded sub-agent is the same task with
+    /** One task row. Identical for both sections: a backgrounded sub-agent is the same task with
      *  the same figures, still running, which is the whole reason it is worth showing. */
     private _row(t: SubagentTask, indents: Map<string, number>) {
         const indent = indents.get(t.taskId);
@@ -343,7 +343,7 @@ export class CvSubagentChip extends LitElement {
             </fluent-button>
             <div id="cv-subagents-popover" class="popover" ?hidden=${!this._open}>
                 <div class="head">
-                    <!-- The total, matching the badge — not the foreground count. Everything in
+                    <!-- The total, matching the badge, not the foreground count. Everything in
                          here is a sub-agent; "Background" below is a subset of it, not a rival
                          category, and Stop all acts on the lot. -->
                     <span>Sub-agents (${n})</span>

@@ -6,7 +6,7 @@
 /**
  * One second-clock for the whole WebView, for the badges that count upwards.
  *
- * Every running sub-agent draws two of those — one in its transcript row, one in the chip — so a
+ * Every running sub-agent draws two of those: one in its transcript row, one in the chip, so a
  * per-component timer means twice as many as there are agents, each started whenever its element
  * happened to mount. That showed: the same task's two badges read 28s and 29s at the same moment,
  * because their intervals had drifted apart. Sharing the tick makes them equal by construction.
@@ -52,7 +52,7 @@ function stop(): void {
 }
 
 // A pane sitting behind another one for an hour has nothing to redraw, and its badges are read
-// again only when it comes back — so the clock stops with the pane and the first tick on return
+// again only when it comes back, so the clock stops with the pane and the first tick on return
 // catches everything up. Done here once rather than in every component, which is why none of them
 // did it.
 document.addEventListener('visibilitychange', () => {
@@ -65,7 +65,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /**
- * Call `fn` about once a second. Returns the unsubscribe — call it from `disconnectedCallback`,
+ * Call `fn` about once a second. Returns the unsubscribe: call it from `disconnectedCallback`,
  * or whenever the badge stops needing a clock.
  *
  * The unsubscribe is returned rather than offered as an offTick(fn), because that one only works

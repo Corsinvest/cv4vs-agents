@@ -28,7 +28,7 @@ internal sealed partial class WebViewMessageHandler
     }
 
     /// <summary>The <c>&lt;ide_*&gt;</c> block sent ahead of the prompt. Composed here, not in the
-    /// composer, so the selected code never crosses the bridge — the WebView only needs the file
+    /// composer, so the selected code never crosses the bridge: the WebView only needs the file
     /// and the lines for its chip.
     /// <para>It goes in its own content block, never glued to the prompt.</para></summary>
     private string BuildIdeContextBlock(string text)
@@ -47,7 +47,7 @@ internal sealed partial class WebViewMessageHandler
         var head = $"<ide_selection>The user selected the lines {ctx.StartLine} to {ctx.EndLine} " +
                    $"from {ctx.FilePath}";
         const string tail = "This may or may not be related to the current task.</ide_selection>";
-        // With the text, the shape is the VS Code webview's — what the CLI's readers expect.
+        // With the text, the shape is the VS Code webview's: what the CLI's readers expect.
         // Without, the tag ends on the path rather than trailing a colon over nothing.
         return Options.AgentsOptions.Chat.SendSelectionText
             ? $"{head}:\n{ctx.SelectedText ?? ""}\n\n{tail}"
@@ -106,7 +106,7 @@ internal sealed partial class WebViewMessageHandler
 
     private void HandleStop(JObject data, int? id) =>
         // Fire and forget: the WebView frees itself the moment it asks, since it can't wait on a
-        // wedged CLI. InterruptAsync logs its own failure — there is nothing to roll back here,
+        // wedged CLI. InterruptAsync logs its own failure: there is nothing to roll back here,
         // unlike the model and permission handlers below.
         _ = client.InterruptAsync();
 
@@ -118,7 +118,7 @@ internal sealed partial class WebViewMessageHandler
         // CoreWebView2 access itself.
         _ = client.SetPermissionModeAsync(newMode).ContinueWith(_ =>
         {
-            // Failure or not — the client logs that itself — tell the WebView what the mode REALLY
+            // Failure or not (the client logs that itself), tell the WebView what the mode REALLY
             // is. The selector switched optimistically before asking, and the client only advances
             // PermissionMode once the CLI has acked, so on failure this sends the old mode back and
             // the UI rolls itself back. Without it the selector reads "Plan" while the CLI is still

@@ -18,7 +18,7 @@ namespace Corsinvest.VisualStudio.Agents.Core.Sessions;
 
 /// <summary>Reads/writes CLI session JSONL files for one config-dir. The config-dir is
 /// constant for a pane's lifetime, so it's injected once via the constructor rather than
-/// threaded through every call — a config-dir can never be silently forgotten.</summary>
+/// threaded through every call: a config-dir can never be silently forgotten.</summary>
 internal sealed partial class SessionManager(ClaudePaths paths, string workingDirectory, OutputWindowLogger log)
 {
     // Metadata scan: read a fixed 64 KB window from the start and from the end
@@ -40,14 +40,14 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
     /// characters it prefixes <c>\\?\</c>, which tells Win32 to skip its own path normalisation.</para>
     /// <para>Here rather than in each reader: this is the single spot the path is built, so every
     /// caller inherits it, including ones written later. All of them test File.Exists on the result,
-    /// and File.Exists(null) is false — a rejected id degrades to "no such session".</para></summary>
+    /// and File.Exists(null) is false: a rejected id degrades to "no such session".</para></summary>
     private string FileFor(string sessionId)
         => IsSafePathToken(sessionId)
             ? LongPath(Path.Combine(paths.SessionFolder(workingDirectory), sessionId + ".jsonl"))
             : null;
 
-    /// <summary>Past 260 characters .NET Framework refuses the path outright — DirectoryNotFoundException
-    /// on a file that is plainly there — and the CLI happily writes session files that long: its own
+    /// <summary>Past 260 characters .NET Framework refuses the path outright (DirectoryNotFoundException
+    /// on a file that is plainly there) and the CLI happily writes session files that long: its own
     /// folder name is most of the working directory, and a GUID plus ".jsonl" follows. The \\?\ prefix
     /// hands the path to Win32 unchecked.
     /// <para>Applied in the two accessors above, so every read and write below inherits it without
@@ -56,7 +56,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
     private static string LongPath(string path)
         => path.Length < 260 || path.StartsWith(@"\\", StringComparison.Ordinal) ? path : @"\\?\" + path;
 
-    /// <summary>One scanned .jsonl. A session file only ever grows — even Rename appends — so a
+    /// <summary>One scanned .jsonl. A session file only ever grows (even Rename appends) so a
     /// file whose write stamp hasn't moved cannot have new metadata, and the scan can be skipped.
     /// <para><see cref="Title"/> null = scanned and not listable (a sub-agent sidechain, or a
     /// session no prompt was ever sent in). Cached all the same, so those aren't re-read either.</para></summary>
@@ -67,14 +67,14 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
     }
 
     /// <summary>Scans kept between calls to <see cref="Load"/>, so a caller that lists the same
-    /// folder repeatedly — the session picker reopening — only re-reads what changed.
+    /// folder repeatedly (the session picker reopening) only re-reads what changed.
     /// <para>Per instance, not static: an instance is one working directory, which is both why the
     /// bare session id works as a key and why the memory can't pile up. A caller that Loads once
     /// and drops the manager (the Statistics tree does, for every project on the machine) takes
     /// the cache down with it.</para></summary>
     private readonly ConcurrentDictionary<string, CacheEntry> _scanCacheById = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The sessions for this workdir, newest first, as list rows — Id, Title, LastUsedAt
+    /// <summary>The sessions for this workdir, newest first, as list rows: Id, Title, LastUsedAt
     /// and WorkingDirectory, which is all any caller has ever read. Sessions with no title of any
     /// kind and sub-agent sidechains are left out; neither is something a user picks.
     /// <para>For the full metadata of one session use <see cref="ScanTitle"/> or ScanMetadata.</para></summary>
@@ -91,7 +91,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
         var scanned = 0;
         var result = files
             // FullName, not FolderFor's own prefixing: a folder can sit under the limit while the
-            // file inside it goes over — the CLI's folder name is nearly the whole workdir, and a
+            // file inside it goes over: the CLI's folder name is nearly the whole workdir, and a
             // GUID plus ".jsonl" is another 41 characters on top.
             .AsParallel()
             .Select(f =>
@@ -126,7 +126,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
         return result;
     }
 
-    /// <summary>The scan of one session file, or null when it holds no listable session — a
+    /// <summary>The scan of one session file, or null when it holds no listable session: a
     /// sub-agent sidechain, or one no prompt was ever sent in. Only Title is filled beyond what
     /// ScanMetadata returns: Load() has the id, the workdir and the write time already, and asking
     /// the filesystem for the date here would cost a syscall per session.</summary>
@@ -228,7 +228,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
         => line.IndexOf("\"" + key + "\":true", StringComparison.Ordinal) >= 0
         || line.IndexOf("\"" + key + "\": true", StringComparison.Ordinal) >= 0;
 
-    /// <summary>True only for a genuine user PROMPT that OPENS an exchange — not a tool_result
+    /// <summary>True only for a genuine user PROMPT that OPENS an exchange, not a tool_result
     /// (content is an array) nor a CLI meta-injection (Chat.MetaInjection, the same filter used
     /// to drop them from the transcript). History paging stops on one of these so the oldest
     /// exchange isn't orphaned.</summary>
@@ -238,7 +238,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
         var content = msg["content"];
 
         // A real user turn: typed text that isn't a CLI meta-injection. An interrupt marker
-        // ([Request interrupted…]) counts — it's a real turn (rendered with an orange bar),
+        // ([Request interrupted…]) counts: it's a real turn (rendered with an orange bar),
         // so the history scroll may anchor on it like any prompt.
         static bool IsRealText(string t)
             => !string.IsNullOrWhiteSpace(t) && !Chat.MetaInjection.IsMetaText(t);
@@ -254,7 +254,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
         if (content is JArray blocks)
         {
             // ANY text block, not the first: the editor-context tag the host prepends is one, and
-            // taking it would call a real prompt meta — the page would then anchor somewhere else.
+            // taking it would call a real prompt meta: the page would then anchor somewhere else.
             return blocks.Any(b => b?["type"]?.Value<string>() == "text" && IsRealText(b.Val("text", "")));
         }
 
@@ -295,7 +295,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
     public sealed class FileBackupInfo
     {
         /// <summary>Relative to the working directory when the file sits under it, absolute
-        /// otherwise — the CLI shortens it on the way in.</summary>
+        /// otherwise: the CLI shortens it on the way in.</summary>
         public string Path { get; set; }
 
         /// <summary>Name of the copy under `~/.claude/file-history/&lt;session&gt;/`. Null when the
@@ -364,7 +364,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
     }
 
     /// <summary>Longest a session title is ever shown at. It falls back to the last prompt when
-    /// nothing better exists, and a prompt is a whole message — one pasted here ran to 40 lines.</summary>
+    /// nothing better exists, and a prompt is a whole message: one pasted here ran to 40 lines.</summary>
     public const int MaxTitleLength = 60;
 
     /// <summary>Resolve the display title for one session (same priority and head+tail
@@ -409,7 +409,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
     public sealed class ForkResult
     {
         public string NewSessionId { get; set; }
-        /// <summary>Text of the forked-at message — excluded from the transcript
+        /// <summary>Text of the forked-at message: excluded from the transcript
         /// and handed back so the user can edit/resend it.</summary>
         public string ExcludedPrompt { get; set; }
     }
@@ -457,7 +457,7 @@ internal sealed partial class SessionManager(ClaudePaths paths, string workingDi
             }
             if (!foundCut) { log.Debug(() => "[sessions] fork-at uuid not found in source session → fork aborted"); return null; }
 
-            // Remap every id that references a message — leaving one pointing at an
+            // Remap every id that references a message: leaving one pointing at an
             // old uuid would dangle, since those ids are all regenerated above.
             // No BOM: it would make the first line invalid JSON for every reader of the file,
             // this one's history scan included.

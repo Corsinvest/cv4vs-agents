@@ -15,8 +15,8 @@ namespace Corsinvest.VisualStudio.Agents.Core.Context;
 /// <summary>Fetches one historical session's context-window breakdown with a throwaway claude.exe:
 /// start it with the profile's env and --resume &lt;sessionId&gt; (get_context_usage needs the
 /// session's messages loaded), send the control_request, map, dispose. Like UsageProbe, we do NOT
-/// wait for system/init (that arrives only after a real user turn, which would append to the .jsonl)
-/// — we wait for the initialize control_response (Account), then send get_context_usage, which is
+/// wait for system/init (that arrives only after a real user turn, which would append to the .jsonl);
+/// we wait for the initialize control_response (Account), then send get_context_usage, which is
 /// pure calculation (count_tokens): no turn, no write.</summary>
 internal static class ContextProbe
 {
@@ -42,7 +42,7 @@ internal static class ContextProbe
                 ResumeSessionId = sessionId, // load this session's messages so count_tokens has context
             });
 
-            // Wait for the initialize control_response (Account), not system/init — same as UsageProbe.
+            // Wait for the initialize control_response (Account), not system/init: same as UsageProbe.
             await WaitForAccountAsync(client, ct);
 
             var raw = await client.GetContextUsageAsync(); // null on error

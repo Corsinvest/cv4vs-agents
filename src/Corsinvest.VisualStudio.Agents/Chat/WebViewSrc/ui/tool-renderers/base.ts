@@ -4,12 +4,12 @@
  */
 // Base tool renderer. One subclass per tool, bound to a ToolHost (the seam to
 // the app). Each tool overrides only what differs and returns its whole row
-// from row() — the component never branches on tool name or behaviour flags.
+// from row(): the component never branches on tool name or behaviour flags.
 //
 // row(ctx):    the entire row (chrome + content). Pick a layout building block
 //              (rowStandard / rowDiff / rowCount / rowHeaderOnly) or build your
 //              own. Default: rowStandard (header + collapsible IN/OUT body).
-// header():    the row label — name span + optional secondary detail. Unchanged whether the body
+// header():    the row label: name span + optional secondary detail. Unchanged whether the body
 //              is open or folded: a title that rewrites itself on a click reads as a different row.
 // body():      the collapsible content. Default: the IN/OUT grid.
 // autoOpen():  whether that body shows without a click. Errors always do; the rest follow the
@@ -33,10 +33,10 @@ import { highlightCode } from '../../core/lang';
 import type { ToolHost } from './types';
 
 /** How a body cell treats the preview cap.
- *  'always'  — clip even when the row is expanded (a long stdout stays a preview; the full
+ *  'always':  clip even when the row is expanded (a long stdout stays a preview; the full
  *              text is one click away in the editor, so the cell never has to hold it).
- *  'preview' — clip until the row is expanded. The default for every tool.
- *  'never'   — show it whole, cap or not: half a shell pipeline says nothing, where the
+ *  'preview': clip until the row is expanded. The default for every tool.
+ *  'never':   show it whole, cap or not: half a shell pipeline says nothing, where the
  *              first lines of a log still do. */
 export type ClipMode = 'always' | 'preview' | 'never';
 
@@ -82,7 +82,7 @@ export abstract class ToolRenderer {
         return this.host.clipsOutput ? 'always' : 'preview';
     }
 
-    /** Clip mode for the OUT cell — the counterpart to clipsInput, and the only way to reach
+    /** Clip mode for the OUT cell: the counterpart to clipsInput, and the only way to reach
      *  'never' for output: a renderer whose result breaks when cut overrides it. */
     protected clipsOutput(): ClipMode {
         return this.host.clipsOutput ? 'always' : 'preview';
@@ -113,7 +113,7 @@ export abstract class ToolRenderer {
         return '';
     }
 
-    /** Text for the OUT cell — the counterpart to inputText, where a renderer that knows its
+    /** Text for the OUT cell: the counterpart to inputText, where a renderer that knows its
      *  output's shape reformats it. */
     outputText(): string {
         return cleanResult(this.host.result, this.host.status === 'error');
@@ -123,7 +123,7 @@ export abstract class ToolRenderer {
      *  single place rather than in each row*() helper.
      *
      *  `expanded` on the host means "the user clicked the chevron", NOT "is open": it FLIPS the
-     *  resting state. That is what lets a row which starts open be folded away — an OR would have
+     *  resting state. That is what lets a row which starts open be folded away: an OR would have
      *  let the resting state win every time, leaving the chevron toggling a value nothing reads.
      *
      *  The resting state itself is the renderer's to decide, through the two hooks it already has:
@@ -185,14 +185,14 @@ export abstract class ToolRenderer {
     /** Diff tools (Edit/Write/MultiEdit): body shows even while pending, the row
      *  click opens the file at the edit, the header gets the VS/error buttons.
      *
-     *  Same open/toggle rule as rowStandard, so "Collapse tool results" reaches the diff too — it
+     *  Same open/toggle rule as rowStandard, so "Collapse tool results" reaches the diff too: it
      *  is the tallest body in the transcript, and an option that folded everything except the
      *  thing taking the most room would not be worth turning on. The row click still opens the
      *  file: the chevron stops propagation, so the two never fight. */
     protected rowDiff(): TemplateResult {
         const fp = String(this.host.input.file_path ?? this.host.input.path ?? '');
         // diffBody(), not hasExpandableContent(): that one asks body(), which an Edit inherits from
-        // the base (the IN/OUT grid) and never renders — it would answer about a body that isn't there.
+        // the base (the IN/OUT grid) and never renders: it would answer about a body that isn't there.
         const body = this.diffBody();
         return this.chrome({
             body,
@@ -214,7 +214,7 @@ export abstract class ToolRenderer {
      *  to double as this switch by being set to 0.
      *
      *  No exception for failures: a closed row still shows its red dot and the error button that
-     *  opens the whole output in Visual Studio — more than the three-line preview would have — so
+     *  opens the whole output in Visual Studio (more than the three-line preview would have) so
      *  forcing it open would only mean the option quietly stops working on the turns that went
      *  wrong, which are the ones with the most rows to fold. */
     protected autoOpen(): boolean {
@@ -222,7 +222,7 @@ export abstract class ToolRenderer {
     }
 
     /** Whether this row starts collapsed, ignoring the preview auto-open setting.
-     *  Default: false — a tool row follows autoOpen (error/previews). A row that holds
+     *  Default: false; a tool row follows autoOpen (error/previews). A row that holds
      *  a lot (Agent: a whole sub-agent transcript) overrides this to start closed and
      *  keep its chevron visible at rest, so it clearly reads as expandable. */
     protected defaultCollapsed(): boolean {
@@ -241,7 +241,7 @@ export abstract class ToolRenderer {
     }): TemplateResult {
         // What clicking the ROW does: a custom onClick wins (Edit opens the file), otherwise a
         // chevron makes the whole row the toggle target (accordion-style). The chevron itself
-        // always toggles — see its handler — and stopPropagation()s so the two can't double-fire.
+        // always toggles (see its handler) and stopPropagation()s so the two can't double-fire.
         const rowClick = opts.onClick ?? (opts.chevron ? () => this.host.toggleExpanded() : null);
         const clickable = rowClick !== null;
         const elapsed = this.host.elapsedSec;
@@ -368,7 +368,7 @@ export abstract class ToolRenderer {
         >`;
     }
 
-    /** A path:line reference inside a markdown cell opens that file, not the cell's own temp doc —
+    /** A path:line reference inside a markdown cell opens that file, not the cell's own temp doc:
      *  the enclosing row listens for clicks too, so this has to stop the event from reaching it. */
     protected onMarkdownClick = (e: Event): void => {
         const a = (e.target as HTMLElement | null)?.closest('a.cv-file-link');
@@ -401,7 +401,7 @@ export abstract class ToolRenderer {
         }
         // Markdown cells hold prose (an Agent's prompt and its report), so they render as rich
         // text and in full: clipping a paragraph mid-sentence hides the answer, and the preview
-        // cap exists for tool output — logs, file dumps — where the first lines are enough.
+        // cap exists for tool output (logs, file dumps) where the first lines are enough.
         const cell = (t: string, clip: ClipMode, lang: string, extra = '') => {
             if (markdown) {
                 return html`<div class="cv-tool-body-md md" @click=${this.onMarkdownClick}>
@@ -528,8 +528,8 @@ export abstract class ToolRenderer {
             <span class="cv-diff-count-del">−${removed}</span>`;
     }
 
-    /** Everything in the header's action slot: the error button — an invariant of a failed row,
-     *  not something a renderer opts into — plus whatever the tool itself offers. Kept out of
+    /** Everything in the header's action slot: the error button (an invariant of a failed row,
+     *  not something a renderer opts into) plus whatever the tool itself offers. Kept out of
      *  renderHeaderActions() so a renderer that overrides it can't drop the error button by
      *  forgetting to call super: on a failed Agent, expanding used to swap the error away for
      *  copy/show-all exactly when the user went looking for what failed. */

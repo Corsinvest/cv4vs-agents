@@ -22,32 +22,32 @@ export interface QueuedMessage {
      *  simply did not say so, and the list could not tell a prompt with a screenshot from one
      *  without. */
     attachments?: Attachment[];
-    /** Entries sharing this leave as one message (Alt+Enter). They stay separate rows — each keeps
-     *  its own edit and remove — so the rule down their left is what says they travel together. */
+    /** Entries sharing this leave as one message (Alt+Enter). They stay separate rows (each keeps
+     *  its own edit and remove) so the rule down their left is what says they travel together. */
     groupId?: string;
 }
 
 /** A toolbar chip counting the messages waiting to be sent, and the list behind it. Stop drops the
  *  whole queue but stops the running turn with it, which is not what you want when it is one
- *  message you regret — so the bin in the list's head empties the queue on its own, and each item
+ *  message you regret, so the bin in the list's head empties the queue on its own, and each item
  *  takes itself out.
  *
  *  A bin on the row and words in the head, not two bins: they sit a few pixels apart and differ
  *  only in how much they take, so with the same glyph position would be the only thing telling
- *  them apart — and getting it wrong costs the whole queue rather than one message. A cross is
+ *  them apart, and getting it wrong costs the whole queue rather than one message. A cross is
  *  kept out of here entirely: the composer's editing bar uses one to CLOSE, and the same shape
  *  meaning "close" in one place and "delete" in another is the confusion this avoids. Both are
  *  red, being the way out of what they sit on.
  *
  *  Renders nothing when the queue is empty, so it costs no room the rest of the time. It was a
- *  full-width row above the composer, holding a single message's text inline — truncated to
+ *  full-width row above the composer, holding a single message's text inline, truncated to
  *  whatever the label and the buttons left over, where it could be neither read in full nor copied.
  *  With the list always answering that, the row had a label and a badge left on it, which is a chip.
  *
  *  The list itself is cv-popover-list, like the model, permission and command pickers: it owns the
  *  panel, its placement over the composer and the keyboard navigation, and takes the row content
- *  through renderRow. Row styles have to live in that component — renderRow's markup renders into
- *  its shadow — which is where .row-icon and the others already are, for the same reason. */
+ *  through renderRow. Row styles have to live in that component (renderRow's markup renders into
+ *  its shadow), which is where .row-icon and the others already are, for the same reason. */
 @customElement('cv-queue-chip')
 export class CvQueueChip extends LitElement {
     static override styles = [
@@ -59,7 +59,7 @@ export class CvQueueChip extends LitElement {
             :host {
                 display: inline-flex;
             }
-            /* Trigger is a <fluent-button> — keep it pure (layout only). Spaced from the toolbar
+            /* Trigger is a <fluent-button>: keep it pure (layout only). Spaced from the toolbar
                buttons either side by the same 4px cv-subagent-chip uses. */
             .chip {
                 display: inline-flex;
@@ -109,8 +109,8 @@ export class CvQueueChip extends LitElement {
     };
 
     override willUpdate(): void {
-        // An empty queue renders nothing at all, trigger included, so the list has to close itself
-        // — there would be no way left to dismiss it.
+        // An empty queue renders nothing at all, trigger included, so the list has to close itself:
+        // there would be no way left to dismiss it.
         if (this._open && this.messages.length === 0) {
             this._open = false;
         }
@@ -121,7 +121,7 @@ export class CvQueueChip extends LitElement {
     };
 
     /** What the user actually typed. The queued payload carries the `<ide_*>` block the composer
-     *  prepends, which the CLI needs and a reader does not — the same strip cv-message applies
+     *  prepends, which the CLI needs and a reader does not, the same strip cv-message applies
      *  before showing a user bubble. */
     private static _shown(text: string): string {
         return cleanMessageOnlyText(text);
@@ -136,7 +136,7 @@ export class CvQueueChip extends LitElement {
 
     /** What the message carries, as the chips the composer and the sent bubble already use.
      *  Not removable and not clickable: taking one attachment out of a queued message is not a
-     *  thing the queue can do — the bin drops the message whole — and opening it would put a
+     *  thing the queue can do (the bin drops the message whole) and opening it would put a
      *  lightbox over the list you are reading. */
     private static _renderFiles(files?: Attachment[]) {
         if (!files?.length) {
@@ -169,7 +169,7 @@ export class CvQueueChip extends LitElement {
         this._open = false;
     }
 
-    /** The item is the click target, so its buttons have to stop the event reaching it — pressing
+    /** The item is the click target, so its buttons have to stop the event reaching it: pressing
      *  remove would otherwise open the editor on the entry it is deleting. */
     private _onAction(e: Event, run: () => void): void {
         e.stopPropagation();
@@ -181,7 +181,7 @@ export class CvQueueChip extends LitElement {
     };
 
     /** Words, not the bin the rows carry: the two sit a few pixels apart and differ only in what
-     *  they take, so with the same glyph the only thing telling them apart would be position —
+     *  they take, so with the same glyph the only thing telling them apart would be position,
      *  and that mistake costs the whole queue instead of one message. Red inline rather than
      *  through a class: this renders into cv-popover-list's shadow, which a rule written here
      *  would not reach. */
@@ -235,18 +235,18 @@ export class CvQueueChip extends LitElement {
             ></cv-popover-list>`;
     }
 
-    /** One queued message. The row shell — click, hover, ↑/↓ — belongs to cv-popover-list; this is
+    /** One queued message. The row shell (click, hover, ↑/↓) belongs to cv-popover-list; this is
      *  the content, plus the two actions, which stop the click reaching that shell so removing an
      *  entry does not also open it for editing. */
     private _renderRow(m: QueuedMessage, selected: boolean) {
-        // .row-label and .row-trailing are cv-popover-list's own row classes — the ones every
+        // .row-label and .row-trailing are cv-popover-list's own row classes, the ones every
         // other caller's renderRow uses, and the reason this needs no styles of its own. The
         // ordinal that used to lead the row is gone with them: the entries are already in a list,
         // in order, and a column of numbers said what their position already did.
         //
         // The actions show on the active row only, which is the hover-reveal the rest of the chat
         // does with CSS: that needs a rule keyed off the row, and a rule written here would not
-        // reach markup rendering into cv-popover-list's shadow. `selected` is the same thing —
+        // reach markup rendering into cv-popover-list's shadow. `selected` is the same thing:
         // the list sets it on mouseenter as well as on arrow keys. visibility rather than display,
         // so the row does not resize as the pointer crosses it.
         const actions = `visibility: ${selected ? 'visible' : 'hidden'}`;

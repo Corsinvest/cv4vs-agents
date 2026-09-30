@@ -90,7 +90,7 @@ const DEFAULT_VERBS: readonly string[] = [
 ];
 
 /** Show the cycling verb next to the frame. Off: the animation already says "working", and a
- *  word that changes every few seconds draws the eye without telling anyone anything — the
+ *  word that changes every few seconds draws the eye without telling anyone anything; the
  *  elapsed time does that better. A known status (Compacting) still gets its label either way.
  *  The pool and its CLI config stay wired up: flip this back to true to have them again. */
 const SHOW_RANDOM_VERBS = false;
@@ -175,7 +175,7 @@ export class CvSpinner extends LitElement {
     `;
 
     /** Raw CLI work status (appState.status). Known values get a fixed label; anything else
-     *  (incl. "") leaves the frame to speak for itself — or falls back to the random verb
+     *  (incl. "") leaves the frame to speak for itself, or falls back to the random verb
      *  while SHOW_RANDOM_VERBS is on. */
     @property() status = '';
 
@@ -191,7 +191,7 @@ export class CvSpinner extends LitElement {
      *  estimate, and deliberately so: the real count only exists once a model call is finished
      *  (`message_delta`), which would leave the number frozen through the whole of a long answer.
      *  The CLI's own spinner does the same (`responseLengthRef.current / 4`). Lives here for the
-     *  same reason the elapsed seconds do — born with the turn, dead with it, no reset needed. */
+     *  same reason the elapsed seconds do: born with the turn, dead with it, no reset needed. */
     @state() private _answerChars = 0;
     /** Thinking tokens, which the API DOES report as it goes (`estimated_tokens` on some
      *  thinking_delta frames). Added to the estimate above: both are output the user is waiting on. */
@@ -260,7 +260,7 @@ export class CvSpinner extends LitElement {
     }
 
     private _scheduleNextVerb(): void {
-        // Nothing reads _verb while the flag is off — re-rolling it would be a timer per pane
+        // Nothing reads _verb while the flag is off, re-rolling it would be a timer per pane
         // waking up to change something invisible.
         if (!SHOW_RANDOM_VERBS) {
             return;
@@ -280,7 +280,7 @@ export class CvSpinner extends LitElement {
         const label = CvSpinner.STATUS_LABELS[this.status] || (SHOW_RANDOM_VERBS ? this._verb : '');
         // ~4 chars per token, the ratio the CLI's own spinner uses. An estimate: the exact figure
         // arrives only when a model call ends, and waiting for it would leave this frozen for the
-        // whole of a long answer — the one moment it has something to say.
+        // whole of a long answer, the one moment it has something to say.
         const estimated = Math.round(this._answerChars / 4) + this._thinkingTokens;
         // After the seconds: the time is what the eye checks first, and this only starts moving
         // once the model writes. `↓` for output, like the end-of-turn row and the CLI.

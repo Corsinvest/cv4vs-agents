@@ -18,7 +18,7 @@ internal sealed class ActivateOutputArgs
     public string Pane { get; set; }
 }
 
-/// <summary>MCP tool: bring a VS Output window pane to the foreground so the user sees it —
+/// <summary>MCP tool: bring a VS Output window pane to the foreground so the user sees it,
 /// e.g. at a debug checkpoint, to show the build/debug output before asking for confirmation.</summary>
 internal sealed class ActivateOutputTool : McpTool<ActivateOutputArgs>
 {
