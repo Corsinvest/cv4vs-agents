@@ -15,7 +15,7 @@
 drive the IDE itself: build the solution, read the errors, step the debugger, follow references
 through the symbol graph, run the tests.
 
-**80+ MCP tools**, in process — so the agent reads the live state Visual Studio already
+**80+ MCP tools**, in process, so the agent reads the live state Visual Studio already
 holds, not the files on disk.
 
 Visual Studio **2022 and 2026**. Free, GPL-3.0.
@@ -28,18 +28,18 @@ Visual Studio **2022 and 2026**. Free, GPL-3.0.
 |---|---|
 | **Build** | build and rebuild, with the errors handed straight back |
 | **Diagnostics** | errors and warnings from the live language service, including the ones an edit just introduced |
-| **Debugger** | breakpoints, stepping, locals, call stack — and it offers to look when you stop on an exception |
-| **Tests** | the Test Explorer's own tests: list, run, read the failures with their message and stack — and run them under the debugger |
+| **Debugger** | breakpoints, stepping, locals, call stack, and it offers to look when you stop on an exception |
+| **Tests** | the Test Explorer's own tests: list, run, read the failures with their message and stack, and run them under the debugger |
 | **Navigation** | go to definition, find references, symbol search |
 | **Editor** | active document, selection, open files |
 | **Solution** | projects, structure, references |
 
 The chat panel and the diff viewer are the easy part. Compiler diagnostics are not: they live in a
 structured model behind the Error List, not as text in a buffer. Reaching them means going through
-Visual Studio's own APIs — which is what these tools do, via Roslyn's per-document language
+Visual Studio's own APIs, which is what these tools do, via Roslyn's per-document language
 services and `EnvDTE` rather than a C#-only path, so they keep working in C++, F# and TypeScript.
 
-And it offers before you ask. Stop on an exception and a bar appears over that file — one press asks
+And it offers before you ask. Stop on an exception and a bar appears over that file: one press asks
 about the break, and the answer comes from the live call stack and locals rather than a guess at the
 source. Breakpoints are opt-in (you placed it, you know why you are there) and stepping never asks.
 
@@ -47,7 +47,7 @@ source. Breakpoints are opt-in (you placed it, you know why you are there) and s
 
 ## Before you start
 
-This extension needs the **Claude Code CLI** installed separately — it drives it, and cannot work
+This extension needs the **Claude Code CLI** installed separately: it drives it, and cannot work
 without it:
 
 ```powershell
@@ -59,7 +59,7 @@ Other platforms and methods are in Anthropic's
 [setup guide](https://docs.claude.com/en/docs/claude-code/setup). If it is missing, the pane says so
 and links you there instead of failing silently.
 
-Then open **View → cv4vs Agents → Claude**. The IDE tools are wired up automatically — nothing to
+Then open **View → cv4vs Agents → Claude**. The IDE tools are wired up automatically: nothing to
 configure, no API key, no separate billing: it drives your own `claude.exe`, with whatever account
 you are already signed in with.
 
@@ -72,25 +72,25 @@ by feature detection rather than by pinning a version.
 
 <img src="https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat.png" alt="The chat pane docked in Visual Studio" width="420">&nbsp;&nbsp;<img src="https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/cli.png" alt="The CLI pane running the same session" width="420">
 
-**Chat** — streaming replies, thinking blocks, collapsible tool output, inline diffs, clickable file
+**Chat**: streaming replies, thinking blocks, collapsible tool output, inline diffs, clickable file
 references (`ClientEvents.cs:208` opens the file at that line), image attachments, and a composer with
 slash commands, an `@` file picker and prompt history. Any reply can be read aloud.
 
 Under the message box, a row for the turn itself: **thinking**, **model and effort** and
 **permission mode**, each a click away. Which model is answering, and what it may do without asking,
-are the two things that change a turn the most — they belong in sight, not three levels down a menu.
+are the two things that change a turn the most: they belong in sight, not three levels down a menu.
 
-**View mode** decides how much of what Claude *did* — the commands, file reads and edits, searches,
-MCP calls and sub-agents — the transcript shows: all of it, each run folded into one row that opens
+**View mode** decides how much of what Claude *did* (the commands, file reads and edits, searches,
+MCP calls and sub-agents) the transcript shows: all of it, each run folded into one row that opens
 in place, or none of it, leaving the conversation. What you took part in stays in every mode:
 answers to questions, plan decisions, the task list, anything waiting on your approval. And a plan
 too long for the banner's small box opens in the editor as a normal document, where you can edit it
-before approving — the banner sends what you wrote.
+before approving: the banner sends what you wrote.
 
-**CLI** — the real `claude.exe` in an embedded terminal, connected to the IDE over the same channel
+**CLI**: the real `claude.exe` in an embedded terminal, connected to the IDE over the same channel
 the official VS Code extension uses.
 
-Both read the same session store, so a conversation started in one opens in the other — or in VS
+Both read the same session store, so a conversation started in one opens in the other, or in VS
 Code. Not one *or* the other: both, on the same conversation. Panes can run on different working
 directories at the same time.
 
@@ -100,11 +100,11 @@ directories at the same time.
 
 Every place that shows code or a failure has a **cv4vs Agents** submenu:
 
-- **Code editor** — Explain, Review, Find bugs, Write tests, Simplify; the file and selection travel
+- **Code editor**: Explain, Review, Find bugs, Write tests, Simplify; the file and selection travel
   with the prompt.
-- **Error List** — Explain and Fix the rows you selected.
-- **Output window** — Explain your selection, or the tail of the pane when you selected nothing.
-- **Solution Explorer** and a **document's tab** — files, folders and projects, several at once.
+- **Error List**: Explain and Fix the rows you selected.
+- **Output window**: Explain your selection, or the tail of the pane when you selected nothing.
+- **Solution Explorer** and a **document's tab**: files, folders and projects, several at once.
 
 Each menu ends with **Add to chat**: it puts a reference (`@src/Foo.cs#L12-18`) or the text itself
 in the composer **without sending**, so you gather pieces from several files and windows, then ask
@@ -114,7 +114,7 @@ once. The prompts are yours to edit in **Options → Prompts**, one tab per menu
 
 ## Built for long sessions
 
-Nothing is built, read or started until you look at it. The chat holds **nothing in memory** — the
+Nothing is built, read or started until you look at it. The chat holds **nothing in memory**: the
 transcript is read from the session file on demand, newest page first, older pages as you scroll,
 and heavy blocks (images, sub-agent transcripts, full diffs) only when you open them. Services, the
 MCP server and the panes themselves start on first use, not on solution load.
@@ -122,7 +122,7 @@ MCP server and the panes themselves start on first use, not on solution load.
 A long session opens as quickly as an empty one.
 
 Walk away from a long turn and come back to it finished: while a chat is working, **Windows is kept
-from going to sleep** — the screen still turns off on its own timer, and everything goes back to
+from going to sleep**: the screen still turns off on its own timer, and everything goes back to
 normal the moment the reply ends. Messages written while Claude is still answering **wait in a
 queue** and go out when the turn ends; you can edit, remove or merge them before they do.
 
@@ -133,7 +133,7 @@ queue** and go out when the turn ends; you can edit, remove or merge them before
 ![Statistics document-tab](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/statistics-document.png)
 
 A live gauge in the composer shows how full the context window is, and a small clock beside it warns
-when the **prompt cache** is about to expire — after a break the next message can cost up to ten
+when the **prompt cache** is about to expire: after a break the next message can cost up to ten
 times more, and the warning comes while there is still time to send. A full-window **Statistics**
 tab aggregates token usage and cost from your local session files: a navigable tree (All → Profile →
 Folder → Project → Days/Sessions) drives summary tiles, a GitHub-style activity heatmap and
@@ -148,7 +148,7 @@ when each resets.
 
 ![File history document-tab](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/file-history-document.png)
 
-Before overwriting a file, Claude Code copies it — and nothing ever prunes those copies: they outlive
+Before overwriting a file, Claude Code copies it, and nothing ever prunes those copies: they outlive
 the session and the transcript alike, quietly reaching tens of megabytes. The **File history** tab
 shows what they cost per project and per session, diffs any backup against the file as it is now, and
 deletes the ones you no longer want, orphans included. Your project files are never touched.
@@ -166,7 +166,7 @@ their own panel: how many are alive, what each one is doing right now, how long 
 and a **Stop** button next to every one of them. Their tool calls stay grouped under the agent that
 made them.
 
-A **plugin manager** covers the rest of the CLI's ecosystem — Installed, Available and Marketplaces
+A **plugin manager** covers the rest of the CLI's ecosystem: Installed, Available and Marketplaces
 tabs: install, enable or disable, update to the latest version, add a marketplace, without leaving
 the IDE.
 
@@ -177,7 +177,7 @@ the IDE.
 ![The Remote Control card and its toolbar indicator](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat/remote-control.png)
 
 `/remote-control` opens a running session to **claude.ai/code and the Claude mobile app**. Claude
-keeps running here, on your machine, with your solution and your IDE tools — the phone is a window
+keeps running here, on your machine, with your solution and your IDE tools: the phone is a window
 onto it, not a copy.
 
 The session link lands in the conversation with a **QR code**: scan it and the turn you started at
@@ -192,8 +192,8 @@ it on its own.
 ![Options → Profiles](https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/options-profiles.png)
 
 Each pane can run against a different configuration: working directory, model, permission mode and
-environment. That includes any **Anthropic-compatible endpoint** — native Claude, GLM/z.ai, or your
-own host — so one pane can run on a different provider while another stays on your usual account,
+environment. That includes any **Anthropic-compatible endpoint**: native Claude, GLM/z.ai, or your
+own host, so one pane can run on a different provider while another stays on your usual account,
 and your global settings are never touched. The IDE tools work the same either way.
 
 ---
@@ -206,9 +206,9 @@ The things people keep asking for, and where they are:
 |---|---|
 | Native diff review inside VS, not a terminal text stream | inline in the chat, click to open the file at the line |
 | Build errors passed to Claude automatically | the build tools return them as file/line/message |
-| A dockable chat panel, not a detached terminal | a real tool window — and a CLI pane too, if you want both |
-| Breakpoint and debug state visible to Claude | the debugger tools: breakpoints, stepping, locals, call stack — and a bar over the file when you stop on an exception, one press from asking about it |
-| Crash dumps, profiling, VS diagnostic tools | not yet — [open an issue](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feature_request.yml) if you need it |
+| A dockable chat panel, not a detached terminal | a real tool window, and a CLI pane too, if you want both |
+| Breakpoint and debug state visible to Claude | the debugger tools: breakpoints, stepping, locals, call stack, and a bar over the file when you stop on an exception, one press from asking about it |
+| Crash dumps, profiling, VS diagnostic tools | not yet, [open an issue](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feature_request.yml) if you need it |
 | Works with a Max subscription | it drives your own `claude.exe`, so whatever you are signed in with |
 | **Visual Studio 2022** | supported, not just 2026 |
 
@@ -220,7 +220,7 @@ The things people keep asking for, and where they are:
 
 | | |
 |---|---|
-| **Visual Studio** | 2022 or 2026 (17.0+) — Community, Professional or Enterprise |
+| **Visual Studio** | 2022 or 2026 (17.0+): Community, Professional or Enterprise |
 | **Claude Code CLI** | installed separately, see above |
 
 ---
@@ -235,7 +235,7 @@ Full documentation, including MCP tools, options, sub-agents and architecture, i
 - [Release notes](https://github.com/Corsinvest/cv4vs-agents/releases)
 
 Problems in `claude.exe` itself belong to
-[the CLI's own tracker](https://github.com/anthropics/claude-code/issues) — this extension drives
+[the CLI's own tracker](https://github.com/anthropics/claude-code/issues); this extension drives
 the CLI, it does not ship it.
 
 ---
@@ -244,7 +244,7 @@ the CLI, it does not ship it.
 
 Artwork by [filocorsa](https://github.com/filocorsa).
 
-GPL-3.0-only — Copyright Corsinvest Srl. Made in Italy 🇮🇹
+GPL-3.0-only, Copyright Corsinvest Srl. Made in Italy 🇮🇹
 
 **Claude** and **Claude Code** are trademarks of Anthropic, PBC. **Visual Studio** is a trademark of
 Microsoft Corporation. This is an independent extension by Corsinvest Srl, not affiliated with or

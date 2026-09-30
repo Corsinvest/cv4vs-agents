@@ -8,7 +8,7 @@ description: Build, compile and drive cv4vs-agents, the Visual Studio 2022 (VSIX
 A **Visual Studio 2022** extension (VSIX, C#/.NET Framework 4.8) that brings the Claude Code
 CLI inside the IDE. The real UI (the Chat/CLI tool windows) lives inside a VS instance and is
 **not headless-launchable**: only a human can open the experimental VS (`devenv /rootsuffix Exp`)
-and see it. What you *can* drive from the command line — and what most changes actually touch —
+and see it. What you *can* drive from the command line (and what most changes actually touch)
 are three surfaces:
 
 1. **WebView** (TypeScript + Lit, in `Chat/WebViewSrc/`) → typecheck + esbuild bundle.
@@ -30,9 +30,9 @@ The `driver.mjs` wraps all three. **Paths here are relative to the repo root.**
 - **claude.exe** installed via npm, at `%APPDATA%\npm\node_modules\@anthropic-ai\claude-code\bin\claude.exe`.
   Check: `which claude`.
 
-No `apt-get`: this is Windows — dependencies are Windows installers + npm.
+No `apt-get`: this is Windows, so dependencies are Windows installers + npm.
 
-## Run (agent path) — the driver
+## Run (agent path): the driver
 
 ```bash
 # Everything in sequence: WebView + VSIX + probe init
@@ -48,7 +48,7 @@ node .claude/skills/cv4vs-run/driver.mjs probe get_settings   # any control_requ
 Expected output:
 - `webview` → `✓ dist/bundle.js produced` (bundle ~1.6mb).
 - `vsix` → `Errors: 0` + `✓ VSIX produced: …\bin\Debug\Corsinvest.VisualStudio.Agents.vsix`.
-- `probe init` → the `system/init` JSON (model, tools, slash_commands…) — the same payload
+- `probe init` → the `system/init` JSON (model, tools, slash_commands…): the same payload
   `ClaudeClient` parses when the chat starts.
 
 The driver auto-detects MSBuild via `vswhere`; override with env `MSBUILD=<path>` if needed.
@@ -71,10 +71,10 @@ See `tools/cli-probe/README.md` for all subtypes and env vars (`CLAUDE_CLI`, `PR
 
 ```bash
 cd src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc
-npm run dev        # esbuild --watch — rebuilds dist/bundle.js on every save
+npm run dev        # esbuild --watch: rebuilds dist/bundle.js on every save
 ```
 
-## Run (human path) — the extension inside VS
+## Run (human path): the extension inside VS
 
 Actually seeing the tool windows needs human hands (not automatable in this container):
 
@@ -100,7 +100,7 @@ Headless this is useless: no window, no screenshot.
   `npm run build`). Do not edit it by hand: it gets overwritten. The `build` prints the count
   (e.g. `21 fromWebView + 30 toWebView = 51 messages`).
 - **Many VSTHRD warnings in the VSIX build** (vs-threading analyzers, ~100): they're known and
-  harmless — `Errors: 0` is the line that matters. The driver uses `-clp:ErrorsOnly;Summary` to
+  harmless: `Errors: 0` is the line that matters. The driver uses `-clp:ErrorsOnly;Summary` to
   keep them from drowning the output.
 
 ## Troubleshooting

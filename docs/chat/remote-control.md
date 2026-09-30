@@ -2,9 +2,9 @@
 
 Remote Control lets you drive a running chat session from `claude.ai/code` or the Claude mobile
 app. The session itself keeps running on your machine, in this pane, talking to your solution and
-your MCP tools — the web page and the phone are just a window onto it, not a copy of it.
+your MCP tools; the web page and the phone are just a window onto it, not a copy of it.
 
-What you type there shows up here too, as your own message, followed by the answer — the pane
+What you type there shows up here too, as your own message, followed by the answer; the pane
 keeps the whole conversation whichever side it was typed on.
 
 ## Turning it on
@@ -17,14 +17,14 @@ in flight the toggle is briefly disabled, so a second click can't race the first
 ## Start it in every new session
 
 `/` menu → **Enable Remote Control for all sessions** writes `remoteControlAtStartup` into the
-profile's `settings.json` — the same setting `/config remoteControl=true` sets in a terminal, and the
+profile's `settings.json`, the same setting `/config remoteControl=true` sets in a terminal, and the
 one the VS Code extension's toggle writes. From then on every **new** chat of that profile starts
 Remote Control by itself. Chats already open keep their own toggle: turning the setting on or off
 never connects or disconnects them.
 
 It only acts on your explicit choice, and the CLI has the last word: a project whose
 `.claude/settings.json` sets it to `false` keeps it off there, and an organization policy can lock
-it — the switch then refuses to turn on and says why. If `settings.json` can't be read (not valid
+it: the switch then refuses to turn on and says why. If `settings.json` can't be read (not valid
 JSON), the switch says so and leaves the file alone.
 
 ## The link and the QR code
@@ -34,7 +34,7 @@ code beside it:
 
 ![The session card and the toolbar indicator](../images/chat/remote-control.png)
 
-The QR is the part that matters. On this machine the link is redundant — the session is already on
+The QR is the part that matters. On this machine the link is redundant: the session is already on
 screen; what you need is a way to reach it from the phone you are about to pick up, and scanning
 beats copying a URL. The link is there too, and opens in your default browser: the WebView never
 navigates there itself.
@@ -51,25 +51,25 @@ chip. It is the answer to "is this session still open to the outside?" without s
 Clicking it opens a two-item menu: **Show link and QR code** posts the card again, further down the
 conversation, and **Turn off Remote Control** tears the bridge down.
 
-If the CLI can't establish the bridge — no login, a disabled feature flag, a stale CLI — that
+If the CLI can't establish the bridge (no login, a disabled feature flag, a stale CLI) that
 surfaces as a dismissible error notice at the top of the chat instead, with the CLI's own reason
 behind a short prefix.
 
 ## It dies with the pane
 
 Remote Control lives inside the `claude.exe` process the pane is driving. Anything that restarts
-that process — closing the pane, reloading a session from history, changing the working directory,
-forking — ends the remote session along with it, and the indicator goes with it. This isn't a
+that process (closing the pane, reloading a session from history, changing the working directory,
+forking) ends the remote session along with it, and the indicator goes with it. This isn't a
 choice this extension makes; it's how the CLI's control protocol works, and every pane in this
 extension already respawns the process for those same actions.
 
 Resuming a session does **not** bring Remote Control back by itself: in the stream-json mode this
 pane uses, the bridge only ever starts from an explicit request. Turn it on again, or switch on
-**Enable Remote Control for all sessions** above — then every process the pane starts, a resumed
+**Enable Remote Control for all sessions** above, then every process the pane starts, a resumed
 session included, asks for it.
 
 A short network drop is not a disconnection. The bridge polls outwards and retries quietly, and the
-CLI reports nothing while it does — the indicator stays on, which is what the connection is
+CLI reports nothing while it does; the indicator stays on, which is what the connection is
 actually doing.
 
 ## Requirements
@@ -77,15 +77,15 @@ actually doing.
 Remote Control depends on things outside this extension, and when it fails, the cause is almost
 always one of these:
 
-- You need to be logged in to claude.ai (`/login`) — an API key alone isn't enough.
+- You need to be logged in to claude.ai (`/login`); an API key alone isn't enough.
 - It isn't available on Amazon Bedrock, Google Vertex AI, or Microsoft Foundry, and not with a
-  custom `ANTHROPIC_BASE_URL` — Remote Control assumes the standard Anthropic API.
+  custom `ANTHROPIC_BASE_URL`: Remote Control assumes the standard Anthropic API.
 - On Team and Enterprise plans, an Owner has to turn Remote Control on in the organization's admin
   settings before anyone on the plan can use it.
 - `DISABLE_TELEMETRY`, `DO_NOT_TRACK`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` or
   `DISABLE_GROWTHBOOK` all disable the feature-flag check Remote Control relies on to know it's
   available, so any of them set will keep it off.
 
-For the full picture of the underlying feature — what the web and mobile side look like, how the
-session syncs — see the upstream docs at
+For the full picture of the underlying feature (what the web and mobile side look like, how the
+session syncs), see the upstream docs at
 [code.claude.com/docs/en/remote-control](https://code.claude.com/docs/en/remote-control).

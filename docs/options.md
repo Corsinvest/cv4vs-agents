@@ -4,7 +4,7 @@ All settings live under **Tools → Options → cv4vs Agents**, split into five 
 **Chat**, **Debug**, **Prompts** and **Profiles**.
 
 Visual Studio persists them in its own settings store; profiles, per-solution state and caches
-go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
+go to `%LOCALAPPDATA%`; see [Settings and data](settings-and-data.md).
 
 ## General
 
@@ -14,9 +14,9 @@ go to `%LOCALAPPDATA%` — see [Settings and data](settings-and-data.md).
 | Offer to ask when the debugger pauses | `Never` / `Exceptions only` / `Exceptions and breakpoints` | `Exceptions only` | Show an InfoBar over the file the debugger stopped in, with an "Ask cv4vs Agents" button that asks a chat pane about the break. See [Asking about a break](#asking-about-a-break). |
 | Default new session | `Chat` / `CLI` | `Chat` | Which kind the "New" button creates by default (the dropdown still lets you pick the other). |
 | Prevent the machine from sleeping while a session is running | bool | `true` | Keep Windows awake while a chat pane is working, so a turn is not suspended half-way through and left hung. The display still sleeps on its own timer, and an idle pane holds nothing. A CLI pane never holds: a terminal has no notion of a turn. See [Keeping the machine awake](power.md). |
-| Claude executable path | file path | *(empty)* | Override auto-detection with a specific `claude.exe` (browse with `…`). Empty = auto-detect via PATH / native installer / npm. Must be the real `.exe` — `.cmd`/`.bat`/`.ps1` shims can't be launched. |
-| Show plan usage in the status bar | bool | `true` | The Claude plan's session (5h) and weekly (7d) usage in Visual Studio's status bar, for the profile of the pane you last used; click it for every limit and when each resets. Shown only while a pane is open — with none there is nothing being spent. See [Usage → Status bar](usage.md#status-bar). |
-| Status bar usage refresh (minutes) | int | `15` | How often the status bar refreshes usage when the open pane's own process cannot answer — one that has not run a turn yet — by starting a short-lived `claude.exe`, only while Visual Studio is in front. `0` = never in the background; a pane that has run a turn, and opening the popup, still refresh it. |
+| Claude executable path | file path | *(empty)* | Override auto-detection with a specific `claude.exe` (browse with `…`). Empty = auto-detect via PATH / native installer / npm. Must be the real `.exe`: `.cmd`/`.bat`/`.ps1` shims can't be launched. |
+| Show plan usage in the status bar | bool | `true` | The Claude plan's session (5h) and weekly (7d) usage in Visual Studio's status bar, for the profile of the pane you last used; click it for every limit and when each resets. Shown only while a pane is open: with none there is nothing being spent. See [Usage → Status bar](usage.md#status-bar). |
+| Status bar usage refresh (minutes) | int | `15` | How often the status bar refreshes usage when the open pane's own process cannot answer (one that has not run a turn yet) by starting a short-lived `claude.exe`, only while Visual Studio is in front. `0` = never in the background; a pane that has run a turn, and opening the popup, still refresh it. |
 
 ### Asking about a break
 
@@ -28,8 +28,8 @@ Pressing the button activates the last chat pane you used and asks it about the 
 sent until you press it, and the bar goes away on its own when execution resumes.
 
 The message names neither the file nor the exception type. Both are right there, but the debug
-[MCP tools](mcp-tools.md#debug) read them live and read more besides — the call stack, the locals,
-any expression — so naming a type up front would only anchor the answer on the outermost exception
+[MCP tools](mcp-tools.md#debug) read them live and read more besides: the call stack, the locals,
+any expression, so naming a type up front would only anchor the answer on the outermost exception
 when the cause is usually an `InnerException` two levels down. What the message does say is to
 leave the debugger where it is: those same tools can step and continue, and you are standing in
 that break looking at it.
@@ -38,7 +38,7 @@ Which pauses are worth an offer differs by kind, which is why the setting has th
 than a checkbox:
 
 - **Exceptions** are a surprise, and the default.
-- **Breakpoints** are not — you placed it and know why you are there — so they are opt-in.
+- **Breakpoints** are not (you placed it and know why you are there), so they are opt-in.
 - **Steps** never raise a bar at any setting: one per F10 is noise.
 
 A break landing where the previous one did is skipped too, so a breakpoint inside a loop raises one
@@ -53,13 +53,13 @@ bar rather than one per iteration.
 | Select lines when opening file | bool | `true` | When opening a file from a tool row, select the relevant lines in the editor. |
 | Preview lines | int | `3` | Lines shown in preview areas (tool output, user messages) before a body is clipped. `0` shows an open row whole, however long it is. |
 | Collapse tool results | bool | `false` | Start every tool row closed, so a long session reads as what Claude did rather than how it got there. The chevron opens one when you want it; a failed row still shows its dot and the button that opens the full output. |
-| View mode | enum | `Full` | How much of Claude's work the chat shows. **Full**: every row. **Focus**: each run of tool calls and thinking between two replies folds into one row — `5 tool calls · 1 failed`, or `Running Bash…` while it works — that opens in place. **HideToolCalls**: the tool rows are removed. In every mode your answers to questions, plan decisions, the task list and a call waiting for your approval stay. The **View mode** entry in the chat's `/` menu switches it for every open chat, keeping each row as it was — open or closed, older history kept. Changed here instead, it reloads each idle chat like any other setting on this page. |
+| View mode | enum | `Full` | How much of Claude's work the chat shows. **Full**: every row. **Focus**: each run of tool calls and thinking between two replies folds into one row (`5 tool calls · 1 failed`, or `Running Bash…` while it works) that opens in place. **HideToolCalls**: the tool rows are removed. In every mode your answers to questions, plan decisions, the task list and a call waiting for your approval stay. The **View mode** entry in the chat's `/` menu switches it for every open chat, keeping each row as it was: open or closed, older history kept. Changed here instead, it reloads each idle chat like any other setting on this page. |
 | Chat font size | int (px) | `13` | Font size of the chat message text. |
-| Show WebView developer entries | bool | `false` | Add "WebView DevTools" and "WebView task manager" to the chat toolbar's "More" (…) menu — the browser console/DOM/network on the chat itself, and the browser's processes with their memory and CPU. Pre-release builds always offer both. |
+| Show WebView developer entries | bool | `false` | Add "WebView DevTools" and "WebView task manager" to the chat toolbar's "More" (…) menu: the browser console/DOM/network on the chat itself, and the browser's processes with their memory and CPU. Pre-release builds always offer both. |
 | Autosave before Claude reads/writes | bool | `true` | Save a dirty file before Claude reads/writes it, so it sees your in-editor edits, not the stale on-disk version. |
-| Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them — the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](chat/context-and-usage.md#spending-less-context). |
-| Keep file checkpoints (Rewind) | bool | `true` | Let Claude copy a file before editing it, so [`/rewind`](chat/rewind.md) can restore it. Copies live under `~/.claude/file-history` and are never cleaned up — the reason to turn this off if you do not use Rewind. Read when a chat starts, so it applies to the next one you open. |
-| Send post-edit diagnostics to Claude (experimental) | bool | `false` | Feed back the new errors/warnings an edit introduced. Experimental — unreliable because VS only analyses files open in an editor (see IDE integration). |
+| Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them: the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](chat/context-and-usage.md#spending-less-context). |
+| Keep file checkpoints (Rewind) | bool | `true` | Let Claude copy a file before editing it, so [`/rewind`](chat/rewind.md) can restore it. Copies live under `~/.claude/file-history` and are never cleaned up, the reason to turn this off if you do not use Rewind. Read when a chat starts, so it applies to the next one you open. |
+| Send post-edit diagnostics to Claude (experimental) | bool | `false` | Feed back the new errors/warnings an edit introduced. Experimental: unreliable because VS only analyses files open in an editor (see IDE integration). |
 | Allowed upload file extensions | string[] | 93 defaults | Extensions accepted on upload/drop. Images → images, `.pdf` → document, rest → text; anything else rejected. Editable list. |
 | Sticky user messages | bool | `true` | Pin the current exchange's user message at the top while the reply/tool rows scroll below. |
 | Show tool errors inline | bool | `false` | Show the tool error inline below the diff/output; off = alert icon only (click to open in VS). |
@@ -67,10 +67,10 @@ bar rather than one per iteration.
 | Use Ctrl+Enter to send | bool | `false` | On: Ctrl+Enter sends, Enter = newline. Off: Enter sends, Shift+Enter = newline. |
 | Spell check in the composer | bool | `false` | Underline misspelled words while you type. Off by default: code names, paths, `@` mentions and `/` commands are what the composer mostly holds, and the spell checker flags all of them. The underline marks the word; correcting it is up to you. |
 | Initial permission mode | `Default` / `AcceptEdits` / `Plan` | `Default` | Mode every new chat starts in (changeable per-session from the toolbar). `Default` = ask before edits. |
-| Allow dangerously skip permissions | bool | `false` | Enables the toolbar's "Bypass permissions" (never asks — even for dangerous commands). |
-| Respect `.gitignore` | bool | `true` | Also hide from the `@` picker what the workspace's `.gitignore` files (at every level inside it, none above it) and git's global excludes (`core.excludesFile`) match — inside a git repository or not. Off: only the Ignored patterns below apply. |
-| Ignored patterns | file path | shipped defaults | Extra rules hiding files from the `@` picker, written as a `.gitignore` and kept as one — the row shows where the file is and `…` opens it in the editor. Applied only where the workspace's own ignore rules say nothing, so they are the fallback for a project that ships none. The picker lists the whole workspace, with no limit on the number of files: the list is read when the `@` menu opens and filtered as you type. |
-| Extra linkable extensions | string[] | *(empty)* | Extensions to also linkify when Claude names a file **in prose** (`render.wgsl:20`), on top of the ~270 built-in ones — needed only for a language not shipped yet. A markdown link written by the model is always linked, whatever its extension. One per line, without the dot. See [Clickable file references](file-links.md). |
+| Allow dangerously skip permissions | bool | `false` | Enables the toolbar's "Bypass permissions" (never asks, even for dangerous commands). |
+| Respect `.gitignore` | bool | `true` | Also hide from the `@` picker what the workspace's `.gitignore` files (at every level inside it, none above it) and git's global excludes (`core.excludesFile`) match, inside a git repository or not. Off: only the Ignored patterns below apply. |
+| Ignored patterns | file path | shipped defaults | Extra rules hiding files from the `@` picker, written as a `.gitignore` and kept as one: the row shows where the file is and `…` opens it in the editor. Applied only where the workspace's own ignore rules say nothing, so they are the fallback for a project that ships none. The picker lists the whole workspace, with no limit on the number of files: the list is read when the `@` menu opens and filtered as you type. |
+| Extra linkable extensions | string[] | *(empty)* | Extensions to also linkify when Claude names a file **in prose** (`render.wgsl:20`), on top of the ~270 built-in ones, needed only for a language not shipped yet. A markdown link written by the model is always linked, whatever its extension. One per line, without the dot. See [Clickable file references](file-links.md). |
 
 ## Debug
 
@@ -88,7 +88,7 @@ Not a settings table but an editor: each profile is a named set of environment v
 ![Profiles page](images/options-profiles.png)
 
 Profiles are listed on the left (the checkbox enables one), and edited on the right: a name, an
-optional description, and the environment grid — pre-filled with the keys you are most likely to
+optional description, and the environment grid, pre-filled with the keys you are most likely to
 need, so a new profile is usually just a matter of pasting two values. **Available environment
 variables** links to Anthropic's reference for everything else the CLI understands.
 
@@ -96,19 +96,19 @@ Enabled profiles appear under **View → cv4vs Agents**, and the active one is s
 caption and toolbar.
 
 Unlike the other three pages, profiles are **not** stored in the VS settings store: they live in
-`profiles.json` so the menu can list them without opening the Options page first — see
+`profiles.json` so the menu can list them without opening the Options page first; see
 [Settings and data](settings-and-data.md).
 
 ### Paste from JSON
 
 The editor's **Paste from JSON** button fills the env grid from the clipboard, so you can lift a
-provider's snippet straight from its docs. It accepts either a full settings block —
-`{ "env": { "ANTHROPIC_BASE_URL": "…", "ANTHROPIC_AUTH_TOKEN": "…" } }` — or a plain key/value map
+provider's snippet straight from its docs. It accepts either a full settings block:
+`{ "env": { "ANTHROPIC_BASE_URL": "…", "ANTHROPIC_AUTH_TOKEN": "…" } }`, or a plain key/value map
 `{ "ANTHROPIC_BASE_URL": "…", … }`; the `env` object is used when present, otherwise the whole
 object.
 
 Profiles are not the only way: the CLI reads these variables from the process environment like any
-shell would, so setting them **at the OS level** works too. Profiles are usually preferable — one
+shell would, so setting them **at the OS level** works too. Profiles are usually preferable: one
 pane per provider, switchable without touching your system environment.
 
 > **Heads-up:** pointing `ANTHROPIC_BASE_URL` at a custom host can disable the IDE MCP tools. That
@@ -116,18 +116,18 @@ pane per provider, switchable without touching your system environment.
 
 ### Provider setup guides
 
-- [z.ai / GLM](https://docs.z.ai/devpack/tool/claude) — GLM, Kimi, DeepSeek, Qwen, MiniMax
-- [Qwen](https://qwenlm.github.io/qwen-code-docs/en/users/configuration/model-providers/) — DashScope Anthropic API
-- [MiniMax](https://www.minimaxi.com/) — Anthropic-compatible models
-- [DeepSeek](https://api-docs.deepseek.com/guides/anthropic_api/) — direct Anthropic API compatibility
-- [OpenRouter](https://openrouter.ai/blog/tutorials/claude-code-openrouter/) — multi-provider gateway
-- [Ollama](https://docs.ollama.com/api/anthropic-compatibility) — local open-source models
-- [Complete alternative models guide](https://github.com/Alorse/cc-compatible-models) — comprehensive provider list
+- [z.ai / GLM](https://docs.z.ai/devpack/tool/claude): GLM, Kimi, DeepSeek, Qwen, MiniMax
+- [Qwen](https://qwenlm.github.io/qwen-code-docs/en/users/configuration/model-providers/): DashScope Anthropic API
+- [MiniMax](https://www.minimaxi.com/): Anthropic-compatible models
+- [DeepSeek](https://api-docs.deepseek.com/guides/anthropic_api/): direct Anthropic API compatibility
+- [OpenRouter](https://openrouter.ai/blog/tutorials/claude-code-openrouter/): multi-provider gateway
+- [Ollama](https://docs.ollama.com/api/anthropic-compatibility): local open-source models
+- [Complete alternative models guide](https://github.com/Alorse/cc-compatible-models): comprehensive provider list
 
 ## Prompts
 
 Not a settings table but an editor: the entries offered under **cv4vs Agents** when you
-right-click code, the Error List or the Output window — one tab per menu. Picking one writes it
+right-click code, the Error List or the Output window: one tab per menu. Picking one writes it
 into a chat pane's composer, or sends it when **Send on click** is set.
 
 | Column | Meaning |
@@ -135,7 +135,7 @@ into a chat pane's composer, or sends it when **Send on click** is set.
 | Title | What the menu item reads. |
 | Prompt | What reaches the composer. The instruction alone: which file and which lines travel with it through the IDE context, and Claude reads the symbol itself with the `nav_*` tools, so pasting code in here only duplicates what the pane already points at. |
 | Needs selection | Editor tab only. Greys the entry out when nothing is selected, the way Copilot greys "Optimize selection". Selecting only whitespace counts as nothing; a single character does not. Leave it off for prompts that read fine against the whole file. |
-| Send on click | Sends the turn right away, exactly as pressing the send button would — file and selection included. Off by default: the prompt waits in the composer so you can add the half line that matters. |
+| Send on click | Sends the turn right away, exactly as pressing the send button would: file and selection included. Off by default: the prompt waits in the composer so you can add the half line that matters. |
 
 Rows appear in the menu in the order listed, so the one you reach for most belongs at the top;
 **Restore defaults** puts back the prompts the extension ships with, for that tab alone.
@@ -152,7 +152,7 @@ The Error List and Output prompts ship with **Send on click** set, as the single
 those menus used to have always sent.
 
 Which pane receives: the last one you worked in, brought to the front. With none open, one is
-opened. If the IDE-context eye was shut, it is re-opened with the prompt — asking about this code
+opened. If the IDE-context eye was shut, it is re-opened with the prompt, asking about this code
 with nothing saying which file it is would reach the CLI as a question about nothing.
 
 Below the prompts, past a separator, two fixed entries add to the composer instead of replacing
@@ -163,10 +163,10 @@ neither touches the eye.
   own. The CLI reads those lines from disk when the turn goes: whole lines, however much of them
   you selected, and without edits you have not saved yet.
 - **Add selection to chat** writes the selected text itself, in a fenced block headed by the path
-  and lines — exactly what is on screen, down to the character. Greyed out with no selection.
+  and lines: exactly what is on screen, down to the character. Greyed out with no selection.
 
 The Error List and Output menus end the same way, with one **Add to chat** that adds what their
-prompts would be handed — the selected rows, the pane's selection or tail — as a block below
+prompts would be handed: the selected rows, the pane's selection or tail, as a block below
 what the composer holds.
 
 Solution Explorer and a document's tab have a **cv4vs Agents** submenu too, with **Add reference
@@ -174,5 +174,5 @@ to chat** alone for now: the selected files, folders and projects (a project sta
 folder) as references, one per line; on a tab, the whole file.
 
 Like profiles, these are **not** in the VS settings store: they live in `prompts.json` so the
-menus can be built without opening the Options page first — see
+menus can be built without opening the Options page first; see
 [Settings and data](settings-and-data.md).

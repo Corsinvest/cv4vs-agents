@@ -40,7 +40,7 @@ Redistributable runtime packages referenced by the VS package.
 
 The Visual Studio SDK and `Microsoft.Terminal.Wpf` assemblies are provided by
 the installed Visual Studio and are **not** bundled in the VSIX; they are listed
-for completeness. `claude.exe` (the Claude Code CLI) is likewise never bundled —
+for completeness. `claude.exe` (the Claude Code CLI) is likewise never bundled:
 the extension drives whatever the user installed.
 
 ---

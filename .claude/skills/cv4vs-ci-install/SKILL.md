@@ -55,13 +55,13 @@ $entries | Where-Object { $_ -like 'WebView2/*' } | Sort-Object
 
 Refuse to install unless the package has:
 
-- `WebView2/index.html` — without it the chat pane throws on open
+- `WebView2/index.html`: without it the chat pane throws on open
 - `WebView2/bundle.js` and `bundle.css`
-- `WebView2/images/plugin-logo.png` — the welcome screen renders a broken image without it
+- `WebView2/images/plugin-logo.png`: the welcome screen renders a broken image without it
 - no `tgconfig.json` at the root; it is a codegen input that has no business shipping
 
 For reference, a sound package has 25 entries and 9 files under `WebView2/`. Report the count either
-way — a number that has moved is worth knowing even when nothing is missing.
+way: a number that has moved is worth knowing even when nothing is missing.
 
 If something is missing, say which files and stop. Do not install and mention it afterwards.
 
@@ -72,7 +72,7 @@ If something is missing, say which files and stop. Do not install and mention it
 ```
 
 The script prints version, packaging date and WebView file count before installing, refuses to run
-while `devenv` is up, and removes every existing copy first — VS keys extensions by `Identity Id`,
+while `devenv` is up, and removes every existing copy first: VS keys extensions by `Identity Id`,
 so leftovers install alongside rather than being replaced.
 
 `-Reinstall`, not `-Install`: the point is to test this artifact, and an older copy left in the hive
@@ -85,7 +85,7 @@ a local build carries local time.
 ## Limits
 
 - Experimental hives only. `-Normal` exists on the script but installing a test build into the IDE
-  you work in is a separate decision — ask first.
+  you work in is a separate decision: ask first.
 - Does not start Visual Studio; it must be closed for the install to work anyway.
-- Does not verify the extension behaves once loaded. Nothing outside VS can see the tool windows —
+- Does not verify the extension behaves once loaded. Nothing outside VS can see the tool windows;
   that check is manual.
