@@ -8,8 +8,8 @@ How the extension is put together, and how to build it from source. For what it 
 - **Host**: C# / .NET Framework 4.8 Visual Studio package (VSIX) for Visual Studio 2022 and 2026 (VS 17.0+).
 - **Chat UI**: a [WebView2](https://learn.microsoft.com/en-us/microsoft-edge/webview2/) app built
   with [Lit](https://lit.dev/) web components and
-  [Fluent UI Web Components](https://storybooks.fluentui.dev/web-components/)
-  — the UI matches Visual Studio's look and adapts to the active theme (light/dark). Fluent
+  [Fluent UI Web Components](https://storybooks.fluentui.dev/web-components/),
+  so the UI matches Visual Studio's look and adapts to the active theme (light/dark). Fluent
   components are kept pure (no custom colour overrides), so theming stays consistent.
 - **[TypeScript](https://www.typescriptlang.org/)** end to end, bundled by
   [esbuild](https://esbuild.github.io/) into a single IIFE `dist/bundle.js`; the host↔web message
@@ -18,10 +18,10 @@ How the extension is put together, and how to build it from source. For what it 
   [ConPTY](https://learn.microsoft.com/en-us/windows/console/creating-a-pseudoconsole-session)
   (`Microsoft.Terminal.Wpf`), so the interactive CLI renders exactly as in a native shell.
 - **Lazy everything, by design.** The guiding principle is *nothing is built, read or started until
-  it's actually needed* — the extension is meant to be fast, fast, fast. Everything loads on demand
+  it's actually needed*: the extension is meant to be fast, fast, fast. Everything loads on demand
   and tears down when idle; work you don't do costs nothing.
 - **Tuned for performance and low memory:**
-  - Chat history is **lazy** — pages of 50 read from the `.jsonl` on demand, heavy blocks (images,
+  - Chat history is **lazy**: pages of 50 read from the `.jsonl` on demand, heavy blocks (images,
     sub-agent transcripts, full diffs) fetched only when opened; nothing loaded up front.
   - Session metadata is read with **head+tail 64 KB windows**, never loading whole files.
   - The [MCP](https://modelcontextprotocol.io/) server and event listeners start/stop lazily on the

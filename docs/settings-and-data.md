@@ -3,14 +3,14 @@ SPDX-FileCopyrightText: Copyright Corsinvest Srl
 SPDX-License-Identifier: GPL-3.0-only
 -->
 
-# Settings and data — where everything is stored
+# Settings and data: where everything is stored
 
 Nothing the extension writes lives inside your solution. Settings go to the Visual Studio
 settings store, everything else to a folder under `%LOCALAPPDATA%`. Chat sessions are not
 ours at all: they belong to the CLI, in `~/.claude`, shared with the Claude Code CLI and the
 VS Code extension.
 
-Uninstalling the extension leaves both trees behind — see [Removing everything](#removing-everything).
+Uninstalling the extension leaves both trees behind: see [Removing everything](#removing-everything).
 
 ## What the extension writes
 
@@ -22,7 +22,7 @@ Uninstalling the extension leaves both trees behind — see [Removing everything
 | Open panes per solution | `…\cv4vs-agents\data\projects\<project-hash>\workspace.json` |
 | Usage stats cache | `…\<project-hash>\<config-id>\stats-cache.json` |
 
-Plus two caches in the same folder — `WebView2\` (chat UI storage) and `icons\` — both
+Plus two caches in the same folder: `WebView2\` (chat UI storage) and `icons\`, both
 rebuilt on demand if deleted.
 
 ## Options are not a file
@@ -35,7 +35,7 @@ to point at: Visual Studio persists them in its own settings store, per VS insta
 `prompts.json` (below) instead, so the launcher menu and the context menus can be
 built without first materialising the Options page. **Ignored patterns** is a third: the row shows
 where `picker-ignore.gitignore` is and its `…` button opens that file, since the content is a rule
-list with comments — something to edit in a real editor and copy between machines.
+list with comments, something to edit in a real editor and copy between machines.
 
 ## Our data folder
 
@@ -54,12 +54,12 @@ data/projects/<project-hash>/
         stats-cache.json            usage stats for this (solution, profile) pair
 ```
 
-`<project-hash>` identifies the **solution folder** — the same hash the CLI uses for its own
+`<project-hash>` identifies the **solution folder**: the same hash the CLI uses for its own
 project folders, so the two trees line up. `<config-id>` identifies the **profile's config
 directory**, which is why stats are per (solution, profile) while `workspace.json` is
 per solution only: a pane's profile is recorded inside that JSON.
 
-`profiles.json` holds the environment variables you enter in the Profiles page —
+`profiles.json` holds the environment variables you enter in the Profiles page,
 `ANTHROPIC_AUTH_TOKEN` among them. It is a plain file with no encryption, readable by anything
 running as your user.
 
@@ -71,17 +71,17 @@ Chat sessions, CLI settings, plugins and skills belong to `claude.exe` and live 
 ```
 ~/.claude/
     settings.json                   CLI settings (permissions, hooks, env…)
-    projects/<project-hash>/*.jsonl one file per session — the transcripts
+    projects/<project-hash>/*.jsonl one file per session, the transcripts
     file-history/<session-id>/      copies taken before each edit, for Rewind
     ide/<port>.lock                 discovery file for `claude --ide`
 ```
 
-`file-history/` holds **whole files**, not diffs — one copy per file per turn that edited it — and
+`file-history/` holds **whole files**, not diffs: one copy per file per turn that edited it, and
 the CLI never removes them. Deleting a session's folder only costs you the ability to
 [rewind](chat/rewind.md) that session; turning **Keep file checkpoints** off
 ([Options → Chat](options.md#chat)) stops new ones being written at all. The
 **[File history](file-history.md)** tab measures what they occupy, per project and per session, and
-deletes them from there — backups whose transcript is already gone included.
+deletes them from there, backups whose transcript is already gone included.
 
 We **read** the session `.jsonl` files directly (that's how history, resume, rename and the
 usage stats work) and write only a `custom-title` entry when you rename a session. Because
@@ -91,7 +91,7 @@ the VS Code extension, and vice versa.
 ## Removing everything
 
 1. Uninstall the extension (Extensions → Manage Extensions). This does **not** remove data.
-2. Delete `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\` — profiles, workspace, caches.
+2. Delete `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\`: profiles, workspace, caches.
 3. Options remain in the VS settings store; they are inert without the extension and are
    overwritten if you reinstall.
 4. `~/.claude` is the CLI's: deleting it removes **all** your Claude Code sessions, including

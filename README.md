@@ -1,4 +1,4 @@
-# cv4vs Agents — Claude Code for Visual Studio
+# cv4vs Agents: Claude Code for Visual Studio
 
 <img src="docs/images/logo.png" alt="cv4vs Agents" width="128">
 
@@ -11,7 +11,7 @@
 [![Installs](https://vsmarketplacebadges.dev/installs-short/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
 [![Self-hosting](https://img.shields.io/badge/self--hosting-since%202026--07--27-brightgreen.svg)](docs/diary.md)
 
-A Visual Studio 2022 / 2026 extension that brings the **Claude Code** CLI inside the IDE — a rich
+A Visual Studio 2022 / 2026 extension that brings the **Claude Code** CLI inside the IDE: a rich
 chat experience plus an interactive terminal, both wired into Visual Studio's editor,
 solution, debugger and build system.
 
@@ -20,7 +20,7 @@ It is **not** a fork of the CLI. It drives the real `claude.exe` (installed via 
 feature-detection, not by pinning a CLI version.
 
 **Design philosophy: lazy and fast.** Nothing is built, read or started until you actually look at
-it. The chat holds **nothing in memory** — the transcript is read from the session file on demand,
+it. The chat holds **nothing in memory**: the transcript is read from the session file on demand,
 newest page first, older pages only as you scroll, and heavy blocks (images, sub-agent transcripts,
 full diffs) only when you open them. Same for the rest: services, the MCP server and the panes
 themselves start on first use, not on solution load. Long sessions and large solutions stay as light
@@ -33,7 +33,7 @@ and quick as an empty one.
 <img src="docs/images/chat.png" alt="The chat pane docked in Visual Studio" width="420">&nbsp;&nbsp;<img src="docs/images/cli.png" alt="The CLI pane running the same session" width="420">
 
 *The same conversation in both panes: the rich chat on the left (inline diffs, tool rows, the
-editor file attached to the prompt) and the real CLI on the right. One session store — open it
+editor file attached to the prompt) and the real CLI on the right. One session store: open it
 in either, or in VS Code.*
 
 </div>
@@ -44,14 +44,14 @@ in either, or in VS Code.*
 
 | | |
 |---|---|
-| **Visual Studio** | 2022 or 2026 (17.0+), any edition — on Windows 10 1809 or later |
-| **Claude Code CLI** | installed separately — see below |
+| **Visual Studio** | 2022 or 2026 (17.0+), any edition, on Windows 10 1809 or later |
+| **Claude Code CLI** | installed separately; see below |
 
 ---
 
 ## Quick start
 
-**1. Install the Claude Code CLI** — the extension drives it, and never bundles it:
+**1. Install the Claude Code CLI**: the extension drives it, and never bundles it:
 
 ```powershell
 winget install Anthropic.ClaudeCode
@@ -61,26 +61,26 @@ winget install Anthropic.ClaudeCode
 Other platforms and installation methods are in Anthropic's
 [official setup guide](https://docs.claude.com/en/docs/claude-code/setup).
 
-**2. Install the extension** — from the
+**2. Install the extension**: from the
 [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents),
 or search *cv4vs Agents* in **Extensions → Manage Extensions** inside the IDE.
 
 Then, in Visual Studio: **View → cv4vs Agents → Claude**. Type in the chat, or open a **CLI**
 pane for the interactive terminal. The IDE tools (navigation, diagnostics, debugger) are wired
-up automatically — nothing to configure.
+up automatically: nothing to configure.
 
 No CLI installed? The pane says so and links to the setup guide, instead of failing silently.
 
 ### Preview builds
 
 Release candidates are tagged `vX.Y.Z-rcN` and published on the
-[Releases](https://github.com/Corsinvest/cv4vs-agents/releases) page with the `.vsix` attached —
+[Releases](https://github.com/Corsinvest/cv4vs-agents/releases) page with the `.vsix` attached;
 they are not on the Marketplace, which takes neither a suffixed version nor a second upload of one
 already published. Double-click the file to install.
 
 Two things to know before trying one. They receive **no automatic updates**: a `.vsix` installed by
 hand has no gallery behind it to check. And every preview of a release carries the **same version
-number** — the `-rcN` suffix lives on the tag, because a VSIX manifest version is digits only — so
+number**: the `-rcN` suffix lives on the tag, because a VSIX manifest version is digits only, so
 installing `rc2` over `rc1` is refused as *already installed*. Uninstall the previous preview first,
 from **Extensions → Manage Extensions**.
 
@@ -91,121 +91,121 @@ own.
 
 ## Features
 
-- **[Two panes](#two-panes-one-extension)** — a rich WebView2 chat and a real terminal (ConPTY),
+- **[Two panes](#two-panes-one-extension)**: a rich WebView2 chat and a real terminal (ConPTY),
   both multi-instance and dockable side by side, each on its own session.
-- **[80+ MCP tools](docs/mcp-tools.md)** — Visual Studio's own navigation, references, rename,
+- **[80+ MCP tools](docs/mcp-tools.md)**: Visual Studio's own navigation, references, rename,
   diagnostics, build, **its Test Explorer** and the **live debugger** (breakpoints, stepping,
   locals, evaluate) handed to the agent. Not text search over source: the IDE's semantic, running
   view of your program.
-- **[It offers when you break](docs/options.md#asking-about-a-break)** — stop on an exception and a
+- **[It offers when you break](docs/options.md#asking-about-a-break)**: stop on an exception and a
   bar appears over that file: one press asks about the break, and the agent reads the live stack and
   locals rather than guessing from the source. Breakpoints are opt-in, steps never ask.
-- **[Review changes in VS's own diff](docs/chat/diff.md)** — every Edit/Write shows as an inline diff,
+- **[Review changes in VS's own diff](docs/chat/diff.md)**: every Edit/Write shows as an inline diff,
   and opens in Visual Studio's native, **editable** side-by-side diff: **save (Ctrl+S) to accept** or
   **close to reject**, the CLI applies it only if you saved.
-- **Edit the plan before you approve it** — a long plan doesn't have to be read through the banner's
+- **Edit the plan before you approve it**: a long plan doesn't have to be read through the banner's
   small scrolling box: **Open in editor** shows it as a normal document in VS's Markdown editor,
-  full-size. While it is still waiting on your answer you can change it there and save — the banner
+  full-size. While it is still waiting on your answer you can change it there and save; the banner
   picks the change up, and approving sends what *you* wrote, not what was proposed.
-- **[Take the files back](docs/chat/rewind.md)** — `/rewind` restores them to the state before any
+- **[Take the files back](docs/chat/rewind.md)**: `/rewind` restores them to the state before any
   message of the session, and leaves the conversation where it is. Pick a message and it says what
-  would change — files, lines added and removed — before you commit to it; click a file and its copy
+  would change (files, lines added and removed) before you commit to it; click a file and its copy
   from before that message opens in VS's diff, against what is on disk now.
-- **[Clickable file references](docs/file-links.md)** — when Claude writes `ClientEvents.cs:208` (or a
+- **[Clickable file references](docs/file-links.md)**: when Claude writes `ClientEvents.cs:208` (or a
   range, `Stats.cs:35-48`, or a whole list, `Package.cs:124,185,202`) the reference becomes a link that
-  opens the file in VS — a range **selects those lines**, and every line in a list is its own link. It
-  works **in plain prose**, not just in markdown links — neither is true in the VS Code extension or
+  opens the file in VS: a range **selects those lines**, and every line in a list is its own link. It
+  works **in plain prose**, not just in markdown links; neither is true in the VS Code extension or
   Claude Desktop. ~270 extensions out of the box, extendable from Options; code blocks stay untouched,
   and clocks, host:ports and version numbers never become dead links.
-- **[Know when the next message costs more](docs/chat/context-and-usage.md#the-prompt-cache)** —
+- **[Know when the next message costs more](docs/chat/context-and-usage.md#the-prompt-cache)**:
   the context gauge tracks the **prompt cache**: *warm, about 42 min left* while you work, a yellow
-  clock beside it a few minutes before it expires — still time to send — and an orange one once it
+  clock beside it a few minutes before it expires (still time to send) and an orange one once it
   has likely expired or a compaction replaced what it held, with how many tokens the next message
   will write back. Coming back to a long conversation after lunch, you know before you type.
-- **Read a response aloud** — a speaker button on each answer reads it out with the system voice
+- **Read a response aloud**: a speaker button on each answer reads it out with the system voice
   (Web Speech, no extra install); click to pause, click to resume. The markdown is spoken as plain
-  prose — no "asterisk asterisk", no code blocks recited.
-- **[Keep writing while it answers](docs/queued-messages.md)** — the next message waits for the turn
+  prose: no "asterisk asterisk", no code blocks recited.
+- **[Keep writing while it answers](docs/queued-messages.md)**: the next message waits for the turn
   to end instead of for you. A chip in the composer's toolbar counts what is still queued and opens
   the list, in the order it will go out: delete one, or click it to bring it back into the composer
-  and fix it — without stopping the turn to do either. **Alt+Enter** queues a message *into* the one
+  and fix it, without stopping the turn to do either. **Alt+Enter** queues a message *into* the one
   before it, so two that correct each other leave as a single message rather than as two turns.
-- **The same sessions as VS Code and the terminal** — no separate database: it reads and writes the
+- **The same sessions as VS Code and the terminal**: no separate database: it reads and writes the
   CLI's own session store, so a conversation started in the VS Code extension or in a terminal shows
   up here, and vice versa. Resume, fork and rename all work on those shared files, so you can switch
   editor mid-project without losing context.
-- **[Remote Control](docs/chat/remote-control.md)** — `/remote-control` hands a running session to
+- **[Remote Control](docs/chat/remote-control.md)**: `/remote-control` hands a running session to
   `claude.ai/code` or the Claude mobile app: the session stays on your machine, web and mobile are
   just a window onto it. The link is posted into the conversation with a QR code to scan from your
   phone, and a toolbar indicator says it's on for as long as it is. It can start by itself in every new
   session: `/` menu → *Enable Remote Control for all sessions*.
-- **[It knows what you're looking at](#ide-integration)** — the file open in the editor (and your
+- **[It knows what you're looking at](#ide-integration)**: the file open in the editor (and your
   selection) rides along with the prompt, shown as a chip you can click to jump back to it. One
   toggle turns the sharing off when you'd rather it didn't.
-- **Ask from the editor** — right-click code and the **cv4vs Agents** submenu offers Explain,
+- **Ask from the editor**: right-click code and the **cv4vs Agents** submenu offers Explain,
   Review, Find bugs, Write tests, Simplify. The prompt lands in the composer, so you can add the
   half line that matters; the file and selection travel with it, so the prompt itself is just the
-  instruction. The list is yours to edit in Options → Prompts — title, text, whether the
+  instruction. The list is yours to edit in Options → Prompts: title, text, whether the
   entry needs a selection, and whether it sends on click instead of waiting. Below them, **Add
   reference to chat** and **Add selection to chat** gather pieces from several files into the
   composer before you write the question. The same **Add reference to chat** is in Solution
-  Explorer — files, folders, projects, several at once — and on a document's tab.
-- **Ask about a failure** — right-click in the **Output window** or the **Error List** and the same
+  Explorer (files, folders, projects, several at once) and on a document's tab.
+- **Ask about a failure**: right-click in the **Output window** or the **Error List** and the same
   **cv4vs Agents** submenu offers its own prompts (Explain, Fix) and **Add to chat**. In the Error
   List it takes the rows you selected, with their file, line and project; in the Output window your
-  selection, or the tail of the pane when you selected nothing — a build error is worth asking
+  selection, or the tail of the pane when you selected nothing: a build error is worth asking
   about without highlighting it first. These prompts are yours to edit too, each menu in its own
   tab.
-- **Jump between panes** — a toolbar list of every open pane, Chat and CLI together, each with its
+- **Jump between panes**: a toolbar list of every open pane, Chat and CLI together, each with its
   title and kind. Docked panes hide each other behind tabs; this is how you find the one you want.
-- **Code review findings as a list** — `/code-review` reports its findings as a readable list —
-  severity first, each with its file and line as a link that opens there — instead of the raw call
+- **Code review findings as a list**: `/code-review` reports its findings as a readable list:
+  severity first, each with its file and line as a link that opens there, instead of the raw call
   data. The row grows to fit them, so nothing hides behind an inner scrollbar; after a `--fix` run it
   also says what each finding became.
-- **[Sub-agent panel](docs/chat/sub-agents.md)** — a chip shows how many sub-agents are running; click it
+- **[Sub-agent panel](docs/chat/sub-agents.md)**: a chip shows how many sub-agents are running; click it
   for a live list with per-agent Stop and Stop-all, so a fan-out never gets away from you.
   Background/async agents are tracked too: the turn is "finished" only once they are.
-- **[Any Anthropic-compatible provider](docs/options.md#profiles)** — profiles inject per-pane
+- **[Any Anthropic-compatible provider](docs/options.md#profiles)**: profiles inject per-pane
   environment variables (z.ai/GLM, MiniMax, DeepSeek, OpenRouter, Ollama…); the IDE tools keep
   working.
-- **[Plan usage in the status bar](docs/usage.md#status-bar)** — `Claude: 5h 44% · 7d 10%` beside the
+- **[Plan usage in the status bar](docs/usage.md#status-bar)**: `Claude: 5h 44% · 7d 10%` beside the
   notification bell, each figure with a bar that turns amber and then red as its window fills, for the
   profile you're working in. Click it for every limit and when each resets. A chat pane keeps it
-  current from its own process; without one, a short-lived CLI refreshes it at most every 15 minutes —
+  current from its own process; without one, a short-lived CLI refreshes it at most every 15 minutes,
   or never, if you set it so.
-- **Analytics tabs** — full-window views under **View → cv4vs Agents**, all reading the local session
+- **Analytics tabs**: full-window views under **View → cv4vs Agents**, all reading the local session
   files with no telemetry:
-  - **[Statistics](docs/statistics.md)** — a navigable tree (All → Profile → Folder → Project →
+  - **[Statistics](docs/statistics.md)**: a navigable tree (All → Profile → Folder → Project →
     Days/Sessions) driving summary tiles, an activity heatmap and per-day/per-model charts.
-  - **[Usage](docs/usage.md)** — each profile's live plan and rate-limit windows, read from the CLI.
-  - **[Context usage](docs/context-usage.md)** — for any historical session, how it fills the model's
+  - **[Usage](docs/usage.md)**: each profile's live plan and rate-limit windows, read from the CLI.
+  - **[Context usage](docs/context-usage.md)**: for any historical session, how it fills the model's
     context window: a memory-map, category table and expandable trees (memory files, agents, skills,
     MCP tools), fetched read-only by resuming the session.
-  - **[File history](docs/file-history.md)** — what the CLI's file backups cost on disk, per project
+  - **[File history](docs/file-history.md)**: what the CLI's file backups cost on disk, per project
     and per session, with a diff against the file as it is now and a way to delete the ones you no
     longer want (orphaned ones included).
-- **[Plugin manager](docs/chat/plugins.md)** — install from a marketplace, enable/disable or update
-  what you have, add marketplaces — from Installed / Available / Marketplaces tabs, without leaving
+- **[Plugin manager](docs/chat/plugins.md)**: install from a marketplace, enable/disable or update
+  what you have, add marketplaces, from Installed / Available / Marketplaces tabs, without leaving
   the chat.
-- **Talk to it** — dictate the prompt instead of typing it: a mic button in the composer transcribes
+- **Talk to it**: dictate the prompt instead of typing it: a mic button in the composer transcribes
   as you speak (Web Speech API; hidden when the platform doesn't support it).
-- **Hot-swap** — model, permission mode and interrupt change on the live process, never a restart.
-- **[Restore panes on solution open](docs/options.md#general)** *(opt-in)* — reopen the panes you
+- **Hot-swap**: model, permission mode and interrupt change on the live process, never a restart.
+- **[Restore panes on solution open](docs/options.md#general)** *(opt-in)*: reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
-- **[Tune it to your taste](docs/options.md)** — 31 options across General, Chat and Debug: what
+- **[Tune it to your taste](docs/options.md)**: 31 options across General, Chat and Debug: what
   the chat shows, how diffs render, which keys send, the starting permission mode, autosave,
   file checkpoints, upload and `@`-picker filters, whether the machine may sleep mid-turn,
   log verbosity.
-- **[It tells you when it needs you](#pane-attention-notifications)** — with several panes working
+- **[It tells you when it needs you](#pane-attention-notifications)**: with several panes working
   at once, the one waiting on a permission raises a VS info bar, or an OS toast when you're outside
   Visual Studio. Clicking it takes you to that pane, focus already on the question.
-- **[Nothing hidden](docs/options.md#debug)** — set the log level to `Trace` and the Output window
+- **[Nothing hidden](docs/options.md#debug)**: set the log level to `Trace` and the Output window
   shows every wire: the NDJSON traffic to and from `claude.exe`, the chat bridge, and each MCP tool
   call. Every line is tagged with the pane it came from (`[chat#2]`, `[cli#1]`), so several open panes
   stay readable in the one Output window. Silent by default; invaluable when something misbehaves or
   you're filing a bug.
-- **Lazy and fast** — nothing is read, built or started until you look at it: services, the MCP
+- **Lazy and fast**: nothing is read, built or started until you look at it: services, the MCP
   server and the panes themselves start on first use, and the transcript is paged in as you scroll.
 
 ---
@@ -213,78 +213,78 @@ own.
 ## Why
 
 I live in two editors. VS Code is light and quick, and Claude Code feels right at home there.
-But when the work gets serious — a large solution, a real refactor, a debugger session that has
-to just *work* — I reach for Visual Studio 2022/2026. For that kind of code, VS is, hands down,
+But when the work gets serious (a large solution, a real refactor, a debugger session that has
+to just *work*), I reach for Visual Studio 2022/2026. For that kind of code, VS is, hands down,
 the better tool.
 
 There was only one thing missing: Claude, *inside* Visual Studio. Not in a browser tab, not in
-another window — right there, next to the code, the solution, the debugger.
+another window, right there, next to the code, the solution, the debugger.
 
 Everyone had the same advice: "just use the CLI", "use Claude Desktop", "use the chat in VS Code".
-And they're all good — each of them has something I genuinely like: the raw power of the terminal,
+And they're all good. Each of them has something I genuinely like: the raw power of the terminal,
 the polish of the desktop app, the rich in-editor chat. But not one of them had *everything*
 together, in the one place I actually work: Visual Studio.
 
-So I stopped waiting for it to exist and rebuilt it, my way — the terminal *and* the rich chat,
+So I stopped waiting for it to exist and rebuilt it, my way: the terminal *and* the rich chat,
 both belonging to Visual Studio, wired into its editor, solution, debugger and build. Everything I
 liked, under one roof.
 
-And then, watching Claude work, a question kept nagging at me. Claude is astonishingly capable —
+And then, watching Claude work, a question kept nagging at me. Claude is astonishingly capable,
 yet it navigates code with almost primordial tools: `grep` to find a symbol, a text `Edit` to
-rename it. I've done that by hand. It's slow, and it's how you introduce bugs — miss one call
+rename it. I've done that by hand. It's slow, and it's how you introduce bugs: miss one call
 site, rename the wrong match. Meanwhile, in my IDE, *Find All References* and *Rename Symbol* are
 native, exact, one keystroke away. So I asked the obvious question: **why not give Claude that same
 superpower?**
 
-The same goes for debugging. When something's wrong, I don't guess from reading the source — I set
+The same goes for debugging. When something's wrong, I don't guess from reading the source; I set
 a breakpoint, step through, evaluate an expression, watch the values change. That's how you *know*
 what the code actually does. Why should Claude be blind to it? So I gave it that too.
 
-That's what the MCP tools here are: they hand Visual Studio's own understanding of your code —
-navigation, references, rename, diagnostics, and the live debugger (breakpoints, stepping,
-locals, evaluate) — straight to Claude. Not text search over source, but the IDE's real, semantic,
+That's what the MCP tools here are: they hand Visual Studio's own understanding of your code
+(navigation, references, rename, diagnostics, and the live debugger with breakpoints, stepping,
+locals, evaluate) straight to Claude. Not text search over source, but the IDE's real, semantic,
 *running* view of your program.
 
 One more thing kept bothering me, and it wasn't about code at all. Claude fans work out to
-sub-agents — several at once, off doing their own thing — and the chat just… sits there. Are they
+sub-agents (several at once, off doing their own thing) and the chat just… sits there. Are they
 still running? Have they finished already? What is that one actually doing? And if I've changed my
 mind, how do I stop it? I found myself staring at a spinner with no idea whether to wait or give up.
 So sub-agents got their own little panel: how many are alive, what each is doing right now, how long
-it's been at it, and a Stop button next to every one of them. Not a progress bar — the truth.
+it's been at it, and a Stop button next to every one of them. Not a progress bar: the truth.
 
 Because what I really wanted was simple: a partner as sharp as me 😉 (maybe sharper), working the
 IDE the way I do. This is that project. This is the why.
 
-And yes — I built this CLI/chat *for* Claude *with* Claude. There's something funny about that, and
+And yes, I built this CLI/chat *for* Claude *with* Claude. There's something funny about that, and
 it was a genuinely fun little adventure: watching it sometimes deny things about itself, only to
 turn around and build them. That's just part of the LLM game. The code here was written with
 Claude's help.
 
 **And it keeps a diary.** Self-hosting since 27 July 2026, it debugged itself, it left the desk, it
-changed how I work, and in September it stopped being only mine —
+changed how I work, and in September it stopped being only mine:
 [the days that were not in the plan](docs/diary.md).
 
-— *Daniele Corsini (Frank Lupo)*
+*Daniele Corsini (Frank Lupo)*
 
 ---
 
 ## Two panes, one extension
 
-The extension registers **two dockable tool-window types**, both **multi-instance** — open as many
+The extension registers **two dockable tool-window types**, both **multi-instance**: open as many
 Chat panes **and** as many CLI panes as you like, side by side, each on its own independent session,
 docking as tabs. A busy dot on each pane's caption tracks which ones are working.
 
-- **Chat pane** — a rich WebView2 UI (TypeScript + Lit). Drives `claude.exe` in headless mode over
+- **Chat pane**: a rich WebView2 UI (TypeScript + Lit). Drives `claude.exe` in headless mode over
   the NDJSON stream-json control protocol. Exposes the IDE to the CLI via an in-process MCP server.
-- **CLI pane** — the interactive Claude Code CLI rendered with a real terminal (ConPTY), launching
+- **CLI pane**: the interactive Claude Code CLI rendered with a real terminal (ConPTY), launching
   `claude.exe --ide`. Reaches the same IDE tools over the WebSocket MCP channel.
 
-Model, permission mode and interrupt are **hot-swapped** on the live process — changing them never
+Model, permission mode and interrupt are **hot-swapped** on the live process: changing them never
 kills the CLI. The process respawns only for what truly can't change at runtime (working directory,
 resuming another session, fork).
 
-**Profiles.** Each pane can run on a different provider — native Claude, GLM/z.ai, or any other
-Anthropic-compatible host — and the IDE tools work the same either way.
+**Profiles.** Each pane can run on a different provider (native Claude, GLM/z.ai, or any other
+Anthropic-compatible host) and the IDE tools work the same either way.
 See [Options → Profiles](docs/options.md#profiles).
 
 ---
@@ -295,92 +295,92 @@ See [Options → Profiles](docs/options.md#profiles).
 
 - **Multi-line prompt** with Send/Stop, Enter-to-send (or Ctrl+Enter, configurable),
   Shift+Enter for a newline.
-- **Write while it is still answering** — the message is held until the turn ends, then sent. Its
+- **Write while it is still answering**: the message is held until the turn ends, then sent. Its
   bubble appears straight away, greyed out so it does not read as already sent, and drops into place
   below the reply it was waiting on, so each answer stays under the question that prompted it. A chip
   in the composer's toolbar lists what is still waiting and takes one back out, without stopping the
-  turn to do it — see [Messages waiting to be sent](docs/queued-messages.md).
-- **Slash-command palette** — a lightning button opens a unified palette; typing `/` filters. It
+  turn to do it; see [Messages waiting to be sent](docs/queued-messages.md).
+- **Slash-command palette**: a lightning button opens a unified palette; typing `/` filters. It
   lists the CLI's slash/skill commands plus built-in actions (Attach, Mention, Clear, Switch model,
   Settings, Manage plugins, Open Claude in Terminal, Help, Report a problem).
-- **`@` mentions** — inline file picker over the **whole** project tree: no depth limit, and the
+- **`@` mentions**: inline file picker over the **whole** project tree: no depth limit, and the
   filter matches the *path*, not just the file name, so `ui/comp` narrows before you type a name.
   Honours `.gitignore`, your own ignore patterns, and git's `core.excludesFile`.
-- **Attachments** — upload files/images from the computer, or paste image data straight into the
+- **Attachments**: upload files/images from the computer, or paste image data straight into the
   composer; removable attachment chips. Images are sent as images, PDFs as documents, the rest as text.
-- **Prompt history** — recall previous prompts with ↑/↓ (shell-style).
-- **Keyboard in the lists** — the `@` menu, the `/` palette and the model and permission pickers
-  move with ↑/↓ and a page at a time with PageUp/PageDown. **Esc** closes whatever is open — a
-  list, a permission prompt, the edit of a queued message — and stops the turn only when nothing is.
-- **Voice input** — dictation via the Web Speech API (pulsing mic while recording; hidden when
+- **Prompt history**: recall previous prompts with ↑/↓ (shell-style).
+- **Keyboard in the lists**: the `@` menu, the `/` palette and the model and permission pickers
+  move with ↑/↓ and a page at a time with PageUp/PageDown. **Esc** closes whatever is open (a
+  list, a permission prompt, the edit of a queued message) and stops the turn only when nothing is.
+- **Voice input**: dictation via the Web Speech API (pulsing mic while recording; hidden when
   unsupported).
-- **Model switcher & controls** — pick the model, with its **Effort** slider under the list and the
+- **Model switcher & controls**: pick the model, with its **Effort** slider under the list and the
   level beside the model name in the toolbar; toggle extended **Thinking**, **Fast mode** and
   auto-switch-on-flag.
-- **Permission mode** — Shift+Tab cycles it, and while the composer has focus its border takes the
-  mode's colour, so the change is visible where you are already looking. **Bypass permissions** —
-  the mode that runs everything without asking, dangerous commands included — is named in red on
+- **Permission mode**: Shift+Tab cycles it, and while the composer has focus its border takes the
+  mode's colour, so the change is visible where you are already looking. **Bypass permissions**,
+  the mode that runs everything without asking, dangerous commands included, is named in red on
   the toolbar whether or not the composer has focus: it is the one worth noticing when you come
   back to a pane and don't remember how you left it. It only appears at all if
   [Allow dangerously skip permissions](docs/options.md) is on.
-- **Notice bar** — info/success/warning/error messages above the composer (e.g. rate-limit notices).
+- **Notice bar**: info/success/warning/error messages above the composer (e.g. rate-limit notices).
 
 ### Conversation
 
-- **Tool rows** — collapsible tool call/result rows; click a file to open it in VS; inline tool
-  errors (toggleable). On an Edit the selection lands on the lines that changed — taken from the
+- **Tool rows**: collapsible tool call/result rows; click a file to open it in VS; inline tool
+  errors (toggleable). On an Edit the selection lands on the lines that changed, taken from the
   patch the CLI itself computed, so it is right even after the edit has been applied and the file
   touched again (**Select lines when opening file**).
-- **View mode: Full / Focus / Hide tool calls** — how much of the work the transcript shows, from the
+- **View mode: Full / Focus / Hide tool calls**: how much of the work the transcript shows, from the
   **View mode** slider in the `/` menu. **Focus** keeps every reply and folds each run of tool calls
-  and thinking between two of them into one row — `5 tool calls · 1 failed`, `Running Bash…` while it
-  works — that opens in place, with the rows exactly as you left them. **Hide tool calls** drops them
+  and thinking between two of them into one row (`5 tool calls · 1 failed`, `Running Bash…` while it
+  works) that opens in place, with the rows exactly as you left them. **Hide tool calls** drops them
   altogether. Your answers to questions, plan decisions and the task list stay in every mode.
-- **[Inline diffs](docs/chat/diff.md)** — Edit/Write rows show a diff with the file's own line
+- **[Inline diffs](docs/chat/diff.md)**: Edit/Write rows show a diff with the file's own line
   numbers and the context around each change, syntax-highlighted, with the changed words marked
   inside an edited line; the row's title carries the counts (`+3 −14`). Clicking it opens the change
-  in VS's native side-by-side diff, where you review — and edit — it with the full editor, then
+  in VS's native side-by-side diff, where you review (and edit) it with the full editor, then
   **save (Ctrl+S) to accept** or **close the tab to reject**; the CLI applies the edit only if you
   saved.
-- **Full Markdown rendering** — tables, lists, blockquotes, links, and fenced code blocks rendered
+- **Full Markdown rendering**: tables, lists, blockquotes, links, and fenced code blocks rendered
   with **syntax highlighting** (highlight.js) across all common languages.
-- **Everything is copyable** — a copy button on every message, tool row, code block and table, so
+- **Everything is copyable**: a copy button on every message, tool row, code block and table, so
   any part of the conversation can be lifted out. A table copies as markdown, pipes and alignment
   included, so it parses back as the same table wherever you paste it.
 - **Image lightbox** and a **welcome screen** for empty chats.
-- **Cost and elapsed time, per turn** — the spinner counts the seconds while the turn runs (and
+- **Cost and elapsed time, per turn**: the spinner counts the seconds while the turn runs (and
   while it is thinking); when it lands, the hover-actions row carries what the turn cost. Agent rows
   do the same for their own run. Enable with **Show cost and duration**.
-- **Back to the latest message** — scrolling up puts a button in the corner that returns you to the
+- **Back to the latest message**: scrolling up puts a button in the corner that returns you to the
   bottom of the transcript.
-- **Lazy history** — the transcript is read from the `.jsonl` on demand: the newest page (batch of
+- **Lazy history**: the transcript is read from the `.jsonl` on demand: the newest page (batch of
   50) first, older pages only as you scroll up, and heavy blocks (images, sub-agent transcripts, full
-  diffs) fetched only when opened. Nothing is held in memory up front — long sessions open fast and
+  diffs) fetched only when opened. Nothing is held in memory up front: long sessions open fast and
   stay light.
 
 ### Sub-agents
 
-- **Sub-agent chip** — while agents are running it shows a live count of active sub-agents; click the
-  button for a popover listing each one with a Stop, plus Stop-all — so you can see how many agents are
+- **Sub-agent chip**: while agents are running it shows a live count of active sub-agents; click the
+  button for a popover listing each one with a Stop, plus Stop-all, so you can see how many agents are
   in flight and stop them. Background/async agents are tracked correctly (the turn's "finished" waits
   for them).
 - Sub-agent transcripts are replayed in history. Collapsed rows show the last 3 steps; expanding
-  fetches the full run — see [Sub-agents](docs/chat/sub-agents.md).
+  fetches the full run; see [Sub-agents](docs/chat/sub-agents.md).
 
 ### Permissions
 
-- **Permission-mode selector** in the toolbar — Manual / Edit automatically / Plan /
+- **Permission-mode selector** in the toolbar: Manual / Edit automatically / Plan /
   Auto / Bypass (Bypass is gated behind an option).
-- **Permission prompts & AskUserQuestion** — an inline approval banner for tool use with
+- **Permission prompts & AskUserQuestion**: an inline approval banner for tool use with
   per-session/project "allow" suggestions, and interactive answering of `AskUserQuestion`. The Ask
-  answer can be **structured** — several questions in one panel, each single- or multi-select — not
+  answer can be **structured** (several questions in one panel, each single- or multi-select), not
   just a plain yes/no. Once answered, the row is compact by default (only what you picked); turn off
   **Compact Ask answers** in Options to keep every option listed with your pick highlighted.
 
 ### Context, usage & stats
 
 A gauge in the composer shows how full the context window is; clicking it opens what is filling it,
-your plan's rate limits, and historical usage — aggregated locally from the session files, with no
+your plan's rate limits, and historical usage, aggregated locally from the session files, with no
 telemetry. Its tooltip also tells you whether the **prompt cache** is still warm; a clock appears
 beside it when the cache is about to expire (yellow) and once it has (orange): the next message
 re-caches the whole conversation. See
@@ -388,68 +388,68 @@ re-caches the whole conversation. See
 
 ### Sessions
 
-- **Session manager** — list, select-to-resume, inline **rename**, **delete** (with confirmation).
-  The list is always read fresh from the `.jsonl` files on disk each time you open it — no cached
-  index that can go stale — so a session started or renamed elsewhere (VS Code, the CLI) shows up
+- **Session manager**: list, select-to-resume, inline **rename**, **delete** (with confirmation).
+  The list is always read fresh from the `.jsonl` files on disk each time you open it, with no cached
+  index that can go stale, so a session started or renamed elsewhere (VS Code, the CLI) shows up
   immediately. It stays fast by reading files in parallel with head+tail 64 KB windows, never
   loading whole files.
-- **Fork** — fork a conversation into a new session from any user message.
-- **Session info** — from the pane's … menu: the session's title, id and `.jsonl` path, the working
-  directory and profile, and which `claude.exe` is running it — path, version and PID. Chat panes add
+- **Fork**: fork a conversation into a new session from any user message.
+- **Session info**: from the pane's … menu: the session's title, id and `.jsonl` path, the working
+  directory and profile, and which `claude.exe` is running it (path, version and PID). Chat panes add
   what the page currently weighs. The first thing to open when something is running against the wrong
   session, the wrong folder, or the wrong CLI.
 - **AI-generated titles**, session picker, and a **New** split button (default Chat or CLI,
   configurable).
-- **Restore panes on solution open** (opt-in) — reopens the panes you had open for a solution,
+- **Restore panes on solution open** (opt-in): reopens the panes you had open for a solution,
   each on its own session and profile, when you reopen that solution. State is saved per-solution;
   a removed profile falls back to native, a deleted session opens fresh. Chat sessions restore
   exactly; CLI terminals resume via a session id the extension assigns up front (so even a fresh
-  terminal is tracked). The panes come back in saved order, but not at their exact dock position —
+  terminal is tracked). The panes come back in saved order, but not at their exact dock position;
   see [Known Issues](docs/KNOWN_ISSUES.md).
 
 ### Plugins
 
-- **[Plugin manager](docs/chat/plugins.md)** — Installed / Available / Marketplaces tabs; install,
+- **[Plugin manager](docs/chat/plugins.md)**: Installed / Available / Marketplaces tabs; install,
   enable/disable, update an installed plugin, add or refresh a marketplace.
 
 ---
 
 ## IDE integration
 
-- **IDE context badge** — a chip above the composer showing the active file and, when you have
+- **IDE context badge**: a chip above the composer showing the active file and, when you have
   selected code, its line range. Clicking it toggles whether that context is shared with the
   session; while it is off the chip dims and shows a struck-through eye.
   - A trailing icon says **what** is going out: 🔖 the position alone (file and lines), 🧾 the
     position **plus the selected code**. The second appears only with *Options → Chat → Send the
-    selected text* on **and** a live selection — an open file with no selection has no code to
+    selected text* on **and** a live selection: an open file with no selection has no code to
     attach, so it stays a bookmark. Sending the code is what makes an **unsaved** buffer readable,
     since otherwise Claude opens the file and sees the saved version; it also costs those tokens on
     every message. See [Spending less context](#spending-less-context).
-- **Post-edit diagnostics** *(experimental, off by default)* — after Claude edits a file, feed back the
+- **Post-edit diagnostics** *(experimental, off by default)*: after Claude edits a file, feed back the
   **new** errors/warnings that edit introduced (diffed against the Error List before the edit). The idea
   is to close the edit → error → fix loop without a manual build, as the VS Code extension does. **It is
   currently unreliable in Visual Studio**: VS only analyses files open in an editor, so right after the
   edit the Error List is usually still empty and Claude gets nothing. Until that's solved, ask Claude to
-  read the errors — the `ide_get_diagnostics` MCP tool works, because it runs once the Error List has
+  read the errors; the `ide_get_diagnostics` MCP tool works, because it runs once the Error List has
   settled. Enable via *Options → Chat → Send post-edit diagnostics*.
 ### Pane attention notifications
 
-With several chat panes open — or Visual Studio in the background — you'd otherwise have no way to
+With several chat panes open (or Visual Studio in the background) you'd otherwise have no way to
 know *which* pane needs you. The extension draws your attention **only when you're not already
 looking at that pane**:
 
-- **A pane needs input** (a blocking permission / `AskUserQuestion`): notified always — the model
+- **A pane needs input** (a blocking permission / `AskUserQuestion`): notified always: the model
   is waiting on you.
 - **A turn finishes**: notified when you're elsewhere. Background/async sub-agents are handled
-  correctly — the "finished" notice waits until the agents actually complete, not the moment the
+  correctly: the "finished" notice waits until the agents actually complete, not the moment the
   main turn returns.
 
 How it reaches you depends on where you are:
 
 - **Inside Visual Studio, on another pane/editor** → a VS **InfoBar** on the main window
   ("Chat #N needs your input" / "Chat #N finished") with a **Go to pane** action.
-- **Outside Visual Studio** (another app, another monitor, a tiling window manager) → an **OS toast**
-  — layout-proof, so it shows regardless of how your windows are arranged. **Clicking the toast
+- **Outside Visual Studio** (another app, another monitor, a tiling window manager) → an **OS toast**,
+  layout-proof, so it shows regardless of how your windows are arranged. **Clicking the toast
   brings VS to the front and activates the right pane.**
 - **Already on the pane** (it's the active frame *and* VS has the OS focus) → nothing; you can see it.
 
@@ -461,7 +461,7 @@ you can answer immediately. It clears when you answer, click into the pane, or u
 
 ### Keeping the machine awake
 
-While a chat pane is working, the machine is kept from suspending — a turn frozen half-way leaves
+While a chat pane is working, the machine is kept from suspending: a turn frozen half-way leaves
 the session hung. The display still sleeps on its own timer, an idle pane holds nothing, and sleep
 you ask for always wins. On by default.
 
@@ -469,30 +469,30 @@ See [Keeping the machine awake](docs/power.md).
 
 ### Other
 
-- **CLI banner** — a bar shown if the CLI process exits unexpectedly.
-- **Open Claude in Terminal** — launch an interactive CLI session.
+- **CLI banner**: a bar shown if the CLI process exits unexpectedly.
+- **Open Claude in Terminal**: launch an interactive CLI session.
 
 ---
 
 ## Spending less context
 
-Tokens are a budget, and the chat's context window is the part of it you can watch filling up — the
+Tokens are a budget, and the chat's context window is the part of it you can watch filling up: the
 gauge in the composer shows how much room is left before the CLI compacts the conversation.
 
 Most of what looks like a saving isn't. **A setting that changes what the chat draws changes nothing
 about what was sent**: by the time a tool result is on screen it has already been through the model.
-Preview lines, Collapse tool results, View mode (Full / Focus / Hide tool calls), Compact Ask answers, Show tool errors inline —
+Preview lines, Collapse tool results, View mode (Full / Focus / Hide tool calls), Compact Ask answers, Show tool errors inline:
 all rendering.
 These four are the ones that reach the wire:
 
 | | Where | Default | What it does |
 |---|---|---|---|
-| **The eye** on the file chip | composer, **per pane** | open | Shuts off the file/lines block on every message. The biggest single knob — reach for it when the conversation has nothing to do with what is on screen. |
+| **The eye** on the file chip | composer, **per pane** | open | Shuts off the file/lines block on every message. The biggest single knob: reach for it when the conversation has nothing to do with what is on screen. |
 | **Send the selected text with the message** | Options → Chat | **off** | On, your selected code rides along with *every* message while that selection stands (the chip's icon turns from 🔖 to 🧾). Off, Claude opens the file when it needs it. Turn it on for unsaved buffers, where the copy on disk is the stale one. |
-| **Extended thinking / effort** | composer toolbar and model picker, **per session** | thinking off | Buys the model room to reason before answering — worth it on a hard bug, wasted on a rename. |
+| **Extended thinking / effort** | composer toolbar and model picker, **per session** | thinking off | Buys the model room to reason before answering; worth it on a hard bug, wasted on a rename. |
 | **Send post-edit diagnostics** | Options → Chat | **off** | Feeds the errors an edit introduced back into the context after every edit. |
 
-Three of the four already default to the cheap setting, so the one to know about is the eye — it is
+Three of the four already default to the cheap setting, so the one to know about is the eye: it is
 per-pane and per-session, made to be flicked rather than configured.
 
 Full detail, including what specifically does *not* help:
@@ -502,28 +502,28 @@ Full detail, including what specifically does *not* help:
 
 ## Authentication & security
 
-**The extension does not handle login, authentication or credentials — the CLI does.** It only
+**The extension does not handle login, authentication or credentials: the CLI does.** It only
 launches and drives `claude.exe`; sign-in and token storage stay entirely on the CLI side, exactly
 as they would from a plain shell. There are two ways to authenticate:
 
-- **Native Claude** — log in the normal way, from a terminal: run `claude` (or use **Open Claude in
+- **Native Claude**: log in the normal way, from a terminal: run `claude` (or use **Open Claude in
   Terminal** / a CLI pane) and follow the CLI's own `/login` flow. The extension never sees or stores
   your credentials.
-- **A provider** (GLM/z.ai, a gateway, any Anthropic-compatible host) — authenticate through the
+- **A provider** (GLM/z.ai, a gateway, any Anthropic-compatible host): authenticate through the
   usual environment variables (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, …), set at the OS level
   or per pane via [profiles](docs/options.md#profiles).
 
-Either way the extension holds no secrets of its own — it inherits whatever the CLI and the process
-environment provide. One caveat: a profile's environment variables — an `ANTHROPIC_AUTH_TOKEN`
-among them — are saved as plain JSON under `%LOCALAPPDATA%`. See
+Either way the extension holds no secrets of its own: it inherits whatever the CLI and the process
+environment provide. One caveat: a profile's environment variables (an `ANTHROPIC_AUTH_TOKEN`
+among them) are saved as plain JSON under `%LOCALAPPDATA%`. See
 [Settings and data](docs/settings-and-data.md) for every file the extension writes and where.
 
 ## MCP tools (the IDE, exposed to Claude)
 
-An in-process MCP server hands the agent Visual Studio's own view of your code — **80+ tools** across
-navigation, editing, build, tests, the live debugger and IDE state — with nothing to configure. They are
+An in-process MCP server hands the agent Visual Studio's own view of your code (**80+ tools** across
+navigation, editing, build, tests, the live debugger and IDE state) with nothing to configure. They are
 language-agnostic by design: wired through Roslyn language services or language-agnostic VS/DTE
-APIs, never a C#/VB-only path. There is no list of supported languages — whatever your Visual
+APIs, never a C#/VB-only path. There is no list of supported languages: whatever your Visual
 Studio can do on a file, the agent can ask for; what it gets back depends on the language service
 and the workloads you have installed.
 
@@ -533,52 +533,52 @@ Every tool is listed and described in **[MCP tools](docs/mcp-tools.md)**.
 
 ## Options
 
-All settings live under **Tools → Options → cv4vs Agents**, split into five pages — General,
+All settings live under **Tools → Options → cv4vs Agents**, split into five pages: General,
 Chat, Debug, **Prompts** and **Profiles** (see
 [Two panes, one extension](#two-panes-one-extension)).
 Every setting is documented in **[docs/options.md](docs/options.md)**.
 
 Visual Studio persists them in its own settings store; profiles, per-solution state and caches
-go to `%LOCALAPPDATA%` — see [Settings and data](docs/settings-and-data.md).
+go to `%LOCALAPPDATA%`; see [Settings and data](docs/settings-and-data.md).
 
 ---
 
 ## What differs from the official VS Code extension
 
 This extension aims for parity with Anthropic's VS Code extension where it makes sense, but Visual
-Studio is a different host, so several things are done differently — or don't exist there:
+Studio is a different host, so several things are done differently, or don't exist there:
 
 - **Two distinct panes (Chat + CLI), multi-instance.** Open several chats and terminals side by
   side, each on its own session, docking as tabs. The Chat pane (WebView2 + SDK-MCP) and the CLI
   pane (ConPTY + `--ide` WebSocket) are deliberately separate startup paths.
 - **Our own MCP tool suite for Visual Studio.** The tools above wrap VS's navigation, build and
-  **debugger** (start/step/breakpoints/inspect/hot-reload) and Error List — capabilities specific to
+  **debugger** (start/step/breakpoints/inspect/hot-reload) and Error List, capabilities specific to
   the VS host, built language-agnostic via Roslyn reflection and DTE, not tied to C#/VB only.
 - **Sub-agents you can see and control.** Their tool calls are grouped under the Agent row that
   spawned them (last 3 steps, expand for the full run) instead of being interleaved into the
-  transcript, and a chip in the composer counts the ones still running — click it to stop any of
+  transcript, and a chip in the composer counts the ones still running; click it to stop any of
   them, or all. See [Sub-agents](docs/chat/sub-agents.md).
 - **Pane attention notifications.** With several panes open (or VS in the background), an InfoBar or
-  a layout-proof OS toast tells you which pane needs input or has finished — the VS docked tab can't
+  a layout-proof OS toast tells you which pane needs input or has finished; the VS docked tab can't
   carry that state the way VS Code's editor title does.
 - **Native `.jsonl` sessions.** Sessions are read directly from the CLI's
   `~/.claude/projects/<folder>/*.jsonl` (head+tail reads to avoid loading huge files); rename appends
-  a `custom-title` entry, fork writes a new JSONL — no separate session store.
+  a `custom-title` entry, fork writes a new JSONL; no separate session store.
 - **Lazy, memory-light history.** The chat holds nothing in memory: the transcript is read from the
-  `.jsonl` on demand — the newest page loads first, older history pages in only as you scroll up,
+  `.jsonl` on demand: the newest page loads first, older history pages in only as you scroll up,
   and heavy blocks (images, sub-agent transcripts, full diffs) are fetched only when you actually
   open them. A very long session opens fast and stays light instead of loading the whole conversation
   up front.
 - **Deep VS integration for viewing changes.** Opening a file lands you in the real editor (optionally
   on the referenced lines); Edit/Write changes open in Visual Studio's **native, interactive
-  side-by-side diff** — not a static rendered diff — so you review and edit with the full editor, then
+  side-by-side diff** (not a static rendered diff) so you review and edit with the full editor, then
   **save (Ctrl+S) to accept** or **close the tab to reject** (the CLI applies the edit only if you
   saved).
 - **[Context gauge + Usage/Context/Statistics dialogs](docs/chat/context-and-usage.md)** rendered
   natively in the chat, including historical statistics across the current chat, the whole project,
   or **all projects together**.
 
-- **[Rewind](docs/chat/rewind.md)** — restore the files to the state they were in before any message
+- **[Rewind](docs/chat/rewind.md)**: restore the files to the state they were in before any message
   in the session, leaving the conversation itself untouched; a dry-run preview lists the files and
   the lines added or removed before anything is written, and clicking a file opens the pre-message
   copy against the current one in Visual Studio's diff.
@@ -601,8 +601,8 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for current limitations (mostly
 
 ## Support
 
-- **Report a bug**: [bug report form](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=bug_report.yml)
-  — also under **View → cv4vs Agents → Help & Feedback**, which pre-fills the version for you
+- **Report a bug**: [bug report form](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=bug_report.yml),
+  also under **View → cv4vs Agents → Help & Feedback**, which pre-fills the version for you
 - **Request a feature**: [feature request form](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feature_request.yml)
 - **Feedback**: [tell us how it's going](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feedback.yml)
 - **Marketplace listing**: [cv4vs Agents](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
@@ -611,14 +611,14 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for current limitations (mostly
 Taking part here means following our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 Problems in `claude.exe` itself belong to
-[the CLI's own tracker](https://github.com/anthropics/claude-code/issues) — this extension drives
+[the CLI's own tracker](https://github.com/anthropics/claude-code/issues); this extension drives
 the CLI, it doesn't ship it.
 
 ---
 
 ## Credits
 
-Artwork by [filocorsa](https://github.com/filocorsa) — thank you.
+Artwork by [filocorsa](https://github.com/filocorsa), thank you.
 
 ---
 
@@ -632,4 +632,4 @@ or endorsed by either company; the names are used only to describe what it works
 
 ## License
 
-GPL-3.0-only — Copyright Corsinvest Srl.
+GPL-3.0-only, Copyright Corsinvest Srl.
