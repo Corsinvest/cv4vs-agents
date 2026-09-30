@@ -23,7 +23,7 @@ internal sealed class RemoveProjectTool : McpTool<RemoveProjectArgs>
 {
     public override string Name => "solution_remove_project";
     public override string Description =>
-        "Remove a project from the solution and save it. The project's files stay on disk — this " +
+        "Remove a project from the solution and save it. The project's files stay on disk: this " +
         "takes it out of the solution, it does not delete it. Returns ok=false with the available " +
         "project names when the name doesn't match. The reverse of solution_add_project.";
 

@@ -31,7 +31,7 @@ internal static class PluginService
         var (ok, stdout, _) = await RunRawAsync("plugin", "list", "--available", "--json");
         if (!ok || !(ExtractJson(stdout) is JObject root))
         {
-            OutputWindowLogger.Global.Debug(() => "[plugins] list failed (process error or unparseable JSON) — returning empty");
+            OutputWindowLogger.Global.Debug(() => "[plugins] list failed (process error or unparseable JSON), returning empty");
             return ([], []);
         }
         var installed = (root["installed"] as JArray ?? new JArray()).Select(MapInstalled).ToArray();
@@ -146,7 +146,7 @@ internal static class PluginService
         }
         var message = (string)result["message"] ?? "";
         // The CLI refreshes the marketplace first; when that fails the version it compared against may be stale.
-        if ((bool?)result["refreshFailed"] == true) { message += " (marketplace could not be refreshed — the latest version may be newer)"; }
+        if ((bool?)result["refreshFailed"] == true) { message += " (marketplace could not be refreshed, so the latest version may be newer)"; }
         return (ok, ok && (string)result["updateOutcome"] == "updated", message);
     }
 
@@ -179,7 +179,7 @@ internal static class PluginService
     private static Task<(bool ok, string stdout, string stderr)> RunRawAsync(params string[] args)
     {
         var exe = Core.Client.ClaudeInstall.ResolveExecutable();
-        if (exe == null) { OutputWindowLogger.Global.Warn("[plugins] claude.exe not found — plugin operations unavailable"); return Task.FromResult((false, "", "claude.exe not found")); }
+        if (exe == null) { OutputWindowLogger.Global.Warn("[plugins] claude.exe not found: plugin operations unavailable"); return Task.FromResult((false, "", "claude.exe not found")); }
         // Plugins are global, so CWD doesn't affect the result; just need a valid one.
         var cwd = AgentsPackage.Instance?.CurrentSolutionFolder
                   ?? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -205,7 +205,7 @@ internal static class PluginService
             var errTask = p.StandardError.ReadToEndAsync();
             if (!p.WaitForExit((int)RunTimeout.TotalMilliseconds))
             {
-                OutputWindowLogger.Global.Warn("[plugins] operation timed out — killing the process");
+                OutputWindowLogger.Global.Warn("[plugins] operation timed out, killing the process");
                 try { p.Kill(); } catch { /* already gone */ }
                 return (false, "", "timeout");
             }

@@ -38,7 +38,7 @@ jobs:
         run: |
           npm run gen-bridge
           git diff --exit-code -- core/bridge-messages.ts \
-            || { echo "::error::bridge-messages.ts is stale — run 'npm run build' and commit it"; exit 1; }
+            || { echo "::error::bridge-messages.ts is stale: run 'npm run build' and commit it"; exit 1; }
 
       - name: Typecheck
         run: npm run typecheck
@@ -112,7 +112,7 @@ jobs:
         run: |
           git diff --exit-code -- src/Corsinvest.VisualStudio.Agents/Chat/WebViewSrc/core/generated/
           if ($LASTEXITCODE -ne 0) {
-              Write-Host "::error::core/generated/*.ts is stale — rebuild the solution and commit the regenerated files"
+              Write-Host "::error::core/generated/*.ts is stale: rebuild the solution and commit the regenerated files"
               exit 1
           }
 
@@ -131,7 +131,7 @@ jobs:
           $expected = Get-ChildItem $dist -Recurse -File |
               ForEach-Object { 'WebView2/' + $_.FullName.Substring((Resolve-Path $dist).Path.Length + 1).Replace('\', '/') }
           if (-not $expected) {
-              Write-Host "::error::$dist is empty — the WebView was never built"
+              Write-Host "::error::$dist is empty: the WebView was never built"
               exit 1
           }
 

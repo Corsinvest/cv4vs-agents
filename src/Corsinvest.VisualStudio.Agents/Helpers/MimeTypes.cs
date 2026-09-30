@@ -30,7 +30,7 @@ internal static class MimeTypes
         catch (Exception ex)
         {
             // A throw would climb into the caller's WPF drop handler and take the pane with it.
-            OutputWindowLogger.Global.Warn($"[mime] media type for '{path}' — {ex.Message}");
+            OutputWindowLogger.Global.Warn($"[mime] media type for '{path}': {ex.Message}");
             return "";
         }
         finally

@@ -23,7 +23,7 @@ internal sealed class GetThreadCallStackTool : McpTool<GetThreadCallStackArgs>
     public override string Name => "debug_get_thread_callstack";
     public override string Description =>
         "Get one thread's call stack by id WITHOUT making it the current thread. Use it to survey " +
-        "several threads — chasing a deadlock, seeing what a worker is blocked on — where " +
+        "several threads (chasing a deadlock, seeing what a worker is blocked on) where " +
         "debug_select_thread + debug_get_callstack would move the debugger's current thread each " +
         "time, taking the user's Call Stack and Locals windows with it and never putting them " +
         "back. Each frame carries its own file and line where it has source. Needs break mode; " +

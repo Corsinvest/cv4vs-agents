@@ -24,7 +24,7 @@ internal sealed class EvaluateExpressionTool : McpTool<EvaluateExpressionArgs>
         "Evaluate an expression in the current stack frame while paused (break mode), like the " +
         "Watch window: pass something like 'order.Items.Count'. Returns the value and type. " +
         "Note: evaluating can call property getters/methods in the program, so it may have " +
-        "side-effects — prefer reading fields/properties. You can also assign (e.g. 'x = 5') to " +
+        "side-effects: prefer reading fields/properties. You can also assign (e.g. 'x = 5') to " +
         "change a variable's value while paused, which is how you fix a value and retry a block " +
         "with debug_set_next_statement. To see inside an object rather than read one field, " +
         "debug_expand walks its members in a single call. Reads the frame debug_select_frame " +

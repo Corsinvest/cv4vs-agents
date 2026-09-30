@@ -53,7 +53,7 @@ internal static class ToolWindowIcons
 
         if (Package.GetGlobalService(typeof(SVsImageService)) is not IVsImageService2 imageService)
         {
-            OutputWindowLogger.Global.Warn("[icons] no image service — tool window tabs get the bare logo");
+            OutputWindowLogger.Global.Warn("[icons] no image service, tool window tabs get the bare logo");
             return PackageMonikers.Logo;
         }
 

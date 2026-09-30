@@ -32,7 +32,7 @@ internal sealed class EnableBreakpointTool : McpTool<EnableBreakpointArgs>
     public override string Description =>
         "Enable or disable the breakpoint(s) at a file and 1-based line, or the ones on a function " +
         "name. Disabling is how a breakpoint in hot code stops interrupting the session while you " +
-        "are trying to reach a different one — unlike debug_remove_breakpoint, which also throws " +
+        "are trying to reach a different one, unlike debug_remove_breakpoint, which also throws " +
         "away the condition and hit-count rule it was set with and cannot put them back. " +
         "debug_list_breakpoints reports enabled for each. Works whether or not a session is running.";
 

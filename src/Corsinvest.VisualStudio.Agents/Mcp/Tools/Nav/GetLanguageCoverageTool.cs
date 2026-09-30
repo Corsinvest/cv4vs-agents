@@ -20,8 +20,8 @@ internal sealed class GetLanguageCoverageTool : McpTool<NoArgs>
         "each language: how many projects it has, and which of go_to_definition, find_references, " +
         "get_document_symbols, rename_symbol and search_workspace_symbols it provides. Also lists " +
         "the solution's projects that are outside the language workspace altogether, with what they " +
-        "contain — C++ ones are, and only get_document_symbols reaches them, through the project " +
-        "system rather than the language services — and, per project, the source " +
+        "contain (C++ ones are, and only get_document_symbols reaches them, through the project " +
+        "system rather than the language services) and, per project, the source " +
         "files whose extension its own language does not answer for, which is how a .csproj full of " +
         "TypeScript reports every tool as available and still answers for none of those files. " +
         "One caveat this cannot measure: TypeScript and JavaScript answer get_document_symbols only " +

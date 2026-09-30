@@ -375,7 +375,7 @@ export class CvRewindDialog extends CvDialogBase {
                          command stays done. Without saying so, a rewind that leaves half the work
                          in place looks like a bug rather than the boundary it is. -->
                     <p class="hint">
-                        Restore the files to how they were before a message — the conversation is
+                        Restore the files to how they were before a message; the conversation is
                         left alone. Only files Claude edited come back: what it changed by running a
                         command is not part of a checkpoint.
                     </p>
@@ -440,7 +440,7 @@ export class CvRewindDialog extends CvDialogBase {
                                               ? 'No message matches that.'
                                               : this._rewindable === null
                                                 ? 'Looking for restore points…'
-                                                : 'Nothing to rewind to yet — no files have been edited in this session.'
+                                                : 'Nothing to rewind to yet: no files have been edited in this session.'
                                       }
                                   </div>`
                         }

@@ -124,7 +124,7 @@ public partial class UsageStatusBarItem : UserControl
         // an unavailable profile would render as nothing at all.
         var named = UsageStatusService.Instance.ShowProfileName;
         ProfileText.Text = segments.Count > 0 ? (named ? snapshot.ProfileName + ":" : "")
-            : snapshot.State == UsageAvailability.Unavailable ? (named ? snapshot.ProfileName + ": —" : "—")
+            : snapshot.State == UsageAvailability.Unavailable ? (named ? snapshot.ProfileName + ": -" : "-")
             : named ? snapshot.ProfileName : "";
         ProfileText.Visibility = ProfileText.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
 

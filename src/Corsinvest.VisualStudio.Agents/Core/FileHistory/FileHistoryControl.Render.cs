@@ -105,7 +105,7 @@ public partial class FileHistoryControl
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("FileHistoryControl.ShowSession", ex);
-            MessageText.Text = "Could not read the transcript — see the output log.";
+            MessageText.Text = "Could not read the transcript. See the output log.";
             MessageText.Visibility = Visibility.Visible;
             FilesList.Visibility = Visibility.Collapsed;
             return;
@@ -214,7 +214,7 @@ public partial class FileHistoryControl
             {
                 OutputWindowLogger.Global.LogException("FileHistoryControl.Compare", ex);
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                ShellHelpers.ShowMessage("Could not open the comparison — see the output log.",
+                ShellHelpers.ShowMessage("Could not open the comparison. See the output log.",
                                          "File history", warning: true);
             }
         });
@@ -243,7 +243,7 @@ public partial class FileHistoryControl
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException("FileHistoryControl.SaveCopy", ex);
-            ShellHelpers.ShowMessage("Could not save the copy — see the output log.",
+            ShellHelpers.ShowMessage("Could not save the copy. See the output log.",
                                      "File history", warning: true);
         }
     }
@@ -278,7 +278,7 @@ public partial class FileHistoryControl
         if (failed > 0)
         {
             ShellHelpers.ShowMessage(
-                $"{failed} of {targets.Count} folder(s) could not be deleted — a running CLI may still hold them. "
+                $"{failed} of {targets.Count} folder(s) could not be deleted: a running CLI may still hold them. "
                 + "See the output log.",
                 "File history", warning: true);
         }

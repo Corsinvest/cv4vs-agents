@@ -79,7 +79,7 @@ internal sealed partial class IdeContextService : IDisposable
             _docFactory = components?.GetService<ITextDocumentFactoryService>();
             if (_editorAdapters == null || _docFactory == null)
             {
-                OutputWindowLogger.Global.Warn("[ide-context] editor services unavailable — selection tracking will not fire");
+                OutputWindowLogger.Global.Warn("[ide-context] editor services unavailable, selection tracking will not fire");
             }
             else
             {

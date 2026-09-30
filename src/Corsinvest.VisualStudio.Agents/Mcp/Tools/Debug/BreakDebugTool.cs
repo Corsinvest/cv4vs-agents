@@ -18,7 +18,7 @@ internal sealed class BreakDebugTool : McpTool<NoArgs>
         "breakpoint, so the call stack and variables can be inspected. Non-blocking, so mode comes " +
         "back null rather than a guess: poll debug_get_state to see it reach 'break' and learn " +
         "where it stopped. Calling it on an already-paused program succeeds and says so, rather " +
-        "than failing — there is nothing to do. Needs a session: debug_start first.";
+        "than failing: there is nothing to do. Needs a session: debug_start first.";
 
     public override bool Idempotent => true;
 

@@ -105,7 +105,7 @@ internal static class EditorPromptStore
         }
         catch (IOException)
         {
-            OutputWindowLogger.Global.Warn("[editor] failed to read the prompts file (IO) — using the defaults");
+            OutputWindowLogger.Global.Warn("[editor] failed to read the prompts file (IO), using the defaults");
         }
         return AllDefaults();
     }
@@ -128,7 +128,7 @@ internal static class EditorPromptStore
         catch (JsonException) { root = null; }
         if (root == null)
         {
-            OutputWindowLogger.Global.Warn("[editor] prompts.json is corrupt — using the defaults");
+            OutputWindowLogger.Global.Warn("[editor] prompts.json is corrupt, using the defaults");
             return AllDefaults();
         }
 
@@ -143,7 +143,7 @@ internal static class EditorPromptStore
             }
             catch (JsonException)
             {
-                OutputWindowLogger.Global.Warn($"[editor] prompts.json: the {scope} list is corrupt — using its defaults");
+                OutputWindowLogger.Global.Warn($"[editor] prompts.json: the {scope} list is corrupt, using its defaults");
                 result[scope] = Defaults(scope);
             }
         }
@@ -164,7 +164,7 @@ internal static class EditorPromptStore
         }
         catch (JsonException)
         {
-            OutputWindowLogger.Global.Warn("[editor] editor-prompts.json is corrupt — using the defaults");
+            OutputWindowLogger.Global.Warn("[editor] editor-prompts.json is corrupt, using the defaults");
         }
         return result;
     }

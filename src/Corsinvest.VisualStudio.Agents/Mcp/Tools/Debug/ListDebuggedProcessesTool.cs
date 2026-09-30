@@ -15,7 +15,7 @@ internal sealed class ListDebuggedProcessesTool : McpTool<NoArgs>
 {
     public override string Name => "debug_list_debugged_processes";
     public override string Description =>
-        "List the processes THIS debug session is attached to — not the machine's processes, which " +
+        "List the processes THIS debug session is attached to, not the machine's processes, which " +
         "is debug_list_processes. Each with its pid, name, thread count and transport. The one the " +
         "other debug tools read comes FIRST and carries isCurrent: the call stack, the locals, the " +
         "threads and the console all act on that single process without naming it, so when a " +

@@ -1,12 +1,12 @@
 name: 💬 Feedback
-description: Share how it's going — what works, what doesn't
+description: Share how it's going (what works, what doesn't)
 title: "[Feedback]: "
 labels: ["feedback"]
 body:
   - type: markdown
     attributes:
       value: |
-        Not a bug and not a request — just how the extension feels in real use. That's the kind of
+        Not a bug and not a request; just how the extension feels in real use. That's the kind of
         thing that's hardest to find out from the inside.
 
   - type: dropdown

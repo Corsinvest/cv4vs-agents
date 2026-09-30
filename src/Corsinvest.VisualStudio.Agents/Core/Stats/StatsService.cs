@@ -362,7 +362,7 @@ internal static class StatsService
                 parent.Children.Add(new StatsTreeNode
                 {
                     Label = string.IsNullOrEmpty(s.title) ? time : s.title,
-                    Tooltip = string.IsNullOrEmpty(s.title) ? null : $"{time} — {s.title}",
+                    Tooltip = string.IsNullOrEmpty(s.title) ? null : $"{time}: {s.title}",
                     Selection = new StatsSelection
                     {
                         Scope = StatsScope.Session,
@@ -405,7 +405,7 @@ internal static class StatsService
     {
         if (string.IsNullOrEmpty(cwd))
         {
-            OutputWindowLogger.Global.Warn("[stats] no cwd for this project — listing its sessions is not possible");
+            OutputWindowLogger.Global.Warn("[stats] no cwd for this project, so listing its sessions is not possible");
             return [];
         }
         try

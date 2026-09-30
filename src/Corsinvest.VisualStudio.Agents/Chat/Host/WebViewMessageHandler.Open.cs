@@ -130,7 +130,7 @@ internal sealed partial class WebViewMessageHandler
         }
         if (input == null)
         {
-            log.Warn($"[diff] no tool_use {toolUseId} in the transcript — nothing to compare");
+            log.Warn($"[diff] no tool_use {toolUseId} in the transcript: nothing to compare");
             return;
         }
 

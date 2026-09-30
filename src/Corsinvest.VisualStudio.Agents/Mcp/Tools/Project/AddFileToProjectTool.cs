@@ -31,7 +31,7 @@ internal sealed class AddFileToProjectTool : McpTool<AddFileToProjectArgs>
         "'Add → Existing Item' does. Needed for project types that list every file explicitly: " +
         "there, a .cs written to disk compiles in the IDE but is missing from an MSBuild command-" +
         "line build, which fails silently. SDK-style projects glob their files in and need no " +
-        "call — one made anyway reports that the file is already included. This does not create " +
+        "call; one made anyway reports that the file is already included. This does not create " +
         "the file: write it first, then add it. project_remove_file is the reverse.";
 
     public override bool Idempotent => true;

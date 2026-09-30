@@ -25,7 +25,7 @@ internal sealed class CheckDocumentDirtyTool : McpTool<CheckDocumentDirtyArgs>
         "Check whether an open file has unsaved changes. Returns isOpen=false " +
         "when the file isn't open in any editor; otherwise isDirty true/false. When it is " +
         "dirty the Read tool gives the version on disk and document_read_buffer the one on " +
-        "screen — they differ, and document_save makes them agree.";
+        "screen: they differ, and document_save makes them agree.";
 
     public override bool ReadOnly => true;
     public override bool Idempotent => true;

@@ -24,11 +24,11 @@ internal sealed class ReadConsoleTool : McpTool<ReadConsoleArgs>
     public override string Name => "debug_console_read";
     public override string Description =>
         "Read what a debugged console application has written to its console window. This is the " +
-        "program's real stdout, which is NOT in the Debug output pane — that pane only carries " +
+        "program's real stdout, which is NOT in the Debug output pane: that pane only carries " +
         "Debug.WriteLine, so a Console.WriteLine prompt is invisible there. Use it to see what the " +
         "program printed, and to find out whether it is sitting at a prompt waiting for input; " +
         "debug_console_send answers it. Needs a running debug session and a project that has a " +
-        "console — a GUI or web app has none.";
+        "console: a GUI or web app has none.";
 
     public override bool ReadOnly => true;
     public override bool Idempotent => true;

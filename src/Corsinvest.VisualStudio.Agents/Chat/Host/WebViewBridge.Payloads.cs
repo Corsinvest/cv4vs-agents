@@ -144,7 +144,7 @@ internal sealed partial class WebViewBridge
                     {
                         // Silence here reaches the user as an attachment Claude never sees: the chip
                         // is on the message, the document block is empty, and nothing says why.
-                        OutputWindowLogger.Global.Warn($"[chat] attachment '{name}': base64 decode failed, sent empty — {ex.Message}");
+                        OutputWindowLogger.Global.Warn($"[chat] attachment '{name}': base64 decode failed, sent empty: {ex.Message}");
                         textData = "";
                     }
                     blocks.Add(new JObject

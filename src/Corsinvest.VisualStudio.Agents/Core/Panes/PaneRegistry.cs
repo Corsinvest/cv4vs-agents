@@ -49,7 +49,7 @@ public sealed class PaneRegistry
         Entries.Add(entry);
         if (wasEmpty && Entries.Count > 0)
         {
-            OutputWindowLogger.Global.Info("[registry] first session started — MCP server will start");
+            OutputWindowLogger.Global.Info("[registry] first session started, MCP server will start");
             FirstSessionStarted?.Invoke();
         }
         return entry;
@@ -69,7 +69,7 @@ public sealed class PaneRegistry
         SessionClosed?.Invoke();
         if (Entries.Count == 0)
         {
-            OutputWindowLogger.Global.Info("[registry] last session ended — MCP server will stop");
+            OutputWindowLogger.Global.Info("[registry] last session ended, MCP server will stop");
             LastSessionEnded?.Invoke();
         }
     }

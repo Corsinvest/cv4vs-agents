@@ -23,10 +23,10 @@ internal sealed class SaveDocumentTool : McpTool<SaveDocumentArgs>
     public override string Name => "document_save";
     public override string Description =>
         "Save an open file if it has unsaved changes. Returns saved=true if a " +
-        "save happened, false if the file wasn't open or was already saved — the two are not " +
+        "save happened, false if the file wasn't open or was already saved: the two are not " +
         "told apart here, document_check_dirty separates them beforehand. Needed after " +
         "document_format, document_organize_imports or document_run_cleanup, which change buffers " +
-        "and leave them unsaved. nav_rename_symbol does not need it — it writes to disk itself.";
+        "and leave them unsaved. nav_rename_symbol does not need it: it writes to disk itself.";
 
     public override bool Idempotent => true;
 

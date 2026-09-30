@@ -27,7 +27,7 @@ internal sealed class OrganizeImportsTool : McpTool<OrganizeImportsArgs>
         "via the IDE's Edit.RemoveAndSort command. " +
         "The file must live inside the open solution's folder; success=false otherwise. " +
         "Opens the file in the editor if it isn't already, and leaves that buffer unsaved like " +
-        "document_format — including that reading it back with the Read tool saves it first when " +
+        "document_format, including that reading it back with the Read tool saves it first when " +
         "autosave is on; document_read_buffer looks without writing.";
 
     public override bool Idempotent => true;

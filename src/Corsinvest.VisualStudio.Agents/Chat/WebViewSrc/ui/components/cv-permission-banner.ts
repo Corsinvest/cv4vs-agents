@@ -1257,7 +1257,7 @@ export class CvPermissionBanner extends LitElement {
                 ${
                     p.planEdited
                         ? html`<div id="plan-edited">
-                              Edited in the editor — this version is what gets approved
+                              Edited in the editor: this version is what gets approved
                           </div>`
                         : nothing
                 }

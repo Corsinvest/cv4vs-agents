@@ -36,12 +36,12 @@ internal sealed class SetFunctionBreakpointTool : McpTool<SetFunctionBreakpointA
     public override string Description =>
         "Add a breakpoint that triggers when a function is entered, identified by name " +
         "(e.g. \"MyClass.Calculate\") instead of a file and line. Optionally pass a condition, or " +
-        "a hitCount to skip the first calls — the way to stop on the 500th call without a counter " +
+        "a hitCount to skip the first calls, the way to stop on the 500th call without a counter " +
         "to test. Works whether or not a debug session is running. Use when you know the method but not " +
         "the exact line, or to avoid opening the file. debug_set_breakpoint takes a file and " +
         "line instead, debug_list_breakpoints shows what is set, and debug_start begins the " +
         "session that will hit it. " +
-        "A name that matches nothing is accepted just the same — it stays unresolved instead of " +
+        "A name that matches nothing is accepted just the same: it stays unresolved instead of " +
         "failing. debug_list_breakpoints reports bound once the session is running: 0 there means " +
         "the name never matched, so check the spelling or how the type is qualified. " +
         "The returned file and line say where the name resolved to, which is worth checking when the " +

@@ -42,7 +42,7 @@ internal static class ProfileStore
         }
         catch (IOException)
         {
-            OutputWindowLogger.Global.Warn("[profiles] failed to read profiles.json (IO) — profiles unavailable this session");
+            OutputWindowLogger.Global.Warn("[profiles] failed to read profiles.json (IO): profiles unavailable this session");
             return [];
         }
     }
@@ -66,7 +66,7 @@ internal static class ProfileStore
         }
         catch (JsonException)
         {
-            OutputWindowLogger.Global.Warn("[profiles] profiles.json is corrupt — ignoring, profiles will appear empty");
+            OutputWindowLogger.Global.Warn("[profiles] profiles.json is corrupt, ignoring, profiles will appear empty");
             return [];
         }
     }

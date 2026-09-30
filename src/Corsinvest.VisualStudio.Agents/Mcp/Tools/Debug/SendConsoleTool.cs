@@ -17,7 +17,7 @@ internal sealed class SendConsoleArgs
                    "ctrl+c", "ctrl+break")]
     [Description("A single key to send instead of text. 'ctrl+c' and 'ctrl+break' interrupt a " +
         "program that is blocked reading input. The arrow keys carry no character, so a program " +
-        "reading lines (Console.ReadLine) will not see them — they only reach one reading keys.")]
+        "reading lines (Console.ReadLine) will not see them; they only reach one reading keys.")]
     public string Key { get; set; }
 
     [Description("Append Enter after the text (default true). Ignored when sending a key.")]
@@ -34,7 +34,7 @@ internal sealed class SendConsoleTool : McpTool<SendConsoleArgs>
     public override string Name => "debug_console_send";
     public override string Description =>
         "Send input to a debugged console application, as if it were typed at its console. Use it " +
-        "when debug_console_read shows the program waiting at a prompt — a Console.ReadLine that " +
+        "when debug_console_read shows the program waiting at a prompt: a Console.ReadLine that " +
         "nobody answers blocks the debug session indefinitely. Pass 'text' (Enter is appended " +
         "unless newline is false), or 'key' for a single named key; 'ctrl+c' and 'ctrl+break' " +
         "interrupt the program rather than typing a character. Needs a running debug session and " +

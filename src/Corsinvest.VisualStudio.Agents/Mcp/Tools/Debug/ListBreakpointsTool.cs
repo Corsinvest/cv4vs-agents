@@ -17,12 +17,12 @@ internal sealed class ListBreakpointsTool : McpTool<NoArgs>
         "List all breakpoints in the solution: each with its file+line (or function name), " +
         "condition and hit-count rule (if any), how many times it has been hit this session, and " +
         "whether it's enabled. Two fields answer \"why did it not break\": currentHits separates " +
-        "'never reached' from 'reached, and the condition said no', and bound — how many code " +
-        "locations it resolved to, during a session — catches the case before both, a " +
+        "'never reached' from 'reached, and the condition said no', and bound (how many code " +
+        "locations it resolved to, during a session) catches the case before both, a " +
         "breakpoint that will never stop anything because the line holds no code or its " +
         "symbols are not loaded. Set them with debug_set_breakpoint or " +
         "debug_set_function_breakpoint, remove one with debug_remove_breakpoint or all with " +
-        "debug_clear_breakpoints. Worth a look when a run stops somewhere unexpected — a " +
+        "debug_clear_breakpoints. Worth a look when a run stops somewhere unexpected: a " +
         "breakpoint left from earlier is the usual reason.";
 
     public override bool ReadOnly => true;

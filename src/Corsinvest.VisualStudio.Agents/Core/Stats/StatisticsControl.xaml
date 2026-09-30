@@ -90,12 +90,12 @@
                right shows the progress. -->
           <StackPanel x:Name="RefreshButtons" Orientation="Horizontal">
             <Button Style="{StaticResource ToolBtn}" Click="OnRefreshClick"
-                    ToolTip="Refresh — re-read changed sessions">
+                    ToolTip="Refresh: re-read changed sessions">
               <imaging:CrispImage Width="16" Height="16"
                                   Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
             </Button>
             <Button Style="{StaticResource ToolBtn}" Click="OnRecreateClick"
-                    ToolTip="Recreate statistics — re-index everything from scratch">
+                    ToolTip="Recreate statistics: re-index everything from scratch">
               <imaging:CrispImage Width="16" Height="16"
                                   Moniker="{x:Static catalog:KnownMonikers.Restart}" />
             </Button>
@@ -153,101 +153,101 @@
         <UniformGrid Columns="4">
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="TotalTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="TotalTokensText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="TOTAL TOKENS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="InputTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="InputTokensText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="INPUT TOKENS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="OutputTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="OutputTokensText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="OUTPUT TOKENS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="CacheTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="CacheTokensText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="CACHE TOKENS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <!-- Row 2: volume -->
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="SessionsText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="SessionsText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="SESSIONS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="MessagesText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="MessagesText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="MESSAGES" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="ToolCallsText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="ToolCallsText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="TOOL CALLS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="SubagentsText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="SubagentsText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="SUBAGENTS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <!-- Row 3: sub-agent tokens + activity -->
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="SubagentTokensText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="SubagentTokensText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="SUBAGENT TOKENS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="ActiveDaysText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="ActiveDaysText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="ACTIVE DAYS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="CurrentStreakText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="CurrentStreakText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="CURRENT STREAK" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="LongestStreakText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="LongestStreakText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="LONGEST STREAK" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <!-- Row 4: meta -->
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="PeakHourText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="PeakHourText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="PEAK HOUR" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="FavoriteModelText" Text="—" Style="{StaticResource TileValueStyle}"
+              <TextBlock x:Name="FavoriteModelText" Text="-" Style="{StaticResource TileValueStyle}"
                          TextTrimming="CharacterEllipsis" MaxWidth="200" />
               <TextBlock Text="FAVORITE MODEL" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="ImagesText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="ImagesText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="IMAGES" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>
           <Border Style="{StaticResource TileStyle}">
             <StackPanel>
-              <TextBlock x:Name="AttachmentsText" Text="—" Style="{StaticResource TileValueStyle}" />
+              <TextBlock x:Name="AttachmentsText" Text="-" Style="{StaticResource TileValueStyle}" />
               <TextBlock Text="ATTACHMENTS" Style="{StaticResource TileLabelStyle}" />
             </StackPanel>
           </Border>

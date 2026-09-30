@@ -207,7 +207,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         // When missing, swap in the inline "not installed" panel instead of a modal dialog.
         if (cmd == null)
         {
-            _log.Warn("[cli] claude.exe not found — showing 'not installed' panel");
+            _log.Warn("[cli] claude.exe not found: showing 'not installed' panel");
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             ShowMissingPanel();
             return;
@@ -302,7 +302,7 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         _ = Dispatcher.BeginInvoke(new Action(() =>
         {
             if (_disposed) { return; }
-            _log.Info("[cli] claude.exe exited — auto-closing pane");
+            _log.Info("[cli] claude.exe exited: auto-closing pane");
             Pane?.ClosePane();
         }));
 

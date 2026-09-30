@@ -88,7 +88,7 @@ internal sealed partial class IdeDebugService
             // No Mode: Go() returns before the transition, so CurrentMode here is still the state we
             // just left: reporting it said "design" for a session that had started. getDebugState
             // is the one that knows, and the caller has to poll it anyway.
-            return new DebugResult { Ok = true, Mode = PendingMode, Reason = "Debugging started — poll debug_get_state for the mode." };
+            return new DebugResult { Ok = true, Mode = PendingMode, Reason = "Debugging started: poll debug_get_state for the mode." };
         }
         catch (Exception ex)
         {
@@ -102,7 +102,7 @@ internal sealed partial class IdeDebugService
                 Ok = false,
                 Mode = ModeToString(GetDebugger()?.CurrentMode ?? dbgDebugMode.dbgDesignMode),
                 Reason = $"Could not start debugging: {ex.Message} " +
-                         "Visual Studio refuses this while a build or a save is still in flight — retrying shortly usually works.",
+                         "Visual Studio refuses this while a build or a save is still in flight, so retrying shortly usually works.",
             };
         }
     }
@@ -121,7 +121,7 @@ internal sealed partial class IdeDebugService
             }
             dbg.Stop(false);
             // Same as Go(): non-blocking, so CurrentMode has not caught up yet.
-            return new DebugResult { Ok = true, Mode = PendingMode, Reason = "Stop requested — poll debug_get_state to see it land." };
+            return new DebugResult { Ok = true, Mode = PendingMode, Reason = "Stop requested: poll debug_get_state to see it land." };
         }
         catch (Exception ex)
         {
@@ -239,7 +239,7 @@ internal sealed partial class IdeDebugService
 
             LeavingBreak();
 
-            return new DebugResult { Ok = true, Reason = $"Running to {System.IO.Path.GetFileName(filePath)}:{line} — poll debug_get_state; it may stop earlier." };
+            return new DebugResult { Ok = true, Reason = $"Running to {System.IO.Path.GetFileName(filePath)}:{line}: poll debug_get_state; it may stop earlier." };
         }
         catch (Exception ex)
         {
@@ -535,7 +535,7 @@ internal sealed partial class IdeDebugService
                 {
                     Ok = true,
                     Mode = ModeToString(dbg.CurrentMode),
-                    Reason = $"No breakpoint at {what} — debug_list_breakpoints has the ones that exist; VS may have moved it to the nearest line with code.",
+                    Reason = $"No breakpoint at {what}: debug_list_breakpoints has the ones that exist; VS may have moved it to the nearest line with code.",
                 };
             }
             return changed == 0
@@ -665,16 +665,16 @@ internal sealed partial class IdeDebugService
             // that had lost track of the mode retry or give up, when the answer was "you are there".
             if (dbg.CurrentMode == dbgDebugMode.dbgBreakMode)
             {
-                return new DebugResult { Ok = true, Mode = "break", Reason = "Already paused — debug_get_state has the position." };
+                return new DebugResult { Ok = true, Mode = "break", Reason = "Already paused: debug_get_state has the position." };
             }
             if (dbg.CurrentMode != dbgDebugMode.dbgRunMode)
             {
-                return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = "Not debugging — debug_start first." };
+                return new DebugResult { Ok = false, Mode = ModeToString(dbg.CurrentMode), Reason = "Not debugging: debug_start first." };
             }
             dbg.Break(false); // false = don't block until the break completes
             // No Mode, same as start/stop/restart: the call returns before the transition, so
             // CurrentMode here still says "run" for a program that is about to be paused.
-            return new DebugResult { Ok = true, Reason = "Break requested — poll debug_get_state for where it stopped." };
+            return new DebugResult { Ok = true, Reason = "Break requested: poll debug_get_state for where it stopped." };
         }
         catch (Exception ex)
         {
@@ -742,7 +742,7 @@ internal sealed partial class IdeDebugService
             if (dbg == null) { return new DebuggedProcessesResult { Ok = false, Reason = "Debugger not available." }; }
             if (dbg.CurrentMode == dbgDebugMode.dbgDesignMode)
             {
-                return new DebuggedProcessesResult { Ok = false, Reason = "No debug session is running — debug_start begins one." };
+                return new DebuggedProcessesResult { Ok = false, Reason = "No debug session is running: debug_start begins one." };
             }
 
             var currentPid = SafeCurrentProcessId(dbg);
@@ -788,7 +788,7 @@ internal sealed partial class IdeDebugService
             if (dbg == null) { return new ModulesResult { Ok = false, Reason = "Debugger not available." }; }
             if (dbg.CurrentMode == dbgDebugMode.dbgDesignMode)
             {
-                return new ModulesResult { Ok = false, Reason = "No debug session is running — debug_start begins one." };
+                return new ModulesResult { Ok = false, Reason = "No debug session is running: debug_start begins one." };
             }
 
             // Modules hang off Process3, not off the debugger. An engine that predates it answers
@@ -934,12 +934,12 @@ internal sealed partial class IdeDebugService
                 {
                     Ok = false,
                     Reason = (pid > 0 ? $"No process with pid {pid}." : $"No process matching '{processName}'.")
-                             + $" Attachable: {sample} — debug_list_processes has them all.",
+                             + $" Attachable: {sample}: debug_list_processes has them all.",
                 };
             }
             if (pid <= 0 && nameMatches > 1)
             {
-                return new DebugResult { Ok = false, Reason = $"'{processName}' matches {nameMatches} processes — pass a pid to disambiguate (use listProcesses)." };
+                return new DebugResult { Ok = false, Reason = $"'{processName}' matches {nameMatches} processes, so pass a pid to disambiguate (use listProcesses)." };
             }
 
             match.Attach();
@@ -966,12 +966,12 @@ internal sealed partial class IdeDebugService
             {
                 // Nothing to restart: just start.
                 dbg.Go(false);
-                return new DebugResult { Ok = true, Reason = "Was not debugging; started — poll debug_get_state for the mode." };
+                return new DebugResult { Ok = true, Reason = "Was not debugging; started: poll debug_get_state for the mode." };
             }
             // Debug.Restart command handles stop+start cleanly across project types. Like Go()/Stop()
             // it returns before the mode changes, so there is no state worth reporting here.
             dte.ExecuteCommand("Debug.Restart", "");
-            return new DebugResult { Ok = true, Reason = "Restart requested — poll debug_get_state for the mode." };
+            return new DebugResult { Ok = true, Reason = "Restart requested: poll debug_get_state for the mode." };
         }
         catch (Exception ex)
         {
@@ -1014,9 +1014,9 @@ internal sealed partial class IdeDebugService
                 {
                     Ok = true,
                     Mode = PendingMode,
-                    Reason = $"Detached from PID {string.Join(", ", pids)} — still running, and no longer under the " +
+                    Reason = $"Detached from PID {string.Join(", ", pids)}: still running, and no longer under the " +
                              "debugger, so stopping now means killing the process. " +
-                             "Poll debug_get_state for the mode — the transition is not immediate.",
+                             "Poll debug_get_state for the mode; the transition is not immediate.",
                 };
         }
         catch (Exception ex)
@@ -1117,7 +1117,7 @@ internal sealed partial class IdeDebugService
             {
                 Ok = true,
                 Mode = ModeToString(dbg.CurrentMode),
-                Reason = "Hot Reload ran. Whether it applied anything is only visible in the output — " +
+                Reason = "Hot Reload ran. Whether it applied anything is only visible in the output: " +
                          "read the 'Hot Reload' pane with ide_read_output; an edit it cannot take " +
                          "(a changed signature, a new type) needs debug_restart instead.",
             };
@@ -1151,7 +1151,7 @@ internal sealed partial class IdeDebugService
             var groups = (dbg as EnvDTE90.Debugger3)?.ExceptionGroups;
             if (groups == null)
             {
-                OutputWindowLogger.Global.Debug(() => "[debug] Debugger3.ExceptionGroups unavailable — exception-break config skipped");
+                OutputWindowLogger.Global.Debug(() => "[debug] Debugger3.ExceptionGroups unavailable, exception-break config skipped");
                 return new DebugResult { Ok = false, Reason = "Exception settings not available on this debugger." };
             }
 

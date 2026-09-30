@@ -225,8 +225,8 @@ export class CvUsageDialog extends CvDialogBase {
                 <fluent-tab id="week">Week</fluent-tab>
             </fluent-tablist>
             <div class="note">
-                Approximate, based on local sessions on this machine — does not include other
-                devices or claude.ai
+                Approximate, based on local sessions on this machine, does not include other devices
+                or claude.ai
             </div>
             <div class="note">
                 ${periodLabel} · these are independent characteristics of your usage, not a

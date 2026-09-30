@@ -112,7 +112,7 @@ internal sealed partial class IdeContextService
     private const int CancelPollMaxTries = 15 * 1000 / BuildPollMs;
 
     private static string BuildTimedOutMessage(string verb) =>
-        $"{verb} still in progress after {BuildPollMaxTries * BuildPollMs / 60000} minutes — " +
+        $"{verb} still in progress after {BuildPollMaxTries * BuildPollMs / 60000} minutes: " +
         "check the Output window; the IDE was left building; build_cancel stops it.";
 
     /// <summary>Build the whole solution (projectName null) or a single project, then report success
@@ -171,7 +171,7 @@ internal sealed partial class IdeContextService
             // hint that asking would show them.
             if (skipped > 0)
             {
-                message += $" {skipped} more item(s) at a lower severity — pass severity:'warning' or 'all' to list them.";
+                message += $" {skipped} more item(s) at a lower severity: pass severity:'warning' or 'all' to list them.";
             }
             return new BuildResult
             {
@@ -267,7 +267,7 @@ internal sealed partial class IdeContextService
                 return new BuildResult
                 {
                     Ok = false,
-                    Message = "This build cannot be cancelled — check the Output window; the IDE was left building.",
+                    Message = "This build cannot be cancelled: check the Output window; the IDE was left building.",
                 };
             }
             ErrorHandler.ThrowOnFailure(bm.CancelUpdateSolutionConfiguration());
@@ -291,7 +291,7 @@ internal sealed partial class IdeContextService
             return new BuildResult
             {
                 Ok = false,
-                Message = $"Cancel requested but the build was still running {CancelPollMaxTries * BuildPollMs / 1000}s later — " +
+                Message = $"Cancel requested but the build was still running {CancelPollMaxTries * BuildPollMs / 1000}s later: " +
                           "check the Output window; the IDE was left building.",
             };
         }
@@ -609,7 +609,7 @@ internal sealed partial class IdeContextService
         {
             var problems = new List<string>();
             if (proj == null) { problems.Add($"no project named '{projectName}' (available: {string.Join(", ", available)})"); }
-            if (missingFile) { problems.Add($"no file at '{filePath}' — write it first, then add it"); }
+            if (missingFile) { problems.Add($"no file at '{filePath}': write it first, then add it"); }
             return (false, proj?.Name, string.Join("; ", problems));
         }
 
@@ -617,11 +617,11 @@ internal sealed partial class IdeContextService
         {
             if (proj.ProjectItems == null)
             {
-                return (false, proj.Name, $"'{proj.Name}' has no item list to add to — its project type manages files itself.");
+                return (false, proj.Name, $"'{proj.Name}' has no item list to add to: its project type manages files itself.");
             }
             if (IsFileInProject(proj, filePath))
             {
-                return (true, proj.Name, "Already in the project — nothing to do.");
+                return (true, proj.Name, "Already in the project, nothing to do.");
             }
             proj.ProjectItems.AddFromFile(filePath);
             proj.Save();
@@ -1349,7 +1349,7 @@ internal sealed partial class IdeContextService
         if (!IsInsideSolution(dte, filePath))
         {
             OutputWindowLogger.Global.Warn($"[mcp] {dteCommand} refused: '{filePath}' is outside the open solution");
-            return (false, $"'{filePath}' is outside the open solution — these commands rewrite the file, " +
+            return (false, $"'{filePath}' is outside the open solution: these commands rewrite the file, " +
                            "so they only run on files the solution owns.");
         }
         try

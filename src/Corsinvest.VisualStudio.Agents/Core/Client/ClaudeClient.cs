@@ -465,7 +465,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         if (_transport.IsRunning) { return; }
         if (_lastOptions == null)
         {
-            _log.Warn("[client] SendPrompt before Prepare/StartAsync — transport not running, prompt dropped");
+            _log.Warn("[client] SendPrompt before Prepare/StartAsync: transport not running, prompt dropped");
             return;
         }
 
@@ -768,7 +768,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         }
         catch (Exception ex)
         {
-            _log.Warn($"[client] rename_session refused ({ex.Message}) — falling back to the JSONL");
+            _log.Warn($"[client] rename_session refused ({ex.Message}), falling back to the JSONL");
             return false;
         }
     }
@@ -808,7 +808,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         }
         catch (Exception ex)
         {
-            _log.Warn($"[client] list_models refused ({ex.Message}) — keeping the catalogue from initialize");
+            _log.Warn($"[client] list_models refused ({ex.Message}), keeping the catalogue from initialize");
             return [];
         }
     }
@@ -932,7 +932,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         // tool_use_id keeps concurrent prompts from clobbering each other.
         if (string.IsNullOrEmpty(toolUseId) || !_toolRequestIds.TryRemove(toolUseId, out var pending))
         {
-            _log.Warn($"[client] permission for unknown/stale tool_use_id={toolUseId} — ignored");
+            _log.Warn($"[client] permission for unknown/stale tool_use_id={toolUseId}, ignored");
             return false;
         }
         var requestId = pending.RequestId;

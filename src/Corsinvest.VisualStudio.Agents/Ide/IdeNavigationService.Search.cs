@@ -203,7 +203,7 @@ internal sealed partial class IdeNavigationService
         const int MaxNamed = 3;
         var named = string.Join(", ", missing.OrderBy(n => n, StringComparer.OrdinalIgnoreCase).Take(MaxNamed));
         var rest = missing.Count > MaxNamed ? $" and {missing.Count - MaxNamed} more" : "";
-        return $"Not searched: {named}{rest} — no symbol search for those projects' language "
+        return $"Not searched: {named}{rest}; no symbol search for those projects' language "
              + "(C++ and other non-Roslyn projects). Use text search to cover them.";
     }
 
@@ -265,7 +265,7 @@ internal sealed partial class IdeNavigationService
             else
             {
                 OutputWindowLogger.Global.Debug(() =>
-                    $"[navto] unmapped parameter {parameters[i].Name} of type {type.FullName} — search skipped");
+                    $"[navto] unmapped parameter {parameters[i].Name} of type {type.FullName}: search skipped");
                 return null;
             }
 

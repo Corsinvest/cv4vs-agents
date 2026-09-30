@@ -119,7 +119,7 @@ internal sealed partial class IdeNavigationService
 
     private static bool ProbeFailed(string step)
     {
-        OutputWindowLogger.Global.Debug(() => $"[IdeNavigationService] navigation unavailable — probe failed at: {step}");
+        OutputWindowLogger.Global.Debug(() => $"[IdeNavigationService] navigation unavailable, probe failed at: {step}");
         return false;
     }
 

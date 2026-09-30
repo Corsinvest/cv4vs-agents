@@ -26,7 +26,7 @@ internal sealed class GetExceptionSettingsTool : McpTool<GetExceptionSettingsArg
         "they are handled. Only those are returned: the full list runs to thousands of types that " +
         "are all set to break on unhandled only, which is the default and says nothing. Use it " +
         "before debug_set_exception_breakpoint to see what is already configured, and to explain " +
-        "why a debug session is stopping somewhere unexpected — a first-chance break the user " +
+        "why a debug session is stopping somewhere unexpected: a first-chance break the user " +
         "turned on earlier looks like a crash until you know it is set.";
 
     public override bool ReadOnly => true;

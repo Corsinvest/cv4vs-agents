@@ -209,7 +209,7 @@ export class CvIdeContextBadge extends LitElement {
                             ? 'Not sent'
                             : withCode
                               ? 'Sent with every message, selected code included'
-                              : 'Sent with every message — the position, not the code'
+                              : 'Sent with every message: the position, not the code'
                     }</span
                 >
             </fluent-tooltip>

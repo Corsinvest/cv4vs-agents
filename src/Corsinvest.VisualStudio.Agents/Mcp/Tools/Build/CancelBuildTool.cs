@@ -15,7 +15,7 @@ internal sealed class CancelBuildTool : McpTool<NoArgs>
     public override string Name => "build_cancel";
     public override string Description =>
         "Stop the build currently running in the IDE and wait for it to actually stop. " +
-        "Reports ok=true once the IDE is free again — including when nothing was running, since " +
+        "Reports ok=true once the IDE is free again, including when nothing was running, since " +
         "that is the state you asked for; ok=false means the build is still going and the message " +
         "says why. Use it when build_solution or build_clean reported a timeout (the build was " +
         "left running), or when a build started outside the chat is in the way. A cancelled build " +

@@ -28,7 +28,7 @@ internal sealed class SearchWorkspaceSymbolsTool : McpTool<SearchWorkspaceSymbol
         "declarations, not text, so a hit is a real class/method/field and comes with its kind, " +
         "its container and the declaration line itself. Returns up to 50 hits, each with name, " +
         "kind, file, 1-based line, container_name and preview, ordered by file then line. " +
-        "Returns supported=false where no project provides NavigateTo — fall back to Grep then, " +
+        "Returns supported=false where no project provides NavigateTo, so fall back to Grep then, " +
         "which searches text and will also match usages and comments. Where only some projects " +
         "provide it the search still answers, and reason names the ones it could not cover, so no " +
         "results there means 'not in the projects searched' rather than 'nowhere'. This is the way in when " +

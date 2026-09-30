@@ -10,7 +10,7 @@ namespace Corsinvest.VisualStudio.Agents.Mcp.Tools;
 
 internal sealed class AttachDebugArgs
 {
-    [Description("PID of the process to attach to (preferred — unambiguous). Use debug_list_processes to find it.")]
+    [Description("PID of the process to attach to (preferred, unambiguous). Use debug_list_processes to find it.")]
     public int Pid { get; set; }
 
     [Description("Process name substring to attach to, if you don't have the PID. Must match exactly one process.")]
@@ -25,7 +25,7 @@ internal sealed class AttachDebugTool : McpTool<AttachDebugArgs>
     public override string Description =>
         "Attach the debugger to an already-running local process, by pid (preferred) or by a " +
         "unique name substring. Use this instead of debug_start when the app is already running " +
-        "(web server, service, console). After attaching, the session is running — use debug_break " +
+        "(web server, service, console). After attaching, the session is running: use debug_break " +
         "or set a breakpoint to pause it, then inspect. Find the pid with debug_list_processes.";
 
     protected override async Task<object> InvokeAsync(AttachDebugArgs args)

@@ -268,7 +268,7 @@ export class CvSubagentChip extends LitElement {
             <div class="main">
                 <div class="desc" title=${this._desc(t)}>${this._desc(t)}</div>
                 <div class="meta">
-                    <span class="now">${t.recentTools[t.recentTools.length - 1] ?? '—'}</span>
+                    <span class="now">${t.recentTools[t.recentTools.length - 1] ?? '-'}</span>
                     <span class="v">${t.usage.toolUses}</span>
                     ${t.usage.toolUses === 1 ? 'tool' : 'tools'} ·
                     <span class="v">${formatTokens(t.usage.totalTokens)}</span> tok
@@ -293,7 +293,7 @@ export class CvSubagentChip extends LitElement {
                           class="stop"
                           appearance="transparent"
                           size="small"
-                          title="Run in the background — the turn stops waiting for it"
+                          title="Run in the background: the turn stops waiting for it"
                           aria-label="Run in the background"
                           @click=${() => this._detach(detachable)}
                           >${unsafeHTML(ArrowMinimize16Regular)}</fluent-button

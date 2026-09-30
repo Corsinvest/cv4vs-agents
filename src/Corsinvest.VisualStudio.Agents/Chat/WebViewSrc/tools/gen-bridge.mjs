@@ -91,7 +91,7 @@ function emit(tree) {
     lines.push(' * SPDX-License-Identifier: GPL-3.0-only');
     lines.push(' *');
     lines.push(' * AUTO-GENERATED from Host/BridgeMessages.cs by tools/gen-bridge.mjs.');
-    lines.push(' * DO NOT EDIT BY HAND — run `npm run gen-bridge` after changing the C# file.');
+    lines.push(' * DO NOT EDIT BY HAND: run `npm run gen-bridge` after changing the C# file.');
     lines.push(' */');
     lines.push('');
     lines.push('export const Msg = {');

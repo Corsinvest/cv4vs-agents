@@ -25,9 +25,9 @@ internal sealed class SelectFrameTool : McpTool<SelectFrameArgs>
         "Choose which call-stack frame debug_get_locals, debug_evaluate and debug_expand read, by " +
         "the index debug_get_callstack reports (0 = where execution is paused). Locals belong to a " +
         "frame: stopped inside a method that was called, the caller's variables are out of scope " +
-        "until you select its frame — that is what \"not in scope in the current frame\" means. " +
+        "until you select its frame: that is what \"not in scope in the current frame\" means. " +
         "Same as double-clicking a line in the Call Stack window. Frames belong to a thread, so " +
-        "this moves within the selected one — debug_select_thread first if the frame you want is " +
+        "this moves within the selected one: debug_select_thread first if the frame you want is " +
         "on another. The selection lasts until the program runs again. Only valid in break mode.";
 
     public override bool Idempotent => true;

@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report this! The **Info** entry in a pane's ⋯ menu copies the
-        session id, working directory and CLI path — handy for the fields below.
+        session id, working directory and CLI path, handy for the fields below.
 
   - type: input
     id: version

@@ -48,7 +48,7 @@ public partial class UsagePopupControl : UserControl
         var zone = TimeZoneInfo.Local;
         var culture = CultureInfo.CurrentCulture;
         var usage = snapshot.Usage;
-        var plan = usage != null && usage.Plan != "—" ? usage.Plan : null;
+        var plan = usage != null && usage.Plan != "-" ? usage.Plan : null;
 
         ProfileText.Text = snapshot.ProfileName;
         PlanText.Text = plan ?? "";

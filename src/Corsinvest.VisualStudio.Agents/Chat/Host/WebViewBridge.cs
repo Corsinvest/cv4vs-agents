@@ -90,7 +90,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             {
                 // Mapping a missing folder throws a bare DirectoryNotFoundException that names
                 // nothing: say which path we resolved before it does.
-                log.Warn($"[webview] index.html not found at '{indexPath}' — the chat can't load");
+                log.Warn($"[webview] index.html not found at '{indexPath}': the chat can't load");
             }
             webView.CoreWebView2.SetVirtualHostNameToFolderMapping(AppPaths.WebViewHost, folder, CoreWebView2HostResourceAccessKind.Allow);
 
@@ -397,7 +397,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         // channel means a case forgot Send→SendResponse → the WebView Promise would time out.
         if (_responseChannels.Contains(type))
         {
-            log.Warn($"!!! Send() on response channel '{type}' — use SendResponse(id). The request Promise will time out.");
+            log.Warn($"!!! Send() on response channel '{type}': use SendResponse(id). The request Promise will time out.");
         }
 #endif
         if (!_ready) { _pending.Enqueue((type, data)); return; }

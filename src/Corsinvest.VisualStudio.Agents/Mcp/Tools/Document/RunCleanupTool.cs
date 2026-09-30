@@ -31,7 +31,7 @@ internal sealed class RunCleanupTool : McpTool<RunCleanupArgs>
         "the user's default cleanup profile. Richer than document_format, but the extra fixers " +
         "are language-dependent (C#/VB get the most). " +
         "The file must live inside the open solution's folder; success=false otherwise. " +
-        "Opens the file in the editor if it isn't already, and leaves that buffer unsaved — though " +
+        "Opens the file in the editor if it isn't already, and leaves that buffer unsaved, though " +
         "reading it back with the Read tool saves it first when autosave is on; " +
         "document_read_buffer looks without writing. " +
         "Some installations refuse the command outright: success=false then carries the IDE's own " +

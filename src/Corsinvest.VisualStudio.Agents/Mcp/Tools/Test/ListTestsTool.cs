@@ -22,11 +22,11 @@ internal sealed class ListTestsTool : McpTool<ListTestsArgs>
     public override string Name => "test_list";
     public override string Description =>
         "List the tests the IDE's Test Explorer has discovered, with their project, class and the " +
-        "assembly they came from. This is the Test Explorer's own tree — the same tests it would " +
+        "assembly they came from. This is the Test Explorer's own tree, the same tests it would " +
         "run, found by the same adapters, so it covers every framework the IDE supports (xUnit, " +
         "NUnit, MSTest, GoogleTest, Boost, CppUnitTest…) and not just .NET. Nothing is rebuilt and " +
         "nothing is re-discovered. An empty list on a solution that has tests usually means the " +
-        "Test Explorer has not discovered them yet — build the solution, or open the window once.";
+        "Test Explorer has not discovered them yet: build the solution, or open the window once.";
 
     public override bool ReadOnly => true;
     public override bool Idempotent => true;

@@ -104,7 +104,7 @@
         <!-- Refresh re-enumerates the folders. There is no Recreate twin here: nothing is indexed,
              so there is no stale cache a second button could rebuild. -->
         <Button x:Name="RefreshButton" Style="{StaticResource ToolBtn}" Click="OnRefreshClick"
-                ToolTip="Refresh — re-read the backup folders">
+                ToolTip="Refresh: re-read the backup folders">
           <imaging:CrispImage Width="16" Height="16" Moniker="{x:Static catalog:KnownMonikers.Refresh}" />
         </Button>
         <Button x:Name="DeleteButton" Style="{StaticResource ToolBtn}" Click="OnDeleteClick"

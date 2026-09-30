@@ -26,11 +26,11 @@ internal sealed class GetDocumentSymbolsTool : McpTool<GetDocumentSymbolsArgs>
 {
     public override string Name => "nav_get_document_symbols";
     public override string Description =>
-        "List a file's symbols as a tree — each with its name, kind (Class/Method/Property/…) " +
-        "and 1-based line, ordered top-to-bottom — the editor's navigation outline. Useful to " +
+        "List a file's symbols as a tree, each with its name, kind (Class/Method/Property/…) " +
+        "and 1-based line, ordered top-to-bottom: the editor's navigation outline. Useful to " +
         "locate members in a large file without reading it all. The file must belong to a " +
         "project in the open solution. Returns supported=false for languages this isn't " +
-        "available for, or transiently while the solution is still loading — retry shortly. " +
+        "available for, or transiently while the solution is still loading; retry shortly. " +
         "This is one file; nav_search_workspace_symbols finds a name across the whole solution.";
 
     public override bool ReadOnly => true;

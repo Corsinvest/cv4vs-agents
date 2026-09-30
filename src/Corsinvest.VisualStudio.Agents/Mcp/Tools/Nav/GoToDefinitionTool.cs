@@ -35,11 +35,11 @@ internal sealed class GoToDefinitionTool : McpTool<GoToDefinitionArgs>
         "1-based line where the symbol is used, and the symbol name. Returns the defining " +
         "file/line. Reaches definitions in referenced assemblies too: with no source on disk, " +
         "the declaration is generated under %TEMP% and the hit carries source='decompiled' " +
-        "(rebuilt from IL — locals renamed) or source='source' (the real thing, via SourceLink). " +
+        "(rebuilt from IL, locals renamed) or source='source' (the real thing, via SourceLink). " +
         "Those files are generated and read-only: read them, never edit them. " +
         "The file must belong to a project in the open solution. Returns " +
         "supported=false for languages this isn't available for, or transiently while the " +
-        "solution is still loading — safe to retry shortly before falling back to grep. " +
+        "solution is still loading; safe to retry shortly before falling back to grep. " +
         "nav_find_references goes the other way, from a definition to its callers, and " +
         "nav_go_to_implementation past an interface to what implements it.";
 

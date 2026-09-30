@@ -16,7 +16,7 @@ internal sealed class CleanSolutionTool : McpTool<NoArgs>
     public override string Description =>
         "Clean the entire solution: delete the build outputs (bin/obj) of every project. " +
         "Blocks until the clean ends. Use it when a build result looks stale, then call " +
-        "build_solution to rebuild — cleaning on its own produces no diagnostics.";
+        "build_solution to rebuild: cleaning on its own produces no diagnostics.";
 
     public override bool Destructive => true;
     public override bool Idempotent => true;

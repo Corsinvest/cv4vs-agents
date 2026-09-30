@@ -115,7 +115,7 @@ public partial class ChatPaneControl
                     if (!saved)
                     {
                         // Say so rather than let Claude treat a stale read as current.
-                        _log.Warn($"[chat] autosave failed for {filePath} — Claude was told the file may be stale");
+                        _log.Warn($"[chat] autosave failed for {filePath}; Claude was told the file may be stale");
                         _client?.RespondToHookCallback(e.RequestId, new
                         {
                             @continue = true,
@@ -151,7 +151,7 @@ public partial class ChatPaneControl
                     // exceptions, so there's no unobserved-exception fallout from abandoning it here.
                     var timedOut = await Task.WhenAny(work, Task.Delay(3000)) != work;
                     var ctx = timedOut ? null : await work;
-                    if (timedOut) { _log.Debug(() => $"[diag] check timed out (3s) for {filePath} — feedback dropped"); }
+                    if (timedOut) { _log.Debug(() => $"[diag] check timed out (3s) for {filePath}: feedback dropped"); }
                     if (!string.IsNullOrEmpty(ctx))
                     {
                         _client?.RespondToHookCallback(e.RequestId, new

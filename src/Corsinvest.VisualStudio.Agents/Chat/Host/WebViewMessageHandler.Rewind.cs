@@ -91,14 +91,14 @@ internal sealed partial class WebViewMessageHandler
             if (!File.Exists(backupPath))
             {
                 // The CLI prunes its own history; a transcript can outlive the copies it names.
-                log.Warn($"[rewind] backup {backup.BackupFileName} is gone from disk — cannot diff {wanted}");
+                log.Warn($"[rewind] backup {backup.BackupFileName} is gone from disk, cannot diff {wanted}");
                 return;
             }
             before = File.ReadAllText(backupPath);
         }
         else
         {
-            log.Debug(() => $"[rewind] {wanted} has no backup at {uuid} — it would be deleted, diffing against nothing");
+            log.Debug(() => $"[rewind] {wanted} has no backup at {uuid}; it would be deleted, diffing against nothing");
         }
 
         var current = File.Exists(wanted) ? File.ReadAllText(wanted) : "";
