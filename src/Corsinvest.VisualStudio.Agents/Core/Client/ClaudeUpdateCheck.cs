@@ -48,7 +48,9 @@ internal static class ClaudeUpdateCheck
     {
         if (_told) { return null; }
 
-        var local = ClaudeInstall.Version();
+        // Off the UI thread, where every caller is: this is a process start allowed five seconds,
+        // and _told stays false while the CLI is current, so each chat a restore opens pays it.
+        var local = await Task.Run(() => ClaudeInstall.Version());
         if (string.IsNullOrEmpty(local)) { return null; }
 
         var latest = await FetchLatestAsync();

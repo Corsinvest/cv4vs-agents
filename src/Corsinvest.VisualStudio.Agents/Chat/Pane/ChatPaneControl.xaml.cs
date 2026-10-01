@@ -410,6 +410,9 @@ public partial class ChatPaneControl : PaneControlBase
     {
         _startupSessionId = sessionId;
         _startupComposer = composer;
+        // Now, not when the CLI reports it: a restore checks the registry for sessions already open
+        // and a solution close snapshots it, both possibly before this pane has even been Loaded.
+        if (!string.IsNullOrEmpty(sessionId)) { Entry.ActiveSessionId = sessionId; }
     }
 
     public ChatPaneControl()

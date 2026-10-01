@@ -78,6 +78,13 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     // whether they are on screen, and the two answers are needed at very different times.
     private System.Threading.Timer _hidePanesTimer;
 
+    // A restore opens its panes over several idle slots; bumped when a solution starts closing, so
+    // the slots still pending from it stand down instead of opening into whatever comes next.
+    private int _restoreGeneration;
+    // Saved panes a restore has yet to open. workspace.json still lists them and the registry does
+    // not, so a close landing mid-restore leaves the file as it was rather than forget them.
+    private int _restorePending;
+
     // Close→open gap, measured at ~850 ms on a small solution. Timed from OnAfterCloseSolution, so it
     // excludes unloading the projects and does not grow with the solution.
     private const int ReloadWatchCloseMs = 10_000;
@@ -233,8 +240,11 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         }).FileAndForget(nameof(AgentsPackage));
 
     /// <summary>Reopen the panes saved for the current solution's workspace.json. Each saved pane is
-    /// validated: an unknown profile falls back to native; a missing session .jsonl opens fresh.</summary>
-    private void RestorePanesForCurrentSolution()
+    /// validated: an unknown profile falls back to native; a missing session .jsonl opens fresh.
+    /// <para>One pane per idle slot, not all of them in this one: building a pane, showing it and
+    /// bringing up its WebView or terminal is UI-thread work, and a restore that did every pane in
+    /// a row held VS frozen until the last one was up.</para></summary>
+    private void RestorePanesForCurrentSolution(int generation)
     {
         var folder = CurrentSolutionFolder;
         var ws = Core.Workspace.WorkspaceStore.Load(folder);
@@ -248,14 +258,6 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         if (profiles.Count == 0) { return; }   // defensive: nothing enabled → nothing to restore onto
         foreach (var p in ws.Panes)
         {
-            // A reload leaves its panes alive: restoring them again would double every chat.
-            if (!string.IsNullOrEmpty(p.SessionId)
-                && Core.Panes.PaneRegistry.Instance.Entries.Any(e =>
-                       string.Equals(e.ActiveSessionId, p.SessionId, StringComparison.OrdinalIgnoreCase)))
-            {
-                OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} still open → skip");
-                continue;
-            }
             var kind = string.Equals(p.Kind, "Cli", StringComparison.OrdinalIgnoreCase)
                 ? Core.Panes.PaneKind.Cli : Core.Panes.PaneKind.Chat;
             var profile = profiles.FirstOrDefault(x =>
@@ -274,7 +276,35 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
                 OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} missing on disk → opening fresh");
                 sessionId = null;
             }
-            PaneLauncher.OpenNew(kind, profile, resumeSessionId: sessionId);
+            var savedId = p.SessionId;
+            // Per queued slot, not the whole list up front: an entry that throws above must not
+            // leave a count that nothing will ever bring back down.
+            _restorePending++;
+            _ = JoinableTaskFactory.StartOnIdle(() =>
+            {
+                // The close that bumped the generation also reset the pending count.
+                if (generation != _restoreGeneration) { return; }
+                _restorePending--;
+                // The folder changed while this waited: OpenNew would hand the pane the folder open
+                // now as its workdir, and resume this session from there.
+                if (!string.Equals(folder, CurrentSolutionFolder, StringComparison.OrdinalIgnoreCase))
+                {
+                    OutputWindowLogger.Global.Debug(() => $"[restore] {folder} no longer open → session {savedId ?? "(new)"} not restored");
+                    return;
+                }
+                // A reload leaves its panes alive: restoring them again would double every chat.
+                if (!string.IsNullOrEmpty(savedId)
+                    && Core.Panes.PaneRegistry.Instance.Entries.Any(e =>
+                           string.Equals(e.ActiveSessionId, savedId, StringComparison.OrdinalIgnoreCase)))
+                {
+                    OutputWindowLogger.Global.Debug(() => $"[restore] session {savedId} still open → skip");
+                    return;
+                }
+                // Without activating: spread over idle slots, each pane would otherwise take the
+                // focus in turn, out of whatever the user started typing in meanwhile.
+                try { PaneLauncher.OpenNew(kind, profile, resumeSessionId: sessionId, activate: false); }
+                catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.RestorePane", ex); }
+            });
         }
     }
 
@@ -286,10 +316,16 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     private void RestorePanesDeferred()
     {
         if (!AgentsOptions.General.RestorePanesOnSolutionOpen) { return; }
+        // Counted from here, not from the slot: a close before VS first goes idle must not save
+        // over the workspace.json this restore has yet to read.
+        var generation = _restoreGeneration;
+        _restorePending++;
         _ = JoinableTaskFactory.StartOnIdle(() =>
         {
-            try { RestorePanesForCurrentSolution(); }
+            if (generation != _restoreGeneration) { return; }
+            try { RestorePanesForCurrentSolution(generation); }
             catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.RestorePanesDeferred", ex); }
+            finally { _restorePending--; }
         });
     }
 
@@ -608,7 +644,16 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     int IVsSolutionEvents.OnBeforeCloseSolution(object pUnkReserved)
     {
         OutputWindowLogger.Global.Debug(() => $"[reload] solution closing: {CurrentSolutionFolder ?? "(none)"}, panes={Core.Panes.PaneRegistry.Instance.Entries.Count}");
-        SaveWorkspace();
+        if (_restorePending > 0)
+        {
+            OutputWindowLogger.Global.Debug(() => $"[restore] {_restorePending} pane(s) not reopened yet → workspace.json left as it was");
+        }
+        else
+        {
+            SaveWorkspace();
+        }
+        _restoreGeneration++;
+        _restorePending = 0;
         // Last point where the folder is still known: OnAfterCloseSolution clears it. The panes are
         // NOT closed here: a reload would take the live CLI down with them, losing the turn in flight.
         _closingSolutionFolder = CurrentSolutionFolder;
