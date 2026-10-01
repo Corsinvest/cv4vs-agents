@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   tokens and anything not in English were flagged by the browser's spell checker, which offered no
   way to fix them either. Spell checking in the composer is now off by default, with an option
   (Options → Chat → Spell check in the composer) for anyone who wants the underlines back.
+- **The tab icons from 1.10.0 lost their logo, and a chat tab came out blank.** Both reached
+  Visual Studio through an image manifest, which it reads into its image catalog only when it
+  rebuilds that catalog's cache: an F5 deploy never does, and an ordinary install could still leave
+  it out. Wherever that happened, a squeezed tab showed its corner glyph over nothing. The extension
+  now hands the logo and the chat bubble to the image library itself when a pane opens.
 
 ## [1.12.0] - 2026-09-27
 

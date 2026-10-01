@@ -517,14 +517,6 @@
          <Resource>, not <Content>, to be embedded in the assembly. -->
     <Resource Include="Resources\plugin-logo.png" />
     <Resource Include="Resources\corsinvest-logo.png" />
-    <!-- Tab icon source for Monikers.imagemanifest: loose XAML, which the image service loads by URI. -->
-    <Resource Include="Resources\logo-icon.xaml" />
-    <Resource Include="Resources\chat-glyph.xaml" />
-    <!-- At the VSIX root, where Visual Studio looks for image manifests. -->
-    <Content Include="Monikers.imagemanifest">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <IncludeInVSIX>true</IncludeInVSIX>
-    </Content>
     <Content Include="..\..\LICENSE">
       <Link>LICENSE</Link>
       <IncludeInVSIX>true</IncludeInVSIX>

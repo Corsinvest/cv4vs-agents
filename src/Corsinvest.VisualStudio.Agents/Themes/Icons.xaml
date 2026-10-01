@@ -9,7 +9,9 @@
     <ResourceDictionary Source="/Corsinvest.VisualStudio.Agents;component/Themes/Icons.xaml" />
 
   MascotImage is the full-colour logo, for an Image. MascotGeometry is the bare silhouette (eyes cut out),
-  for anything that needs a single-colour version.
+  for anything that needs a single-colour version. ChatGlyphImage is the chat pane's corner glyph on its
+  tab icon. Helpers/ToolWindowIcons.cs hands MascotImage and ChatGlyphImage to Visual Studio's image
+  library by key, so renaming either leaves the tool window tabs without it.
 
   The gradient stops and the shade's edges were sampled from the PNG's pixels; at icon sizes the shade is
   what keeps it looking like the logo rather than a flat blob.
@@ -81,6 +83,29 @@
         </GeometryDrawing>
         <GeometryDrawing Brush="{StaticResource MascotBrush}" Geometry="{StaticResource MascotGeometry}" />
         <GeometryDrawing Brush="{StaticResource MascotShadeBrush}" Geometry="{StaticResource MascotShadeGeometry}" />
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+
+  <!-- The chat pane's glyph, drawn at 9/16 of the tab icon over the mascot's bottom-right corner. A solid
+       bubble rather than VS's Comment icon, an outline that disappears into the purple at that size: white
+       for the mascot under it, a dark edge for a light tab around it. The transparent 16×16 frame pins its
+       bounds (the stroke spans the width, not the height), so the glyph scales from the same box as the
+       icon it sits on. -->
+  <DrawingImage x:Key="ChatGlyphImage" po:Freeze="True">
+    <DrawingImage.Drawing>
+      <DrawingGroup>
+        <GeometryDrawing Brush="Transparent">
+          <GeometryDrawing.Geometry>
+            <RectangleGeometry Rect="0,0,16,16" />
+          </GeometryDrawing.Geometry>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="White"
+                         Geometry="M 3.5,1.75 H 12.5 A 2.75,2.75 0 0 1 15.25,4.5 V 8.5 A 2.75,2.75 0 0 1 12.5,11.25 H 8.25 L 4,14.75 V 11.25 H 3.5 A 2.75,2.75 0 0 1 0.75,8.5 V 4.5 A 2.75,2.75 0 0 1 3.5,1.75 Z">
+          <GeometryDrawing.Pen>
+            <Pen Brush="#1E1E1E" Thickness="1.5" LineJoin="Round" />
+          </GeometryDrawing.Pen>
+        </GeometryDrawing>
       </DrawingGroup>
     </DrawingImage.Drawing>
   </DrawingImage>
