@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,7 +35,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
     private readonly ConcurrentQueue<(string type, object data)> _pending = new();
     // The other direction: what the page sends before the pane is ready to take it. UI thread
     // only, like everything that touches it (see OpenInbound).
-    private readonly System.Collections.Generic.Queue<(string type, JObject data, int? id)> _inbound = new();
+    private readonly Queue<(string type, JObject data, int? id)> _inbound = new();
     private bool _inboundOpen;
     private bool? _pendingTheme;
     private string _docCreatedScriptId;
@@ -186,7 +187,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
 
     /// <summary>Drop leading/trailing separators and collapse consecutive ones,
     /// left behind after removing browser items from the context menu.</summary>
-    private static void TrimSeparators(System.Collections.Generic.IList<CoreWebView2ContextMenuItem> items)
+    private static void TrimSeparators(IList<CoreWebView2ContextMenuItem> items)
     {
         bool IsSep(int i) => items[i].Kind == CoreWebView2ContextMenuItemKind.Separator;
         // Walk backwards so removals don't shift pending indices.
@@ -432,7 +433,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
     // The ToWebView channels that carry request responses. In DEBUG, Send() warns if called
     // on one of these (a case that forgot Send→SendResponse would silently time out the Promise).
     // chat_history is a pure response channel: the unprompted push goes on chat_history_loaded.
-    private static readonly System.Collections.Generic.HashSet<string> _responseChannels =
+    private static readonly HashSet<string> _responseChannels =
     [
         BridgeMessages.ToWebView.Chat.ImageData,
         BridgeMessages.ToWebView.Chat.History,
