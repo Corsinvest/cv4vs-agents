@@ -32,6 +32,10 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
     // first one needs to seed the options and drain the queue.
     private bool _firstLoadDone;
     private readonly ConcurrentQueue<(string type, object data)> _pending = new();
+    // The other direction: what the page sends before the pane is ready to take it. UI thread
+    // only, like everything that touches it (see OpenInbound).
+    private readonly System.Collections.Generic.Queue<(string type, JObject data, int? id)> _inbound = new();
+    private bool _inboundOpen;
     private bool? _pendingTheme;
     private string _docCreatedScriptId;
 
@@ -538,9 +542,38 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
             // Correlation id for request/response; absent (null) for notifications.
             int? id = node["id"]?.Type == JTokenType.Integer ? (int)node["id"] : null;
             log.Trace(() => $"[bridge ← web] {type} {StringHelpers.Truncate(raw)}");
-            dispatcher.Invoke(() => MessageReceived?.Invoke(type, data, id));
+            dispatcher.Invoke(() =>
+            {
+                if (_inboundOpen) { MessageReceived?.Invoke(type, data, id); }
+                else { _inbound.Enqueue((type, data, id)); }
+            });
         }
         catch (Exception ex) { log.LogException("WebViewBridge.OnRawMessage", ex); }
+    }
+
+    /// <summary>Start handing the page's messages to <see cref="MessageReceived"/>, first the ones
+    /// that came before this call, in the order they came.
+    /// <para>The page says webview_ready once, as soon as it has mounted, and the pane takes its
+    /// messages only once its client exists. A restored chat reads its session before that, on
+    /// the thread pool, and when the pool is busy (an F# solution being checked will do it) the
+    /// page wins: dropped, that one message left the pane on its "Initializing..." placeholder for
+    /// good.</para></summary>
+    public void OpenInbound()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (_inboundOpen || _disposed) { return; }
+        var held = _inbound.Count;
+        if (held > 0) { log.Debug(() => $"[bridge] {held} page message(s) held until the pane was ready"); }
+        // Drained before opening: a handler that pumps can let the next page message in, and that
+        // one has to queue behind these rather than overtake them.
+        while (_inbound.Count > 0 && !_disposed)
+        {
+            var (type, data, id) = _inbound.Dequeue();
+            // One at a time, as OnRawMessage does: a handler that throws must not cost the rest.
+            try { MessageReceived?.Invoke(type, data, id); }
+            catch (Exception ex) { log.LogException($"WebViewBridge.OpenInbound[{type}]", ex); }
+        }
+        _inboundOpen = true;
     }
 
 }

@@ -708,21 +708,32 @@ public partial class ChatPaneControl : PaneControlBase
         var ssePort = Mcp.McpServerHost.Instance.EnsureStarted();
         // Start the CLI now (not lazily on first prompt) so its `initialize` runs
         // and the model catalogue / slash commands reach the UI as soon as the pane opens.
-        await _client.StartAsync(new ClientOptions
+        try
         {
-            WorkingDirectory = workDir,
-            // Fork: we already wrote the <newId>.jsonl on disk, so --resume loads it.
-            // (--session-id would try to CREATE that id and the CLI rejects it as
-            // "already in use".) A fresh pane passes neither.
-            ResumeSessionId = _startupSessionId,
-            InitialPermissionMode = permMode,
-            AllowBypassPermissions = allowBypass,
-            // Read here rather than in ClaudeClient: the client is given its settings, it does not
-            // go looking for them, and this one is fixed for the life of the process anyway.
-            FileCheckpoints = AgentsOptions.Chat.FileCheckpoints,
-            SsePort = ssePort,
-            Env = Entry.Profile.Env,
-        });
+            await _client.StartAsync(new ClientOptions
+            {
+                WorkingDirectory = workDir,
+                // Fork: we already wrote the <newId>.jsonl on disk, so --resume loads it.
+                // (--session-id would try to CREATE that id and the CLI rejects it as
+                // "already in use".) A fresh pane passes neither.
+                ResumeSessionId = _startupSessionId,
+                InitialPermissionMode = permMode,
+                AllowBypassPermissions = allowBypass,
+                // Read here rather than in ClaudeClient: the client is given its settings, it does not
+                // go looking for them, and this one is fixed for the life of the process anyway.
+                FileCheckpoints = AgentsOptions.Chat.FileCheckpoints,
+                SsePort = ssePort,
+                Env = Entry.Profile.Env,
+            });
+        }
+        finally
+        {
+            // Only now take what the page sent, including what came while the session above was
+            // being read: its one webview_ready is what brings the placeholder down. With the
+            // client started, a page that beat the read ends up where a new pane's does. In the
+            // finally because a start that throws must not leave the placeholder up for good.
+            _bridge.OpenInbound();
+        }
 
         // A fork's forked-at message, or a prompt from the editor context menu. Not gated on
         // restoreState: the context menu opens a fresh pane, with a prompt but no session, which
