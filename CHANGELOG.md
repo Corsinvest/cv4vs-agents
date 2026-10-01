@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   tokens and anything not in English were flagged by the browser's spell checker, which offered no
   way to fix them either. Spell checking in the composer is now off by default, with an option
   (Options → Chat → Spell check in the composer) for anyone who wants the underlines back.
+- **A pane's More → Info froze Visual Studio until the CLI reported its version.** The dialog
+  asked `claude --version` on the UI thread, which is allowed up to five seconds. It now asks in
+  the background, and Visual Studio stays responsive while the dialog gathers its rows.
 
 ## [1.12.0] - 2026-09-27
 
