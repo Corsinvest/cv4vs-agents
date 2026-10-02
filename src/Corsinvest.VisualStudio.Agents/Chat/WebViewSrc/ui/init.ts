@@ -294,8 +294,8 @@ export function init(): void {
     // "Initializing…" placeholder exactly when the chat is visible underneath: no white gap, no
     // double placeholder. Two frames, because the first only schedules the initial render.
     // Announced from here rather than on receiving ui_init, and only once: the host sends ui_init
-    // on its own schedule, and holds what the page sends until the pane can take it
-    // (WebViewBridge.OpenInbound), so going early cannot lose it.
+    // on its own schedule, and the pane listens from before the page loads, remembering an early
+    // ready until its client is up, so going early cannot lose it.
     requestAnimationFrame(() =>
         requestAnimationFrame(() => bridge.sendNotification(Msg.fromWebView.ui.ready, {})),
     );

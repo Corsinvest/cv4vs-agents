@@ -27,6 +27,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   rebuilds that catalog's cache: an F5 deploy never does, and an ordinary install could still leave
   it out. Wherever that happened, a squeezed tab showed its corner glyph over nothing. The extension
   now hands the logo and the chat bubble to the image library itself when a pane opens.
+- **A restored or forked chat could stay on "Initializing..." for good.** The page says it is
+  ready once, as soon as it has loaded, and a resumed chat only started listening after reading its
+  session from disk. Whenever Visual Studio was busy, for instance checking an F# solution, the
+  page won and its one signal was lost. The pane now listens from the start and acts on the
+  signal once its client is up.
 
 ### Internal
 
@@ -45,11 +50,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The third-party list named `diff2html`, removed in 1.6.0, and left out four packages the bundle
   carries: `@paulmillr/qr`, `@fluentui/tokens`, and the two Fluent pulls in on its own,
   `@microsoft/focusgroup-polyfill` and `tslib`.
-- **A restored or forked chat could stay on "Initializing..." for good.** The page says it is
-  ready once, as soon as it has loaded, and a resumed chat only started listening after reading its
-  session from disk. Whenever Visual Studio was busy, for instance checking an F# solution, the
-  page won and its one signal was lost. The pane now keeps what the page sends until it can take
-  it.
 
 ## [1.12.0] - 2026-09-27
 
