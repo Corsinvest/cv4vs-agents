@@ -32,6 +32,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   session from disk. Whenever Visual Studio was busy, for instance checking an F# solution, the
   page won and its one signal was lost. The pane now listens from the start and acts on the
   signal once its client is up.
+- **A floating chat pane stopped taking typed keys.** A click still landed (the caret showed in
+  the composer for a moment), but the letters that followed went to whatever Visual Studio window
+  had focus instead, sometimes driving Solution Explorer's type-ahead. `WebView2CompositionControl`
+  points its browser's keyboard focus at the window that hosted the control the first time it
+  loaded, and never updates that. Docking never moves a pane out of the main window, so the bug
+  showed only when floating: VS reparents the content into a separate window for the float, and the
+  browser kept targeting the old one
+  ([WebView2Feedback#5398](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5398), open with
+  no SDK fix; Visual Studio loads its own `WebView2.Wpf` copy anyway). The chat pane now re-points
+  the browser's parent to the window that actually hosts it, once Visual Studio has finished moving
+  the pane, and moves it onto the main window before a floating window closes (the case of a pane
+  opened while already floating and then docked). It never moves keyboard focus itself, and panes
+  that stay docked, including those shown in the auto-hide flyout, are left exactly as before.
 
 ### Internal
 
@@ -212,21 +225,6 @@ the session title.
   reported F# and C++ as out of reach for the file outline while the outline was being returned for
   them. A report like that reads as authoritative, and the wrong answer is the one that makes Claude
   stop trying.
-- **A floating chat pane stopped taking typed keys.** A click still landed (the caret would show in
-  the composer for a moment), but the letters that followed went to whatever Visual Studio window
-  had focus instead, sometimes driving Solution Explorer's type-ahead. `WebView2CompositionControl`
-  points its browser's keyboard focus at the HWND that hosted it the first time the control loaded,
-  and never updates that afterwards; docking never moves the pane out of the main window, so the bug
-  never showed there, but floating it reparents the content into a separate window VS creates for
-  the float, and the browser kept targeting the old one
-  ([WebView2Feedback#5398](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5398), open with
-  no SDK fix, and moot anyway, since Visual Studio loads its own `WebView2.Wpf` copy rather than the
-  one the VSIX ships). The chat pane now follows the window it's actually hosted in: it re-points the
-  controller whenever that changes, and moves it onto the main window first if the one it's leaving
-  is about to close: the case a pane opened while already floating hits the moment it's docked.
-  Re-docking a pane that had focus also reclaims it: re-pointing the controller moves the browser,
-  not Win32 keyboard focus, so without this the code editor (if one was open) kept the keystrokes
-  while the composer's caret just sat there blinking.
 
 ### Changed
 
