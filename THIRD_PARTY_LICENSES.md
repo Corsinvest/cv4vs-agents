@@ -16,14 +16,17 @@ These npm packages are compiled into the chat WebView bundle shipped in the VSIX
 | Package | Version | License |
 | --- | --- | --- |
 | [lit](https://github.com/lit/lit) | ^3.3.3 | BSD-3-Clause |
-| [@fluentui/web-components](https://github.com/microsoft/fluentui) | 3.0.2 | MIT |
+| [@fluentui/web-components](https://github.com/microsoft/fluentui) | 3.1.3 | MIT |
+| [@fluentui/tokens](https://github.com/microsoft/fluentui) | 1.0.0-alpha.24 | MIT |
 | [@fluentui/svg-icons](https://github.com/microsoft/fluentui-system-icons) | ^1.1.331 | MIT |
 | [@microsoft/fast-element](https://github.com/microsoft/fast) | ^3.0.0 | MIT |
+| [@microsoft/focusgroup-polyfill](https://github.com/microsoft/polyfills) | ^1.5.0 | MIT |
+| [tslib](https://github.com/microsoft/tslib) | ^2.1.0 | 0BSD |
 | [marked](https://github.com/markedjs/marked) | ^18.0.7 | MIT |
 | [highlight.js](https://github.com/highlightjs/highlight.js) | ^11.11.1 | BSD-3-Clause |
-| [DOMPurify](https://github.com/cure53/DOMPurify) | ^3.4.12 | MPL-2.0 OR Apache-2.0 |
+| [DOMPurify](https://github.com/cure53/DOMPurify) | ^3.4.16 | MPL-2.0 OR Apache-2.0 |
 | [diff](https://github.com/kpdecker/jsdiff) | ^9.0.0 | BSD-3-Clause |
-| [diff2html](https://github.com/rtfpessoa/diff2html) | ^3.4.55 | MIT |
+| [@paulmillr/qr](https://github.com/paulmillr/qr) | ^0.3.0 | MIT OR Apache-2.0 |
 | [Fuse.js](https://github.com/krisk/Fuse) | ^7.5.0 | Apache-2.0 |
 
 ## Extension host (.NET / NuGet)

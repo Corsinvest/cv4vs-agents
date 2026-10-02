@@ -28,6 +28,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   it out. Wherever that happened, a squeezed tab showed its corner glyph over nothing. The extension
   now hands the logo and the chat bubble to the image library itself when a pane opens.
 
+### Internal
+
+- **Fluent moves from 3.0.2 to 3.1.3**, the pin the last dependency pass left alone. Nothing in the
+  five releases removes or renames a tag. What shows: a message bar no longer has a maximum width,
+  its dismiss button sits a few pixels higher, a menu's items take focus as soon as its list
+  connects, and a text area shows its scrollbar. `setTheme()` now drops token values that could inject CSS:
+  both stock themes pass through whole, 459 tokens each. The pin stays exact.
+- `@fluentui/tokens` is a declared dependency. The WebView imported it while only Fluent pulled it
+  in, so its version was whatever Fluent asked for.
+- Eight more WebView packages moved to their current patch or minor, `marked` among them.
+  `@types/dompurify` and `@types/diff` are gone: both are deprecated stubs for packages that ship
+  their own types. So are `@typescript-eslint/eslint-plugin` and `@typescript-eslint/parser`, which
+  `typescript-eslint` already brings and nothing else names. TypeScript 7 and `@types/node` 26 stay
+  held back.
+- The third-party list named `diff2html`, removed in 1.6.0, and left out four packages the bundle
+  carries: `@paulmillr/qr`, `@fluentui/tokens`, and the two Fluent pulls in on its own,
+  `@microsoft/focusgroup-polyfill` and `tslib`.
+
 ## [1.12.0] - 2026-09-27
 
 A chat now keeps the computer awake while it works, and warns you when the next message is about to
