@@ -174,7 +174,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
             }
             catch (Exception ex)
             {
-                Log.LogException("ChatWebView.Controller", ex);
+                Log.LogException("[webview] Controller", ex);
                 return null;
             }
         }
@@ -249,7 +249,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
         }
         catch (Exception ex)
         {
-            Log.LogException("ChatWebView.Reconcile", ex);
+            Log.LogException("[webview] Reconcile", ex);
         }
     }
 
@@ -299,7 +299,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
         if (msg == WM_MOVE)
         {
             try { Controller?.NotifyParentWindowPositionChanged(); }
-            catch (Exception ex) { Log.LogException("ChatWebView.WM_MOVE", ex); }
+            catch (Exception ex) { Log.LogException("[webview] WM_MOVE", ex); }
         }
         else if (msg == WM_DESTROY)
         {
@@ -329,7 +329,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
         }
         catch (Exception ex)
         {
-            Log.LogException("ChatWebView.Park", ex);
+            Log.LogException("[webview] Park", ex);
         }
         QueueReconcile();
     }
