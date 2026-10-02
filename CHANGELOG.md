@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   tokens and anything not in English were flagged by the browser's spell checker, which offered no
   way to fix them either. Spell checking in the composer is now off by default, with an option
   (Options → Chat → Spell check in the composer) for anyone who wants the underlines back.
+- **A CLI pane could lose its connection to Visual Studio while you moved around the editor.** The
+  answer to a request from the CLI and the notice that the selection had changed could be written
+  to the same connection at the same moment, which closed it. The two now take turns.
 
 ## [1.12.0] - 2026-09-27
 
