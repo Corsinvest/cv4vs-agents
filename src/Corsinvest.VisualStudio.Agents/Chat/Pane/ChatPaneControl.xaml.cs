@@ -398,6 +398,9 @@ public partial class ChatPaneControl : PaneControlBase
     // What to put in the composer once the pane loads: a fork's forked-at message, or what a
     // context-menu entry had for a chat that was not open yet.
     private Contracts.SetComposerNotification _startupComposer;
+    // The page said webview_ready before the client existed. It says it once, and a restored or
+    // forked pane reads its session first, so on a busy thread pool the page wins that race.
+    private bool _pageReadyEarly;
 
     /// <summary>Make this pane start resumed on <paramref name="sessionId"/> rather
     /// than fresh, filling the composer with <paramref name="composer"/>.
@@ -476,6 +479,8 @@ public partial class ChatPaneControl : PaneControlBase
             _log.Info("load: OnLoaded start");
 
             _bridge = new WebViewBridge(WebView, Dispatcher, _log);
+            // Before the page can load, not in EnsureClient: a message with no subscriber is lost.
+            _bridge.MessageReceived += OnBridgeMessage;
 
             using (OutputWindowLogger.Global.PerfSpan("WebView.Init"))
             {
@@ -521,6 +526,7 @@ public partial class ChatPaneControl : PaneControlBase
         if (_client != null) { DetachClientEvents(_client); }
         _client?.Dispose();
         // Last: the bridge tears down the WebView2, and anything above may still post to it.
+        if (_bridge != null) { _bridge.MessageReceived -= OnBridgeMessage; }
         _bridge?.Dispose();
         // Nulled so the `_bridge?.` sends elsewhere no-op, NOT as the teardown signal: this only
         // happens at the end of DisposeCore, while `_disposed` is already true on entry. Work that
@@ -723,6 +729,7 @@ public partial class ChatPaneControl : PaneControlBase
             SsePort = ssePort,
             Env = Entry.Profile.Env,
         });
+        if (_pageReadyEarly) { OnPageReady(); }
 
         // A fork's forked-at message, or a prompt from the editor context menu. Not gated on
         // restoreState: the context menu opens a fresh pane, with a prompt but no session, which
@@ -795,35 +802,16 @@ public partial class ChatPaneControl : PaneControlBase
             var raw = await client.GetUsageAsync();
             return raw == null ? null : Core.Usage.UsageMapper.Build(raw, Core.Usage.UsageMapper.ToAccountDto(client.Account));
         };
-        _bridge.MessageReceived -= OnBridgeMessage;
-        _bridge.MessageReceived += OnBridgeMessage;
     }
 
     private void OnBridgeMessage(string type, JObject data, int? id)
     {
         switch (type)
         {
-            // App painted its first frame: hide the native "Initializing…"
-            // placeholder (it covered the blank WebView until now) and mark the
-            // pane ready so the toolbar enables New session / History.
+            // Held until the client has started: ready enables the toolbar, whose actions need it.
             case BridgeMessages.FromWebView.Ui.Ready:
-                StatusPanel.Visibility = Visibility.Collapsed;
-                SetReady(true);
-                // First open: focus the composer now, not earlier. A ui_focus_input sent during
-                // startup lands before the bundle has mounted cv-prompt, so the textarea it looks
-                // for isn't there yet and the call is a no-op, which is why the pane opened
-                // needing a click. Later activations work because they come from a frame change,
-                // long after this. Only on the pane that VS considers active, so opening a second
-                // chat in the background doesn't steal focus from the one being used.
-                if (Pane?.IsActiveFrame() == true) { FocusInput(); }
-                // Name this pane's page after the pane. The browser's task manager labels each row
-                // with the document title, and every chat ships the same index.html, so without
-                // this they all read "cv4vs Agents" and none of them says which pane it is.
-                _bridge?.SetDocumentTitle(Entry?.Title);
-                // Seed the IDE-context badge with the already-open editor: we only subscribe to
-                // future ContextChanged events, so without this the badge stays empty until the
-                // first editor click. Force a snapshot emit now that the WebView can receive it.
-                IdeContextService.Instance.ResendCurrentContext();
+                if (_client == null) { _pageReadyEarly = true; }
+                else { OnPageReady(); }
                 break;
 
             // Everything else is chat protocol: hand it to the message handler.
@@ -831,6 +819,30 @@ public partial class ChatPaneControl : PaneControlBase
                 _handler?.Handle(type, data, id);
                 break;
         }
+    }
+
+    /// <summary>App painted its first frame: hide the native "Initializing…" placeholder (it
+    /// covered the blank WebView until now) and mark the pane ready so the toolbar enables
+    /// New session / History.</summary>
+    private void OnPageReady()
+    {
+        StatusPanel.Visibility = Visibility.Collapsed;
+        SetReady(true);
+        // First open: focus the composer now, not earlier. A ui_focus_input sent during
+        // startup lands before the bundle has mounted cv-prompt, so the textarea it looks
+        // for isn't there yet and the call is a no-op, which is why the pane opened
+        // needing a click. Later activations work because they come from a frame change,
+        // long after this. Only on the pane that VS considers active, so opening a second
+        // chat in the background doesn't steal focus from the one being used.
+        if (Pane?.IsActiveFrame() == true) { FocusInput(); }
+        // Name this pane's page after the pane. The browser's task manager labels each row
+        // with the document title, and every chat ships the same index.html, so without
+        // this they all read "cv4vs Agents" and none of them says which pane it is.
+        _bridge?.SetDocumentTitle(Entry?.Title);
+        // Seed the IDE-context badge with the already-open editor: we only subscribe to
+        // future ContextChanged events, so without this the badge stays empty until the
+        // first editor click. Force a snapshot emit now that the WebView can receive it.
+        IdeContextService.Instance.ResendCurrentContext();
     }
 
 }

@@ -293,8 +293,9 @@ export function init(): void {
     // Tell the host the app has mounted and painted its first frame, so it can hide the native
     // "Initializing…" placeholder exactly when the chat is visible underneath: no white gap, no
     // double placeholder. Two frames, because the first only schedules the initial render.
-    // Announced from here rather than on receiving ui_init: the host now answers this signal WITH
-    // ui_init, and waiting for the payload to declare ourselves ready would deadlock the pair.
+    // Announced from here rather than on receiving ui_init, and only once: the host sends ui_init
+    // on its own schedule, and the pane listens from before the page loads, remembering an early
+    // ready until its client is up, so going early cannot lose it.
     requestAnimationFrame(() =>
         requestAnimationFrame(() => bridge.sendNotification(Msg.fromWebView.ui.ready, {})),
     );
