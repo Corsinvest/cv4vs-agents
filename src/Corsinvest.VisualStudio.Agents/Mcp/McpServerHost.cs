@@ -379,12 +379,12 @@ internal sealed partial class McpServerHost
                 {
                     _ = SendInitialContextAsync(conn);
                 }
-                if (reply != null && ws.State == WebSocketState.Open)
+                // Through the send lock: a selection_changed broadcast may be writing to this socket,
+                // and a reply colliding with it would throw out of this loop and drop the connection.
+                if (reply != null)
                 {
                     OutputWindowLogger.Global.Trace(() => $"Mcp: -> {StringHelpers.Truncate(reply, 200)}");
-                    var bytes = Encoding.UTF8.GetBytes(reply);
-                    await ws.SendAsync(new ArraySegment<byte>(bytes),
-                        WebSocketMessageType.Text, endOfMessage: true, ct);
+                    await SendAsync(conn, reply, "Mcp.Reply");
                 }
             }
         }
