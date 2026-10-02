@@ -60,9 +60,12 @@
     </Reference>
   </ItemGroup>
 
-  <!-- The image manifest the VSIX ships, which ImageManifestTests checks against the built assembly. -->
+  <!-- WPF, for ToolWindowIconsTests: it loads the compiled Themes/Icons.xaml out of the built assembly. -->
   <ItemGroup>
-    <None Include="..\..\src\Corsinvest.VisualStudio.Agents\Monikers.imagemanifest" Link="Monikers.imagemanifest" CopyToOutputDirectory="PreserveNewest" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
 
 </Project>

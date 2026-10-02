@@ -22,6 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **A pane's More → Info froze Visual Studio until the CLI reported its version.** The dialog
   asked `claude --version` on the UI thread, which is allowed up to five seconds. It now asks in
   the background, and Visual Studio stays responsive while the dialog gathers its rows.
+- **The tab icons from 1.10.0 lost their logo, and a chat tab came out blank.** Both reached
+  Visual Studio through an image manifest, which it reads into its image catalog only when it
+  rebuilds that catalog's cache: an F5 deploy never does, and an ordinary install could still leave
+  it out. Wherever that happened, a squeezed tab showed its corner glyph over nothing. The extension
+  now hands the logo and the chat bubble to the image library itself when a pane opens.
 
 ## [1.12.0] - 2026-09-27
 
