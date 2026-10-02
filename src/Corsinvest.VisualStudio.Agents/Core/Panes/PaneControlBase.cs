@@ -155,6 +155,10 @@ public abstract class PaneControlBase : UserControl, IPaneControl
             var sessionFile = !string.IsNullOrEmpty(wd) && !string.IsNullOrEmpty(sid)
                 ? Path.Combine(paths.SessionFolder(wd), sid + ".jsonl")
                 : "(none)";
+            // Off the UI thread: asking the CLI its version is a process start allowed five
+            // seconds, and this runs on a click. The rest resumes on the UI thread (the toolbar
+            // starts this inside JTF.RunAsync), which the WebView rows below need.
+            var (cliPath, cliVersion) = await Task.Run(() => (ClaudeInstall.ResolveExecutable(), ClaudeInstall.Version()));
 
             List<(string Label, string Value)> rows =
             [
@@ -163,8 +167,8 @@ public abstract class PaneControlBase : UserControl, IPaneControl
                 ("Session file", sessionFile),
                 ("Workdir", wd ?? "(none)"),
                 ("Profile", Entry.Profile?.Name ?? "(native)"),
-                ("CLI path", ClaudeInstall.ResolveExecutable() ?? "(not found)"),
-                ("CLI version", ClaudeInstall.Version() ?? "(unknown)"),
+                ("CLI path", cliPath ?? "(not found)"),
+                ("CLI version", cliVersion ?? "(unknown)"),
                 ("CLI PID", CliProcessId > 0 ? CliProcessId.ToString() : "(not running)"),
                 .. await ExtraSessionInfoAsync(),
             ];
