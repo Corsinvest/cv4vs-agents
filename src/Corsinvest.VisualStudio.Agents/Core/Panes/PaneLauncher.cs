@@ -135,8 +135,10 @@ internal static class PaneLauncher
     /// <paramref name="resumeSessionId"/> is set (workspace restore, either kind), the new
     /// pane opens resumed on that session instead of fresh: a separate case from the fork,
     /// with no pre-filled prompt. A fresh chat pane takes <paramref name="initialComposer"/> too:
-    /// what a context-menu entry had for a chat that was not open yet.</summary>
-    public static void OpenNew(PaneKind kind, Profile profile, string forkSessionId = null, Contracts.SetComposerNotification initialComposer = null, string resumeSessionId = null)
+    /// what a context-menu entry had for a chat that was not open yet. With
+    /// <paramref name="activate"/> false the pane is shown without taking the focus: a pane the
+    /// user did not just ask for.</summary>
+    public static void OpenNew(PaneKind kind, Profile profile, string forkSessionId = null, Contracts.SetComposerNotification initialComposer = null, string resumeSessionId = null, bool activate = true)
     {
         var pkg = AgentsPackage.Instance;
         if (pkg == null) { OutputWindowLogger.Global.Warn("PaneLauncher: package not yet initialized"); return; }
@@ -197,11 +199,14 @@ internal static class PaneLauncher
                         // branches above need one, so without this the prompt would be dropped.
                         freshChat.SetStartupSession(null, initialComposer);
                     }
-                    if (pane.Frame is IVsWindowFrame frame) { ErrorHandler.ThrowOnFailure(frame.Show()); }
+                    if (pane.Frame is IVsWindowFrame frame)
+                    {
+                        ErrorHandler.ThrowOnFailure(activate ? frame.Show() : frame.ShowNoActivate());
+                    }
 
                     // Focus a fresh CLI terminal so the user can type immediately (FocusInput is on
                     // IPaneControl → via the window's ActivatePane; Content is a DockPanel, not the control).
-                    if (pane is CliPaneWindow newCli) { newCli.ActivatePane(); }
+                    if (activate && pane is CliPaneWindow newCli) { newCli.ActivatePane(); }
                     return;
                 }
             }

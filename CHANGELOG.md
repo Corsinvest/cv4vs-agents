@@ -32,6 +32,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   session from disk. Whenever Visual Studio was busy, for instance checking an F# solution, the
   page won and its one signal was lost. The pane now listens from the start and acts on the
   signal once its client is up.
+- **Reopening a solution with "Restore panes on solution open" froze Visual Studio until every
+  pane was back.** The panes were built and shown one after another without a break, and each chat
+  also asked the CLI for its version on the UI thread as it opened, which can take up to five
+  seconds. The panes now come back one at a time while Visual Studio is idle, without taking the
+  focus from the editor, and the version check runs in the background. A restored chat is also known
+  by its session from the moment it opens, so a solution reload no longer opens it a second time.
 
 ### Internal
 

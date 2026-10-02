@@ -111,7 +111,14 @@ internal class CliPaneControl : PaneControlBase, ITerminalConnection, IDisposabl
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         GotFocus += (_, e) => { e.Handled = true; _term?.Focus(); };
-        IsVisibleChanged += (_, e) => { if (e.NewValue is true) { _term?.Focus(); } };
+        // Only on the pane the user is looking at: a restore shows its panes without activating them,
+        // and a focus taken here would send the editor's keystrokes to a live claude.exe. A tab click
+        // is covered by the frame's OnShow, which waits for the activation to settle.
+        IsVisibleChanged += (_, e) =>
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (e.NewValue is true && Pane?.IsActiveFrame() == true) { _term?.Focus(); }
+        };
 
         VSColorTheme.ThemeChanged += OnThemeChanged;
     }
