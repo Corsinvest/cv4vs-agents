@@ -67,6 +67,9 @@ internal static class BridgeMessages
             /// <summary>Thinking toggle → runtime set_max_thinking_tokens (separate from the
             /// flag-settings layer; takes effect immediately, not merged into settings).</summary>
             public const string SetMaxThinkingTokens = "cli_set_max_thinking_tokens";
+            /// <summary>Run `claude update` (the update notice's button). Not this pane's process:
+            /// the binary on disk, which every pane shares. No payload.</summary>
+            public const string UpdateInstall = "update_cli_install";
         }
 
         /// <summary>Open something somewhere (IDE, browser, our own WebView).</summary>
