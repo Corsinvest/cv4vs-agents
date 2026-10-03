@@ -110,6 +110,11 @@ internal sealed partial class WebViewMessageHandler
         // unlike the model and permission handlers below.
         _ = client.InterruptAsync();
 
+    private void HandleUpdateInstall(JObject data, int? id) =>
+        // Nothing is sent back from here: the pane shows progress and outcome from ClaudeUpdate's
+        // events, which also fire for a run started from the menu or from another pane.
+        _ = ClaudeUpdate.RunAsync();
+
     private void HandleSetPermissionMode(JObject data, int? id)
     {
         var newMode = data.ToObject<Contracts.SetPermissionModeNotification>().Mode ?? "default";

@@ -516,6 +516,8 @@ public partial class ChatPaneControl : PaneControlBase
         AgentsOptions.Applied -= OnOptionsApplied;
         AgentsOptions.ViewModeChanged -= OnViewModeChanged;
         CliSettingsStore.KeyChanged -= OnCliUserSettingChanged;
+        ClaudeUpdate.Started -= OnClaudeUpdateStarted;
+        ClaudeUpdate.Completed -= OnClaudeUpdateCompleted;
         WebView.HostKeyPressed -= OnHostKeyPressed;
         WebView.HostFilesDropped -= OnHostFilesDropped;
         WebView.PreviewMouseDown -= OnWebViewClicked;
@@ -744,24 +746,74 @@ public partial class ChatPaneControl : PaneControlBase
         // at the same speed whether the registry answers in 50ms, in five seconds, or never.
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
-            var update = await Core.Client.ClaudeUpdateCheck.CheckAsync();
+            var update = await Core.Client.ClaudeUpdate.CheckAsync();
             if (update == null) { return; }
 
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            _bridge?.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
+            if (_disposed) { return; }
+            // From here this pane holds the row, so it follows any run: one started from the menu
+            // or from another pane must not leave a live Update button over an update under way.
+            ClaudeUpdate.Started += OnClaudeUpdateStarted;
+            ClaudeUpdate.Completed += OnClaudeUpdateCompleted;
+            // A run already under way has fired Started before this pane was listening: show
+            // where it stands, not an Update button over it.
+            if (ClaudeUpdate.IsRunning)
             {
-                Key = "cli-update",
-                // Info, not warning: nothing is wrong and nothing is blocked; a newer release
-                // exists, which is worth saying once and colouring like a fact.
-                // Sticky all the same: the chat may well be opened and left alone for a while, and
-                // a row that fades after a few seconds is easy to miss entirely.
-                Severity = Contracts.NoticeVariantDto.Info,
-                Sticky = true,
-                Message = $"Claude Code {update.Value.Latest} is available (you have {update.Value.Local})",
-                Position = Contracts.NoticePositionDto.Top,
-            });
+                SendCliUpdateNotice(Contracts.NoticeVariantDto.Info, ClaudeUpdate.RunningMessage, null, null);
+                return;
+            }
+            // Info, not warning: nothing is wrong and nothing is blocked; a newer release
+            // exists, which is worth saying once and colouring like a fact.
+            SendCliUpdateNotice(
+                Contracts.NoticeVariantDto.Info,
+                ClaudeUpdate.AvailableChatMessage(update.Value.Latest, update.Value.Local),
+                "Update",
+                BridgeMessages.FromWebView.Cli.UpdateInstall);
         });
     }
+
+    /// <summary>The one row about the CLI's version: "is available", then "updating", then the
+    /// outcome, each replacing the last under the same key.
+    /// <para>Sticky every time: the chat may be opened and left alone, an update takes minutes,
+    /// and a row that fades after a few seconds is easy to miss entirely.</para></summary>
+    private void SendCliUpdateNotice(Contracts.NoticeVariantDto severity, string message, string actionLabel, string actionMessage)
+        => _bridge?.Send(BridgeMessages.ToWebView.Chat.Notice, new Contracts.NoticeNotification
+        {
+            Key = "cli-update",
+            Severity = severity,
+            Sticky = true,
+            Message = message,
+            Position = Contracts.NoticePositionDto.Top,
+            ActionLabel = actionLabel,
+            ActionMessage = actionMessage,
+        });
+
+    private void OnClaudeUpdateStarted()
+        => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (_disposed) { return; }
+            SendCliUpdateNotice(Contracts.NoticeVariantDto.Info, ClaudeUpdate.RunningMessage, null, null);
+        }).FileAndForget(nameof(ChatPaneControl));
+
+    private void OnClaudeUpdateCompleted(ClaudeUpdateResult result)
+        => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            if (_disposed) { return; }
+            var failed = result.Outcome == ClaudeUpdateOutcome.Failed;
+            SendCliUpdateNotice(
+                result.Outcome switch
+                {
+                    ClaudeUpdateOutcome.Updated => Contracts.NoticeVariantDto.Success,
+                    ClaudeUpdateOutcome.Failed or ClaudeUpdateOutcome.StillRunning => Contracts.NoticeVariantDto.Warning,
+                    _ => Contracts.NoticeVariantDto.Info,
+                },
+                // Encoded: the notice stack renders its message as HTML, and this is CLI output.
+                result.ChatMessage,
+                failed ? "View logs" : null,
+                failed ? BridgeMessages.FromWebView.Open.IdeOutputWindow : null);
+        }).FileAndForget(nameof(ChatPaneControl));
 
     /// <summary>Fills or adds to the composer. <c>EnableIdeContext</c> also re-opens the
     /// IDE-context eye: a prompt picked from the editor context menu is about the file it came

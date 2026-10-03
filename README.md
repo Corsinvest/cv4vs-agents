@@ -190,6 +190,10 @@ own.
 - **Talk to it**: dictate the prompt instead of typing it: a mic button in the composer transcribes
   as you speak (Web Speech API; hidden when the platform doesn't support it).
 - **Hot-swap**: model, permission mode and interrupt change on the live process, never a restart.
+- **[Update Claude Code from Visual Studio](docs/updating-claude-code.md)**: when a newer CLI
+  exists the chat says so, with an **Update** button; **View → cv4vs Agents → Update Claude Code**
+  does the same at any time. It runs the CLI's own updater and tells you what happened; sessions
+  already open keep working.
 - **[Restore panes on solution open](docs/options.md#general)** *(opt-in)*: reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
@@ -466,6 +470,17 @@ the session hung. The display still sleeps on its own timer, an idle pane holds 
 you ask for always wins. On by default.
 
 See [Keeping the machine awake](docs/power.md).
+
+### Updating Claude Code
+
+The extension never bundles the CLI, so the CLI is updated on its own. When a newer one exists, the
+first chat of a Visual Studio session says so, with an **Update** button; **View → cv4vs Agents →
+Update Claude Code** is always there, with or without a pane open. Both run `claude update` and
+report the outcome: the new version, or why nothing changed (already current, or an install your
+package manager owns, with the command to run). Sessions already open are not interrupted: they
+keep the version they started with until they are reopened.
+
+See [Updating Claude Code](docs/updating-claude-code.md).
 
 ### Other
 

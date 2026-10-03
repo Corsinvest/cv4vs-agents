@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Update Claude Code without leaving Visual Studio.** The notice that a newer Claude Code exists
+  now has an **Update** button, and **View → cv4vs Agents → Update Claude Code** does the same at
+  any time, with or without a pane open. It runs the CLI's own `claude update` and then says what
+  happened: the new version, or why nothing changed (already current, or an install your package
+  manager owns, with the command to run). Sessions already open keep working on the version they
+  started with until they are restarted.
+
 ### Fixed
 
 - **The `@` file picker could miss files in large projects, and froze Visual Studio while it
