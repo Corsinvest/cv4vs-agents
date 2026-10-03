@@ -8,13 +8,19 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace Corsinvest.VisualStudio.Agents.Chat.Pane;
 
 /// <summary>
-/// The chat's WebView2, forwarding the keys composition rendering drops.
+/// The chat's WebView2, forwarding the keys composition rendering drops and following the pane
+/// into whatever window Visual Studio moves it to.
 /// <para>Rendering through Windows.UI.Composition means input is handed to the browser by hand
 /// rather than reaching a child HWND. The forwarding is incomplete: CoreWebView2CompositionController
 /// has SendMouseInput and SendPointerInput but no keyboard counterpart, and the control leaves
@@ -31,6 +37,12 @@ internal sealed class ChatWebView : WebView2CompositionControl
 
     internal event Action<string[]> HostFilesDropped;
 
+    /// <summary>Logger for this control. XAML builds it with no constructor args, so it starts on
+    /// <see cref="OutputWindowLogger.Global"/>; <see cref="ChatPaneControl"/> replaces it with the
+    /// pane's own logger right after construction, the same fallback shape as a class that takes
+    /// its logger as an optional constructor argument.</summary>
+    internal OutputWindowLogger Log { get; set; } = OutputWindowLogger.Global;
+
     // public, not internal: XAML instantiates this by x:Name and needs a public default ctor.
     public ChatWebView()
     {
@@ -43,6 +55,10 @@ internal sealed class ChatWebView : WebView2CompositionControl
         // scale, and a 1px sliver of a collapsed pane is invisible.
         MinWidth = 1;
         MinHeight = 1;
+
+        // See the region below for why these two are here.
+        PresentationSource.AddSourceChangedHandler(this, OnPresentationSourceChanged);
+        CoreWebView2InitializationCompleted += OnCoreWebView2InitializationCompleted;
     }
 
     // Preview, and Handled either way, or the drop tunnels on to VS and opens the file in an editor.
@@ -115,6 +131,240 @@ internal sealed class ChatWebView : WebView2CompositionControl
         // ClickCount, so the page still sees detail=2 and nothing needs the second delivery.
     }
 
+    // --- Following the pane into whatever window VS moves it to -----------------------------
+    //
+    // WebView2CompositionControl gives its CoreWebView2Controller a ParentWindow once, the window
+    // hosting the control at its first Loaded, and never updates it (WebView2Feedback#5398; the
+    // same in every SDK from 1.0.3179.45 to 1.0.3967.48, and Visual Studio runs its own copy of
+    // that last one whatever the project references). Floating a pane makes VS reparent its content
+    // into a separate FloatingWindow, so the browser's focus window stays a child of the OLD window:
+    // a click still lands (mouse coordinates are local to this control), but the keys that follow
+    // go to whatever the old window has focused.
+    //
+    // So the parent is re-pointed here. Deliberately focus-neutral: nothing below calls MoveFocus,
+    // SetFocus or Focus. A speculative push made from inside VS's own float/dock transaction can
+    // end up on another pane, because VS picks the pane to activate by recency.
+
+    private static readonly FieldInfo _webview2BaseField =
+        typeof(WebView2CompositionControl).GetField("m_webview2Base", BindingFlags.NonPublic | BindingFlags.Instance);
+    private static readonly PropertyInfo _controllerProperty =
+        _webview2BaseField?.FieldType.GetProperty("CoreWebView2Controller", BindingFlags.NonPublic | BindingFlags.Instance);
+    private static bool _reflectionWarned;
+
+    /// <summary>The live controller behind this control, or null before init completes, or if a
+    /// future SDK ever reshapes these internals: reflection is the only way to reach either
+    /// member, so a missing one degrades to the stock behavior instead of throwing.</summary>
+    private CoreWebView2Controller Controller
+    {
+        get
+        {
+            if (_webview2BaseField == null || _controllerProperty == null)
+            {
+                if (!_reflectionWarned)
+                {
+                    _reflectionWarned = true;
+                    Log.Warn("[webview] WebView2CompositionControl internals not found; a floating chat pane won't take typing");
+                }
+                return null;
+            }
+            try
+            {
+                var webview2Base = _webview2BaseField.GetValue(this);
+                return webview2Base == null ? null : _controllerProperty.GetValue(webview2Base) as CoreWebView2Controller;
+            }
+            catch (Exception ex)
+            {
+                Log.LogException("[webview] Controller", ex);
+                return null;
+            }
+        }
+    }
+
+    private bool _reconcileQueued;
+    private bool _boundsDirty;
+    // controller.ParentWindow as last read or written by us. The wrapper never rewrites it after
+    // creating the controller, so a docked pane compares two integers and makes no COM call.
+    private IntPtr _knownParent;
+    private HwndSource _watched;
+
+    private void OnPresentationSourceChanged(object sender, SourceChangedEventArgs e)
+    {
+        // A float or dock arrives as old -> null, then null -> new. Tab switches and auto-hide
+        // collapses do too, in the same window, which Reconcile finds already correct.
+        if (e.NewSource is HwndSource) { QueueReconcile(); }
+    }
+
+    private void OnCoreWebView2InitializationCompleted(object sender, CoreWebView2InitializationCompletedEventArgs e)
+    {
+        // A pane moved while EnsureCoreWebView2Async was still running (it blocks the UI thread for
+        // about 2s) had no controller yet for a SourceChanged to act on.
+        if (e.IsSuccess) { QueueReconcile(); }
+    }
+
+    // Not from the SourceChanged callback itself: that runs in the middle of VS moving the pane.
+    // At Loaded priority layout has run and the pane is where it is going to stay.
+    private void QueueReconcile()
+    {
+        if (_reconcileQueued) { return; }
+        _reconcileQueued = true;
+        _ = Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, new Action(() =>
+        {
+            _reconcileQueued = false;
+            Reconcile();
+        }));
+    }
+
+    /// <summary>The HwndSource hosting this control when that is a live top-level Window, else null.
+    /// The auto-hide flyout lives in a child HwndSource whose root is not a Window: a docked pane
+    /// shown there must stay as the wrapper set it.</summary>
+    private HwndSource TopLevelHost()
+        => PresentationSource.FromVisual(this) is HwndSource s
+           && s.RootVisual is Window
+           && s.Handle != IntPtr.Zero
+           && IsWindow(s.Handle)
+            ? s : null;
+
+    private void Reconcile()
+    {
+        try
+        {
+            var host = TopLevelHost();
+            var controller = Controller;
+            if (host == null || controller == null) { return; }
+
+            if (_knownParent == IntPtr.Zero) { _knownParent = controller.ParentWindow; }
+            if (_knownParent != host.Handle)
+            {
+                controller.ParentWindow = host.Handle;
+                _knownParent = host.Handle;
+                _boundsDirty = true;
+                Log.Debug(() => $"[webview] controller parent -> 0x{host.Handle.ToInt64():X}");
+            }
+            if (_boundsDirty && ActualWidth > 0 && ActualHeight > 0)
+            {
+                SyncBounds(controller, host);
+                _boundsDirty = false;
+            }
+            Watch(host);
+        }
+        catch (Exception ex)
+        {
+            Log.LogException("[webview] Reconcile", ex);
+        }
+    }
+
+    /// <summary>Recompute Bounds against the window the control was re-parented to. Done here, against
+    /// the host's own root, rather than through the wrapper's private SyncControllerBounds(): that one
+    /// trusts a window it cached at first Loaded and, on the SDK build Visual Studio runs, stops
+    /// updating after the control's first Unloaded.</summary>
+    private void SyncBounds(CoreWebView2Controller controller, HwndSource host)
+    {
+        if (host.RootVisual is not UIElement root) { return; }
+        var dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
+        var origin = TranslatePoint(new Point(0, 0), root);
+        controller.Bounds = new System.Drawing.Rectangle(
+            (int)(origin.X * dpi), (int)(origin.Y * dpi),
+            (int)(ActualWidth * dpi), (int)(ActualHeight * dpi));
+        controller.NotifyParentWindowPositionChanged();
+    }
+
+    // Hook only a window other than the main one: the main window outlives every pane and a docked
+    // pane never needs the notifications below.
+    private void Watch(HwndSource host)
+    {
+        var main = Application.Current?.MainWindow;
+        var mainHandle = main == null ? IntPtr.Zero : new WindowInteropHelper(main).Handle;
+        var want = host.Handle == mainHandle ? null : host;
+        if (ReferenceEquals(_watched, want)) { return; }
+        _watched?.RemoveHook(OnHostMessage);
+        _watched = want;
+        want?.AddHook(OnHostMessage);
+    }
+
+    private const int WM_DESTROY = 0x0002;
+    private const int WM_MOVE = 0x0003;
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindow(IntPtr hWnd);
+
+    /// <summary>WM_MOVE keeps popups and the context menu positioned: the wrapper's own
+    /// LocationChanged hook is dropped for good after the control's first Unloaded. WM_DESTROY covers
+    /// a pane first opened while floating, whose only ParentWindow is destroyed the moment it is
+    /// docked; it is the last message that still reaches a hook while the browser's child window
+    /// exists (WM_NCDESTROY comes after the children are gone), and Window.Closing is not raised
+    /// when VS closes a float itself.</summary>
+    private IntPtr OnHostMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WM_MOVE)
+        {
+            try { Controller?.NotifyParentWindowPositionChanged(); }
+            catch (Exception ex) { Log.LogException("[webview] WM_MOVE", ex); }
+        }
+        else if (msg == WM_DESTROY)
+        {
+            Park(hwnd);
+        }
+        return IntPtr.Zero;
+    }
+
+    /// <summary>The window the controller hangs off is being destroyed: move the browser onto the
+    /// main window, which outlives every pane. The reconcile queued afterwards puts it wherever the
+    /// pane lands next.</summary>
+    private void Park(IntPtr dying)
+    {
+        _watched?.RemoveHook(OnHostMessage);
+        _watched = null;
+        try
+        {
+            var controller = Controller;
+            var main = Application.Current?.MainWindow;
+            if (controller == null || main == null || _knownParent != dying) { return; }
+            var mainHandle = new WindowInteropHelper(main).Handle;
+            if (mainHandle == IntPtr.Zero) { return; }
+            controller.ParentWindow = mainHandle;
+            _knownParent = mainHandle;
+            _boundsDirty = true;
+            Log.Debug(() => $"[webview] parent 0x{dying.ToInt64():X} closing, parked on the main window");
+        }
+        catch (Exception ex)
+        {
+            Log.LogException("[webview] Park", ex);
+        }
+        QueueReconcile();
+    }
+
+    // The previews run before the wrapper's own handlers hand the browser focus, so a parent that
+    // is still stale (the queued reconcile has not run yet) is fixed first. Two integer compares
+    // when docked.
+    protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+    {
+        ReconcileIfStale();
+        base.OnPreviewMouseDown(e);
+    }
+
+    protected override void OnPreviewGotKeyboardFocus(KeyboardFocusChangedEventArgs e)
+    {
+        if (ReferenceEquals(e.NewFocus, this)) { ReconcileIfStale(); }
+        base.OnPreviewGotKeyboardFocus(e);
+    }
+
+    private void ReconcileIfStale()
+    {
+        var host = TopLevelHost();
+        if (host == null || _knownParent == IntPtr.Zero || _knownParent == host.Handle) { return; }
+        Reconcile();
+    }
+
+    /// <summary>Stop following window moves. Called from ChatPaneControl.DisposeCore: the hooked
+    /// window's HwndSource would otherwise keep this control alive after the pane is gone.</summary>
+    internal void ReleaseWindowTracking()
+    {
+        PresentationSource.RemoveSourceChangedHandler(this, OnPresentationSourceChanged);
+        CoreWebView2InitializationCompleted -= OnCoreWebView2InitializationCompleted;
+        _watched?.RemoveHook(OnHostMessage);
+        _watched = null;
+    }
     // Static: the browser has ONE task manager, so one owner serves every pane. A per-pane field
     // grew a spare renderer for each chat that had opened it, all of them then listed in the very
     // window they had opened.
