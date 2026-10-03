@@ -242,11 +242,9 @@ internal static class ClaudeUpdate
 
     public const string RunningMessage = "Updating Claude Code...";
 
-    /// <summary>The "is available" row, for the chat. Encoded like every other text sent to the
-    /// notice stack, which renders HTML: both versions come from outside, one from the registry's
-    /// answer and one from the CLI's output.</summary>
+    /// <summary>The "is available" row, for the chat.</summary>
     internal static string AvailableChatMessage(string latest, string local)
-        => WebUtility.HtmlEncode($"Claude Code {latest} is available (you have {local})");
+        => $"Claude Code {latest} is available (you have {local})";
 
     internal static readonly TimeSpan RunTimeout = TimeSpan.FromMinutes(5);
 
@@ -340,10 +338,6 @@ internal sealed class ClaudeUpdateResult(ClaudeUpdateOutcome outcome, string bef
     /// <summary>For the message box, which has room: the CLI's lines kept as it wrote them, each
     /// on its own line, under the headline.</summary>
     public string DialogMessage => Join(Join(Headline, string.Join("\n", DetailLines), "\n\n"), Hint, "\n\n");
-
-    /// <summary>The chat text encoded: the notice stack renders its message as HTML, and the
-    /// detail is whatever the CLI or npm printed.</summary>
-    public string ChatMessage => WebUtility.HtmlEncode(Message);
 
     private string Headline => Outcome switch
     {

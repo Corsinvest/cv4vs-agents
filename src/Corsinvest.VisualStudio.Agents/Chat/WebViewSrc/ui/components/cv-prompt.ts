@@ -80,7 +80,7 @@ function isAllowedUpload(file: File): boolean {
 function unsupportedMessage(names: string[]): string {
     const list = names.join(', ');
     return (
-        `<strong>Unsupported file types:</strong> ${list}. ` +
+        `**Unsupported file types:** ${list}. ` +
         'Add the extension to allow it, or reference the file by absolute path in your prompt ' +
         '(@ for paths inside your working directory).'
     );

@@ -113,18 +113,13 @@ public class ClaudeUpdateTests
             r.Message);
     }
 
-    /// <summary>The "is available" row goes through the same HTML rendering as the outcome, and
-    /// its two versions come from outside: the registry's answer and the CLI's own output.</summary>
+    /// <summary>The notice stack shows a tag as written, so nothing here encodes: doing it twice
+    /// would put <c>&amp;lt;</c> on screen where the registry or the CLI wrote <c>&lt;</c>.</summary>
     [Fact]
-    public void AvailableChatMessage_EncodesBothVersions()
-    {
-        var text = ClaudeUpdate.AvailableChatMessage("9.9.9-<img src=x onerror=alert(1)>", "2.1.286<b>");
-        Assert.DoesNotContain("<img", text);
-        Assert.DoesNotContain("<b>", text);
-        Assert.Equal(
-            "Claude Code 9.9.9-&lt;img src=x onerror=alert(1)&gt; is available (you have 2.1.286&lt;b&gt;)",
-            text);
-    }
+    public void AvailableChatMessage_LeavesBothVersionsAsWritten()
+        => Assert.Equal(
+            "Claude Code 9.9.9-<img src=x onerror=alert(1)> is available (you have 2.1.286<b>)",
+            ClaudeUpdate.AvailableChatMessage("9.9.9-<img src=x onerror=alert(1)>", "2.1.286<b>"));
 
     [Theory]
     [InlineData(null, "2.1.287")]
@@ -160,11 +155,8 @@ public class ClaudeUpdateTests
     }
 
     [Fact]
-    public void ChatMessage_IsHtmlEncoded_MessageIsNot()
-    {
-        var r = Run("2.1.286", "2.1.286", 1, "", "npm error <https://registry.npmjs.org/> & co");
-        Assert.Contains("<https://registry.npmjs.org/> & co", r.Message);
-        Assert.Contains("&lt;https://registry.npmjs.org/&gt; &amp; co", r.ChatMessage);
-        Assert.DoesNotContain("<https", r.ChatMessage);
-    }
+    public void Message_LeavesTheCliOutputAsWritten()
+        => Assert.Contains(
+            "<https://registry.npmjs.org/> & co",
+            Run("2.1.286", "2.1.286", 1, "", "npm error <https://registry.npmjs.org/> & co").Message);
 }

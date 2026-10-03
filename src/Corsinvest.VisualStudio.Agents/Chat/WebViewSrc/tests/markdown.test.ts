@@ -14,7 +14,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { marked } from 'marked';
-import { closeOpenMarkdown } from '../core/markdown.ts'; // also pulls in renderer and extension
+import { closeOpenMarkdown, inlineMarked } from '../core/markdown.ts'; // also pulls in renderer and extension
 
 /** marked's HTML, before DOMPurify. */
 function md(text: string): string {
@@ -205,4 +205,57 @@ test('streaming: digits arriving one at a time move only the line, not the link'
         assert.equal(links(html), 1, src);
         assert.match(html, new RegExp(`data-line="${line}"`), src);
     }
+});
+
+// The notice rows: one line whose text comes from outside (the CLI, a hook, a file name).
+
+function inline(text: string): string {
+    return inlineMarked.parseInline(text, { async: false }) as string;
+}
+
+test('notice: a tag is shown as written, not parsed', () => {
+    assert.equal(inline('<b>x</b>'), '&lt;b&gt;x&lt;/b&gt;');
+    assert.equal(inline('expected <T> at <path>'), 'expected &lt;T&gt; at &lt;path&gt;');
+});
+
+test('notice: markup with an event handler never becomes an element', () => {
+    for (const src of [
+        '<img src=x onerror=alert(1)>',
+        '<svg onload=alert(1)>',
+        '<a href="javascript:alert(1)">x</a>',
+        '<script>alert(1)</script>',
+        '<img src=x onerror=alert(1)',
+    ]) {
+        assert.doesNotMatch(inline(src), /<[a-z]/i, src);
+    }
+});
+
+test('notice: bold and code are the marks a sender can use', () => {
+    assert.equal(
+        inline('**Unsupported file types:** a.xyz'),
+        '<strong>Unsupported file types:</strong> a.xyz',
+    );
+    assert.equal(
+        inline('Run `claude update` in a terminal'),
+        'Run <code>claude update</code> in a terminal',
+    );
+});
+
+test('notice: an http link opens outside, any other scheme stays text', () => {
+    assert.equal(
+        inline('[Docs](https://example.com/a)'),
+        '<a href="https://example.com/a" target="_blank" rel="noopener noreferrer">Docs</a>',
+    );
+    assert.doesNotMatch(inline('[x](javascript:alert(1))'), /<a\b/);
+    assert.doesNotMatch(inline('[x](file:///c:/windows)'), /<a\b/);
+    assert.doesNotMatch(inline('![x](https://example.com/a.png)'), /<img\b/);
+});
+
+test('notice: no file link, nothing in the row would handle its click', () => {
+    assert.equal(links(inline('Program.cs:12: not found')), 0);
+    assert.equal(links(inline('`Program.cs:12`')), 0);
+});
+
+test('notice: a file name keeps its underscores', () => {
+    assert.equal(inline('my_file_name.cs: not found'), 'my_file_name.cs: not found');
 });

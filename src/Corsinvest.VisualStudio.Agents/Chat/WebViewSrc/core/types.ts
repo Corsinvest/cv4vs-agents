@@ -535,6 +535,8 @@ export interface LightboxRequest {
 export interface Notice {
     id: string;
     severity: 'info' | 'success' | 'warning' | 'error';
+    /** One line of inline markdown (bold, code, http links), never HTML: a tag in it is shown as
+     *  written, so a sender passes outside text (CLI output, a file name) without encoding it. */
     message: string;
     key?: string;
     /** Optional action button: label + the fromWebView bridge message its click sends. */
