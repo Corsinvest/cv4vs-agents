@@ -809,8 +809,7 @@ public partial class ChatPaneControl : PaneControlBase
                     ClaudeUpdateOutcome.Failed or ClaudeUpdateOutcome.StillRunning => Contracts.NoticeVariantDto.Warning,
                     _ => Contracts.NoticeVariantDto.Info,
                 },
-                // Encoded: the notice stack renders its message as HTML, and this is CLI output.
-                result.ChatMessage,
+                result.Message,
                 failed ? "View logs" : null,
                 failed ? BridgeMessages.FromWebView.Open.IdeOutputWindow : null);
         }).FileAndForget(nameof(ChatPaneControl));

@@ -17,6 +17,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **A notice at the top of the chat could lose part of its text, or read it as markup.** The rows
+  rendered their message as HTML, so an advisory from Claude Code mentioning `<T>` or `<path>`
+  showed a sentence with a hole in it, and text from outside (the CLI, a hook, a file name) could
+  change how the row looked or run script in the chat page. A tag is now shown as written; bold,
+  inline code and web links are the only marks a notice renders.
 - **The `@` file picker could miss files in large projects, and froze Visual Studio while it
   looked.** It re-read the whole project on every keystroke and gave up after 20,000 files, so in a
   big solution a file you typed by its exact name could still be missing. The list is now read once
