@@ -11,6 +11,8 @@ go to `%LOCALAPPDATA%`; see [Settings and data](/cv4vs-agents/settings-and-data/
 
 ## General
 
+![Options, General page](../../../images/options-general.png)
+
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | Restore panes on solution open | bool | `false` | Reopen the panes (with their sessions) that were open for a solution when it is reopened. |
@@ -29,7 +31,9 @@ Agents** button that asks a chat pane about the break. Exceptions raise it by de
 
 ## Chat
 
-The page groups its settings in categories; the tables below follow them.
+The page groups its settings in categories, in alphabetical order; the tables below follow them.
+
+![Options, Chat page: the categories Display, File links, Files, Ignore, Input](../../../images/options-chat.png)
 
 ### Display
 
@@ -46,15 +50,11 @@ The page groups its settings in categories; the tables below follow them.
 | Sticky user messages | bool | `true` | Pin the current exchange's user message at the top while the reply/tool rows scroll below. |
 | Compact Ask answers | bool | `true` | After an `AskUserQuestion`, show only the chosen option per question (compact); off = all options with the pick highlighted. |
 
-### Input
+### File links
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them: the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. Turn it on when you ask about code you have not saved: off, Claude reads the file from disk and sees the saved version. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](/cv4vs-agents/guides/spending-less-context/). |
-| Use Ctrl+Enter to send | bool | `false` | On: Ctrl+Enter sends, Enter = newline. Off: Enter sends, Shift+Enter = newline. |
-| Spell check in the composer | bool | `false` | Underline misspelled words while you type. Off by default: code names, paths, `@` mentions and `/` commands are what the composer mostly holds, and the spell checker flags all of them. The underline marks the word; correcting it is up to you. |
-| Initial permission mode | `Default` / `AcceptEdits` / `Plan` / `BypassPermissions` | `Default` | Mode every new chat starts in (changeable per-session from the toolbar). `Default` is the mode the toolbar calls Manual: ask before edits. `BypassPermissions` also requires **Allow dangerously skip permissions** below: without it, sessions start in Manual. |
-| Allow dangerously skip permissions | bool | `false` | Adds "Bypass permissions" to the toolbar's permission menu: a mode that never asks, even for commands that can destroy data. Enabling it skips nothing by itself: the mode still has to be selected. Takes effect on new sessions. |
+| Extra linkable extensions | string[] | *(empty)* | Extensions to also linkify when Claude names a file **in prose** (`render.wgsl:20`), on top of the ~270 built-in ones, needed only for a language not shipped yet. A markdown link written by the model is always linked, whatever its extension. One per line, without the dot. See [Clickable file references](/cv4vs-agents/chat/file-links/). |
 
 ### Files
 
@@ -72,19 +72,27 @@ The page groups its settings in categories; the tables below follow them.
 | Respect `.gitignore` | bool | `true` | Also hide from the `@` picker what the workspace's `.gitignore` files (at every level inside it, none above it) and git's global excludes (`core.excludesFile`) match, inside a git repository or not. Off: only the Ignored patterns below apply. |
 | Ignored patterns | file path | shipped defaults | Extra rules hiding files from the `@` picker, written as a `.gitignore` and kept as one: the row shows where the file is and `…` opens it in the editor. Applied only where the workspace's own ignore rules say nothing, so they are the fallback for a project that ships none. The picker lists the whole workspace, with no limit on the number of files: the list is read when the `@` menu opens and filtered as you type. |
 
-### File links
+### Input
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| Extra linkable extensions | string[] | *(empty)* | Extensions to also linkify when Claude names a file **in prose** (`render.wgsl:20`), on top of the ~270 built-in ones, needed only for a language not shipped yet. A markdown link written by the model is always linked, whatever its extension. One per line, without the dot. See [Clickable file references](/cv4vs-agents/chat/file-links/). |
+| Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them: the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. Turn it on when you ask about code you have not saved: off, Claude reads the file from disk and sees the saved version. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](/cv4vs-agents/guides/spending-less-context/). |
+| Use Ctrl+Enter to send | bool | `false` | On: Ctrl+Enter sends, Enter = newline. Off: Enter sends, Shift+Enter = newline. |
+| Spell check in the composer | bool | `false` | Underline misspelled words while you type. Off by default: code names, paths, `@` mentions and `/` commands are what the composer mostly holds, and the spell checker flags all of them. The underline marks the word; correcting it is up to you. |
+| Initial permission mode | `Default` / `AcceptEdits` / `Plan` / `BypassPermissions` | `Default` | Mode every new chat starts in (changeable per-session from the toolbar). `Default` is the mode the toolbar calls Manual: ask before edits. `BypassPermissions` also requires **Allow dangerously skip permissions** below: without it, sessions start in Manual. |
+| Allow dangerously skip permissions | bool | `false` | Adds "Bypass permissions" to the toolbar's permission menu: a mode that never asks, even for commands that can destroy data. Enabling it skips nothing by itself: the mode still has to be selected. Takes effect on new sessions. |
 
 ### Misc
+
+The one setting with no category of its own; the page lists it last, under *Misc*.
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | Show tool errors inline | bool | `false` | Show the tool error inline below the diff/output; off = alert icon only (click to open in VS). |
 
 ## Debug
+
+![Options, Debug page](../../../images/options-debug.png)
 
 | Setting | Type | Default | Description |
 |---|---|---|---|

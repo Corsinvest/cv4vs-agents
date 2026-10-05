@@ -85,6 +85,8 @@ saying which file it is would reach the CLI as a question about nothing.
 **Tools → Options → cv4vs Agents → Prompts** is not a settings table but an editor: one tab per
 menu (Editor, Error List, Output).
 
+![Options, Prompts page: one tab per menu, and the grid of prompts](../../../../images/options-prompts.png)
+
 | Column | Meaning |
 |---|---|
 | Title | What the menu item reads. |
