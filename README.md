@@ -100,14 +100,14 @@ Each line links to the page that explains it.
   diagnostics, build, its Test Explorer and the live debugger handed to the agent.
 - **[It offers when you break](https://corsinvest.github.io/cv4vs-agents/guides/debug-with-the-agent/)**: stop on an exception and one
   press asks about it; the agent reads the live stack and locals rather than guessing.
-- **[Review changes in VS's own diff](https://corsinvest.github.io/cv4vs-agents/chat/diff/)**: every Edit/Write opens in the native,
-  editable side-by-side diff: save to accept, close to reject.
+- **[Review changes in VS's own diff](https://corsinvest.github.io/cv4vs-agents/chat/diff/)**: every Edit/Write shows as an inline
+  diff and opens in the native, editable side-by-side one: save to accept, close to reject.
 - **[Edit the plan before you approve it](https://corsinvest.github.io/cv4vs-agents/chat/permissions/#reviewing-a-plan)**: open it in the
   Markdown editor, change it, and approving sends what you wrote.
 - **[Take the files back](https://corsinvest.github.io/cv4vs-agents/chat/rewind/)**: `/rewind` restores them to the state before any
   message of the session, and leaves the conversation where it is.
 - **[Clickable file references](https://corsinvest.github.io/cv4vs-agents/chat/file-links/)**: `ClientEvents.cs:208` in an answer, in
-  plain prose, is a link that opens the file and selects the lines.
+  plain prose, is a link that opens the file there; a range selects those lines.
 - **[Know when the next message costs more](https://corsinvest.github.io/cv4vs-agents/chat/context-and-usage/#the-prompt-cache)**: the
   context gauge tracks the prompt cache and warns before it expires.
 - **[Keep writing while it answers](https://corsinvest.github.io/cv4vs-agents/chat/queued-messages/)**: the next message waits for the

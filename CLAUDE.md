@@ -1,7 +1,8 @@
 # CLAUDE.md
 
 Guidance for Claude Code working in this repository. Only what you can't infer from the code:
-architecture is documented in [docs/architecture.md](docs/architecture.md) and the rest of `docs/`.
+architecture is documented in [architecture.md](docs/src/content/docs/architecture.md) and the rest
+of the documentation site's pages, `docs/src/content/docs/`.
 
 ## What it is
 
@@ -91,7 +92,8 @@ Things that break in ways the compiler won't tell you about:
 
 ## Architecture notes
 
-Full description in [docs/architecture.md](docs/architecture.md). What matters when editing:
+Full description in [architecture.md](docs/src/content/docs/architecture.md). What matters when
+editing:
 
 - **The two startup paths are deliberately separate**: Chat (stream-json + in-process SDK MCP) and
   CLI (ConPTY + `--ide` WebSocket). Do **not** try to unify them.
@@ -157,14 +159,15 @@ Full description in [docs/architecture.md](docs/architecture.md). What matters w
 ## Docs
 
 The documentation is a Starlight site built from `docs/`, published at
-`https://corsinvest.github.io/cv4vs-agents/` by `docs.yml` on every push to master. The pages are
+`https://corsinvest.github.io/cv4vs-agents/` by `docs.yml` on every push to master that touches
+`docs/`. The pages are
 `docs/src/content/docs/**/*.md(x)`, **written in English**; a new page must also be added to
 `sidebar` in `docs/astro.config.mjs`, and `quality.yml` fails the PR if it is not. `npm run dev` /
 `build` / `preview` in `docs/`; the build validates internal links.
 
 **Stock Starlight only**: its own components, no `.astro` of ours, and `src/styles/vs2026.css`
 holds theme variables and nothing else. The accents there are stops of the gradients in
-`Resources/plugin-logo.svg`. The one exception is `docs/external-links.mjs`, which opens external
+`src/Corsinvest.VisualStudio.Agents/Resources/plugin-logo.svg`. The one exception is `docs/external-links.mjs`, which opens external
 links in a new tab at build time: a link written through a component (`LinkCard`, a hero action, a
 sidebar entry) does not pass through it and takes `target` and `rel` by hand.
 

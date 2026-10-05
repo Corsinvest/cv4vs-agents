@@ -1,6 +1,7 @@
 ---
 title: "Diary"
 description: "Days when something happened that was not in the plan."
+next: false
 ---
 
 Days when something happened that was not in the plan. Newest first.

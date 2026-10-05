@@ -54,7 +54,7 @@ The page groups its settings in categories; the tables below follow them.
 | Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them: the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](/cv4vs-agents/guides/spending-less-context/). |
 | Use Ctrl+Enter to send | bool | `false` | On: Ctrl+Enter sends, Enter = newline. Off: Enter sends, Shift+Enter = newline. |
 | Spell check in the composer | bool | `false` | Underline misspelled words while you type. Off by default: code names, paths, `@` mentions and `/` commands are what the composer mostly holds, and the spell checker flags all of them. The underline marks the word; correcting it is up to you. |
-| Initial permission mode | `Default` / `AcceptEdits` / `Plan` | `Default` | Mode every new chat starts in (changeable per-session from the toolbar). `Default` = ask before edits. |
+| Initial permission mode | `Default` / `AcceptEdits` / `Plan` / `BypassPermissions` | `Default` | Mode every new chat starts in (changeable per-session from the toolbar). `Default` = ask before edits. `BypassPermissions` also requires **Allow dangerously skip permissions** below: without it, sessions start in Manual. |
 | Allow dangerously skip permissions | bool | `false` | Enables the toolbar's "Bypass permissions" (never asks, even for dangerous commands). |
 
 ### Files

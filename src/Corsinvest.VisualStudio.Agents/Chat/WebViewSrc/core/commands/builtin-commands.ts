@@ -202,7 +202,7 @@ export class OpenCliTerminalCommand extends ChatCommand {
 export class HelpDocsCommand extends ChatCommand {
     readonly id = 'help-docs';
     readonly label = 'View help docs';
-    readonly description = 'Open the documentation on GitHub';
+    readonly description = 'Open the documentation';
     readonly section: CommandSection = 'support';
     readonly order = 10;
     readonly icon = Book16Regular;

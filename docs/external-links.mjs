@@ -20,7 +20,8 @@ export function externalLinksInNewTab() {
     hooks: {
       /** @param {any} options */
       'astro:config:setup'({ config, updateConfig }) {
-        const siteRoot = new URL(config.base ?? '/', config.site ?? 'http://localhost').href;
+        // With the trailing slash: without it, '/cv4vs-agents-other/' would pass as ours.
+        const siteRoot = new URL(config.base ?? '/', config.site ?? 'http://localhost').href.replace(/\/?$/, '/');
         const plugin = {
           name: 'external-links-new-tab',
           element: {
@@ -28,7 +29,7 @@ export function externalLinksInNewTab() {
             /** @param {any} node @param {any} ctx */
             visit(node, ctx) {
               const href = node.properties?.href;
-              if (typeof href !== 'string' || !/^https?:\/\//.test(href) || href.startsWith(siteRoot)) return;
+              if (typeof href !== 'string' || !/^https?:\/\//.test(href) || (href + '/').startsWith(siteRoot)) return;
               ctx.setProperty(node, 'target', '_blank');
               ctx.setProperty(node, 'rel', ['noopener', 'noreferrer']);
             },

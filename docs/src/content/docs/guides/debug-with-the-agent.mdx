@@ -42,7 +42,8 @@ iteration.
 
 ## What the agent reads while paused
 
-Inspection only works in break mode. Paused, the agent can ask for:
+Inspection only works in break mode; `debug_get_state` is the exception, and answers in any mode.
+Paused, the agent can ask for:
 
 | Tool | What comes back |
 |---|---|
@@ -73,8 +74,7 @@ When the agent drives the session itself, this is the order the tools are built 
 </Steps>
 
 For a program that is already running (a web server, a service), `debug_attach` takes the place of
-`debug_start`, and `debug_detach` leaves it running afterwards where `debug_stop` would end the
-session.
+`debug_start`, and `debug_detach` always leaves it running afterwards.
 
 ## Tests under the debugger
 
@@ -83,7 +83,7 @@ and the tools above can read the state there. Set the breakpoints first and filt
 failing test, otherwise the whole suite runs under a debugger for nothing. `test_run` is the plain,
 faster version.
 
-## Editing while paused
+## Editing during a session
 
 `debug_apply_hot_reload` applies pending code edits to the running program without restarting it
 (Hot Reload / Edit and Continue). An edit Hot Reload cannot take, such as a changed method

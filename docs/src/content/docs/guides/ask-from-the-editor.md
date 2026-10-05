@@ -15,7 +15,8 @@ file and selection travel with it, so the prompt itself is just the instruction.
 ## From the Error List and the Output window
 
 Right-click in the **Output window** or the **Error List** and the same **cv4vs Agents** submenu
-offers its own prompts (Explain, Fix). In the Error List it takes the rows you selected, with their
+offers its own prompts: Explain and Fix in the Error List, Explain in the Output window. In the
+Error List it takes the rows you selected, with their
 file, line and project; in the Output window your selection, or the tail of the pane when you
 selected nothing: a build error is worth asking about without highlighting it first.
 

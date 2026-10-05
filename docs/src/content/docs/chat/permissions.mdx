@@ -18,13 +18,15 @@ border takes the mode's colour.
 | **Manual** | Every edit and command waits for your approval |
 | **Edit automatically** | Files in the working directory are edited without asking; anything outside it, and commands, still ask |
 | **Plan** | Reads and explores freely, then proposes a plan: no file is changed |
-| **Auto** | Decides per task when to act and when to ask, based on how risky it is |
+| **Auto** | Decides per task when to act and when to ask, based on how risky it is. Offered only when the current model supports it |
 | **Bypass permissions** | Nothing is ever asked, including commands that can destroy data |
 
 The mode changes on the live process: switching it never restarts the CLI.
 
 **Initial permission mode** ([Options → Chat](/cv4vs-agents/options/#chat)) is the mode every new
-chat starts in: `Default` (ask before edits), `AcceptEdits` or `Plan`.
+chat starts in: `Default` (ask before edits), `AcceptEdits`, `Plan` or `BypassPermissions`. The
+last one also requires **Allow dangerously skip permissions**: without it, sessions start in
+Manual.
 
 ## Approving a tool
 
@@ -57,7 +59,9 @@ answer you can change it there and save; the banner picks the change up, and app
 </Aside>
 
 It only appears at all if **Allow dangerously skip permissions**
-([Options → Chat](/cv4vs-agents/options/#chat)) is on. It is off by default.
+([Options → Chat](/cv4vs-agents/options/#chat)) is on. It is off by default, and takes effect on new
+sessions: the CLI decides at launch whether the mode can ever be entered. Enabling it does not skip
+anything by itself: the mode still has to be selected.
 
 When it is the active mode it is named in red on the toolbar whether or not the composer has focus:
 it is the one worth noticing when you come back to a pane and don't remember how you left it.
