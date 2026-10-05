@@ -13,6 +13,8 @@ of context around them, syntax-highlighted for the file's own language, and with
 marked inside a line that was edited rather than rewritten. The row's title carries the counts:
 `+3 −14`, the same numbers git would report.
 
+![An Edit row: the file's own line numbers, the lines removed and added, the counts in the title](../../../../images/chat/edit-diff.png)
+
 The line numbers are the **file's**, not the fragment's, and come from the patch the CLI computes
 when it applies the edit. While the tool is still running there is no patch yet: the preview shows
 what is being changed without a line gutter, and gains the numbers once the edit lands.
@@ -46,8 +48,6 @@ the text the edit replaces with the text it puts there, with the editor's own co
 navigation. Clicking the same row again closes it; opening another change replaces it, so the chat
 never leaves a trail of diff tabs behind.
 
-![The change in Visual Studio's native diff](../../../../images/chat/vs-diff.png)
-
 This view is for reading. In a Chat pane the change is approved or refused in the conversation,
 with the approval prompt (see [Permissions](/cv4vs-agents/chat/permissions/#approving-a-tool)):
 saving or closing the diff tab decides nothing, and the tab closes by itself once you answer.
@@ -59,6 +59,8 @@ Visual Studio has a second diff, and that one does decide. The
 proposed version of it, in a tab whose title ends in *Ctrl+S to apply · close to reject*, with an
 **Accept** / **Reject** bar above the editor. The proposed side is a real editor: you can change it
 before deciding.
+
+![The editable diff: the bar that asks to accept or reject, and the change counts](../../../../images/chat/vs-diff.png)
 
 | You | The tool answers |
 |---|---|

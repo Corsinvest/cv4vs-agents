@@ -42,6 +42,8 @@ Clicking a file path opens the file in VS.
 A failed row has a **Show error details** button; with **Show tool errors inline** on, the error is
 shown under the output instead. A row left unfinished in a reopened session is shown as failed.
 
+![A failed Bash row, an Edit with its diff, and a Write showing the new file's content](../../../../images/chat/tool-rows.png)
+
 ## View mode
 
 How much of the work the transcript shows, from the **View mode** slider in the `/` menu.

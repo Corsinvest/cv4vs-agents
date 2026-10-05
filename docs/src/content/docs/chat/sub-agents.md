@@ -51,6 +51,8 @@ above them says there are earlier ones.
 **Show all**, in the row's header, loads the whole run, every step in order. **Reduce** goes back
 to the last 3. A button under the nested rows copies the sub-agent's output.
 
+![An Agent row opened: the prompt it was given, its report, and the run's totals in the title](../../../../images/chat/agent-row.png)
+
 This is the same lazy rule the rest of the chat follows: nothing heavy is loaded until you ask for
 it. A sub-agent that ran for two hundred steps costs nothing to scroll past, and shows everything
 the moment you ask.

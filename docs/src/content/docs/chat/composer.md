@@ -39,6 +39,8 @@ its aliases, which is why typing `/rewind` or `/rc` finds entries that are not c
 PageUp/PageDown move, Enter or Tab picks, Esc closes. Switches and sliders act in place and keep the
 menu open.
 
+![The slash palette: the Context section and the start of Model](../../../../images/chat/slash-menu.png)
+
 | Section | Entries |
 |---|---|
 | **Context** | Attach file…, Mention file from this project…, Clear conversation, New conversation (a new pane), Resume conversation… (the session list), Rewind files… (hidden when checkpoints are off), Remote Control (a switch) |
@@ -83,7 +85,11 @@ recommendation. Under the list:
 - **Ultracode**, where the model supports it: dynamic workflows on every task, for this session
   only.
 
-A model with no effort levels shows neither. Picking another model mid-conversation posts a
+A model with no effort levels shows neither.
+
+![The model list, with the Effort slider and Ultracode under it](../../../../images/chat/model-list.png)
+
+ Picking another model mid-conversation posts a
 *Switched to …* line in the transcript.
 
 The `/` menu's **Model** section has the same two controls plus three switches:
