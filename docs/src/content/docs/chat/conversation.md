@@ -48,14 +48,21 @@ shown under the output instead. A row left unfinished in a reopened session is s
 
 How much of the work the transcript shows, from the **View mode** slider in the `/` menu.
 
-| Mode | Shows |
-|---|---|
-| **Full** | every row |
-| **Focus** | every reply; each run of tool calls and thinking between two of them folds into one row (`5 tool calls · 1 failed`, `Running Bash…` while it works) that opens in place |
-| **Hide tools** | the tool rows are dropped altogether; thinking rows stay |
+| Mode | Command | Shows |
+|---|---|---|
+| **Full** | `/vm:full` or `/vm:0` | every row |
+| **Focus** | `/vm:focus` or `/vm:1` | every reply; each run of tool calls and thinking between two of them folds into one row (`5 tool calls · 1 failed`, `Running Bash…` while it works) that opens in place |
+| **Hide tools** | `/vm:hide` or `/vm:2` | the tool rows are dropped altogether; thinking rows stay |
+
+The commands set a mode outright, without leaving the keyboard: type `/vm:1` and press Enter. The
+number is how much is hidden, 0 nothing and 2 the most. They work with a draft in the composer too:
+a `/` that starts a word opens the menu anywhere in the text, and what you typed for the command
+is removed once it has run. `/view`, `/hide` or `/tools` bring the slider itself to the top of the
+list. The mode is shared by every open chat.
 
 Kept in every mode: your answers to questions, plan decisions, the task list, and a call waiting
-for your approval.
+for your approval. In Focus and Hide tools an answered question starts closed, down to its header
+(`Question · Answered`); its chevron opens it.
 
 ![The task list in the conversation](../../../../images/chat/todo-list.png) A fold opened while its run was still working closes again when the turn ends.
 

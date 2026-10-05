@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   manager owns, with the command to run). Sessions already open keep working on the version they
   started with until they are restarted.
 
+- **A View mode can be set by name from the keyboard.** `/vm:full`, `/vm:focus` and `/vm:hide`,
+  or `/vm:0`, `/vm:1` and `/vm:2`, set the mode outright: type `/vm:1` and press Enter. The number
+  is how much is hidden. The slider in the `/` menu stays, and still answers to `/view`, `/hide`
+  and `/tools`.
+
 ### Changed
 
 - **Ultracode is a switch of its own, no longer the last stop of the effort slider.** It sits under
@@ -29,11 +34,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   The row reads `Question`, then `Answered` or `Declined` and how many questions it held. Open, it
   lists every option with yours ticked, a radio or a checkbox as the question was single- or
   multi-select; the chevron closes it to its header. It follows **Collapse tool results** like the
-  rest, which it used to ignore. One view that opens and closes replaces the option that chose
-  between two.
+  rest, which it used to ignore, and starts closed in the Focus and Hide tools view modes. One view
+  that opens and closes replaces the option that chose between two.
 
 ### Fixed
 
+- **`/focus` and `/compact` listed View mode under a command of the same name.** Both words were
+  aliases of View mode and are also Claude Code's own commands, whose row came first: `/focus`
+  and Enter ran the one that answers "isn't available here yet". View mode no longer answers to
+  them: `/vm:focus` sets Focus.
 - **Turning Ultracode on forced the effort to Extra high, and moving the effort turned Ultracode
   off.** The two were one control. They are now set separately.
 - **A notice at the top of the chat could lose part of its text, or read it as markup.** The rows
