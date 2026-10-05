@@ -21,6 +21,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   the slider in the model list and in the `/` menu, and it works at any effort level: the model
   button reads, for example, `Opus 5.5 Medium · Ultracode`. It stays on when you move the effort.
   It takes the rocket icon, as in the VS Code extension; Fast mode moves to a rabbit.
+- **The Thinking button left the composer toolbar.** It is set once and rarely touched, so it
+  now lives only in the `/` menu, under **Model**, with the other switches.
+- **The permission mode button shows the mode's icon** beside its name, the same one the mode
+  has in the list: `Manual` alone did not say what was manual.
 
 ### Fixed
 

@@ -76,8 +76,8 @@ by feature detection rather than by pinning a version.
 references (`ClientEvents.cs:208` opens the file at that line), image attachments, and a composer with
 slash commands, an `@` file picker and prompt history. Any reply can be read aloud.
 
-Under the message box, a row for the turn itself: **thinking**, **model and effort** and
-**permission mode**, each a click away. Which model is answering, and what it may do without asking,
+Under the message box, a row for the turn itself: **model and effort** and **permission mode**,
+each a click away. Which model is answering, and what it may do without asking,
 are the two things that change a turn the most: they belong in sight, not three levels down a menu.
 
 **View mode** decides how much of what Claude *did* (the commands, file reads and edits, searches,
