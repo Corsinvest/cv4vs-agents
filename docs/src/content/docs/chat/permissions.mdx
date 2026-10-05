@@ -40,36 +40,22 @@ agent should ask you before doing with Visual Studio is decided in your `CLAUDE.
 ## Approving a tool
 
 When a tool needs your approval the prompt takes the composer's place until you answer; a draft you
-were writing is kept. It names the tool (*Allow this Bash command?*) and shows what it would run.
+were writing is kept. It names the tool and what it would touch:
 
-![The approval prompt on a shell command: the command in an editable box, the three choices, the text field](../../../../images/chat/permission-prompt.png)
+![The approval prompt on an edit: the file, the three choices, the text field](../../../../images/chat/permission-prompt.png)
 
 | Key | Choice |
 |---|---|
 | 1 | **Yes**: this once |
-| 2 | **Yes, allow … for …**: this once, and stop asking for the rule shown |
+| 2 | **Yes, allow …**: this once, and stop asking. For an edit it reads *Yes, allow all edits this session*; for a command it names a rule and where it is saved, and that last word can be clicked to change it |
 | 3 | **No** |
 
 Enter confirms the highlighted choice (Yes to begin with), ↑/↓ move between them, Esc answers No.
 
-The second choice ends in a scope you can click to change before confirming:
-
-| Scope | Where the rule is saved |
-|---|---|
-| this project (just you) | `.claude/settings.local.json` (gitignored) |
-| all projects | `~/.claude/settings.json` |
-| this project (shared) | `.claude/settings.json` (shared with the team) |
-| this session | nowhere: it lasts until the session ends |
+**Or type what to do instead…** refuses the tool and sends what you typed as the reason, so Claude
+reads an instruction rather than a bare no.
 
 A shell command is shown in a box you can edit: what runs is what the box holds when you say Yes.
-Other tools show a one-line detail, or a **Details** expander.
-
-Under the choices, **Or type what to do instead…** refuses the tool and sends what you typed as the
-reason, so Claude reads an instruction rather than a bare no. Enter sends it, Shift+Enter breaks
-the line.
-
-When several tools ask at once (parallel calls, a sub-agent), the prompts come one at a time, in the
-order they arrived.
 
 With several panes open, the one waiting on a permission raises a VS InfoBar, and an OS
 notification when you're outside Visual Studio; see
