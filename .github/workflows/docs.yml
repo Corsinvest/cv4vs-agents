@@ -1,0 +1,25 @@
+name: Docs
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - "docs/**"
+      - "!docs/marketplace-overview.md"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # The organisation's reusable workflow: builds docs/ with withastro/action and deploys it with
+  # actions/deploy-pages. Its name says cv4pve, its content does not.
+  docs:
+    uses: Corsinvest/.github/.github/workflows/cv4pve-tools-docs.yml@main

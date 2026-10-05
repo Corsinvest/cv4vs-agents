@@ -156,8 +156,25 @@ Full description in [docs/architecture.md](docs/architecture.md). What matters w
 
 ## Docs
 
-`docs/*.md` is public and **written in English** (README, options, mcp-tools, sub-agents,
-architecture, context-and-usage, settings-and-data).
+The documentation is a Starlight site built from `docs/`, published at
+`https://corsinvest.github.io/cv4vs-agents/` by `docs.yml` on every push to master. The pages are
+`docs/src/content/docs/**/*.md(x)`, **written in English**; a new page must also be added to
+`sidebar` in `docs/astro.config.mjs`, and `quality.yml` fails the PR if it is not. `npm run dev` /
+`build` / `preview` in `docs/`; the build validates internal links.
+
+**Stock Starlight only**: its own components, no `.astro` of ours, and `src/styles/vs2026.css`
+holds theme variables and nothing else. The accents there are stops of the gradients in
+`Resources/plugin-logo.svg`. The one exception is `docs/external-links.mjs`, which opens external
+links in a new tab at build time: a link written through a component (`LinkCard`, a hero action, a
+sidebar entry) does not pass through it and takes `target` and `rel` by hand.
+
+Links between pages are site-absolute (`/cv4vs-agents/<slug>/`). The README, the listing, the
+Documentation menu entry (`GlobalMenuCommands.DocsUrl`) and the chat's Help (`links.ts`) link to
+the site by full URL, and nothing checks those in CI: rename a page or a heading and they break
+silently.
+
+`docs/images/` stays where it is: the listing and the README load those files by path, and the
+pages reference them from there too, so there is one copy.
 
 `docs/marketplace-overview.md` is the odd one out: it is not documentation but the listing text.
 `vs-publish.json` points the release workflow at it, so a stable tag uploads it along with the

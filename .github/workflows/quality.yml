@@ -55,6 +55,40 @@ jobs:
         run: npm audit --audit-level=moderate
         continue-on-error: true
 
+  docs:
+    name: Docs site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+
+      - run: npm ci
+
+      # The links validator runs inside the build: a broken internal link fails it here, on the
+      # pull request, rather than on the deploy after the merge.
+      - name: Build
+        run: npm run build
+
+      # A page in no sidebar group is reachable only by search.
+      - name: Every page is in the sidebar
+        run: |
+          missing=0
+          for f in $(find src/content/docs -name '*.md' -o -name '*.mdx' | sort); do
+            slug="${f#src/content/docs/}"; slug="${slug%.mdx}"; slug="${slug%.md}"
+            [ "$slug" = "index" ] && continue
+            grep -q "'$slug'" astro.config.mjs || { echo "::error::$slug is in no sidebar group"; missing=1; }
+          done
+          exit $missing
+
   build:
     name: Build VSIX
     # A VSIX needs MSBuild and the VS SDK: .NET Framework 4.8 can't be built on Linux.
