@@ -59,6 +59,8 @@ Three rules worth knowing:
 
 ## Mentions and attachments
 
+![The Add menu: Attach a file, Reference a workspace file, Slash command](../../../../images/chat/add-menu.png)
+
 - **`@` mentions**: inline file picker over the **whole** project tree: no depth limit, and the
   filter matches the *path*, not just the file name, so `ui/comp` narrows before you type a name.
   It lists folders too: picking one inserts `@folder/`. A path with a space is written `@"…"`.
