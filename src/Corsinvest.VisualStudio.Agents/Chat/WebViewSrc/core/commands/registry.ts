@@ -26,6 +26,7 @@ import {
     ThinkingCommand,
     FastModeCommand,
     EffortCommand,
+    UltracodeCommand,
     SwitchModelsOnFlagCommand,
 } from './model-controls';
 import { RewindCommand } from './rewind';
@@ -50,6 +51,7 @@ export const STATIC_COMMANDS: readonly ChatCommand[] = [
     new SwitchModelCommand(),
     new SwitchPermissionModeCommand(),
     new EffortCommand(),
+    new UltracodeCommand(),
     new ThinkingCommand(),
     new FastModeCommand(),
     new SwitchModelsOnFlagCommand(),

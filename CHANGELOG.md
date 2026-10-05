@@ -15,8 +15,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   manager owns, with the command to run). Sessions already open keep working on the version they
   started with until they are restarted.
 
+### Changed
+
+- **Ultracode is a switch of its own, no longer the last stop of the effort slider.** It sits under
+  the slider in the model list and in the `/` menu, and it works at any effort level: the model
+  button reads, for example, `Opus 5.5 Medium · Ultracode`. It stays on when you move the effort.
+  It takes the rocket icon, as in the VS Code extension; Fast mode moves to a rabbit.
+
 ### Fixed
 
+- **Turning Ultracode on forced the effort to Extra high, and moving the effort turned Ultracode
+  off.** The two were one control. They are now set separately.
 - **A notice at the top of the chat could lose part of its text, or read it as markup.** The rows
   rendered their message as HTML, so an advisory from Claude Code mentioning `<T>` or `<path>`
   showed a sentence with a hole in it, and text from outside (the CLI, a hook, a file name) could

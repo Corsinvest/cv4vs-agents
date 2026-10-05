@@ -8,8 +8,8 @@ import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
 import { iconStyles, tooltipStyles } from '../styles/shared';
 import { modelLabelShort } from '../../core/ai-models';
-import { currentEffortLevels } from '../../core/commands/model-controls';
-import { effortLabel } from '../../core/types';
+import { currentEffortLevels, ultracodeActive } from '../../core/commands/model-controls';
+import { effortLabel, ULTRACODE_LABEL } from '../../core/types';
 
 /**
  * Model trigger in the input toolbar, next to the permission selector: shows the active model and
@@ -62,12 +62,17 @@ export class CvModelSelector extends LitElement {
                 color: var(--colorNeutralForeground3);
                 white-space: nowrap;
             }
+            /* Inside the level's tag, set apart by colour alone: it is on for every task until
+               turned off, so it has to show with the menu closed, without a second box that
+               outweighs the model's name. */
+            .ultracode {
+                color: var(--colorPaletteBerryBorderActive);
+            }
         `,
     ];
 
     @state() private _current = appState.currentModel;
     @state() private _effort = appState.effortLevel;
-    @state() private _ultracode = appState.ultracodeEnabled;
 
     private readonly _subs = new StateSubscriptions(this);
 
@@ -79,10 +84,7 @@ export class CvModelSelector extends LitElement {
         this._subs.on('effortLevel', (v) => {
             this._effort = v;
         });
-        this._subs.on('ultracodeEnabled', (v) => {
-            this._ultracode = v;
-        });
-        this._subs.rerenderOn('models');
+        this._subs.rerenderOn('models', 'ultracodeEnabled');
     }
 
     private _onClick = (): void => {
@@ -107,7 +109,11 @@ export class CvModelSelector extends LitElement {
                 ${
                     currentEffortLevels() !== null
                         ? html`<span class="effort"
-                              >${effortLabel(this._effort, this._ultracode)}</span
+                              >${effortLabel(this._effort)}${
+                                  ultracodeActive()
+                                      ? html` · <span class="ultracode">${ULTRACODE_LABEL}</span>`
+                                      : nothing
+                              }</span
                           >`
                         : nothing
                 }

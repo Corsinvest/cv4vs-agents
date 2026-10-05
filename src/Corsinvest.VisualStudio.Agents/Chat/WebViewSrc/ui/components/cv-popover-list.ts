@@ -93,6 +93,23 @@ export class CvPopoverList extends LitElement {
                 color: var(--colorNeutralForeground2);
                 font-family: var(--fontFamilyBase);
             }
+            .footer-rows {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .footer-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .footer-label {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
             .section {
                 display: flex;
                 align-items: baseline;

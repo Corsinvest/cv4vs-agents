@@ -436,7 +436,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
                 PermissionMode = permissionMode,
                 EffortLevel = applied?.Val("effort") ?? eff?.Val("effortLevel"),
                 AlwaysThinkingEnabled = eff?.ValBool("alwaysThinkingEnabled"),
-                Ultracode = applied?.ValBool("ultracode"),
+                Ultracode = applied?.ValBool("ultracodeRequested") ?? applied?.ValBool("ultracode"),
                 SwitchModelsOnFlag = eff?.ValBool("switchModelsOnFlag"),
                 BypassPermissionsDisabled =
                     eff?["permissions"].Val("disableBypassPermissionsMode") == "disable",

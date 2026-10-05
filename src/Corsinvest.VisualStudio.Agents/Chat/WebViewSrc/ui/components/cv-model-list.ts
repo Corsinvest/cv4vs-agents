@@ -9,8 +9,8 @@ import Checkmark16Regular from '@fluentui/svg-icons/icons/checkmark_16_regular.s
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
 import { resolveModelValue } from '../../core/ai-models';
-import type { CommandHost } from '../../core/commands/base';
-import { EffortCommand } from '../../core/commands/model-controls';
+import type { ChatCommand, CommandHost } from '../../core/commands/base';
+import { EffortCommand, UltracodeCommand } from '../../core/commands/model-controls';
 import type { ModelInfoDto } from '../../core/types';
 import './cv-popover-list';
 import './cv-segmented-slider';
@@ -32,6 +32,7 @@ export class CvModelList extends LitElement {
     // The same command the `/` menu's Effort row uses: its stops, label and setter follow the
     // current model's levels, so the two can't disagree.
     private readonly _effort = new EffortCommand();
+    private readonly _ultracode = new UltracodeCommand();
 
     // `default` is listed even when another entry resolves to the same model: it follows the
     // CLI's recommendation when that changes, a named entry stays put.
@@ -98,16 +99,24 @@ export class CvModelList extends LitElement {
         );
     }
 
+    private _renderLabel(cmd: ChatCommand) {
+        return html`<span class="footer-label" title=${cmd.description ?? ''}>
+            ${cmd.icon ? html`<span class="row-icon">${unsafeHTML(cmd.icon)}</span>` : nothing}
+            <span>${cmd.label}</span>
+        </span>`;
+    }
+
     /** Effort for the current model, below the list; absent when the model has none (Haiku). */
     private _renderEffort() {
         if (!this._effort.isEnabled()) {
-            return undefined;
+            return nothing;
         }
         const ctrl = this._effort.trailingControl;
         if (ctrl.kind !== 'slider') {
-            return undefined;
+            return nothing;
         }
-        return html`<span>Effort</span>
+        return html`<div class="footer-row">
+            ${this._renderLabel(this._effort)}
             <span class="dots-wrap">
                 <span class="dots-val">${ctrl.label}</span>
                 <cv-segmented-slider
@@ -118,7 +127,33 @@ export class CvModelList extends LitElement {
                         this.requestUpdate();
                     }}
                 ></cv-segmented-slider>
-            </span>`;
+            </span>
+        </div>`;
+    }
+
+    private _renderUltracode() {
+        if (!this._ultracode.isEnabled()) {
+            return nothing;
+        }
+        return html`<div class="footer-row">
+            ${this._renderLabel(this._ultracode)}
+            <fluent-switch
+                class="toggle"
+                aria-label=${this._ultracode.label}
+                ?checked=${this._ultracode.checked}
+                @change=${() => {
+                    this._ultracode.run(this.host);
+                    this.requestUpdate();
+                }}
+            ></fluent-switch>
+        </div>`;
+    }
+
+    /** Undefined when the model has no effort: the list then draws no empty band. */
+    private _renderFooter() {
+        return this._effort.isEnabled()
+            ? html`<div class="footer-rows">${this._renderEffort()}${this._renderUltracode()}</div>`
+            : undefined;
     }
 
     override render() {
@@ -131,7 +166,7 @@ export class CvModelList extends LitElement {
                 .items=${this._models}
                 .isNavigable=${(m: ModelInfoDto) => !m.disabled}
                 .header=${html`<span>Select a model</span>`}
-                .footer=${this._renderEffort()}
+                .footer=${this._renderFooter()}
                 emptyText="No models"
                 .renderRow=${(m: ModelInfoDto) => html`
                     <span class="row-text">
