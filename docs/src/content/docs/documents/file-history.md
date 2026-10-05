@@ -27,7 +27,9 @@ started and nothing is sent anywhere.
 ## The tree (left)
 
 **Config-dir → project → session**, with the newest backup date and the size on every row. Sessions
-are the leaves: a row is one `file-history/<session>/` folder.
+are the leaves: a row is one `file-history/<session>/` folder, labelled with the first 8 characters
+of the session id; the tooltip has the full id, the copy and file counts, the last backup time and
+the folder. The tree opens sorted by size, largest first.
 
 - The **config-dir** level appears only when profiles resolve to more than one. Several profiles
   usually share `~/.claude`, and a tree rooted on profiles would count the same megabytes twice, so
@@ -45,8 +47,10 @@ filesystem, which already knows them.
 
 ## The files (right)
 
-Selecting a session shows what it backed up: **file, version, size, and when the copy was taken**,
-newest-largest first. The tiles above give the session's totals: size on disk, distinct files,
+Selecting a session shows what it backed up, one row per file with its **latest** copy: file,
+version, size, and when that copy was taken, largest first. Earlier versions of the same file are
+counted in the *copies* tile and are still in the folder (**Open the backup folder**), but only the
+latest can be compared or saved from here. The tiles above give the session's totals: size on disk, distinct files,
 copies (one per version of each file), and the date of the last one.
 
 - **Double-click a row** (or **Compare with the current file**) opens a diff between the backup and
@@ -70,8 +74,9 @@ Two things are worth knowing before you press it:
 - **The copies are gone for good**, and rewinding those sessions stops working. The transcript keeps
   the records, but the files they point at will not be there.
 
-A session that an open pane is driving **cannot** be deleted: its checkbox is disabled and the status
-bar says how many are held that way. Deleting the copies a live rewind restores from would break it
+A session that an open pane is driving **cannot** be deleted: its checkbox is disabled and the tab's status line says how many are held that way (*N sessions are
+open in panes: not deletable*). Only the panes of this Visual Studio are known: a session running in
+a terminal, or in another Visual Studio, is not protected. Deleting the copies a live rewind restores from would break it
 half-way, so the consequence sits in the control rather than in a warning you can click past.
 
 ## What it is not

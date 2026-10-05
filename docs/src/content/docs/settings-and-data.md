@@ -4,7 +4,8 @@ description: "Every file the extension writes, where it is, what belongs to the 
 ---
 
 Nothing the extension writes lives inside your solution. Settings go to the Visual Studio
-settings store, everything else to a folder under `%LOCALAPPDATA%`. Chat sessions are not
+settings store, everything else to a folder under `%LOCALAPPDATA%`, apart from a few lines in the
+CLI's own files and scratch copies in `%TEMP%`, both listed below. Chat sessions are not
 ours at all: they belong to the CLI, in `~/.claude`, shared with the Claude Code CLI and the
 VS Code extension.
 
@@ -17,11 +18,15 @@ Uninstalling the extension leaves both trees behind: see [Removing everything](#
 | Environment profiles | `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\profiles.json` |
 | Context-menu prompts | `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\prompts.json` |
 | `@` picker ignore rules | `%LOCALAPPDATA%\Corsinvest\cv4vs-agents\picker-ignore.gitignore` |
-| Open panes per solution | `…\cv4vs-agents\data\projects\<project-hash>\workspace.json` |
-| Usage stats cache | `…\<project-hash>\<config-id>\stats-cache.json` |
+| Open panes per solution | `…\cv4vs-agents\data\projects\<name>-<hash>\workspace.json` |
+| Usage stats cache | `…\<name>-<hash>\<config-id>\stats-cache.json` |
 
 Plus two caches in the same folder: `WebView2\` (chat UI storage) and `icons\`, both
 rebuilt on demand if deleted.
+
+`picker-ignore.gitignore` exists only after you open it from Options: until then the built-in
+defaults apply. `workspace.json` is written when the solution closes. `stats-cache.json` is thrown
+away and rebuilt when a new version of the extension changes its format.
 
 ## Options are not a file
 
@@ -46,16 +51,19 @@ editor-prompts.json                 the editor's prompts before prompts.json: re
 picker-ignore.gitignore             extra `@` picker ignore rules, on top of the workspace's own
 WebView2/                           WebView2 user-data (chat UI cache/storage)
 icons/                              file-type icons rasterised from VS KnownMonikers
-data/projects/<project-hash>/
+data/projects/<name>-<hash>/
+    project.json                    the folder this data belongs to ({"path": "…"})
     workspace.json                  panes open for this solution (+ each pane's profile)
     <config-id>/
         stats-cache.json            usage stats for this (solution, profile) pair
 ```
 
-`<project-hash>` identifies the **solution folder**: the same hash the CLI uses for its own
-project folders, so the two trees line up. `<config-id>` identifies the **profile's config
-directory**, which is why stats are per (solution, profile) while `workspace.json` is
-per solution only: a pane's profile is recorded inside that JSON.
+`<name>-<hash>` is the **solution folder's** own name (up to 30 characters) followed by eight hex
+digits of a hash of its full path, so `K:\source\repos\MyApp` becomes `MyApp-1a2b3c4d`. It is not
+the CLI's project folder name: `project.json` records the path, because the hash cannot be read
+back. `<config-id>` is the **profile's config directory** with every non-alphanumeric character
+replaced by `-` (`C--Users-jane--claude`), which is why stats are per (solution, profile) while
+`workspace.json` is per solution only: a pane's profile is recorded inside that JSON.
 
 `profiles.json` holds the environment variables you enter in the Profiles page,
 `ANTHROPIC_AUTH_TOKEN` among them. It is a plain file with no encryption, readable by anything
@@ -71,7 +79,7 @@ Chat sessions, CLI settings, plugins and skills belong to `claude.exe` and live 
     settings.json                   CLI settings (permissions, hooks, env…)
     projects/<project-hash>/*.jsonl one file per session, the transcripts
     file-history/<session-id>/      copies taken before each edit, for Rewind
-    ide/<port>.lock                 discovery file for `claude --ide`
+    ide/<port>.lock                 discovery file for `claude --ide` (written by the extension)
 ```
 
 `file-history/` holds **whole files**, not diffs: one copy per file per turn that edited it, and
@@ -81,8 +89,25 @@ the CLI never removes them. Deleting a session's folder only costs you the abili
 **[File history](/cv4vs-agents/documents/file-history/)** tab measures what they occupy, per project and per session, and
 deletes them from there, backups whose transcript is already gone included.
 
-We **read** the session `.jsonl` files directly (that's how history, resume, rename and the
-usage stats work) and write only a `custom-title` entry when you rename a session. Because
+We **read** the session `.jsonl` files directly (history, resume and the usage stats work that
+way). What we write into the CLI's tree is short and deliberate:
+
+| Where | What | When |
+|---|---|---|
+| `projects/<…>/<id>.jsonl` | a `custom-title` line | you rename a session and no live CLI can do it for us |
+| `projects/<…>/<id>.jsonl` | an `ai-title` line | after a session's first exchange, if it has no title yet |
+| `projects/<…>/<new-id>.jsonl` | a new transcript | **Fork** |
+| `projects/<…>/<id>.jsonl` | deleted | **Delete** in the session list |
+| `settings.json` | `"diffTool": "auto"`, only if the key is missing | opening a pane, so edits are reviewed in the IDE diff |
+| `settings.json` | `remoteControlAtStartup` | the Remote Control start-up switch |
+| `ide/<port>.lock` | the discovery file | while the IDE's MCP server is running |
+| `file-history/<id>/` | deleted | **File history**, delete |
+
+Outside both trees: opening a tool's input or output, an attachment, or a diff writes a copy into
+`%TEMP%` (`<name>_in_<id>.<ext>`, `cv4vs-agents-<name>.<ext>`). The tool copies are marked read-only
+on purpose; nothing removes them, Windows' own temp clean-up does.
+
+ Because
 the store is the CLI's, a conversation started in Visual Studio also appears in the CLI and in
 the VS Code extension, and vice versa.
 

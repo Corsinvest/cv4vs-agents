@@ -12,7 +12,8 @@ along with the prompt, so "this method" means something without you pasting it.
 
 ## The context chip
 
-A chip above the composer shows the active file and, when you have selected code, its line range.
+A chip in the composer's toolbar, under the prompt, shows the active file and, when you have
+selected code, its line range. It is not there when no document is open.
 
 Clicking the chip toggles whether that context is shared with the session; while it is off the
 chip dims and shows a struck-through eye. It is per pane.
@@ -26,11 +27,17 @@ A trailing icon says **what** is going out:
 | 🔖 | the position alone: file and lines |
 | 🧾 | the position **plus the selected code** |
 
-The second appears only with *Options → Chat → Send the selected text* on **and** a live selection:
+The second appears only with *Options → Chat → Send the selected text with the message* on **and**
+a live selection:
 an open file with no selection has no code to attach, so it stays a bookmark.
 
 Sending the code is what makes an **unsaved** buffer readable, since otherwise Claude opens the file
 and sees the saved version; it also costs those tokens on every message.
+
+The chip's tooltip says the same in words: *Not sent*, *Sent with every message: the position, not
+the code*, or *Sent with every message, selected code included*.
+
+A message that starts with `/` never carries the editor context: a slash command is sent as it is.
 
 <LinkCard title="Spending less context" description="What the chip, the eye and the setting each cost, and when to use which." href="/cv4vs-agents/guides/spending-less-context/" />
 

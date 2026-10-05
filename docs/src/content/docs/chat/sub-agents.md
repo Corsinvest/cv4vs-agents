@@ -29,9 +29,11 @@ Each row shows:
 | Description | what it was asked to do |
 | Current tool · totals | the tool it is using right now, then tool count and tokens spent |
 | Elapsed | how long it has been running |
+| Run in the background | lets the main turn finish without waiting for this agent; it moves under **Background** and keeps running |
 | Stop | ends that agent |
 
-Plus **Stop all** in the header, which stops every one of them.
+Plus **Stop all** in the header, which stops every one of them. Agents launched by another agent
+are indented under it.
 
 The current tool matters more than it looks: with several near-identical agents ("Run build
 simulation loop", "Run scan simulation loop") it is often the only thing that tells them apart.
@@ -41,19 +43,21 @@ have actually finished, not when the main reply ends.
 
 ## In the conversation: nested rows
 
-While a sub-agent works, its own tool calls appear nested inside the Agent row that spawned it, so
-you can watch it without leaving the conversation.
+The Agent row starts closed: its title, a running clock and the chevron. Open it and you get the
+prompt the sub-agent was given (**IN**), its report once it has one (**OUT**), and its own tool
+calls nested underneath, populated as they happen. The box shows the **last 3** steps; a `…` line
+above them says there are earlier ones.
 
-The rows populate as they happen, and the box stays readable by showing only the **last 3** steps.
-Expand the row and the full transcript is fetched: the whole run, every step, in order. Collapse it
-and it goes back to the last 3.
+**Show all**, in the row's header, loads the whole run, every step in order. **Reduce** goes back
+to the last 3. A button under the nested rows copies the sub-agent's output.
 
 This is the same lazy rule the rest of the chat follows: nothing heavy is loaded until you ask for
 it. A sub-agent that ran for two hundred steps costs nothing to scroll past, and shows everything
-the moment you open it.
+the moment you ask.
 
 Sub-agent transcripts are replayed in history too, so re-opening an old session shows the same
-nested structure; again, fetched only when you expand.
+nested structure; again, fetched only when you ask. A sub-agent that failed turns its Agent row
+red; one you stopped does not.
 
 ## Stopping them
 

@@ -52,10 +52,9 @@ finish "successfully" without changing anything.
 | `Claude Code was not updated (still X).` | the CLI ran and the version is the same; its own text follows and says why |
 | `Claude Code update finished, but its version could not be read.` | the CLI ran, and it did not answer `--version` afterwards |
 | `Claude Code update is still running after 5 minutes. It was left to finish: check the version later.` | a slow download; the updater is not stopped half-way |
-| `Claude Code update failed.` | the CLI reported an error; its own text follows |
+| `Claude Code update failed.` | the CLI reported an error; its own text follows, then ``Run `claude update` in a terminal to see the full output.`` In the chat the row has a **View logs** button that opens the Output window |
 
-The text after the first sentence is the CLI's, unchanged. The message box shows all of it, one
-line per row; the notice in the chat has room for one line, the cause of a failure or the
+The text after the first sentence is the CLI's, unchanged. The message box shows up to 15 lines of it, one per row; the notice in the chat has room for one line, the cause of a failure or the
 conclusion of a report.
 
 ## Sessions already open
@@ -94,5 +93,7 @@ The notice compares your version with the `latest` tag of the npm package, the s
 be told that a newer version exists while its own updater says it is up to date: both are right,
 they are looking at different channels.
 
-The check runs once per Visual Studio session, when the first chat opens. If the registry does not
-answer within five seconds, there is simply no notice.
+The check runs each time a chat opens, until one of them has something to announce; from then on
+that Visual Studio session says no more. It asks the installed CLI for its version and the npm
+registry for the `latest` tag: the only network request the extension makes on its own. If the
+registry does not answer within five seconds, there is simply no notice.

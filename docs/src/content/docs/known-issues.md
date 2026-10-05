@@ -52,3 +52,11 @@ meant, but the editor does not distinguish the two cases.
 **Workaround:** for a block you want Claude to read, select it the ordinary way
 (without Alt). A box selection is usually a column edit, where the surrounding
 code is what matters and asking about it works anyway.
+
+## An MCP server that asks for input gets no answer
+
+When an MCP server asks the user for something (a form, or a browser sign-in), the chat has no
+dialog for it and declines the request. A login that never prompts looks like a hang.
+
+**Workaround:** sign in to that server from a terminal session first. With the log level at `Warn`
+the Output window says so: `elicitation from MCP server '…' declined`.

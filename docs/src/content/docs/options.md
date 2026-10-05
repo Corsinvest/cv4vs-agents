@@ -24,7 +24,7 @@ go to `%LOCALAPPDATA%`; see [Settings and data](/cv4vs-agents/settings-and-data/
 ### Asking about a break
 
 When the debugger stops, an InfoBar appears over the file it stopped in, with an **Ask cv4vs
-Agents** button that asks the last chat pane you used about the break. Exceptions raise it by default, the other pauses that are not a step are opt-in, steps never do. The whole story is in
+Agents** button that asks a chat pane about the break. Exceptions raise it by default, the other pauses that are not a step are opt-in, steps never do. The whole story is in
 [Debug with the agent](/cv4vs-agents/guides/debug-with-the-agent/).
 
 ## Chat

@@ -28,6 +28,17 @@ variables** links to Anthropic's reference for everything else the CLI understan
 Enabled profiles appear under **View → cv4vs Agents**, and the active one is shown in the pane
 caption and toolbar.
 
+A few rules:
+
+- **Claude**, the native profile, is not stored: it is the process environment as it is. A profile
+  of your own named `Claude` replaces it.
+- Setting `CLAUDE_CONFIG_DIR` in a profile gives it its own config directory: separate login,
+  settings, sessions, statistics and file backups. Profiles without it share `~/.claude`.
+- A new pane opened from a pane's toolbar inherits that pane's profile.
+- A profile with a blank name, or disabled, is ignored everywhere.
+- A profile's variables are applied first and the extension's own last, so a profile cannot
+  override `CLAUDE_CODE_ENTRYPOINT`.
+
 ## Paste from JSON
 
 The editor's **Paste from JSON** button fills the env grid from the clipboard, so you can lift a
@@ -68,8 +79,9 @@ Pointing `ANTHROPIC_BASE_URL` at a custom host can disable the IDE MCP tools. Th
 restriction, not something the extension controls.
 </Aside>
 
-- **Plan usage.** A third-party profile (z.ai/GLM, Bedrock, Vertex, an API key) has no plan limits,
-  so the [status bar item](/cv4vs-agents/documents/usage/#status-bar) shows just its name.
+- **Plan usage.** A profile that sets an API key, an auth token, a base URL, or the Bedrock or
+  Vertex switch has no plan limits, so the
+  [status bar item](/cv4vs-agents/documents/usage/#status-bar) shows the icon alone, dimmed.
 - **Remote Control** isn't available on Amazon Bedrock, Google Vertex AI, or Microsoft Foundry, and
   not with a custom `ANTHROPIC_BASE_URL`: see
   [Remote Control](/cv4vs-agents/claude/remote-control/#requirements).

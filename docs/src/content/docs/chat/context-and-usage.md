@@ -10,10 +10,13 @@ over time.
 ## The gauge
 
 A circular token-usage gauge sits in the composer, filling as the conversation grows: green,
-then orange, then red as it approaches the auto-compact threshold.
+orange from 60% of the model's window, red from 85%. The number in its tooltip and in the panel is a
+different measure: what is left before the CLI compacts.
 
-Clicking it opens a small panel: a progress bar, the numbers, and shortcuts to the three dialogs
-below.
+Clicking it opens a small panel: how much is left before auto-compact, a bar with used / before
+compact / total, **Compact** to compact the conversation now (not while a turn is running), and
+**Statistics**, **Usage** and **Context usage** for the three dialogs below. Until the first reply
+of a session there are no numbers and the ring is empty.
 
 ![Context gauge popup](../../../../images/chat/gauge-popup.png)
 
@@ -52,12 +55,25 @@ minutes on an API key or once you are on extra usage, which is why it is read fr
 rather than assumed. A reopened session is judged by when its last message was sent, not by when you
 opened it.
 
+## Rate-limit notices
+
+When the plan's limits come into play a notice appears above the composer, in the CLI's own terms:
+
+- *You've hit your session limit · resets in 2h*: an error, the window is closed until then;
+- *You've used 82% of your weekly limit · resets in 3d*: a warning;
+- *Approaching weekly Opus limit*: a warning for one model's window.
+
+The windows it can name are the session limit, the weekly limit, the weekly Opus and Sonnet
+limits, and the usage credit limit. The notice clears by itself when the CLI reports the window
+allowed again.
+
 ## Account & usage
 
 ![Account & usage dialog](../../../../images/chat/usage-dialog.png)
 
 Account information and the plan's rate-limit windows: what you are allowed, and how much of it
-is left in the current window. Read live from the CLI, not computed here.
+is left in the current window. Read live from the CLI, not computed here. Like the
+Usage tab it also has **What's contributing to your limits usage?**, with Day / Week.
 
 The full-window version, for every profile, is [Usage](/cv4vs-agents/documents/usage/).
 
@@ -99,7 +115,8 @@ Two tabs (**Overview** and **Models**) and two selectors that decide what is cou
 | **All** | everything on disk |
 | **30d** / **7d** | the last 30 or 7 days |
 
-The chart stacks tokens per day by model; hovering a bar breaks that day down. Below, each model
+The dialog opens on **Project**. The chart stacks tokens per day by model (per week, with more than
+35 days in range); hovering a bar breaks that day down. Below, each model
 with its share, and input/output tokens.
 
 Model names are shown **exactly as the API returned them** (`claude-opus-4-8`, not "Opus 4.8"), so

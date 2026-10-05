@@ -36,8 +36,12 @@ directory: see [Known issues](/cv4vs-agents/known-issues/).
 
 ## The CLI process exited
 
-A bar is shown in the chat if the CLI process exits unexpectedly. Turn on the log, below, before
-reproducing it.
+A bar is shown in the chat if the CLI process exits unexpectedly. Your next message starts it again
+on the same session, profile and permission mode.
+
+What the CLI writes on its error stream is shown in the chat only when the process is gone; while
+it runs those lines are warnings and go to the log, tagged `[stderr]`. Turn on the log, below,
+before reproducing the problem.
 
 ## Turn on the log
 

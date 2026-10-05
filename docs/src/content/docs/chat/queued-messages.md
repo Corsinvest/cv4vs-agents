@@ -63,12 +63,21 @@ Three messages that correct one another are no use arriving a turn apart: Claude
 without having seen the rest.
 
 **Alt+Enter** queues a message *into* the one before it instead of after it. They stay two entries in
-the list, each with its own pencil and cross, joined by a rule down their left, and they leave
+the list, each with its own pencil and bin, joined by a rule down their left, and they leave
 together, as a single message, with the attachments of both.
 
 Plain Enter queues as it always did. Alt+Enter needs something already in the queue to join, so with
 an empty queue it stays what it has always been: a newline, and the composer says so, offering the
 shortcut only once there is an entry to join.
+
+## Small print
+
+- Entries show their attachments as chips.
+- Recalling an entry while you have a draft keeps the draft, under the recalled text.
+- Opening a second entry abandons the edit of the first; deleting the entry you are editing
+  releases the queue.
+- Joined messages are sent separated by a blank line.
+- Switching session, or clearing the conversation, drops the queue.
 
 ## Why not just Stop
 

@@ -12,7 +12,7 @@ the chat keeps the context that got you there.
 
 ## Using it
 
-Run **`/rewind`** from the command menu (**Context → Rewind files…**). The dialog lists the
+Open the `/` menu and pick **Rewind files…**, under Context (typing `/rewind` finds it). The dialog lists the
 messages this session can go back to, newest first, and clicking one shows what returning there
 would change:
 
@@ -27,7 +27,7 @@ Clicking a **file** opens it in Visual Studio's own diff: the copy from before t
 left, what is on disk now on the right. It is the same viewer the chat uses to
 [review a change](/cv4vs-agents/chat/diff/), so the two sides are real editors.
 
-With more than a handful of messages a filter box appears above the list. The arrow keys walk the
+With more than six messages a filter box appears above the list. The arrow keys walk the
 list (while you are still typing in the filter) and Home/End jump to the ends.
 
 ## What comes back, and what does not
@@ -41,7 +41,10 @@ Directory operations are not covered either: a folder created, moved or deleted 
 A file the message **created** has no earlier version to restore, so rewinding past it **deletes**
 it. Its diff shows an empty left-hand side, which is what that means.
 
-Messages that changed no file are not listed at all; there would be nothing to restore.
+Symbolic links are not restored: the dialog says how many (*N symlinks will not be restored.*).
+
+Messages that changed no file are not listed at all; there would be nothing to restore. And when
+the code has not changed since the message you picked, **Rewind** is disabled, with the reason.
 
 ## Where the copies live
 
@@ -56,7 +59,9 @@ them at all. With it off no copies are written, and the `/rewind` command is hid
 offered as something that can only decline.
 
 The setting is read when a chat starts, so changing it leaves any chat already open as it was:
-the pane says so when you apply it, and the next chat you open follows the new value.
+the pane says so when you apply it (*File checkpoints stay on for this chat; turning them off
+applies to the next one you open.*, or *File checkpoints are off for this chat; open a new one to
+start keeping them.*), and the next chat you open follows the new value.
 
 ## Limits worth knowing
 

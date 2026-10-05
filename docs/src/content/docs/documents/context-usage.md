@@ -17,10 +17,11 @@ The same scope tree as Statistics (**All → Profile → Folder → Project → 
 calendar levels**: a project expands straight to its sessions, one row per session file (titled from
 the chat). Context is per-session, so only a **Session** is clickable for the breakdown; the
 intermediate nodes (All / Profile / Folder / Project) only navigate: until you pick a session the
-right side shows "Select a session".
+right side shows *Select a session to see its context usage.*
 
 The **Range** selector (7 days / 30 days / All time) filters the tree, and **Refresh** re-reads
-changed sessions (and re-fetches the visible one).
+changed sessions; **Recreate** rebuilds the index from scratch. Both fetch the visible session
+again.
 
 ## The breakdown (right)
 
@@ -48,3 +49,8 @@ calculation (token counting), no message is sent and the session file is not mod
 takes a few seconds; the result is cached in memory, so re-selecting the same session is instant.
 Refresh drops the cached value and fetches again. This complements the in-chat context gauge, which
 covers the **current** session; the tab is for any **historical** one.
+
+Two limits follow from how it is fetched. The CLI gets 20 seconds to start and 30 to answer: past
+that the page reads *Context usage unavailable.* And the process is started with your own MCP
+servers but without the IDE's `vs` server, so the IDE tools are absent from a historical breakdown
+while they are present in the in-chat one.

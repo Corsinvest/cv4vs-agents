@@ -12,10 +12,11 @@ keeps the whole conversation whichever side it was typed on.
 
 ## Turning it on
 
-Run **`/remote-control`** (or the shorter `/remote`, `/rc`, `/phone`) from the `/` command menu. It
+Open the `/` menu and switch on **Remote Control**, under Context: typing `/remote-control`, or
+the shorter `/remote`, `/rc`, `/phone`, finds it. It
 renders as a toggle, not a one-shot action: switching it on sends a control request to the running
-CLI and waits for it to come up, switching it off tears the bridge down again. While the request is
-in flight the toggle is briefly disabled, so a second click can't race the first.
+CLI and waits for it to come up, switching it off tears the bridge down again. While the request is in flight the entry is taken out of the menu, so a second click cannot race
+the first; it comes back as soon as the CLI answers.
 
 ## Start it in every new session
 
@@ -24,6 +25,9 @@ profile's `settings.json`, the same setting `/config remoteControl=true` sets in
 one the VS Code extension's toggle writes. From then on every **new** chat of that profile starts
 Remote Control by itself. Chats already open keep their own toggle: turning the setting on or off
 never connects or disconnects them.
+
+A session started this way does not post the link card: the toolbar indicator says it is on, and
+**Show link and QR code** in its menu posts the card when you want it.
 
 It only acts on your explicit choice, and the CLI has the last word: a project whose
 `.claude/settings.json` sets it to `false` keeps it off there, and an organization policy can lock

@@ -37,3 +37,7 @@ where.
 
 The extension sends no telemetry. Statistics are aggregated locally from the session files the CLI
 already writes on your machine: nothing is uploaded.
+
+It makes one network request of its own: when a chat opens it asks the npm registry which version
+of Claude Code is the latest, to offer the update. It sends nothing but its own name and version.
+Everything else on the network is the CLI's.

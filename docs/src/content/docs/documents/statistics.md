@@ -20,10 +20,10 @@ All                         every profile, everything on disk
 └─ Profile                  one config-dir (profiles sharing a ~/.claude collapse into one node)
    └─ Folder…               a folder in your path tree; aggregates every project beneath it
       └─ Project             one repository/working directory
-         ├─ Days             that project split by calendar day
+         ├─ Days (12)        that project split by calendar day
          │  └─ 22/07/2026    real tokens produced on that day
-         └─ Sessions         that project's sessions, one file each
-            └─ 14:32:07 …    one whole session (titled from the chat)
+         └─ Sessions (31)    that project's sessions, one file each
+            └─ Fix the drag and drop    one whole session (its title; date and time in the tooltip)
 ```
 
 - **Folders are a real nested tree** built from each session's working directory, with single-child
@@ -58,6 +58,16 @@ For the selected node:
 
 Model names are shown **exactly as the API returned them** (`claude-opus-4-8`, not "Opus 4.8"), so a
 third-party provider's model ids stay readable.
+
+## What is counted
+
+- The tab opens on the current solution's project and starts an incremental index by itself, once
+  per tab. Projects not indexed yet are hidden until the pass finishes.
+- A **message** is any user or assistant line. Sub-agent turns add tokens and tool calls, not
+  sessions or messages; a **Subagent tokens** tile shows their share.
+- **Current streak** counts back from today; **Peak hour** is the hour most sessions *started* in.
+- In a 7 or 30 day range, images, attachments and tool calls are counted for the whole session if
+  any of its days falls in the range.
 
 ## Refresh vs Recreate
 

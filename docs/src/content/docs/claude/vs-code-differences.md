@@ -46,8 +46,8 @@ and DTE, not tied to C#/VB only. See [MCP tools](/cv4vs-agents/mcp-tools/).
 
 ## Sub-agents you can see and control
 
-Their tool calls are grouped under the Agent row that spawned them (last 3 steps, expand for the
-full run) instead of being interleaved into the transcript, and a chip in the composer counts the
+Their tool calls are grouped under the Agent row that spawned them (last 3 steps, **Show all** for
+the full run) instead of being interleaved into the transcript, and a chip in the composer counts the
 ones still running; click it to stop any of them, or all. See
 [Sub-agents](/cv4vs-agents/chat/sub-agents/).
 
@@ -70,12 +70,11 @@ page loads first, older history pages in only as you scroll up, and heavy blocks
 transcripts, full diffs) are fetched only when you actually open them. A very long session opens
 fast and stays light instead of loading the whole conversation up front.
 
-## Changes reviewed in Visual Studio's own diff
+## Changes opened in Visual Studio's own diff
 
-Opening a file lands you in the real editor (optionally on the referenced lines); Edit/Write
-changes open in Visual Studio's **native, interactive side-by-side diff** (not a static rendered
-diff) so you review and edit with the full editor, then **save (Ctrl+S) to accept** or **close the
-tab to reject** (the CLI applies the edit only if you saved). See
+Opening a file lands you in the real editor (optionally on the referenced lines); an Edit opens in
+Visual Studio's **native side-by-side diff** (not a static rendered diff), with the editor's own
+colouring and navigation. In a Chat pane the answer is given in the approval prompt. See
 [Reviewing changes](/cv4vs-agents/chat/diff/).
 
 ## File references in prose are links

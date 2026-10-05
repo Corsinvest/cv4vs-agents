@@ -69,7 +69,7 @@ selected has a file or folder on disk.
 
 ## Which pane receives
 
-The last chat pane you worked in, brought to the front: CLI panes are never the target. With none
+The most recently opened chat pane, brought to the front: CLI panes are never the target. With none
 open, a Chat pane is opened on the native Claude profile. If the
 IDE-context eye was shut, it is re-opened with the prompt: asking about this code with nothing
 saying which file it is would reach the CLI as a question about nothing.

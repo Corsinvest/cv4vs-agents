@@ -44,8 +44,10 @@ command apart from an idle prompt would mean scraping its output, which would ev
 machine awake forever on a pane sitting at a blinking cursor.
 
 The hold is also released when the pane is closed, when `claude.exe` exits or is killed, and when
-Visual Studio shuts down. If the CLI stops responding entirely (no reply, no exit) a watchdog
-releases it after a few minutes of silence and says so in the Output window.
+Visual Studio shuts down. If the CLI stops responding entirely (no output, no exit) a watchdog
+releases the hold after 5 minutes of silence, or 15 while a compaction is running, since a healthy
+one produces no output. With the log level at `Warn` or higher the Output window records it:
+`[power] pane #2 silent for 5 min, releasing the sleep block`.
 
 ## Seeing it
 

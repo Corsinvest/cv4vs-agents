@@ -48,8 +48,15 @@ extension works: `[label](src/utils/helper.rb#L12)` links even though `.rb` is n
 still does not link is a target with no plausible file shape at all (`[x](19.99#L2)`): rather than
 render a blue link that does nothing when clicked, it degrades to plain text.
 
-Anything inside a fenced or inline **code block is left untouched**: a path in an example command
-stays literal text.
+A **fenced code block is left untouched**: a path in an example command stays literal text. An
+inline code span is linked only when the whole span is one reference (`` `ClientEvents.cs:208` ``),
+which is how the model usually writes a location; a span holding anything more, such as
+`` `cat Foo.cs:12` ``, is a command and stays as it is.
+
+Three limits in prose: a bare file name with no folder and no line ("see README.md") is not
+linked, it needs a path separator or a line; names with no extension (`Makefile`, `Dockerfile`) are
+never linked; and a markdown link whose target is a range opens at its first line without selecting
+the range, which only references written in prose or as an inline code span do.
 
 ## Where it opens
 

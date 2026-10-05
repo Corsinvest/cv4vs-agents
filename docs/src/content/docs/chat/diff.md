@@ -3,13 +3,12 @@ title: "Reviewing changes"
 description: "How an Edit or Write shows in the chat as an inline diff, and how to accept or reject it in Visual Studio's own diff."
 ---
 
-Every Edit/Write the agent proposes shows up in the chat as an **inline diff** before anything
-touches your files. You can review it there, or open it in Visual Studio's own diff to review (and
-edit) with the full editor.
+Every Edit the agent proposes shows up in the chat as an **inline diff**. You can read it there, or
+open it in Visual Studio's own diff, with the full editor.
 
 ## Inline diff
 
-Each Edit/Write tool row renders a preview of the diff: the added and removed lines with a few lines
+Each Edit (and MultiEdit) tool row renders a preview of the diff: the added and removed lines with a few lines
 of context around them, syntax-highlighted for the file's own language, and with the changed words
 marked inside a line that was edited rather than rewritten. The row's title carries the counts:
 `+3 −14`, the same numbers git would report.
@@ -18,8 +17,12 @@ The line numbers are the **file's**, not the fragment's, and come from the patch
 when it applies the edit. While the tool is still running there is no patch yet: the preview shows
 what is being changed without a line gutter, and gains the numbers once the edit lands.
 
-Long lines wrap instead of scrolling sideways, so the preview reads in a docked tool window. A large
-change is cut short; click it to see the whole thing in Visual Studio's own diff.
+Long lines wrap instead of scrolling sideways, so the preview reads in a docked tool window. A large change is cut short: the preview shows at most 12 rows, with 3 lines of context, then *… N
+more lines*. Click it to see the whole thing in Visual Studio's own diff.
+
+A **Write** creates or replaces a whole file, so there is nothing to compare: its row shows the
+content itself, highlighted for the file's language, with the line count in the title (`Write Foo.cs
+(42 lines)`). Clicking that content opens it in a Visual Studio document.
 
 ## Opening the file at the change
 
@@ -37,19 +40,14 @@ Turn it off with **Select lines when opening file** (**Options → Chat**) to ju
 
 ## Open in Visual Studio
 
-Clicking the preview hands the change to VS's
-**native, interactive side-by-side diff**: the real editor on both sides, not a static rendered
-diff. Clicking the same row again closes it; opening another change replaces it, so the chat never
-leaves a trail of diff tabs behind.
+Clicking the preview of an Edit opens the change in Visual Studio's native side-by-side diff, in a
+tab named `Claude Code: <file>`: **Original** on the left, **Proposed** on the right. It compares
+the text the edit replaces with the text it puts there, with the editor's own colouring and
+navigation. Clicking the same row again closes it; opening another change replaces it, so the chat
+never leaves a trail of diff tabs behind.
 
 ![The change in Visual Studio's native diff](../../../../images/chat/vs-diff.png)
 
-This is where you accept or reject:
-
-- **Save (Ctrl+S) → accept.** The CLI applies the edit. You can tweak the proposed side first: what
-  you save is what gets applied, so the edit and your adjustments land together.
-- **Close the tab → reject.** Nothing is written.
-
-The CLI applies the edit **only** if you saved; closing without saving leaves the file untouched.
-It's the same gate the agent's permission prompt would give you, but with the whole diff (and the
-editor) in front of you.
+This view is for reading. In a Chat pane the change is approved or refused in the conversation,
+with the approval prompt (see [Permissions](/cv4vs-agents/chat/permissions/#approving-a-tool)):
+saving or closing the diff tab decides nothing, and the tab closes by itself once you answer.

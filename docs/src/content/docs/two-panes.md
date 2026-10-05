@@ -5,7 +5,11 @@ description: The Chat pane and the CLI pane, both multi-instance and dockable, e
 
 The extension registers **two dockable tool-window types**, both **multi-instance**: open as many
 Chat panes **and** as many CLI panes as you like, side by side, each on its own independent session,
-docking as tabs. A busy dot on each pane's caption tracks which ones are working.
+docking as tabs. Each pane is captioned with its kind,
+number and profile (`Chat 3 (Claude)`), and its tab icon carries a chat or terminal glyph.
+
+A pane's working directory is the solution's folder, or the opened folder, fixed when the pane
+opens; with neither it is your home directory.
 
 ![The chat pane docked in Visual Studio](../../../images/chat.png)
 
@@ -35,11 +39,36 @@ MCP channel.
 **Open Claude in Terminal**, in the chat's `/` menu, launches an interactive CLI session from a
 chat.
 
+- **It closes itself when `claude` exits** (`/exit`, Ctrl+C twice, a crash): the pane is only a view
+  onto that process.
+- **Keys go to the terminal.** While it has the focus, Esc and every Ctrl+letter reach the CLI
+  rather than Visual Studio, so Ctrl+S or Ctrl+B there are the CLI's, not the IDE's.
+- **New Session** and **Session History** restart the terminal on a fresh or a resumed session.
+  There is no title box: the terminal does not report its session.
+- The IDE tools are registered as an MCP server named `vs` and pre-approved, so calling them does
+  not prompt.
+- The font is Cascadia Mono 12; colours follow the Visual Studio theme.
+
+## The pane toolbar
+
+| Control | What it does |
+|---|---|
+| Title box (chat only) | the session's title; click to rename, Enter saves, Esc cancels. `Untitled` until the first exchange has produced one |
+| **Open panes** | every open pane, Chat and CLI, by number, profile and session title |
+| **New Instance** (split button) | a new **pane**, of the default kind or the one picked from the arrow, on this pane's profile |
+| **Session History** | the session list for this folder |
+| **New Session** | a fresh conversation in **this** pane |
+| **More** | **Info**, **Open sessions folder** (the CLI's folder for this project in Explorer) and, on preview builds or with *Show WebView developer entries*, **WebView DevTools** and **WebView task manager** |
+
+**New Session** and **Session History** are disabled until the pane's process is up.
+
 ## What changes without a restart
 
 Model, permission mode and interrupt are **hot-swapped** on the live process: changing them never
-kills the CLI. The process respawns only for what truly can't change at runtime (working directory,
-resuming another session, fork).
+kills the CLI. The process is replaced only when the conversation itself changes: **New
+Session** in the same pane, or picking another session from **Session History**. A fork opens a new
+pane and leaves this one's process alone. If the CLI has died, the next message starts it again on
+the same session.
 
 ## A different provider per pane
 

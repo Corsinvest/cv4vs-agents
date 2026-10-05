@@ -4,19 +4,23 @@ description: "Install, enable, disable and update Claude Code plugins, and manag
 ---
 
 Manage Claude Code plugins without leaving the chat: install from a marketplace, enable or disable
-what you have, and add marketplaces. Open it from the pane toolbar (**Manage plugins**).
+what you have, and add marketplaces. Open it from the `/` menu: **Customize → Manage
+plugins** (typing `/plugins` finds it).
 
 Three tabs: **Installed**, **Available**, **Marketplaces**.
 
 Plugin operations run as one-shot `claude plugin … --json` processes (the live chat process rejects
-them), and when something changes every open chat gets a small "plugins changed" banner: restart or
-reload so the change takes effect.
+them). The result of each one is shown in a bar at the top of the dialog, in the CLI's own words. A
+change to the active plugins reaches a chat when its CLI process next starts: open a new chat, or
+resume the session, to pick it up.
 
 ## Installed
 
 ![Installed plugins](../../../../images/chat/plugin-installed-dialog.png)
 
-Everything currently installed, each with its marketplace, version and enable/disable toggle. Turn a
+Everything currently installed, enabled ones first, each with its marketplace, version and scope
+(`v1.2.0 · user`) and its install and update dates. Hovering a row swaps the dates for the
+enable/disable toggle, **Update** and **Uninstall**. Turn a
 plugin off to keep it installed but inactive; on to bring it back. Its skills, agents and MCP servers
 follow the toggle.
 
@@ -29,14 +33,17 @@ account have no marketplace behind them and no Update button; manage them on cla
 
 ![Available plugins](../../../../images/chat/plugin-available-dialog.png)
 
-Everything on offer across your marketplaces, with an install count. Install straight from here; the
-plugin then shows up under **Installed**. Where a plugin has a home page, its name links out to it.
+Everything on offer across your marketplaces, with an install count. A **Search plugins…** box filters by name and
+description; the list is sorted by install count and shows the first 30 matches, so search to reach
+the rest. Install straight from here (installs go to the user scope); the plugin then shows up under
+**Installed**. Where a plugin's source can be browsed, a **Source** link under its description opens
+it.
 
 ## Marketplaces
 
 ![Marketplaces](../../../../images/chat/plugin-marketplace-dialog.png)
 
-The marketplaces feeding the **Available** list. **Add** one by its source (a git URL or a local
+The marketplaces feeding the **Available** list. **Add** one by its source (a GitHub `owner/repo`, a git URL or a local
 path), and **refresh** a marketplace to pull its latest catalogue; the ↻ spins while it fetches.
 Removing a marketplace drops the plugins it offered from **Available** (already-installed ones stay).
 

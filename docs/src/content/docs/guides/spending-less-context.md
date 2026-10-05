@@ -10,7 +10,7 @@ the CLI compacts the conversation. This is what you can actually do about it.
 Worth saying first, because most of the Chat options page looks like it belongs here and does not:
 **a setting that changes what the chat draws changes nothing about what was sent.** By the time the
 tool result is on screen, it has already been through the model. Preview lines, Collapse tool
-results, View mode (Focus and Hide tool calls included), Compact Ask answers, Show tool errors
+results, View mode (Focus and Hide tools included), Compact Ask answers, Show tool errors
 inline: every one of those is a rendering choice.
 The knobs below are the ones that reach the wire.
 
@@ -85,12 +85,12 @@ with nothing saying which code would reach the CLI as a question about nothing.
 
 ## Thinking and effort
 
-Both sit in the composer toolbar: extended thinking is a toggle of its own, and the effort level is
-the slider at the foot of the model picker, named beside the model on its button.
+The effort level is the slider at the foot of the model picker, named beside the model on its
+button. Extended thinking is a switch in the `/` menu, under **Model → Thinking**.
 Thinking buys the model room to reason before answering: real output tokens, on every turn it uses
 them. It earns its cost on a hard debugging session and wastes it on "rename this variable".
 
-These are per-session and live in the toolbar, not in Options, because they are the ones worth
+These are per-session and live in the composer, not in Options, because they are the ones worth
 changing *during* a conversation rather than once and for all.
 
 ## Post-edit diagnostics

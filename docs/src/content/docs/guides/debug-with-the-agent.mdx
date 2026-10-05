@@ -19,8 +19,9 @@ When the debugger stops, an InfoBar appears over the file it stopped in:
 On a pause with no exception it reads `Debugger paused at Calcolatrice.cs:13.` If the file is not
 open in an editor, the bar appears at the top of the main window instead: no tab is opened for it.
 
-Pressing the button sends the question straight away to the last chat pane you used, and opens one
-if none is open. Nothing is sent until you press it; the bar goes away when you press it, close it,
+Pressing the button sends the question straight away to the most recently opened chat pane and
+brings it forward; with none open, a new one opens on the native profile. The editor context is
+switched back on for that pane if you had turned it off. Nothing is sent until you press it; the bar goes away when you press it, close it,
 or resume execution.
 
 What is sent is short. On an exception: *The debugger is paused on an exception. Look at it and
