@@ -20,6 +20,7 @@ hero:
 ---
 
 import { Card, CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
+import IconCard from '../../components/IconCard.astro';
 
 ## Two panes, one session
 
@@ -48,12 +49,12 @@ Both are multi-instance and dockable, each on its own session. See
 
     [MCP tools](/cv4vs-agents/mcp-tools/)
   </Card>
-  <Card title="The live debugger" icon="error">
+  <IconCard title="The live debugger" icon="bug">
     Stop on an exception and one press asks about the break: the agent reads the live stack and
     locals rather than guessing from the source.
 
     [Debug with the agent](/cv4vs-agents/guides/debug-with-the-agent/)
-  </Card>
+  </IconCard>
   <Card title="Changes in Visual Studio's own diff" icon="approve-check-circle">
     Every Edit/Write shows as an inline diff, and opens in the native, editable side-by-side one:
     save to accept, close to reject.
