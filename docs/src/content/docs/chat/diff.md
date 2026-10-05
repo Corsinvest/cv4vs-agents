@@ -51,3 +51,24 @@ never leaves a trail of diff tabs behind.
 This view is for reading. In a Chat pane the change is approved or refused in the conversation,
 with the approval prompt (see [Permissions](/cv4vs-agents/chat/permissions/#approving-a-tool)):
 saving or closing the diff tab decides nothing, and the tab closes by itself once you answer.
+
+## The editable diff
+
+Visual Studio has a second diff, and that one does decide. The
+[`editor_open_diff`](/cv4vs-agents/mcp-tools/#editor) tool opens the **whole file** against a
+proposed version of it, in a tab whose title ends in *Ctrl+S to apply · close to reject*, with an
+**Accept** / **Reject** bar above the editor. The proposed side is a real editor: you can change it
+before deciding.
+
+| You | The tool answers |
+|---|---|
+| **Ctrl+S**, or **Accept** | `FILE_SAVED`, with the text as you saved it, your own changes included |
+| close the tab, or **Reject** | rejected |
+
+The call waits until you decide. The tool does not write the file: it hands the saved text back to
+whoever opened the diff, and that caller applies it.
+
+In a Chat pane nothing opens this diff for an Edit waiting on your approval: the prompt is what
+answers the CLI, and the diff you reach from the preview is the read-only one above. The agent can
+open the editable one itself, when you ask it to show a change before making it ("show me the diff
+first"): it then gets back what you saved and makes the edit from that.
