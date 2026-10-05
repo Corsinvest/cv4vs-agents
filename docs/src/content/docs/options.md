@@ -23,31 +23,16 @@ go to `%LOCALAPPDATA%`; see [Settings and data](/cv4vs-agents/settings-and-data/
 
 ### Asking about a break
 
-When the debugger stops, an InfoBar appears over the file it stopped in:
-
-> ⚠ Debugger paused on `DivideByZeroException` at `Calcolatrice.cs:13`.  **[Ask cv4vs Agents]**
-
-Pressing the button activates the last chat pane you used and asks it about the break. Nothing is
-sent until you press it, and the bar goes away on its own when execution resumes.
-
-The message names neither the file nor the exception type. Both are right there, but the debug
-[MCP tools](/cv4vs-agents/mcp-tools/#debug) read them live and read more besides: the call stack, the locals,
-any expression, so naming a type up front would only anchor the answer on the outermost exception
-when the cause is usually an `InnerException` two levels down. What the message does say is to
-leave the debugger where it is: those same tools can step and continue, and you are standing in
-that break looking at it.
-
-Which pauses are worth an offer differs by kind, which is why the setting has three values rather
-than a checkbox:
-
-- **Exceptions** are a surprise, and the default.
-- **Breakpoints** are not (you placed it and know why you are there), so they are opt-in.
-- **Steps** never raise a bar at any setting: one per F10 is noise.
-
-A break landing where the previous one did is skipped too, so a breakpoint inside a loop raises one
-bar rather than one per iteration.
+When the debugger stops, an InfoBar appears over the file it stopped in, with an **Ask cv4vs
+Agents** button that asks the last chat pane you used about the break. Exceptions raise it by
+default, breakpoints are opt-in, steps never do. The whole story is in
+[Debug with the agent](/cv4vs-agents/guides/debug-with-the-agent/).
 
 ## Chat
+
+The page groups its settings in categories; the tables below follow them.
+
+### Display
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
@@ -59,21 +44,46 @@ bar rather than one per iteration.
 | View mode | enum | `Full` | How much of Claude's work the chat shows. **Full**: every row. **Focus**: each run of tool calls and thinking between two replies folds into one row (`5 tool calls · 1 failed`, or `Running Bash…` while it works) that opens in place. **HideToolCalls**: the tool rows are removed. In every mode your answers to questions, plan decisions, the task list and a call waiting for your approval stay. The **View mode** entry in the chat's `/` menu switches it for every open chat, keeping each row as it was: open or closed, older history kept. Changed here instead, it reloads each idle chat like any other setting on this page. |
 | Chat font size | int (px) | `13` | Font size of the chat message text. |
 | Show WebView developer entries | bool | `false` | Add "WebView DevTools" and "WebView task manager" to the chat toolbar's "More" (…) menu: the browser console/DOM/network on the chat itself, and the browser's processes with their memory and CPU. Pre-release builds always offer both. |
-| Autosave before Claude reads/writes | bool | `true` | Save a dirty file before Claude reads/writes it, so it sees your in-editor edits, not the stale on-disk version. |
-| Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them: the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](/cv4vs-agents/chat/context-and-usage/#spending-less-context). |
-| Keep file checkpoints (Rewind) | bool | `true` | Let Claude copy a file before editing it, so [`/rewind`](/cv4vs-agents/chat/rewind/) can restore it. Copies live under `~/.claude/file-history` and are never cleaned up, the reason to turn this off if you do not use Rewind. Read when a chat starts, so it applies to the next one you open. |
-| Send post-edit diagnostics to Claude (experimental) | bool | `false` | Feed back the new errors/warnings an edit introduced. Experimental: unreliable because VS only analyses files open in an editor (see IDE integration). |
-| Allowed upload file extensions | string[] | 93 defaults | Extensions accepted on upload/drop. Images → images, `.pdf` → document, rest → text; anything else rejected. Editable list. |
 | Sticky user messages | bool | `true` | Pin the current exchange's user message at the top while the reply/tool rows scroll below. |
-| Show tool errors inline | bool | `false` | Show the tool error inline below the diff/output; off = alert icon only (click to open in VS). |
 | Compact Ask answers | bool | `true` | After an `AskUserQuestion`, show only the chosen option per question (compact); off = all options with the pick highlighted. |
+
+### Input
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them: the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](/cv4vs-agents/guides/spending-less-context/). |
 | Use Ctrl+Enter to send | bool | `false` | On: Ctrl+Enter sends, Enter = newline. Off: Enter sends, Shift+Enter = newline. |
 | Spell check in the composer | bool | `false` | Underline misspelled words while you type. Off by default: code names, paths, `@` mentions and `/` commands are what the composer mostly holds, and the spell checker flags all of them. The underline marks the word; correcting it is up to you. |
 | Initial permission mode | `Default` / `AcceptEdits` / `Plan` | `Default` | Mode every new chat starts in (changeable per-session from the toolbar). `Default` = ask before edits. |
 | Allow dangerously skip permissions | bool | `false` | Enables the toolbar's "Bypass permissions" (never asks, even for dangerous commands). |
+
+### Files
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| Autosave before Claude reads/writes | bool | `true` | Save a dirty file before Claude reads/writes it, so it sees your in-editor edits, not the stale on-disk version. |
+| Keep file checkpoints (Rewind) | bool | `true` | Let Claude copy a file before editing it, so [`/rewind`](/cv4vs-agents/chat/rewind/) can restore it. Copies live under `~/.claude/file-history` and are never cleaned up, the reason to turn this off if you do not use Rewind. Read when a chat starts, so it applies to the next one you open. |
+| Send post-edit diagnostics to Claude (experimental) | bool | `false` | Feed back the new errors/warnings an edit introduced. Experimental: unreliable because VS only analyses files open in an editor (see [Editor context](/cv4vs-agents/ide-integration/#post-edit-diagnostics)). |
+| Allowed upload file extensions | string[] | 93 defaults | Extensions accepted on upload/drop. Images → images, `.pdf` → document, rest → text; anything else rejected. Editable list. |
+
+### Ignore
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
 | Respect `.gitignore` | bool | `true` | Also hide from the `@` picker what the workspace's `.gitignore` files (at every level inside it, none above it) and git's global excludes (`core.excludesFile`) match, inside a git repository or not. Off: only the Ignored patterns below apply. |
 | Ignored patterns | file path | shipped defaults | Extra rules hiding files from the `@` picker, written as a `.gitignore` and kept as one: the row shows where the file is and `…` opens it in the editor. Applied only where the workspace's own ignore rules say nothing, so they are the fallback for a project that ships none. The picker lists the whole workspace, with no limit on the number of files: the list is read when the `@` menu opens and filtered as you type. |
+
+### File links
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
 | Extra linkable extensions | string[] | *(empty)* | Extensions to also linkify when Claude names a file **in prose** (`render.wgsl:20`), on top of the ~270 built-in ones, needed only for a language not shipped yet. A markdown link written by the model is always linked, whatever its extension. One per line, without the dot. See [Clickable file references](/cv4vs-agents/chat/file-links/). |
+
+### Misc
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| Show tool errors inline | bool | `false` | Show the tool error inline below the diff/output; off = alert icon only (click to open in VS). |
 
 ## Debug
 
@@ -88,44 +98,9 @@ Not a settings table but an editor: each profile is a named set of environment v
 `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, model overrides) injected into that pane's
 `claude.exe`, so a pane can run on a different provider while the IDE MCP tools keep working.
 
-![Profiles page](../../../images/options-profiles.png)
-
-Profiles are listed on the left (the checkbox enables one), and edited on the right: a name, an
-optional description, and the environment grid, pre-filled with the keys you are most likely to
-need, so a new profile is usually just a matter of pasting two values. **Available environment
-variables** links to Anthropic's reference for everything else the CLI understands.
-
-Enabled profiles appear under **View → cv4vs Agents**, and the active one is shown in the pane
-caption and toolbar.
-
-Unlike the other three pages, profiles are **not** stored in the VS settings store: they live in
-`profiles.json` so the menu can list them without opening the Options page first; see
-[Settings and data](/cv4vs-agents/settings-and-data/).
-
-### Paste from JSON
-
-The editor's **Paste from JSON** button fills the env grid from the clipboard, so you can lift a
-provider's snippet straight from its docs. It accepts either a full settings block:
-`{ "env": { "ANTHROPIC_BASE_URL": "…", "ANTHROPIC_AUTH_TOKEN": "…" } }`, or a plain key/value map
-`{ "ANTHROPIC_BASE_URL": "…", … }`; the `env` object is used when present, otherwise the whole
-object.
-
-Profiles are not the only way: the CLI reads these variables from the process environment like any
-shell would, so setting them **at the OS level** works too. Profiles are usually preferable: one
-pane per provider, switchable without touching your system environment.
-
-> **Heads-up:** pointing `ANTHROPIC_BASE_URL` at a custom host can disable the IDE MCP tools. That
-> is a CLI-side restriction, not something the extension controls.
-
-### Provider setup guides
-
-- [z.ai / GLM](https://docs.z.ai/devpack/tool/claude): GLM, Kimi, DeepSeek, Qwen, MiniMax
-- [Qwen](https://qwenlm.github.io/qwen-code-docs/en/users/configuration/model-providers/): DashScope Anthropic API
-- [MiniMax](https://www.minimaxi.com/): Anthropic-compatible models
-- [DeepSeek](https://api-docs.deepseek.com/guides/anthropic_api/): direct Anthropic API compatibility
-- [OpenRouter](https://openrouter.ai/blog/tutorials/claude-code-openrouter/): multi-provider gateway
-- [Ollama](https://docs.ollama.com/api/anthropic-compatibility): local open-source models
-- [Complete alternative models guide](https://github.com/Alorse/cc-compatible-models): comprehensive provider list
+Profiles are not stored in the VS settings store: they live in `profiles.json`. Creating one, Paste
+from JSON and the provider setup guides are in
+[Another provider](/cv4vs-agents/guides/another-provider/).
 
 ## Prompts
 
@@ -133,49 +108,6 @@ Not a settings table but an editor: the entries offered under **cv4vs Agents** w
 right-click code, the Error List or the Output window: one tab per menu. Picking one writes it
 into a chat pane's composer, or sends it when **Send on click** is set.
 
-| Column | Meaning |
-|---|---|
-| Title | What the menu item reads. |
-| Prompt | What reaches the composer. The instruction alone: which file and which lines travel with it through the IDE context, and Claude reads the symbol itself with the `nav_*` tools, so pasting code in here only duplicates what the pane already points at. |
-| Needs selection | Editor tab only. Greys the entry out when nothing is selected, the way Copilot greys "Optimize selection". Selecting only whitespace counts as nothing; a single character does not. Leave it off for prompts that read fine against the whole file. |
-| Send on click | Sends the turn right away, exactly as pressing the send button would: file and selection included. Off by default: the prompt waits in the composer so you can add the half line that matters. |
-
-Rows appear in the menu in the order listed, so the one you reach for most belongs at the top;
-**Restore defaults** puts back the prompts the extension ships with, for that tab alone.
-
-What a prompt is handed differs by menu, which is why each has its own list:
-
-| Tab | What goes with the prompt |
-|---|---|
-| Editor | Nothing in the text: the file and selection travel through the IDE context. |
-| Error List | The rows you selected, below the prompt. Greyed out with none. |
-| Output | What you selected in the pane, or its last 80 lines, below the prompt, fenced. |
-
-The Error List and Output prompts ship with **Send on click** set, as the single "Explain" entry
-those menus used to have always sent.
-
-Which pane receives: the last one you worked in, brought to the front. With none open, one is
-opened. If the IDE-context eye was shut, it is re-opened with the prompt, asking about this code
-with nothing saying which file it is would reach the CLI as a question about nothing.
-
-Below the prompts, past a separator, two fixed entries add to the composer instead of replacing
-it, so you can gather pieces from several files before writing the question. Neither sends, and
-neither touches the eye.
-
-- **Add reference to chat** writes `@path#L12-18` (or `@path` with no selection) on a line of its
-  own. The CLI reads those lines from disk when the turn goes: whole lines, however much of them
-  you selected, and without edits you have not saved yet.
-- **Add selection to chat** writes the selected text itself, in a fenced block headed by the path
-  and lines: exactly what is on screen, down to the character. Greyed out with no selection.
-
-The Error List and Output menus end the same way, with one **Add to chat** that adds what their
-prompts would be handed: the selected rows, the pane's selection or tail, as a block below
-what the composer holds.
-
-Solution Explorer and a document's tab have a **cv4vs Agents** submenu too, with **Add reference
-to chat** alone for now: the selected files, folders and projects (a project stands for its
-folder) as references, one per line; on a tab, the whole file.
-
-Like profiles, these are **not** in the VS settings store: they live in `prompts.json` so the
-menus can be built without opening the Options page first; see
-[Settings and data](/cv4vs-agents/settings-and-data/).
+Like profiles, these live in a file, `prompts.json`. The columns, what each menu hands the prompt
+and the fixed **Add to chat** entries are in
+[Ask from the editor](/cv4vs-agents/guides/ask-from-the-editor/).

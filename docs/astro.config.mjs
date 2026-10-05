@@ -25,10 +25,25 @@ export default defineConfig({
       editLink: { baseUrl: 'https://github.com/Corsinvest/cv4vs-agents/edit/master/docs/' },
       plugins: [starlightLinksValidator()],
       sidebar: [
-        { label: 'Start here', items: ['known-issues'] },
+        { label: 'Start here', items: ['getting-started', 'two-panes', 'why', 'known-issues'] },
+        {
+          label: 'Guides',
+          items: [
+            'guides/debug-with-the-agent',
+            'guides/ask-from-the-editor',
+            'guides/teach-the-agent',
+            'guides/another-provider',
+            'guides/several-panes',
+            'guides/spending-less-context',
+          ],
+        },
         {
           label: 'Chat',
           items: [
+            'chat/composer',
+            'chat/conversation',
+            'chat/permissions',
+            'chat/sessions',
             'chat/diff',
             'chat/rewind',
             'chat/sub-agents',
@@ -37,14 +52,33 @@ export default defineConfig({
             'chat/context-and-usage',
           ],
         },
-        { label: 'IDE tools', items: ['mcp-tools'] },
+        { label: 'IDE tools', items: ['ide-integration', 'mcp-tools'] },
         {
           label: 'Documents',
           items: ['documents/statistics', 'documents/usage', 'documents/context-usage', 'documents/file-history'],
         },
-        { label: 'Claude Code', items: ['claude/updating', 'claude/plugins', 'claude/remote-control'] },
-        { label: 'Reference', items: ['options', 'settings-and-data', 'power', 'architecture'] },
+        {
+          label: 'Claude Code',
+          items: [
+            'claude/authentication',
+            'claude/updating',
+            'claude/plugins',
+            'claude/remote-control',
+            'claude/vs-code-differences',
+          ],
+        },
+        { label: 'Reference', items: ['options', 'settings-and-data', 'power', 'troubleshooting', 'architecture'] },
         { label: 'Project', items: ['diary'] },
+        {
+          label: 'Corsinvest',
+          items: [
+            {
+              label: 'Professional support',
+              link: 'https://www.corsinvest.it/en/contact/',
+              attrs: { target: '_blank', rel: 'noopener noreferrer' },
+            },
+          ],
+        },
       ],
     }),
     // After Starlight: it reads the Markdown processor Starlight has configured.

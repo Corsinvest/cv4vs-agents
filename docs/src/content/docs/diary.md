@@ -58,4 +58,4 @@ the toughest test there is: every rough edge turns up in the day's work, not in 
 
 *Daniele Corsini (Frank Lupo)*
 
-[Back to the README](https://github.com/Corsinvest/cv4vs-agents#why)
+[Back to Why](/cv4vs-agents/why/)

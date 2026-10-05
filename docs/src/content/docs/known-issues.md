@@ -6,8 +6,6 @@ description: "Current limitations of the extension, most of them Visual Studio s
 Current limitations of the extension. Most stem from Visual Studio shell
 constraints, not from bugs in the extension itself.
 
----
-
 ## Restored panes don't keep their exact position or grouping
 
 When **Restore panes on solution open** reopens the panes you had open for a
@@ -27,8 +25,6 @@ once and Visual Studio tends to keep that arrangement for the rest of the
 session. Saving pixel-perfect layout per solution is not currently feasible with
 the available VS APIs.
 
----
-
 ## A single loose file falls back to the home directory
 
 Solutions, projects and opened folders give the pane a working directory. A
@@ -40,8 +36,6 @@ you switch tabs, while the working directory is fixed when the pane starts.
 
 **Workaround:** none needed: the home directory is a reasonable fallback for a
 loose file. Low priority.
-
----
 
 ## A box selection reports one of its lines, not the rectangle
 

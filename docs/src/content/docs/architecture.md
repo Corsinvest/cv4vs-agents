@@ -4,7 +4,7 @@ description: "How the extension is put together and how to build it from source.
 ---
 
 How the extension is put together, and how to build it from source. For what it does, see the
-[README](https://github.com/Corsinvest/cv4vs-agents).
+[home page](/cv4vs-agents/).
 
 ## Tech & performance
 

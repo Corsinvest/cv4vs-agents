@@ -3,7 +3,7 @@ title: "Usage"
 description: "The live plan and rate-limit windows of each profile, and the same numbers in Visual Studio's status bar."
 ---
 
-A full-window view under **View → cv4vs Agents → Usage**: the live plan / rate-limit picture for
+A full-window view under **View → cv4vs Agents → Analytics → Usage**: the live plan / rate-limit picture for
 each profile, read from the CLI. It opens as a document-tab in the editor area, next to
 [Statistics](/cv4vs-agents/documents/statistics/).
 

@@ -1,0 +1,74 @@
+---
+title: Troubleshooting
+description: The pane says the CLI is missing, a pane runs against the wrong session or folder, turning on the log, and where to report what.
+---
+
+import { Steps, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+## The pane says the CLI is missing
+
+The extension drives `claude.exe` and never bundles it. With no CLI installed the pane says so and
+links to the setup guide, instead of failing silently: install it as in
+[Getting started](/cv4vs-agents/getting-started/#install).
+
+If it is installed and not found, set **Claude executable path** under
+[Options → General](/cv4vs-agents/options/#general). Empty means auto-detect via PATH, the native
+installer or npm. It must be the real `.exe`: `.cmd`/`.bat`/`.ps1` shims can't be launched.
+
+## A pane runs against the wrong session, folder or CLI
+
+Open **Session info** from the pane's … menu: the session's title, id and `.jsonl` path, the
+working directory and profile, and which `claude.exe` is running it (path, version and PID).
+
+A single file opened on its own, with no solution or folder around it, starts the pane in your home
+directory: see [Known issues](/cv4vs-agents/known-issues/).
+
+## The CLI process exited
+
+A bar is shown in the chat if the CLI process exits unexpectedly. Turn on the log, below, before
+reproducing it.
+
+## Turn on the log
+
+Silent by default; invaluable when something misbehaves or you're filing a bug.
+
+<Steps>
+
+1. **Tools → Options → cv4vs Agents → Debug → Log level**. `None` is silent; `Trace` shows every
+   wire: the NDJSON traffic to and from `claude.exe`, the chat bridge, and each MCP tool call.
+
+2. **View → cv4vs Agents → Developer → View output log** opens the Output window pane **cv4vs
+   Agents**.
+
+3. Reproduce the problem. Every line is tagged with the pane it came from (`[chat#2]`, `[cli#1]`),
+   so several open panes stay readable in the one Output window.
+
+</Steps>
+
+**View → cv4vs Agents → Developer → Open data folder** opens the folder the extension writes to;
+what is in it is in [Settings and data](/cv4vs-agents/settings-and-data/).
+
+## Specific problems
+
+<CardGrid>
+  <LinkCard title="Updating Claude Code fails" description="EBUSY, the npm registry not answering, nothing happening." href="/cv4vs-agents/claude/updating/#when-it-fails" />
+  <LinkCard title="Remote Control will not turn on" description="Login, provider, organization policy and the variables that disable it." href="/cv4vs-agents/claude/remote-control/#requirements" />
+  <LinkCard title="The IDE tools are missing on a provider" description="A custom ANTHROPIC_BASE_URL can disable them, on the CLI side." href="/cv4vs-agents/guides/another-provider/#what-changes-on-another-provider" />
+  <LinkCard title="Known issues" description="Current limitations, mostly Visual Studio shell constraints." href="/cv4vs-agents/known-issues/" />
+</CardGrid>
+
+## Report a bug
+
+- **Report a bug**: the
+  [bug report form](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=bug_report.yml),
+  also under **View → cv4vs Agents → Help & Feedback**, which pre-fills the version for you.
+- **Request a feature**: the
+  [feature request form](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feature_request.yml).
+- **Feedback**:
+  [tell us how it's going](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feedback.yml).
+
+## Not ours: `claude.exe`
+
+Problems in `claude.exe` itself belong to
+[the CLI's own tracker](https://github.com/anthropics/claude-code/issues); this extension drives
+the CLI, it doesn't ship it.

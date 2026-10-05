@@ -1,0 +1,39 @@
+---
+title: Authentication and security
+description: The extension handles no login and stores no credentials; the CLI does. How to sign in, and the one file that holds a token.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+**The extension does not handle login, authentication or credentials: the CLI does.** It only
+launches and drives `claude.exe`; sign-in and token storage stay entirely on the CLI side, exactly
+as they would from a plain shell.
+
+## Signing in to Claude
+
+Log in the normal way, from a terminal: run `claude` (or use **Open Claude in Terminal** / a CLI
+pane) and follow the CLI's own `/login` flow. The extension never sees or stores your credentials.
+
+## Using a provider
+
+A provider (GLM/z.ai, a gateway, any Anthropic-compatible host) authenticates through the usual
+environment variables (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, …), set at the OS level or per
+pane via profiles. See [Another provider](/cv4vs-agents/guides/another-provider/).
+
+## What is stored
+
+Either way the extension holds no secrets of its own: it inherits whatever the CLI and the process
+environment provide.
+
+<Aside type="caution" title="One caveat">
+A profile's environment variables (an `ANTHROPIC_AUTH_TOKEN` among them) are saved as plain JSON
+under `%LOCALAPPDATA%`.
+</Aside>
+
+See [Settings and data](/cv4vs-agents/settings-and-data/) for every file the extension writes and
+where.
+
+## No telemetry
+
+The analytics views (Statistics, Usage, Context usage, File history) read the local session files:
+nothing is uploaded.

@@ -11,8 +11,6 @@ That is powerful and easy to lose track of: several agents can be running at onc
 tokens, and a chat that simply streamed everything would drown you. The extension surfaces them in
 two places: a **live panel** while they run, and **collapsible rows** in the conversation.
 
----
-
 ## While they run: the composer chip
 
 As soon as a sub-agent starts, a chip appears in the composer toolbar: a bot icon with a **badge
@@ -41,8 +39,6 @@ simulation loop", "Run scan simulation loop") it is often the only thing that te
 Background and async sub-agents are tracked too: the turn is reported as *finished* only once they
 have actually finished, not when the main reply ends.
 
----
-
 ## In the conversation: nested rows
 
 While a sub-agent works, its own tool calls appear nested inside the Agent row that spawned it, so
@@ -58,8 +54,6 @@ the moment you open it.
 
 Sub-agent transcripts are replayed in history too, so re-opening an old session shows the same
 nested structure; again, fetched only when you expand.
-
----
 
 ## Stopping them
 

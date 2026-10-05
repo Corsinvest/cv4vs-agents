@@ -3,7 +3,7 @@ title: "Context usage"
 description: "How any past session fills the model's context window: categories, memory map and what was loaded."
 ---
 
-A full-window view under **View → cv4vs Agents → Context usage**: for any historical session, how it
+A full-window view under **View → cv4vs Agents → Analytics → Context usage**: for any historical session, how it
 fills the model's context window: model, categories, a memory-map, and the files/agents/skills/tools
 loaded into context. It opens as a document-tab in the editor area, next to [Statistics](/cv4vs-agents/documents/statistics/)
 and [Usage](/cv4vs-agents/documents/usage/). (For the current chat's context, use the in-chat gauge,
@@ -11,7 +11,7 @@ see [Context, usage & statistics](/cv4vs-agents/chat/context-and-usage/).)
 
 ![Context usage document-tab](../../../../images/usage-context-document.png)
 
-### The tree (left)
+## The tree (left)
 
 The same scope tree as Statistics (**All → Profile → Folder → Project → Session**) but **without the
 calendar levels**: a project expands straight to its sessions, one row per session file (titled from
@@ -22,7 +22,7 @@ right side shows "Select a session".
 The **Range** selector (7 days / 30 days / All time) filters the tree, and **Refresh** re-reads
 changed sessions (and re-fetches the visible one).
 
-### The breakdown (right)
+## The breakdown (right)
 
 Clicking a session loads its context window (see *How it works*), then shows, mirroring the in-chat
 context dialog:
@@ -40,7 +40,7 @@ context dialog:
   links**: click one to open the file in the editor.
 - **Footer**: the auto-compact state (on/off, threshold, source).
 
-### How it works
+## How it works
 
 Reading a closed session's context requires loading its messages, so the tab spawns a short-lived
 `claude.exe` that resumes that session and asks the CLI for `get_context_usage`: a read-only

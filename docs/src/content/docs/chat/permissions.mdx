@@ -1,0 +1,63 @@
+---
+title: Permissions
+description: The permission modes, approving a tool, answering a question, reviewing a plan before you approve it, and Bypass.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+What the agent may do without asking is the **permission mode**; what it asks, it asks in the
+conversation.
+
+## The modes
+
+A selector in the composer toolbar. Shift+Tab cycles it, and while the composer has focus its
+border takes the mode's colour.
+
+| Mode | What happens |
+|---|---|
+| **Manual** | Every edit and command waits for your approval |
+| **Edit automatically** | Files in the working directory are edited without asking; anything outside it, and commands, still ask |
+| **Plan** | Reads and explores freely, then proposes a plan: no file is changed |
+| **Auto** | Decides per task when to act and when to ask, based on how risky it is |
+| **Bypass permissions** | Nothing is ever asked, including commands that can destroy data |
+
+The mode changes on the live process: switching it never restarts the CLI.
+
+**Initial permission mode** ([Options → Chat](/cv4vs-agents/options/#chat)) is the mode every new
+chat starts in: `Default` (ask before edits), `AcceptEdits` or `Plan`.
+
+## Approving a tool
+
+An inline approval banner for tool use, with per-session/project "allow" suggestions.
+
+With several panes open, the one waiting on a permission raises a VS InfoBar, or an OS toast when
+you're outside Visual Studio; see [Several panes at once](/cv4vs-agents/guides/several-panes/).
+
+An Edit or Write can also be reviewed in Visual Studio's own diff, where saving accepts and closing
+rejects: see [Reviewing changes](/cv4vs-agents/chat/diff/).
+
+## Answering a question
+
+`AskUserQuestion` is answered in the conversation. The answer can be **structured** (several
+questions in one panel, each single- or multi-select), not just a plain yes/no. Once answered, the
+row is compact by default (only what you picked); turn off **Compact Ask answers** in Options to
+keep every option listed with your pick highlighted.
+
+## Reviewing a plan
+
+A long plan doesn't have to be read through the banner's small scrolling box: **Open in editor**
+shows it as a normal document in VS's Markdown editor, full-size. While it is still waiting on your
+answer you can change it there and save; the banner picks the change up, and approving sends what
+*you* wrote, not what was proposed.
+
+## Bypass
+
+<Aside type="danger">
+**Bypass permissions** runs everything without asking, dangerous commands included.
+</Aside>
+
+It only appears at all if **Allow dangerously skip permissions**
+([Options → Chat](/cv4vs-agents/options/#chat)) is on. It is off by default.
+
+When it is the active mode it is named in red on the toolbar whether or not the composer has focus:
+it is the one worth noticing when you come back to a pane and don't remember how you left it.

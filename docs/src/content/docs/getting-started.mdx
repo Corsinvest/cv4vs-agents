@@ -1,0 +1,92 @@
+---
+title: Getting started
+description: Install the Claude Code CLI and the extension, open a pane in Visual Studio and send the first message.
+---
+
+import { Steps, Tabs, TabItem, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+cv4vs Agents is **not** a fork of the CLI. It drives the real `claude.exe`, which you install
+separately: the binary is never bundled. Version differences are handled by feature-detection, not
+by pinning a CLI version.
+
+## Requirements
+
+| | |
+|---|---|
+| **Visual Studio** | 2022 or 2026 (17.0+), any edition, on Windows 10 1809 or later |
+| **Claude Code CLI** | installed separately; see below |
+
+## Install
+
+<Steps>
+
+1. **Install the Claude Code CLI.**
+
+   <Tabs>
+     <TabItem label="winget">
+       ```powershell
+       winget install Anthropic.ClaudeCode
+       ```
+     </TabItem>
+     <TabItem label="npm">
+       ```powershell
+       npm install -g @anthropic-ai/claude-code
+       ```
+     </TabItem>
+   </Tabs>
+
+   Other platforms and installation methods are in Anthropic's
+   [official setup guide](https://docs.claude.com/en/docs/claude-code/setup).
+
+2. **Install the extension** from the
+   [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents),
+   or search *cv4vs Agents* in **Extensions → Manage Extensions** inside the IDE.
+
+3. **Open a pane.** In Visual Studio: **View → cv4vs Agents → Claude**.
+
+</Steps>
+
+No CLI installed? The pane says so and links to the setup guide, instead of failing silently.
+
+## Sign in
+
+The extension does not handle login: the CLI does. Log in the normal way, from a terminal: run
+`claude` (or open a **CLI** pane) and follow the CLI's own `/login` flow. The extension never sees
+or stores your credentials.
+
+To use a provider other than Anthropic, see
+[Another provider](/cv4vs-agents/guides/another-provider/).
+
+## Your first message
+
+Type in the chat, or open a **CLI** pane for the interactive terminal. The IDE tools (navigation,
+diagnostics, debugger) are wired up automatically: nothing to configure.
+
+The file open in the editor, and your selection, ride along with the prompt: a chip above the
+composer shows what is going out, and one click turns the sharing off. See
+[Editor context](/cv4vs-agents/ide-integration/).
+
+## Preview builds
+
+Release candidates are tagged `vX.Y.Z-rcN` and published on the
+[Releases](https://github.com/Corsinvest/cv4vs-agents/releases) page with the `.vsix` attached;
+they are not on the Marketplace, which takes neither a suffixed version nor a second upload of one
+already published. Double-click the file to install.
+
+Two things to know before trying one. They receive **no automatic updates**: a `.vsix` installed by
+hand has no gallery behind it to check. And every preview of a release carries the **same version
+number**: the `-rcN` suffix lives on the tag, because a VSIX manifest version is digits only, so
+installing `rc2` over `rc1` is refused as *already installed*. Uninstall the previous preview first,
+from **Extensions → Manage Extensions**.
+
+Stable releases carry no `.vsix`: install them from the Marketplace, where updates arrive on their
+own.
+
+## Next
+
+<CardGrid>
+  <LinkCard title="Two panes, one extension" description="What the Chat pane and the CLI pane each are." href="/cv4vs-agents/two-panes/" />
+  <LinkCard title="Debug with the agent" description="Stop on an exception and ask about it, with the live stack and locals." href="/cv4vs-agents/guides/debug-with-the-agent/" />
+  <LinkCard title="Teach the agent about the IDE" description="A few lines of CLAUDE.md that make it reach for Visual Studio instead of the shell." href="/cv4vs-agents/guides/teach-the-agent/" />
+  <LinkCard title="Options" description="Every setting, with its default." href="/cv4vs-agents/options/" />
+</CardGrid>

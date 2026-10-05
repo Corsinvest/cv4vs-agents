@@ -3,14 +3,14 @@ title: "Statistics"
 description: "Historical token usage, aggregated locally from the CLI's session files, by profile, folder, project, day and session."
 ---
 
-A full-window view under **View → cv4vs Agents → Statistics**: historical token usage, aggregated
+A full-window view under **View → cv4vs Agents → Analytics → Statistics**: historical token usage, aggregated
 **locally** from the CLI's session files, with a navigable tree on the left. It opens as a
 document-tab in the editor area (not a dockable tool-window), so it gets the whole window for the
 charts and tables. (For the live plan / rate-limit view, see [Usage](/cv4vs-agents/documents/usage/).)
 
 ![Statistics document-tab](../../../../images/statistics-document.png)
 
-### The tree (left)
+## The tree (left)
 
 The tree is the scope picker: click any node and the right side recomputes for exactly that node.
 Every level is clickable.
@@ -40,7 +40,7 @@ The **Range** selector (7 days / 30 days / All time, next to the toolbar) filter
 out-of-range days, sessions, projects and folders are hidden, and the current selection is restored
 on the rebuild, or falls back to **All** if it no longer exists in range.
 
-### What you see on the right
+## What you see on the right
 
 For the selected node:
 
@@ -59,7 +59,7 @@ For the selected node:
 Model names are shown **exactly as the API returned them** (`claude-opus-4-8`, not "Opus 4.8"), so a
 third-party provider's model ids stay readable.
 
-### Refresh vs Recreate
+## Refresh vs Recreate
 
 Two buttons on the tree toolbar:
 
@@ -72,7 +72,7 @@ Two buttons on the tree toolbar:
 While either runs, the buttons are disabled and the right side is replaced by a centered progress
 bar; the tree and the right side refresh when it finishes, keeping your selection.
 
-### How it works
+## How it works
 
 No telemetry, nothing uploaded. The numbers come from the `.jsonl` transcripts the CLI already
 writes on your machine: the same files the chat history reads. Reading every file on every open

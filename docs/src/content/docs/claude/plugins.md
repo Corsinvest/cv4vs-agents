@@ -12,8 +12,6 @@ Plugin operations run as one-shot `claude plugin … --json` processes (the live
 them), and when something changes every open chat gets a small "plugins changed" banner: restart or
 reload so the change takes effect.
 
----
-
 ## Installed
 
 ![Installed plugins](../../../../images/chat/plugin-installed-dialog.png)
@@ -27,16 +25,12 @@ that marketplace first, so there is no need to refresh it by hand. When the plug
 latest version the message says so, and nothing needs a reload. Plugins synced from your claude.ai
 account have no marketplace behind them and no Update button; manage them on claude.ai.
 
----
-
 ## Available
 
 ![Available plugins](../../../../images/chat/plugin-available-dialog.png)
 
 Everything on offer across your marketplaces, with an install count. Install straight from here; the
 plugin then shows up under **Installed**. Where a plugin has a home page, its name links out to it.
-
----
 
 ## Marketplaces
 
@@ -45,8 +39,6 @@ plugin then shows up under **Installed**. Where a plugin has a home page, its na
 The marketplaces feeding the **Available** list. **Add** one by its source (a git URL or a local
 path), and **refresh** a marketplace to pull its latest catalogue; the ↻ spins while it fetches.
 Removing a marketplace drops the plugins it offered from **Available** (already-installed ones stay).
-
----
 
 ## How it works
 
