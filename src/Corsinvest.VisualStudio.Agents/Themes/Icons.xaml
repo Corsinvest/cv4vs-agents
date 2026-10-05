@@ -29,12 +29,12 @@
   <CombinedGeometry x:Key="MascotGeometry" GeometryCombineMode="Exclude" po:Freeze="True">
     <CombinedGeometry.Geometry1>
       <GeometryGroup FillRule="Nonzero">
-        <PathGeometry Figures="M 83,100 H 419 A 19,19 0 0 1 438,119 V 344 A 10,10 0 0 1 428,354 H 73 A 10,10 0 0 1 63,344 V 120 A 20,20 0 0 1 83,100 Z" />
-        <RectangleGeometry Rect="6,228,488,64" RadiusX="10" RadiusY="10" />
-        <RectangleGeometry Rect="95,340,31,76" RadiusX="8" RadiusY="8" />
-        <RectangleGeometry Rect="157,340,32,76" RadiusX="8" RadiusY="8" />
-        <RectangleGeometry Rect="311,340,32,76" RadiusX="8" RadiusY="8" />
-        <RectangleGeometry Rect="374,340,31,76" RadiusX="8" RadiusY="8" />
+        <PathGeometry Figures="M 85.5,100 H 418.25 A 19.5,19.5 0 0 1 437.75,119.5 V 341.5 A 13,13 0 0 1 424.75,354.5 H 76 A 13,13 0 0 1 63,341.5 V 122.5 A 22.5,22.5 0 0 1 85.5,100 Z" />
+        <RectangleGeometry Rect="6.25,228.25,487.25,63.75" RadiusX="11" RadiusY="11" />
+        <RectangleGeometry Rect="94.75,340,31.25,75.5" RadiusX="9.5" RadiusY="9.5" />
+        <RectangleGeometry Rect="157.25,340,31.75,75.5" RadiusX="9.5" RadiusY="9.5" />
+        <RectangleGeometry Rect="311.25,340,31.75,75.5" RadiusX="9.5" RadiusY="9.5" />
+        <RectangleGeometry Rect="373.75,340,31.25,75.5" RadiusX="9.5" RadiusY="9.5" />
       </GeometryGroup>
     </CombinedGeometry.Geometry1>
     <CombinedGeometry.Geometry2>
