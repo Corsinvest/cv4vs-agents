@@ -4,17 +4,25 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.13.0] - 2026-10-05
+
+Claude Code can now be updated from inside Visual Studio, and the extension has a documentation
+site of its own. Ultracode is a switch apart from the effort slider, an answered question folds
+like any other row, `/vm:1` and its siblings set a view mode from the keyboard, and a new chat
+starts in the permission mode its selector shows.
 
 ### Added
 
+- **A documentation site.** <https://corsinvest.github.io/cv4vs-agents/> holds the guides, the chat
+  pages, every option by category and the MCP tool list, with screenshots from the current build.
+  **View → cv4vs Agents → Documentation** and the chat's **Help** open it, as do **More
+  information** and **Getting started** on the extension's page in Visual Studio.
 - **Update Claude Code without leaving Visual Studio.** The notice that a newer Claude Code exists
   now has an **Update** button, and **View → cv4vs Agents → Update Claude Code** does the same at
   any time, with or without a pane open. It runs the CLI's own `claude update` and then says what
   happened: the new version, or why nothing changed (already current, or an install your package
   manager owns, with the command to run). Sessions already open keep working on the version they
   started with until they are restarted.
-
 - **A View mode can be set by name from the keyboard.** `/vm:full`, `/vm:focus` and `/vm:hide`,
   or `/vm:0`, `/vm:1` and `/vm:2`, set the mode outright: type `/vm:1` and press Enter. The number
   is how much is hidden. The slider in the `/` menu stays, and still answers to `/view`, `/hide`
@@ -34,17 +42,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   The row reads `Question`, then `Answered` or `Declined` and how many questions it held. Open, it
   lists every option with yours ticked, a radio or a checkbox as the question was single- or
   multi-select; the chevron closes it to its header. It follows **Collapse tool results** like the
-  rest, which it used to ignore, and starts closed in the Focus and Hide tools view modes. One view
-  that opens and closes replaces the option that chose between two.
+  rest, which it used to ignore, and starts closed in the Focus and Hide tools view modes, with its
+  chevron always in view. One view that opens and closes replaces the option that chose between
+  two.
+- **The mascot on the tabs, in the status bar and in the usage popup is the logo's own shape.** It
+  was a trace by eye, with corners and shading that were not the logo's. It is now fitted to the
+  logo itself.
 
 ### Fixed
 
+- **A new chat could approve on its own while its selector read Manual.** With Manual as the
+  starting mode the extension told Claude Code nothing, so it started in the `defaultMode` of your
+  `settings.json`: with `auto` there, tools ran unasked under a selector that said otherwise. The
+  mode you see is now always the one passed, and the selector shows the mode Claude Code reports
+  from the moment the pane opens.
 - **`/focus` and `/compact` listed View mode under a command of the same name.** Both words were
   aliases of View mode and are also Claude Code's own commands, whose row came first: `/focus`
   and Enter ran the one that answers "isn't available here yet". View mode no longer answers to
   them: `/vm:focus` sets Focus.
+- **Tool rows already on screen ignored a change of Collapse tool results** until something else
+  redrew them. They now follow the option, and the view mode, at once.
 - **Turning Ultracode on forced the effort to Extra high, and moving the effort turned Ultracode
   off.** The two were one control. They are now set separately.
+- **Ultracode read as off after switching to a model that can run it.** A session started on a
+  model without Ultracode kept the switch off in the chat even once Claude Code was running it.
+  The switch now shows what you asked for.
 - **A notice at the top of the chat could lose part of its text, or read it as markup.** The rows
   rendered their message as HTML, so an advisory from Claude Code mentioning `<T>` or `<path>`
   showed a sentence with a hole in it, and text from outside (the CLI, a hook, a file name) could
@@ -74,6 +96,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   session from disk. Whenever Visual Studio was busy, for instance checking an F# solution, the
   page won and its one signal was lost. The pane now listens from the start and acts on the
   signal once its client is up.
+- **Three texts that said the wrong thing.** The **Collapse tool results** option claimed a failed
+  row stays open: it closes like the rest, and keeps its red dot and the button that opens the full
+  output. The About dialog was titled "About Claude Code". The description of the
+  `ide_get_project_structure` tool had an unbalanced parenthesis.
 
 ### Internal
 
