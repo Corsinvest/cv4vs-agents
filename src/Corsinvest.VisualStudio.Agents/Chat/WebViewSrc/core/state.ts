@@ -31,7 +31,7 @@ export interface AppState {
     theme: Theme;
     /** Reasoning effort level for the Model menu slider. */
     effortLevel: EffortLevelDto;
-    /** ultracode flag: the slider's purple stop past xhigh (effort=xhigh + this). */
+    /** Ultracode flag (Model menu toggle): on or off at any effort level. */
     ultracodeEnabled: boolean;
     /** Extended thinking on/off (Model menu toggle). */
     thinkingEnabled: boolean;

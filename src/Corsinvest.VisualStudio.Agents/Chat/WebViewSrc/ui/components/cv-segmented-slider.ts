@@ -10,9 +10,6 @@ export interface SliderStop<V = unknown> {
     value: V;
     /** Tooltip / accessible label for this stop. */
     label?: string;
-    /** Tint the fill/knob with the accent colour when this stop is active
-     *  (e.g. the purple "ultracode" stop past the max). */
-    accent?: boolean;
 }
 
 /**
@@ -80,11 +77,6 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
         }
         .track:focus-visible {
             box-shadow: 0 0 0 2px var(--colorStrokeFocus2, currentColor);
-        }
-        /* Accent stop (ultracode): purple fill/knob past the max. */
-        .track.accent {
-            --cv-slider-fill: #b180d7;
-            --cv-slider-knob: #fff;
         }
         /* filled portion up to the active stop */
         .fill {
@@ -232,7 +224,7 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
                     : nothing
             }
             <div
-                class="track ${active?.accent ? 'accent' : ''}"
+                class="track"
                 role="slider"
                 tabindex="0"
                 aria-label=${this.label || 'selector'}

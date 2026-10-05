@@ -80,7 +80,7 @@ export type TrailingControl =
     | { kind: 'value'; label: string; icon?: string }
     | {
           kind: 'slider';
-          stops: ReadonlyArray<{ label: string; value: number; accent?: boolean }>;
+          stops: ReadonlyArray<{ label: string; value: number }>;
           value: number;
           label: string;
           onSet: (host: CommandHost, value: number) => void;
