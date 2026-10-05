@@ -1,10 +1,13 @@
-# Usage
+---
+title: "Usage"
+description: "The live plan and rate-limit windows of each profile, and the same numbers in Visual Studio's status bar."
+---
 
 A full-window view under **View → cv4vs Agents → Usage**: the live plan / rate-limit picture for
 each profile, read from the CLI. It opens as a document-tab in the editor area, next to
-[Statistics](statistics.md).
+[Statistics](/cv4vs-agents/documents/statistics/).
 
-![Usage document-tab](images/usage-document.png)
+![Usage document-tab](../../../../images/usage-document.png)
 
 A profile list on the left; pick one and its **live** usage loads on the right, fetched from the CLI
 for that profile (a short-lived process), so it reflects the real account, not something computed
@@ -25,7 +28,7 @@ providers (z.ai/GLM, Bedrock, Vertex, gateway) don't get it: the link wouldn't a
 The same numbers without opening anything: an item at the right of Visual Studio's status bar, beside
 the notification bell.
 
-![The status bar item and the popup it opens](images/plan-usage-status-bar.png)
+![The status bar item and the popup it opens](../../../../images/plan-usage-status-bar.png)
 
 `Claude: 5h 44% · 7d 10%`: the session (5-hour) and weekly (7-day) windows, each with a thin bar
 under it. A bar turns amber at 75% and red at 90%, or sooner when the CLI itself flags the window.
@@ -61,4 +64,4 @@ so there is nothing to watch) and it returns with the first one. Close the only 
 being shown and it moves to one that still has a pane, rather than sitting on a session that ended.
 
 *Show plan usage in the status bar* turns the item off altogether, see
-[Options](options.md#general).
+[Options](/cv4vs-agents/options/#general).

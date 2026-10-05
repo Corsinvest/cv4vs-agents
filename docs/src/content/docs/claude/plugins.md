@@ -1,4 +1,7 @@
-# Plugins
+---
+title: "Plugins"
+description: "Install, enable, disable and update Claude Code plugins, and manage marketplaces, without leaving the chat."
+---
 
 Manage Claude Code plugins without leaving the chat: install from a marketplace, enable or disable
 what you have, and add marketplaces. Open it from the pane toolbar (**Manage plugins**).
@@ -13,7 +16,7 @@ reload so the change takes effect.
 
 ## Installed
 
-![Installed plugins](../images/chat/plugin-installed-dialog.png)
+![Installed plugins](../../../../images/chat/plugin-installed-dialog.png)
 
 Everything currently installed, each with its marketplace, version and enable/disable toggle. Turn a
 plugin off to keep it installed but inactive; on to bring it back. Its skills, agents and MCP servers
@@ -28,7 +31,7 @@ account have no marketplace behind them and no Update button; manage them on cla
 
 ## Available
 
-![Available plugins](../images/chat/plugin-available-dialog.png)
+![Available plugins](../../../../images/chat/plugin-available-dialog.png)
 
 Everything on offer across your marketplaces, with an install count. Install straight from here; the
 plugin then shows up under **Installed**. Where a plugin has a home page, its name links out to it.
@@ -37,7 +40,7 @@ plugin then shows up under **Installed**. Where a plugin has a home page, its na
 
 ## Marketplaces
 
-![Marketplaces](../images/chat/plugin-marketplace-dialog.png)
+![Marketplaces](../../../../images/chat/plugin-marketplace-dialog.png)
 
 The marketplaces feeding the **Available** list. **Add** one by its source (a git URL or a local
 path), and **refresh** a marketplace to pull its latest catalogue; the ↻ spins while it fetches.

@@ -1,7 +1,10 @@
-# Architecture & build
+---
+title: "Architecture & build"
+description: "How the extension is put together and how to build it from source."
+---
 
 How the extension is put together, and how to build it from source. For what it does, see the
-[README](../README.md).
+[README](https://github.com/Corsinvest/cv4vs-agents).
 
 ## Tech & performance
 

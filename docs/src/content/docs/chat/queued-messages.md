@@ -1,9 +1,7 @@
-<!--
-SPDX-FileCopyrightText: Copyright Corsinvest Srl
-SPDX-License-Identifier: GPL-3.0-only
--->
-
-# Messages waiting to be sent
+---
+title: "Messages waiting to be sent"
+description: "Write the next message while the turn is running: read, fix, drop or join what is waiting to be sent."
+---
 
 You do not have to wait for an answer to write the next message. Type it while the turn is running
 and it is **queued**: the bubble appears straight away, greyed out so it does not read as already
@@ -12,7 +10,7 @@ sent, and goes to the CLI the moment the turn ends.
 Which leaves what this page is about: reading what is still waiting, fixing one you got wrong,
 dropping it, or sending two of them as a single message.
 
-![The queue list, with an entry's actions showing](images/chat/queued-messages.png)
+![The queue list, with an entry's actions showing](../../../../images/chat/queued-messages.png)
 
 ## Where it lives
 
@@ -45,7 +43,7 @@ Clicking an entry brings its text and attachments back into the composer, and a 
 you are editing something queued rather than writing a new message. Change it and press Enter: it
 goes back to **its own place** in the queue, not to the end.
 
-![The composer editing a queued message](images/chat/editing-queued-message.png)
+![The composer editing a queued message](../../../../images/chat/editing-queued-message.png)
 
 The entry does not leave the queue while you edit: it holds its place and **the queue waits there**.
 Anything behind it waits too, which is why the bar also counts what is held up. Without that the
@@ -82,4 +80,4 @@ leaves no trace in the conversation. The bubble goes with it.
 
 ## See also
 
-- [Options](options.md): Enter vs Ctrl+Enter to send, and the rest of the composer's behaviour.
+- [Options](/cv4vs-agents/options/): Enter vs Ctrl+Enter to send, and the rest of the composer's behaviour.

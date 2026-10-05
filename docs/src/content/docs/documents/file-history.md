@@ -1,11 +1,14 @@
-# File history
+---
+title: "File history"
+description: "What the CLI's file backups occupy on disk, per project and session, with a diff and a way to delete them."
+---
 
 A full-window view under **View → cv4vs Agents → Analytics → File history**: what the CLI's file
 backups occupy on disk, which files each session preserved, and a way to delete the ones you no
-longer want. It opens as a document-tab in the editor area, next to [Statistics](statistics.md),
-[Usage](usage.md) and [Context usage](context-usage.md).
+longer want. It opens as a document-tab in the editor area, next to [Statistics](/cv4vs-agents/documents/statistics/),
+[Usage](/cv4vs-agents/documents/usage/) and [Context usage](/cv4vs-agents/documents/context-usage/).
 
-![File history document-tab](images/file-history-document.png)
+![File history document-tab](../../../../images/file-history-document.png)
 
 ## What it reads
 
@@ -50,7 +53,7 @@ copies (one per version of each file), and the date of the last one.
   the file as it is now, in Visual Studio's own diff viewer.
 - **Save a copy as…** writes the backup wherever you choose. It is deliberately *not* called
   "Restore": it saves a file and leaves both your working copy and the conversation alone. Going back
-  in a conversation is [rewind](chat/rewind.md), which lives in the chat pane.
+  in a conversation is [rewind](/cv4vs-agents/chat/rewind/), which lives in the chat pane.
 - **Open the backup folder** shows `file-history/<session>/` in Explorer.
 
 A transcript can name a copy the CLI has since pruned; such rows are left out rather than shown as
@@ -74,5 +77,5 @@ half-way, so the consequence sits in the control rather than in a warning you ca
 ## What it is not
 
 This is an archive, not a second rewind. It shows and deletes; it never writes into a conversation.
-Restoring files *and* moving a session back is [rewind](chat/rewind.md), and it only works on the
+Restoring files *and* moving a session back is [rewind](/cv4vs-agents/chat/rewind/), and it only works on the
 session its own pane is driving; the running CLI knows nothing about the others.

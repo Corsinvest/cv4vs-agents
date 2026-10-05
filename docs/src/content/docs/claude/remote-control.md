@@ -1,4 +1,7 @@
-# Remote Control
+---
+title: "Remote Control"
+description: "Drive a running chat session from claude.ai/code or the Claude mobile app."
+---
 
 Remote Control lets you drive a running chat session from `claude.ai/code` or the Claude mobile
 app. The session itself keeps running on your machine, in this pane, talking to your solution and
@@ -32,7 +35,7 @@ JSON), the switch says so and leaves the file alone.
 Once the CLI confirms the bridge is up, the session link is posted into the conversation, with a QR
 code beside it:
 
-![The session card and the toolbar indicator](../images/chat/remote-control.png)
+![The session card and the toolbar indicator](../../../../images/chat/remote-control.png)
 
 The QR is the part that matters. On this machine the link is redundant: the session is already on
 screen; what you need is a way to reach it from the phone you are about to pick up, and scanning

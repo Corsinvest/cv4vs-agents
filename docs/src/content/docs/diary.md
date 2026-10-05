@@ -1,4 +1,7 @@
-# Diary
+---
+title: "Diary"
+description: "Days when something happened that was not in the plan."
+---
 
 Days when something happened that was not in the plan. Newest first.
 
@@ -55,4 +58,4 @@ the toughest test there is: every rough edge turns up in the day's work, not in 
 
 *Daniele Corsini (Frank Lupo)*
 
-[Back to the README](../README.md#why)
+[Back to the README](https://github.com/Corsinvest/cv4vs-agents#why)

@@ -1,4 +1,7 @@
-# Keeping the machine awake
+---
+title: "Keeping the machine awake"
+description: "Why and when the extension keeps Windows from sleeping while a chat turn is running."
+---
 
 A long turn is easy to walk away from. If Windows suspends the machine while `claude.exe` is
 mid-turn, the process is frozen where it stands: the turn never completes, and the session is still
@@ -69,4 +72,4 @@ Tools → Options → cv4vs Agents → General → **Prevent the machine from sl
 running**. On by default; unticking it releases any hold immediately rather than at the end of the
 current turn.
 
-See [Options → General](options.md#general).
+See [Options → General](/cv4vs-agents/options/#general).

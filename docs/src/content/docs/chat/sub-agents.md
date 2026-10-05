@@ -1,4 +1,7 @@
-# Sub-agents
+---
+title: "Sub-agents"
+description: "See how many sub-agents are running, what each one is doing, and stop any of them."
+---
 
 Claude can fan work out to **sub-agents**: separate agents it spawns to handle a piece of the task
 in parallel (searching a large codebase, running independent checks, reviewing several files at
@@ -18,7 +21,7 @@ chip.
 
 Clicking it opens the sub-agents panel:
 
-![Sub-agents panel](../images/chat/subagents-panel.png)
+![Sub-agents panel](../../../../images/chat/subagents-panel.png)
 
 Each row shows:
 

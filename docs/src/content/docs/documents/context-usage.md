@@ -1,12 +1,15 @@
-# Context usage
+---
+title: "Context usage"
+description: "How any past session fills the model's context window: categories, memory map and what was loaded."
+---
 
 A full-window view under **View → cv4vs Agents → Context usage**: for any historical session, how it
 fills the model's context window: model, categories, a memory-map, and the files/agents/skills/tools
-loaded into context. It opens as a document-tab in the editor area, next to [Statistics](statistics.md)
-and [Usage](usage.md). (For the current chat's context, use the in-chat gauge,
-see [Context, usage & statistics](chat/context-and-usage.md).)
+loaded into context. It opens as a document-tab in the editor area, next to [Statistics](/cv4vs-agents/documents/statistics/)
+and [Usage](/cv4vs-agents/documents/usage/). (For the current chat's context, use the in-chat gauge,
+see [Context, usage & statistics](/cv4vs-agents/chat/context-and-usage/).)
 
-![Context usage document-tab](images/usage-context-document.png)
+![Context usage document-tab](../../../../images/usage-context-document.png)
 
 ### The tree (left)
 

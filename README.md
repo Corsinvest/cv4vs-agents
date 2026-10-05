@@ -9,7 +9,7 @@
 [![Visual Studio](https://img.shields.io/badge/Visual%20Studio-2022%20%7C%202026-5C2D91.svg)](https://visualstudio.microsoft.com/)
 [![Marketplace](https://vsmarketplacebadges.dev/version-short/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
 [![Installs](https://vsmarketplacebadges.dev/installs-short/Corsinvest.cv4vs-agents.svg)](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents)
-[![Self-hosting](https://img.shields.io/badge/self--hosting-since%202026--07--27-brightgreen.svg)](docs/diary.md)
+[![Self-hosting](https://img.shields.io/badge/self--hosting-since%202026--07--27-brightgreen.svg)](https://corsinvest.github.io/cv4vs-agents/diary/)
 
 A Visual Studio 2022 / 2026 extension that brings the **Claude Code** CLI inside the IDE: a rich
 chat experience plus an interactive terminal, both wired into Visual Studio's editor,
@@ -93,31 +93,31 @@ own.
 
 - **[Two panes](#two-panes-one-extension)**: a rich WebView2 chat and a real terminal (ConPTY),
   both multi-instance and dockable side by side, each on its own session.
-- **[80+ MCP tools](docs/mcp-tools.md)**: Visual Studio's own navigation, references, rename,
+- **[80+ MCP tools](https://corsinvest.github.io/cv4vs-agents/mcp-tools/)**: Visual Studio's own navigation, references, rename,
   diagnostics, build, **its Test Explorer** and the **live debugger** (breakpoints, stepping,
   locals, evaluate) handed to the agent. Not text search over source: the IDE's semantic, running
   view of your program.
-- **[It offers when you break](docs/options.md#asking-about-a-break)**: stop on an exception and a
+- **[It offers when you break](https://corsinvest.github.io/cv4vs-agents/options/#asking-about-a-break)**: stop on an exception and a
   bar appears over that file: one press asks about the break, and the agent reads the live stack and
   locals rather than guessing from the source. Breakpoints are opt-in, steps never ask.
-- **[Review changes in VS's own diff](docs/chat/diff.md)**: every Edit/Write shows as an inline diff,
+- **[Review changes in VS's own diff](https://corsinvest.github.io/cv4vs-agents/chat/diff/)**: every Edit/Write shows as an inline diff,
   and opens in Visual Studio's native, **editable** side-by-side diff: **save (Ctrl+S) to accept** or
   **close to reject**, the CLI applies it only if you saved.
 - **Edit the plan before you approve it**: a long plan doesn't have to be read through the banner's
   small scrolling box: **Open in editor** shows it as a normal document in VS's Markdown editor,
   full-size. While it is still waiting on your answer you can change it there and save; the banner
   picks the change up, and approving sends what *you* wrote, not what was proposed.
-- **[Take the files back](docs/chat/rewind.md)**: `/rewind` restores them to the state before any
+- **[Take the files back](https://corsinvest.github.io/cv4vs-agents/chat/rewind/)**: `/rewind` restores them to the state before any
   message of the session, and leaves the conversation where it is. Pick a message and it says what
   would change (files, lines added and removed) before you commit to it; click a file and its copy
   from before that message opens in VS's diff, against what is on disk now.
-- **[Clickable file references](docs/file-links.md)**: when Claude writes `ClientEvents.cs:208` (or a
+- **[Clickable file references](https://corsinvest.github.io/cv4vs-agents/chat/file-links/)**: when Claude writes `ClientEvents.cs:208` (or a
   range, `Stats.cs:35-48`, or a whole list, `Package.cs:124,185,202`) the reference becomes a link that
   opens the file in VS: a range **selects those lines**, and every line in a list is its own link. It
   works **in plain prose**, not just in markdown links; neither is true in the VS Code extension or
   Claude Desktop. ~270 extensions out of the box, extendable from Options; code blocks stay untouched,
   and clocks, host:ports and version numbers never become dead links.
-- **[Know when the next message costs more](docs/chat/context-and-usage.md#the-prompt-cache)**:
+- **[Know when the next message costs more](https://corsinvest.github.io/cv4vs-agents/chat/context-and-usage/#the-prompt-cache)**:
   the context gauge tracks the **prompt cache**: *warm, about 42 min left* while you work, a yellow
   clock beside it a few minutes before it expires (still time to send) and an orange one once it
   has likely expired or a compaction replaced what it held, with how many tokens the next message
@@ -125,7 +125,7 @@ own.
 - **Read a response aloud**: a speaker button on each answer reads it out with the system voice
   (Web Speech, no extra install); click to pause, click to resume. The markdown is spoken as plain
   prose: no "asterisk asterisk", no code blocks recited.
-- **[Keep writing while it answers](docs/queued-messages.md)**: the next message waits for the turn
+- **[Keep writing while it answers](https://corsinvest.github.io/cv4vs-agents/chat/queued-messages/)**: the next message waits for the turn
   to end instead of for you. A chip in the composer's toolbar counts what is still queued and opens
   the list, in the order it will go out: delete one, or click it to bring it back into the composer
   and fix it, without stopping the turn to do either. **Alt+Enter** queues a message *into* the one
@@ -134,7 +134,7 @@ own.
   CLI's own session store, so a conversation started in the VS Code extension or in a terminal shows
   up here, and vice versa. Resume, fork and rename all work on those shared files, so you can switch
   editor mid-project without losing context.
-- **[Remote Control](docs/chat/remote-control.md)**: `/remote-control` hands a running session to
+- **[Remote Control](https://corsinvest.github.io/cv4vs-agents/claude/remote-control/)**: `/remote-control` hands a running session to
   `claude.ai/code` or the Claude mobile app: the session stays on your machine, web and mobile are
   just a window onto it. The link is posted into the conversation with a QR code to scan from your
   phone, and a toolbar indicator says it's on for as long as it is. It can start by itself in every new
@@ -162,49 +162,49 @@ own.
   severity first, each with its file and line as a link that opens there, instead of the raw call
   data. The row grows to fit them, so nothing hides behind an inner scrollbar; after a `--fix` run it
   also says what each finding became.
-- **[Sub-agent panel](docs/chat/sub-agents.md)**: a chip shows how many sub-agents are running; click it
+- **[Sub-agent panel](https://corsinvest.github.io/cv4vs-agents/chat/sub-agents/)**: a chip shows how many sub-agents are running; click it
   for a live list with per-agent Stop and Stop-all, so a fan-out never gets away from you.
   Background/async agents are tracked too: the turn is "finished" only once they are.
-- **[Any Anthropic-compatible provider](docs/options.md#profiles)**: profiles inject per-pane
+- **[Any Anthropic-compatible provider](https://corsinvest.github.io/cv4vs-agents/options/#profiles)**: profiles inject per-pane
   environment variables (z.ai/GLM, MiniMax, DeepSeek, OpenRouter, Ollama…); the IDE tools keep
   working.
-- **[Plan usage in the status bar](docs/usage.md#status-bar)**: `Claude: 5h 44% · 7d 10%` beside the
+- **[Plan usage in the status bar](https://corsinvest.github.io/cv4vs-agents/documents/usage/#status-bar)**: `Claude: 5h 44% · 7d 10%` beside the
   notification bell, each figure with a bar that turns amber and then red as its window fills, for the
   profile you're working in. Click it for every limit and when each resets. A chat pane keeps it
   current from its own process; without one, a short-lived CLI refreshes it at most every 15 minutes,
   or never, if you set it so.
 - **Analytics tabs**: full-window views under **View → cv4vs Agents**, all reading the local session
   files with no telemetry:
-  - **[Statistics](docs/statistics.md)**: a navigable tree (All → Profile → Folder → Project →
+  - **[Statistics](https://corsinvest.github.io/cv4vs-agents/documents/statistics/)**: a navigable tree (All → Profile → Folder → Project →
     Days/Sessions) driving summary tiles, an activity heatmap and per-day/per-model charts.
-  - **[Usage](docs/usage.md)**: each profile's live plan and rate-limit windows, read from the CLI.
-  - **[Context usage](docs/context-usage.md)**: for any historical session, how it fills the model's
+  - **[Usage](https://corsinvest.github.io/cv4vs-agents/documents/usage/)**: each profile's live plan and rate-limit windows, read from the CLI.
+  - **[Context usage](https://corsinvest.github.io/cv4vs-agents/documents/context-usage/)**: for any historical session, how it fills the model's
     context window: a memory-map, category table and expandable trees (memory files, agents, skills,
     MCP tools), fetched read-only by resuming the session.
-  - **[File history](docs/file-history.md)**: what the CLI's file backups cost on disk, per project
+  - **[File history](https://corsinvest.github.io/cv4vs-agents/documents/file-history/)**: what the CLI's file backups cost on disk, per project
     and per session, with a diff against the file as it is now and a way to delete the ones you no
     longer want (orphaned ones included).
-- **[Plugin manager](docs/chat/plugins.md)**: install from a marketplace, enable/disable or update
+- **[Plugin manager](https://corsinvest.github.io/cv4vs-agents/claude/plugins/)**: install from a marketplace, enable/disable or update
   what you have, add marketplaces, from Installed / Available / Marketplaces tabs, without leaving
   the chat.
 - **Talk to it**: dictate the prompt instead of typing it: a mic button in the composer transcribes
   as you speak (Web Speech API; hidden when the platform doesn't support it).
 - **Hot-swap**: model, permission mode and interrupt change on the live process, never a restart.
-- **[Update Claude Code from Visual Studio](docs/updating-claude-code.md)**: when a newer CLI
+- **[Update Claude Code from Visual Studio](https://corsinvest.github.io/cv4vs-agents/claude/updating/)**: when a newer CLI
   exists the chat says so, with an **Update** button; **View → cv4vs Agents → Update Claude Code**
   does the same at any time. It runs the CLI's own updater and tells you what happened; sessions
   already open keep working.
-- **[Restore panes on solution open](docs/options.md#general)** *(opt-in)*: reopen the panes you
+- **[Restore panes on solution open](https://corsinvest.github.io/cv4vs-agents/options/#general)** *(opt-in)*: reopen the panes you
   had for a solution, each back on its own session. Off by default: opening a solution shouldn't
   start agents you didn't ask for.
-- **[Tune it to your taste](docs/options.md)**: 31 options across General, Chat and Debug: what
+- **[Tune it to your taste](https://corsinvest.github.io/cv4vs-agents/options/)**: 31 options across General, Chat and Debug: what
   the chat shows, how diffs render, which keys send, the starting permission mode, autosave,
   file checkpoints, upload and `@`-picker filters, whether the machine may sleep mid-turn,
   log verbosity.
 - **[It tells you when it needs you](#pane-attention-notifications)**: with several panes working
   at once, the one waiting on a permission raises a VS info bar, or an OS toast when you're outside
   Visual Studio. Clicking it takes you to that pane, focus already on the question.
-- **[Nothing hidden](docs/options.md#debug)**: set the log level to `Trace` and the Output window
+- **[Nothing hidden](https://corsinvest.github.io/cv4vs-agents/options/#debug)**: set the log level to `Trace` and the Output window
   shows every wire: the NDJSON traffic to and from `claude.exe`, the chat bridge, and each MCP tool
   call. Every line is tagged with the pane it came from (`[chat#2]`, `[cli#1]`), so several open panes
   stay readable in the one Output window. Silent by default; invaluable when something misbehaves or
@@ -266,7 +266,7 @@ Claude's help.
 
 **And it keeps a diary.** Self-hosting since 27 July 2026, it debugged itself, it left the desk, it
 changed how I work, and in September it stopped being only mine:
-[the days that were not in the plan](docs/diary.md).
+[the days that were not in the plan](https://corsinvest.github.io/cv4vs-agents/diary/).
 
 *Daniele Corsini (Frank Lupo)*
 
@@ -289,7 +289,7 @@ resuming another session, fork).
 
 **Profiles.** Each pane can run on a different provider (native Claude, GLM/z.ai, or any other
 Anthropic-compatible host) and the IDE tools work the same either way.
-See [Options → Profiles](docs/options.md#profiles).
+See [Options → Profiles](https://corsinvest.github.io/cv4vs-agents/options/#profiles).
 
 ---
 
@@ -303,7 +303,7 @@ See [Options → Profiles](docs/options.md#profiles).
   bubble appears straight away, greyed out so it does not read as already sent, and drops into place
   below the reply it was waiting on, so each answer stays under the question that prompted it. A chip
   in the composer's toolbar lists what is still waiting and takes one back out, without stopping the
-  turn to do it; see [Messages waiting to be sent](docs/queued-messages.md).
+  turn to do it; see [Messages waiting to be sent](https://corsinvest.github.io/cv4vs-agents/chat/queued-messages/).
 - **Slash-command palette**: a lightning button opens a unified palette; typing `/` filters. It
   lists the CLI's slash/skill commands plus built-in actions (Attach, Mention, Clear, Switch model,
   Settings, Manage plugins, Open Claude in Terminal, Help, Report a problem).
@@ -326,7 +326,7 @@ See [Options → Profiles](docs/options.md#profiles).
   the mode that runs everything without asking, dangerous commands included, is named in red on
   the toolbar whether or not the composer has focus: it is the one worth noticing when you come
   back to a pane and don't remember how you left it. It only appears at all if
-  [Allow dangerously skip permissions](docs/options.md) is on.
+  [Allow dangerously skip permissions](https://corsinvest.github.io/cv4vs-agents/options/) is on.
 - **Notice bar**: info/success/warning/error messages above the composer (e.g. rate-limit notices).
 
 ### Conversation
@@ -340,7 +340,7 @@ See [Options → Profiles](docs/options.md#profiles).
   and thinking between two of them into one row (`5 tool calls · 1 failed`, `Running Bash…` while it
   works) that opens in place, with the rows exactly as you left them. **Hide tool calls** drops them
   altogether. Your answers to questions, plan decisions and the task list stay in every mode.
-- **[Inline diffs](docs/chat/diff.md)**: Edit/Write rows show a diff with the file's own line
+- **[Inline diffs](https://corsinvest.github.io/cv4vs-agents/chat/diff/)**: Edit/Write rows show a diff with the file's own line
   numbers and the context around each change, syntax-highlighted, with the changed words marked
   inside an edited line; the row's title carries the counts (`+3 −14`). Clicking it opens the change
   in VS's native side-by-side diff, where you review (and edit) it with the full editor, then
@@ -369,7 +369,7 @@ See [Options → Profiles](docs/options.md#profiles).
   in flight and stop them. Background/async agents are tracked correctly (the turn's "finished" waits
   for them).
 - Sub-agent transcripts are replayed in history. Collapsed rows show the last 3 steps; expanding
-  fetches the full run; see [Sub-agents](docs/chat/sub-agents.md).
+  fetches the full run; see [Sub-agents](https://corsinvest.github.io/cv4vs-agents/chat/sub-agents/).
 
 ### Permissions
 
@@ -388,7 +388,7 @@ your plan's rate limits, and historical usage, aggregated locally from the sessi
 telemetry. Its tooltip also tells you whether the **prompt cache** is still warm; a clock appears
 beside it when the cache is about to expire (yellow) and once it has (orange): the next message
 re-caches the whole conversation. See
-[Context, usage & statistics](docs/chat/context-and-usage.md).
+[Context, usage & statistics](https://corsinvest.github.io/cv4vs-agents/chat/context-and-usage/).
 
 ### Sessions
 
@@ -409,11 +409,11 @@ re-caches the whole conversation. See
   a removed profile falls back to native, a deleted session opens fresh. Chat sessions restore
   exactly; CLI terminals resume via a session id the extension assigns up front (so even a fresh
   terminal is tracked). The panes come back in saved order, but not at their exact dock position;
-  see [Known Issues](docs/KNOWN_ISSUES.md).
+  see [Known Issues](https://corsinvest.github.io/cv4vs-agents/known-issues/).
 
 ### Plugins
 
-- **[Plugin manager](docs/chat/plugins.md)**: Installed / Available / Marketplaces tabs; install,
+- **[Plugin manager](https://corsinvest.github.io/cv4vs-agents/claude/plugins/)**: Installed / Available / Marketplaces tabs; install,
   enable/disable, update an installed plugin, add or refresh a marketplace.
 
 ---
@@ -469,7 +469,7 @@ While a chat pane is working, the machine is kept from suspending: a turn frozen
 the session hung. The display still sleeps on its own timer, an idle pane holds nothing, and sleep
 you ask for always wins. On by default.
 
-See [Keeping the machine awake](docs/power.md).
+See [Keeping the machine awake](https://corsinvest.github.io/cv4vs-agents/power/).
 
 ### Updating Claude Code
 
@@ -480,7 +480,7 @@ report the outcome: the new version, or why nothing changed (already current, or
 package manager owns, with the command to run). Sessions already open are not interrupted: they
 keep the version they started with until they are reopened.
 
-See [Updating Claude Code](docs/updating-claude-code.md).
+See [Updating Claude Code](https://corsinvest.github.io/cv4vs-agents/claude/updating/).
 
 ### Other
 
@@ -511,7 +511,7 @@ Three of the four already default to the cheap setting, so the one to know about
 per-pane and per-session, made to be flicked rather than configured.
 
 Full detail, including what specifically does *not* help:
-[Spending less context](docs/chat/context-and-usage.md#spending-less-context).
+[Spending less context](https://corsinvest.github.io/cv4vs-agents/chat/context-and-usage/#spending-less-context).
 
 ---
 
@@ -526,12 +526,12 @@ as they would from a plain shell. There are two ways to authenticate:
   your credentials.
 - **A provider** (GLM/z.ai, a gateway, any Anthropic-compatible host): authenticate through the
   usual environment variables (`ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, …), set at the OS level
-  or per pane via [profiles](docs/options.md#profiles).
+  or per pane via [profiles](https://corsinvest.github.io/cv4vs-agents/options/#profiles).
 
 Either way the extension holds no secrets of its own: it inherits whatever the CLI and the process
 environment provide. One caveat: a profile's environment variables (an `ANTHROPIC_AUTH_TOKEN`
 among them) are saved as plain JSON under `%LOCALAPPDATA%`. See
-[Settings and data](docs/settings-and-data.md) for every file the extension writes and where.
+[Settings and data](https://corsinvest.github.io/cv4vs-agents/settings-and-data/) for every file the extension writes and where.
 
 ## MCP tools (the IDE, exposed to Claude)
 
@@ -542,7 +542,7 @@ APIs, never a C#/VB-only path. There is no list of supported languages: whatever
 Studio can do on a file, the agent can ask for; what it gets back depends on the language service
 and the workloads you have installed.
 
-Every tool is listed and described in **[MCP tools](docs/mcp-tools.md)**.
+Every tool is listed and described in **[MCP tools](https://corsinvest.github.io/cv4vs-agents/mcp-tools/)**.
 
 ---
 
@@ -551,10 +551,10 @@ Every tool is listed and described in **[MCP tools](docs/mcp-tools.md)**.
 All settings live under **Tools → Options → cv4vs Agents**, split into five pages: General,
 Chat, Debug, **Prompts** and **Profiles** (see
 [Two panes, one extension](#two-panes-one-extension)).
-Every setting is documented in **[docs/options.md](docs/options.md)**.
+Every setting is documented in **[docs/options.md](https://corsinvest.github.io/cv4vs-agents/options/)**.
 
 Visual Studio persists them in its own settings store; profiles, per-solution state and caches
-go to `%LOCALAPPDATA%`; see [Settings and data](docs/settings-and-data.md).
+go to `%LOCALAPPDATA%`; see [Settings and data](https://corsinvest.github.io/cv4vs-agents/settings-and-data/).
 
 ---
 
@@ -572,7 +572,7 @@ Studio is a different host, so several things are done differently, or don't exi
 - **Sub-agents you can see and control.** Their tool calls are grouped under the Agent row that
   spawned them (last 3 steps, expand for the full run) instead of being interleaved into the
   transcript, and a chip in the composer counts the ones still running; click it to stop any of
-  them, or all. See [Sub-agents](docs/chat/sub-agents.md).
+  them, or all. See [Sub-agents](https://corsinvest.github.io/cv4vs-agents/chat/sub-agents/).
 - **Pane attention notifications.** With several panes open (or VS in the background), an InfoBar or
   a layout-proof OS toast tells you which pane needs input or has finished; the VS docked tab can't
   carry that state the way VS Code's editor title does.
@@ -589,11 +589,11 @@ Studio is a different host, so several things are done differently, or don't exi
   side-by-side diff** (not a static rendered diff) so you review and edit with the full editor, then
   **save (Ctrl+S) to accept** or **close the tab to reject** (the CLI applies the edit only if you
   saved).
-- **[Context gauge + Usage/Context/Statistics dialogs](docs/chat/context-and-usage.md)** rendered
+- **[Context gauge + Usage/Context/Statistics dialogs](https://corsinvest.github.io/cv4vs-agents/chat/context-and-usage/)** rendered
   natively in the chat, including historical statistics across the current chat, the whole project,
   or **all projects together**.
 
-- **[Rewind](docs/chat/rewind.md)**: restore the files to the state they were in before any message
+- **[Rewind](https://corsinvest.github.io/cv4vs-agents/chat/rewind/)**: restore the files to the state they were in before any message
   in the session, leaving the conversation itself untouched; a dry-run preview lists the files and
   the lines added or removed before anything is written, and clicking a file opens the pre-message
   copy against the current one in Visual Studio's diff.
@@ -604,13 +604,13 @@ Studio is a different host, so several things are done differently, or don't exi
 
 How it's built (VS package, WebView2 chat, ConPTY terminal, in-process MCP server), the
 performance choices behind the lazy history, and how to build the VSIX from source:
-see **[Architecture & build](docs/architecture.md)**.
+see **[Architecture & build](https://corsinvest.github.io/cv4vs-agents/architecture/)**.
 
 ---
 
 ## Known issues
 
-See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for current limitations (mostly Visual Studio shell constraints).
+See [docs/KNOWN_ISSUES.md](https://corsinvest.github.io/cv4vs-agents/known-issues/) for current limitations (mostly Visual Studio shell constraints).
 
 ---
 

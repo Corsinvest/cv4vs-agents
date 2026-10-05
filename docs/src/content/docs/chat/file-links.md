@@ -1,9 +1,7 @@
-<!--
-SPDX-FileCopyrightText: Copyright Corsinvest Srl
-SPDX-License-Identifier: GPL-3.0-only
--->
-
-# Clickable file references
+---
+title: "Clickable file references"
+description: "File names with a line or a range in Claude's answers become links that open the file in Visual Studio."
+---
 
 When Claude mentions a source location in its answer (`ClientEvents.cs:208`,
 `Core/Stats/StatsService.cs:45`, a whole list like `McpServerHost.cs:192,214,230`), the extension

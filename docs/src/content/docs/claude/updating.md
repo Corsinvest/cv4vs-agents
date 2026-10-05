@@ -1,4 +1,7 @@
-# Updating Claude Code
+---
+title: "Updating Claude Code"
+description: "Update the Claude Code CLI from the chat notice or the menu, and what each outcome means."
+---
 
 The extension drives the Claude Code CLI and never bundles it, so the CLI is updated separately
 from the extension. You can do that without leaving Visual Studio.

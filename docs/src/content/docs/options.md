@@ -1,10 +1,13 @@
-# Options
+---
+title: "Options"
+description: "Every setting under Tools, Options, cv4vs Agents: General, Chat, Debug, Profiles and Prompts."
+---
 
 All settings live under **Tools → Options → cv4vs Agents**, split into five pages: **General**,
 **Chat**, **Debug**, **Prompts** and **Profiles**.
 
 Visual Studio persists them in its own settings store; profiles, per-solution state and caches
-go to `%LOCALAPPDATA%`; see [Settings and data](settings-and-data.md).
+go to `%LOCALAPPDATA%`; see [Settings and data](/cv4vs-agents/settings-and-data/).
 
 ## General
 
@@ -13,9 +16,9 @@ go to `%LOCALAPPDATA%`; see [Settings and data](settings-and-data.md).
 | Restore panes on solution open | bool | `false` | Reopen the panes (with their sessions) that were open for a solution when it is reopened. |
 | Offer to ask when the debugger pauses | `Never` / `Exceptions only` / `Exceptions and breakpoints` | `Exceptions only` | Show an InfoBar over the file the debugger stopped in, with an "Ask cv4vs Agents" button that asks a chat pane about the break. See [Asking about a break](#asking-about-a-break). |
 | Default new session | `Chat` / `CLI` | `Chat` | Which kind the "New" button creates by default (the dropdown still lets you pick the other). |
-| Prevent the machine from sleeping while a session is running | bool | `true` | Keep Windows awake while a chat pane is working, so a turn is not suspended half-way through and left hung. The display still sleeps on its own timer, and an idle pane holds nothing. A CLI pane never holds: a terminal has no notion of a turn. See [Keeping the machine awake](power.md). |
+| Prevent the machine from sleeping while a session is running | bool | `true` | Keep Windows awake while a chat pane is working, so a turn is not suspended half-way through and left hung. The display still sleeps on its own timer, and an idle pane holds nothing. A CLI pane never holds: a terminal has no notion of a turn. See [Keeping the machine awake](/cv4vs-agents/power/). |
 | Claude executable path | file path | *(empty)* | Override auto-detection with a specific `claude.exe` (browse with `…`). Empty = auto-detect via PATH / native installer / npm. Must be the real `.exe`: `.cmd`/`.bat`/`.ps1` shims can't be launched. |
-| Show plan usage in the status bar | bool | `true` | The Claude plan's session (5h) and weekly (7d) usage in Visual Studio's status bar, for the profile of the pane you last used; click it for every limit and when each resets. Shown only while a pane is open: with none there is nothing being spent. See [Usage → Status bar](usage.md#status-bar). |
+| Show plan usage in the status bar | bool | `true` | The Claude plan's session (5h) and weekly (7d) usage in Visual Studio's status bar, for the profile of the pane you last used; click it for every limit and when each resets. Shown only while a pane is open: with none there is nothing being spent. See [Usage → Status bar](/cv4vs-agents/documents/usage/#status-bar). |
 | Status bar usage refresh (minutes) | int | `15` | How often the status bar refreshes usage when the open pane's own process cannot answer (one that has not run a turn yet) by starting a short-lived `claude.exe`, only while Visual Studio is in front. `0` = never in the background; a pane that has run a turn, and opening the popup, still refresh it. |
 
 ### Asking about a break
@@ -28,7 +31,7 @@ Pressing the button activates the last chat pane you used and asks it about the 
 sent until you press it, and the bar goes away on its own when execution resumes.
 
 The message names neither the file nor the exception type. Both are right there, but the debug
-[MCP tools](mcp-tools.md#debug) read them live and read more besides: the call stack, the locals,
+[MCP tools](/cv4vs-agents/mcp-tools/#debug) read them live and read more besides: the call stack, the locals,
 any expression, so naming a type up front would only anchor the answer on the outermost exception
 when the cause is usually an `InnerException` two levels down. What the message does say is to
 leave the debugger where it is: those same tools can step and continue, and you are standing in
@@ -57,8 +60,8 @@ bar rather than one per iteration.
 | Chat font size | int (px) | `13` | Font size of the chat message text. |
 | Show WebView developer entries | bool | `false` | Add "WebView DevTools" and "WebView task manager" to the chat toolbar's "More" (…) menu: the browser console/DOM/network on the chat itself, and the browser's processes with their memory and CPU. Pre-release builds always offer both. |
 | Autosave before Claude reads/writes | bool | `true` | Save a dirty file before Claude reads/writes it, so it sees your in-editor edits, not the stale on-disk version. |
-| Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them: the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](chat/context-and-usage.md#spending-less-context). |
-| Keep file checkpoints (Rewind) | bool | `true` | Let Claude copy a file before editing it, so [`/rewind`](chat/rewind.md) can restore it. Copies live under `~/.claude/file-history` and are never cleaned up, the reason to turn this off if you do not use Rewind. Read when a chat starts, so it applies to the next one you open. |
+| Send the selected text with the message | bool | `false` | Attach the selected code itself, not just its file and line numbers. Off, the message names the lines and Claude opens the file to read them: the same content, but only if it needs it, and only once. On, the code travels with **every** message sent with a selection. The composer's context chip shows which of the two is going out (🔖 position / 🧾 position + code). See [Spending less context](/cv4vs-agents/chat/context-and-usage/#spending-less-context). |
+| Keep file checkpoints (Rewind) | bool | `true` | Let Claude copy a file before editing it, so [`/rewind`](/cv4vs-agents/chat/rewind/) can restore it. Copies live under `~/.claude/file-history` and are never cleaned up, the reason to turn this off if you do not use Rewind. Read when a chat starts, so it applies to the next one you open. |
 | Send post-edit diagnostics to Claude (experimental) | bool | `false` | Feed back the new errors/warnings an edit introduced. Experimental: unreliable because VS only analyses files open in an editor (see IDE integration). |
 | Allowed upload file extensions | string[] | 93 defaults | Extensions accepted on upload/drop. Images → images, `.pdf` → document, rest → text; anything else rejected. Editable list. |
 | Sticky user messages | bool | `true` | Pin the current exchange's user message at the top while the reply/tool rows scroll below. |
@@ -70,7 +73,7 @@ bar rather than one per iteration.
 | Allow dangerously skip permissions | bool | `false` | Enables the toolbar's "Bypass permissions" (never asks, even for dangerous commands). |
 | Respect `.gitignore` | bool | `true` | Also hide from the `@` picker what the workspace's `.gitignore` files (at every level inside it, none above it) and git's global excludes (`core.excludesFile`) match, inside a git repository or not. Off: only the Ignored patterns below apply. |
 | Ignored patterns | file path | shipped defaults | Extra rules hiding files from the `@` picker, written as a `.gitignore` and kept as one: the row shows where the file is and `…` opens it in the editor. Applied only where the workspace's own ignore rules say nothing, so they are the fallback for a project that ships none. The picker lists the whole workspace, with no limit on the number of files: the list is read when the `@` menu opens and filtered as you type. |
-| Extra linkable extensions | string[] | *(empty)* | Extensions to also linkify when Claude names a file **in prose** (`render.wgsl:20`), on top of the ~270 built-in ones, needed only for a language not shipped yet. A markdown link written by the model is always linked, whatever its extension. One per line, without the dot. See [Clickable file references](file-links.md). |
+| Extra linkable extensions | string[] | *(empty)* | Extensions to also linkify when Claude names a file **in prose** (`render.wgsl:20`), on top of the ~270 built-in ones, needed only for a language not shipped yet. A markdown link written by the model is always linked, whatever its extension. One per line, without the dot. See [Clickable file references](/cv4vs-agents/chat/file-links/). |
 
 ## Debug
 
@@ -85,7 +88,7 @@ Not a settings table but an editor: each profile is a named set of environment v
 `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, model overrides) injected into that pane's
 `claude.exe`, so a pane can run on a different provider while the IDE MCP tools keep working.
 
-![Profiles page](images/options-profiles.png)
+![Profiles page](../../../images/options-profiles.png)
 
 Profiles are listed on the left (the checkbox enables one), and edited on the right: a name, an
 optional description, and the environment grid, pre-filled with the keys you are most likely to
@@ -97,7 +100,7 @@ caption and toolbar.
 
 Unlike the other three pages, profiles are **not** stored in the VS settings store: they live in
 `profiles.json` so the menu can list them without opening the Options page first; see
-[Settings and data](settings-and-data.md).
+[Settings and data](/cv4vs-agents/settings-and-data/).
 
 ### Paste from JSON
 
@@ -175,4 +178,4 @@ folder) as references, one per line; on a tab, the whole file.
 
 Like profiles, these are **not** in the VS settings store: they live in `prompts.json` so the
 menus can be built without opening the Options page first; see
-[Settings and data](settings-and-data.md).
+[Settings and data](/cv4vs-agents/settings-and-data/).

@@ -24,7 +24,28 @@ export default defineConfig({
       head: [socialLinksInNewTab],
       editLink: { baseUrl: 'https://github.com/Corsinvest/cv4vs-agents/edit/master/docs/' },
       plugins: [starlightLinksValidator()],
-      sidebar: [],
+      sidebar: [
+        { label: 'Start here', items: ['known-issues'] },
+        {
+          label: 'Chat',
+          items: [
+            'chat/diff',
+            'chat/rewind',
+            'chat/sub-agents',
+            'chat/queued-messages',
+            'chat/file-links',
+            'chat/context-and-usage',
+          ],
+        },
+        { label: 'IDE tools', items: ['mcp-tools'] },
+        {
+          label: 'Documents',
+          items: ['documents/statistics', 'documents/usage', 'documents/context-usage', 'documents/file-history'],
+        },
+        { label: 'Claude Code', items: ['claude/updating', 'claude/plugins', 'claude/remote-control'] },
+        { label: 'Reference', items: ['options', 'settings-and-data', 'power', 'architecture'] },
+        { label: 'Project', items: ['diary'] },
+      ],
     }),
     // After Starlight: it reads the Markdown processor Starlight has configured.
     externalLinksInNewTab(),

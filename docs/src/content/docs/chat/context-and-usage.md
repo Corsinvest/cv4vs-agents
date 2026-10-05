@@ -1,4 +1,7 @@
-# Context, usage & statistics
+---
+title: "Context, usage & statistics"
+description: "The context gauge in the composer, the prompt cache, and the dialogs it opens: account and usage, context usage, statistics."
+---
 
 Four related views, reachable from the **context gauge** in the composer toolbar: how full the
 current context window is, what is filling it, what your plan allows, and what you have spent
@@ -14,7 +17,7 @@ then orange, then red as it approaches the auto-compact threshold.
 Clicking it opens a small panel: a progress bar, the numbers, and shortcuts to the three dialogs
 below.
 
-![Context gauge popup](../images/chat/gauge-popup.png)
+![Context gauge popup](../../../../images/chat/gauge-popup.png)
 
 `61% of context remaining until auto-compact` is the number that matters day to day: not how much
 you have used, but how much room is left before the CLI compacts the conversation.
@@ -55,7 +58,7 @@ opened it.
 
 ## Account & usage
 
-![Account & usage dialog](../images/chat/usage-dialog.png)
+![Account & usage dialog](../../../../images/chat/usage-dialog.png)
 
 Account information and the plan's rate-limit windows: what you are allowed, and how much of it
 is left in the current window. Read live from the CLI, not computed here.
@@ -66,7 +69,7 @@ is left in the current window. Read live from the CLI, not computed here.
 
 What is actually filling the context window right now.
 
-![Context usage dialog](../images/chat/context-usage-dialog.png)
+![Context usage dialog](../../../../images/chat/context-usage-dialog.png)
 
 The grid at the top is a memory map: one cell per slice of the window, coloured by category, so
 the shape of the problem is visible at a glance: a wall of purple means the conversation itself is
@@ -84,7 +87,7 @@ The footer shows whether auto-compact is on and at what threshold.
 
 Historical usage, aggregated **locally** from the CLI's own session files.
 
-![Statistics dialog](../images/chat/statistics-dialog.png)
+![Statistics dialog](../../../../images/chat/statistics-dialog.png)
 
 Two tabs (**Overview** and **Models**) and two selectors that decide what is counted:
 
@@ -185,7 +188,7 @@ question about another repo, a long back-and-forth about something abstract. Thi
 the two knobs: the setting above changes what the block *contains*, the eye decides whether there
 is one at all.
 
-Picking an [editor prompt](../options.md#prompts) re-opens it: a question about "this code"
+Picking an [editor prompt](/cv4vs-agents/options/#prompts) re-opens it: a question about "this code"
 with nothing saying which code would reach the CLI as a question about nothing.
 
 ### Thinking and effort
@@ -202,7 +205,7 @@ changing *during* a conversation rather than once and for all.
 
 *Options → Chat → Send post-edit diagnostics* (off by default) feeds the new errors an edit
 introduced back to Claude after every edit. That is extra content into the context on each one.
-It is [experimental and unreliable in Visual Studio](../../README.md#ide-integration) for reasons
+It is [experimental and unreliable in Visual Studio](https://github.com/Corsinvest/cv4vs-agents#ide-integration) for reasons
 that have nothing to do with tokens, but if you did turn it on, this is part of what it costs.
 
 ### What does not help

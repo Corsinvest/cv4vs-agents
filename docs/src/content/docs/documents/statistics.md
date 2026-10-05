@@ -1,11 +1,14 @@
-# Statistics
+---
+title: "Statistics"
+description: "Historical token usage, aggregated locally from the CLI's session files, by profile, folder, project, day and session."
+---
 
 A full-window view under **View → cv4vs Agents → Statistics**: historical token usage, aggregated
 **locally** from the CLI's session files, with a navigable tree on the left. It opens as a
 document-tab in the editor area (not a dockable tool-window), so it gets the whole window for the
-charts and tables. (For the live plan / rate-limit view, see [Usage](usage.md).)
+charts and tables. (For the live plan / rate-limit view, see [Usage](/cv4vs-agents/documents/usage/).)
 
-![Statistics document-tab](images/statistics-document.png)
+![Statistics document-tab](../../../../images/statistics-document.png)
 
 ### The tree (left)
 

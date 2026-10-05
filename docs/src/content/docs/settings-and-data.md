@@ -1,9 +1,7 @@
-<!--
-SPDX-FileCopyrightText: Copyright Corsinvest Srl
-SPDX-License-Identifier: GPL-3.0-only
--->
-
-# Settings and data: where everything is stored
+---
+title: "Settings and data: where everything is stored"
+description: "Every file the extension writes, where it is, what belongs to the CLI instead, and how to remove it all."
+---
 
 Nothing the extension writes lives inside your solution. Settings go to the Visual Studio
 settings store, everything else to a folder under `%LOCALAPPDATA%`. Chat sessions are not
@@ -78,9 +76,9 @@ Chat sessions, CLI settings, plugins and skills belong to `claude.exe` and live 
 
 `file-history/` holds **whole files**, not diffs: one copy per file per turn that edited it, and
 the CLI never removes them. Deleting a session's folder only costs you the ability to
-[rewind](chat/rewind.md) that session; turning **Keep file checkpoints** off
-([Options → Chat](options.md#chat)) stops new ones being written at all. The
-**[File history](file-history.md)** tab measures what they occupy, per project and per session, and
+[rewind](/cv4vs-agents/chat/rewind/) that session; turning **Keep file checkpoints** off
+([Options → Chat](/cv4vs-agents/options/#chat)) stops new ones being written at all. The
+**[File history](/cv4vs-agents/documents/file-history/)** tab measures what they occupy, per project and per session, and
 deletes them from there, backups whose transcript is already gone included.
 
 We **read** the session `.jsonl` files directly (that's how history, resume, rename and the

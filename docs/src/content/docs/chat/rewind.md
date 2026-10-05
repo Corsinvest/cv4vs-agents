@@ -1,4 +1,7 @@
-# Rewinding files
+---
+title: "Rewinding files"
+description: "Put the files back the way they were before a message, without touching the conversation."
+---
 
 Claude keeps a copy of every file **before** it edits one. `/rewind` puts them back the way they
 were before a message you pick, without touching the conversation, which stays exactly where it
@@ -13,7 +16,7 @@ Run **`/rewind`** from the command menu (**Context → Rewind files…**). The d
 messages this session can go back to, newest first, and clicking one shows what returning there
 would change:
 
-![The Rewind dialog: the session's messages, and what rewinding to the selected one would change](../images/chat/checkpoints.png)
+![The Rewind dialog: the session's messages, and what rewinding to the selected one would change](../../../../images/chat/checkpoints.png)
 
 The panel under the list is the answer to "what happens if I press this": how many files, how many
 lines added and removed, and which files. Clicking a message never touches them: the figures come
@@ -22,7 +25,7 @@ meant to be browsed.
 
 Clicking a **file** opens it in Visual Studio's own diff: the copy from before that message on the
 left, what is on disk now on the right. It is the same viewer the chat uses to
-[review a change](diff.md), so the two sides are real editors.
+[review a change](/cv4vs-agents/chat/diff/), so the two sides are real editors.
 
 With more than a handful of messages a filter box appears above the list. The arrow keys walk the
 list (while you are still typing in the filter) and Home/End jump to the ends.
@@ -44,11 +47,11 @@ Messages that changed no file are not listed at all; there would be nothing to r
 
 Under `~/.claude/file-history/<session-id>/`, one folder per session, holding whole files rather
 than diffs. They belong to the CLI, are private to their session, and **are not cleaned up**: they
-stay until the folder is deleted. **[File history](../file-history.md)** shows what they cost across
+stay until the folder is deleted. **[File history](/cv4vs-agents/documents/file-history/)** shows what they cost across
 every session, and deletes the ones you no longer want.
 
 That is the reason the feature can be turned off. **Keep file checkpoints (Rewind)**
-(**[Options → Chat → Files](../options.md#chat)**, on by default) decides whether the CLI takes
+(**[Options → Chat → Files](/cv4vs-agents/options/#chat)**, on by default) decides whether the CLI takes
 them at all. With it off no copies are written, and the `/rewind` command is hidden rather than
 offered as something that can only decline.
 

@@ -1,4 +1,7 @@
-# MCP tools
+---
+title: "MCP tools"
+description: "The 80+ tools that hand Visual Studio's navigation, build, tests and live debugger to the agent."
+---
 
 The extension runs an in-process **[MCP](https://modelcontextprotocol.io/) server** that hands
 Visual Studio's own understanding of your code to the agent: navigation, references, rename,

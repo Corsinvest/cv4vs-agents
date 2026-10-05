@@ -1,4 +1,7 @@
-# Known Issues & Limitations
+---
+title: "Known Issues & Limitations"
+description: "Current limitations of the extension, most of them Visual Studio shell constraints, with the workaround for each."
+---
 
 Current limitations of the extension. Most stem from Visual Studio shell
 constraints, not from bugs in the extension itself.

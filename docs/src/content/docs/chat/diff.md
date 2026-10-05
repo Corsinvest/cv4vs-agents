@@ -1,4 +1,7 @@
-# Reviewing changes
+---
+title: "Reviewing changes"
+description: "How an Edit or Write shows in the chat as an inline diff, and how to accept or reject it in Visual Studio's own diff."
+---
 
 Every Edit/Write the agent proposes shows up in the chat as an **inline diff** before anything
 touches your files. You can review it there, or open it in Visual Studio's own diff to review (and
@@ -39,7 +42,7 @@ Clicking the preview hands the change to VS's
 diff. Clicking the same row again closes it; opening another change replaces it, so the chat never
 leaves a trail of diff tabs behind.
 
-![The change in Visual Studio's native diff](../images/chat/vs-diff.png)
+![The change in Visual Studio's native diff](../../../../images/chat/vs-diff.png)
 
 This is where you accept or reject:
 
