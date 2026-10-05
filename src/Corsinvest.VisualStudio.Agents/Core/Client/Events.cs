@@ -35,7 +35,7 @@ public sealed class CliStateReceivedEventArgs
     // applied.effort (post-model-gate) ?? effective.effortLevel. Raw string ("low"|"medium"|"high"|"xhigh").
     public string EffortLevel { get; set; }
     public bool? AlwaysThinkingEnabled { get; set; }   // effective.alwaysThinkingEnabled
-    public bool? Ultracode { get; set; }               // applied.ultracode
+    public bool? Ultracode { get; set; }               // applied.ultracodeRequested ?? applied.ultracode
     public bool? SwitchModelsOnFlag { get; set; }      // effective.switchModelsOnFlag (absent in CLI → null → webview default)
     // effective.permissions.disableBypassPermissionsMode == "disable": an org policy forbids the
     // bypass mode. Absent/get_settings failed → false, i.e. allowed: only the exact "disable" may
