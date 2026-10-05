@@ -697,6 +697,9 @@ export class AskUserQuestionRenderer extends ToolRenderer {
             open: done && this.isOpen(),
             onClick: null,
             chevron: done,
+            // Visible at rest, as on Agent: closed, the header gives no hint that the options
+            // and the answer are one click away.
+            chevronAlwaysShown: true,
         });
     }
     /** Closed at rest outside Full: Focus and Hide tools are for reading the conversation, and
