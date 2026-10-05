@@ -20,6 +20,16 @@ export default defineConfig({
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Corsinvest/cv4vs-agents' },
       ],
+      // Starlight has no option for this, and its social links take no target at all: one script
+      // covers every link that leaves the site, whichever component rendered it.
+      head: [
+        {
+          tag: 'script',
+          content:
+            `document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('a[href]').forEach((a)=>{` +
+            `if(/^https?:$/.test(a.protocol)&&a.origin!==location.origin){a.target='_blank';a.rel=(a.rel+' noopener noreferrer').trim();}});});`,
+        },
+      ],
       editLink: { baseUrl: 'https://github.com/Corsinvest/cv4vs-agents/edit/master/docs/' },
       plugins: [starlightLinksValidator()],
       sidebar: [],
