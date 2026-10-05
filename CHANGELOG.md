@@ -34,8 +34,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   The row reads `Question`, then `Answered` or `Declined` and how many questions it held. Open, it
   lists every option with yours ticked, a radio or a checkbox as the question was single- or
   multi-select; the chevron closes it to its header. It follows **Collapse tool results** like the
-  rest, which it used to ignore. One view that opens and closes replaces the option that chose
-  between two.
+  rest, which it used to ignore, and starts closed in the Focus and Hide tools view modes. One view
+  that opens and closes replaces the option that chose between two.
 
 ### Fixed
 

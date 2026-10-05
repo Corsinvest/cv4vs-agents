@@ -67,6 +67,9 @@ export class CvToolRow extends LitElement implements ToolRowState {
     constructor() {
         super();
         this._subs.rerenderOn('subagentTasks');
+        // A row's resting state reads the options (Collapse tool results, View mode), and the
+        // parent re-rendering does not reach a row whose own properties did not change.
+        this._subs.rerenderOn('ui');
     }
 
     get expanded(): boolean {

@@ -61,7 +61,8 @@ is removed once it has run. `/view`, `/hide` or `/tools` bring the slider itself
 list. The mode is shared by every open chat.
 
 Kept in every mode: your answers to questions, plan decisions, the task list, and a call waiting
-for your approval.
+for your approval. In Focus and Hide tools an answered question starts closed, down to its header
+(`Question · Answered`); its chevron opens it.
 
 ![The task list in the conversation](../../../../images/chat/todo-list.png) A fold opened while its run was still working closes again when the turn ends.
 

@@ -699,6 +699,11 @@ export class AskUserQuestionRenderer extends ToolRenderer {
             chevron: done,
         });
     }
+    /** Closed at rest outside Full: Focus and Hide tools are for reading the conversation, and
+     *  the row stays in both (the user took part in it), so there it keeps to its header. */
+    protected override autoOpen(): boolean {
+        return super.autoOpen() && appState.ui.viewMode === 'full';
+    }
     override header(): TemplateResult {
         const n = this.questions().length;
         const count = `${n} ${n === 1 ? 'question' : 'questions'}`;
