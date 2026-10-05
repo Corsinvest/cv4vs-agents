@@ -224,7 +224,6 @@ const _impl = new StoreImpl<AppState>({
         showInlineToolErrors: false,
         useCtrlEnterToSend: false,
         spellCheckComposer: false,
-        compactOutputAskAnswers: true,
         allowDangerouslySkipPermissions: false,
         fileCheckpoints: false,
         sendSelectionText: false,
