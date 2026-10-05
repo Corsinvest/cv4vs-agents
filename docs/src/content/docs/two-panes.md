@@ -62,6 +62,8 @@ chat.
 
 **New Session** and **Session History** are disabled until the pane's process is up.
 
+![The More menu: Info, Open sessions folder and, when enabled, the two WebView developer entries](../../../images/pane-more-menu.png)
+
 ## What changes without a restart
 
 Model, permission mode and interrupt are **hot-swapped** on the live process: changing them never
