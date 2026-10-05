@@ -571,7 +571,7 @@ export class EnterPlanModeRenderer extends HeaderOnlyRenderer {
 
 export class ExitPlanModeRenderer extends ToolRenderer {
     readonly name = 'ExitPlanMode';
-    /** Same shape as Ask: the outcome IS the body, so no chevron, and nothing to show
+    /** Same shape as TodoWrite: the outcome IS the body, so no chevron, and nothing to show
      *  while the banner is still up. */
     override row(): TemplateResult {
         const done = this.host.status !== 'pending';
@@ -688,78 +688,62 @@ export class TodoWriteRenderer extends ToolRenderer {
 
 export class AskUserQuestionRenderer extends ToolRenderer {
     readonly name = 'AskUserQuestion';
-    /** Same shape as TodoWrite: the questions body is what there is, so no chevron. */
+    /** Folds like any other row once it has an outcome. Nothing to show while the banner is
+     *  still up: the questions are being answered there. */
     override row(): TemplateResult {
         const done = this.host.status !== 'pending';
         return this.chrome({
             body: done ? this.questionsBody() : null,
-            open: done,
+            open: done && this.isOpen(),
             onClick: null,
-            chevron: false,
+            chevron: done,
         });
     }
     override header(): TemplateResult {
-        const qs = (this.host.input.questions ?? []) as AskQuestion[];
-        const first = qs[0]?.question ?? '';
-        const more = qs.length > 1 ? ` (+${qs.length - 1})` : '';
-        return html`${this.nameSpan('Ask')}${this.detailSpan(`${truncate(first, 80)}${more}`)}`;
-    }
-    /** Compact answered view: one line per question: the header chip (or the
-     *  truncated question text) followed by the chosen option(s). Mirrors VS
-     *  Code's terse summary, dropping the options the user didn't pick. */
-    private compactBody(questions: AskQuestion[], answered: string): TemplateResult {
-        return html`
-            <div class="cv-tool-body">
-                ${this.answerCopy(questions, answered)}
-                <div class="cv-question-list cv-question-compact">
-                    ${questions.map((q) => {
-                        const chosen = answerText(q, answered);
-                        return html`<div class="cv-question-answer">
-                            ${
-                                q.header
-                                    ? html`<span class="cv-question-chip">${q.header}</span>`
-                                    : html`<span class="cv-question-text"
-                                          >${truncate(q.question ?? '', 60)}</span
-                                      >`
-                            }
-                            <span class="cv-question-answer-val">${chosen}</span>
-                        </div>`;
-                    })}
-                </div>
-            </div>
-        `;
+        const n = this.questions().length;
+        const count = `${n} ${n === 1 ? 'question' : 'questions'}`;
+        const state =
+            this.host.status === 'pending'
+                ? ''
+                : this.host.status === 'error'
+                  ? 'Declined · '
+                  : 'Answered · ';
+        return html`${this.nameSpan(n === 1 ? 'Question' : 'Questions')}${this.detailSpan(
+            `${state}${count}`,
+        )}`;
     }
 
-    /** Copy button for the Ask body. Copies markdown built from the questions,
-     *  matching the shown view: compact = "- **Header**: chosen" per line; full =
-     *  "**N. Header**" + one bullet per option, a ✅ prefixing the chosen ones (the
-     *  unchosen have no marker). NOT the CLI's raw "Your questions have been
-     *  answered: …" result. Only shown once answered. */
+    private questions(): AskQuestion[] {
+        return ((this.host.input ?? {}) as { questions?: AskQuestion[] }).questions ?? [];
+    }
+
+    /** Copy button for the Ask body. Copies markdown built from the questions: "**N. Header**"
+     *  + one bullet per option, a ✅ prefixing the chosen ones (the unchosen have no marker).
+     *  NOT the CLI's raw "Your questions have been answered: …" result. Only shown once
+     *  answered: a declined Ask has no answer to copy. */
     private answerCopy(questions: AskQuestion[], answered: string): TemplateResult {
-        if (!answered) {
+        if (!answered || this.host.status === 'error') {
             return html`${nothing}`;
         }
         const title = (q: AskQuestion): string => q.header || q.question || '';
-        const md = appState.ui.compactOutputAskAnswers
-            ? questions.map((q) => `- **${title(q)}**: ${answerText(q, answered)}`).join('\n')
-            : questions
-                  .map((q, i) => {
-                      const chosen = chosenLabels(q, answered);
-                      const rows = (q.options ?? []).map((o) => {
-                          const label = o.label ?? '';
-                          const mark = chosen.includes(label) ? '✅ ' : '';
-                          const desc = o.description ? `: ${o.description}` : '';
-                          return `- ${mark}${label}${desc}`;
-                      });
-                      // Typed into "Other": no declared option carries it, so it needs a row of
-                      // its own or the copied markdown lists the choices with none of them ticked.
-                      const free = chosen.length ? '' : questionAnswer(q, answered);
-                      if (free) {
-                          rows.push(`- ✅ ${free}`);
-                      }
-                      return `**${i + 1}. ${title(q)}**\n\n${rows.join('\n')}`;
-                  })
-                  .join('\n\n');
+        const md = questions
+            .map((q, i) => {
+                const chosen = chosenLabels(q, answered);
+                const rows = (q.options ?? []).map((o) => {
+                    const label = o.label ?? '';
+                    const mark = chosen.includes(label) ? '✅ ' : '';
+                    const desc = o.description ? `: ${o.description}` : '';
+                    return `- ${mark}${label}${desc}`;
+                });
+                // Typed into "Other": no declared option carries it, so it needs a row of
+                // its own or the copied markdown lists the choices with none of them ticked.
+                const free = chosen.length ? '' : questionAnswer(q, answered);
+                if (free) {
+                    rows.push(`- ✅ ${free}`);
+                }
+                return `**${i + 1}. ${title(q)}**\n\n${rows.join('\n')}`;
+            })
+            .join('\n\n');
         return html`<cv-copy-btn
             class="cv-question-copy"
             .text=${md}
@@ -767,25 +751,36 @@ export class AskUserQuestionRenderer extends ToolRenderer {
         ></cv-copy-btn>`;
     }
 
+    /** The marker of one option: the banner's own radio/checkbox, so a multi-select question
+     *  reads as one here too. */
+    private optionMark(multi: boolean, picked: boolean): TemplateResult {
+        return multi
+            ? html`<fluent-checkbox
+                  class="cv-question-opt-mark"
+                  tabindex="-1"
+                  ?checked=${picked}
+              ></fluent-checkbox>`
+            : html`<fluent-radio
+                  class="cv-question-opt-mark"
+                  tabindex="-1"
+                  ?checked=${picked}
+              ></fluent-radio>`;
+    }
+
     private questionsBody(): TemplateResult {
-        const questions =
-            ((this.host.input ?? {}) as { questions?: AskQuestion[] }).questions ?? [];
+        const questions = this.questions();
         if (!questions.length) {
             return html`${nothing}`;
         }
+        const declined = this.host.status === 'error';
         const answered = cleanText(this.host.result);
-        // Compact (VS Code style): once answered, show only the chosen option per
-        // question. While still pending (no result yet) fall through to the full
-        // list so all options are visible.
-        if (appState.ui.compactOutputAskAnswers && answered) {
-            return this.compactBody(questions, answered);
-        }
         return html`
             <div class="cv-tool-body">
                 ${this.answerCopy(questions, answered)}
                 <div class="cv-question-list">
                     ${questions.map((q) => {
                         const opts = q.options ?? [];
+                        const multi = !!q.multiSelect;
                         // Once per question, not once per option: every option would otherwise
                         // re-run the same regex over the whole result text.
                         const chosen = chosenLabels(q, answered);
@@ -805,9 +800,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                                 return html`<div
                                     class="cv-question-opt ${isPicked ? 'chosen' : ''}"
                                 >
-                                    <span class="cv-question-opt-mark"
-                                        >${isPicked ? '●' : '○'}</span
-                                    >
+                                    ${this.optionMark(multi, isPicked)}
                                     <span class="cv-question-opt-text">
                                         <span class="cv-question-opt-label">${label}</span>
                                         ${
@@ -825,7 +818,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                                 // this the question renders as if it had gone unanswered.
                                 free
                                     ? html`<div class="cv-question-opt chosen">
-                                          <span class="cv-question-opt-mark">●</span>
+                                          ${this.optionMark(multi, true)}
                                           <span class="cv-question-opt-text">
                                               <span class="cv-question-opt-label">${free}</span>
                                           </span>
@@ -835,6 +828,13 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                         </div>`;
                     })}
                 </div>
+                ${
+                    // The refusal is prose addressed to the model, so it follows the option the
+                    // other failed rows follow instead of always taking room here.
+                    declined && answered && appState.ui.showInlineToolErrors
+                        ? html`<div class="cv-tool-body-error">${this.outputText()}</div>`
+                        : nothing
+                }
             </div>
         `;
     }
@@ -873,7 +873,7 @@ function chosenLabels(q: AskQuestion, answered: string): string[] {
  * several questions at once: each one picks its own pair instead of the whole blob, which would
  * otherwise put another question's answer under this header.
  *
- * Returns '' when the shape isn't there: a CLI that words this differently gets an em dash, not
+ * Returns '' when the shape isn't there: a CLI that words this differently gets nothing, not
  * a paragraph of its own prose rendered as if the user had typed it.
  */
 function questionAnswer(q: AskQuestion, answered: string): string {
@@ -884,22 +884,6 @@ function questionAnswer(q: AskQuestion, answered: string): string {
     const escaped = question.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const m = new RegExp(`"${escaped}"\\s*=\\s*"([^"]*)"`).exec(answered);
     return m ? m[1].trim() : '';
-}
-
-/**
- * What to show as the answer to `q`: the options that matched, or (when none did) the answer
- * text itself.
- *
- * "Other" is free text, so it is never one of the declared options and matching against them can
- * only come up empty. Showing a dash there loses something the user typed: the answer reached the
- * CLI, and re-reading the chat is the one place it can still be seen.
- */
-function answerText(q: AskQuestion, answered: string): string {
-    const chosen = chosenLabels(q, answered);
-    if (chosen.length) {
-        return chosen.join(', ');
-    }
-    return questionAnswer(q, answered) || '-';
 }
 
 interface Finding {

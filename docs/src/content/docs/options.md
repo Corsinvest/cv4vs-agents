@@ -48,7 +48,6 @@ The page groups its settings in categories, in alphabetical order; the tables be
 | Chat font size | int (px) | `13` | Font size of the chat message text. |
 | Show WebView developer entries | bool | `false` | Add "WebView DevTools" and "WebView task manager" to the chat toolbar's "More" (…) menu: the browser console/DOM/network on the chat itself, and the browser's processes with their memory and CPU. Pre-release builds always offer both. |
 | Sticky user messages | bool | `true` | Pin the current exchange's user message at the top while the reply/tool rows scroll below. |
-| Compact Ask answers | bool | `true` | After an `AskUserQuestion`, show only the chosen option per question (compact); off = all options with the pick highlighted. |
 
 ### File links
 

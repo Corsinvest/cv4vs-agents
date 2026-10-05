@@ -531,7 +531,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 
 /* AskUserQuestion body: one block per question, each with a header chip,
  * the question text and the offered options. The option the user picked is
- * highlighted (`.chosen`). */
+ * ticked and highlighted (`.chosen`). */
 .cv-question-list {
     padding: 2px 0;
     display: flex;
@@ -575,7 +575,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     font-weight: var(--fontWeightSemibold);
     color: var(--colorNeutralForeground1);
 }
-/* Compact answered view: one row per question, "header chip → chosen value". */
+/* One-line outcome (the plan decision): "chip → value". */
 .cv-question-compact {
     gap: 4px;
 }
@@ -591,21 +591,15 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 .cv-question-opt {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     gap: 6px;
     font-size: 11px;
     padding: 2px 0 2px 8px;
 }
+/* Fluent radio/checkbox used as the marker only: the row is a record, not a form. */
 .cv-question-opt-mark {
     flex-shrink: 0;
-    color: var(--colorNeutralForeground3);
-    font-size: 15px;
-    line-height: 1;
-}
-.cv-question-opt.chosen .cv-question-opt-mark {
-    color: var(--colorBrandBackground);
-    /* ● renders smaller than ○ at the same size: bump it to match visually. */
-    font-size: 22px;
+    pointer-events: none;
 }
 .cv-question-opt-text {
     display: flex;

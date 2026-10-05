@@ -25,6 +25,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   now lives only in the `/` menu, under **Model**, with the other switches.
 - **The permission mode button shows the mode's icon** beside its name, the same one the mode
   has in the list: `Manual` alone did not say what was manual.
+- **An answered question folds like any other row, and the Compact Ask answers option is gone.**
+  The row reads `Question`, then `Answered` or `Declined` and how many questions it held. Open, it
+  lists every option with yours ticked, a radio or a checkbox as the question was single- or
+  multi-select; the chevron closes it to its header. It follows **Collapse tool results** like the
+  rest, which it used to ignore. One view that opens and closes replaces the option that chose
+  between two.
 
 ### Fixed
 

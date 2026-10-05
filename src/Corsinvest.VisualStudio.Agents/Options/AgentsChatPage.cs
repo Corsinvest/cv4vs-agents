@@ -150,11 +150,6 @@ public class AgentsChatPage : AgentsOptionsPage
     [Description("Show the tool error message inline below the diff/output. When disabled, only the alert icon (on hover) is shown; click it to open the full error in VS.")]
     public bool ShowInlineToolErrors { get; set; } = false;
 
-    [Category("Display")]
-    [DisplayName("Compact Ask answers")]
-    [Description("After an Ask (AskUserQuestion) is answered, show only the chosen option per question (compact, like VS Code). When disabled, all offered options are listed with the picked one highlighted (detailed).")]
-    public bool CompactOutputAskAnswers { get; set; } = true;
-
     [Category("Input")]
     [DisplayName("Use Ctrl+Enter to send")]
     [Description("When enabled, Ctrl+Enter sends the prompt and Enter inserts a new line. When disabled, Enter sends and Shift+Enter inserts a new line.")]

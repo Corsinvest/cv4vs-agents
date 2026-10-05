@@ -16,7 +16,6 @@ export interface VsOptionsDto {
     showInlineToolErrors: boolean;
     useCtrlEnterToSend: boolean;
     spellCheckComposer: boolean;
-    compactOutputAskAnswers: boolean;
     allowDangerouslySkipPermissions: boolean;
     fileCheckpoints: boolean;
     sendSelectionText: boolean;
