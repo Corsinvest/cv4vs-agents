@@ -16,7 +16,7 @@ go to `%LOCALAPPDATA%`; see [Settings and data](/cv4vs-agents/settings-and-data/
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | Restore panes on solution open | bool | `false` | Reopen the panes (with their sessions) that were open for a solution when it is reopened. |
-| Offer to ask when the debugger pauses | `Never` / `Exceptions` / `ExceptionsAndBreakpoints` | `Exceptions` | Show an InfoBar over the file the debugger stopped in, with an "Ask cv4vs Agents" button that asks a chat pane about the break. See [Asking about a break](#asking-about-a-break). |
+| Offer to ask when the debugger pauses | `Never` / `Exceptions` / `ExceptionsAndBreakpoints` | `Exceptions` | Show an InfoBar over the file the debugger stopped in, with an "Ask cv4vs Agents" link that asks a chat pane about the break. See [Asking about a break](#asking-about-a-break). |
 | Default new session | `Chat` / `Cli` | `Chat` | Which kind of pane the "New" button creates, and which kind a profile under **View → cv4vs Agents** opens. The dropdown beside "New" still lets you pick the other. |
 | Prevent the machine from sleeping while a session is running | bool | `true` | Keep Windows awake while a chat pane is working, so a turn is not suspended half-way through and left hung. The display still sleeps on its own timer, and an idle pane holds nothing. A CLI pane never holds: a terminal has no notion of a turn. See [Keeping the machine awake](/cv4vs-agents/power/). |
 | Claude executable path | file path | *(empty)* | Override auto-detection with a specific `claude.exe` (browse with `…`). Empty = auto-detect via PATH / native installer / npm. Must be the real `.exe`: `.cmd`/`.bat`/`.ps1` shims can't be launched. A path that does not exist, or is not an `.exe`, is not an error: auto-detection takes over and a warning goes to the log. See [Troubleshooting](/cv4vs-agents/troubleshooting/#the-pane-says-the-cli-is-missing). |
@@ -26,7 +26,7 @@ go to `%LOCALAPPDATA%`; see [Settings and data](/cv4vs-agents/settings-and-data/
 ### Asking about a break
 
 When the debugger stops, an InfoBar appears over the file it stopped in, with an **Ask cv4vs
-Agents** button that asks a chat pane about the break. Exceptions raise it by default, the other pauses that are not a step are opt-in, steps never do. The whole story is in
+Agents** link that asks a chat pane about the break. Exceptions raise it by default, the other pauses that are not a step are opt-in, steps never do. The whole story is in
 [Debug with the agent](/cv4vs-agents/guides/debug-with-the-agent/).
 
 ## Chat

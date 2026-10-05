@@ -12,19 +12,19 @@ breakpoints, stepping, the call stack, locals, evaluate.
 
 ## The offer when you break
 
-When the debugger stops, an InfoBar appears over the file it stopped in:
-
-> ⚠ Debugger paused on `DivideByZeroException` at `Calcolatrice.cs:13`.  **[Ask cv4vs Agents]**
+When the debugger stops, an InfoBar appears over the file it stopped in. It names the exception and
+where execution is, *Debugger paused on COMException at AgentsOptions.cs:51.*, and ends with a link,
+**Ask cv4vs Agents**, and a cross to close it:
 
 ![The InfoBar over the file the debugger stopped in](../../../../images/debug-infobar.png)
 
-On a pause with no exception it reads `Debugger paused at Calcolatrice.cs:13.` If the file is not
+On a pause with no exception it reads `Debugger paused at AgentsOptions.cs:51.` If the file is not
 open in an editor, the bar appears at the top of the main window instead: no tab is opened for it.
 
-Pressing the button sends the question straight away to the most recently opened chat pane and
+Clicking the link sends the question straight away to the most recently opened chat pane and
 brings it forward; with none open, a new one opens on the native profile. The editor context is
-switched back on for that pane if you had turned it off. Nothing is sent until you press it; the bar goes away when you press it, close it,
-or resume execution.
+switched back on for that pane if you had turned it off. Nothing is sent until you click it; the
+bar goes away when you click it, close it, or resume execution.
 
 What is sent is short. On an exception: *The debugger is paused on an exception. Look at it and
 tell me why.* Otherwise: *The debugger is paused. Look at it and tell me what is going on here.*
