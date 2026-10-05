@@ -66,7 +66,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Display")]
     [DisplayName("Collapse tool results")]
-    [Description("Start every tool row closed, so a long session reads as what Claude did rather than how it got there. The chevron opens one when you want it, and a failed tool stays open either way. Separate from Preview lines, which decides how much of an OPEN row is shown.")]
+    [Description("Start every tool row closed, so a long session reads as what Claude did rather than how it got there. The chevron opens one when you want it; a failed row stays closed too, and still shows its red dot and the button that opens the full output. Separate from Preview lines, which decides how much of an OPEN row is shown.")]
     public bool CollapseTools { get; set; }
 
     [Category("Display")]
