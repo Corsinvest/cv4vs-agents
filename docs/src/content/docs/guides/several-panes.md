@@ -12,7 +12,8 @@ working. This page is about living with more than one.
 A toolbar list of every open pane, Chat and CLI together, each with its title and kind. Docked
 panes hide each other behind tabs; this is how you find the one you want.
 
-The same list is under **View → cv4vs Agents → Active sessions**.
+The same list is under **View → cv4vs Agents → Active sessions**; the entry is absent while no pane
+is open.
 
 ## When a pane needs you
 

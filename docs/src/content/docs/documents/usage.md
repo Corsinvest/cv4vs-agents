@@ -53,7 +53,7 @@ your credentials, nothing is estimated here:
 
 - A **chat pane** on that profile answers from its own running `claude.exe`, after each turn (at most
   once a minute) and whenever a rate-limit event arrives. No extra process.
-- A pane that has **not run a turn yet** has nothing to answer with, so a short-lived `claude.exe`
+- A profile with **no chat pane open** (only a CLI pane) has no process to ask, so a short-lived `claude.exe`
   (started without your MCP servers) fills in: when the numbers are older than *Status bar usage
   refresh (minutes)* (15 by default) while Visual Studio is in front, when the popup opens on numbers
   more than two minutes old, or on **Refresh**. Set the option to `0` and none is ever started in the

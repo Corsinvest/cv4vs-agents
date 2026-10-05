@@ -16,8 +16,16 @@ When the debugger stops, an InfoBar appears over the file it stopped in:
 
 > ⚠ Debugger paused on `DivideByZeroException` at `Calcolatrice.cs:13`.  **[Ask cv4vs Agents]**
 
-Pressing the button activates the last chat pane you used and asks it about the break. Nothing is
-sent until you press it, and the bar goes away on its own when execution resumes.
+On a pause with no exception it reads `Debugger paused at Calcolatrice.cs:13.` If the file is not
+open in an editor, the bar appears at the top of the main window instead: no tab is opened for it.
+
+Pressing the button sends the question straight away to the last chat pane you used, and opens one
+if none is open. Nothing is sent until you press it; the bar goes away when you press it, close it,
+or resume execution.
+
+What is sent is short. On an exception: *The debugger is paused on an exception. Look at it and
+tell me why.* Otherwise: *The debugger is paused. Look at it and tell me what is going on here.*
+Both end with *Do not move the debugger: I am looking at this break.*
 
 The message names neither the file nor the exception type. Both are right there, but the debug
 tools read them live and read more besides: the call stack, the locals, any expression, so naming a
@@ -34,11 +42,12 @@ values rather than a checkbox, because which pauses are worth an offer differs b
 |---|---|
 | `Never` | nothing |
 | `Exceptions only` *(default)* | exceptions: they are a surprise |
-| `Exceptions and breakpoints` | breakpoints too: you placed it and know why you are there, so they are opt-in |
+| `Exceptions and breakpoints` | every other pause that is not a step too: a breakpoint, Break All, `Debugger.Break()`. You asked for those, so they are opt-in |
 
-**Steps** never raise a bar at any setting: one per F10 is noise. A break landing where the
-previous one did is skipped too, so a breakpoint inside a loop raises one bar rather than one per
-iteration.
+**Steps** never raise a bar at any setting: one per F10 is noise. The bar closes when execution
+resumes, and the next pause raises a new one, the same breakpoint included: with breakpoints on, one
+inside a loop offers once per iteration. Only a pause reported twice without leaving break mode is
+shown once.
 
 ## What the agent reads while paused
 

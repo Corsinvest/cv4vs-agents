@@ -11,13 +11,24 @@ The extension drives `claude.exe` and never bundles it. With no CLI installed th
 links to the setup guide, instead of failing silently: install it as in
 [Getting started](/cv4vs-agents/getting-started/#install).
 
-If it is installed and not found, set **Claude executable path** under
-[Options → General](/cv4vs-agents/options/#general). Empty means auto-detect via PATH, the native
-installer or npm. It must be the real `.exe`: `.cmd`/`.bat`/`.ps1` shims can't be launched.
+The extension looks for a file named `claude.exe`, in this order:
+
+1. the **Claude executable path** option ([Options → General](/cv4vs-agents/options/#general));
+2. every folder on the `PATH` Visual Studio was started with;
+3. `%USERPROFILE%\.local\bin` (the native installer);
+4. the npm global folders: `%APPDATA%\npm` and `%LOCALAPPDATA%\npm`, under
+   `node_modules\@anthropic-ai\claude-code\bin`.
+
+The npm shims (`claude`, `claude.cmd`, `claude.ps1`) are skipped: they cannot be launched.
+
+Two things follow. If you installed the CLI while Visual Studio was open, restart Visual Studio so
+it sees the new `PATH`. And a path set in the option that does not exist, or is not an `.exe`, is
+not an error: the extension falls back to auto-detection and writes a warning to the log, so check
+**Info** in the pane's More (…) menu to see which binary is really running.
 
 ## A pane runs against the wrong session, folder or CLI
 
-Open **Session info** from the pane's … menu: the session's title, id and `.jsonl` path, the
+Open **Info** from the pane's More (…) menu: the session's title, id and `.jsonl` path, the
 working directory and profile, and which `claude.exe` is running it (path, version and PID).
 
 A single file opened on its own, with no solution or folder around it, starts the pane in your home
@@ -46,7 +57,8 @@ Silent by default; invaluable when something misbehaves or you're filing a bug.
 </Steps>
 
 **View → cv4vs Agents → Developer → Open data folder** opens the folder the extension writes to;
-what is in it is in [Settings and data](/cv4vs-agents/settings-and-data/).
+what is in it is in [Settings and data](/cv4vs-agents/settings-and-data/). **Open sessions folder**, in a
+pane's More (…) menu, opens the CLI's session folder for that pane's working directory.
 
 ## Specific problems
 
@@ -59,13 +71,21 @@ what is in it is in [Settings and data](/cv4vs-agents/settings-and-data/).
 
 ## Report a bug
 
-- **Report a bug**: the
+**View → cv4vs Agents → Help & Feedback** holds **Documentation** (this site) and three forms on
+GitHub:
+
+- **Report a Bug**: the
   [bug report form](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=bug_report.yml),
-  also under **View → cv4vs Agents → Help & Feedback**, which pre-fills the version for you.
-- **Request a feature**: the
+  with the extension version filled in for you.
+- **Provide Feedback**:
+  [tell us how it's going](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feedback.yml),
+  with the version filled in too.
+- **Request a Feature**: the
   [feature request form](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feature_request.yml).
-- **Feedback**:
-  [tell us how it's going](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=feedback.yml).
+
+Beside it, **Release Notes** opens the notes of the version you are running, and **About** shows
+that version. **Settings**, in the same menu, opens the Options pages without going through Tools →
+Options.
 
 ## Not ours: `claude.exe`
 

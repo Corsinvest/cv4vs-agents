@@ -12,6 +12,19 @@ Right-click code and the submenu offers **Explain**, **Review**, **Find bugs**, 
 and **Simplify**. The prompt lands in the composer, so you can add the half line that matters; the
 file and selection travel with it, so the prompt itself is just the instruction.
 
+The prompts as shipped:
+
+| Menu | Title | Prompt | Needs selection | Send on click |
+|---|---|---|---|---|
+| Editor | Explain | Explain what this code does. | no | no |
+| Editor | Review | Review this code and point out what you would change, and why. | no | no |
+| Editor | Find bugs | Look for bugs in this code. Say so plainly if you find none. | no | no |
+| Editor | Write tests | Write tests for this code, following the ones already in this project. | no | no |
+| Editor | Simplify | Simplify this code without changing what it does. | yes | no |
+| Error List | Explain | For each of these, explain the cause and the fix. | - | yes |
+| Error List | Fix | Fix these errors. | - | yes |
+| Output | Explain | Explain this output. | - | yes |
+
 ## From the Error List and the Output window
 
 Right-click in the **Output window** or the **Error List** and the same **cv4vs Agents** submenu
@@ -25,8 +38,8 @@ What a prompt is handed differs by menu, which is why each has its own list:
 | Menu | What goes with the prompt |
 |---|---|
 | Editor | Nothing in the text: the file and selection travel through the IDE context. |
-| Error List | The rows you selected, below the prompt. Greyed out with none. |
-| Output | What you selected in the pane, or its last 80 lines, below the prompt, fenced. |
+| Error List | The rows you selected (up to 40), one line each with severity, file, line and project, below the prompt. Greyed out with none. |
+| Output | What you selected in the active pane, whichever it is (Build, Debug…), or its last 80 lines, below the prompt, fenced. Selecting only whitespace counts as selecting nothing. Greyed out when the pane is empty. |
 
 The Error List and Output prompts ship with **Send on click** set, as the single "Explain" entry
 those menus used to have always sent.
@@ -51,11 +64,13 @@ what the composer holds.
 
 Solution Explorer and a document's tab have a **cv4vs Agents** submenu too, with **Add reference
 to chat** alone for now: the selected files, folders and projects (a project stands for its
-folder) as references, one per line; on a tab, the whole file.
+folder) as references, one per line; on a tab, the whole file. The entry is greyed out when nothing
+selected has a file or folder on disk.
 
 ## Which pane receives
 
-The last one you worked in, brought to the front. With none open, one is opened. If the
+The last chat pane you worked in, brought to the front: CLI panes are never the target. With none
+open, a Chat pane is opened on the native Claude profile. If the
 IDE-context eye was shut, it is re-opened with the prompt: asking about this code with nothing
 saying which file it is would reach the CLI as a question about nothing.
 
@@ -71,9 +86,18 @@ menu (Editor, Error List, Output).
 | Needs selection | Editor tab only. Greys the entry out when nothing is selected, the way Copilot greys "Optimize selection". Selecting only whitespace counts as nothing; a single character does not. Leave it off for prompts that read fine against the whole file. |
 | Send on click | Sends the turn right away, exactly as pressing the send button would: file and selection included. Off by default: the prompt waits in the composer so you can add the half line that matters. |
 
-Rows appear in the menu in the order listed, so the one you reach for most belongs at the top;
-**Restore defaults** puts back the prompts the extension ships with, for that tab alone.
+Rows appear in the menu in the order listed, so the one you reach for most belongs at the top: the
+arrows under the grid move the selected row. The other buttons add a row, delete the selected one,
+and replace the tab's list with the prompts the extension ships with (after a confirmation, and for
+that tab alone). A row needs both a title and a prompt: Apply is refused until every row has them.
+Delete every row and that menu simply has no prompts.
 
 Like profiles, these are **not** in the VS settings store: they live in `prompts.json` so the
 menus can be built without opening the Options page first; see
 [Settings and data](/cv4vs-agents/settings-and-data/).
+
+The file is an object with one list per menu (`Editor`, `ErrorList`, `Output`); each entry has
+`Title`, `Prompt`, `RequiresSelection` and `SendImmediately`. Edit it by hand if you like, but the
+menus keep the list in memory: the change shows after you open Options → Prompts and press OK, or
+after restarting Visual Studio. A menu whose key is missing gets the shipped prompts; a key holding
+`[]` stays empty.

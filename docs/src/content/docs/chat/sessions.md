@@ -34,7 +34,7 @@ To put the *files* back without leaving the conversation, see
 
 ## Session info
 
-From the pane's … menu: the session's title, id and `.jsonl` path, the working directory and
+**Info**, in the pane's More (…) menu: the session's title, id and `.jsonl` path, the working directory and
 profile, and which `claude.exe` is running it (path, version and PID). Chat panes add what the page
 currently weighs.
 

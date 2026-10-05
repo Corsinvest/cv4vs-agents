@@ -13,7 +13,7 @@ by pinning a CLI version.
 
 | | |
 |---|---|
-| **Visual Studio** | 2022 or 2026 (17.0+), any edition, on Windows 10 1809 or later |
+| **Visual Studio** | 2022 or 2026 (17.0 or later), Community, Professional or Enterprise, x64, on Windows 10 1809 or later. Visual Studio on ARM64 is not supported. No workload is required. |
 | **Claude Code CLI** | installed separately; see below |
 
 ## Install
@@ -42,7 +42,10 @@ by pinning a CLI version.
    [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents),
    or search *cv4vs Agents* in **Extensions → Manage Extensions** inside the IDE.
 
-3. **Open a pane.** In Visual Studio: **View → cv4vs Agents → Claude**.
+3. **Open a pane.** In Visual Studio: **View → cv4vs Agents → Claude**. It opens a Chat pane. For
+   the terminal instead, use the arrow beside **New** on the pane's toolbar and pick **CLI**, or set
+   **Default new session** to CLI under [Options → General](/cv4vs-agents/options/#general): the View
+   menu then opens CLI panes.
 
 </Steps>
 
