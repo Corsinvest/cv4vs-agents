@@ -48,6 +48,8 @@ the text the edit replaces with the text it puts there, with the editor's own co
 navigation. Clicking the same row again closes it; opening another change replaces it, so the chat
 never leaves a trail of diff tabs behind.
 
+![The read-only diff: Original on the left, Proposed on the right](../../../../images/chat/readonly-diff.png)
+
 This view is for reading. In a Chat pane the change is approved or refused in the conversation,
 with the approval prompt (see [Permissions](/cv4vs-agents/chat/permissions/#approving-a-tool)):
 saving or closing the diff tab decides nothing, and the tab closes by itself once you answer.

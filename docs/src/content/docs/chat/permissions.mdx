@@ -42,6 +42,8 @@ agent should ask you before doing with Visual Studio is decided in your `CLAUDE.
 When a tool needs your approval the prompt takes the composer's place until you answer; a draft you
 were writing is kept. It names the tool (*Allow this Bash command?*) and shows what it would run.
 
+![The approval prompt on a shell command: the command in an editable box, the three choices, the text field](../../../../images/chat/permission-prompt.png)
+
 | Key | Choice |
 |---|---|
 | 1 | **Yes**: this once |
@@ -85,6 +87,8 @@ questions in one panel, one tab each, single- or multi-select, with an **Other**
 your own text. A single-select answer moves to the next question by itself; **Submit answers** is
 enabled once every question has one. Esc, or the cross, cancels.
 
+![A question with several tabs and an Other choice](../../../../images/chat/ask-question.png)
+
 Once answered, the row is compact by default (only what you picked); turn off **Compact Ask
 answers** in Options to keep every option listed with your pick highlighted.
 
@@ -94,6 +98,8 @@ A long plan doesn't have to be read through the banner's small scrolling box: **
 shows it as a normal document in VS's Markdown editor, full-size. While it is still waiting on your
 answer you can change it there and save; the banner picks the change up (*Edited in the editor:
 this version is what gets approved*), and approving sends what *you* wrote, not what was proposed.
+
+![The plan prompt: Open in editor and the three answers](../../../../images/chat/plan-prompt.png)
 
 The prompt asks which mode to continue in, not whether to run something:
 

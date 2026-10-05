@@ -55,7 +55,11 @@ How much of the work the transcript shows, from the **View mode** slider in the 
 | **Hide tools** | the tool rows are dropped altogether; thinking rows stay |
 
 Kept in every mode: your answers to questions, plan decisions, the task list, and a call waiting
-for your approval. A fold opened while its run was still working closes again when the turn ends.
+for your approval.
+
+![The task list in the conversation](../../../../images/chat/todo-list.png) A fold opened while its run was still working closes again when the turn ends.
+
+![Focus: a run of tool calls folded into one row](../../../../images/chat/focus-row.png)
 
 ## Diffs
 
@@ -68,6 +72,8 @@ change in Visual Studio's native side-by-side diff. See
 
 With **Thinking** on, the model's reasoning appears as a closed row above the answer: *Thinking…
 12s* while it runs, *Thought for 12s · ~88 tok* afterwards. Open it to read the reasoning.
+
+![A thinking row, closed](../../../../images/chat/thinking-row.png)
 
 ## Compaction
 

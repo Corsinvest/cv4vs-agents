@@ -56,6 +56,8 @@ To put the *files* back without leaving the conversation, see
 profile, and which `claude.exe` is running it (path, version and PID). Chat panes add what the page
 currently weighs. A **Copy** button puts the whole report on the clipboard, for a bug report.
 
+![The Info dialog: session, working directory, profile and the CLI that is running](../../../../images/pane-info.png)
+
 The first thing to open when something is running against the wrong session, the wrong folder, or
 the wrong CLI.
 

@@ -42,6 +42,8 @@ The InfoBar or the notification lands your focus on the open ask (its first choi
 textarea, so you can answer immediately. The notice goes away when you click into the pane, use
 **Go to pane**, or the turn ends.
 
+![The InfoBar on the main window: Chat #N needs your input, with Go to pane](../../../../images/pane-attention-infobar.png)
+
 Only chat panes notify: a CLI pane is a terminal, and nothing tells the extension when it is
 waiting.
 
