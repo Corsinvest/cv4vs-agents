@@ -10,7 +10,7 @@ hero:
   actions:
     - text: Get started
       link: /cv4vs-agents/getting-started/
-      icon: right-arrow
+      icon: rocket
     - text: MCP tools
       link: /cv4vs-agents/mcp-tools/
       variant: secondary
@@ -29,7 +29,7 @@ import { Card, CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
 
     ![The chat pane docked in Visual Studio](../../../images/chat.png)
   </Card>
-  <Card title="CLI" icon="laptop">
+  <Card title="CLI" icon="window">
     The real Claude Code CLI, in a real terminal, on the same session store.
 
     ![The CLI pane running the same session](../../../images/cli.png)
@@ -48,19 +48,19 @@ Both are multi-instance and dockable, each on its own session. See
 
     [MCP tools](/cv4vs-agents/mcp-tools/)
   </Card>
-  <Card title="The live debugger" icon="magnifier">
+  <Card title="The live debugger" icon="error">
     Stop on an exception and one press asks about the break: the agent reads the live stack and
     locals rather than guessing from the source.
 
     [Debug with the agent](/cv4vs-agents/guides/debug-with-the-agent/)
   </Card>
-  <Card title="Changes in Visual Studio's own diff" icon="approve-check">
+  <Card title="Changes in Visual Studio's own diff" icon="approve-check-circle">
     Every Edit/Write shows as an inline diff, and opens in the native, editable side-by-side one:
     save to accept, close to reject.
 
     [Reviewing changes](/cv4vs-agents/chat/diff/)
   </Card>
-  <Card title="The same CLI as VS Code" icon="document">
+  <Card title="The same CLI as VS Code" icon="vscode">
     It drives the real `claude.exe`, so sessions, commands, plugins and settings are the ones the VS
     Code extension and the terminal see.
 
@@ -91,18 +91,18 @@ The whole walkthrough is in [Getting started](/cv4vs-agents/getting-started/).
 ## Find your way
 
 <CardGrid>
-  <Card title="Work in the chat" icon="pencil">
+  <Card title="Work in the chat" icon="comment-alt">
     - [The composer](/cv4vs-agents/chat/composer/)
     - [Permissions](/cv4vs-agents/chat/permissions/)
     - [Sub-agents](/cv4vs-agents/chat/sub-agents/)
     - [Rewinding files](/cv4vs-agents/chat/rewind/)
   </Card>
-  <Card title="Let the agent use the IDE" icon="rocket">
+  <Card title="Let the agent use the IDE" icon="desktop">
     - [Teach the agent about the IDE](/cv4vs-agents/guides/teach-the-agent/)
     - [Ask from the editor](/cv4vs-agents/guides/ask-from-the-editor/)
     - [Editor context](/cv4vs-agents/ide-integration/)
   </Card>
-  <Card title="Keep cost in view" icon="information">
+  <Card title="Keep cost in view" icon="analytics">
     - [The context gauge](/cv4vs-agents/chat/context-and-usage/)
     - [Spending less context](/cv4vs-agents/guides/spending-less-context/)
     - [Usage](/cv4vs-agents/documents/usage/) and [Statistics](/cv4vs-agents/documents/statistics/)
