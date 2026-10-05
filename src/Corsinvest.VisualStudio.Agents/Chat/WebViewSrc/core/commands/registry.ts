@@ -30,7 +30,7 @@ import {
     SwitchModelsOnFlagCommand,
 } from './model-controls';
 import { RewindCommand } from './rewind';
-import { ViewModeCommand } from './view-mode';
+import { ViewModeCommand, SET_VIEW_MODE_COMMANDS } from './view-mode';
 import { RemoteControlAtStartupCommand } from './remote-control-at-startup';
 import { SlashCommand } from './slash';
 
@@ -59,6 +59,7 @@ export const STATIC_COMMANDS: readonly ChatCommand[] = [
     new ContextCommand(),
     new StatsCommand(),
     new ViewModeCommand(),
+    ...SET_VIEW_MODE_COMMANDS,
     new RemoteControlAtStartupCommand(),
     new GeneralConfigCommand(),
     new ManagePluginsCommand(),

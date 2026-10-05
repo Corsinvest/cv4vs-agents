@@ -47,7 +47,7 @@ menu open.
 | **Model** | Switch model…, Effort, Ultracode, Switch permission mode…, Thinking, Fast mode, Switch models when a message is flagged, Account & usage…, Context usage…, Statistics… |
 | **Customize** | Manage plugins, Open Claude in Terminal |
 | **Slash Commands** | the CLI's own commands and skills, each with its argument hint |
-| **Settings** | View mode (a slider: Full, Focus, Hide tools), Enable Remote Control for all sessions, Settings… |
+| **Settings** | View mode (a slider: Full, Focus, Hide tools), `/vm:full`, `/vm:focus` and `/vm:hide` (one mode each, see [View mode](/cv4vs-agents/chat/conversation/#view-mode)), Enable Remote Control for all sessions, Settings… |
 | **Support** | View help docs, Report a problem |
 
 Three rules worth knowing:
