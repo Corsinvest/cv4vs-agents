@@ -1,12 +1,36 @@
 ---
-title: What differs from the official VS Code extension
-description: Where this extension does things differently from Anthropic's VS Code extension, or does things that do not exist there.
+title: Compared with the official VS Code extension
+description: What is the same as in Anthropic's VS Code extension, because the same CLI is behind both, and what Visual Studio does differently.
 sidebar:
-  label: Differences from VS Code
+  label: Compared with VS Code
 ---
 
 This extension aims for parity with Anthropic's VS Code extension where it makes sense, but Visual
 Studio is a different host, so several things are done differently, or don't exist there.
+
+## What is the same
+
+The chat is not a reimplementation of Claude. It drives the real `claude.exe`, and starts it the
+way the VS Code extension does: over the stream-json control protocol, with the CLI told it runs
+inside an IDE (`CLAUDE_CODE_ENTRYPOINT=claude-vscode`). What you get from the CLI is therefore the
+CLI's, not a copy of it:
+
+- **The same sessions.** One store, the CLI's own: a conversation started in VS Code or in a
+  terminal shows up here, and vice versa. See [Sessions](/cv4vs-agents/chat/sessions/).
+- **The same commands.** The `/` palette lists the CLI's own slash and skill commands, next to the
+  extension's built-in actions.
+- **The same plugins.** Plugins live in the CLI's store, so what you install here is the same set
+  the CLI, the VS Code extension and the terminal see. See [Plugins](/cv4vs-agents/claude/plugins/).
+- **The same settings and login.** `~/.claude/settings.json` (permissions, hooks, env) belongs to
+  the CLI, and so does sign-in: the extension holds no credentials. See
+  [Authentication and security](/cv4vs-agents/claude/authentication/).
+- **The same editor channel.** Visual Studio pushes the editor selection to the CLI over the IDE
+  integration channel, the same way the VS Code extension does.
+
+Because it is the CLI doing the work, a newer CLI is handled by feature-detection, not by pinning a
+version: the extension never bundles it. See [Updating Claude Code](/cv4vs-agents/claude/updating/).
+
+What follows is where the two part ways.
 
 ## Two distinct panes, multi-instance
 

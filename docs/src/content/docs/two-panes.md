@@ -19,6 +19,10 @@ attached to the prompt) and the real CLI. One session store: open it in either, 
 A rich WebView2 UI (TypeScript + Lit). It drives `claude.exe` in headless mode over the NDJSON
 stream-json control protocol, and exposes the IDE to the CLI through an in-process MCP server.
 
+It is the same CLI, started the same way, as behind Anthropic's VS Code extension: sessions,
+commands, plugins and settings are shared with it. See
+[Compared with the official VS Code extension](/cv4vs-agents/claude/vs-code-differences/).
+
 What it adds on top of the CLI is in the **Chat** section of this site, starting from
 [The composer](/cv4vs-agents/chat/composer/).
 
