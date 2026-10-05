@@ -42,13 +42,13 @@ iteration.
 
 ## What the agent reads while paused
 
-Inspection only works in break mode; `debug_get_state` is the exception, and answers in any mode.
+The tools in this table need break mode, except `debug_get_state`, which answers in any mode.
 Paused, the agent can ask for:
 
 | Tool | What comes back |
 |---|---|
 | `debug_get_state` | the mode (`design`, `run`, `break`), the file and line where execution is paused and, on an exception, its type and message |
-| `debug_get_callstack` | each frame's index, function and module |
+| `debug_get_callstack` | each frame's index, function, module and, where it has source, file and line; `isCurrent` marks the frame the inspection tools read |
 | `debug_get_locals` | the parameters and local variables of the selected frame, with name, type and value |
 | `debug_evaluate` | the value and type of an expression, like the Watch window |
 | `debug_expand` | an object as a tree of members; `$exception` when stopped on a throw, which carries `InnerException` and the stack |
@@ -65,7 +65,8 @@ When the agent drives the session itself, this is the order the tools are built 
 
 <Steps>
 
-1. `debug_set_breakpoint` at a file and line, optionally with a condition or a hit count.
+1. `debug_set_breakpoint` at a file and line, optionally with a condition or a hit count. A line
+   with no statement on it is refused rather than moved.
 2. `debug_start`: equivalent to F5 on the startup project. It returns once launched.
 3. Poll `debug_get_state` until the mode is `break`.
 4. `debug_get_callstack` and `debug_get_locals` to read where it stopped.
@@ -75,6 +76,21 @@ When the agent drives the session itself, this is the order the tools are built 
 
 For a program that is already running (a web server, a service), `debug_attach` takes the place of
 `debug_start`, and `debug_detach` always leaves it running afterwards.
+
+## When it never stops
+
+A breakpoint that is never hit is its own case, and two tools answer it. `debug_list_breakpoints`
+reports `bound` and `currentHits` for each breakpoint: `bound` 0 during a session means it resolved
+to no code, and `currentHits` 0 with `bound` above it means the line was never reached, or the
+condition said no. `debug_list_modules` shows whether the module's symbols were loaded, which is
+nearly always why a breakpoint will not bind.
+
+## Console programs
+
+A console application's own output is not in the Debug output pane: that pane only carries
+`Debug.WriteLine`. `debug_console_read` reads what the program wrote to its console, and
+`debug_console_send` answers it: a `Console.ReadLine` that nobody answers blocks the debug session
+indefinitely.
 
 ## Tests under the debugger
 
