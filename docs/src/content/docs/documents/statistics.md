@@ -8,6 +8,8 @@ A full-window view under **View → cv4vs Agents → Analytics → Statistics**:
 document-tab in the editor area (not a dockable tool-window), so it gets the whole window for the
 charts and tables. (For the live plan / rate-limit view, see [Usage](/cv4vs-agents/documents/usage/).)
 
+![The Analytics submenu: Statistics, Usage, Context usage, File history](../../../../images/analytics-menu.png)
+
 ![Statistics document-tab](../../../../images/statistics-document.png)
 
 ## The tree (left)

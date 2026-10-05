@@ -20,6 +20,8 @@ A search box filters by title as you type; Enter opens the first match, ↓ move
 closes. The session the pane is on carries a ✓. Each row shows how long ago it was used (`just
 now`, `12m`, `3h`, `5d`, then the date); the tooltip has the full id and timestamp.
 
+![Session History: the search box, the current session ticked, how long ago each was used](../../../../images/session-history.png)
+
 A session is listed under a title chosen in this order: your rename, the AI-generated title, the
 last prompt, cut to 60 characters on one line. Sessions in which no prompt was ever sent, and
 sub-agent transcripts, are left out.

@@ -62,6 +62,10 @@ chat.
 
 **New Session** and **Session History** are disabled until the pane's process is up.
 
+![The New Instance arrow: a new Chat or CLI pane](../../../images/pane-new-instance.png)
+
+![Open panes: every open pane with its number, profile and session title](../../../images/pane-open-panes.png)
+
 ![The More menu: Info, Open sessions folder and, when enabled, the two WebView developer entries](../../../images/pane-more-menu.png)
 
 ## What changes without a restart

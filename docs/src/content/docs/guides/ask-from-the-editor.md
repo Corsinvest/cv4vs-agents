@@ -12,6 +12,8 @@ Right-click code and the submenu offers **Explain**, **Review**, **Find bugs**, 
 and **Simplify**. The prompt lands in the composer, so you can add the half line that matters; the
 file and selection travel with it, so the prompt itself is just the instruction.
 
+![The cv4vs Agents submenu in the editor. With nothing selected, Simplify and Add selection to chat are greyed out](../../../../images/editor-context-menu.png)
+
 The prompts as shipped:
 
 | Menu | Title | Prompt | Needs selection | Send on click |
@@ -32,6 +34,10 @@ offers its own prompts: Explain and Fix in the Error List, Explain in the Output
 Error List it takes the rows you selected, with their
 file, line and project; in the Output window your selection, or the tail of the pane when you
 selected nothing: a build error is worth asking about without highlighting it first.
+
+![The submenu in the Error List: Explain, Fix, Add to chat](../../../../images/errorlist-context-menu.png)
+
+![The submenu in the Output window: Explain, Add to chat](../../../../images/output-context-menu.png)
 
 What a prompt is handed differs by menu, which is why each has its own list:
 

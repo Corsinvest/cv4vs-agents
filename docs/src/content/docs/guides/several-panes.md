@@ -16,6 +16,8 @@ panes hide each other behind tabs; this is how you find the one you want.
 The same list is under **View → cv4vs Agents → Active sessions**; the entry is absent while no pane
 is open.
 
+![Active sessions: one entry per open pane](../../../../images/active-sessions-menu.png)
+
 ## When a pane needs you
 
 With several chat panes open (or Visual Studio in the background) you'd otherwise have no way to
