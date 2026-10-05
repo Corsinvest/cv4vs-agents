@@ -23,6 +23,7 @@ namespace Corsinvest.VisualStudio.Agents.Menu;
 internal static class GlobalMenuCommands
 {
     private const string RepoUrl = "https://github.com/Corsinvest/cv4vs-agents";
+    private const string DocsUrl = "https://corsinvest.github.io/cv4vs-agents/";
 
     public static async Task InitializeAsync(AsyncPackage package)
     {
@@ -46,7 +47,7 @@ internal static class GlobalMenuCommands
         ClaudeUpdate.Completed += _ => RefreshCommandState();
         Add(svc, PackageIds.DataFolderCommandId, () => ShellHelpers.OpenExternal(AppPaths.DataFolder));
         Add(svc, PackageIds.OutputLogCommandId, OutputWindowLogger.ActivatePane);
-        Add(svc, PackageIds.DocumentationCommandId, () => ShellHelpers.OpenExternal(RepoUrl));
+        Add(svc, PackageIds.DocumentationCommandId, () => ShellHelpers.OpenExternal(DocsUrl));
         // The release for the running version, not the list: /releases/tag/v<version>. A build
         // that was actually shipped has a matching tag; a local build 404s to GitHub's own
         // "release not found" page, which links back to the list.

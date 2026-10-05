@@ -1,0 +1,131 @@
+---
+title: Debug with the agent
+description: Stop on an exception and ask about it; the agent reads the live call stack and locals instead of guessing from the source.
+---
+
+import { Steps, Aside, LinkCard, CardGrid } from '@astrojs/starlight/components';
+
+When something is wrong, you don't guess from reading the source: you set a breakpoint, step
+through, evaluate an expression, watch the values change. The agent can do the same. The
+[`debug_*` tools](/cv4vs-agents/mcp-tools/#debug) hand it Visual Studio's live debugger:
+breakpoints, stepping, the call stack, locals, evaluate.
+
+## The offer when you break
+
+When the debugger stops, an InfoBar appears over the file it stopped in. It names the exception and
+where execution is, *Debugger paused on COMException at AgentsOptions.cs:51.*, and ends with a link,
+**Ask cv4vs Agents**, and a cross to close it:
+
+![The InfoBar over the file the debugger stopped in](../../../../images/debug-infobar.png)
+
+On a pause with no exception it reads `Debugger paused at AgentsOptions.cs:51.` If the file is not
+open in an editor, the bar appears at the top of the main window instead: no tab is opened for it.
+
+Clicking the link sends the question straight away to the most recently opened chat pane and
+brings it forward; with none open, a new one opens on the native profile. The editor context is
+switched back on for that pane if you had turned it off. Nothing is sent until you click it; the
+bar goes away when you click it, close it, or resume execution.
+
+What is sent is short. On an exception: *The debugger is paused on an exception. Look at it and
+tell me why.* Otherwise: *The debugger is paused. Look at it and tell me what is going on here.*
+Both end with *Do not move the debugger: I am looking at this break.*
+
+The message names neither the file nor the exception type. Both are right there, but the debug
+tools read them live and read more besides: the call stack, the locals, any expression, so naming a
+type up front would only anchor the answer on the outermost exception when the cause is usually an
+`InnerException` two levels down. What the message does say is to leave the debugger where it is:
+those same tools can step and continue, and you are standing in that break looking at it.
+
+### Which pauses raise the bar
+
+**Tools → Options → cv4vs Agents → General → Offer to ask when the debugger pauses** has three
+values rather than a checkbox, because which pauses are worth an offer differs by kind:
+
+| Value | Raises the bar on |
+|---|---|
+| `Never` | nothing |
+| `Exceptions` *(default)* | exceptions: they are a surprise |
+| `ExceptionsAndBreakpoints` | every other pause that is not a step too: a breakpoint, Break All, `Debugger.Break()`. You asked for those, so they are opt-in |
+
+**Steps** never raise a bar at any setting: one per F10 is noise. The bar closes when execution
+resumes, and the next pause raises a new one, the same breakpoint included: with breakpoints on, one
+inside a loop offers once per iteration. Only a pause reported twice without leaving break mode is
+shown once.
+
+## What the agent reads while paused
+
+The tools in this table need break mode, except `debug_get_state`, which answers in any mode.
+Paused, the agent can ask for:
+
+| Tool | What comes back |
+|---|---|
+| `debug_get_state` | the mode (`design`, `run`, `break`), the file and line where execution is paused and, on an exception, its type and message |
+| `debug_get_callstack` | each frame's index, function, module and, where it has source, file and line; `isCurrent` marks the frame the inspection tools read |
+| `debug_get_locals` | the parameters and local variables of the selected frame, with name, type and value |
+| `debug_evaluate` | the value and type of an expression, like the Watch window |
+| `debug_expand` | an object as a tree of members; `$exception` when stopped on a throw, which carries `InnerException` and the stack |
+| `debug_list_threads` | the threads, with location and whether each is frozen |
+
+<Aside type="caution">
+Evaluating can call property getters and methods in the program, so `debug_evaluate` and
+`debug_expand` may have side effects, and `debug_evaluate` accepts assignments.
+</Aside>
+
+## The usual cycle
+
+When the agent drives the session itself, this is the order the tools are built for:
+
+<Steps>
+
+1. `debug_set_breakpoint` at a file and line, optionally with a condition or a hit count. A line
+   with no statement on it is refused rather than moved.
+2. `debug_start`: equivalent to F5 on the startup project. It returns once launched.
+3. Poll `debug_get_state` until the mode is `break`.
+4. `debug_get_callstack` and `debug_get_locals` to read where it stopped.
+5. `debug_step` (`over`, `into`, `out`), `debug_run_to_line` or `debug_continue`.
+
+</Steps>
+
+For a program that is already running (a web server, a service), `debug_attach` takes the place of
+`debug_start`, and `debug_detach` always leaves it running afterwards.
+
+## When it never stops
+
+A breakpoint that is never hit is its own case, and two tools answer it. `debug_list_breakpoints`
+reports `bound` and `currentHits` for each breakpoint: `bound` 0 during a session means it resolved
+to no code, and `currentHits` 0 with `bound` above it means the line was never reached, or the
+condition said no. `debug_list_modules` shows whether the module's symbols were loaded, which is
+nearly always why a breakpoint will not bind.
+
+## Console programs
+
+A console application's own output is not in the Debug output pane: that pane only carries
+`Debug.WriteLine`. `debug_console_read` reads what the program wrote to its console, and
+`debug_console_send` answers it: a `Console.ReadLine` that nobody answers blocks the debug session
+indefinitely.
+
+## Tests under the debugger
+
+`test_run_with_debugger` runs tests under the IDE's debugger, so execution stops where one fails
+and the tools above can read the state there. Set the breakpoints first and filter down to the
+failing test, otherwise the whole suite runs under a debugger for nothing. `test_run` is the plain,
+faster version.
+
+## Editing during a session
+
+`debug_apply_hot_reload` applies pending code edits to the running program without restarting it
+(Hot Reload / Edit and Continue). An edit Hot Reload cannot take, such as a changed method
+signature or a new type, needs `debug_restart`.
+
+## What to ask before
+
+<Aside type="caution">
+`debug_start` and `debug_stop` take over the IDE, and `debug_set_next_statement` skips code rather
+than running it. Tell the agent to ask before using them: see
+[Teach the agent about the IDE](/cv4vs-agents/guides/teach-the-agent/).
+</Aside>
+
+<CardGrid>
+  <LinkCard title="All the debug tools" description="Every debug_* tool, with what it does and when it is valid." href="/cv4vs-agents/mcp-tools/#debug" />
+  <LinkCard title="Options: General" description="Where the offer is turned on, off or widened to breakpoints." href="/cv4vs-agents/options/#general" />
+</CardGrid>

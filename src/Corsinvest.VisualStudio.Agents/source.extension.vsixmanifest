@@ -6,8 +6,9 @@
               Publisher="Corsinvest Srl" />
     <DisplayName>cv4vs Agents</DisplayName>
     <Description xml:space="preserve">Claude Code inside Visual Studio: agentic coding with a rich chat pane and an interactive terminal, wired into the editor, solution and debugger through an in-process MCP server.</Description>
-    <MoreInfo>https://github.com/Corsinvest/cv4vs-agents</MoreInfo>
+    <MoreInfo>https://corsinvest.github.io/cv4vs-agents/</MoreInfo>
     <License>LICENSE</License>
+    <GettingStartedGuide>https://corsinvest.github.io/cv4vs-agents/getting-started/</GettingStartedGuide>
     <!-- A URL rather than a file: the release workflow publishes each version's CHANGELOG section
          there, so the link stays current without the manifest naming a version. The schema fixes
          the order of these elements: ReleaseNotes belongs after License, not before. -->
