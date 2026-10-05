@@ -18,19 +18,19 @@ public sealed class InitializedEventArgs
     public string FastModeState { get; set; }
 }
 
-/// <summary>The CLI's full startup state, gathered from `initialize` (fast_mode_state) + `get_settings`
-/// (model + toggles) right after StartProcess, WITHOUT a user turn (system/init only arrives on the
-/// first turn, so it can't seed the UI on open). The pane maps these onto the webview DTO and adds
-/// PermissionMode (which the CLI doesn't report: we pass it via --permission-mode). Fired on every
-/// startup (open + respawn). Fields are null when get_settings fails.</summary>
+/// <summary>The CLI's full startup state, gathered from `initialize` (fast_mode_state,
+/// current_permission_mode) + `get_settings` (model + toggles) right after StartProcess, WITHOUT a
+/// user turn (system/init only arrives on the first turn, so it can't seed the UI on open). The
+/// pane maps these onto the webview DTO. Fired on every startup (open + respawn). Fields are null
+/// when get_settings fails.</summary>
 public sealed class CliStateReceivedEventArgs
 {
     // From get_settings.applied.model (resume = the session's own model, new = the settings default,
     // already resolved to a served id). Empty/null → the webview shows "Default".
     public string Model { get; set; }
-    // The permission mode WE passed at launch (--permission-mode from Options/.jsonl). The CLI doesn't
-    // report it, so the client captures its own value at startup, carried here so a rapid respawn
-    // can't swap _client.PermissionMode out from under a late-firing event.
+    // initialize.current_permission_mode: the mode the CLI is really in. On a CLI that doesn't
+    // report it, the one WE passed at launch (--permission-mode from Options/.jsonl), captured at
+    // startup so a rapid respawn can't swap _client.PermissionMode out from under a late event.
     public string PermissionMode { get; set; }
     // applied.effort (post-model-gate) ?? effective.effortLevel. Raw string ("low"|"medium"|"high"|"xhigh").
     public string EffortLevel { get; set; }

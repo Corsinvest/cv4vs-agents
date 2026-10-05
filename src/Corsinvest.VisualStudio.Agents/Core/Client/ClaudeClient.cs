@@ -255,12 +255,19 @@ internal sealed partial class ClaudeClient : IClaudeClient
         if (options.AllowBypassPermissions) { args += " --allow-dangerously-skip-permissions"; }
 
         // The mode decides WHICH tools need confirmation, the prompt-tool is the channel to ask.
-        var mode = options.InitialPermissionMode ?? Client.PermissionMode.Default;
-        if (mode == Client.PermissionMode.AcceptEdits) { args += " --permission-mode acceptEdits"; }
-        else if (mode == Client.PermissionMode.Plan) { args += " --permission-mode plan"; }
-        else if (mode == Client.PermissionMode.Auto) { args += " --permission-mode auto"; }
-        // Needed on resume: a session left in bypass would otherwise restart in `default`.
-        else if (mode == Client.PermissionMode.BypassPermissions) { args += " --permission-mode bypassPermissions"; }
+        // Always passed, `default` included: without the flag the CLI starts in the user's
+        // `permissions.defaultMode` (settings.json), while the selector reads "Manual".
+        // A closed list, not the value as it comes: it is read back from a .jsonl, and the CLI
+        // exits on a mode it doesn't know. Anything else starts in the cautious one.
+        args += " --permission-mode " + options.InitialPermissionMode switch
+        {
+            Client.PermissionMode.AcceptEdits
+                or Client.PermissionMode.Plan
+                or Client.PermissionMode.Auto
+                or Client.PermissionMode.DontAsk
+                or Client.PermissionMode.BypassPermissions => options.InitialPermissionMode,
+            _ => Client.PermissionMode.Default,
+        };
 
         // ALWAYS, whatever the mode. Verified on CLI 2.1.220: without this flag the CLI drops
         // AskUserQuestion from the session entirely: the turn ends `success` and the question is
@@ -370,7 +377,8 @@ internal sealed partial class ClaudeClient : IClaudeClient
         try
         {
             // Capture the permission mode for THIS startup up front, before the awaits below let a
-            // rapid respawn reassign the field (the CLI never reports permissionMode; it's ours).
+            // rapid respawn reassign the field. It is what we asked for; the initialize reply below
+            // says what the CLI made of it.
             var permissionMode = PermissionMode;
             // Declare SDK MCP servers inside `initialize` (not via mcp_set_servers after init):
             // the JS SDK's flow; the CLI uses this to build the full reply (incl. unavailable_models).
@@ -423,6 +431,17 @@ internal sealed partial class ClaudeClient : IClaudeClient
             // the account/org (else absent → "off"). It's the ONLY startup field the CLI won't give
             // via get_settings.
             var fastModeState = resp.Val("fast_mode_state", "off");
+
+            // The CLI's own answer, before any turn: it differs from what was asked when the model
+            // doesn't support that mode. Absent on older CLIs, where what we passed is all there is.
+            var reportedMode = resp.Val("current_permission_mode");
+            if (!string.IsNullOrEmpty(reportedMode) && reportedMode != permissionMode)
+            {
+                _log.Debug(() => $"[client] permission mode from initialize: {permissionMode} → {reportedMode}");
+                // Unless a respawn or the selector moved the field while this was in flight.
+                if (PermissionMode == permissionMode) { PermissionMode = reportedMode; }
+                permissionMode = reportedMode;
+            }
 
             // get_settings gives the model + the Model-menu toggles without a turn (applied.* are the
             // runtime-resolved values that actually go to the API; effective.* is the disk merge).
