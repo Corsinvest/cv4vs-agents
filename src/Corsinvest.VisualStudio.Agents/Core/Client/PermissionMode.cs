@@ -11,6 +11,8 @@ public static class PermissionMode
     public const string AcceptEdits = "acceptEdits";
     public const string Plan = "plan";
     public const string Auto = "auto";
+    // Never offered by the selector: only ever met on a session resumed from the terminal.
+    public const string DontAsk = "dontAsk";
     public const string BypassPermissions = "bypassPermissions";
 
     /// <summary>Map the Options enum to the CLI's wire value. <paramref name="allowBypass"/> is

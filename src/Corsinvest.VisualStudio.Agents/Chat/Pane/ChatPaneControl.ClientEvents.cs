@@ -182,8 +182,7 @@ public partial class ChatPaneControl
 
     // The CLI's startup state (initialize + get_settings, gathered by ClaudeClient.StartupAsync
     // WITHOUT a user turn: system/init only arrives on the first turn, too late to enable the
-    // toolbar). Fired on every startup (open + respawn). PermissionMode isn't in the CLI's reply:
-    // we pass it via --permission-mode, so it's read from the client here.
+    // toolbar). Fired on every startup (open + respawn).
     // Its own message, not ui_init: this lands seconds after the pane opens, and the config the
     // WebView needs to render its first history cannot wait for it.
     private void OnCliStateReceived(object sender, CliStateReceivedEventArgs e)
@@ -198,10 +197,8 @@ public partial class ChatPaneControl
                 {
                     // Empty model → the webview shows "Default"; get_settings usually fills it in.
                     Model = e.Model ?? "",
-                    // The startup reply doesn't carry permissionMode (it's ours, passed as
-                    // --permission-mode), so it's read from the client here, captured at this
-                    // startup so a respawn can't stale it. Later changes DO come from the CLI,
-                    // on system/status (OnPermissionModeChanged).
+                    // What the CLI reported at this startup, so a respawn can't stale it. Later
+                    // changes come on system/status (OnPermissionModeChanged).
                     PermissionMode = e.PermissionMode ?? "default",
                     EffortLevel = Enum.TryParse<Contracts.EffortLevelDto>(e.EffortLevel, ignoreCase: true, out var lvl) ? lvl : (Contracts.EffortLevelDto?)null,
                     AlwaysThinkingEnabled = e.AlwaysThinkingEnabled,
