@@ -17,9 +17,11 @@ export default defineConfig({
       description: 'Claude Code inside Visual Studio 2022 and 2026: a rich chat, a real terminal and the IDE handed to the agent as tools.',
       logo: { src: './src/assets/mascot.svg', alt: '' },
       favicon: '/icon.svg',
-      customCss: ['./src/styles/vs2026.css'],
+      customCss: ['./src/styles/vs2026.css', './src/styles/corsinvest-link.css'],
       social: [
         { icon: 'github', label: 'GitHub', href: 'https://github.com/Corsinvest/cv4vs-agents' },
+        // The icon is a stand-in: corsinvest-link.css draws the Corsinvest mark over it.
+        { icon: 'external', label: 'Corsinvest', href: 'https://www.corsinvest.it' },
       ],
       head: [socialLinksInNewTab],
       editLink: { baseUrl: 'https://github.com/Corsinvest/cv4vs-agents/edit/master/docs/' },

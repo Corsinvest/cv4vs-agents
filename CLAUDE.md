@@ -170,7 +170,10 @@ nothing else. `src/components/IconCard.astro` is Starlight's `Card` for an icon 
 have (the bug on the home page): `Card` takes only a built-in name. Use `Card` whenever it has one. The accents there are stops of the gradients in
 `src/Corsinvest.VisualStudio.Agents/Resources/plugin-logo.svg`. The other exception is `docs/external-links.mjs`, which opens external
 links in a new tab at build time: a link written through a component (`LinkCard`, a hero action, a
-sidebar entry) does not pass through it and takes `target` and `rel` by hand.
+sidebar entry) does not pass through it and takes `target` and `rel` by hand. The last one is
+`src/styles/corsinvest-link.css`: the Corsinvest mark in the header beside GitHub, drawn over a
+stand-in social icon because `social` takes only built-in names. It is the one rule that targets a
+Starlight class (`.social-icons`), so check the header after a Starlight upgrade.
 
 Links between pages are site-absolute (`/cv4vs-agents/<slug>/`). The README, the listing, the
 Documentation menu entry (`GlobalMenuCommands.DocsUrl`) and the chat's Help (`links.ts`) link to
