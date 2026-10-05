@@ -43,6 +43,8 @@ And it offers before you ask. Stop on an exception and a bar appears over that f
 about the break, and the answer comes from the live call stack and locals rather than a guess at the
 source. Breakpoints are opt-in (you placed it, you know why you are there) and stepping never asks.
 
+[Every tool, one by one](https://corsinvest.github.io/cv4vs-agents/mcp-tools/) in the documentation.
+
 ---
 
 ## Before you start
@@ -65,6 +67,8 @@ you are already signed in with.
 
 It is **not** a fork of the CLI. The binary is never bundled, and version differences are handled
 by feature detection rather than by pinning a version.
+
+[The whole walkthrough](https://corsinvest.github.io/cv4vs-agents/getting-started/) in the documentation.
 
 ---
 
@@ -94,6 +98,8 @@ Both read the same session store, so a conversation started in one opens in the 
 Code. Not one *or* the other: both, on the same conversation. Panes can run on different working
 directories at the same time.
 
+[More on the two panes](https://corsinvest.github.io/cv4vs-agents/two-panes/) in the documentation.
+
 ---
 
 ## Right-click to ask
@@ -110,6 +116,8 @@ Each menu ends with **Add to chat**: it puts a reference (`@src/Foo.cs#L12-18`) 
 in the composer **without sending**, so you gather pieces from several files and windows, then ask
 once. The prompts are yours to edit in **Options → Prompts**, one tab per menu.
 
+[The menus and how to edit their prompts](https://corsinvest.github.io/cv4vs-agents/guides/ask-from-the-editor/) in the documentation.
+
 ---
 
 ## Built for long sessions
@@ -125,6 +133,8 @@ Walk away from a long turn and come back to it finished: while a chat is working
 from going to sleep**: the screen still turns off on its own timer, and everything goes back to
 normal the moment the reply ends. Messages written while Claude is still answering **wait in a
 queue** and go out when the turn ends; you can edit, remove or merge them before they do.
+
+[What the conversation shows, and how much](https://corsinvest.github.io/cv4vs-agents/chat/conversation/) in the documentation.
 
 ---
 
@@ -155,6 +165,8 @@ deletes the ones you no longer want, orphans included. Your project files are ne
 
 All aggregated locally. No telemetry.
 
+[The gauge and the prompt cache](https://corsinvest.github.io/cv4vs-agents/chat/context-and-usage/) in the documentation.
+
 ---
 
 ## Sub-agents and plugins
@@ -169,6 +181,8 @@ made them.
 A **plugin manager** covers the rest of the CLI's ecosystem: Installed, Available and Marketplaces
 tabs: install, enable or disable, update to the latest version, add a marketplace, without leaving
 the IDE.
+
+[Sub-agents](https://corsinvest.github.io/cv4vs-agents/chat/sub-agents/) in the documentation.
 
 ---
 
@@ -185,6 +199,8 @@ your desk carries on in your hand. A toolbar indicator says it is on for as long
 turns it off from the same place. Or turn it on once for **every session**, and each new chat starts
 it on its own.
 
+[Remote Control](https://corsinvest.github.io/cv4vs-agents/claude/remote-control/) in the documentation.
+
 ---
 
 ## Profiles
@@ -195,6 +211,8 @@ Each pane can run against a different configuration: working directory, model, p
 environment. That includes any **Anthropic-compatible endpoint**: native Claude, GLM/z.ai, or your
 own host, so one pane can run on a different provider while another stays on your usual account,
 and your global settings are never touched. The IDE tools work the same either way.
+
+[Setting up another provider](https://corsinvest.github.io/cv4vs-agents/guides/another-provider/) in the documentation.
 
 ---
 
@@ -227,7 +245,8 @@ The things people keep asking for, and where they are:
 
 ## Documentation and support
 
-Full documentation, including MCP tools, options, sub-agents and architecture, is on
+Full documentation is at **[corsinvest.github.io/cv4vs-agents](https://corsinvest.github.io/cv4vs-agents/)**: getting started, guides, MCP
+tools, options and troubleshooting. The source is on
 [GitHub](https://github.com/Corsinvest/cv4vs-agents).
 
 - [Report a bug](https://github.com/Corsinvest/cv4vs-agents/issues/new?template=bug_report.yml)
