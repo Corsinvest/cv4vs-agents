@@ -94,16 +94,20 @@ A model with no effort levels shows neither.
  Picking another model mid-conversation posts a
 *Switched to …* line in the transcript.
 
-The `/` menu's **Model** section has the same two controls plus three switches:
+Three more switches are **not** in the model list: they are in the `/` menu. Type `/` in the
+composer and scroll to the **Model** section, under Context:
 
-| Switch | What it does |
-|---|---|
-| **Thinking** | extended reasoning before answering |
-| **Fast mode** | faster responses on supported models |
-| **Switch models when a message is flagged** | switch model when safety flags a message, instead of pausing the session |
+| Switch | What it does | Listed when |
+|---|---|---|
+| **Thinking** | extended reasoning before answering | the current model supports it |
+| **Fast mode** | faster responses | the current model supports it; on a model that does not, the entry is missing altogether |
+| **Switch models when a message is flagged** | switch model when safety flags a message, instead of pausing the session | always |
 
-A switch the current model does not support is not listed. Model, permission mode and interrupt
-change on the live process, never a restart.
+The same section repeats **Switch model…**, **Effort** and **Ultracode**, and adds **Switch
+permission mode…**. So if you look for **Fast mode** and do not find it, it is not hidden somewhere
+else: the model you are on does not offer it.
+
+Model, permission mode and interrupt change on the live process, never a restart.
 
 ## Permission mode
 
