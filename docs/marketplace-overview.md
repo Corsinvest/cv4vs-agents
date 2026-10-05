@@ -58,7 +58,7 @@ winget install Anthropic.ClaudeCode
 ```
 
 Other platforms and methods are in Anthropic's
-[setup guide](https://docs.claude.com/en/docs/claude-code/setup). If it is missing, the pane says so
+[setup guide](https://code.claude.com/docs/en/setup). If it is missing, the pane says so
 and links you there instead of failing silently.
 
 Then open **View → cv4vs Agents → Claude**. The IDE tools are wired up automatically: nothing to

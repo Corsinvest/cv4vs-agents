@@ -45,7 +45,7 @@ in either, or in VS Code.*
 
 | | |
 |---|---|
-| **Visual Studio** | 2022 or 2026 (17.0+), any edition, on Windows 10 1809 or later |
+| **Visual Studio** | 2022 or 2026 (17.0 or later), Community, Professional or Enterprise, x64 |
 | **Claude Code CLI** | installed separately; see below |
 
 ---
@@ -60,7 +60,7 @@ winget install Anthropic.ClaudeCode
 ```
 
 Other platforms and installation methods are in Anthropic's
-[official setup guide](https://docs.claude.com/en/docs/claude-code/setup).
+[official setup guide](https://code.claude.com/docs/en/setup).
 
 **2. Install the extension**: from the
 [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Corsinvest.cv4vs-agents),

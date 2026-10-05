@@ -42,8 +42,8 @@ values rather than a checkbox, because which pauses are worth an offer differs b
 | Value | Raises the bar on |
 |---|---|
 | `Never` | nothing |
-| `Exceptions only` *(default)* | exceptions: they are a surprise |
-| `Exceptions and breakpoints` | every other pause that is not a step too: a breakpoint, Break All, `Debugger.Break()`. You asked for those, so they are opt-in |
+| `Exceptions` *(default)* | exceptions: they are a surprise |
+| `ExceptionsAndBreakpoints` | every other pause that is not a step too: a breakpoint, Break All, `Debugger.Break()`. You asked for those, so they are opt-in |
 
 **Steps** never raise a bar at any setting: one per F10 is noise. The bar closes when execution
 resumes, and the next pause raises a new one, the same breakpoint included: with breakpoints on, one
