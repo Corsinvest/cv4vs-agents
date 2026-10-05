@@ -2,11 +2,12 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
-import { tooltipStyles } from '../styles/shared';
+import { iconStyles, tooltipStyles } from '../styles/shared';
 import type { PermissionMode } from '../../core/types';
 import { PERMISSION_MODE } from '../../core/types';
 import { permissionItems } from '../../core/permission-modes';
@@ -22,6 +23,7 @@ import { permissionItems } from '../../core/permission-modes';
 @customElement('cv-permission-selector')
 export class CvPermissionSelector extends LitElement {
     static override styles = [
+        iconStyles,
         tooltipStyles,
         css`
             :host {
@@ -39,6 +41,16 @@ export class CvPermissionSelector extends LitElement {
             .trigger .danger {
                 color: var(--colorPaletteRedForeground1);
                 font-weight: var(--fontWeightSemibold);
+            }
+            /* The mode's own glyph, the one its row has in the list and in the / menu: "Manual"
+               alone does not say what is manual. Drawn at 14px like the other icons of the row;
+               the modes' glyphs are 20px ones. */
+            .icon {
+                display: inline-flex;
+            }
+            .icon svg {
+                width: 14px;
+                height: 14px;
             }
         `,
     ];
@@ -64,6 +76,7 @@ export class CvPermissionSelector extends LitElement {
         // (`dontAsk`, or `auto`/`bypassPermissions` once filtered out), and labelling that
         // "Manual" would state the opposite of what is in force. The raw value is ugly and true.
         const item = permissionItems().find((it) => it.value === this._current);
+        const danger = this._current === PERMISSION_MODE.bypassPermissions ? 'danger' : '';
         return html`
             <fluent-button
                 id="perm-trigger"
@@ -73,9 +86,14 @@ export class CvPermissionSelector extends LitElement {
                 size="small"
                 @click=${this._onClick}
             >
-                <span class=${this._current === PERMISSION_MODE.bypassPermissions ? 'danger' : ''}
-                    >${item?.short ?? this._current}</span
-                >
+                ${
+                    item
+                        ? html`<span slot="start" class="icon ${danger}"
+                              >${unsafeHTML(item.icon)}</span
+                          >`
+                        : nothing
+                }
+                <span class=${danger}>${item?.short ?? this._current}</span>
             </fluent-button>
             <!-- The name of the control, not of the mode: three of the five modes are shown in full
                  on the button already (Manual, Plan, Auto), so echoing the label would be the same

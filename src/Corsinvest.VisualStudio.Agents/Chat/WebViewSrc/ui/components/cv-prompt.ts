@@ -50,7 +50,6 @@ import './cv-context-gauge';
 import './cv-ide-context-badge';
 import './cv-subagent-chip';
 import './cv-queue-chip';
-import './cv-thinking-toggle';
 import './cv-remote-chip';
 import './cv-model-list';
 import './cv-model-selector';
@@ -1990,7 +1989,6 @@ export class CvPrompt extends LitElement implements CommandHost {
                         <!-- The settings that outlive the message: the left of the row is what goes
                              into it, the right is how it will be answered. The gap between the two
                              groups is the separation. -->
-                        <cv-thinking-toggle .host=${this}></cv-thinking-toggle>
                         <cv-model-selector></cv-model-selector>
                         <cv-permission-selector></cv-permission-selector>
                         <!-- Out here with the settings, not in the field with send: how much

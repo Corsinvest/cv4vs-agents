@@ -504,7 +504,7 @@ These four are the ones that reach the wire:
 |---|---|---|---|
 | **The eye** on the file chip | composer, **per pane** | open | Shuts off the file/lines block on every message. The biggest single knob: reach for it when the conversation has nothing to do with what is on screen. |
 | **Send the selected text with the message** | Options → Chat | **off** | On, your selected code rides along with *every* message while that selection stands (the chip's icon turns from 🔖 to 🧾). Off, Claude opens the file when it needs it. Turn it on for unsaved buffers, where the copy on disk is the stale one. |
-| **Extended thinking / effort** | composer toolbar and model picker, **per session** | thinking off | Buys the model room to reason before answering; worth it on a hard bug, wasted on a rename. |
+| **Extended thinking / effort** | `/` menu and model picker, **per session** | thinking off | Buys the model room to reason before answering; worth it on a hard bug, wasted on a rename. |
 | **Send post-edit diagnostics** | Options → Chat | **off** | Feeds the errors an edit introduced back into the context after every edit. |
 
 Three of the four already default to the cheap setting, so the one to know about is the eye: it is
