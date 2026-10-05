@@ -48,6 +48,12 @@ Do not call `mcp__vs__debug_start` / `mcp__vs__debug_stop` without asking: they 
 `mcp__vs__debug_set_next_statement` skips code rather than running it, so ask before that one too.
 After editing during a session, `mcp__vs__debug_apply_hot_reload` applies the change without
 a restart.
+
+## Reviewing a change first
+When I ask to see a change before it is made, open it with `mcp__vs__editor_open_diff` (the
+whole file, with your proposal as the new content). I can edit the proposed side: on FILE_SAVED
+apply exactly the content that comes back, not your original proposal. On a rejection, make no
+edit.
 ```
 
 ## Worth writing down
@@ -55,6 +61,9 @@ a restart.
 - **That the IDE is there at all**, and that it already knows the code. One line, and the most
   useful of the lot: the specific rules below are consequences of it.
 - **Which tool wins over the obvious shell command**, and why: build, output reading, diagnostics.
+- **How to show a change before making it.** The editable diff answers with what you saved, and
+  the agent has to be told to apply that rather than what it first proposed: see
+  [Reviewing changes](/cv4vs-agents/chat/diff/#the-editable-diff).
 - **What needs asking first.** Anything that takes over the IDE or is slow to undo: starting and stopping the debugger, `document_run_cleanup`, `nav_rename_symbol` across a solution,
   `solution_set_configuration` (it stays changed in your IDE) and `debug_clear_breakpoints` (it
   removes your own breakpoints too). Inside this extension no `mcp__vs__` tool raises a permission

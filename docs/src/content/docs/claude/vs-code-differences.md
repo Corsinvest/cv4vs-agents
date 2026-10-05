@@ -74,7 +74,9 @@ fast and stays light instead of loading the whole conversation up front.
 
 Opening a file lands you in the real editor (optionally on the referenced lines); an Edit opens in
 Visual Studio's **native side-by-side diff** (not a static rendered diff), with the editor's own
-colouring and navigation. In a Chat pane the answer is given in the approval prompt. See
+colouring and navigation. In a Chat pane the answer is given in the approval prompt. A second,
+editable diff (`editor_open_diff`) shows the whole file against a proposal: **Ctrl+S** or
+**Accept** hands back the text as you saved it, closing rejects. See
 [Reviewing changes](/cv4vs-agents/chat/diff/).
 
 ## File references in prose are links
