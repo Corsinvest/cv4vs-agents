@@ -45,10 +45,10 @@ internal static class ClaudeUpdate
     /// repeating itself.</summary>
     private static bool _told;
 
-    private static readonly object CheckGate = new();
     // A check is in flight. The chats a restore opens together all ask within the same seconds:
     // without this each would start its own claude.exe and its own request, and each would then
-    // announce the update, since none had set _told when the others looked.
+    // announce the update, since none had set _told when the others looked. No lock: the callers
+    // are on the UI thread, and the awaits below come back to it.
     private static bool _checking;
 
     /// <summary>The newer version to announce, or <c>null</c> when there is nothing to say:
@@ -57,11 +57,8 @@ internal static class ClaudeUpdate
     /// <para>Never throws: a version check must not be able to break the pane that awaits it.</para></summary>
     public static async Task<(string Latest, string Local)?> CheckAsync()
     {
-        lock (CheckGate)
-        {
-            if (_told || _checking) { return null; }
-            _checking = true;
-        }
+        if (_told || _checking) { return null; }
+        _checking = true;
         try
         {
             // Off the UI thread, where every caller is: this is a process start allowed five
@@ -72,13 +69,10 @@ internal static class ClaudeUpdate
             var latest = await FetchLatestAsync();
             if (string.IsNullOrEmpty(latest) || !IsNewer(latest, local)) { return null; }
 
-            lock (CheckGate) { _told = true; }
+            _told = true;
             return (latest, local);
         }
-        finally
-        {
-            lock (CheckGate) { _checking = false; }
-        }
+        finally { _checking = false; }
     }
 
     private static readonly object RunGate = new();
