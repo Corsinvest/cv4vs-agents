@@ -27,9 +27,11 @@ The mode changes on the live process: switching it never restarts the CLI. It ca
 without you touching it: approving a plan sets the mode you chose to continue in.
 
 **Initial permission mode** ([Options → Chat](/cv4vs-agents/options/#chat)) is the mode every new
-chat starts in: `Default` (ask before edits), `AcceptEdits`, `Plan` or `BypassPermissions`. The
-last one also requires **Allow dangerously skip permissions**: without it, sessions start in
-Manual. A resumed session starts in the mode it was last in.
+chat starts in: `Default`, `Manual`, `AcceptEdits`, `Plan` or `BypassPermissions`. `Default` leaves
+the choice to Claude Code, which reads `permissions.defaultMode` from your `settings.json` (user or
+folder) and picks a mode by itself when there is none (which may be Auto), as it does in a
+terminal; `Manual` asks before edits whatever that file says. `BypassPermissions` also requires **Allow dangerously skip permissions**: without it,
+sessions start in Manual. A resumed session starts in the mode it was last in.
 
 <Aside type="note" title="The IDE tools never ask">
 The `mcp__vs__` tools are pre-approved in every mode: none of them raises this prompt. What the
