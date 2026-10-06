@@ -10,6 +10,8 @@
 // context dialog) and durations (turn timer, tool rows, sub-agent chips). They used to be four
 // near-identical private helpers, each with its own rounding.
 
+import type { CacheState } from '../../core/ai-models';
+
 const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
 
 const UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
@@ -63,6 +65,27 @@ export function formatDuration(ms: number): string {
     }
     const s = Math.round(ms / 1000);
     return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+}
+
+/** How long the prompt cache has sat unused: "42m", "3h 31m", "8d 13h". Coarse on purpose: the
+ *  reading is an estimate, and a cache dead for days is no more useful stated to the minute. */
+export function formatIdle(ms: number): string {
+    const minutes = Math.max(0, Math.floor(ms / 60000));
+    if (minutes < 60) {
+        return `${minutes}m`;
+    }
+    const hours = Math.floor(minutes / 60);
+    return hours < 24 ? `${hours}h ${minutes % 60}m` : `${Math.floor(hours / 24)}d ${hours % 24}h`;
+}
+
+/** The line a loaded session shows under its last message when its cache has run out, or null when
+ *  there is nothing to say. Expired only: a compaction already has its own row in the transcript. */
+export function cacheResumeNote(state: CacheState): string | null {
+    return state.kind === 'cold' && state.reason === 'expired'
+        ? `Idle ${formatIdle(state.idleMs)}. Prompt cache likely expired: ` +
+              `your next message costs more, it re-caches about ` +
+              `${formatTokens(state.recacheTokens)} tokens.`
+        : null;
 }
 
 /** Same, for the callers that already hold seconds (tool rows, the spinner's own counter). */

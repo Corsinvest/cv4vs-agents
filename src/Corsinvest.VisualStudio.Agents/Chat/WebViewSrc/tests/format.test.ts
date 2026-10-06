@@ -7,6 +7,7 @@ import {
     formatTimeAgo,
     formatDuration,
     formatDurationSec,
+    formatIdle,
     formatTokenCount,
     formatTokens,
 } from '../ui/helpers/format.ts';
@@ -84,6 +85,14 @@ test('formatDurationSec: it is formatDuration in seconds, same rendering', () =>
     // The spinner and the tool rows hold seconds, not ms: the two signatures must not diverge.
     assert.equal(formatDurationSec(45), formatDuration(45_000));
     assert.equal(formatDurationSec(83), formatDuration(83_000));
+});
+
+test('formatIdle: minutes, then hours and minutes, then days and hours', () => {
+    assert.equal(formatIdle(42 * MINUTE), '42m');
+    assert.equal(formatIdle(3 * HOUR + 31 * MINUTE), '3h 31m');
+    assert.equal(formatIdle(8 * 24 * HOUR + 13 * HOUR + 20 * MINUTE), '8d 13h');
+    // A clock that ran backwards must not print a negative idle.
+    assert.equal(formatIdle(-5 * MINUTE), '0m');
 });
 
 test('formatTokens: compacts only past the thousand', () => {

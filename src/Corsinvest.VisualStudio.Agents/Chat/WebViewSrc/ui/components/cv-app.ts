@@ -29,6 +29,7 @@ import './cv-prompt';
 import './cv-message';
 import './cv-copy-btn';
 import { renderActionsRow, type TurnMetrics } from '../helpers/actions-row';
+import { cacheResumeNote } from '../helpers/format';
 import './cv-thinking';
 import './cv-fold-row';
 // Dialogs are created on demand by core/dialog-host (which must not import ui/),
@@ -86,7 +87,7 @@ import type {
 import { takeReplay } from '../../core/sent-prompts';
 import { EMPTY } from '../../core/types';
 import { GetHistoryReq } from '../../core/request-types';
-import { modelLabel } from '../../core/ai-models';
+import { cacheState, modelLabel } from '../../core/ai-models';
 import { turnErrorLabel, turnErrorDetail, isUserAbort } from '../../core/turn-errors';
 import { parseLocalCommandOutput } from '../../core/slash-commands';
 
@@ -781,6 +782,7 @@ export class CvApp extends LitElement {
                     // met on the way back, before that event, came after it: nothing has cached the
                     // compacted conversation yet.
                     let compactedAfter = false;
+                    let seeded = false;
                     appState.cacheCompactedMs = null;
                     for (let i = events.length - 1; i >= 0; i--) {
                         if (events[i].type === Msg.toWebView.chat.compacted) {
@@ -795,9 +797,29 @@ export class CvApp extends LitElement {
                                     appState.cacheCompactedMs =
                                         appState.cacheAnchorMs ?? Date.now();
                                 }
+                                seeded = true;
                                 break;
                             }
                         }
+                    }
+
+                    // Said in the transcript on a load only: whoever reopens a session did not watch
+                    // the gauge's clock run out, and the figure is behind a hover. Not when the cache
+                    // expires under an open pane: the idle time would freeze at the TTL and go stale.
+                    // Not mid-turn either: there is no "next message" while one is being answered.
+                    const note =
+                        seeded && !appState.isBusy
+                            ? cacheResumeNote(
+                                  cacheState(
+                                      appState.contextUsage,
+                                      appState.cacheAnchorMs,
+                                      Date.now(),
+                                      appState.cacheCompactedMs,
+                                  ),
+                              )
+                            : null;
+                    if (note) {
+                        out.push({ kind: 'text', id: ++_entryIdSeq, role: 'status', text: note });
                     }
 
                     // The context WINDOW (maxTokens) only ships in exchangeEnded (turn end), so on a
