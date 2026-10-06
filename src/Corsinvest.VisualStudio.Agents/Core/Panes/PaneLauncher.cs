@@ -12,6 +12,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 
@@ -76,6 +77,7 @@ internal static class PaneLauncher
             {
                 if (Frame(pkg, entry) is IVsWindowFrame frame && frame.IsVisible() != VSConstants.S_OK)
                 {
+                    OutputWindowLogger.Global.Debug(() => $"[panes] ShowExisting shows '{entry.Title}'");
                     frame.Show();
                 }
             }
@@ -102,6 +104,78 @@ internal static class PaneLauncher
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException($"PaneLauncher.Activate({entry.Title})", ex);
+        }
+    }
+
+    // Chat only: a CLI pane shares its group with the Output window, and putting it back in front
+    // would cover what the debugger has to show.
+    private static readonly FrontChatKeeper _frontChats = new(
+        () => PaneRegistry.Instance.OfKind(PaneKind.Chat),
+        IsFront,
+        BringForward);
+
+    /// <summary>The debugger changed mode: note the chats in front if the shell is about to swap its
+    /// window layout (see <see cref="FrontChatKeeper"/>). Main thread only.</summary>
+    public static void DebuggerModeChanged(bool inDesign)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        _frontChats.ModeChanged(inDesign);
+    }
+
+    /// <summary>The swap is over: put the noted chats back in front one last time. Main thread only.</summary>
+    public static void RestoreFrontChats()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        _frontChats.Finish();
+    }
+
+    /// <summary>A pane was shown or had its tab selected. During a layout swap that is the shell
+    /// bringing another chat forward, and waiting for idle to undo it leaves the wrong chat on
+    /// screen for the second the debugger takes to start. Deferred: showing a frame from inside
+    /// the shell's own notification is overwritten by it.</summary>
+    internal static void OnPaneShown()
+    {
+        if (!_frontChats.Keeping) { return; }
+        _ = System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _frontChats.Reassert();
+        }));
+    }
+
+    /// <summary>ShowNoActivate, not Show: the tab comes forward and the focus stays where it is,
+    /// which at a breakpoint is the editor.</summary>
+    private static void BringForward(PaneEntry entry)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            if (AgentsPackage.Instance is AgentsPackage pkg && Frame(pkg, entry) is IVsWindowFrame frame)
+            {
+                OutputWindowLogger.Global.Debug(() => $"[panes] '{entry.Title}' was in front before the layout change: back in front");
+                frame.ShowNoActivate();
+            }
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException($"PaneLauncher.BringForward({entry.Title})", ex);
+        }
+    }
+
+    /// <summary>Whether the pane is the front tab of its group: what the user can see, as opposed
+    /// to what is merely docked.</summary>
+    private static bool IsFront(PaneEntry entry)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            return AgentsPackage.Instance is AgentsPackage pkg && Frame(pkg, entry) is IVsWindowFrame frame
+                   && frame.IsOnScreen(out var onScreen) == VSConstants.S_OK && onScreen != 0;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException($"PaneLauncher.IsFront({entry.Title})", ex);
+            return false;
         }
     }
 
@@ -135,17 +209,22 @@ internal static class PaneLauncher
     /// <paramref name="resumeSessionId"/> is set (workspace restore, either kind), the new
     /// pane opens resumed on that session instead of fresh: a separate case from the fork,
     /// with no pre-filled prompt. A fresh chat pane takes <paramref name="initialComposer"/> too:
-    /// what a context-menu entry had for a chat that was not open yet. With
+    /// what a context-menu entry had for a chat that was not open yet.</summary>
+    public static void OpenNew(PaneKind kind, Profile profile, string forkSessionId = null, Contracts.SetComposerNotification initialComposer = null, string resumeSessionId = null)
+        => _ = OpenNewAsync(kind, profile, forkSessionId, initialComposer, resumeSessionId, true);
+
+    /// <summary><see cref="OpenNew"/> for a caller that has to know when the pane is registered:
+    /// the restore, which holds the workspace file until its last pane is. With
     /// <paramref name="activate"/> false the pane is shown without taking the focus: a pane the
-    /// user did not just ask for.</summary>
-    public static void OpenNew(PaneKind kind, Profile profile, string forkSessionId = null, Contracts.SetComposerNotification initialComposer = null, string resumeSessionId = null, bool activate = true)
+    /// user did not just ask for. Never faults: a failure is logged here.</summary>
+    public static Task OpenNewAsync(PaneKind kind, Profile profile, string forkSessionId, Contracts.SetComposerNotification initialComposer, string resumeSessionId, bool activate)
     {
         var pkg = AgentsPackage.Instance;
-        if (pkg == null) { OutputWindowLogger.Global.Warn("PaneLauncher: package not yet initialized"); return; }
+        if (pkg == null) { OutputWindowLogger.Global.Warn("PaneLauncher: package not yet initialized"); return Task.CompletedTask; }
         var paneType = WindowType(kind);
 
         OutputWindowLogger.Global.Debug(() => $"PaneLauncher: OpenNew({paneType.Name}) requested");
-        _ = pkg.JoinableTaskFactory.RunAsync(async () =>
+        return pkg.JoinableTaskFactory.RunAsync(async () =>
         {
             try
             {
@@ -166,7 +245,12 @@ internal static class PaneLauncher
                         // Create the entry BEFORE AssignPaneId: AssignPaneId → RegisterInstance →
                         // SetSessionCaption reads Entry.Title (built from the profile in its ctor), so
                         // the caption must see it on the first computation, not on a later refresh.
-                        var entry = new PaneEntry(kind, profile, new PaneOptions(), ResolveWorkdir());
+                        var entry = new PaneEntry(kind, profile, new PaneOptions(), ResolveWorkdir())
+                        {
+                            // Now, not when the process reports it: until then a second restore
+                            // would not see this session as taken and would open it again.
+                            ActiveSessionId = string.IsNullOrEmpty(resumeSessionId) ? null : resumeSessionId,
+                        };
                         paneWindow.Init(entry);
                         paneWindow.AssignPaneId(id);
                     }
@@ -216,7 +300,7 @@ internal static class PaneLauncher
                 var inner = ex.InnerException;
                 while (inner != null) { OutputWindowLogger.Global.LogException("  inner", inner); inner = inner.InnerException; }
             }
-        });
+        }).Task;
     }
 
     // Switching to an existing pane isn't done here: VS recycles

@@ -677,7 +677,6 @@ public class VsOptionsDto
     public bool ShowInlineToolErrors { get; set; }
     public bool UseCtrlEnterToSend { get; set; }
     public bool SpellCheckComposer { get; set; }
-    public bool CompactOutputAskAnswers { get; set; }
     public bool AllowDangerouslySkipPermissions { get; set; }
 
     /// <summary>Whether the CLI is keeping file snapshots for this pane. What hides the Rewind

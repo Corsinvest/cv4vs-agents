@@ -27,7 +27,7 @@ import {
     msUntilCacheChange,
     type CacheState,
 } from '../../core/ai-models';
-import { formatTokens } from '../helpers/format';
+import { formatIdle, formatTokens } from '../helpers/format';
 import type { ContextUsageDto, SendPromptNotification } from '../../core/types';
 import { openUsageDialog, openContextDialog, openStatsDialog } from '../../core/dialog-host';
 
@@ -53,17 +53,6 @@ function gaugeValidationState(percent: number): 'success' | 'warning' | 'error' 
     return 'success';
 }
 
-// Coarse on purpose: the reading is an estimate, and a cache dead for days is no more useful
-// stated to the minute.
-function formatIdle(ms: number): string {
-    const minutes = Math.max(0, Math.floor(ms / 60000));
-    if (minutes < 60) {
-        return `${minutes}m`;
-    }
-    const hours = Math.floor(minutes / 60);
-    return hours < 24 ? `${hours}h ${minutes % 60}m` : `${Math.floor(hours / 24)}d ${hours % 24}h`;
-}
-
 function cacheTooltip(state: CacheState): string {
     switch (state.kind) {
         case 'unknown':
@@ -80,7 +69,8 @@ function cacheTooltip(state: CacheState): string {
                 ? 'Prompt cache does not cover the compacted conversation.\n' +
                       'Your next message re-caches it.'
                 : `Prompt cache likely expired (idle ${formatIdle(state.idleMs)}).\n` +
-                      `Your next message re-caches about ${formatTokens(state.recacheTokens)} tokens.`;
+                      'Your next message costs more:\n' +
+                      `it re-caches about ${formatTokens(state.recacheTokens)} tokens.`;
     }
 }
 

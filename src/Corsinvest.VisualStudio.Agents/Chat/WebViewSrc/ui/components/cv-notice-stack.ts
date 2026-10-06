@@ -11,6 +11,7 @@ import CheckmarkCircle16Filled from '@fluentui/svg-icons/icons/checkmark_circle_
 import DismissCircle16Filled from '@fluentui/svg-icons/icons/dismiss_circle_16_filled.svg';
 import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import { bridge } from '../../core/bridge';
+import { renderInlineMarkdown } from '../../core/markdown';
 import type { Notice, NoticeDismissedDetail } from '../../core/types';
 
 // Same glyph set Fluent's own message-bar uses: info outlined, the actionable severities filled so
@@ -50,6 +51,12 @@ export class CvNoticeStack extends LitElement {
         .msg {
             white-space: normal;
             overflow-wrap: anywhere;
+        }
+        .msg a {
+            color: var(--colorBrandForegroundLink);
+        }
+        .msg code {
+            font-family: var(--fontFamilyMonospace);
         }
         .ico {
             display: inline-flex;
@@ -203,7 +210,7 @@ export class CvNoticeStack extends LitElement {
                             <span slot="icon" class="ico ${n.severity}"
                                 >${unsafeHTML(n.icon ?? ICONS[n.severity])}</span
                             >
-                            <span class="msg">${unsafeHTML(n.message)}</span>
+                            <span class="msg">${unsafeHTML(renderInlineMarkdown(n.message))}</span>
                             ${
                                 n.actionLabel && n.actionMessage
                                     ? html`<fluent-button

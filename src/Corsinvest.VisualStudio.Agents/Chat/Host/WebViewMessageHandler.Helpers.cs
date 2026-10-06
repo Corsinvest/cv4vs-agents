@@ -365,6 +365,14 @@ internal sealed partial class WebViewMessageHandler
         var window = OpenWindow(dte, filePath);
         if (window == null)
         {
+            // No Window is not "not opened": a non-text editor (the image editor on a .png) opens
+            // the file and still hands back nothing. The shell knows whether a frame exists.
+            if (VsShellUtilities.IsDocumentOpen(ServiceProvider.GlobalProvider, filePath, Guid.Empty,
+                    out _, out _, out var frame))
+            {
+                frame?.Show();
+                return;
+            }
             NoticeOpenFailed(filePath, "Visual Studio would not open it");
             return;
         }

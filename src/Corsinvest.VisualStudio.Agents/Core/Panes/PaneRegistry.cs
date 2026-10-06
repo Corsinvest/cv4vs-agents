@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -49,6 +52,7 @@ public sealed class PaneRegistry
         Entries.Add(entry);
         if (wasEmpty && Entries.Count > 0)
         {
+            StartTrackingActivation();
             OutputWindowLogger.Global.Info("[registry] first session started, MCP server will start");
             FirstSessionStarted?.Invoke();
         }
@@ -61,6 +65,7 @@ public sealed class PaneRegistry
     {
         if (entry == null || !Entries.Contains(entry)) { return; }
         Entries.Remove(entry);
+        _activeChat.Removed(entry);
         // The one service this registry names, and deliberately: a pane closed mid-turn sends no
         // `result`, so nothing else releases its sleep block. Not routed through SessionClosed
         // because that event carries no entry, and the twin release, on process death, has to run
@@ -69,6 +74,7 @@ public sealed class PaneRegistry
         SessionClosed?.Invoke();
         if (Entries.Count == 0)
         {
+            StopTrackingActivation();
             OutputWindowLogger.Global.Info("[registry] last session ended, MCP server will stop");
             LastSessionEnded?.Invoke();
         }
@@ -114,4 +120,69 @@ public sealed class PaneRegistry
 
     public PaneEntry Find(PaneKind kind, int paneId)
         => Entries.FirstOrDefault(e => e.PaneId == paneId && e.Kind == kind);
+
+    /// <summary>The chat pane the user was in last, if <paramref name="usable"/> accepts it, else
+    /// the newest one that it does: none has been clicked since the solution restored them, or
+    /// the one that was has been closed.</summary>
+    public PaneEntry LastActiveChat(Func<PaneEntry, bool> usable)
+        => _activeChat.Pick(OfKind(PaneKind.Chat), usable);
+
+    private readonly ActiveChatTracker _activeChat = new();
+    private IVsMonitorSelection _monitorSelection;
+    private uint _selectionCookie;
+
+    /// <summary>Follow VS's active window frame, the one signal that covers both ways into a pane:
+    /// its tab being selected and a click into a pane that was already visible beside another.
+    /// A frame's OnShow reports only the first.</summary>
+    private void StartTrackingActivation()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (_selectionCookie != 0) { return; }
+        _monitorSelection = Package.GetGlobalService(typeof(SVsShellMonitorSelection)) as IVsMonitorSelection;
+        if (_monitorSelection == null)
+        {
+            OutputWindowLogger.Global.Warn("[registry] no selection monitor: prompts sent from a menu go to the newest chat, not the one in use");
+            return;
+        }
+        _monitorSelection.AdviseSelectionEvents(new SelectionEventSink(this), out _selectionCookie);
+    }
+
+    private void StopTrackingActivation()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (_selectionCookie == 0) { return; }
+        _monitorSelection?.UnadviseSelectionEvents(_selectionCookie);
+        _selectionCookie = 0;
+    }
+
+    private void MarkActivated(IVsWindowFrame frame)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (frame != null && frame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out var view) == VSConstants.S_OK
+            && view is PaneWindowBase pane)
+        {
+            _activeChat.Activated(pane.Entry);
+        }
+    }
+
+    /// <summary>IVsMonitorSelection sink: remembers the chat pane under the active window frame.</summary>
+    private sealed class SelectionEventSink(PaneRegistry owner) : IVsSelectionEvents
+    {
+        int IVsSelectionEvents.OnElementValueChanged(uint elementid, object varValueOld, object varValueNew)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (elementid == (uint)VSConstants.VSSELELEMID.SEID_WindowFrame)
+            {
+                owner.MarkActivated(varValueNew as IVsWindowFrame);
+            }
+            return VSConstants.S_OK;
+        }
+
+        int IVsSelectionEvents.OnSelectionChanged(
+            IVsHierarchy pHierOld, uint itemidOld, IVsMultiItemSelect pMISOld, ISelectionContainer pSCOld,
+            IVsHierarchy pHierNew, uint itemidNew, IVsMultiItemSelect pMISNew, ISelectionContainer pSCNew)
+            => VSConstants.S_OK;
+
+        int IVsSelectionEvents.OnCmdUIContextChanged(uint dwCmdUICookie, int fActive) => VSConstants.S_OK;
+    }
 }

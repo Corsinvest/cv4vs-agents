@@ -1,7 +1,8 @@
 # CLAUDE.md
 
 Guidance for Claude Code working in this repository. Only what you can't infer from the code:
-architecture is documented in [docs/architecture.md](docs/architecture.md) and the rest of `docs/`.
+architecture is documented in [architecture.md](docs/src/content/docs/architecture.md) and the rest
+of the documentation site's pages, `docs/src/content/docs/`.
 
 ## What it is
 
@@ -91,7 +92,8 @@ Things that break in ways the compiler won't tell you about:
 
 ## Architecture notes
 
-Full description in [docs/architecture.md](docs/architecture.md). What matters when editing:
+Full description in [architecture.md](docs/src/content/docs/architecture.md). What matters when
+editing:
 
 - **The two startup paths are deliberately separate**: Chat (stream-json + in-process SDK MCP) and
   CLI (ConPTY + `--ide` WebSocket). Do **not** try to unify them.
@@ -156,8 +158,35 @@ Full description in [docs/architecture.md](docs/architecture.md). What matters w
 
 ## Docs
 
-`docs/*.md` is public and **written in English** (README, options, mcp-tools, sub-agents,
-architecture, context-and-usage, settings-and-data).
+The documentation is a Starlight site built from `docs/`, published at
+`https://corsinvest.github.io/cv4vs-agents/` by `docs.yml` on every push to master that touches
+`docs/`. The pages are
+`docs/src/content/docs/**/*.md(x)`, **written in English**; a new page must also be added to
+`sidebar` in `docs/astro.config.mjs`, and `quality.yml` fails the PR if it is not. `npm run dev` /
+`build` / `preview` in `docs/`; the build validates internal links.
+
+**Stock Starlight only**: its own components, and `src/styles/vs2026.css` holds theme variables and
+nothing else. `src/components/IconCard.astro` is Starlight's `Card` for an icon its set does not
+have (the bug on the home page): `Card` takes only a built-in name. Use `Card` whenever it has one.
+`src/components/Motto.astro` is the motto under the home page's hero, signed with the Corsinvest
+wordmark (`src/assets/corsinvest-wordmark*.svg`): a local copy of the one in
+`@corsinvest/cv4pve-docs-theme`, whose text, link, fonts and colours are that suite's. The accents there are stops of the gradients in
+`src/Corsinvest.VisualStudio.Agents/Resources/plugin-logo.svg`. The other exception is `docs/external-links.mjs`, which opens external
+links in a new tab at build time: a link written through a component (`LinkCard`, a hero action, a
+sidebar entry) does not pass through it and takes `target` and `rel` by hand. `docs/matomo.mjs`
+writes the Matomo script (site 15 on `matomo.corsinvest.it`, no cookies) into the head, in the
+built site only, so `npm run dev` visits are not counted. The last one is
+`src/styles/corsinvest-link.css`: the Corsinvest mark in the header beside GitHub, drawn over a
+stand-in social icon because `social` takes only built-in names. It is the one rule that targets a
+Starlight class (`.social-icons`), so check the header after a Starlight upgrade.
+
+Links between pages are site-absolute (`/cv4vs-agents/<slug>/`). The README, the listing, the
+Documentation menu entry (`GlobalMenuCommands.DocsUrl`) and the chat's Help (`links.ts`) link to
+the site by full URL, and nothing checks those in CI: rename a page or a heading and they break
+silently.
+
+`docs/images/` stays where it is: the listing and the README load those files by path, and the
+pages reference them from there too, so there is one copy.
 
 `docs/marketplace-overview.md` is the odd one out: it is not documentation but the listing text.
 `vs-publish.json` points the release workflow at it, so a stable tag uploads it along with the

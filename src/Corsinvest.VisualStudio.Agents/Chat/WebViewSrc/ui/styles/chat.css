@@ -409,7 +409,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 
 /* The chevron toggle is a fluent-button (icon-only). Hidden at rest, revealed on row
- * hover, except .always-shown (Agent), kept visible so a near-empty collapsed row reads
+ * hover, except .always-shown (Agent, Question), kept visible so a near-empty collapsed row reads
  * as expandable. The button rotates 180° when open. */
 .cv-tool-row-chev {
     flex-shrink: 0;
@@ -425,7 +425,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     transform: rotate(180deg);
     opacity: 1;
 }
-/* Kept visible at rest (Agent rows): a near-empty collapsed row needs the chevron
+/* Kept visible at rest (Agent and Question rows): a near-empty collapsed row needs the chevron
  * as its only "expandable" cue, so it doesn't wait for hover. */
 .cv-tool-row-chev.always-shown {
     opacity: 1;
@@ -531,7 +531,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 
 /* AskUserQuestion body: one block per question, each with a header chip,
  * the question text and the offered options. The option the user picked is
- * highlighted (`.chosen`). */
+ * ticked and highlighted (`.chosen`). */
 .cv-question-list {
     padding: 2px 0;
     display: flex;
@@ -575,7 +575,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     font-weight: var(--fontWeightSemibold);
     color: var(--colorNeutralForeground1);
 }
-/* Compact answered view: one row per question, "header chip → chosen value". */
+/* One-line outcome (the plan decision): "chip → value". */
 .cv-question-compact {
     gap: 4px;
 }
@@ -591,21 +591,15 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 .cv-question-opt {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     gap: 6px;
     font-size: 11px;
     padding: 2px 0 2px 8px;
 }
+/* Fluent radio/checkbox used as the marker only: the row is a record, not a form. */
 .cv-question-opt-mark {
     flex-shrink: 0;
-    color: var(--colorNeutralForeground3);
-    font-size: 15px;
-    line-height: 1;
-}
-.cv-question-opt.chosen .cv-question-opt-mark {
-    color: var(--colorBrandBackground);
-    /* ● renders smaller than ○ at the same size: bump it to match visually. */
-    font-size: 22px;
+    pointer-events: none;
 }
 .cv-question-opt-text {
     display: flex;
@@ -854,10 +848,11 @@ cv-message[msg-role="user"] .cv-msg-actions {
 }
 .cv-model-switch .cv-model-switch-pill {
     padding: 1px 10px;
-    border-radius: 999px;
+    /* Not 999px, and free to wrap: the cache note is a sentence, wider than a narrow pane. */
+    border-radius: 10px;
     background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 12%, transparent);
     border: 1px solid color-mix(in srgb, var(--colorPaletteBerryBorderActive) 35%, transparent);
-    white-space: nowrap;
+    text-align: center;
 }
 
 /* Elapsed time on a running Agent row (the dot handles the spinner). */

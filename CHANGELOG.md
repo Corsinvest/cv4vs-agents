@@ -6,8 +6,119 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **A session reopened after its prompt cache expired says so in the conversation.** A line under
+  the last message gives the idle time and what the next message re-caches: *Idle 3h 2m. Prompt
+  cache likely expired: your next message costs more, it re-caches about 459k tokens.* Until now
+  the figure was only in the tooltip of the clock beside the context gauge. That tooltip takes the
+  same wording.
+- **Manual as an initial permission mode.** **Options → Chat → Initial permission mode** has a
+  `Manual` entry: every new chat asks before edits, whatever `settings.json` says.
+
+### Changed
+
+- **`Default` as initial permission mode now leaves the choice to Claude Code.** It used to start
+  every new chat in Manual, ignoring the `permissions.defaultMode` of your `settings.json`. A new
+  chat now starts as `claude` does in a terminal: in that mode when one is set, user or folder,
+  and otherwise in the one Claude Code picks by itself, which can be Auto. `Default` is the
+  option's default, so this applies unless you chose another mode: **pick `Manual` to keep the
+  previous behaviour.** A resumed session still starts in the mode it was last in.
+
 ### Fixed
 
+- **Clicking a link to an image said Visual Studio would not open it, with the image open.** A
+  file that opens in an editor other than the text one (a `.png` in the image editor) opened as
+  asked and the chat still showed the error. The error is now kept for a file that did not open.
+- **"Add to chat" and the prompts of the context menus went to the chat opened last, not the one
+  in use.** With two chats open, the text landed in the newer one and brought it forward, whichever
+  you were working in. It now goes to the chat you were in last; passing through a CLI pane or the
+  editor on the way does not change that.
+- **Starting or stopping the debugger put another chat in front.** Visual Studio keeps a window
+  layout for design time and one for run time, each with its own front tab, so with several chats
+  in one group F5 and Shift+F5 showed whichever had been in front the last time that layout was
+  used, and the first F5 after opening them left the newest on top. The chat you were looking at
+  now stays in front, and the keyboard focus stays where it was.
+- **Reloading a solution could open a second copy of a chat.** A chat that had not been used yet
+  came back twice, and a conversation saved twice was opened in two chats, both writing the same
+  session. Each conversation is now restored once.
+- **A crash while the open chats were being saved could lose the list.** The file was deleted
+  before the new one was in place.
+- **Reopening a solution with "Restore panes on solution open" froze Visual Studio until every
+  pane was back.** The panes were built and shown one after another without a break, and each chat
+  also asked the CLI for its version on the UI thread as it opened, which can take up to five
+  seconds. The panes now come back one at a time while Visual Studio is idle, without taking the
+  focus from the editor, and the version check runs in the background, once however many chats
+  open together. Closing the solution before the last pane is back leaves the saved list as it was.
+
+## [1.13.0] - 2026-10-05
+
+Claude Code can now be updated from inside Visual Studio, and the extension has a documentation
+site of its own. Ultracode is a switch apart from the effort slider, an answered question folds
+like any other row, `/vm:1` and its siblings set a view mode from the keyboard, and a new chat
+starts in the permission mode its selector shows.
+
+### Added
+
+- **A documentation site.** <https://corsinvest.github.io/cv4vs-agents/> holds the guides, the chat
+  pages, every option by category and the MCP tool list, with screenshots from the current build.
+  **View → cv4vs Agents → Documentation** and the chat's **Help** open it, as do **More
+  information** and **Getting started** on the extension's page in Visual Studio.
+- **Update Claude Code without leaving Visual Studio.** The notice that a newer Claude Code exists
+  now has an **Update** button, and **View → cv4vs Agents → Update Claude Code** does the same at
+  any time, with or without a pane open. It runs the CLI's own `claude update` and then says what
+  happened: the new version, or why nothing changed (already current, or an install your package
+  manager owns, with the command to run). Sessions already open keep working on the version they
+  started with until they are restarted.
+- **A View mode can be set by name from the keyboard.** `/vm:full`, `/vm:focus` and `/vm:hide`,
+  or `/vm:0`, `/vm:1` and `/vm:2`, set the mode outright: type `/vm:1` and press Enter. The number
+  is how much is hidden. The slider in the `/` menu stays, and still answers to `/view`, `/hide`
+  and `/tools`.
+
+### Changed
+
+- **Ultracode is a switch of its own, no longer the last stop of the effort slider.** It sits under
+  the slider in the model list and in the `/` menu, and it works at any effort level: the model
+  button reads, for example, `Opus 5.5 Medium · Ultracode`. It stays on when you move the effort.
+  It takes the rocket icon, as in the VS Code extension; Fast mode moves to a rabbit.
+- **The Thinking button left the composer toolbar.** It is set once and rarely touched, so it
+  now lives only in the `/` menu, under **Model**, with the other switches.
+- **The permission mode button shows the mode's icon** beside its name, the same one the mode
+  has in the list: `Manual` alone did not say what was manual.
+- **An answered question folds like any other row, and the Compact Ask answers option is gone.**
+  The row reads `Question`, then `Answered` or `Declined` and how many questions it held. Open, it
+  lists every option with yours ticked, a radio or a checkbox as the question was single- or
+  multi-select; the chevron closes it to its header. It follows **Collapse tool results** like the
+  rest, which it used to ignore, and starts closed in the Focus and Hide tools view modes, with its
+  chevron always in view. One view that opens and closes replaces the option that chose between
+  two.
+- **The mascot on the tabs, in the status bar and in the usage popup is the logo's own shape.** It
+  was a trace by eye, with corners and shading that were not the logo's. It is now fitted to the
+  logo itself.
+
+### Fixed
+
+- **A new chat could approve on its own while its selector read Manual.** With Manual as the
+  starting mode the extension told Claude Code nothing, so it started in the `defaultMode` of your
+  `settings.json`: with `auto` there, tools ran unasked under a selector that said otherwise. The
+  mode you see is now always the one passed, and the selector shows the mode Claude Code reports
+  from the moment the pane opens.
+- **`/focus` and `/compact` listed View mode under a command of the same name.** Both words were
+  aliases of View mode and are also Claude Code's own commands, whose row came first: `/focus`
+  and Enter ran the one that answers "isn't available here yet". View mode no longer answers to
+  them: `/vm:focus` sets Focus.
+- **Tool rows already on screen ignored a change of Collapse tool results** until something else
+  redrew them. They now follow the option, and the view mode, at once.
+- **Turning Ultracode on forced the effort to Extra high, and moving the effort turned Ultracode
+  off.** The two were one control. They are now set separately.
+- **Ultracode read as off after switching to a model that can run it.** A session started on a
+  model without Ultracode kept the switch off in the chat even once Claude Code was running it.
+  The switch now shows what you asked for.
+- **A notice at the top of the chat could lose part of its text, or read it as markup.** The rows
+  rendered their message as HTML, so an advisory from Claude Code mentioning `<T>` or `<path>`
+  showed a sentence with a hole in it, and text from outside (the CLI, a hook, a file name) could
+  change how the row looked or run script in the chat page. A tag is now shown as written; bold,
+  inline code and web links are the only marks a notice renders.
 - **The `@` file picker could miss files in large projects, and froze Visual Studio while it
   looked.** It re-read the whole project on every keystroke and gave up after 20,000 files, so in a
   big solution a file you typed by its exact name could still be missing. The list is now read once
@@ -32,12 +143,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   session from disk. Whenever Visual Studio was busy, for instance checking an F# solution, the
   page won and its one signal was lost. The pane now listens from the start and acts on the
   signal once its client is up.
-- **Reopening a solution with "Restore panes on solution open" froze Visual Studio until every
-  pane was back.** The panes were built and shown one after another without a break, and each chat
-  also asked the CLI for its version on the UI thread as it opened, which can take up to five
-  seconds. The panes now come back one at a time while Visual Studio is idle, without taking the
-  focus from the editor, and the version check runs in the background. A restored chat is also known
-  by its session from the moment it opens, so a solution reload no longer opens it a second time.
+- **Three texts that said the wrong thing.** The **Collapse tool results** option claimed a failed
+  row stays open: it closes like the rest, and keeps its red dot and the button that opens the full
+  output. The About dialog was titled "About Claude Code". The description of the
+  `ide_get_project_structure` tool had an unbalanced parenthesis.
 
 ### Internal
 

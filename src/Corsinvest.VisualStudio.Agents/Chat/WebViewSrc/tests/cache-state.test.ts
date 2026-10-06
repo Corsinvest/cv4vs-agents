@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cacheState, msUntilCacheChange } from '../core/ai-models.ts';
 import type { ContextUsageDto } from '../core/types.ts';
+import { cacheResumeNote } from '../ui/helpers/format.ts';
 
 const MIN = 60_000;
 const T0 = 1_000_000_000_000;
@@ -53,6 +54,24 @@ test('cacheState: a compaction no reply has cached is cold, whatever the clock s
         kind: 'cold',
         reason: 'compacted',
     });
+});
+
+test('cacheResumeNote: an expired cache gets a line with the idle time and the re-cache size', () => {
+    assert.equal(
+        cacheResumeNote(cacheState(usage('1h'), T0, T0 + 90 * MIN, null)),
+        'Idle 1h 30m. Prompt cache likely expired: ' +
+            'your next message costs more, it re-caches about 1k tokens.',
+    );
+});
+
+test('cacheResumeNote: nothing to say while the cache holds, or when its state is unknown', () => {
+    assert.equal(cacheResumeNote(cacheState(usage('1h'), T0, T0 + 50 * MIN, null)), null);
+    assert.equal(cacheResumeNote(cacheState(usage('1h'), T0, T0 + 59 * MIN, null)), null);
+    assert.equal(cacheResumeNote(cacheState(null, T0, T0, null)), null);
+});
+
+test('cacheResumeNote: a compaction stays silent, its own row already says it', () => {
+    assert.equal(cacheResumeNote(cacheState(usage('1h'), T0, T0 + 90 * MIN, T0)), null);
 });
 
 test('cacheState: no usage, no anchor or an unknown TTL is unknown', () => {

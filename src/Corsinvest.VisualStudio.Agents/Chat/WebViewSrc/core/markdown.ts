@@ -5,7 +5,7 @@
 // Markdown → sanitized HTML pipeline. Pure string-only; output is
 // DOMPurified and fed to lit-html via `unsafeHTML`.
 
-import { marked, type Renderer, type Tokens } from 'marked';
+import { Marked, marked, type Renderer, type Tokens } from 'marked';
 import DOMPurify from 'dompurify';
 import { resolveLang, highlightCode, clearHighlightCache } from './lang';
 import { escapeHtml } from './html';
@@ -207,6 +207,39 @@ export function renderMarkdown(text: string | undefined | null): string {
         _mdCache.delete(_mdCache.keys().next().value as string);
     }
     return out;
+}
+
+// Its own instance, not the transcript's: a notice row has nothing that handles a file link's
+// click, and its text is not the model's. It comes from the CLI, a hook, a file name, so raw HTML
+// is shown as the characters it is rather than handed to the sanitizer, which would drop a `<T>`
+// and leave a sentence with a hole in it. Exported for the tests, which cannot run DOMPurify.
+export const inlineMarked = new Marked({
+    gfm: true,
+    renderer: {
+        html: (token: Tokens.HTML | Tokens.Tag): string => escapeHtml(token.text),
+        image: (token: Tokens.Image): string => escapeHtml(token.raw),
+        link(this: Renderer, token: Tokens.Link): string {
+            return /^https?:/i.test(token.href)
+                ? `<a href="${escapeHtml(token.href)}" target="_blank" rel="noopener noreferrer">${this.parser.parseInline(token.tokens)}</a>`
+                : escapeHtml(token.raw);
+        },
+    },
+});
+
+/**
+ * Render one line of markdown (bold, italic, code, http links) to sanitized HTML for `unsafeHTML`.
+ * For text that is a sentence, not a document: no paragraphs, no blocks, no HTML passed through.
+ */
+export function renderInlineMarkdown(text: string | undefined | null): string {
+    const src = text ?? '';
+    try {
+        return DOMPurify.sanitize(inlineMarked.parseInline(src, { async: false }) as string, {
+            ALLOWED_TAGS: ['a', 'code', 'del', 'em', 'strong'],
+            ALLOWED_ATTR: ['href', 'target', 'rel'],
+        });
+    } catch {
+        return escapeHtml(src);
+    }
 }
 
 /**

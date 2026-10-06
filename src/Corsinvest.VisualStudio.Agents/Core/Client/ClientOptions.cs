@@ -12,6 +12,8 @@ public sealed class ClientOptions
     public string WorkingDirectory { get; set; }
     public string ResumeSessionId { get; set; }
 
+    /// <summary>The mode to launch in, as the CLI's wire value. Null passes no
+    /// <c>--permission-mode</c> and leaves the choice to the CLI (settings.json).</summary>
     public string InitialPermissionMode { get; set; } = PermissionMode.Default;
 
     /// <summary>Whether this pane may ENTER <c>bypassPermissions</c> later (Options → Chat).

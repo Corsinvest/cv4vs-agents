@@ -3,9 +3,11 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Core.Client;
 using Corsinvest.VisualStudio.Agents.Helpers;
 using Corsinvest.VisualStudio.Agents.Options;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.ComponentModel.Design;
 using System.Reflection;
@@ -21,6 +23,7 @@ namespace Corsinvest.VisualStudio.Agents.Menu;
 internal static class GlobalMenuCommands
 {
     private const string RepoUrl = "https://github.com/Corsinvest/cv4vs-agents";
+    private const string DocsUrl = "https://corsinvest.github.io/cv4vs-agents/";
 
     public static async Task InitializeAsync(AsyncPackage package)
     {
@@ -33,9 +36,18 @@ internal static class GlobalMenuCommands
 
         Add(svc, PackageIds.SettingsCommandId,
             () => AgentsPackage.Instance?.ShowOptionPage(typeof(AgentsGeneralPage)));
+        // Greyed out while a run is under way, whoever started it: a second click would only join
+        // that run, and then report the same outcome in a second message box.
+        Add(svc, PackageIds.UpdateClaudeCommandId, UpdateClaude).BeforeQueryStatus +=
+            (sender, _) => ((OleMenuCommand)sender).Enabled = !ClaudeUpdate.IsRunning;
+        // VS keeps a command's state and asks again only when told to: without this the entry
+        // stayed greyed after the run had ended (seen in the Exp instance). No unsubscribe: these
+        // commands live as long as VS, like the events.
+        ClaudeUpdate.Started += RefreshCommandState;
+        ClaudeUpdate.Completed += _ => RefreshCommandState();
         Add(svc, PackageIds.DataFolderCommandId, () => ShellHelpers.OpenExternal(AppPaths.DataFolder));
         Add(svc, PackageIds.OutputLogCommandId, OutputWindowLogger.ActivatePane);
-        Add(svc, PackageIds.DocumentationCommandId, () => ShellHelpers.OpenExternal(RepoUrl));
+        Add(svc, PackageIds.DocumentationCommandId, () => ShellHelpers.OpenExternal(DocsUrl));
         // The release for the running version, not the list: /releases/tag/v<version>. A build
         // that was actually shipped has a matching tag; a local build 404s to GitHub's own
         // "release not found" page, which links back to the list.
@@ -65,6 +77,26 @@ internal static class GlobalMenuCommands
         ShellHelpers.OpenExternal(url);
     }
 
+    /// <summary>The outcome goes to a message box, not to the status bar that carries the
+    /// progress: VS overwrites that with the next build or search, and a failed update would go
+    /// unnoticed. It also has to reach someone with no chat open, which rules the chat notice out.</summary>
+    private static void UpdateClaude()
+        => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await Community.VisualStudio.Toolkit.VS.StatusBar.ShowMessageAsync(ClaudeUpdate.RunningMessage);
+            var result = await ClaudeUpdate.RunAsync();
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            await Community.VisualStudio.Toolkit.VS.StatusBar.ClearAsync();
+            ShellHelpers.ShowMessage(result.DialogMessage, "Update Claude Code", warning: result.Outcome is ClaudeUpdateOutcome.Failed or ClaudeUpdateOutcome.StillRunning);
+        }).FileAndForget("GlobalMenu.UpdateClaude");
+
+    private static void RefreshCommandState()
+        => ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            (Package.GetGlobalService(typeof(SVsUIShell)) as IVsUIShell)?.UpdateCommandUI(1);
+        }).FileAndForget("GlobalMenu.RefreshCommandState");
+
     private static string AppVersion()
     {
         var asm = typeof(GlobalMenuCommands).Assembly;
@@ -73,11 +105,16 @@ internal static class GlobalMenuCommands
                ?? "";
     }
 
-    /// <summary>One place for the try/catch: a menu action must never take VS down.</summary>
-    private static void Add(OleMenuCommandService svc, int id, Action run)
-        => svc.AddCommand(new MenuCommand((_, _) =>
+    /// <summary>One place for the try/catch: a menu action must never take VS down. Returns the
+    /// command for an entry whose state changes (<see cref="OleMenuCommand.BeforeQueryStatus"/>).</summary>
+    private static OleMenuCommand Add(OleMenuCommandService svc, int id, Action run)
+    {
+        var command = new OleMenuCommand((_, _) =>
         {
             try { run(); }
             catch (Exception ex) { OutputWindowLogger.Global.LogException($"GlobalMenu.0x{id:X}", ex); }
-        }, new CommandID(PackageGuids.AgentsCommandSet, id)));
+        }, new CommandID(PackageGuids.AgentsCommandSet, id));
+        svc.AddCommand(command);
+        return command;
+    }
 }

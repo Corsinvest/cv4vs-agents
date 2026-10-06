@@ -327,6 +327,14 @@
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>Settings</ButtonText></Strings>
       </Button>
+      <!-- Global, not per pane: the CLI binary is one for the whole of VS, and the entry has to
+           be reachable with no pane open. -->
+      <Button guid="guidAgentsCommandSet" id="UpdateClaudeCommandId" priority="0x0150" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="GlobalGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Refresh"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <Strings><ButtonText>Update Claude Code</ButtonText></Strings>
+      </Button>
       <Button guid="guidAgentsCommandSet" id="DataFolderCommandId" priority="0x0100" type="Button">
         <Parent guid="guidAgentsCommandSet" id="DeveloperGroup"/>
         <Icon guid="ImageCatalogGuid" id="OpenFolder"/>
@@ -481,6 +489,7 @@
       <IDSymbol name="OutputAddToChatCommandId" value="0x0211" />
       <IDSymbol name="SolutionAddReferenceToChatCommandId" value="0x0212" />
       <IDSymbol name="TabAddReferenceToChatCommandId" value="0x0213" />
+      <IDSymbol name="UpdateClaudeCommandId" value="0x0214" />
       <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
            number of open panes and must not run into the fixed ids above. -->
       <IDSymbol name="ActiveSessionCommandId" value="0x0300" />

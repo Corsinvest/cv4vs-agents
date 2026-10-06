@@ -3,7 +3,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: 📖 Documentation
-    url: https://github.com/Corsinvest/cv4vs-agents#readme
+    url: https://corsinvest.github.io/cv4vs-agents/
     about: Setup, options, MCP tools and how the pieces fit together
 
   - name: 🔎 Search existing issues

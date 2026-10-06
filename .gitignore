@@ -434,6 +434,9 @@ FodyWeavers.xsd
 
 # Spec/piano di design e scratch dei workflow superpowers (locali, non versionati)
 docs/internal/
+# Astro build output of the documentation site
+docs/dist/
+docs/.astro/
 tools/cli-probe/results
 .superpowers/
 

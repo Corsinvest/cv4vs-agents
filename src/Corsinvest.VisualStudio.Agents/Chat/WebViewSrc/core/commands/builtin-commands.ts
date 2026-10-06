@@ -144,7 +144,8 @@ export class SwitchPermissionModeCommand extends ChatCommand {
     readonly label = 'Switch permission mode…';
     readonly description = 'Choose how much Claude may do without asking';
     readonly section: CommandSection = 'model';
-    readonly order = 20;
+    // After Ultracode (25), so that one stays directly under Effort.
+    readonly order = 27;
     readonly icon = Shield16Regular;
     readonly trailing: CommandTrailing = 'value';
     override readonly aliases = ['permission', 'permissions', 'mode', 'plan', 'auto'];
@@ -201,7 +202,7 @@ export class OpenCliTerminalCommand extends ChatCommand {
 export class HelpDocsCommand extends ChatCommand {
     readonly id = 'help-docs';
     readonly label = 'View help docs';
-    readonly description = 'Open the documentation on GitHub';
+    readonly description = 'Open the documentation';
     readonly section: CommandSection = 'support';
     readonly order = 10;
     readonly icon = Book16Regular;

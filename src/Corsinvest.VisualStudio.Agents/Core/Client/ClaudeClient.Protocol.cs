@@ -311,8 +311,16 @@ internal sealed partial class ClaudeClient
 
         var model = obj.Val("model");
         if (!string.IsNullOrEmpty(model)) { Model = model; }
+        // The first word the CLI says about the mode it is really in. It can differ from the one
+        // asked for at launch (a mode the model doesn't support falls back to default), and the
+        // selector must not keep showing the request.
         var mode = obj.Val("permissionMode");
-        if (!string.IsNullOrEmpty(mode)) { PermissionMode = mode; }
+        if (!string.IsNullOrEmpty(mode) && mode != PermissionMode)
+        {
+            _log.Debug(() => $"[client] permission mode from init: {PermissionMode} → {mode}");
+            PermissionMode = mode;
+            PermissionModeChanged?.Invoke(this, mode);
+        }
 
         Initialized?.Invoke(this, new InitializedEventArgs
         {

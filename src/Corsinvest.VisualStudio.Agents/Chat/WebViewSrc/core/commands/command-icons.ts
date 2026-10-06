@@ -8,7 +8,7 @@ import Settings16Regular from '@fluentui/svg-icons/icons/settings_16_regular.svg
 import Bug16Regular from '@fluentui/svg-icons/icons/bug_16_regular.svg';
 import Gauge16Regular from '@fluentui/svg-icons/icons/gauge_16_regular.svg';
 import Lightbulb16Regular from '@fluentui/svg-icons/icons/lightbulb_16_regular.svg';
-import Rocket16Regular from '@fluentui/svg-icons/icons/rocket_16_regular.svg';
+import AnimalRabbit16Regular from '@fluentui/svg-icons/icons/animal_rabbit_16_regular.svg';
 import Dumbbell16Regular from '@fluentui/svg-icons/icons/dumbbell_16_regular.svg';
 import Stethoscope20Regular from '@fluentui/svg-icons/icons/stethoscope_20_regular.svg';
 import DocumentAdd16Regular from '@fluentui/svg-icons/icons/document_add_16_regular.svg';
@@ -32,7 +32,7 @@ const COMMAND_ICONS: Readonly<Record<string, string>> = {
     context: Gauge16Regular,
     usage: Gauge16Regular,
     thinking: Lightbulb16Regular,
-    fast: Rocket16Regular,
+    fast: AnimalRabbit16Regular,
     effort: Dumbbell16Regular,
     doctor: Stethoscope20Regular,
     init: DocumentAdd16Regular,

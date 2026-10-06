@@ -1,0 +1,44 @@
+/*
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+ *
+ * Visual Studio 2026 colours and fonts on stock Starlight. Theme variables only: no class is
+ * restyled, so a Starlight upgrade cannot break the layout.
+ * The accents are stops of the gradients in Resources/plugin-logo.svg: keep them in step.
+ */
+
+:root {
+  --sl-font: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --sl-font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+}
+
+/* Dark: a near-neutral ground with a violet cast. Starlight declares its palette inside
+   @layer starlight.base, so an unlayered bare :root would repaint light mode too. */
+:root:not([data-theme='light']) {
+  --sl-color-accent-low: #2a1650;
+  --sl-color-accent: #bd58ef;
+  --sl-color-accent-high: #e9c4fb;
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: #e6e4ee;
+  --sl-color-gray-2: #c9c6d6;
+  --sl-color-gray-3: #a29fb3;
+  --sl-color-gray-4: #55526a;
+  --sl-color-gray-5: #2e2c38;
+  --sl-color-gray-6: #1f1e25;
+  --sl-color-black: #17161b;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #efe6fc;
+  --sl-color-accent: #6f32c8;
+  --sl-color-accent-high: #4a1f8f;
+  --sl-color-white: #1d1b26;
+  --sl-color-gray-1: #2a2735;
+  --sl-color-gray-2: #3d394d;
+  --sl-color-gray-3: #5d5970;
+  --sl-color-gray-4: #8a86a0;
+  --sl-color-gray-5: #c9c4d9;
+  --sl-color-gray-6: #ece8f5;
+  --sl-color-gray-7: #f7f5fb;
+  --sl-color-black: #ffffff;
+}

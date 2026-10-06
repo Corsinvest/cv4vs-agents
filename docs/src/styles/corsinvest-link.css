@@ -1,0 +1,17 @@
+/*
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+ *
+ * The Corsinvest mark in the header, beside GitHub. Starlight's social links take only an icon
+ * name from its own set, so the entry is declared with a stand-in and drawn over here: the one
+ * rule in the site that targets a Starlight class. If Starlight renames it, the stand-in shows.
+ */
+.social-icons a[href="https://www.corsinvest.it"] svg {
+  display: none;
+}
+.social-icons a[href="https://www.corsinvest.it"]::before {
+  content: '';
+  width: 1.35em;
+  height: 1.35em;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' rx='28' fill='%23163454'/%3E%3Cpath fill='%23fff' d='M78 22Q64 22 60 38L24 162Q20 178 36 178L110 178Q124 178 128 162L138 124L110 124L102 156L60 156L90 44L132 44L124 76L152 76L162 38Q166 22 152 22Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}

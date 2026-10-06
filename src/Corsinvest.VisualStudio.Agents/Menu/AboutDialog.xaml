@@ -4,7 +4,7 @@
         xmlns:vsui="clr-namespace:Microsoft.VisualStudio.PlatformUI;assembly=Microsoft.VisualStudio.Shell.15.0"
         xmlns:toolkit="clr-namespace:Community.VisualStudio.Toolkit;assembly=Community.VisualStudio.Toolkit"
         toolkit:Themes.UseVsTheme="True"
-        Title="About Claude Code"
+        Title="About cv4vs Agents"
         Width="380" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
@@ -19,7 +19,7 @@
            HorizontalAlignment="Center"
            Margin="0,0,0,8" />
 
-    <TextBlock Text="Claude Code for Visual Studio"
+    <TextBlock Text="cv4vs Agents: Claude Code for Visual Studio"
                FontSize="14" FontWeight="SemiBold"
                HorizontalAlignment="Center"
                Margin="0,0,0,2" />

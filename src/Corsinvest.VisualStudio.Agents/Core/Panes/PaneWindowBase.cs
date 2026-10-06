@@ -213,6 +213,7 @@ public abstract class PaneWindowBase : ToolWindowPane
                 // overwritten by the shell a moment later. The IsActiveFrame gate is evaluated in
                 // the same continuation: asking during OnShow can still name the previous frame.
                 owner.FocusInputIfActive();
+                PaneLauncher.OnPaneShown();
             }
             return next?.OnShow(fShow) ?? VSConstants.S_OK;
         }

@@ -258,11 +258,13 @@
     <Compile Include="Core\Panes\PaneToolbar.xaml.cs">
       <DependentUpon>PaneToolbar.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Core\Panes\ActiveChatTracker.cs" />
+    <Compile Include="Core\Panes\FrontChatKeeper.cs" />
     <Compile Include="Core\Panes\PaneEntry.cs" />
     <Compile Include="Core\Panes\PaneRegistry.cs" />
     <Compile Include="Core\Panes\PaneControlBase.cs" />
     <Compile Include="Core\Client\ClaudeInstall.cs" />
-    <Compile Include="Core\Client\ClaudeUpdateCheck.cs" />
+    <Compile Include="Core\Client\ClaudeUpdate.cs" />
     <Compile Include="Core\Client\ClientMessages.cs" />
     <Compile Include="Core\Client\ClientOptions.cs" />
     <Compile Include="Core\Client\ContextUsage.cs" />
@@ -335,6 +337,7 @@
       <DependentUpon>FileHistoryControl.xaml.cs</DependentUpon>
     </Compile>
     <Compile Include="Core\Workspace\ProjectStore.cs" />
+    <Compile Include="Core\Workspace\RestorePlan.cs" />
     <Compile Include="Core\Workspace\WorkspaceState.cs" />
     <Compile Include="Core\Workspace\WorkspaceStore.cs" />
     <Compile Include="Chat\ContentBlockTranslator.cs" />

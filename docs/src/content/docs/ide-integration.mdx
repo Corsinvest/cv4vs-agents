@@ -1,0 +1,64 @@
+---
+title: Editor context
+description: The file open in the editor and your selection ride along with the prompt; a chip shows what is going out, and one click turns it off.
+sidebar:
+  label: Editor context
+---
+
+import { Badge, LinkCard } from '@astrojs/starlight/components';
+
+The agent knows what you're looking at: the file open in the editor (and your selection) rides
+along with the prompt, so "this method" means something without you pasting it.
+
+## The context chip
+
+A chip in the composer's toolbar, under the prompt, shows the active file and, when you have
+selected code, its line range. It is not there when no document is open.
+
+![The context chip in the composer's toolbar](../../../images/chat/context-chip.png)
+
+Clicking the chip toggles whether that context is shared with the session; while it is off the
+chip dims and shows a struck-through eye. It is per pane.
+
+## What goes out
+
+A trailing icon says **what** is going out:
+
+| Icon | Going out |
+|---|---|
+| 🔖 | the position alone: file and lines |
+| 🧾 | the position **plus the selected code** |
+
+The second appears only with *Options → Chat → Send the selected text with the message* on **and**
+a live selection:
+an open file with no selection has no code to attach, so it stays a bookmark.
+
+Sending the code is what makes an **unsaved** buffer readable, since otherwise Claude opens the file
+and sees the saved version; it also costs those tokens on every message.
+
+The chip's tooltip says the same in words: *Not sent*, *Sent with every message: the position, not
+the code*, or *Sent with every message, selected code included*.
+
+A message that starts with `/` never carries the editor context: a slash command is sent as it is.
+
+<LinkCard title="Spending less context" description="What the chip, the eye and the setting each cost, and when to use which." href="/cv4vs-agents/guides/spending-less-context/" />
+
+## Post-edit diagnostics
+
+<Badge text="Experimental" variant="caution" /> <Badge text="Off by default" />
+
+After Claude edits a file, feed back the **new** errors/warnings that edit introduced (diffed
+against the Error List before the edit). The idea is to close the edit → error → fix loop without a
+manual build, as the VS Code extension does.
+
+**It is currently unreliable in Visual Studio**: VS only analyses files open in an editor, so right
+after the edit the Error List is usually still empty and Claude gets nothing. Until that's solved,
+ask Claude to read the errors; the `ide_get_diagnostics` [MCP tool](/cv4vs-agents/mcp-tools/#ide)
+works, because it runs once the Error List has settled.
+
+Enable via *Options → Chat → Send post-edit diagnostics*.
+
+## More than context
+
+The chip is what the agent is *told*. What it can *ask* Visual Studio for (references, definitions,
+diagnostics, builds, tests, the debugger) is in [MCP tools](/cv4vs-agents/mcp-tools/).

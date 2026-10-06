@@ -3,16 +3,17 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 // Model-section controls with inline state: Thinking (toggle), Fast mode
-// (toggle), Effort (slider). Each mirrors its value in app state so the menu
-// shows the current setting; Fast mode/Effort push into the CLI flag-settings
-// layer via host.applyFlagSettings, Thinking hot-swaps the runtime thinking
-// budget directly via host.setMaxThinkingTokens. keepMenuOpen so toggling
-// doesn't dismiss.
+// (toggle), Effort (slider), Ultracode (toggle). Each mirrors its value in app
+// state so the menu shows the current setting; Fast mode/Effort/Ultracode push
+// into the CLI flag-settings layer via host.applyFlagSettings, Thinking
+// hot-swaps the runtime thinking budget directly via host.setMaxThinkingTokens.
+// keepMenuOpen so toggling doesn't dismiss.
 
 import Lightbulb16Regular from '@fluentui/svg-icons/icons/lightbulb_16_regular.svg';
 import Rocket16Regular from '@fluentui/svg-icons/icons/rocket_16_regular.svg';
 import Dumbbell16Regular from '@fluentui/svg-icons/icons/dumbbell_16_regular.svg';
 import ArrowSwap16Regular from '@fluentui/svg-icons/icons/arrow_swap_16_regular.svg';
+import AnimalRabbit16Regular from '@fluentui/svg-icons/icons/animal_rabbit_16_regular.svg';
 import {
     ChatCommand,
     type CommandHost,
@@ -24,7 +25,7 @@ import { state as appState } from '../state';
 import { resolveModelValue } from '../ai-models';
 import {
     effortLabel,
-    ULTRACODE_VALUE,
+    ULTRACODE_LABEL,
     type EffortLevelDto,
     type EffortSliderLevel,
 } from '../types';
@@ -75,7 +76,7 @@ export class FastModeCommand extends ChatCommand {
     readonly description = 'Faster responses on supported models';
     readonly section: CommandSection = 'model';
     readonly order = 40;
-    readonly icon = Rocket16Regular;
+    readonly icon = AnimalRabbit16Regular;
     readonly trailing: CommandTrailing = 'toggle';
     override readonly aliases = ['fast', 'speed', 'turbo'];
     readonly keepMenuOpen = true;
@@ -126,16 +127,8 @@ export class EffortCommand extends ChatCommand {
     readonly keepMenuOpen = true;
     override readonly aliases = ['effort', 'reasoning', 'thinking'];
 
-    /** The slider's effort stops for the current model (from the CLI), then an
-     *  "ultracode" stop when the model supports xhigh: ultracode is xhigh plus a
-     *  flag, so without that level there is no stop to offer. */
     private stopValues(): string[] {
-        const levels = currentEffortLevels() ?? [];
-        const ultraAvailable = levels.includes('xhigh');
-        return ultraAvailable ? [...levels, ULTRACODE_VALUE] : [...levels];
-    }
-    private ultraIdx(stops: string[]): number {
-        return stops.indexOf(ULTRACODE_VALUE);
+        return currentEffortLevels() ?? [];
     }
 
     /** Hidden when the current model has no effort levels (e.g. Haiku). */
@@ -143,48 +136,24 @@ export class EffortCommand extends ChatCommand {
         return currentEffortLevels() !== null;
     }
 
-    /** Active slider stop. ultracode wins when enabled; else the current level. */
     get level(): number {
-        const stops = this.stopValues();
-        if (appState.ultracodeEnabled) {
-            const u = this.ultraIdx(stops);
-            if (u >= 0) {
-                return u;
-            }
-        }
-        return Math.max(0, stops.indexOf(appState.effortLevel));
+        return Math.max(0, this.stopValues().indexOf(appState.effortLevel));
     }
     get levelLabel(): string {
-        return effortLabel(appState.effortLevel, appState.ultracodeEnabled);
+        return effortLabel(appState.effortLevel);
     }
-    /** Set the active stop. The ultracode stop is effort=xhigh + the ultracode
-     *  flag; any other stop clears ultracode. `max` is selectable but not
-     *  persisted by the CLI enum, so it isn't pushed to settings. */
+    /** Only the level: the flag layer merges, so ultracode stays as it is. `max` is selectable
+     *  but not persisted by the CLI enum, so it isn't pushed to settings. */
     setLevel(host: CommandHost, idx: number): void {
         const stops = this.stopValues();
         const value = stops[Math.max(0, Math.min(idx, stops.length - 1))];
-        if (value === ULTRACODE_VALUE) {
-            appState.effortLevel = 'xhigh';
-            appState.ultracodeEnabled = true;
-            host.applyFlagSettings({ effortLevel: 'xhigh', ultracode: true });
-            return;
-        }
         appState.effortLevel = value as EffortLevelDto;
-        appState.ultracodeEnabled = false;
-        host.applyFlagSettings({ effortLevel: value, ultracode: null });
+        host.applyFlagSettings({ effortLevel: value });
     }
     override get trailingControl(): TrailingControl {
-        const stops = this.stopValues();
-        const ultra = this.ultraIdx(stops);
         return {
             kind: 'slider',
-            // false: a stop is labelled by its own value; the ultracode stop already IS
-            // ULTRACODE_VALUE, so it needs no flag to be named.
-            stops: stops.map((lvl, i) => ({
-                label: effortLabel(lvl, false),
-                value: i,
-                accent: i === ultra,
-            })),
+            stops: this.stopValues().map((lvl, i) => ({ label: effortLabel(lvl), value: i })),
             value: this.level,
             label: this.levelLabel,
             onSet: (host, v) => this.setLevel(host, v),
@@ -196,5 +165,40 @@ export class EffortCommand extends ChatCommand {
         if (stops.length > 0) {
             this.setLevel(host, (this.level + 1) % stops.length);
         }
+    }
+}
+
+/** Whether the current model can run ultracode. Derived: the CLI reports it for the current
+ *  model only (get_settings applied.ultracodeAvailable), and on every model probed it matches
+ *  the ones that list `xhigh`. */
+function ultracodeAvailable(): boolean {
+    return currentEffortLevels()?.includes('xhigh') ?? false;
+}
+
+export function ultracodeActive(): boolean {
+    return appState.ultracodeEnabled && ultracodeAvailable();
+}
+
+export class UltracodeCommand extends ChatCommand {
+    readonly id = 'ultracode';
+    readonly label = ULTRACODE_LABEL;
+    readonly description = 'Dynamic workflows on every task, this session only';
+    readonly section: CommandSection = 'model';
+    readonly order = 25;
+    readonly icon = Rocket16Regular;
+    readonly trailing: CommandTrailing = 'toggle';
+    override readonly aliases = ['ultracode', 'workflow', 'orchestrate'];
+    readonly keepMenuOpen = true;
+    get checked(): boolean {
+        return ultracodeActive();
+    }
+    override isEnabled(): boolean {
+        return ultracodeAvailable();
+    }
+    override run(host: CommandHost): void {
+        const next = !ultracodeActive();
+        appState.ultracodeEnabled = next;
+        // null, not false: it removes the key from the flag layer rather than storing an "off".
+        host.applyFlagSettings({ ultracode: next ? true : null });
     }
 }

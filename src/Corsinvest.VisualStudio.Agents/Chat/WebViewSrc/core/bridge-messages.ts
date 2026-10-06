@@ -28,6 +28,7 @@ export const Msg = {
             setSendSelection: 'set_cli_send_selection',
             applyFlagSettings: 'apply_cli_flag_settings',
             setMaxThinkingTokens: 'cli_set_max_thinking_tokens',
+            updateInstall: 'update_cli_install',
         },
         open: {
             ideFile: 'open_ide_file',

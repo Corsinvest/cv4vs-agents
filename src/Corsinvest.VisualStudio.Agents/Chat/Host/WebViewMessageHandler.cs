@@ -71,6 +71,10 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
                 HandleStop(data, id);
                 break;
 
+            case BridgeMessages.FromWebView.Cli.UpdateInstall:
+                HandleUpdateInstall(data, id);
+                break;
+
             case BridgeMessages.FromWebView.Open.IdeFile:
                 HandleIdeFile(data, id);
                 break;
