@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   in use.** With two chats open, the text landed in the newer one and brought it forward, whichever
   you were working in. It now goes to the chat you were in last; passing through a CLI pane or the
   editor on the way does not change that.
+- **Starting or stopping the debugger put another chat in front.** Visual Studio keeps a window
+  layout for design time and one for run time, each with its own front tab, so with several chats
+  in one group F5 and Shift+F5 showed whichever had been in front the last time that layout was
+  used, and the first F5 after opening them left the newest on top. The chat you were looking at
+  now stays in front, and the keyboard focus stays where it was.
 
 ## [1.13.0] - 2026-10-05
 

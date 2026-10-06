@@ -76,6 +76,7 @@ internal static class PaneLauncher
             {
                 if (Frame(pkg, entry) is IVsWindowFrame frame && frame.IsVisible() != VSConstants.S_OK)
                 {
+                    OutputWindowLogger.Global.Debug(() => $"[panes] ShowExisting shows '{entry.Title}'");
                     frame.Show();
                 }
             }
@@ -102,6 +103,78 @@ internal static class PaneLauncher
         catch (Exception ex)
         {
             OutputWindowLogger.Global.LogException($"PaneLauncher.Activate({entry.Title})", ex);
+        }
+    }
+
+    // Chat only: a CLI pane shares its group with the Output window, and putting it back in front
+    // would cover what the debugger has to show.
+    private static readonly FrontChatKeeper _frontChats = new(
+        () => PaneRegistry.Instance.OfKind(PaneKind.Chat),
+        IsFront,
+        BringForward);
+
+    /// <summary>The debugger changed mode: note the chats in front if the shell is about to swap its
+    /// window layout (see <see cref="FrontChatKeeper"/>). Main thread only.</summary>
+    public static void DebuggerModeChanged(bool inDesign)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        _frontChats.ModeChanged(inDesign);
+    }
+
+    /// <summary>The swap is over: put the noted chats back in front one last time. Main thread only.</summary>
+    public static void RestoreFrontChats()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        _frontChats.Finish();
+    }
+
+    /// <summary>A pane was shown or had its tab selected. During a layout swap that is the shell
+    /// bringing another chat forward, and waiting for idle to undo it leaves the wrong chat on
+    /// screen for the second the debugger takes to start. Deferred: showing a frame from inside
+    /// the shell's own notification is overwritten by it.</summary>
+    internal static void OnPaneShown()
+    {
+        if (!_frontChats.Keeping) { return; }
+        _ = System.Windows.Application.Current?.Dispatcher.BeginInvoke(new Action(() =>
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            _frontChats.Reassert();
+        }));
+    }
+
+    /// <summary>ShowNoActivate, not Show: the tab comes forward and the focus stays where it is,
+    /// which at a breakpoint is the editor.</summary>
+    private static void BringForward(PaneEntry entry)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            if (AgentsPackage.Instance is AgentsPackage pkg && Frame(pkg, entry) is IVsWindowFrame frame)
+            {
+                OutputWindowLogger.Global.Debug(() => $"[panes] '{entry.Title}' was in front before the layout change: back in front");
+                frame.ShowNoActivate();
+            }
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException($"PaneLauncher.BringForward({entry.Title})", ex);
+        }
+    }
+
+    /// <summary>Whether the pane is the front tab of its group: what the user can see, as opposed
+    /// to what is merely docked.</summary>
+    private static bool IsFront(PaneEntry entry)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            return AgentsPackage.Instance is AgentsPackage pkg && Frame(pkg, entry) is IVsWindowFrame frame
+                   && frame.IsOnScreen(out var onScreen) == VSConstants.S_OK && onScreen != 0;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException($"PaneLauncher.IsFront({entry.Title})", ex);
+            return false;
         }
     }
 

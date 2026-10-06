@@ -325,6 +325,15 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     /// Only ever shows what was already open: a pane the user closed stays closed, because it is
     /// not in the registry. StartOnIdle for the same reason as the solution-open restore: the
     /// shell is mid-transition and showing a frame from inside its event freezes it.
+    /// </para>
+    /// <para>
+    /// Each layout also keeps its own front tab per group, so the chat on screen gives way to
+    /// whichever was in front the last time that layout was used, and bringing the absent ones
+    /// back leaves the last one opened on top. Starting or stopping a program is not a request to
+    /// look at another chat: the ones in front are noted here and put back (see
+    /// <see cref="Core.Panes.FrontChatKeeper"/>). This event arrives before the shell swaps the
+    /// layout and idle comes after it, which is what makes the note possible (measured: the panes
+    /// read the old layout here, the new one at idle).
     /// </para></summary>
     public int OnModeChange(DBGMODE dbgmodeNew)
     {
@@ -333,10 +342,18 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             // Left break mode: whatever the break InfoBar was pointing at is over.
             if (dbgmodeNew != DBGMODE.DBGMODE_Break) { DebugBreakService.Clear(); }
 
+            // Before the early return: the mode is tracked even with no pane open, or the first
+            // one opened during a debug session would start from the wrong side of the swap.
+            Core.Panes.PaneLauncher.DebuggerModeChanged(dbgmodeNew == DBGMODE.DBGMODE_Design);
+
             if (Core.Panes.PaneRegistry.Instance.Entries.Count == 0) { return VSConstants.S_OK; }
             _ = JoinableTaskFactory.StartOnIdle(() =>
             {
-                try { Core.Panes.PaneLauncher.ShowExisting(); }
+                try
+                {
+                    Core.Panes.PaneLauncher.ShowExisting();
+                    Core.Panes.PaneLauncher.RestoreFrontChats();
+                }
                 catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.OnModeChange.Show", ex); }
             });
         }
