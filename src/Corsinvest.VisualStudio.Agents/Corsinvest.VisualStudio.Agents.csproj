@@ -258,6 +258,7 @@
     <Compile Include="Core\Panes\PaneToolbar.xaml.cs">
       <DependentUpon>PaneToolbar.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Core\Panes\ActiveChatTracker.cs" />
     <Compile Include="Core\Panes\PaneEntry.cs" />
     <Compile Include="Core\Panes\PaneRegistry.cs" />
     <Compile Include="Core\Panes\PaneControlBase.cs" />
