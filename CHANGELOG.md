@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Clicking a link to an image said Visual Studio would not open it, with the image open.** A
   file that opens in an editor other than the text one (a `.png` in the image editor) opened as
   asked and the chat still showed the error. The error is now kept for a file that did not open.
+- **"Add to chat" and the prompts of the context menus went to the chat opened last, not the one
+  in use.** With two chats open, the text landed in the newer one and brought it forward, whichever
+  you were working in. It now goes to the chat you were in last; passing through a CLI pane or the
+  editor on the way does not change that.
 
 ## [1.13.0] - 2026-10-05
 

@@ -33,7 +33,7 @@ internal static class PromptDispatcher
     /// lands in a tool window nobody is looking at.</summary>
     private static void Dispatch(SetComposerNotification composer)
     {
-        var target = PaneRegistry.Instance.OfKind(PaneKind.Chat).LastOrDefault(e => e.SetComposerAction != null);
+        var target = PaneRegistry.Instance.LastActiveChat(e => e.SetComposerAction != null);
         if (target == null)
         {
             // First profile = the native "Claude" that ProfileStore prepends.
