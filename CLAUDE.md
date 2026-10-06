@@ -167,10 +167,15 @@ The documentation is a Starlight site built from `docs/`, published at
 
 **Stock Starlight only**: its own components, and `src/styles/vs2026.css` holds theme variables and
 nothing else. `src/components/IconCard.astro` is Starlight's `Card` for an icon its set does not
-have (the bug on the home page): `Card` takes only a built-in name. Use `Card` whenever it has one. The accents there are stops of the gradients in
+have (the bug on the home page): `Card` takes only a built-in name. Use `Card` whenever it has one.
+`src/components/Motto.astro` is the motto under the home page's hero, signed with the Corsinvest
+wordmark (`src/assets/corsinvest-wordmark*.svg`): a local copy of the one in
+`@corsinvest/cv4pve-docs-theme`, whose text, link, fonts and colours are that suite's. The accents there are stops of the gradients in
 `src/Corsinvest.VisualStudio.Agents/Resources/plugin-logo.svg`. The other exception is `docs/external-links.mjs`, which opens external
 links in a new tab at build time: a link written through a component (`LinkCard`, a hero action, a
-sidebar entry) does not pass through it and takes `target` and `rel` by hand. The last one is
+sidebar entry) does not pass through it and takes `target` and `rel` by hand. `docs/matomo.mjs`
+writes the Matomo script (site 15 on `matomo.corsinvest.it`, no cookies) into the head, in the
+built site only, so `npm run dev` visits are not counted. The last one is
 `src/styles/corsinvest-link.css`: the Corsinvest mark in the header beside GitHub, drawn over a
 stand-in social icon because `social` takes only built-in names. It is the one rule that targets a
 Starlight class (`.social-icons`), so check the header after a Starlight upgrade.
