@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   in one group F5 and Shift+F5 showed whichever had been in front the last time that layout was
   used, and the first F5 after opening them left the newest on top. The chat you were looking at
   now stays in front, and the keyboard focus stays where it was.
+- **Reloading a solution could open a second copy of a chat.** A chat that had not been used yet
+  came back twice, and a conversation saved twice was opened in two chats, both writing the same
+  session. Each conversation is now restored once.
+- **A crash while the open chats were being saved could lose the list.** The file was deleted
+  before the new one was in place.
 
 ## [1.13.0] - 2026-10-05
 

@@ -337,6 +337,7 @@
       <DependentUpon>FileHistoryControl.xaml.cs</DependentUpon>
     </Compile>
     <Compile Include="Core\Workspace\ProjectStore.cs" />
+    <Compile Include="Core\Workspace\RestorePlan.cs" />
     <Compile Include="Core\Workspace\WorkspaceState.cs" />
     <Compile Include="Core\Workspace\WorkspaceStore.cs" />
     <Compile Include="Chat\ContentBlockTranslator.cs" />

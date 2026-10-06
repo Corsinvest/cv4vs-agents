@@ -237,7 +237,12 @@ internal static class PaneLauncher
                         // Create the entry BEFORE AssignPaneId: AssignPaneId → RegisterInstance →
                         // SetSessionCaption reads Entry.Title (built from the profile in its ctor), so
                         // the caption must see it on the first computation, not on a later refresh.
-                        var entry = new PaneEntry(kind, profile, new PaneOptions(), ResolveWorkdir());
+                        var entry = new PaneEntry(kind, profile, new PaneOptions(), ResolveWorkdir())
+                        {
+                            // Now, not when the process reports it: until then a second restore
+                            // would not see this session as taken and would open it again.
+                            ActiveSessionId = string.IsNullOrEmpty(resumeSessionId) ? null : resumeSessionId,
+                        };
                         paneWindow.Init(entry);
                         paneWindow.AssignPaneId(id);
                     }

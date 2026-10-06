@@ -6,6 +6,7 @@
 using Corsinvest.VisualStudio.Agents.Core.Panes;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -27,27 +28,32 @@ internal static class WorkspaceStore
             {
                 Version = 1,
                 SavedAt = savedAtIso,
-                Panes = [.. PaneRegistry.Instance.Entries
-                    .OrderBy(e => e.SeqNo)
-                    .Select(e => new PaneState
-                    {
-                        Kind = e.Kind == PaneKind.Cli ? "Cli" : "Chat",
-                        Profile = e.Profile.Name,
-                        SessionId = e.ActiveSessionId,
-                    })],
+                Panes = OpenPanes(),
             };
 
             var path = AppPaths.WorkspaceFile(solutionFolder);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             var json = JsonConvert.SerializeObject(state, Formatting.Indented);
-            // Atomic write (tmp + replace) so a crash mid-write can't corrupt the file.
+            // Through a temp file, and Replace rather than Delete then Move: a crash between those
+            // two leaves no workspace at all.
             var tmp = path + ".tmp";
             File.WriteAllText(tmp, json);
-            if (File.Exists(path)) { File.Delete(path); }
-            File.Move(tmp, path);
+            if (File.Exists(path)) { File.Replace(tmp, path, null); }
+            else { File.Move(tmp, path); }
         }
         catch (Exception ex) { OutputWindowLogger.Global.LogException("WorkspaceStore.Save", ex); }
     }
+
+    /// <summary>The panes open now, in opening order, as they would be saved.</summary>
+    public static List<PaneState> OpenPanes()
+        => [.. PaneRegistry.Instance.Entries
+            .OrderBy(e => e.SeqNo)
+            .Select(e => new PaneState
+            {
+                Kind = e.Kind == PaneKind.Cli ? "Cli" : "Chat",
+                Profile = e.Profile.Name,
+                SessionId = e.ActiveSessionId,
+            })];
 
     /// <summary>Load the solution's workspace, or null if absent/unreadable.</summary>
     public static WorkspaceState Load(string solutionFolder)

@@ -246,16 +246,11 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         // Load(forEdit:false) normally includes the native "Claude" profile → profiles[0] is the fallback.
         var profiles = Core.Profiles.ProfileStore.Load(forEdit: false);
         if (profiles.Count == 0) { return; }   // defensive: nothing enabled → nothing to restore onto
-        foreach (var p in ws.Panes)
+        // A reload leaves its panes alive: restoring them again would double every chat.
+        var toOpen = Core.Workspace.RestorePlan.ToOpen(ws.Panes, Core.Workspace.WorkspaceStore.OpenPanes());
+        OutputWindowLogger.Global.Debug(() => $"[restore] {ws.Panes.Count} pane(s) saved, {toOpen.Count} to open");
+        foreach (var p in toOpen)
         {
-            // A reload leaves its panes alive: restoring them again would double every chat.
-            if (!string.IsNullOrEmpty(p.SessionId)
-                && Core.Panes.PaneRegistry.Instance.Entries.Any(e =>
-                       string.Equals(e.ActiveSessionId, p.SessionId, StringComparison.OrdinalIgnoreCase)))
-            {
-                OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} still open → skip");
-                continue;
-            }
             var kind = string.Equals(p.Kind, "Cli", StringComparison.OrdinalIgnoreCase)
                 ? Core.Panes.PaneKind.Cli : Core.Panes.PaneKind.Chat;
             var profile = profiles.FirstOrDefault(x =>
@@ -271,7 +266,11 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             }
             else
             {
-                OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} missing on disk → opening fresh");
+                // A chat saved before its first message has no session to miss.
+                if (!string.IsNullOrEmpty(p.SessionId))
+                {
+                    OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} missing on disk → opening fresh");
+                }
                 sessionId = null;
             }
             PaneLauncher.OpenNew(kind, profile, resumeSessionId: sessionId);
