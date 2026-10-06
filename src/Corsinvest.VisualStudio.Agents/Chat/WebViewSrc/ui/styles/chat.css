@@ -848,10 +848,11 @@ cv-message[msg-role="user"] .cv-msg-actions {
 }
 .cv-model-switch .cv-model-switch-pill {
     padding: 1px 10px;
-    border-radius: 999px;
+    /* Not 999px, and free to wrap: the cache note is a sentence, wider than a narrow pane. */
+    border-radius: 10px;
     background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 12%, transparent);
     border: 1px solid color-mix(in srgb, var(--colorPaletteBerryBorderActive) 35%, transparent);
-    white-space: nowrap;
+    text-align: center;
 }
 
 /* Elapsed time on a running Agent row (the dot handles the spinner). */
