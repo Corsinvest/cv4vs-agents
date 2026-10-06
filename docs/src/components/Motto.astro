@@ -1,0 +1,96 @@
+---
+/*
+ * SPDX-FileCopyrightText: Copyright Corsinvest Srl
+ * SPDX-License-Identifier: GPL-3.0-only
+ *
+ * The motto, for the home page right under the hero, signed with the Corsinvest wordmark. Same
+ * shape as Motto.astro in @corsinvest/cv4pve-docs-theme, which cannot be imported here: its text
+ * and link are the cv4pve suite's, and it leans on that theme's fonts and colours.
+ * Self-contained markup and scoped styles (`not-content`): no Starlight internals touched.
+ */
+import wordmark from '../assets/corsinvest-wordmark.svg';
+import wordmarkWhite from '../assets/corsinvest-wordmark-white.svg';
+
+const CORSINVEST_URL = 'https://www.corsinvest.it';
+---
+
+<figure class="cv-motto not-content">
+  <blockquote>By a developer, for developers.</blockquote>
+  <figcaption>
+    <span>Powered by</span>
+    <a href={CORSINVEST_URL} target="_blank" rel="noopener noreferrer" title="Corsinvest">
+      <img class="cv-motto-on-light" src={wordmark.src} alt="Corsinvest" width="657" height="137" loading="lazy" />
+      <img class="cv-motto-on-dark" src={wordmarkWhite.src} alt="Corsinvest" width="657" height="137" loading="lazy" />
+    </a>
+  </figcaption>
+</figure>
+
+<style>
+  .cv-motto {
+    margin: 2rem auto 3.5rem;
+    max-width: 64rem;
+    text-align: center;
+  }
+  /* On a wide page the hero ends on a tall bottom padding (it grows with the viewport), and the
+     motto is pulled up into it. A narrow page has no such room: the buttons end the hero. */
+  @media (min-width: 50rem) {
+    .cv-motto {
+      margin-top: -4rem;
+    }
+  }
+  .cv-motto blockquote {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: var(--sl-color-white);
+    font-size: clamp(2.25rem, 6vw, 3.75rem);
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  /* A short accent rule under the motto, as a pause before the attribution. */
+  .cv-motto blockquote::after {
+    content: '';
+    display: block;
+    width: 5rem;
+    height: 4px;
+    margin: 1.25rem auto 1.1rem;
+    border-radius: 2px;
+    background: var(--sl-color-accent);
+  }
+  .cv-motto figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6em;
+    color: var(--sl-color-gray-2);
+    font-size: clamp(1.3rem, 3vw, 1.75rem);
+  }
+  /* "Powered by" as a small spaced label, so the weight of the line stays on the wordmark. */
+  .cv-motto figcaption span {
+    font-size: 0.6em;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .cv-motto a {
+    display: inline-flex;
+  }
+  .cv-motto img {
+    width: auto;
+    height: 1em;
+  }
+  .cv-motto a:hover img {
+    opacity: 0.8;
+  }
+  /* Dark wordmark on the light theme, white one on the dark theme. */
+  .cv-motto-on-light {
+    display: none;
+  }
+  :global(:root[data-theme='light']) .cv-motto-on-light {
+    display: block;
+  }
+  :global(:root[data-theme='light']) .cv-motto-on-dark {
+    display: none;
+  }
+</style>

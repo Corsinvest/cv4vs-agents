@@ -7,6 +7,12 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import starlightLinksValidator from 'starlight-links-validator';
 import { externalLinksInNewTab, socialLinksInNewTab } from './external-links.mjs';
+import { matomoHead } from './matomo.mjs';
+
+// Only in the built site: local dev visits stay out of the statistics.
+const matomo = process.argv.includes('build')
+  ? [matomoHead({ url: 'https://matomo.corsinvest.it/', siteId: 15 })]
+  : [];
 
 export default defineConfig({
   site: 'https://corsinvest.github.io',
@@ -23,7 +29,7 @@ export default defineConfig({
         // The icon is a stand-in: corsinvest-link.css draws the Corsinvest mark over it.
         { icon: 'external', label: 'Corsinvest', href: 'https://www.corsinvest.it' },
       ],
-      head: [socialLinksInNewTab],
+      head: [socialLinksInNewTab, ...matomo],
       editLink: { baseUrl: 'https://github.com/Corsinvest/cv4vs-agents/edit/master/docs/' },
       plugins: [starlightLinksValidator()],
       sidebar: [
