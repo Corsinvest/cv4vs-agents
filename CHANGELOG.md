@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **A session reopened after its prompt cache expired says so in the conversation.** A line under
+  the last message gives the idle time and what the next message re-caches: *Idle 3h 2m. Prompt
+  cache likely expired: your next message costs more, it re-caches about 459k tokens.* Until now
+  the figure was only in the tooltip of the clock beside the context gauge. That tooltip takes the
+  same wording.
+- **Manual as an initial permission mode.** **Options → Chat → Initial permission mode** has a
+  `Manual` entry: every new chat asks before edits, whatever `settings.json` says.
+
+### Changed
+
+- **`Default` as initial permission mode now leaves the choice to Claude Code.** It used to start
+  every new chat in Manual, ignoring the `permissions.defaultMode` of your `settings.json`. A new
+  chat now starts as `claude` does in a terminal: in that mode when one is set, user or folder,
+  and otherwise in the one Claude Code picks by itself, which can be Auto. `Default` is the
+  option's default, so this applies unless you chose another mode: **pick `Manual` to keep the
+  previous behaviour.** A resumed session still starts in the mode it was last in.
+
 ### Fixed
 
 - **Clicking a link to an image said Visual Studio would not open it, with the image open.** A

@@ -658,7 +658,8 @@ public partial class ChatPaneControl : PaneControlBase
         // (set by SetStartupSession before load). Model isn't decided here: client-first, the CLI's
         // own system/init reports it (fresh pane picks the CLI default; resume re-emits the
         // session's model) and the gate ships it to the WebView. Permission mode comes from OUR
-        // Options page (the CLI doesn't restore it from --resume).
+        // Options page (the CLI doesn't restore it from --resume), null when that leaves it to
+        // the CLI.
         var allowBypass = AgentsOptions.Chat.AllowDangerouslySkipPermissions;
         var permMode = PermissionMode.FromInitial(AgentsOptions.Chat.InitialPermissionMode, allowBypass);
         // Resuming (auto-resume or fork)? Read the session ONCE now so the respawn's --permission-mode
@@ -684,7 +685,7 @@ public partial class ChatPaneControl : PaneControlBase
         if (_disposed) { _log.Debug(() => "load: pane closed mid-read: init abandoned"); return; }
 
         _bridge.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
-        _log.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode})");
+        _log.Info($"load: InitAsync sessionId={_startupSessionId ?? "(none)"} (mode={permMode ?? "cli default"})");
 
         // Before the history, never after: those rows shorten their paths against the working
         // directory, and a row drawn without one keeps the absolute path it was born with. This

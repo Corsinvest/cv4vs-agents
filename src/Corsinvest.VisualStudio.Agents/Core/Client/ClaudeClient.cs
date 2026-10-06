@@ -186,6 +186,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
         _env = options.Env;
         WorkingDirectory = options.WorkingDirectory;
         SessionId = options.ResumeSessionId;
+        // A null mode is the CLI's to pick: Manual stands in until `initialize` names it.
         PermissionMode = options.InitialPermissionMode ?? Client.PermissionMode.Default;
     }
 
@@ -255,19 +256,8 @@ internal sealed partial class ClaudeClient : IClaudeClient
         if (options.AllowBypassPermissions) { args += " --allow-dangerously-skip-permissions"; }
 
         // The mode decides WHICH tools need confirmation, the prompt-tool is the channel to ask.
-        // Always passed, `default` included: without the flag the CLI starts in the user's
-        // `permissions.defaultMode` (settings.json), while the selector reads "Manual".
-        // A closed list, not the value as it comes: it is read back from a .jsonl, and the CLI
-        // exits on a mode it doesn't know. Anything else starts in the cautious one.
-        args += " --permission-mode " + options.InitialPermissionMode switch
-        {
-            Client.PermissionMode.AcceptEdits
-                or Client.PermissionMode.Plan
-                or Client.PermissionMode.Auto
-                or Client.PermissionMode.DontAsk
-                or Client.PermissionMode.BypassPermissions => options.InitialPermissionMode,
-            _ => Client.PermissionMode.Default,
-        };
+        // Nothing for a null mode: the CLI then picks its own, and `initialize` reports which.
+        args += Client.PermissionMode.LaunchArg(options.InitialPermissionMode);
 
         // ALWAYS, whatever the mode. Verified on CLI 2.1.220: without this flag the CLI drops
         // AskUserQuestion from the session entirely: the turn ends `success` and the question is

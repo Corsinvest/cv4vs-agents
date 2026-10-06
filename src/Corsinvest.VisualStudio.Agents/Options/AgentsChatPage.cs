@@ -10,17 +10,19 @@ using System.Runtime.InteropServices;
 namespace Corsinvest.VisualStudio.Agents.Options;
 
 /// <summary>Permission mode a new chat session starts in; maps to the CLI's
-/// <c>--permission-mode</c> (see Core/Client/PermissionMode.cs). The CLI also accepts
-/// `manual` as an alias for `default`: one behaviour under two names, so it is deliberately
-/// not repeated here ("Manual" is already the label of Default). `auto` stays toolbar-only:
-/// it depends on the model supporting it, which isn't known until the catalogue arrives.</summary>
+/// <c>--permission-mode</c> (see Core/Client/PermissionMode.cs). `auto` stays toolbar-only:
+/// it depends on the model supporting it, which isn't known until the catalogue arrives.
+/// The member names are what VS serializes into the settings store: renaming one drops
+/// everyone's saved choice, which is why Manual was added rather than Default renamed.</summary>
 public enum InitialPermissionMode
 {
-    /// <summary>Manual: approval required for each edit (prudent default). The name stays
-    /// `Default` because it is what goes on the wire and what VS serializes into the settings
-    /// store: renaming it would invalidate the saved preference of everyone who already chose
-    /// a mode. "Manual" is only the user-facing label.</summary>
+    /// <summary>Whatever the CLI resolves: `permissions.defaultMode` from the user's or the
+    /// folder's settings.json, and the CLI's own choice when none is set: not always Manual, a
+    /// fresh profile on 2.1.291 starts in `auto`. No <c>--permission-mode</c> is passed.</summary>
     Default,
+    /// <summary>Manual: approval required for each edit, whatever settings.json says. The mode
+    /// the CLI calls `default` on the wire and `manual` on its command line.</summary>
+    Manual,
     /// <summary>Edit automatically: accept Edit/Write without asking.</summary>
     AcceptEdits,
     /// <summary>Plan: explore and present a plan before editing.</summary>
@@ -28,7 +30,7 @@ public enum InitialPermissionMode
     /// <summary>Bypass permissions: nothing is ever asked. Requires
     /// <see cref="AgentsChatPage.AllowDangerouslySkipPermissions"/>: without it the mode is
     /// hidden from the selector, so starting in it would leave the session in a mode the user
-    /// cannot see or leave. Falls back to Default in that case.</summary>
+    /// cannot see or leave. Falls back to Manual in that case.</summary>
     BypassPermissions,
 }
 
@@ -167,7 +169,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Input")]
     [DisplayName("Initial permission mode")]
-    [Description("Permission mode every new chat session starts in. You can still change it per-session from the toolbar. \"Manual\" (Default) is the most cautious. \"BypassPermissions\" also requires \"Allow dangerously skip permissions\" below: without it, sessions start in Manual.")]
+    [Description("Permission mode every new chat session starts in. You can still change it per-session from the toolbar. \"Default\" leaves it to Claude Code: the permissions.defaultMode of your settings.json, or the mode it picks by itself when there is none (which may be Auto), as in a terminal. \"Manual\" always asks before edits, whatever settings.json says. \"BypassPermissions\" also requires \"Allow dangerously skip permissions\" below: without it, sessions start in Manual.")]
     public InitialPermissionMode InitialPermissionMode { get; set; } = InitialPermissionMode.Default;
 
     [Category("Input")]
