@@ -246,16 +246,11 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
         // Load(forEdit:false) normally includes the native "Claude" profile → profiles[0] is the fallback.
         var profiles = Core.Profiles.ProfileStore.Load(forEdit: false);
         if (profiles.Count == 0) { return; }   // defensive: nothing enabled → nothing to restore onto
-        foreach (var p in ws.Panes)
+        // A reload leaves its panes alive: restoring them again would double every chat.
+        var toOpen = Core.Workspace.RestorePlan.ToOpen(ws.Panes, Core.Workspace.WorkspaceStore.OpenPanes());
+        OutputWindowLogger.Global.Debug(() => $"[restore] {ws.Panes.Count} pane(s) saved, {toOpen.Count} to open");
+        foreach (var p in toOpen)
         {
-            // A reload leaves its panes alive: restoring them again would double every chat.
-            if (!string.IsNullOrEmpty(p.SessionId)
-                && Core.Panes.PaneRegistry.Instance.Entries.Any(e =>
-                       string.Equals(e.ActiveSessionId, p.SessionId, StringComparison.OrdinalIgnoreCase)))
-            {
-                OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} still open → skip");
-                continue;
-            }
             var kind = string.Equals(p.Kind, "Cli", StringComparison.OrdinalIgnoreCase)
                 ? Core.Panes.PaneKind.Cli : Core.Panes.PaneKind.Chat;
             var profile = profiles.FirstOrDefault(x =>
@@ -271,7 +266,11 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             }
             else
             {
-                OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} missing on disk → opening fresh");
+                // A chat saved before its first message has no session to miss.
+                if (!string.IsNullOrEmpty(p.SessionId))
+                {
+                    OutputWindowLogger.Global.Debug(() => $"[restore] session {p.SessionId} missing on disk → opening fresh");
+                }
                 sessionId = null;
             }
             PaneLauncher.OpenNew(kind, profile, resumeSessionId: sessionId);
@@ -325,6 +324,15 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     /// Only ever shows what was already open: a pane the user closed stays closed, because it is
     /// not in the registry. StartOnIdle for the same reason as the solution-open restore: the
     /// shell is mid-transition and showing a frame from inside its event freezes it.
+    /// </para>
+    /// <para>
+    /// Each layout also keeps its own front tab per group, so the chat on screen gives way to
+    /// whichever was in front the last time that layout was used, and bringing the absent ones
+    /// back leaves the last one opened on top. Starting or stopping a program is not a request to
+    /// look at another chat: the ones in front are noted here and put back (see
+    /// <see cref="Core.Panes.FrontChatKeeper"/>). This event arrives before the shell swaps the
+    /// layout and idle comes after it, which is what makes the note possible (measured: the panes
+    /// read the old layout here, the new one at idle).
     /// </para></summary>
     public int OnModeChange(DBGMODE dbgmodeNew)
     {
@@ -333,10 +341,18 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
             // Left break mode: whatever the break InfoBar was pointing at is over.
             if (dbgmodeNew != DBGMODE.DBGMODE_Break) { DebugBreakService.Clear(); }
 
+            // Before the early return: the mode is tracked even with no pane open, or the first
+            // one opened during a debug session would start from the wrong side of the swap.
+            Core.Panes.PaneLauncher.DebuggerModeChanged(dbgmodeNew == DBGMODE.DBGMODE_Design);
+
             if (Core.Panes.PaneRegistry.Instance.Entries.Count == 0) { return VSConstants.S_OK; }
             _ = JoinableTaskFactory.StartOnIdle(() =>
             {
-                try { Core.Panes.PaneLauncher.ShowExisting(); }
+                try
+                {
+                    Core.Panes.PaneLauncher.ShowExisting();
+                    Core.Panes.PaneLauncher.RestoreFrontChats();
+                }
                 catch (Exception ex) { OutputWindowLogger.Global.LogException("Pkg.OnModeChange.Show", ex); }
             });
         }
