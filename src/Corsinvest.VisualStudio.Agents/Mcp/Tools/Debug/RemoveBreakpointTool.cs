@@ -23,7 +23,8 @@ internal sealed class RemoveBreakpointTool : McpTool<RemoveBreakpointArgs>
 {
     public override string Name => "debug_remove_breakpoint";
     public override string Description =>
-        "Remove the breakpoint(s) at a file and 1-based line. Use debug_clear_breakpoints to remove all.";
+        "Remove the breakpoint(s) at a file and 1-based line, tracepoints included. Use " +
+        "debug_clear_breakpoints to remove all.";
 
     public override bool Destructive => true;
     public override bool Idempotent => true;

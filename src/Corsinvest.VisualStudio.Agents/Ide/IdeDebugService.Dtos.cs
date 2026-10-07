@@ -36,8 +36,8 @@ internal sealed partial class IdeDebugService
         /// means the breakpoint will not stop anything. Only set by the breakpoint tools.</summary>
         public int? Bound { get; set; }
 
-        /// <summary>Where the breakpoint landed. For a file breakpoint that is always the line asked
-        /// for (VS rejects a line it can't use rather than moving it) but for a function breakpoint
+        /// <summary>Where the breakpoint landed. For a file breakpoint that is the line asked for
+        /// unless it was a comment, which VS moves to the next statement; for a function breakpoint
         /// it is the only way the caller learns which file and line the name resolved to. A null line
         /// means unresolved, which in design mode is normal. Only set by the breakpoint tools.</summary>
         public string File { get; set; }
@@ -68,6 +68,12 @@ internal sealed partial class IdeDebugService
         /// 0 means it never will, because the line holds no code or the module's symbols are not
         /// loaded, as opposed to bound and simply not reached.</summary>
         public int? Bound { get; set; }
+
+        /// <summary>What it prints to the Debug output pane when reached, or null. With
+        /// <see cref="Breaks"/> false that is a tracepoint, and one more answer to "why did it
+        /// not break": it was never going to.</summary>
+        public string LogMessage { get; set; }
+        public bool Breaks { get; set; }
     }
 
     public sealed class BreakpointsResult

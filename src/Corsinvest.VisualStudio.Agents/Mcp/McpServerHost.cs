@@ -258,6 +258,7 @@ internal sealed partial class McpServerHost
         yield return new Tools.GetDebugStateTool();
         yield return new Tools.SetBreakpointTool();
         yield return new Tools.SetFunctionBreakpointTool();
+        yield return new Tools.SetTracepointTool();
         yield return new Tools.RemoveBreakpointTool();
         yield return new Tools.EnableBreakpointTool();
         yield return new Tools.ClearBreakpointsTool();

@@ -42,8 +42,10 @@ internal sealed class SetBreakpointTool : McpTool<SetBreakpointArgs>
         ", the way to stop on the 500th iteration of a loop without a counter variable to test. " +
         "Works whether or not a debug session is running. Combine with debug_start + " +
         "debug_get_state to pause execution at this point. " +
-        "A line with no executable code (blank, comment, a type declaration) is refused, not moved: " +
-        "ok=false and the reason says so, so retry on a line that has a statement. A method's " +
+        "A blank line or a type declaration is refused: ok=false and the reason says so, so retry " +
+        "on a line that has a statement. A comment line is moved to the next statement instead: " +
+        "the returned line is where it sits, the reason says it moved, and that is the line " +
+        "debug_remove_breakpoint and debug_enable_breakpoint take. A method's " +
         "opening brace is fine: it carries the entry sequence point. " +
         "Accepting the line does not mean the debugger can stop on it either: binding happens later. " +
         "debug_list_breakpoints reports bound once the session is running, which is where " +

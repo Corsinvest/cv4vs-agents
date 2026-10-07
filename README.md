@@ -96,7 +96,7 @@ Each line links to the page that explains it.
 
 - **[Two panes](https://corsinvest.github.io/cv4vs-agents/two-panes/)**: a rich WebView2 chat and a real terminal (ConPTY), both
   multi-instance and dockable side by side, each on its own session.
-- **[79 MCP tools](https://corsinvest.github.io/cv4vs-agents/mcp-tools/)**: Visual Studio's own navigation, references, rename,
+- **[80 MCP tools](https://corsinvest.github.io/cv4vs-agents/mcp-tools/)**: Visual Studio's own navigation, references, rename,
   diagnostics, build, its Test Explorer and the live debugger handed to the agent.
 - **[It offers when you break](https://corsinvest.github.io/cv4vs-agents/guides/debug-with-the-agent/)**: stop on an exception and one
   press asks about it; the agent reads the live stack and locals rather than guessing.
