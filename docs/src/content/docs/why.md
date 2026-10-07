@@ -1,6 +1,6 @@
 ---
 title: Why
-description: Why this extension exists, in the words of the person who wrote it.
+description: Why this Visual Studio extension for Claude Code exists, in the words of the person who wrote it.
 ---
 
 I live in two editors. VS Code is light and quick, and Claude Code feels right at home there.

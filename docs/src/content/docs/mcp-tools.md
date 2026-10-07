@@ -1,5 +1,8 @@
 ---
 title: "MCP tools"
+head:
+  - tag: title
+    content: "MCP server and tools for Visual Studio | cv4vs Agents"
 description: "The 80 tools that hand Visual Studio's navigation, build, tests and live debugger to the agent."
 ---
 

@@ -1,5 +1,8 @@
 ---
 title: Two panes, one extension
+head:
+  - tag: title
+    content: "Chat and terminal panes for Claude Code | cv4vs Agents"
 description: The Chat pane and the CLI pane, both multi-instance and dockable, each on its own session.
 ---
 

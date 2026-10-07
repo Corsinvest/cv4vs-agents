@@ -10,6 +10,18 @@ import { externalLinksInNewTab, socialLinksInNewTab } from './external-links.mjs
 import { matomoHead } from './matomo.mjs';
 
 // Only in the built site: local dev visits stay out of the statistics.
+// Starlight emits og:title and og:description but no image, and the twitter:card it declares is
+// the large-image one: without this a shared link is a bare line of text. An absolute URL,
+// because the scrapers that read it resolve nothing relative.
+const ogImage = 'https://corsinvest.github.io/cv4vs-agents/og.png';
+const socialCard = [
+  { tag: 'meta', attrs: { property: 'og:image', content: ogImage } },
+  { tag: 'meta', attrs: { property: 'og:image:width', content: '1200' } },
+  { tag: 'meta', attrs: { property: 'og:image:height', content: '630' } },
+  { tag: 'meta', attrs: { property: 'og:image:alt', content: 'cv4vs Agents: Claude Code inside Visual Studio' } },
+  { tag: 'meta', attrs: { name: 'twitter:image', content: ogImage } },
+];
+
 const matomo = process.argv.includes('build')
   ? [matomoHead({ url: 'https://matomo.corsinvest.it/', siteId: 15 })]
   : [];
@@ -29,7 +41,7 @@ export default defineConfig({
         // The icon is a stand-in: corsinvest-link.css draws the Corsinvest mark over it.
         { icon: 'external', label: 'Corsinvest', href: 'https://www.corsinvest.it' },
       ],
-      head: [socialLinksInNewTab, ...matomo],
+      head: [socialLinksInNewTab, ...socialCard, ...matomo],
       editLink: { baseUrl: 'https://github.com/Corsinvest/cv4vs-agents/edit/master/docs/' },
       plugins: [starlightLinksValidator()],
       sidebar: [
