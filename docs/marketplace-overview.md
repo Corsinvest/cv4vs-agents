@@ -28,7 +28,7 @@ Visual Studio **2022 and 2026**. Free, GPL-3.0.
 |---|---|
 | **Build** | build and rebuild, with the errors handed straight back |
 | **Diagnostics** | errors and warnings from the live language service, including the ones an edit just introduced |
-| **Debugger** | breakpoints, stepping, locals, call stack, and it offers to look when you stop on an exception |
+| **Debugger** | breakpoints, tracepoints, stepping, locals, call stack, and it offers to look when you stop on an exception |
 | **Tests** | the Test Explorer's own tests: list, run, read the failures with their message and stack, and run them under the debugger |
 | **Navigation** | go to definition, find references, symbol search |
 | **Editor** | active document, selection, open files |
@@ -43,7 +43,8 @@ And it offers before you ask. Stop on an exception and a bar appears over that f
 about the break, and the answer comes from the live call stack and locals rather than a guess at the
 source. Breakpoints are opt-in (you placed it, you know why you are there) and stepping never asks.
 
-[Every tool, one by one](https://corsinvest.github.io/cv4vs-agents/mcp-tools/) in the documentation.
+[Every tool, one by one](https://corsinvest.github.io/cv4vs-agents/mcp-tools/) and
+[debugging with the agent](https://corsinvest.github.io/cv4vs-agents/guides/debug-with-the-agent/) in the documentation.
 
 ---
 
