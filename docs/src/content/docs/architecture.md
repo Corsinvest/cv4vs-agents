@@ -1,6 +1,6 @@
 ---
 title: "Architecture & build"
-description: "How the extension is put together and how to build it from source."
+description: "How the cv4vs Agents extension for Visual Studio is put together, and how to build the VSIX from source."
 ---
 
 How the extension is put together, and how to build it from source. For what it does, see the

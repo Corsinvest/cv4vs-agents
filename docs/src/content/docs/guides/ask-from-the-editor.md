@@ -1,5 +1,8 @@
 ---
 title: Ask from the editor
+head:
+  - tag: title
+    content: "Ask Claude Code from the Visual Studio editor | cv4vs Agents"
 description: Right-click code, the Error List or the Output window and ask about it; gather references from several files; edit the prompts on offer.
 ---
 
