@@ -15,6 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   same wording.
 - **Manual as an initial permission mode.** **Options → Chat → Initial permission mode** has a
   `Manual` entry: every new chat asks before edits, whatever `settings.json` says.
+- **Tracepoints: the agent can watch a line without stopping on it.** The new MCP tool
+  `debug_set_tracepoint` prints a message to the Debug output pane each time a line is reached and
+  lets the program carry on, with expressions in braces evaluated (`"total = {total}, i = {i}"`).
+  It is how a value gets followed across a whole loop in one run, or code that behaves differently
+  when paused gets watched at all. `debug_list_breakpoints` reports the message and `breaks`, so a
+  tracepoint is not mistaken for a breakpoint that failed to stop. 80 tools now.
 
 ### Changed
 
@@ -27,6 +33,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **`debug_set_breakpoint` on a comment line said nothing about where the breakpoint went.**
+  Visual Studio moves it to the next statement, and removing or disabling it then needs that line,
+  not the one asked for. The result now says it moved and where. The tool's description claimed
+  such a line was refused; only a blank one is.
+- **`debug_set_breakpoint` answered `ok` after creating nothing.** On a line that already holds a
+  breakpoint Visual Studio adds none and raises no error. The tool now answers `ok=false` and says
+  one is already there.
+- **`currentHits` read while the program runs looked like a live count.** The debugger hands it
+  over when the program pauses, so `debug_list_breakpoints` now says the figure is as of the last
+  pause.
 - **Clicking a link to an image said Visual Studio would not open it, with the image open.** A
   file that opens in an editor other than the text one (a `.png` in the image editor) opened as
   asked and the chat still showed the error. The error is now kept for a file that did not open.

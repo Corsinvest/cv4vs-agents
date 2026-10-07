@@ -34,7 +34,8 @@ internal sealed class EnableBreakpointTool : McpTool<EnableBreakpointArgs>
         "name. Disabling is how a breakpoint in hot code stops interrupting the session while you " +
         "are trying to reach a different one, unlike debug_remove_breakpoint, which also throws " +
         "away the condition and hit-count rule it was set with and cannot put them back. " +
-        "debug_list_breakpoints reports enabled for each. Works whether or not a session is running.";
+        "debug_list_breakpoints reports enabled for each. Works whether or not a session is running, " +
+        "and on a tracepoint as well, where disabling silences it without losing the message.";
 
     public override bool Idempotent => true;
 

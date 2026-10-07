@@ -77,8 +77,8 @@ When the agent drives the session itself, this is the order the tools are built 
 
 <Steps>
 
-1. `debug_set_breakpoint` at a file and line, optionally with a condition or a hit count. A line
-   with no statement on it is refused rather than moved.
+1. `debug_set_breakpoint` at a file and line, optionally with a condition or a hit count. A blank
+   line is refused; a comment line is moved to the next statement, and the result says where.
 2. `debug_start`: equivalent to F5 on the startup project. It returns once launched.
 3. Poll `debug_get_state` until the mode is `break`.
 4. `debug_get_callstack` and `debug_get_locals` to read where it stopped.
@@ -96,6 +96,21 @@ reports `bound` and `currentHits` for each breakpoint: `bound` 0 during a sessio
 to no code, and `currentHits` 0 with `bound` above it means the line was never reached, or the
 condition said no. `debug_list_modules` shows whether the module's symbols were loaded, which is
 nearly always why a breakpoint will not bind.
+
+## Watching without stopping
+
+Some bugs go away when the program is paused: a race, a timeout, a loop that only misbehaves on
+the ten-thousandth pass. `debug_set_tracepoint` is for those: it takes a file, a line and a
+`logMessage`, prints the text to the Debug output pane each time the line is reached, and the
+program carries on. Expressions in braces are evaluated, so
+`"total = {total}, i = {i}"` follows two values across the whole run, and `ide_read_output` reads
+the lines back. `debug_list_breakpoints` reports it with `breaks` false, so it is not mistaken for
+a breakpoint that failed to stop. To Visual Studio a tracepoint is a kind of breakpoint, so
+`debug_remove_breakpoint` and `debug_enable_breakpoint` work on it too.
+
+Two things to know. A tracepoint is not free: each pass costs a few milliseconds, so a hot loop runs
+visibly slower while one is set on it. And `currentHits` only moves when the program
+pauses, so a tracepoint that has printed a thousand lines still reads 0 while the program runs.
 
 ## Console programs
 

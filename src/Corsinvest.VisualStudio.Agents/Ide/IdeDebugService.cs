@@ -307,6 +307,56 @@ internal sealed partial class IdeDebugService
         }
     }
 
+    /// <summary>Turn the breakpoints just created into tracepoints: print
+    /// <paramref name="logMessage"/> and carry on. False when the debugger's breakpoints do not
+    /// take one, and then the breakpoints are deleted again: left in place they would stop a
+    /// program the caller asked only to watch. Must be called on the UI thread.</summary>
+    private static bool MakeTracepoints(Breakpoints added, string logMessage)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            foreach (Breakpoint bp in added)
+            {
+                var bp2 = (EnvDTE80.Breakpoint2)bp;
+                bp2.Message = logMessage;
+                bp2.BreakWhenHit = false;
+            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[debug] could not turn a breakpoint into a tracepoint: {ex.Message}");
+            try { foreach (Breakpoint bp in added) { bp.Delete(); } }
+            catch (Exception deleteEx)
+            {
+                OutputWindowLogger.Global.Warn($"[debug] could not remove the breakpoint left behind: {deleteEx.Message}");
+            }
+            return false;
+        }
+    }
+
+    /// <summary>The message a breakpoint prints when reached, and whether it still stops there.
+    /// A message with Breaks false is a tracepoint; the Breakpoints window can also set one that
+    /// prints and stops. Must be called on the UI thread.</summary>
+    private static (string LogMessage, bool Breaks) LogActionOf(Breakpoint bp)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (bp is not EnvDTE80.Breakpoint2 bp2) { return (null, true); }
+        try
+        {
+            return (string.IsNullOrEmpty(bp2.Message) ? null : bp2.Message, bp2.BreakWhenHit);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[debug] could not read a breakpoint's log message: {ex.Message}");
+            return (null, true);
+        }
+    }
+
+    private const string TracepointRefused =
+        "This debugger's breakpoints do not take a log message, so nothing was set.";
+
     private static int CountHits(Breakpoint bp)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -361,8 +411,21 @@ internal sealed partial class IdeDebugService
     /// optional condition (true-expression) and hit-count rule. Works in any mode. Returns Ok even
     /// if VS can't bind it yet (it binds when the code loads), as long as the request was
     /// accepted.</summary>
-    public async Task<DebugResult> SetBreakpointAsync(string filePath, int line, string condition,
-                                                      int hitCount, string hitCountType)
+    public Task<DebugResult> SetBreakpointAsync(string filePath, int line, string condition,
+                                                int hitCount, string hitCountType)
+        => AddFileBreakpointAsync(filePath, line, condition, hitCount, hitCountType, null);
+
+    /// <summary>Add a tracepoint at <paramref name="filePath"/>:<paramref name="line"/>: a
+    /// breakpoint that prints <paramref name="logMessage"/> to the Debug output pane and carries
+    /// on. An empty message is refused: it would leave a plain breakpoint, which stops.</summary>
+    public Task<DebugResult> SetTracepointAsync(string filePath, int line, string logMessage,
+                                                string condition, int hitCount, string hitCountType)
+        => string.IsNullOrWhiteSpace(logMessage)
+            ? Task.FromResult(new DebugResult { Ok = false, Reason = "logMessage is required." })
+            : AddFileBreakpointAsync(filePath, line, condition, hitCount, hitCountType, logMessage);
+
+    private async Task<DebugResult> AddFileBreakpointAsync(string filePath, int line, string condition,
+                                                           int hitCount, string hitCountType, string logMessage)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         try
@@ -397,20 +460,49 @@ internal sealed partial class IdeDebugService
                 HitCount: Math.Max(0, hitCount),
                 HitCountType: hitType);
 
+            // Measured: when the place VS would use is taken, Add creates nothing and says nothing.
+            // That reported ok with no line, and for a tracepoint it would have claimed a message
+            // on a breakpoint that still stops.
+            if (added.Count == 0)
+            {
+                return new DebugResult
+                {
+                    Ok = false,
+                    Mode = ModeToString(dbg.CurrentMode),
+                    Reason = $"Visual Studio added nothing for line {line}: a breakpoint already sits " +
+                             "where this one would land. debug_list_breakpoints shows it; remove it " +
+                             "first to replace it.",
+                };
+            }
+
+            if (!string.IsNullOrEmpty(logMessage) && !MakeTracepoints(added, logMessage))
+            {
+                return new DebugResult { Ok = false, Reason = TracepointRefused };
+            }
+
             // Report the line back so the caller can reason about the breakpoint it got rather than
-            // the one it asked for. Measured: for a file breakpoint the two always match; VS
-            // rejects a line it cannot use (see the catch) instead of moving it elsewhere.
+            // the one it asked for. Measured: a blank line is rejected (see the catch), but a comment
+            // line is accepted and slides to the next statement, and every other breakpoint tool
+            // then matches on that line, not on the one asked for.
             var (landedFile, landedLine) = LandedAt(added, filePath);
+            var moved = landedLine is int landed && landed != line
+                ? $"Line {line} holds no code: Visual Studio moved it to line {landed}, the line " +
+                  "the other breakpoint tools take. "
+                : null;
             return new DebugResult
             {
                 Ok = true,
                 Mode = ModeToString(dbg.CurrentMode),
+                Reason = logMessage == null
+                    ? moved?.TrimEnd()
+                    : moved + "Tracepoint set: it prints to the Debug output pane and does not stop. " +
+                      "debug_remove_breakpoint removes it, debug_list_breakpoints lists it.",
                 File = landedFile,
                 Line = landedLine,
             };
         }
         // The one failure the caller can act on: VS refuses a line it cannot put a breakpoint on
-        // (blank, comment, a type declaration) instead of moving it to the next executable one.
+        // (blank, a type declaration) instead of moving it to the next executable one.
         // Under the generic message below it read as "the debugger is broken", when the fix is to
         // pick another line. VS's own text is localized, so it goes to the log, not into Reason.
         // Measured, against the obvious guess: a method's opening brace IS accepted (it carries the
@@ -422,14 +514,14 @@ internal sealed partial class IdeDebugService
             return new DebugResult
             {
                 Ok = false,
-                Reason = $"Visual Studio will not put a breakpoint on line {line}: it has no " +
+                Reason = $"Visual Studio will not put a {(logMessage == null ? "breakpoint" : "tracepoint")} on line {line}: it has no " +
                          "executable code. Pick a line with a statement on it.",
             };
         }
         catch (Exception ex)
         {
-            OutputWindowLogger.Global.LogException("IdeDebugService.SetBreakpointAsync", ex);
-            return new DebugResult { Ok = false, Reason = "Failed to set breakpoint." };
+            OutputWindowLogger.Global.LogException("IdeDebugService.AddFileBreakpointAsync", ex);
+            return new DebugResult { Ok = false, Reason = logMessage == null ? "Failed to set breakpoint." : "Failed to set tracepoint." };
         }
     }
 
@@ -620,6 +712,7 @@ internal sealed partial class IdeDebugService
             foreach (Breakpoint bp in dbg.Breakpoints)
             {
                 var isFile = bp.LocationType == dbgBreakpointLocationType.dbgBreakpointLocationTypeFile;
+                var (logMessage, breaks) = LogActionOf(bp);
                 list.Add(new BreakpointInfo
                 {
                     File = isFile ? bp.File : null,
@@ -634,6 +727,8 @@ internal sealed partial class IdeDebugService
                     HitCountType = HitCountTypeToString(bp.HitCountType),
                     CurrentHits = CountHits(bp),
                     Bound = BoundCount(bp, dbg),
+                    LogMessage = logMessage,
+                    Breaks = breaks,
                 });
             }
             // Stable order so the model can compare across calls (file bps by file/line,
@@ -643,7 +738,16 @@ internal sealed partial class IdeDebugService
                 .ThenBy(b => b.Line)
                 .ThenBy(b => b.Function ?? "", StringComparer.Ordinal)
                 .ToArray();
-            return new BreakpointsResult { Ok = true, Breakpoints = ordered };
+            return new BreakpointsResult
+            {
+                Ok = true,
+                Breakpoints = ordered,
+                // Measured: the debugger hands the counts over when it pauses, so a tracepoint that
+                // has fired 900 times reads 0 for as long as the program keeps running.
+                Reason = dbg.CurrentMode == dbgDebugMode.dbgRunMode
+                    ? "Running: currentHits is as of the last pause. debug_break refreshes it."
+                    : null,
+            };
         }
         catch (Exception ex)
         {

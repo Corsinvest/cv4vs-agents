@@ -20,8 +20,11 @@ internal sealed class ListBreakpointsTool : McpTool<NoArgs>
         "'never reached' from 'reached, and the condition said no', and bound (how many code " +
         "locations it resolved to, during a session) catches the case before both, a " +
         "breakpoint that will never stop anything because the line holds no code or its " +
-        "symbols are not loaded. Set them with debug_set_breakpoint or " +
-        "debug_set_function_breakpoint, remove one with debug_remove_breakpoint or all with " +
+        "symbols are not loaded. One more is not a failure at all: breaks=false with a " +
+        "logMessage is a tracepoint, which prints to the Debug output pane and carries on by " +
+        "design. currentHits is refreshed when the program pauses: read while it runs, it is the " +
+        "count as of the last pause, and the reason says so. Set them with debug_set_breakpoint, " +
+        "debug_set_function_breakpoint or debug_set_tracepoint, remove one with debug_remove_breakpoint or all with " +
         "debug_clear_breakpoints. Worth a look when a run stops somewhere unexpected: a " +
         "breakpoint left from earlier is the usual reason.";
 
@@ -35,6 +38,7 @@ internal sealed class ListBreakpointsTool : McpTool<NoArgs>
         return new
         {
             ok = true,
+            reason = r.Reason,
             breakpoints = r.Breakpoints.Select(b => new
             {
                 file = b.File,
@@ -46,6 +50,8 @@ internal sealed class ListBreakpointsTool : McpTool<NoArgs>
                 hitCountType = b.HitCountType,
                 currentHits = b.CurrentHits,
                 bound = b.Bound,
+                logMessage = b.LogMessage,
+                breaks = b.Breaks,
             }).ToArray(),
         };
     }

@@ -161,6 +161,7 @@
     <Compile Include="Mcp\McpServerHost.LockFile.cs" />
     <Compile Include="Mcp\McpTool.cs" />
     <Compile Include="Mcp\SchemaBuilder.cs" />
+    <Compile Include="Mcp\Tools\Debug\SetTracepointTool.cs" />
     <Compile Include="Mcp\Tools\Ide\GetWorkspaceFoldersTool.cs" />
     <Compile Include="Mcp\Tools\Editor\GetCurrentSelectionTool.cs" />
     <Compile Include="Mcp\Tools\Editor\GetLatestSelectionTool.cs" />
