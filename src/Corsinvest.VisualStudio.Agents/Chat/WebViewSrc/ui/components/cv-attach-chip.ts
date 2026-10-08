@@ -13,7 +13,7 @@ import { iconStyles } from '../styles/shared';
  * presentational: whoever creates it knows the action, so the chip has no
  * semantics: the click on the chip is native (bubbles to the host; the creator
  * binds @click to open the lightbox / VS file / IDE file). The only custom event
- * is `remove` (the ✕, when removable). `accent='brand'` gives the IDE-ref look.
+ * is `remove` (the ✕, when removable).
  * Shadow DOM.
  */
 @customElement('cv-attach-chip')
@@ -22,28 +22,29 @@ export class CvAttachChip extends LitElement {
         iconStyles,
         css`
             :host {
-                /* Sized to its content; the remove ✕ overlays the corner on hover. */
-                position: relative;
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
-                background: var(--colorNeutralBackground3);
+                /* One step lighter than the surface it sits on (the composer's field and the
+                 * user bubble share one): each level nested in another goes lighter, never back
+                 * down, or the chip reads as a hole in the bubble. The outline is what makes it
+                 * an object rather than a patch. The link colour because every chip opens
+                 * something: an image, a file, a place in the editor. */
+                background: var(--colorNeutralBackground1Hover);
                 border: 1px solid var(--colorNeutralStroke1);
-                border-radius: var(--borderRadiusSmall);
-                padding: 3px 8px 3px 4px;
+                border-radius: var(--borderRadiusMedium);
+                padding: 3px 8px 3px 6px;
                 font-size: var(--fontSizeBase200);
-                color: var(--colorNeutralForeground3);
+                color: var(--colorBrandForegroundLink);
                 max-width: 280px;
                 cursor: pointer;
             }
-            /* IDE-ref look: brand-blue border + link text. */
-            :host([accent='brand']) {
-                border-color: var(--colorBrandStroke1);
-                color: var(--colorBrandForegroundLink);
-                opacity: 0.85;
+            :host(:hover) {
+                border-color: var(--colorNeutralStrokeAccessible);
             }
-            :host([accent='brand']:hover) {
-                opacity: 1;
+            /* The ✕ brings its own room on the right. */
+            :host([removable]) {
+                padding-right: 4px;
             }
             .icon {
                 width: 16px;
@@ -58,46 +59,41 @@ export class CvAttachChip extends LitElement {
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
-            /* Remove ✕: floats over the top-right corner, only on hover; no inline
-             * space reserved, so the chip stays as wide as the filename. */
+            /* Remove ✕: inside the chip, at its end. It shows on hover, in room that is always
+             * kept for it: a chip that widened under the pointer would push the ones beside it. */
             .remove {
-                position: absolute;
-                top: -6px;
-                right: -6px;
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
+                flex-shrink: 0;
                 width: 16px;
                 height: 16px;
                 padding: 0;
                 border: none;
-                border-radius: 50%;
-                background: var(--colorNeutralBackground1);
-                color: var(--colorNeutralForeground2);
-                box-shadow: 0 0 0 1px var(--colorNeutralStroke1);
+                background: transparent;
+                color: var(--colorNeutralForeground3);
                 cursor: pointer;
                 line-height: 1;
                 opacity: 0;
                 transition: opacity 0.15s;
             }
-            .remove svg {
-                width: 12px;
-                height: 12px;
-            }
             :host(:hover) .remove,
             :host(:focus-within) .remove {
                 opacity: 1;
             }
+            .remove svg {
+                width: 12px;
+                height: 12px;
+            }
             .remove:hover {
-                color: var(--colorPaletteRedForeground1);
+                color: var(--colorNeutralForeground1);
             }
         `,
     ];
 
     @property() src = '';
     @property() label = '';
-    @property({ reflect: true }) accent?: 'brand';
-    @property({ type: Boolean }) removable = false;
+    @property({ type: Boolean, reflect: true }) removable = false;
 
     private _remove = (e: Event): void => {
         e.stopPropagation();

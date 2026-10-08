@@ -62,16 +62,16 @@
 .cv-message.user {
     display: block;
     align-self: stretch;
-    background: var(--colorNeutralBackground3);
+    /* The composer's surface: what you write looks the same before and after it is sent, and
+     * neither looks like code, which is the dark surface. Fluent's own chat tints "my message"
+     * with the brand colour; tried, and a blue block was too loud in a tool window. No rail down
+     * the left: that is kept for a message that needs attention (.interrupted, .error). */
+    background: var(--colorNeutralBackground1Selected);
     color: var(--colorNeutralForeground1);
-    border: none;
-    border-left: 3px solid var(--colorBrandBackground);
-    padding: 8px 12px;
-    border-radius: 4px;
+    border: 1px solid var(--colorNeutralStroke1);
+    padding: 6px 8px;
+    border-radius: var(--borderRadiusLarge);
     word-break: break-word;
-    font-size: 13px;
-    /* Explicit so the collapse math in updated() matches the rendered height. */
-    line-height: 18px;
     position: relative;
 }
 /* Container above a user bubble for parsed <ide_*> refs (cv-message renders the
@@ -93,10 +93,10 @@
     flex-shrink: 0;
     padding: 8px;
 }
-/* A stopped turn ("[Request interrupted…]") gets an orange bar instead of the blue
-   brand bar, so it reads as an interruption rather than a normal user prompt. */
+/* A stopped turn ("[Request interrupted…]") gets an orange bar, so it reads as an
+   interruption rather than a normal user prompt. */
 .cv-message.user.interrupted {
-    border-left-color: var(--colorPaletteDarkOrangeBorderActive, #da3b01);
+    border-left: 3px solid var(--colorPaletteDarkOrangeBorderActive);
 }
 /* Each user/assistant exchange is wrapped in <section class="cv-exchange">.
  * position:relative limits the sticky scope so each user bubble pins only
@@ -150,7 +150,7 @@ cv-message[queued] {
     opacity: 0.55;
 }
 .cv-pending-note {
-    font-size: 11px;
+    font-size: var(--fontSizeBase200);
     color: var(--colorNeutralForeground3);
 }
 /* The note and the actions row on one line: the note stays in view, the row beside it shows on
@@ -182,37 +182,29 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child {
      * itself, only a query its descendants can ask. */
     container-type: scroll-state;
 }
-body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-message.user {
-    background: var(--colorNeutralBackground3);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-}
 /* Pinned, the bubble is the exchange's header rather than a message in the flow, so it takes the
  * full column back: an 85% header would leave the scrolling answer visible past its edge. */
 @container scroll-state(stuck: top) {
     .cv-message.user {
         max-width: 100%;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    }
+    /* Expanded while pinned, a long message would be taller than what is left of its exchange,
+     * and a sticky box that no longer fits is pushed out of the top. Capped, it scrolls inside
+     * itself and stays the header. */
+    .cv-message.user.expanded .md {
+        max-height: 40vh;
+        overflow-y: auto;
     }
 }
 /* Clip + fade the TEXT (.md is a plain block, so max-height clips cleanly with no scrollbar).
  * The "Show more" button flows BELOW .md, still inside the bubble, so it's always visible below
- * the clipped text. On a short message the gradient would clip descenders, so it's gated on
- * is-overflowing. */
+ * the clipped text. A mask rather than a gradient laid over the text: it fades the text itself,
+ * so it needs no knowledge of the colour behind it. On a short message it would clip descenders,
+ * so it's gated on is-overflowing. */
 .cv-message.user.collapsible.is-overflowing .md {
     overflow: hidden;
-    position: relative;
-}
-.cv-message.user.collapsible.is-overflowing .md::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 16px;
-    background: linear-gradient(transparent, var(--colorNeutralBackground3));
-    pointer-events: none;
-}
-.cv-message.user:hover.collapsible.is-overflowing .md::after {
-    background: linear-gradient(transparent, var(--colorNeutralBackground4));
+    mask-image: linear-gradient(#000 calc(100% - 16px), transparent);
 }
 
 /* "Show more / Show less" for long user messages, inside the bubble, below the clipped text,
@@ -276,23 +268,17 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
      * own line-height box (see .cv-tool-row-dot). */
     align-items: flex-start;
     gap: 6px;
-    font-size: 12px;
-    line-height: 18px;
+    font-size: var(--fontSizeBase200);
+    line-height: 1.5;
     color: var(--colorNeutralForeground3);
     font-family: var(--fontFamilyBase);
     padding: 1px 0;
     min-width: 0;
 }
-.cv-tool-row:hover .cv-tool-row-detail {
-    color: var(--colorNeutralForeground1);
-}
-/* Grep/Glob: header is not clickable (only the count is). Reset both
- * pointer and hover highlight so it doesn't look interactive. */
+/* Grep/Glob: header is not clickable (only the count is). Reset the pointer so it doesn't look
+ * interactive. */
 .cv-tool-wrap.no-row-click .cv-tool-row-detail {
     cursor: default;
-}
-.cv-tool-wrap.no-row-click .cv-tool-row:hover .cv-tool-row-detail {
-    color: var(--colorNeutralForeground3);
 }
 
 /* The dot is a box one text-line tall that centers a crisp 7px circle (its
@@ -351,7 +337,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 .cv-tool-row-count {
     display: block;
     color: var(--colorNeutralForeground3);
-    font-size: 11px;
+    font-size: var(--fontSizeBase200);
     opacity: 0.8;
     /* Align under the tool name (4px wrap padding + 7px dot + 6px gap = 17px) */
     padding-left: 17px;
@@ -359,7 +345,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 .cv-tool-row-progress {
     color: var(--colorNeutralForeground3);
-    font-size: 10px;
+    font-size: var(--fontSizeBase100);
     margin-left: 6px;
     font-family: var(--fontFamilyMonospace);
     opacity: 0.7;
@@ -387,7 +373,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 .cv-children-more {
     color: var(--colorNeutralForeground4);
-    font-size: 14px;
+    font-size: var(--fontSizeBase300);
     line-height: 1;
     padding: 0 0 2px 2px;
     cursor: default;
@@ -464,7 +450,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 .cv-tool-body-pre {
     font-family: var(--fontFamilyMonospace);
-    font-size: 11px;
+    font-size: var(--fontSizeBase200);
     line-height: 1.35;
     color: var(--colorNeutralForeground1);
     white-space: pre;
@@ -479,7 +465,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
    because the two cells are read differently: IN is the prompt the user just wrote, OUT is the
    answer they opened the row for. */
 .cv-tool-body-md {
-    font-size: 12px;
+    font-size: var(--fontSizeBase200);
     max-height: 220px;
     overflow-y: auto;
 }
@@ -520,7 +506,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     display: flex;
     align-items: baseline;
     gap: 6px;
-    font-size: 11px;
+    font-size: var(--fontSizeBase200);
     font-family: var(--fontFamilyMonospace);
     padding: 1px 0;
 }
@@ -578,14 +564,14 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 .cv-question-chip {
     flex-shrink: 0;
-    font-size: 10px;
+    font-size: var(--fontSizeBase100);
     padding: 1px 6px;
     border-radius: var(--borderRadiusMedium);
     background: var(--colorNeutralBackground4);
     color: var(--colorNeutralForeground3);
 }
 .cv-question-text {
-    font-size: 12px;
+    font-size: var(--fontSizeBase200);
     font-weight: var(--fontWeightSemibold);
     color: var(--colorNeutralForeground1);
 }
@@ -599,7 +585,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     gap: 6px;
 }
 .cv-question-answer-val {
-    font-size: 12px;
+    font-size: var(--fontSizeBase200);
     font-weight: var(--fontWeightSemibold);
     color: var(--colorNeutralForeground1);
 }
@@ -607,7 +593,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     display: flex;
     align-items: flex-start;
     gap: 6px;
-    font-size: 11px;
+    font-size: var(--fontSizeBase200);
     padding: 2px 0 2px 8px;
 }
 /* Fluent radio/checkbox used as the marker only: the row is a record, not a form. */
@@ -631,13 +617,13 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     line-height: var(--lineHeightBase200);
 }
 
-/* IN/OUT box (VS Code-like): bordered container with two rows; the label
- * sits in a fixed left column, the content fills the rest of the row. */
+/* IN/OUT box (VS Code-like): bordered container with two rows. The surface is the one a code
+ * block in an answer has: what a tool was given and what it printed are code too. */
 .cv-tool-body-box {
-    border: 1px solid var(--colorNeutralStroke1);
-    border-radius: 4px;
+    border: 1px solid var(--colorNeutralStroke2);
+    border-radius: var(--borderRadiusMedium);
     overflow: hidden;
-    background: var(--colorNeutralBackground1);
+    background: var(--colorNeutralBackground3);
 }
 /* IN/OUT label above its block, not beside it: a 44px gutter plus its gap cost every row 52px
    of width for two three-letter words, and width is what a docked tool window hasn't got:
@@ -650,10 +636,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
     gap: 2px;
 }
 .cv-tool-body-row-in + .cv-tool-body-row-out {
-    border-top: 1px solid var(--colorNeutralStroke1);
-}
-.cv-tool-body-row-out:hover {
-    background: color-mix(in srgb, var(--colorBrandBackground) 4%, transparent);
+    border-top: 1px solid var(--colorNeutralStroke2);
 }
 .cv-tool-body-cell {
     position: relative;
@@ -675,18 +658,15 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child .cv-mess
 }
 .cv-tool-body-label {
     font-family: var(--fontFamilyMonospace);
-    font-size: 10px;
+    font-size: var(--fontSizeBase100);
     font-weight: 600;
     color: var(--colorNeutralForeground3);
     letter-spacing: 0.05em;
     opacity: 0.75;
 }
 
-.cv-message.user:hover {
-    background: var(--colorNeutralBackground4);
-}
 /* Actions row: cv-msg-actions sits below the bubble, on the chat background (a sibling of the
- * bubble inside the light-DOM cv-message host, NOT inside the .cv-message.user dark box). The slot
+ * bubble inside the light-DOM cv-message host, NOT inside the .cv-message.user box). The slot
  * is reserved (min-height) so revealing it on hover never shifts the layout. */
 .cv-msg-actions {
     display: flex;
@@ -755,12 +735,12 @@ cv-message[msg-role="user"] .cv-msg-actions {
  * get greyed out wholesale. */
 .cv-message.assistant .md:has(> p:only-child > em:only-child) {
     color: var(--colorNeutralForeground3);
-    font-size: 12px;
+    font-size: var(--fontSizeBase200);
 }
 
 .cv-message.result {
     align-self: flex-end;
-    font-size: 11px;
+    font-size: var(--fontSizeBase200);
     color: var(--colorNeutralForeground3);
     padding: 2px 4px;
 }
@@ -771,13 +751,13 @@ cv-message[msg-role="user"] .cv-msg-actions {
 .cv-message.slash-result {
     margin: 6px 0;
     color: var(--colorNeutralForeground3);
-    font-size: 11px;
+    font-size: var(--fontSizeBase200);
     font-family: var(--fontFamilyMonospace, monospace);
 }
 .cv-message.slash-result pre {
     margin: 0;
     padding: 2px 0 2px 10px;
-    border-left: 2px solid var(--colorNeutralStroke1);
+    border-left: 3px solid var(--colorNeutralStroke1);
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -795,7 +775,7 @@ cv-message[msg-role="user"] .cv-msg-actions {
     align-self: flex-start;
     background: color-mix(in srgb, var(--colorPaletteRedForeground1) 15%, var(--colorNeutralBackground2));
     border-left: 3px solid var(--colorPaletteRedForeground1);
-    border-radius: 0 var(--borderRadiusMedium) var(--borderRadiusMedium) 0;
+    border-radius: var(--borderRadiusMedium);
     padding: 8px 12px;
     max-width: 95%;
 }
@@ -807,7 +787,7 @@ cv-message[msg-role="user"] .cv-msg-actions {
     gap: 8px;
     margin: 6px 0;
     color: var(--colorPaletteBerryBorderActive);
-    font-size: 11px;
+    font-size: var(--fontSizeBase200);
 }
 .cv-compact-separator::before,
 .cv-compact-separator::after {
@@ -818,7 +798,7 @@ cv-message[msg-role="user"] .cv-msg-actions {
 }
 .cv-compact-separator span {
     padding: 1px 10px;
-    border-radius: 999px;
+    border-radius: var(--borderRadiusCircular);
     background: color-mix(in srgb, var(--colorPaletteBerryBorderActive) 12%, transparent);
     border: 1px solid color-mix(in srgb, var(--colorPaletteBerryBorderActive) 35%, transparent);
     white-space: nowrap;
@@ -833,10 +813,10 @@ cv-message[msg-role="user"] .cv-msg-actions {
 .cv-compact-summary {
     margin: 4px 12px 8px;
     padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: var(--borderRadiusLarge);
     background: var(--colorNeutralBackground2);
     color: var(--colorNeutralForeground2);
-    font-size: 12px;
+    font-size: var(--fontSizeBase200);
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
@@ -851,7 +831,7 @@ cv-message[msg-role="user"] .cv-msg-actions {
     gap: 8px;
     margin: 6px 0;
     color: var(--colorPaletteBerryBorderActive);
-    font-size: 11px;
+    font-size: var(--fontSizeBase200);
 }
 .cv-model-switch::before,
 .cv-model-switch::after {
@@ -872,7 +852,7 @@ cv-message[msg-role="user"] .cv-msg-actions {
 /* Elapsed time on a running Agent row (the dot handles the spinner). */
 /* The finished Agent's totals, which take the running clock's place in the row: cv-elapsed carries
  * the same three properties on its own :host. */
-.cv-agent-time { margin-left: 4px; font-size: 11px; opacity: 0.7; }
+.cv-agent-time { margin-left: 4px; font-size: var(--fontSizeBase200); opacity: 0.7; }
 /* A finished Agent's totals reveal on hover, unlike the running clock next to them: several
  * sub-agents in a row put near-identical figures one under the other, and read as a wall of
  * numbers you can't skip past. The running badge stays: it is the only sign the row is alive. */

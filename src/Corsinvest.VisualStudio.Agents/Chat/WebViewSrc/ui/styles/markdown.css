@@ -70,23 +70,16 @@
     font-size: 0.9em;
     background: var(--colorNeutralBackground3);
     border: 1px solid var(--colorNeutralStroke1);
-    border-radius: 3px;
+    border-radius: var(--borderRadiusSmall);
     padding: 2px 4px;
     word-break: break-word;
-}
-/* Inside the user bubble the background is already --colorNeutralBackground3,
- * so an inline-code pill of the same colour vanishes. Lift inline code (NOT
- * code inside a fenced <pre>, which stays transparent) to a lighter surface so
- * it keeps contrast. */
-.cv-message.user .md :not(pre) > code {
-    background: var(--colorNeutralBackground1);
 }
 .md pre {
     position: relative;
     background: var(--colorNeutralBackground3);
     border: 1px solid var(--colorNeutralStroke1);
     border-radius: var(--borderRadiusMedium);
-    margin: 6px 0;
+    margin: 0.8em 0;
     overflow: auto;
     padding: 0;
 }
@@ -120,6 +113,9 @@
  * which sits absolute over the top-right corner of the <pre>. */
 .cv-md-code-wrap {
     position: relative;
+    /* Here and not on the <pre>, whose margin the rule below zeroes: two blocks in a row would
+     * otherwise touch and read as one. */
+    margin: 0.8em 0;
 }
 .cv-md-code-wrap > pre {
     margin: 0;
@@ -176,10 +172,15 @@
  * with nothing to scroll because nothing stuck out. Columns take the width they need instead, and
  * the overflow becomes real. A narrow table is unaffected: max-content is smaller than the bubble. */
 .md table {
-    border-collapse: collapse;
+    /* separate, not collapse: a collapsed table cannot round its corners. The frame is the
+     * strong line and the rules inside it the weak ones: all at one weight, a table reads as a
+     * wireframe laid on the page rather than as an object. */
+    border-collapse: separate;
+    border-spacing: 0;
     margin: 0.6em 0;
     font-size: var(--fontSizeBase200);
     border: 1px solid var(--colorNeutralStroke1);
+    border-radius: var(--borderRadiusMedium);
     width: max-content;
     max-width: none;
 }
@@ -191,21 +192,36 @@
 }
 .md th,
 .md td {
-    border: 1px solid var(--colorNeutralStroke1);
+    border-bottom: 1px solid var(--colorNeutralStroke2);
+    border-right: 1px solid var(--colorNeutralStroke2);
     padding: 5px 10px;
     text-align: left;
 }
+/* The frame already closes the last column and the last row. */
+.md th:last-child,
+.md td:last-child {
+    border-right: none;
+}
+.md tr:last-child td {
+    border-bottom: none;
+}
+/* Lighter than the page, not darker: the header leads the table, and the dark surface is code's. */
 .md th {
-    background: var(--colorNeutralBackground3);
+    background: var(--colorNeutralBackground1Selected);
     font-weight: 600;
     text-align: center;
+    border-bottom-color: var(--colorNeutralStroke1);
 }
-.md tr:nth-child(even) {
-    background: color-mix(in srgb, var(--colorNeutralBackground2) 50%, transparent);
+/* The fill would square off the frame's corners: one pixel less, for the frame's own width. */
+.md th:first-child {
+    border-top-left-radius: calc(var(--borderRadiusMedium) - 1px);
+}
+.md th:last-child {
+    border-top-right-radius: calc(var(--borderRadiusMedium) - 1px);
 }
 .md hr {
     border: none;
     height: 1px;
-    background: var(--colorNeutralForeground3);
+    background: var(--colorNeutralStroke1);
     margin: 12px 0;
 }
