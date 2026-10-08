@@ -11,6 +11,15 @@ import { resolveLang, highlightCode, clearHighlightCache } from './lang';
 import { escapeHtml } from './html';
 import { findFileRefs, firstRefHint, parseFileRef } from './file-links';
 import { renderCodespanInner } from './codespan-link';
+import { parseForgeLink, type ForgeProvider } from './forge-links';
+import AzureDevOpsMark from './forge-icons/azuredevops.svg';
+import BitbucketMark from './forge-icons/bitbucket.svg';
+import CodebergMark from './forge-icons/codeberg.svg';
+import GitMark from './forge-icons/git.svg';
+import GiteaMark from './forge-icons/gitea.svg';
+import GiteeMark from './forge-icons/gitee.svg';
+import GithubMark from './forge-icons/github.svg';
+import GitlabMark from './forge-icons/gitlab.svg';
 
 // CLI-internal tags that look like HTML but are content; DOMPurify would
 // drop them silently, so escape up-front to render as literal text.
@@ -66,11 +75,40 @@ renderer.table = function (this: Renderer, token: Tokens.Table): string {
     );
 };
 
+// The <title> goes: inside a link it would answer the hover with "GitHub" in place of the URL.
+const brandIcon = (svg: string, provider: ForgeProvider): string =>
+    svg
+        .replace(/<title>.*?<\/title>/, '')
+        .replace('<svg ', `<svg class="cv-forge-icon cv-forge-${provider}" aria-hidden="true" `);
+const FORGE_ICON: Record<ForgeProvider, string> = {
+    github: brandIcon(GithubMark, 'github'),
+    gitlab: brandIcon(GitlabMark, 'gitlab'),
+    bitbucket: brandIcon(BitbucketMark, 'bitbucket'),
+    gitea: brandIcon(GiteaMark, 'gitea'),
+    codeberg: brandIcon(CodebergMark, 'codeberg'),
+    gitee: brandIcon(GiteeMark, 'gitee'),
+    azure: brandIcon(AzureDevOpsMark, 'azure'),
+    // Gerrit's own drawing is 10 KB, repeated in every link.
+    gerrit: brandIcon(GitMark, 'gerrit'),
+    git: brandIcon(GitMark, 'git'),
+};
+
 renderer.link = function (token: Tokens.Link): string {
     const href = token.href || '';
     const title = token.title || '';
     const text = token.text || '';
     if (/^(https?|mailto):/.test(href)) {
+        const forge = parseForgeLink(href);
+        if (forge) {
+            // A label the model wrote stays. The URL is the tooltip either way: the short form
+            // hides where the link goes.
+            const naked = text === href || text === escapeHtml(href);
+            const label = naked ? escapeHtml(forge.label) : text;
+            return (
+                `<a class="cv-forge-link" href="${escapeHtml(href)}" title="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">` +
+                `${FORGE_ICON[forge.provider]}${label}</a>`
+            );
+        }
         return `<a href="${escapeHtml(href)}" title="${escapeHtml(title)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     }
     // A markdown link to a local file: the model writes [X.cs:192](src/.../X.cs:192). If the href

@@ -78,8 +78,10 @@ by feature detection rather than by pinning a version.
 <img src="https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/chat.png" alt="The chat pane docked in Visual Studio" width="420">&nbsp;&nbsp;<img src="https://raw.githubusercontent.com/Corsinvest/cv4vs-agents/master/docs/images/cli.png" alt="The CLI pane running the same session" width="420">
 
 **Chat**: streaming replies, thinking blocks, collapsible tool output, inline diffs, clickable file
-references (`ClientEvents.cs:208` opens the file at that line), image attachments, and a composer with
-slash commands, an `@` file picker and prompt history. Any reply can be read aloud.
+references (`ClientEvents.cs:208` opens the file at that line), links to pull requests and issues
+shown short (`acme/widgets#312`, on GitHub, GitLab, Azure DevOps and Bitbucket, your own servers
+included), image attachments, and a composer with slash commands, an `@` file picker and prompt
+history. Any reply can be read aloud.
 
 Under the message box, a row for the turn itself: **model and effort** and **permission mode**,
 each a click away. Which model is answering, and what it may do without asking,

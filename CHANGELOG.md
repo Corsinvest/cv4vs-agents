@@ -13,6 +13,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   cache likely expired: your next message costs more, it re-caches about 459k tokens.* Until now
   the figure was only in the tooltip of the clock beside the context gauge. That tooltip takes the
   same wording.
+- **Links to pull requests and issues are shown short.** An address in an answer such as
+  `https://github.com/acme/widgets/pull/312` now reads `acme/widgets#312`, with the service's mark
+  in front and the full address as its tooltip. Pull or merge requests, issues and work items,
+  commits, releases and CI runs, on GitHub, GitLab, Azure DevOps, Bitbucket, Codeberg, Gitee,
+  Gitea, Forgejo and Gerrit, each in that service's own notation (`!114` for a GitLab merge
+  request). A server of your own needs no configuration: it is recognised by the shape of the
+  address. A link Claude gave a name of its own keeps it. See
+  [Links to pull requests and issues](https://corsinvest.github.io/cv4vs-agents/chat/forge-links/).
 - **Manual as an initial permission mode.** **Options → Chat → Initial permission mode** has a
   `Manual` entry: every new chat asks before edits, whatever `settings.json` says.
 - **Tracepoints: the agent can watch a line without stopping on it.** The new MCP tool

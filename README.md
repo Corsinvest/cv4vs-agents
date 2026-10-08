@@ -108,6 +108,9 @@ Each line links to the page that explains it.
   message of the session, and leaves the conversation where it is.
 - **[Clickable file references](https://corsinvest.github.io/cv4vs-agents/chat/file-links/)**: `ClientEvents.cs:208` in an answer, in
   plain prose, is a link that opens the file there; a range selects those lines.
+- **[Links to pull requests and issues, shown short](https://corsinvest.github.io/cv4vs-agents/chat/forge-links/)**: an address on
+  GitHub, GitLab, Azure DevOps or Bitbucket reads `acme/widgets#312`, with the service's mark and
+  the full address on hover. Your own servers are recognised with nothing to configure.
 - **[Know when the next message costs more](https://corsinvest.github.io/cv4vs-agents/chat/context-and-usage/#the-prompt-cache)**: the
   context gauge tracks the prompt cache and warns before it expires.
 - **[Keep writing while it answers](https://corsinvest.github.io/cv4vs-agents/chat/queued-messages/)**: the next message is read

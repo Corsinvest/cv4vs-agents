@@ -259,3 +259,29 @@ test('notice: no file link, nothing in the row would handle its click', () => {
 test('notice: a file name keeps its underscores', () => {
     assert.equal(inline('my_file_name.cs: not found'), 'my_file_name.cs: not found');
 });
+
+// Forge links: the table is tested in forge-links.test.ts, here only that the link renderer uses it.
+
+test('a bare forge URL is shown short, with the URL as its tooltip', () => {
+    const url = 'https://github.com/acme/widgets/pull/312';
+    const html = md(`merged in ${url} yesterday`);
+    assert.match(html, /class="cv-forge-link"/);
+    assert.match(html, />acme\/widgets#312<\/a>/);
+    assert.ok(html.includes(`title="${url}"`), html);
+    assert.ok(html.includes(`href="${url}"`), html);
+    assert.match(html, /class="cv-forge-icon"/);
+    assert.doesNotMatch(html, /<title>/);
+});
+
+test('a forge link the model labelled keeps its label', () => {
+    const html = md('see [the fix](https://git.example.org/g/p/-/merge_requests/114)');
+    assert.match(html, /class="cv-forge-link"/);
+    assert.match(html, />the fix<\/a>/);
+    assert.ok(html.includes('title="https://git.example.org/g/p/-/merge_requests/114"'), html);
+});
+
+test('any other link is left as it was', () => {
+    const html = md('docs at https://example.com/a/b/issues/12');
+    assert.doesNotMatch(html, /cv-forge-link/);
+    assert.match(html, /href="https:\/\/example.com\/a\/b\/issues\/12"/);
+});

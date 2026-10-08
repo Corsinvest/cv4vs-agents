@@ -65,6 +65,38 @@
     color: var(--colorBrandForegroundLinkHover);
     text-decoration: underline;
 }
+/* A forge link (core/forge-links.ts): the mark is never split from its reference at a line end. */
+.cv-forge-link {
+    white-space: nowrap;
+}
+.cv-forge-icon {
+    width: 1em;
+    height: 1em;
+    margin-right: 0.3em;
+    vertical-align: -0.125em;
+    fill: var(--colorNeutralForeground2);
+}
+/* Each service's own colour, taken from its real logo: with two services in one answer the
+ * colour tells them apart before the shape does. GitHub's is black, so its mark stays neutral, and
+ * the plain Git mark stands for no service in particular. */
+.cv-forge-gitlab {
+    fill: #e24329;
+}
+.cv-forge-azure {
+    fill: #0078d4;
+}
+.cv-forge-bitbucket {
+    fill: #2684ff;
+}
+.cv-forge-gitea {
+    fill: #609926;
+}
+.cv-forge-codeberg {
+    fill: #2185d0;
+}
+.cv-forge-gitee {
+    fill: #c71d23;
+}
 .md code {
     font-family: var(--fontFamilyMonospace);
     font-size: 0.9em;
