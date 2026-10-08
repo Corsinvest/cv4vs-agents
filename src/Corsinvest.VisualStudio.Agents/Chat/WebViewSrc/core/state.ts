@@ -63,10 +63,9 @@ export interface AppState {
     initialized: boolean;
     // Active sub-agents, mirrored from cv-app's Map for cross-component access.
     subagentTasks: SubagentTask[];
-    // Uuids of messages typed while a turn was running: echoed as bubbles at once, but not handed
-    // to the CLI until that turn ends. Mirrored from cv-prompt's queue, which keeps the payloads
-    // themselves (text + attachments) since it is the one that sends them: cv-app needs only the
-    // uuids, to fade a bubble that is on screen without having been sent.
+    // Uuids of messages sent while a turn was running and not read by the CLI yet. Mirrored from
+    // pendingPrompts, which keeps the payloads themselves (text + attachments): cv-app needs only
+    // the uuids, to fade a bubble the model does not have yet and draw it below the reply.
     queuedUuids: string[];
 
     // History paging (scroll-up fetches older pages on demand):

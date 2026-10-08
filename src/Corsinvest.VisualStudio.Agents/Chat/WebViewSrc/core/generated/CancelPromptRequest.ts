@@ -3,9 +3,6 @@
  * Any changes made to this file can be lost when this file is regenerated.
  */
 
-export interface SendPromptNotification {
-    text: string;
+export interface CancelPromptRequest {
     uuid: string;
-    attachments: Object | null;
-    priority: string | null;
 }

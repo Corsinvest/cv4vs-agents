@@ -23,6 +23,9 @@ public class SendPromptNotification
     public string Text { get; set; }
     public string Uuid { get; set; }
     public object Attachments { get; set; }
+    /// <summary>`later` for a prompt that must wait for the end of the running turn. Absent on
+    /// every other prompt.</summary>
+    public string Priority { get; set; }
 }
 
 /// <summary>Answer a tool-permission request (cli_respond_permission). updatedInput /
@@ -124,6 +127,12 @@ public class SubagentCancelNotification
 public class SubagentDetachNotification
 {
     public string ToolUseId { get; set; }
+}
+
+/// <summary>Take one prompt back from the CLI's queue (cancel_cli_prompt).</summary>
+public class CancelPromptRequest
+{
+    public string Uuid { get; set; }
 }
 
 /// <summary>Load a page of transcript history (chat_get_history). beforeOffset = -1 for

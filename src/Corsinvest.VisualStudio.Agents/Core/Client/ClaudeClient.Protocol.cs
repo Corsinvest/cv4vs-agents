@@ -144,6 +144,12 @@ internal sealed partial class ClaudeClient
             case ClientMessages.Type.ConversationReset:
                 ConversationReset?.Invoke(this, obj.Val("new_conversation_id"));
                 break;
+            case ClientMessages.Type.CommandLifecycle:
+                if (PromptQueue.TryParseLifecycle(obj, out var promptUuid, out var promptState))
+                {
+                    PromptLifecycleChanged?.Invoke(this, new PromptLifecycleEventArgs { Uuid = promptUuid, State = promptState });
+                }
+                break;
             default: _log.Trace(() => $"[unhandled] type={type}"); break;
         }
     }

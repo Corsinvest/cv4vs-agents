@@ -144,10 +144,10 @@ export class Transcript {
     /**
      * Move the top-level entry with `uuid` to the end.
      *
-     * A message typed during a turn is echoed at once but only sent when that turn ends, so its
-     * bubble sits above a reply it did not prompt, and `buildGroups` opens an exchange on every
-     * user message, so that reply is grouped under the wrong question. Moving it on dispatch also
-     * matches the order the .jsonl records, so the live view and a reopened session agree.
+     * A message sent during a turn is echoed where the transcript ended at that moment, above
+     * work it did not prompt, and `buildGroups` opens an exchange on every user message, so the
+     * reply that follows would be grouped under the wrong question. Moving it when the CLI reads
+     * it also matches the order the .jsonl records, so the live view and a reopened session agree.
      *
      * Top level only: a user message is never nested under a tool row.
      */

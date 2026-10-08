@@ -8,8 +8,10 @@ What the transcript shows, and how much of it.
 ## Your messages
 
 A long message is clipped to **Preview lines**, with **Show more** / **Show less**. Hovering a
-message of yours gives **Copy message**, **Fork conversation from here** (see
-[Sessions](/cv4vs-agents/chat/sessions/#fork)) and how long ago it was sent.
+message of yours gives, under it, how long ago it was sent, then **Copy message** and **Fork
+conversation from here** (see [Sessions](/cv4vs-agents/chat/sessions/#fork)). A message Claude has
+not read yet has a cross in place of Fork: see
+[Messages sent while Claude works](/cv4vs-agents/chat/queued-messages/#taking-a-message-back).
 
 Chips on the bubble show what went with it: the editor file and lines, images, attached files.
 Clicking the file chip opens it at those lines; an image opens the lightbox, which has **Copy

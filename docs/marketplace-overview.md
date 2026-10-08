@@ -132,8 +132,8 @@ A long session opens as quickly as an empty one.
 
 Walk away from a long turn and come back to it finished: while a chat is working, **Windows is kept
 from going to sleep**: the screen still turns off on its own timer, and everything goes back to
-normal the moment the reply ends. Messages written while Claude is still answering **wait in a
-queue** and go out when the turn ends; you can edit, remove or merge them before they do.
+normal the moment the reply ends. Messages written while Claude is still working **reach it
+while it works**: they are read when the step in progress ends, and can be taken back until then.
 
 [What the conversation shows, and how much](https://corsinvest.github.io/cv4vs-agents/chat/conversation/) in the documentation.
 

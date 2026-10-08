@@ -71,6 +71,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddEnum<NoticePositionDto>(asUnionType: true).StringInitializers();
         AddEnum<EffortLevelDto>(asUnionType: true).StringInitializers();
         AddInterface<RateLimitNotification>();
+        AddInterface<CancelPromptResponse>();
+        AddInterface<PromptsGoneNotification>();
         AddInterface<NoticeNotification>();
         AddInterface<ModelChangedNotification>();
         AddInterface<PermissionModeChangedNotification>();
@@ -183,7 +185,9 @@ public class BridgeGenerationSpec : GenerationSpec
     // handler falls back to the current session / main transcript) → nullable.
     private void RegisterFromWebView()
     {
-        AddInterface<SendPromptNotification>().Member(x => nameof(x.Attachments)).Null();
+        AddInterface<SendPromptNotification>()
+            .Member(x => nameof(x.Attachments)).Null()
+            .Member(x => nameof(x.Priority)).Null();
         // denyMessage/updatedInput/updatedPermissions are each sent only on some paths
         // (allow-with-input vs deny vs allow-with-suggestion) → optional.
         AddInterface<RespondPermissionNotification>()
@@ -207,6 +211,7 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<GetCompactSummaryRequest>().Member(x => nameof(x.SessionId)).Optional();
         AddInterface<SubagentCancelNotification>();
         AddInterface<SubagentDetachNotification>();
+        AddInterface<CancelPromptRequest>();
         // getHistory always sends sessionId → keep it required-nullable.
         AddInterface<GetHistoryRequest>().Member(x => nameof(x.SessionId)).Null();
         AddInterface<GetUsageRequest>();

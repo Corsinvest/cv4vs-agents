@@ -70,6 +70,9 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
             case BridgeMessages.FromWebView.Cli.Stop:
                 HandleStop(data, id);
                 break;
+            case BridgeMessages.FromWebView.Cli.CancelPrompt:
+                HandleCancelPrompt(data, id);
+                break;
 
             case BridgeMessages.FromWebView.Cli.UpdateInstall:
                 HandleUpdateInstall(data, id);

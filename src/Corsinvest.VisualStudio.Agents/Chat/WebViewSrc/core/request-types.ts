@@ -25,6 +25,8 @@ import type {
     GetSuggestionsResponse,
     GetCompactSummaryRequest,
     GetCompactSummaryResponse,
+    CancelPromptRequest,
+    CancelPromptResponse,
     RewindRequest,
     RewindResultNotification,
     RewindPointsNotification,
@@ -65,6 +67,12 @@ export const GetCompactSummaryReq = new RequestType<
     GetCompactSummaryRequest,
     GetCompactSummaryResponse
 >(Msg.fromWebView.chat.getCompactSummary, Msg.toWebView.chat.compactSummaryResult);
+
+/** Take a prompt back from the CLI's queue: `cancelled` is false once the CLI has read it. */
+export const CancelPromptReq = new RequestType<CancelPromptRequest, CancelPromptResponse>(
+    Msg.fromWebView.cli.cancelPrompt,
+    Msg.toWebView.cli.promptCancelResult,
+);
 
 export const GetUsageReq = new RequestType<GetUsageRequest, UsageDto>(
     Msg.fromWebView.chat.getUsage,

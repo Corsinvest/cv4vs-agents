@@ -51,6 +51,9 @@ internal static class BridgeMessages
         {
             public const string SendPrompt = "send_cli_prompt";
             public const string Stop = "stop_cli";
+            /// <summary>Take one prompt back from the CLI's queue. A request: the answer says
+            /// whether it was still there.</summary>
+            public const string CancelPrompt = "cancel_cli_prompt";
             public const string SetModel = "set_cli_model";
             public const string SetRemoteControl = "set_remote_control";
             /// <summary>remoteControlAtStartup in this profile's settings.json. A request: the write
@@ -175,6 +178,7 @@ internal static class BridgeMessages
             public const string Error = "cli_error";
             public const string State = "cli_state";                       // initialize + get_settings, re-sent on respawn
             public const string ModelChanged = "cli_model_changed";
+            public const string PromptCancelResult = "cli_prompt_cancel_result";
             public const string RemoteControlAtStartupResult = "remote_control_at_startup_result";
             public const string RemoteControlAtStartupChanged = "remote_control_at_startup_changed";
             public const string PermissionModeChanged = "cli_permission_mode_changed";
@@ -216,6 +220,8 @@ internal static class BridgeMessages
             /// re-reads the stats (cache is now up to date).</summary>
             public const string StatsIndexDone = "chat_stats_index_done";
             public const string RateLimit = "chat_rate_limit";
+            /// <summary>Prompts waiting in the CLI's queue that will never run.</summary>
+            public const string PromptsGone = "chat_prompts_gone";
             /// <summary>A CLI advisory (system/informational) shown as a session notice at the top of
             /// the chat, e.g. "session model X isn't recognized by this version".</summary>
             public const string Notice = "chat_notice";

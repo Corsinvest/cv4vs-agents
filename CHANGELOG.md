@@ -24,6 +24,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- **A message typed while Claude works reaches it while it works.** It used to wait for the end
+  of the turn, so a correction arrived after the work it was meant to redirect. It is now sent at
+  once and read when the tool in progress returns, in the same turn. It waits at the bottom of the
+  conversation until then, and several waiting messages are read together. The cross under a
+  waiting message takes it back into the composer; editing one in place and grouping with
+  Alt+Enter are gone (the key is Visual Studio's Properties again), and so is the chip in the
+  composer's toolbar. A message with a file attached
+  still waits for the end of the turn: read earlier, Claude Code drops the file.
+- **Under a message of yours the time comes first, then the buttons.** The row is right-aligned,
+  so the buttons no longer move when the time changes width. A waiting message has the same row,
+  with the cross in place of Fork.
 - **`Default` as initial permission mode now leaves the choice to Claude Code.** It used to start
   every new chat in Manual, ignoring the `permissions.defaultMode` of your `settings.json`. A new
   chat now starts as `claude` does in a terminal: in that mode when one is set, user or folder,

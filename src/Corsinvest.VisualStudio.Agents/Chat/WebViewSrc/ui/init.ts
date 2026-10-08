@@ -6,6 +6,7 @@
 // document-level state observers, and starts the bridge listener.
 
 import { bridge } from '../core/bridge';
+import { pendingPrompts } from '../core/pending-prompts';
 import { Msg } from '../core/bridge-messages';
 import { state } from '../core/state';
 import type { IdeContextNotification } from '../core/types';
@@ -247,7 +248,11 @@ function wireBridgeHandlers(): void {
     // Turn end: clear busy and capture the model's real context window/max output
     // (the result carries them; 0 means unknown, so keep the previous value).
     bridge.onNotification<ExchangeEndedNotification>(Msg.toWebView.chat.exchangeEnded, (data) => {
-        state.isBusy = false;
+        // Prompts still waiting are read now, in a turn the CLI starts by itself: the composer
+        // must not read as idle in the gap between the two.
+        pendingPrompts.onTurnProgress();
+        pendingPrompts.turnEnded();
+        state.isBusy = pendingPrompts.busy;
         if (data?.contextWindow && data.contextWindow > 0) {
             state.contextWindow = data.contextWindow;
             state.maxOutputTokens = data.maxOutputTokens ?? 0;

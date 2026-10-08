@@ -7,10 +7,10 @@ import type { UiEntry } from './types';
  * Group a transcript into exchanges: each user message opens one, and whatever precedes the first
  * user message (a history page boundary) gets its own leading group.
  *
- * A message still in the queue is the exception: it heads no turn, since the CLI has not been
- * given it. Opening an exchange for it would end the running turn's <section> early, and the
- * sticky user bubble pins only within its own section (.cv-exchange in chat.css): that turn's
- * header would come unstuck while its reply is still arriving. It opens its own group once sent.
+ * A message the CLI has not read yet is the exception: it heads no turn. Opening an exchange for
+ * it would end the running turn's <section> early, and the sticky user bubble pins only within
+ * its own section (.cv-exchange in chat.css): that turn's header would come unstuck while its
+ * reply is still arriving. It opens its own group once read.
  *
  * Pure and derived: cv-app calls this from a memoised getter instead of holding the groups as
  * state, so the groups can never drift from the entries they are built from.
@@ -39,6 +39,32 @@ export function buildGroups(
         groups.push(current);
     }
     return groups;
+}
+
+/** A user bubble the CLI has not read yet. */
+export function isPending(e: UiEntry, pending: ReadonlySet<string>): boolean {
+    return e.kind === 'text' && e.role === 'user' && !!e.uuid && pending.has(e.uuid);
+}
+
+/**
+ * The entries with the pending user bubbles moved to the end, in the order they were sent.
+ *
+ * A prompt sent mid-turn is echoed where the transcript ended at that moment, and the turn keeps
+ * appending after it, so left alone it would sit in the middle of a reply it has no part in. It
+ * belongs below everything until the CLI reads it. Derived at render time: the transcript itself
+ * is only reordered when the replay says where the prompt really went.
+ *
+ * Returns the same array when nothing moves, so a memoised caller keyed on identity stays so.
+ */
+export function pendingLast(
+    entries: readonly UiEntry[],
+    pending: ReadonlySet<string>,
+): readonly UiEntry[] {
+    const waiting = (e: UiEntry): boolean => isPending(e, pending);
+    if (pending.size === 0 || !entries.some(waiting)) {
+        return entries;
+    }
+    return [...entries.filter((e) => !waiting(e)), ...entries.filter(waiting)];
 }
 
 /**

@@ -56,7 +56,7 @@ export function parseIdeContextTags(text: string | undefined | null): {
 /**
  * A user message with every injected block taken out: what the person actually typed.
  *
- * For the callers that want the words and nothing else: a copy to the clipboard, a queued bubble,
+ * For the callers that want the words and nothing else: a copy to the clipboard, a pending bubble,
  * a one-line label in a picker.
  *
  * Deliberately a wrapper rather than a second regex: the tag list lives in ONE place, so a block

@@ -6,7 +6,6 @@ import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { iconStyles, tooltipStyles } from '../styles/shared';
-import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import Send16Filled from '@fluentui/svg-icons/icons/send_16_filled.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
 import { iconUrl } from '../../core/icon-url';
@@ -37,6 +36,7 @@ import type {
 } from '../../core/types';
 import { GetSuggestionsReq, SetRemoteControlAtStartupReq } from '../../core/request-types';
 import { markSent } from '../../core/sent-prompts';
+import { pendingPrompts, type PendingPrompt } from '../../core/pending-prompts';
 import { AtRequests } from '../../core/at-requests';
 import { permissionItems } from '../../core/permission-modes';
 import type { ChatCommand, CommandHost } from '../../core/commands';
@@ -49,7 +49,6 @@ import './cv-attach-chip';
 import './cv-context-gauge';
 import './cv-ide-context-badge';
 import './cv-subagent-chip';
-import './cv-queue-chip';
 import './cv-remote-chip';
 import './cv-model-list';
 import './cv-model-selector';
@@ -173,32 +172,6 @@ export class CvPrompt extends LitElement implements CommandHost {
             /* Notice bar (error/warning) shown above the textarea. */
             .notice {
                 margin-bottom: 6px;
-            }
-            /* Between the queue row and the field, where the message it names came from. The
-               accent stripe is what separates it at a glance from the notices above. */
-            .editing-bar {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 8px;
-                padding: 3px 4px 3px 8px;
-                font-size: 0.85em;
-                color: var(--colorNeutralForeground3);
-                border-left: 2px solid var(--colorBrandStroke1, #0f6cbd);
-            }
-            /* Cut to icon width, like the composer's other icon triggers. */
-            .editing-cancel {
-                flex-shrink: 0;
-                padding: 3px;
-                min-width: 0;
-            }
-            /* Red like the list's bins: a cross closes where a bin deletes, but both are the
-               "get out of this" button, and one red glyph per bar reads as that at a glance. */
-            .editing-cancel svg {
-                width: 16px;
-                height: 16px;
-                display: block;
-                color: var(--colorStatusDangerForeground1, #d13438);
             }
             /* A bare column: the border belongs to #field, not here. position:relative because the
                popovers (@, commands, model, permission) anchor to it. */
@@ -345,17 +318,6 @@ export class CvPrompt extends LitElement implements CommandHost {
     @state() private _hasText = false;
     @state() private _attachments: Attachment[] = [];
     @state() private _dragOver = false;
-    @state() private _queue: Array<{
-        text: string;
-        attachments: Attachment[];
-        uuid: string;
-        /** Entries sharing this leave as one message: Alt+Enter sets it. Absent means "on its
-         *  own", which is every entry queued with Enter. */
-        groupId?: string;
-    }> = [];
-    /** The queued entry open in the composer, or null. The text alone cannot say whether it is a
-     *  new message or a recalled one, and the queue payload already carries the uuid. */
-    @state() private _editingUuid: string | null = null;
     @state() private _atOpen = false;
     @state() private _atItems: AtItemDto[] = [];
     // Set when the host could not list the workspace; shown in place of "No matches".
@@ -421,9 +383,6 @@ export class CvPrompt extends LitElement implements CommandHost {
         super();
         this._subs.on('isBusy', (v) => {
             this._isBusy = v;
-            if (!v) {
-                queueMicrotask(() => this._flushQueue());
-            }
         });
         this._subs.on('permissionMode', (v) => {
             this._permissionMode = v;
@@ -944,17 +903,6 @@ export class CvPrompt extends LitElement implements CommandHost {
             this._cyclePermissionMode();
             return;
         }
-        // Alt+Enter appends to the last queued entry's group rather than opening a new one, for
-        // messages that correct each other and are no use arriving a turn apart. It is the only
-        // combination free in both configurations: useCtrlEnterToSend swaps Enter and Shift+Enter,
-        // so either of those would mean opposite things for two users. With no turn running or an
-        // empty queue there is nothing to group with, and it stays the newline it has always been.
-        if (e.key === 'Enter' && e.altKey && this._isBusy && this._queue.length > 0) {
-            e.preventDefault();
-            e.stopPropagation();
-            this._submit({ groupWithPrevious: true });
-            return;
-        }
         // Submit on Enter (or Ctrl/Cmd+Enter when useCtrlEnterToSend).
         if (e.key === 'Enter' && !e.altKey) {
             const ctrlOrMeta = e.ctrlKey || e.metaKey;
@@ -1055,7 +1003,7 @@ export class CvPrompt extends LitElement implements CommandHost {
         }
     };
 
-    private _submit(opts?: { groupWithPrevious?: boolean }): void {
+    private _submit(): void {
         const text = this._ta.value.trim();
         if (!text && this._attachments.length === 0) {
             return;
@@ -1077,29 +1025,14 @@ export class CvPrompt extends LitElement implements CommandHost {
                       : { filePath: ctx.filePath },
               ];
         const payload = { text, attachments: this._attachments, uuid };
-        const editing = this._editingUuid;
-        if (editing) {
-            // Replace in place, keeping the entry's own uuid: it never left the queue, so its
-            // position is kept and its bubble (already in the transcript) stays the right one.
-            // Re-echoing would put a second bubble up for the same message.
-            this._editingUuid = null;
-            this._setQueue(
-                this._queue.map((q) => (q.uuid === editing ? { ...payload, uuid: editing } : q)),
-            );
-            // The turn may have ended while this was being edited: nothing drains the queue then,
-            // because the flush already ran and found the entry blocked.
-            this._flushQueue();
+        // The echo first, then the send: the echo rides the same channel as the CLI's replay, and
+        // must reach the transcript before this uuid is known as pending, or it would be taken
+        // for the replay and move a bubble that is not there yet.
+        this._echoUserMessage(payload, ideRefs);
+        if (this._isBusy) {
+            this._sendPending(payload);
         } else {
-            // Echo the user bubble locally now (stream-json doesn't reflect the
-            // submitted message back). Same path for live and queued messages, so
-            // a queued one shows up immediately instead of waiting for the flush.
-            this._echoUserMessage(payload, ideRefs);
-            if (this._isBusy) {
-                // Already running → enqueue. Drained when isBusy flips to false.
-                this._setQueue(this._queueWithGroup(payload, opts));
-            } else {
-                this._dispatch(payload);
-            }
+            this._dispatch(payload);
         }
         // Append to the ↑/↓ history (skip a consecutive duplicate, shell-style).
         if (text && this._promptHistory[this._promptHistory.length - 1] !== text) {
@@ -1248,171 +1181,47 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     private _dispatch(payload: { text: string; attachments: Attachment[]; uuid: string }): void {
+        pendingPrompts.turnStarted();
         appState.isBusy = true;
         markSent(payload.uuid);
-        bridge.sendNotification<SendPromptNotification>(Msg.fromWebView.cli.sendPrompt, payload);
-    }
-
-    /**
-     * Replace the queue and mirror its uuids into the shared state, how cv-app knows which
-     * bubbles are on screen without having been sent.
-     *
-     * Every write goes through here, so the two cannot drift. The payloads stay with the component
-     * that sends them (text and attachments are of no use to anyone else); only the uuids, which
-     * another component does need, are published.
-     */
-    private _setQueue(queue: typeof this._queue): void {
-        this._queue = queue;
-        appState.queuedUuids = queue.map((q) => q.uuid);
-    }
-
-    /**
-     * Drop what is still queued and take its bubbles with it, on Stop, and when the session is
-     * swapped out from under it. They were echoed on submit but never reached the CLI, so leaving
-     * them on screen would show the model messages it has never been told about: the same
-     * divergence a retraction causes, from our own side.
-     */
-    dropQueue(): void {
-        if (this._queue.length === 0) {
-            return;
-        }
-        const uuids = this._queue.map((q) => q.uuid);
-        this._setQueue([]);
-        this._editingUuid = null;
-        this.dispatchEvent(
-            new CustomEvent('queued-dropped', { detail: { uuids }, bubbles: true, composed: true }),
-        );
-    }
-
-    /** One queued message, taken out from the row above the composer. Same event as dropQueue with
-     *  a list of one, so the transcript side stays the single path it already is. */
-    private _onDropQueued = (e: CustomEvent<{ uuid: string }>): void => {
-        const { uuid } = e.detail;
-        if (!this._queue.some((q) => q.uuid === uuid)) {
-            return;
-        }
-        this._setQueue(this._queue.filter((q) => q.uuid !== uuid));
-        // Deleting the entry being edited leaves nothing to replace on submit, and an indicator
-        // pointing at something that is gone. The queue was stopped on it, so it needs releasing.
-        if (uuid === this._editingUuid) {
-            this._editingUuid = null;
-            this._flushQueue();
-        }
-        this.dispatchEvent(
-            new CustomEvent('queued-dropped', {
-                detail: { uuids: [uuid] },
-                bubbles: true,
-                composed: true,
-            }),
-        );
-    };
-
-    private _onClearQueue = (): void => {
-        this.dropQueue();
-    };
-
-    /** Bring a queued message back into the composer to be fixed.
-     *  <para>The entry is NOT removed: it holds its place and stops the queue there. Taking it out
-     *  would let a turn ending mid-edit send whatever follows, and your message (no longer queued)
-     *  would arrive last or not at all.</para>
-     *  <para>Opening a second entry while one is open reads as cancelling the first: its unsaved
-     *  edits go, the queue stops at the new one instead. No prompt: the entry itself is untouched
-     *  in the queue, so what is lost is only what had just been typed over it.</para> */
-    private _onEditQueued = (e: CustomEvent<{ uuid: string }>): void => {
-        const entry = this._queue.find((q) => q.uuid === e.detail.uuid);
-        if (!entry) {
-            return;
-        }
-        // What is in the box is only a draft worth keeping if it is something being typed. While
-        // another entry is open it is that entry's own text, and treating it as a draft would
-        // stack the two: click twice and the message is in there twice.
-        const draft = this._editingUuid ? '' : (this._ta?.value ?? '');
-        this._editingUuid = entry.uuid;
-        this._attachments = [...(entry.attachments ?? [])];
-        // A real draft stays below: the queued message came first in time.
-        this.setComposerText(draft ? `${entry.text}\n${draft}` : entry.text);
-    };
-
-    /** Whether the composer holds a queued message rather than a new one. Esc asks before
-     *  interrupting: while an edit is open it belongs to the edit, not to the turn. */
-    get isEditingQueued(): boolean {
-        return this._editingUuid !== null;
-    }
-
-    /** Leave the entry as it was: it stays in the queue, untouched. Public because Esc is the
-     *  keyboard form of the editing bar's cross. */
-    cancelEdit = (): void => {
-        this._editingUuid = null;
-        this._attachments = [];
-        this.setComposerText('');
-        // The flush that would have sent this entry already ran and found it blocked; nothing else
-        // will call it until the next turn ends, so the queue would sit there.
-        this._flushQueue();
-    };
-
-    private _flushQueue(): void {
-        if (this._isBusy || this._queue.length === 0) {
-            return;
-        }
-        const [next] = this._queue;
-        // Alt+Enter groups entries that go out as one message; the whole group leaves together.
-        const group = next.groupId ? this._queue.filter((q) => q.groupId === next.groupId) : [next];
-        // A recalled entry holds its place and the queue waits on it. Skipping ahead would reorder
-        // what was queued: recall the second of three and the third goes out before it. For a
-        // group it matters more: it leaves as ONE message, so sending it a part short would send
-        // something incomplete rather than something partial.
-        if (group.some((q) => q.uuid === this._editingUuid)) {
-            return;
-        }
-        this._setQueue(this._queue.filter((q) => !group.includes(q)));
-        this._dispatchGroup(group);
-        // The state above unfades the bubbles; this says WHICH ones left, so cv-app can move them
-        // below the reply they had been sitting above: all of them, in order, or a group would
-        // leave its tail stranded further up.
-        this.dispatchEvent(
-            new CustomEvent('queued-sent', {
-                detail: { uuids: group.map((q) => q.uuid) },
-                bubbles: true,
-                composed: true,
-            }),
-        );
-    }
-
-    /** Tag a new entry into the last one's group, starting one if the last entry has none. The
-     *  head has to be tagged too, or the filter that drains the group would find only the entry
-     *  that asked to join it. */
-    private _queueWithGroup(
-        payload: { text: string; attachments: Attachment[]; uuid: string },
-        opts?: { groupWithPrevious?: boolean },
-    ): typeof this._queue {
-        const last = this._queue[this._queue.length - 1];
-        if (!opts?.groupWithPrevious || !last) {
-            return [...this._queue, payload];
-        }
-        // The head of a new group has to be tagged as well, or the filter that drains a group
-        // would find only the entry that asked to join it and send half of what was grouped.
-        // Both writes happen in this one returned array: tagging the head in a separate _setQueue
-        // was lost to the spread that rebuilt the queue around it a moment later.
-        const groupId = last.groupId ?? crypto.randomUUID();
-        return [
-            ...this._queue.map((q) => (q.uuid === last.uuid ? { ...q, groupId } : q)),
-            { ...payload, groupId },
-        ];
-    }
-
-    /** A group leaves as ONE message: texts joined, attachments concatenated, a single dispatch.
-     *  Merging here rather than host-side is what keeps the IDE context block single:
-     *  BuildIdeContextBlock runs once per send, so two sends would carry it twice. */
-    private _dispatchGroup(group: typeof this._queue): void {
-        if (group.length === 1) {
-            this._dispatch(group[0]);
-            return;
-        }
-        this._dispatch({
-            text: group.map((q) => q.text).join('\n\n'),
-            attachments: group.flatMap((q) => q.attachments ?? []),
-            uuid: group[0].uuid,
+        bridge.sendNotification<SendPromptNotification>(Msg.fromWebView.cli.sendPrompt, {
+            ...payload,
+            priority: null,
         });
+    }
+
+    /**
+     * A prompt sent while a turn runs. It goes to the CLI now: the CLI hands it to the model at
+     * the next tool boundary, or when the turn ends if no tool is left.
+     *
+     * A document is the exception. Read at a tool boundary it is lost: the CLI replays it and
+     * saves it, and the model does not get it (measured on 2.1.291, text and PDF, 10 runs of
+     * 10; images are fine). `later` makes the CLI hold the prompt to the end of the turn, where
+     * documents arrive.
+     */
+    private _sendPending(payload: { text: string; attachments: Attachment[]; uuid: string }): void {
+        const later = payload.attachments.some((a) => !a.isImage);
+        pendingPrompts.add({ ...payload, later });
+        appState.queuedUuids = pendingPrompts.uuids;
+        bridge.sendNotification<SendPromptNotification>(Msg.fromWebView.cli.sendPrompt, {
+            ...payload,
+            priority: later ? 'later' : null,
+        });
+    }
+
+    /** The session these prompts were sent to is gone: forget them. Their bubbles went with the
+     *  transcript that was cleared. */
+    forgetPending(): void {
+        pendingPrompts.clear();
+        appState.queuedUuids = [];
+    }
+
+    /** A prompt taken back from the CLI: its text and attachments return to the composer. What
+     *  is already typed stays, with the returned text below it: nothing typed is ever replaced. */
+    restoreToComposer(p: PendingPrompt): void {
+        const draft = this._ta?.value ?? '';
+        this.setComposerText(draft.trim() ? `${draft}\n${p.text}` : p.text);
+        this._attachments = [...this._attachments, ...p.attachments];
     }
 
     private _addAttachment(att: Attachment): void {
@@ -1473,10 +1282,10 @@ export class CvPrompt extends LitElement implements CommandHost {
         if (echo) {
             this._echoUserMessage(payload);
         }
-        // A builtin that resets the session is also the way out of a stuck one, so it must not
-        // queue behind the very turn it is meant to clear: the CLI takes these mid-turn.
+        // A builtin that resets the session is also the way out of a stuck one: it is sent as a
+        // prompt of its own, never as one waiting behind the turn it is meant to clear.
         if (this._isBusy && !RESET_COMMANDS.has(text.trim().split(/\s+/, 1)[0])) {
-            this._setQueue([...this._queue, payload]);
+            this._sendPending(payload);
         } else {
             this._dispatch(payload);
         }
@@ -1681,16 +1490,17 @@ export class CvPrompt extends LitElement implements CommandHost {
         void this._readFiles(files);
     };
 
-    /** Stop the turn: interrupt the CLI, drop anything queued behind it, free the UI.
-     *  Public because Esc (handled globally in cv-app) is the same gesture as the Stop
-     *  button: it must not stop halfway and leave the queue to fire on the next flush. */
+    /** Stop the turn: interrupt the CLI, which also drops the prompts still waiting, and free
+     *  the UI. Public because Esc (handled globally in cv-app) is the same gesture as the Stop
+     *  button. */
     stop(): void {
         bridge.sendNotification(Msg.fromWebView.cli.stop, {});
-        // Queued prompts were meant to follow the turn being stopped; flushing them after an
-        // interrupt would send messages the user never confirmed at a CLI they just halted.
-        this.dropQueue();
+        // The host asks the CLI to drop what is pending and tells us which prompts went
+        // (chat_prompts_gone). Nothing is removed here on a guess: a CLI that drops nothing will
+        // run them, and their replays will say so.
         // Optimistic reset: free the UI now in case the CLI is wedged and
         // never sends `result`.
+        pendingPrompts.turnEnded();
         appState.isBusy = false;
     }
 
@@ -1826,35 +1636,6 @@ export class CvPrompt extends LitElement implements CommandHost {
         `;
     }
 
-    /** Says the composer holds a queued message rather than a new one, and how many are held up
-     *  behind it: the queue stops at the entry being edited, and with the turn over this is the
-     *  only thing left saying the queue is still there and still waiting. */
-    private _renderEditingBar() {
-        if (!this._editingUuid) {
-            return nothing;
-        }
-        const waiting = this._queue.length - 1;
-        return html`<div class="editing-bar">
-            <span
-                >Editing a queued
-                message${waiting > 0 ? ` · ${waiting} waiting behind it` : ''}</span
-            >
-            <!-- A cross, like the one that takes an entry out of the list: the word was the only
-                 button here spelled out, and this closes the edit rather than destroying anything,
-                 the entry is still in the queue, untouched. -->
-            <fluent-button
-                class="editing-cancel"
-                appearance="subtle"
-                size="small"
-                icon-only
-                title="Stop editing"
-                aria-label="Stop editing"
-                @click=${this.cancelEdit}
-                >${unsafeHTML(Dismiss16Regular)}</fluent-button
-            >
-        </div>`;
-    }
-
     override render() {
         // While a permission/question prompt is pending, hide the composer: the user answers it
         // in the overlay above; typing the next message isn't allowed until then. Hide via CSS
@@ -1871,7 +1652,6 @@ export class CvPrompt extends LitElement implements CommandHost {
                 @drop=${this._onDrop}
             >
                 <cv-notice-stack @notice-dismissed=${this._onNoticeDismissed}></cv-notice-stack>
-                ${this._renderEditingBar()}
                 <!-- Everything that travels with this message, and the one border that says so. -->
                 <div id="field">
                     ${this._renderChips()}
@@ -1881,14 +1661,9 @@ export class CvPrompt extends LitElement implements CommandHost {
                             spellcheck=${appState.ui.spellCheckComposer ? 'true' : 'false'}
                             placeholder=${
                                 this._isBusy
-                                    ? // Alt+Enter only once there is something to join, which is
-                                      // the same guard the key handler has, and the only moment
-                                      // it is worth the room. Esc gives way to it there: that one
-                                      // is learnt in the first turn, this one is discovered by
-                                      // nobody.
-                                      this._queue.length > 0
-                                        ? 'Queue another message…  Alt+Enter joins the last'
-                                        : 'Queue another message… (Esc to stop)'
+                                    ? // Sent now, read when the step in progress ends: said here
+                                      // because nothing else on screen does.
+                                      'Message Claude while it works…  (Esc to stop)'
                                     : // @ and / are the two things nobody discovers on their own, so they
                                       // lead; the send key follows because it's configurable (Ctrl+Enter).
                                       `Send a message…  @ for files, / for commands  ·  ${
@@ -1966,15 +1741,6 @@ export class CvPrompt extends LitElement implements CommandHost {
                             @recording-end=${this._onMicEnd}
                         ></cv-mic-button>
                         <cv-subagent-chip .tasks=${this._subagentTasks}></cv-subagent-chip>
-                        <!-- Beside the sub-agent chip, which answers the same kind of question:
-                             something is pending, click for the list. It renders nothing with an
-                             empty queue, so it costs no room the rest of the time. -->
-                        <cv-queue-chip
-                            .messages=${this._queue}
-                            @drop-queued=${this._onDropQueued}
-                            @clear-queue=${this._onClearQueue}
-                            @edit-queued=${this._onEditQueued}
-                        ></cv-queue-chip>
                         <!-- Before the file chip, not after: that one is the only item here that
                              resizes (it absorbs the row's spare width), so anything past it moves
                              on every editor change. -->
