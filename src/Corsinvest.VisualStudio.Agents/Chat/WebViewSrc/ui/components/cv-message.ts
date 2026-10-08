@@ -357,6 +357,7 @@ export class CvMessage extends LitElement {
     private _onToggleExpand = (e: Event): void => {
         e.stopPropagation();
         const wasExpanded = this.expanded;
+        const topBefore = this.getBoundingClientRect().top;
         this.expanded = !this.expanded;
         // On expand, scroll to the top ONLY if the now-taller message doesn't
         // fully fit in the viewport. If it's already fully visible, don't move
@@ -364,6 +365,13 @@ export class CvMessage extends LitElement {
         if (!wasExpanded) {
             void this.updateComplete.then(() => {
                 const rect = this.getBoundingClientRect();
+                // Pinned (sticky), a bubble taller than what is left of its exchange on screen is
+                // pushed out of the top: a sticky box cannot leave its section. Scrolling back by
+                // what was lost brings in enough of the exchange for it to fit.
+                if (rect.top < topBefore - 1) {
+                    document.querySelector('#messages')?.scrollBy(0, rect.top - topBefore);
+                    return;
+                }
                 const overflowsBottom = rect.bottom > window.innerHeight;
                 if (overflowsBottom) {
                     this.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -436,9 +444,12 @@ export class CvMessage extends LitElement {
             // selection); tooltip carries the full relative path.
             const rel = displayPathUi(r.filePath);
             const name = fileName(r.filePath);
-            const range = r.startLine ? `:${r.startLine}-${r.endLine}` : '';
+            const range = !r.startLine
+                ? ''
+                : r.endLine && r.endLine !== r.startLine
+                  ? `:${r.startLine}-${r.endLine}`
+                  : `:${r.startLine}`;
             return html`<cv-attach-chip
-                accent="brand"
                 .src=${iconUrl(name)}
                 .label=${`${name}${range}`}
                 title=${rel || r.filePath}
@@ -466,7 +477,7 @@ export class CvMessage extends LitElement {
 
             case 'user': {
                 // A slash-command envelope renders as the raw "/name args" in a normal user
-                // bubble (blue band), same as a typed message. A bare "/compact" has no envelope
+                // bubble, same as a typed message. A bare "/compact" has no envelope
                 // and reaches here as plain text.
                 const slashText = renderSlashCommand(this.text);
                 const text = slashText || this.text;
@@ -482,8 +493,8 @@ export class CvMessage extends LitElement {
                 ) {
                     return nothing;
                 }
-                // A "[Request interrupted…]" notice gets an orange bar (not the blue
-                // brand bar) so a stopped turn reads as interrupted, not a normal prompt.
+                // A "[Request interrupted…]" notice gets an orange bar, which a normal prompt
+                // does not have, so a stopped turn can be found at a glance.
                 const interrupted = this.text.startsWith('[Request interrupted');
                 const userCls = `cv-message user ${this.expanded ? 'expanded' : 'collapsible'}${interrupted ? ' interrupted' : ''}`;
                 const hasChips = this.images.length > 0 || this.files.length > 0 || refs.length > 0;

@@ -161,7 +161,11 @@ export class CvIdeContextBadge extends LitElement {
         const cls = `badge${this._enabled ? '' : ' is-disabled'}`;
         // Editor-style `:start-end` range, shown only for a real selection
         // (a bare open file carries no lines). Matches the in-bubble chip.
-        const lineInfo = ctx.hasSelection ? `:${ctx.startLine}-${ctx.endLine}` : '';
+        const lineInfo = !ctx.hasSelection
+            ? ''
+            : ctx.endLine !== ctx.startLine
+              ? `:${ctx.startLine}-${ctx.endLine}`
+              : `:${ctx.startLine}`;
         // The option alone doesn't decide it: with no selection there is no code to attach, so an
         // open file stays a bookmark whatever the setting says.
         const withCode = this._withText && ctx.hasSelection;

@@ -35,6 +35,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Under a message of yours the time comes first, then the buttons.** The row is right-aligned,
   so the buttons no longer move when the time changes width. A waiting message has the same row,
   with the cross in place of Fork.
+- **One look for what you write, another for code.** A message of yours and the composer now share
+  one surface, lighter than the page, with the same border and corners: a message looks the same
+  before and after it is sent. Code is the dark surface, and only code: fenced blocks, inline
+  code and the IN/OUT of a tool call. Until now your messages, the composer and code blocks were
+  all the same dark box.
+  - A message of yours no longer has the blue bar down its left. That bar now means "look here":
+    orange on a turn you stopped, red on an error.
+  - Attachment chips have one look for images, files and editor references: outlined, the name
+    in the link colour, corners a little rounder. The cross that removes one sits inside the
+    chip, at its end, and shows when you point at it.
+  - Tables are framed and rounded, with a light header and faint rules inside the frame.
+  - Nothing fills in when you point at it any more: a hover shows controls or underlines a
+    link. Your message, the IN/OUT rows and the title of a tool call stay as they are.
+  - Tool rows, their code and the small labels now follow the chat font size option. They were
+    fixed sizes.
+  - While a turn runs the composer reads *Queue another message…  ·  Esc to stop*.
 - **`Default` as initial permission mode now leaves the choice to Claude Code.** It used to start
   every new chat in Manual, ignoring the `permissions.defaultMode` of your `settings.json`. A new
   chat now starts as `claude` does in a terminal: in that mode when one is set, user or folder,
@@ -44,6 +60,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **The same file could be attached twice.** A second drop or paste of something already attached
+  now adds nothing. It goes by content, not name: two screenshots are both `image.png`.
+- **A one-line selection read as a range.** The chip said `Program.cs:183-183`; it now says
+  `Program.cs:183`, on the message and in the composer's toolbar.
+- **Expanding a long message pinned at the top pushed it off the screen.** It now scrolls inside
+  itself and stays the header of its exchange.
+- **Two code blocks in a row touched.** They read as one block cut in two.
 - **`debug_set_breakpoint` on a comment line said nothing about where the breakpoint went.**
   Visual Studio moves it to the next statement, and removing or disabling it then needs that line,
   not the one asked for. The result now says it moved and where. The tool's description claimed

@@ -191,8 +191,11 @@ export class CvPrompt extends LitElement implements CommandHost {
             #field {
                 display: flex;
                 flex-direction: column;
-                background: var(--colorNeutralBackground3);
-                border: 1px solid var(--colorNeutralStroke2);
+                /* The user bubble's surface (chat.css): a message starts here and keeps its
+                 * look once sent. The border is one step stronger than the bubble's: this is
+                 * the one you type in. */
+                background: var(--colorNeutralBackground1Selected);
+                border: 1px solid var(--colorNeutralStroke1Hover);
                 border-radius: var(--borderRadiusLarge);
                 transition: border-color 0.15s;
             }
@@ -1221,10 +1224,19 @@ export class CvPrompt extends LitElement implements CommandHost {
     restoreToComposer(p: PendingPrompt): void {
         const draft = this._ta?.value ?? '';
         this.setComposerText(draft.trim() ? `${draft}\n${p.text}` : p.text);
-        this._attachments = [...this._attachments, ...p.attachments];
+        for (const a of p.attachments) {
+            this._addAttachment(a);
+        }
     }
 
+    /** The same content twice is one attachment: a second drop or paste of a file already there
+     *  adds nothing. By content, not name: two screenshots are both "image.png". */
     private _addAttachment(att: Attachment): void {
+        if (
+            this._attachments.some((a) => a.mediaType === att.mediaType && a.base64 === att.base64)
+        ) {
+            return;
+        }
         this._attachments = [...this._attachments, att];
     }
 
@@ -1661,9 +1673,9 @@ export class CvPrompt extends LitElement implements CommandHost {
                             spellcheck=${appState.ui.spellCheckComposer ? 'true' : 'false'}
                             placeholder=${
                                 this._isBusy
-                                    ? // Sent now, read when the step in progress ends: said here
-                                      // because nothing else on screen does.
-                                      'Message Claude while it works…  (Esc to stop)'
+                                    ? // VS Code's own wording while a turn runs, plus the one key
+                                      // nothing else on screen names.
+                                      'Queue another message…  ·  Esc to stop'
                                     : // @ and / are the two things nobody discovers on their own, so they
                                       // lead; the send key follows because it's configurable (Ctrl+Enter).
                                       `Send a message…  @ for files, / for commands  ·  ${
