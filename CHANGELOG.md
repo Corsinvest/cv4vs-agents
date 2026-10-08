@@ -45,9 +45,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   with the cross in place of Fork.
 - **One look for what you write, another for code.** A message of yours and the composer now share
   one surface, lighter than the page, with the same border and corners: a message looks the same
-  before and after it is sent. Code is the dark surface, and only code: fenced blocks, inline
-  code and the IN/OUT of a tool call. Until now your messages, the composer and code blocks were
-  all the same dark box.
+  before and after it is sent. A block of code is the dark surface, and only that: fenced blocks
+  and the IN/OUT of a tool call. Until now your messages, the composer and code blocks were all
+  the same dark box.
+  - Inline code is a pill lighter than the page, with no outline. Darker than a dark page, a
+    word or two showed only its border.
   - A message of yours no longer has the blue bar down its left. That bar now means "look here":
     orange on a turn you stopped, red on an error.
   - Attachment chips have one look for images, files and editor references: outlined, the name

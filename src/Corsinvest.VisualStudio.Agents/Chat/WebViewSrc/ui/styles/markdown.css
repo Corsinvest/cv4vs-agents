@@ -97,12 +97,13 @@
 .cv-forge-gitee {
     fill: #c71d23;
 }
+/* Lighter than whatever it sits on: set darker than a dark page, a word or two showed only its
+ * border. A share of the text colour, so it stands off any surface in either theme. */
 .md code {
     font-family: var(--fontFamilyMonospace);
     font-size: 0.9em;
-    background: var(--colorNeutralBackground3);
-    border: 1px solid var(--colorNeutralStroke1);
-    border-radius: var(--borderRadiusSmall);
+    background: color-mix(in srgb, var(--colorNeutralForeground1) 15%, transparent);
+    border-radius: var(--borderRadiusMedium);
     padding: 2px 4px;
     word-break: break-word;
 }
