@@ -17,6 +17,7 @@ import { iconStyles, tooltipStyles } from '../styles/shared';
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
 import { bridge } from '../../core/bridge';
+import { pendingPrompts } from '../../core/pending-prompts';
 import { Msg } from '../../core/bridge-messages';
 import {
     consumedTokens,
@@ -208,11 +209,13 @@ export class CvContextGauge extends LitElement {
         if (appState.isBusy) {
             return;
         }
+        pendingPrompts.turnStarted();
         appState.isBusy = true;
         bridge.sendNotification<SendPromptNotification>(Msg.fromWebView.cli.sendPrompt, {
             text: '/compact',
             attachments: [],
             uuid: crypto.randomUUID(),
+            priority: null,
         });
     };
 

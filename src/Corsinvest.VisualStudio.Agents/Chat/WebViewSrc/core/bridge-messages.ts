@@ -20,6 +20,7 @@ export const Msg = {
         cli: {
             sendPrompt: 'send_cli_prompt',
             stop: 'stop_cli',
+            cancelPrompt: 'cancel_cli_prompt',
             setModel: 'set_cli_model',
             setRemoteControl: 'set_remote_control',
             setRemoteControlAtStartup: 'set_remote_control_at_startup',
@@ -90,6 +91,7 @@ export const Msg = {
             error: 'cli_error',
             state: 'cli_state',
             modelChanged: 'cli_model_changed',
+            promptCancelResult: 'cli_prompt_cancel_result',
             remoteControlAtStartupResult: 'remote_control_at_startup_result',
             remoteControlAtStartupChanged: 'remote_control_at_startup_changed',
             permissionModeChanged: 'cli_permission_mode_changed',
@@ -120,6 +122,7 @@ export const Msg = {
             stats: 'chat_stats',
             statsIndexDone: 'chat_stats_index_done',
             rateLimit: 'chat_rate_limit',
+            promptsGone: 'chat_prompts_gone',
             notice: 'chat_notice',
             remoteControl: 'chat_remote_control',
             models: 'chat_models',

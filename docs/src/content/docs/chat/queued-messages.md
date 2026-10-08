@@ -1,92 +1,75 @@
 ---
-title: "Messages waiting to be sent"
-description: "Write the next message while the turn is running: read, fix, drop or join what is waiting to be sent."
+title: "Messages sent while Claude works"
+description: "Write the next message while the turn is running: Claude reads it when the step in progress ends, in the same turn."
 ---
 
 You do not have to wait for an answer to write the next message. Type it while the turn is running
-and it is **queued**: the bubble appears straight away, greyed out so it does not read as already
-sent, and goes to the CLI the moment the turn ends.
+and it goes to Claude Code **at once**. Claude reads it when the tool in progress returns, and
+carries on in the same turn with what you said.
 
-Which leaves what this page is about: reading what is still waiting, fixing one you got wrong,
-dropping it, or sending two of them as a single message.
+That is what makes a correction worth typing: "not that file", "use the other API" arrive while the
+work can still be redirected, not after it is done.
 
-![The queue list, with an entry's actions showing](../../../../images/chat/queued-messages.png)
+## When it is read
 
-## Where it lives
-
-A chip in the composer's toolbar, next to the sub-agent one, counting what is waiting. It is there
-only while something is; with an empty queue it takes no room at all.
-
-## The list
-
-Click the chip and every message that has not been sent yet is there, in the order it will go out.
-That order is the one thing the greyed-out bubbles do not show at a glance, and by the time a turn
-has been running for a while, those bubbles have usually scrolled out of view, which makes this the
-only place left to read what is about to be sent. A long message is clipped to the row; its full
-text is in the tooltip.
-
-Each entry carries two actions, shown when the pointer is over it:
-
-| | |
+| What Claude is doing when you send | When your message is read |
 |---|---|
-| **pencil** | bring the message back into the composer |
-| **bin** | delete that one message |
+| Running a tool (a command, an edit, a search) | when that tool returns, in the same turn |
+| Running a long command | when the command ends: a message cannot cut a tool short |
+| Waiting on a sub-agent in the foreground | when the sub-agent returns |
+| Only writing its answer | when the turn ends; a new turn then starts on your message |
+| Nothing | at once, as always |
 
-The whole row is the pencil's target too: the icon is there to say so. At the top of the list,
-**Clear all** empties the queue. It is spelled out rather than given an icon on purpose: it sits a
-few pixels from the rows' own bins and takes everything instead of one, and position alone is a thin
-thing to tell those two apart.
+## Where it waits
 
-## Fixing a queued message
+Until it is read the message sits **at the bottom of the conversation**, paler than the others, so it
+does not read as part of what Claude already has. When it is read it takes its place in the
+conversation, above the work that follows it, and looks like any other message.
 
-Clicking an entry brings its text and attachments back into the composer, and a bar above it says
-you are editing something queued rather than writing a new message. Change it and press Enter: it
-goes back to **its own place** in the queue, not to the end.
+Several messages can wait together. They are read at the same moment:
 
-![The composer editing a queued message](../../../../images/chat/editing-queued-message.png)
+- at the end of a tool they stay separate messages;
+- at the end of a turn Claude Code joins them into **one** message, and the conversation shows
+  that one, with the text and the attachments of each in the order you sent them.
 
-The entry does not leave the queue while you edit: it holds its place and **the queue waits there**.
-Anything behind it waits too, which is why the bar also counts what is held up. Without that the
-queue could reorder itself behind your back: take the entry out, let the turn end, and the messages
-after it would go while yours, no longer queued, arrived last.
+## Taking a message back
 
-If the turn ends mid-edit nothing is sent, and the bar stays: with the turn over it is the only
-thing saying the queue is still there and still waiting on you.
+Point at a waiting message and its actions appear under it, with a **cross** at the end. It takes the message
+out of the conversation and puts its text and attachments back into the composer, to fix and send again or to drop.
 
-The **cross** on that bar puts the entry back as it was, and **Esc** does the same: it closes the
-nearest thing open, and stops the turn only when nothing is. A cross there and a bin in the list
-are deliberate: one closes what you opened, the other deletes something.
+- If you had already typed something, the returned text goes below it: nothing you typed is replaced.
+- A message sent again waits at the end, after the others still waiting.
+- Once Claude has read a message it is part of the conversation and cannot be taken back. If the
+  cross is pressed at that very moment, a notice says so: *That message had already been read.*
 
-## Sending two messages as one
+## Stop
 
-Three messages that correct one another are no use arriving a turn apart: Claude answers the first
-without having seen the rest.
+**Stop**, and **Esc**, stop the turn and also drop the messages still waiting: whoever presses Stop
+wants Claude to stop, not to start on the next message. Their bubbles go with them.
 
-**Alt+Enter** queues a message *into* the one before it instead of after it. They stay two entries in
-the list, each with its own pencil and bin, joined by a rule down their left, and they leave
-together, as a single message, with the attachments of both.
+## Attachments
 
-Plain Enter queues as it always did. Alt+Enter needs something already in the queue to join, so with
-an empty queue it stays what it has always been: a newline, and the composer says so, offering the
-shortcut only once there is an entry to join.
+- A message with an **image** is read like any other.
+- A message with a **file** attached (text, PDF, anything that is not an image) waits for the end of
+  the turn, and says so under the bubble: *Sent after this turn*. Read earlier, Claude Code delivers
+  the message without the file, so it is held back on purpose. A message without a file sent in the
+  meantime is not held up by it.
+
+## Slash commands
+
+A slash command sent while a turn runs always waits for the end of the turn. `/clear` and `/compact`
+are the exception: they are the way out of a stuck turn, and act at once.
 
 ## Small print
 
-- Entries show their attachments as chips.
-- Recalling an entry while you have a draft keeps the draft, under the recalled text.
-- Opening a second entry abandons the edit of the first; deleting the entry you are editing
-  releases the queue.
-- Joined messages are sent separated by a blank line.
-- Switching session, or clearing the conversation, drops the queue.
-
-## Why not just Stop
-
-Stop does clear the queue, but it interrupts the running turn as well, and that is rarely what you
-want when the problem is one message you regret. Stop is for stopping; this is for the queue.
-
-Nothing is sent to the model either way: a queued message was never given to the CLI, so removing it
-leaves no trace in the conversation. The bubble goes with it.
+- Switching session, or clearing the conversation, forgets the messages still waiting.
+- If Claude Code stops unexpectedly, the messages still waiting go back into the composer: they
+  were never read.
+- A waiting message can be copied but has no Fork: it is not in the conversation yet.
+- On an older Claude Code some of this is missing rather than broken: a message that cannot be
+  taken back stays where it is, and messages waiting when you press Stop are sent after it.
 
 ## See also
 
-- [Options](/cv4vs-agents/options/): Enter vs Ctrl+Enter to send, and the rest of the composer's behaviour.
+- [The composer](/cv4vs-agents/chat/composer/): keys, attachments and the rest of the input area.
+- [Options](/cv4vs-agents/options/): Enter vs Ctrl+Enter to send.

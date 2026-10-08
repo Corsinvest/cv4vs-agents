@@ -108,6 +108,14 @@ public sealed class UserMessageEventArgs
     public bool IsMeta { get; set; }
 }
 
+/// <summary>A prompt we wrote on stdin moved in the CLI's queue: `queued`, `started`,
+/// `completed`, `cancelled`, and on some builds `discarded` or `refused`.</summary>
+public sealed class PromptLifecycleEventArgs
+{
+    public string Uuid { get; set; }
+    public string State { get; set; }
+}
+
 public sealed class AssistantTextDeltaEventArgs
 {
     /// <summary>The newly streamed text chunk (to be appended to the in-flight assistant block).</summary>

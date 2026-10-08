@@ -101,6 +101,9 @@ export type { AgentRunTotalsDto } from './generated/AgentRunTotalsDto';
 /** Rate-limit notice (`chat_rate_limit`) + its severity union.
  *  Generated from C# by TypeGen, re-exported here. */
 export type { RateLimitNotification } from './generated/RateLimitNotification';
+export type { PromptsGoneNotification } from './generated/PromptsGoneNotification';
+export type { CancelPromptRequest } from './generated/CancelPromptRequest';
+export type { CancelPromptResponse } from './generated/CancelPromptResponse';
 export type { NoticeNotification } from './generated/NoticeNotification';
 export type { NoticeVariantDto } from './generated/NoticeVariantDto';
 export type { NoticePositionDto } from './generated/NoticePositionDto';

@@ -5,6 +5,7 @@
 
 using Corsinvest.VisualStudio.Agents.Core.Client;
 using Corsinvest.VisualStudio.Agents.Helpers;
+using Microsoft.VisualStudio.Shell;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Threading.Tasks;
@@ -24,7 +25,7 @@ internal sealed partial class WebViewMessageHandler
         var blocks = WebViewBridge.BuildContentBlocks(p.Text ?? "",
                                                      data["attachments"] as JArray,
                                                      BuildIdeContextBlock(p.Text ?? ""));
-        client.SendPrompt(blocks, p.Uuid ?? "");
+        client.SendPrompt(blocks, p.Uuid ?? "", p.Priority);
     }
 
     /// <summary>The <c>&lt;ide_*&gt;</c> block sent ahead of the prompt. Composed here, not in the
@@ -105,10 +106,36 @@ internal sealed partial class WebViewMessageHandler
     }
 
     private void HandleStop(JObject data, int? id) =>
-        // Fire and forget: the WebView frees itself the moment it asks, since it can't wait on a
-        // wedged CLI. InterruptAsync logs its own failure: there is nothing to roll back here,
-        // unlike the model and permission handlers below.
-        _ = client.InterruptAsync();
+        // Fire and forget for the WebView, which frees itself the moment it asks: it can't wait on
+        // a wedged CLI. The receipt is still worth having: it names the prompts the Stop took
+        // with it, which are bubbles to take off screen. A CLI that sends no receipt leaves them
+        // where they are, and they run.
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            InterruptReceipt receipt;
+            try { receipt = await client.InterruptAsync(true); }
+            catch { return; }   // logged by InterruptAsync
+            if (receipt.Cancelled.Length == 0) { return; }
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            bridge.Send(BridgeMessages.ToWebView.Chat.PromptsGone, new Contracts.PromptsGoneNotification { Uuids = receipt.Cancelled });
+        }).FileAndForget(nameof(WebViewMessageHandler));
+
+    private void HandleCancelPrompt(JObject data, int? id)
+    {
+        if (id is not int reqId) { return; }
+        var uuid = data.ToObject<Contracts.CancelPromptRequest>().Uuid ?? "";
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            // CancelPromptAsync never throws: a refusal is "not cancelled".
+            var cancelled = !string.IsNullOrEmpty(uuid) && await client.CancelPromptAsync(uuid);
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            bridge.SendResponse(BridgeMessages.ToWebView.Cli.PromptCancelResult, reqId, new Contracts.CancelPromptResponse
+            {
+                Uuid = uuid,
+                Cancelled = cancelled,
+            });
+        }).FileAndForget(nameof(WebViewMessageHandler));
+    }
 
     private void HandleUpdateInstall(JObject data, int? id) =>
         // Nothing is sent back from here: the pane shows progress and outcome from ClaudeUpdate's

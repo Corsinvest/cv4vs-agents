@@ -27,6 +27,9 @@ internal static class ClientMessages
         // Emitted when the CLI resets the conversation (/clear): a new_conversation_id
         // follows, then a fresh system/init with the new session_id.
         public const string ConversationReset = "conversation_reset";
+        // One per prompt, ours included: {command_uuid, state}. The CLI's own account of where a
+        // prompt written on stdin stands in its queue.
+        public const string CommandLifecycle = "command_lifecycle";
     }
 
     // subtype on system messages.

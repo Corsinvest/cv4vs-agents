@@ -33,6 +33,7 @@ public partial class ChatPaneControl
         c.ModelsReceived += OnModelsReceived;
         c.AssistantMessageReceived += OnAssistantMessage;
         c.UserMessageReceived += OnUserMessage;
+        c.PromptLifecycleChanged += OnPromptLifecycleChanged;
         c.ResultReceived += OnResult;
         c.ToolPermissionRequested += OnToolPermissionRequested;
         c.ToolPermissionCancelled += OnToolPermissionCancelled;
@@ -60,6 +61,7 @@ public partial class ChatPaneControl
         c.ModelsReceived -= OnModelsReceived;
         c.AssistantMessageReceived -= OnAssistantMessage;
         c.UserMessageReceived -= OnUserMessage;
+        c.PromptLifecycleChanged -= OnPromptLifecycleChanged;
         c.ResultReceived -= OnResult;
         c.ToolPermissionRequested -= OnToolPermissionRequested;
         c.ToolPermissionCancelled -= OnToolPermissionCancelled;
@@ -323,6 +325,18 @@ public partial class ChatPaneControl
                                             timestamp: e.Timestamp,
                                             extras: ToolResultExtras.FromToolUseResult(e.ToolUseResult));
         });
+
+    /// <summary>Only the states that end a prompt without running it are passed on: a prompt that
+    /// is read announces itself with its replay, which also says where.</summary>
+    private void OnPromptLifecycleChanged(object sender, PromptLifecycleEventArgs e)
+    {
+        if (!PromptQueue.IsGone(e.State)) { return; }
+        Dispatcher.Invoke(() =>
+        {
+            _log.Debug(() => $"[chat] prompt {e.Uuid} {e.State}");
+            _bridge.Send(BridgeMessages.ToWebView.Chat.PromptsGone, new Contracts.PromptsGoneNotification { Uuids = [e.Uuid] });
+        });
+    }
 
     private void OnResult(object sender, ResultEventArgs e)
         => Dispatcher.Invoke(() =>

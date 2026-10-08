@@ -110,8 +110,8 @@ Each line links to the page that explains it.
   plain prose, is a link that opens the file there; a range selects those lines.
 - **[Know when the next message costs more](https://corsinvest.github.io/cv4vs-agents/chat/context-and-usage/#the-prompt-cache)**: the
   context gauge tracks the prompt cache and warns before it expires.
-- **[Keep writing while it answers](https://corsinvest.github.io/cv4vs-agents/chat/queued-messages/)**: the next message waits for the
-  turn to end; read, fix, drop or join what is queued.
+- **[Keep writing while it answers](https://corsinvest.github.io/cv4vs-agents/chat/queued-messages/)**: the next message is read
+  when the step in progress ends, in the same turn; take it back while it waits.
 - **[The same sessions as VS Code and the terminal](https://corsinvest.github.io/cv4vs-agents/chat/sessions/)**: it reads and writes the
   CLI's own session store, no separate database.
 - **[Remote Control](https://corsinvest.github.io/cv4vs-agents/claude/remote-control/)**: hand a running session to `claude.ai/code` or

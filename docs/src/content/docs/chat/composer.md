@@ -5,7 +5,7 @@ description: Writing and sending, the slash palette and every action in it, file
 
 The composer is the input area at the bottom of a Chat pane: the prompt, and under it a toolbar with
 everything that shapes the next turn. From left to right the toolbar holds **Add** (+), the
-microphone, the sub-agent, queue and Remote Control chips while they have something to show, the
+microphone, the sub-agent and Remote Control chips while they have something to show, the
 editor-context chip, then the model button, the permission button and the context gauge.
 
 ## Writing and sending
@@ -13,11 +13,10 @@ editor-context chip, then the model button, the permission button and the contex
 - **Multi-line prompt** with Send/Stop, Enter-to-send (or Ctrl+Enter, configurable),
   Shift+Enter for a newline. The placeholder names the keys in force, and so does the send button's
   tooltip.
-- **Write while it is still answering**: the message is held until the turn ends, then sent. Its
-  bubble appears straight away, greyed out so it does not read as already sent, and drops into place
-  below the reply it was waiting on, so each answer stays under the question that prompted it. A chip
-  in the composer's toolbar lists what is still waiting and takes one back out, without stopping the
-  turn to do it; see [Messages waiting to be sent](/cv4vs-agents/chat/queued-messages/).
+- **Write while it is still working**: the message is sent at once and Claude reads it when the
+  step in progress ends, in the same turn. Until then its bubble waits at the bottom of the
+  conversation, paler than the others, with a cross that takes it back into the composer; see
+  [Messages sent while Claude works](/cv4vs-agents/chat/queued-messages/).
 - **Notices** appear above the prompt: rate limits, a refused attachment, a turn that ended without
   an answer. See [The conversation](/cv4vs-agents/chat/conversation/#notices).
 
@@ -55,7 +54,8 @@ Three rules worth knowing:
 - **Picking a CLI command from the list sends it at once, with no arguments.** To pass arguments,
   type the whole line (`/review 123`) and press Enter: the list closes at the first space.
 - A message starting with `/` never carries the editor context.
-- `/clear` and `/compact` picked while a turn runs are sent immediately rather than queued.
+- `/clear` and `/compact` picked while a turn runs act at once; any other command waits for the
+  turn to end.
 
 ## Mentions and attachments
 
@@ -122,14 +122,13 @@ change is visible where you are already looking. The modes and what each one ask
 | Enter | send; with **Use Ctrl+Enter to send** on, a newline |
 | Ctrl+Enter | send, with **Use Ctrl+Enter to send** on |
 | Shift+Enter | newline |
-| Alt+Enter | join this message to the last queued one; needs a running turn and something queued, otherwise a newline |
 | ↑ / ↓ | previous and next prompt (from the first and last line); move in an open list |
 | PageUp / PageDown | a page at a time in an open list |
 | Tab | in an open list, pick the highlighted entry, like Enter |
 | Shift+Tab | cycle the permission mode |
 | Home / End | start and end of the line; with Ctrl, of the whole text. Outside a text field they scroll the conversation to its top or bottom |
 | Ctrl+F | the chat's own find bar, not Visual Studio's Find |
-| Esc | close what is open (a list, the edit of a queued message); on an approval prompt it answers **No**, on a question it cancels it; it stops the turn only when nothing is open |
+| Esc | close what is open (a list); on an approval prompt it answers **No**, on a question it cancels it; it stops the turn only when nothing is open |
 
 The keys of the approval prompt are in [Permissions](/cv4vs-agents/chat/permissions/#approving-a-tool).
 

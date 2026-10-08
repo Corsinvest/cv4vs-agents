@@ -295,6 +295,21 @@ public class RateLimitNotification
     public string Message { get; set; }
 }
 
+/// <summary>The answer to cancel_cli_prompt. Cancelled is false when the CLI had already read
+/// the prompt: it is then part of the conversation and stays on screen.</summary>
+public class CancelPromptResponse
+{
+    public string Uuid { get; set; }
+    public bool Cancelled { get; set; }
+}
+
+/// <summary>Prompts that were waiting in the CLI's queue and will never run (chat_prompts_gone):
+/// dropped by a Stop, or cancelled, discarded or refused by the CLI.</summary>
+public class PromptsGoneNotification
+{
+    public string[] Uuids { get; set; } = [];
+}
+
 /// <summary>A notice for one of the two notice stacks (chat_notice): today CLI advisories
 /// (system/informational). Key dedups repeats of the same advisory; severity maps the CLI's level;
 /// position picks the stack (absent = top, i.e. session scope).</summary>

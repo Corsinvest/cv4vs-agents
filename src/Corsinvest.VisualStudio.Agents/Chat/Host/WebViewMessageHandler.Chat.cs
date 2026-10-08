@@ -202,7 +202,7 @@ internal sealed partial class WebViewMessageHandler
     private void HandleSubagentCancelAll(JObject data, int? id) =>
         // The UI knows the active taskIds; it sends one cancel per id. As a fallback,
         // a bare cancel_all maps to interrupt (stops the whole turn).
-        _ = client?.InterruptAsync();
+        _ = client?.InterruptAsync(false);
 
     private void HandleGetHistory(JObject data, int? id)
     {

@@ -6,6 +6,7 @@ import { LitElement, html, nothing, type PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import BranchFork16Regular from '@fluentui/svg-icons/icons/branch_fork_16_regular.svg';
+import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import './cv-copy-btn';
 import './cv-attach-chip';
 import { renderMarkdown, renderMarkdownStreaming } from '../../core/markdown';
@@ -47,9 +48,12 @@ export class CvMessage extends LitElement {
     // NOT `role`: that is the ARIA attribute, and 'status' is a real ARIA role: reflecting it
     // made every status bubble a live region nested inside cv-app's aria-live #messages.
     @property({ reflect: true, attribute: 'msg-role' }) role: MessageRole = 'assistant';
-    // Typed during a turn and still waiting for it to end: reflected so chat.css can fade the
-    // bubble, since an unsent message that looks sent is the whole reason this exists.
+    // Sent while a turn was running and not read by the CLI yet: reflected so chat.css can fade
+    // the bubble, since an unread message that looks read is the whole reason this exists.
     @property({ type: Boolean, reflect: true }) queued = false;
+    // A pending prompt holding a document was sent with priority `later`: it waits for the end of
+    // the turn, and the bubble says so, or it would look stuck next to ones that have moved.
+    @property({ type: Boolean }) later = false;
     @property() text = '';
     // role:'compact' only: header fields (trigger/tokens) + the lazily-fetched summary,
     // shown in the expandable <details> body. `loaded` gates the fetch (cached after).
@@ -229,16 +233,36 @@ export class CvMessage extends LitElement {
         }
     }
 
+    private _onPendingRemove = (): void => {
+        this.dispatchEvent(
+            new CustomEvent('pending-remove', {
+                detail: { uuid: this.uuid },
+                bubbles: true,
+                composed: true,
+            }),
+        );
+    };
+
     /**
-     * Bottom hover actions row (user messages): Copy + Fork (only with a uuid, i.e. replayed from
-     * JSONL history: live messages have none) + "x ago" timestamp. Inline: cv-copy-btn is the
-     * shared icon button; Fork is a plain .trigger (styled in chat.css). Expand is NOT here: long
-     * messages get an always-visible "Show more" button on the fade instead (see the user render).
+     * Bottom actions row (user messages): "x ago" timestamp + Copy + Fork (only with a uuid, i.e.
+     * replayed from JSONL history: live messages have none). The timestamp leads because the row is
+     * right-aligned: text that changes width on the left leaves the buttons where they were.
+     * A prompt the CLI has not read yet has nothing to fork from and gets the cross that takes it
+     * back instead, last so it never sits where Copy was. The "Sent after this turn" note sits
+     * outside the row, before it: the row shows on hover, and the note is information that cannot
+     * wait for one. Inline: cv-copy-btn is the shared icon button; Fork and the cross are plain
+     * .trigger (styled in chat.css). Expand is NOT here: long messages get an always-visible
+     * "Show more" button on the fade instead (see the user render).
      */
     private _renderActions() {
         const copyText = cleanMessageOnlyText(this.text);
-        const showFork = this.role === 'user' && !!this.uuid;
-        return html`<div class="cv-msg-actions">
+        const showFork = !this.queued && this.role === 'user' && !!this.uuid;
+        const actions = html`<div class="cv-msg-actions">
+            ${
+                this.timestamp > 0
+                    ? html`<cv-time-ago .ms=${this.timestamp}></cv-time-ago>`
+                    : nothing
+            }
             <cv-copy-btn .text=${copyText} title="Copy message"></cv-copy-btn>
             ${
                 showFork
@@ -256,11 +280,28 @@ export class CvMessage extends LitElement {
                     : nothing
             }
             ${
-                this.timestamp > 0
-                    ? html`<cv-time-ago .ms=${this.timestamp}></cv-time-ago>`
+                this.queued
+                    ? html`<fluent-button
+                          class="trigger"
+                          appearance="subtle"
+                          shape="rounded"
+                          size="small"
+                          icon-only
+                          title="Take this message back"
+                          aria-label="Take this message back"
+                          ?disabled=${!this.uuid}
+                          @click=${this._onPendingRemove}
+                      >
+                          ${unsafeHTML(Dismiss16Regular)}
+                      </fluent-button>`
                     : nothing
             }
         </div>`;
+        return this.queued && this.later
+            ? html`<div class="cv-pending-row">
+                  <span class="cv-pending-note">Sent after this turn</span>${actions}
+              </div>`
+            : actions;
     }
 
     private _onFork = (e: Event): void => {

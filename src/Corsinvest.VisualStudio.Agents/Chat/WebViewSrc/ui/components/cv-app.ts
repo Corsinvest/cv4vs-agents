@@ -18,6 +18,8 @@ import {
     foldLabel,
     foldLiveLabel,
     isHiddenToolCall,
+    isPending,
+    pendingLast,
     type FoldRun,
 } from '../../core/exchanges';
 import { openRewindDialog } from '../../core/dialog-host';
@@ -57,6 +59,7 @@ import type {
     UiThinkingEntry,
     UiCompactEntry,
     UiSlashResultEntry,
+    PromptsGoneNotification,
     UiRemoteControlEntry,
     SubagentStartedNotification,
     SubagentProgressNotification,
@@ -85,8 +88,9 @@ import type {
     ViewMode,
 } from '../../core/types';
 import { takeReplay } from '../../core/sent-prompts';
+import { pendingPrompts, type ReplayAction } from '../../core/pending-prompts';
 import { EMPTY } from '../../core/types';
-import { GetHistoryReq } from '../../core/request-types';
+import { CancelPromptReq, GetHistoryReq } from '../../core/request-types';
 import { cacheState, modelLabel } from '../../core/ai-models';
 import { turnErrorLabel, turnErrorDetail, isUserAbort } from '../../core/turn-errors';
 import { parseLocalCommandOutput } from '../../core/slash-commands';
@@ -190,7 +194,11 @@ export class CvApp extends LitElement {
         const src = this._transcript.entries;
         const queued = this._queuedUuids;
         if (this._groupCache?.src !== src || this._groupCache.queued !== queued) {
-            this._groupCache = { src, queued, groups: buildGroups(src, queued) };
+            this._groupCache = {
+                src,
+                queued,
+                groups: buildGroups(pendingLast(src, queued), queued),
+            };
         }
         return this._groupCache.groups;
     }
@@ -286,11 +294,8 @@ export class CvApp extends LitElement {
         // User picked a model from the menu (cv-prompt): the "Switched to X" notice
         // fires ONLY here, never for the ui_init seed or a runtime cli_model_changed.
         this.addEventListener('model-switched', this._onModelSwitched as EventListener);
-        // A queued message reached the CLI: its bubble moves down to where it was really sent (the
-        // fading comes from appState.queuedUuids, which needs no event).
-        this.addEventListener('queued-sent', this._onQueuedSent as EventListener);
-        // Stop / Clear: what never went is taken off screen rather than left looking sent.
-        this.addEventListener('queued-dropped', this._onQueuedDropped as EventListener);
+        // The cross under a pending bubble: take the prompt back from the CLI's queue.
+        this.addEventListener('pending-remove', this._onPendingRemove as EventListener);
         // The toolbar chip asking for the session link back, once its notice has been dismissed
         // or the user simply wants it again.
         this.addEventListener('show-remote-link', this._onShowRemoteLink);
@@ -323,6 +328,17 @@ export class CvApp extends LitElement {
                     this._systemNotices?.dismissByKey(CLI_EXITED_KEY);
                     return;
                 }
+                // What was waiting in the dead process's queue will never be read. It goes back
+                // into the composer rather than staying on screen as if it still might.
+                const lost = pendingPrompts.drain();
+                if (lost.length > 0) {
+                    this._mutate(() => this._transcript.removeByUuid(lost.map((p) => p.uuid)));
+                    const composer = this.querySelector('cv-prompt');
+                    for (const p of lost) {
+                        composer?.restoreToComposer(p);
+                    }
+                }
+                appState.queuedUuids = [];
                 const code = d?.exitCode;
                 this._systemNotices?.push({
                     severity: 'error',
@@ -352,13 +368,27 @@ export class CvApp extends LitElement {
 
         this._offs.push(
             bridge.onNotification<UserTextEcho>(Msg.toWebView.chat.userText, (data) => {
-                // A replay of our own prompt is dropped, not merged: the bubble echoed before the send
-                // is the richer one (IDE chip, thumbnails, a group's separate bubbles). Only a prompt
-                // typed elsewhere (claude.ai, through Remote Control) adds a bubble.
-                if (data.uuid && !data.parentToolUseId && takeReplay(data.uuid)) {
-                    return;
-                }
                 const entry = CvApp.buildUserEntry(data);
+                if (data.uuid && !data.parentToolUseId) {
+                    // The replay of a prompt sent mid-turn says where the CLI read it, and
+                    // whether it read it alone.
+                    const isUser = entry?.role === 'user';
+                    const action = pendingPrompts.onReplay(data.uuid, {
+                        text: entry?.text ?? '',
+                        images: isUser ? (entry.images?.length ?? 0) : 0,
+                        files: isUser ? (entry.files?.length ?? 0) : 0,
+                    });
+                    if (action.kind !== 'ignore') {
+                        this._onPendingRead(action, entry, data.timestamp ?? Date.now());
+                        return;
+                    }
+                    // A replay of a prompt sent while idle is dropped, not merged: the bubble
+                    // echoed before the send is the richer one (IDE chip, thumbnails). Only a
+                    // prompt typed elsewhere (claude.ai, through Remote Control) adds a bubble.
+                    if (takeReplay(data.uuid)) {
+                        return;
+                    }
+                }
                 if (!entry) {
                     return;
                 }
@@ -376,6 +406,9 @@ export class CvApp extends LitElement {
                 Msg.toWebView.chat.assistantText,
                 (data) => {
                     const parentId = data?.parentToolUseId ?? '';
+                    if (!parentId) {
+                        pendingPrompts.onTurnProgress();
+                    }
                     // Gauge tracks main-thread usage only (sub-agents would skew it).
                     if (!parentId && data?.usage) {
                         appState.contextUsage = data.usage;
@@ -423,6 +456,9 @@ export class CvApp extends LitElement {
                 (data) => {
                     const delta = data?.text ?? '';
                     const parentId = data?.parentToolUseId ?? '';
+                    if (!parentId) {
+                        pendingPrompts.onTurnProgress();
+                    }
                     const streamingId = this._streamingMsgs.get(parentId);
                     if (streamingId === undefined) {
                         this._streamingMsgs.set(
@@ -519,7 +555,8 @@ export class CvApp extends LitElement {
             bridge.onNotification<CliErrorNotification>(Msg.toWebView.cli.error, (data) => {
                 this._addText({ role: 'error', text: data?.message ?? 'Unknown error' });
                 // An error can end the turn without a `result`; free the UI so it doesn't stay busy.
-                appState.isBusy = false;
+                pendingPrompts.turnEnded();
+                appState.isBusy = pendingPrompts.busy;
             }),
         );
 
@@ -594,9 +631,8 @@ export class CvApp extends LitElement {
                 // that clears busy) would land on nothing. Without this the spinner outlives the
                 // session that started it, with no message under it to explain what it is waiting for.
                 appState.isBusy = false;
-                // Anything queued was written for the session that just went; the isBusy above is
-                // what would otherwise flush it into the new one.
-                this.querySelector('cv-prompt')?.dropQueue();
+                // Anything pending was sent to the session that just went.
+                this.querySelector('cv-prompt')?.forgetPending();
                 appState.currentSessionId = null;
                 appState.oldestLoadedOffset = -1;
                 appState.hasMoreHistory = false;
@@ -627,6 +663,22 @@ export class CvApp extends LitElement {
                     queueMicrotask(() => this._scrollToBottom());
                 }
             }),
+        );
+
+        this._offs.push(
+            bridge.onNotification<PromptsGoneNotification>(
+                Msg.toWebView.chat.promptsGone,
+                (data) => {
+                    // Dropped by a Stop, or cancelled by the CLI: they will never run, so the
+                    // model does not have them and the screen must not show them.
+                    const gone = pendingPrompts.remove(data?.uuids ?? []);
+                    if (gone.length === 0) {
+                        return;
+                    }
+                    this._mutate(() => this._transcript.removeByUuid(gone.map((g) => g.uuid)));
+                    this._pendingShrank();
+                },
+            ),
         );
 
         this._offs.push(
@@ -681,6 +733,9 @@ export class CvApp extends LitElement {
                 (data) => {
                     if (!data?.id || !data?.name) {
                         return;
+                    }
+                    if (!data.parentToolUseId) {
+                        pendingPrompts.onTurnProgress();
                     }
                     // Gauge update (for assistant messages with only tool_use, no text).
                     if (!data.parentToolUseId && data.usage) {
@@ -1030,8 +1085,7 @@ export class CvApp extends LitElement {
         this.removeEventListener('subagent-toggle', this._onChildrenToggle as EventListener);
         this.removeEventListener('compact-expand', this._onCompactExpand as EventListener);
         this.removeEventListener('model-switched', this._onModelSwitched as EventListener);
-        this.removeEventListener('queued-sent', this._onQueuedSent as EventListener);
-        this.removeEventListener('queued-dropped', this._onQueuedDropped as EventListener);
+        this.removeEventListener('pending-remove', this._onPendingRemove as EventListener);
         this.removeEventListener('show-remote-link', this._onShowRemoteLink);
         for (const off of this._offs) {
             off();
@@ -1050,23 +1104,12 @@ export class CvApp extends LitElement {
         if (document.querySelector(':popover-open')) {
             return;
         }
-        // Editing a queued message: Esc belongs to the edit. Ahead of the busy check on purpose:
-        // the turn is usually over by the time the queue is being edited, and there the interrupt
-        // has nothing to stop while the edit still has something to close.
-        const prompt = this.querySelector('cv-prompt');
-        if (prompt?.isEditingQueued) {
-            e.preventDefault();
-            prompt.cancelEdit();
-            return;
-        }
         if (!this._isBusy) {
             return;
         }
         e.preventDefault();
-        // Same gesture as the Stop button, so it goes through the composer's own stop: doing the
-        // interrupt here and nothing else left the queue intact, and the next flush then sent
-        // prompts the user had written behind a turn they had just cancelled.
-        prompt?.stop();
+        // Same gesture as the Stop button, so it goes through the composer's own stop.
+        this.querySelector('cv-prompt')?.stop();
     };
 
     /** Build UiEntry[] from a replayed page of typed events (chat_history / subagent_loaded).
@@ -1484,43 +1527,89 @@ export class CvApp extends LitElement {
     };
 
     /**
-     * A queued message went to the CLI: move its bubble below the reply it had been sitting above,
-     * so that reply keeps the question which actually prompted it. The fading is already handled (
-     * the uuid left `appState.queuedUuids`) so only the position is left.
+     * The CLI read a prompt that was sent mid-turn. Its bubble has been drawn at the bottom
+     * (pendingLast) without being there in the transcript: now it is put there for real, where
+     * the reply that follows will find it.
      *
-     * Follows only if the view was already at the bottom, like every other path that changes the
-     * transcript. Someone reading further up (often the very reason they queued something) is
-     * left where they are, with the jump button to come back; someone at the bottom would otherwise
-     * watch the bubble slide out of view and be left staring at the gap it came from.
+     * A merge is one message for the model and one line in the .jsonl, so it becomes one bubble
+     * here too, built from the replay: reopening the session then shows what was on screen.
      *
-     * Read before the mutation: moving the bubble is what changes the height, so asking afterwards
-     * measures the layout the answer is supposed to decide about.
+     * Follows only if the view was already at the bottom, read before the mutation: moving the
+     * bubble is what changes the height.
      */
-    private _onQueuedSent = (e: CustomEvent<{ uuids: string[] }>): void => {
-        // A list, not one: Alt+Enter groups entries that leave as a single message, and moving
-        // only the first would strand the rest of the group further up the transcript.
-        const uuids = e.detail?.uuids ?? [];
-        if (uuids.length > 0) {
-            const atBottom = this._isNearBottom();
-            this._mutate(() => {
-                for (const uuid of uuids) {
-                    this._transcript.moveToEnd(uuid);
-                }
-            });
-            if (atBottom) {
-                queueMicrotask(() => this._scrollToBottom());
+    private _onPendingRead(
+        action: Exclude<ReplayAction, { kind: 'ignore' }>,
+        replay: UiUserEntry | UiSlashResultEntry | null,
+        timestamp: number,
+    ): void {
+        const atBottom = this._isNearBottom();
+        this._mutate(() => {
+            if (action.kind === 'read') {
+                this._transcript.moveToEnd(action.uuid);
+            } else {
+                this._transcript.removeByUuid([...action.absorbed, action.uuid]);
             }
+        });
+        if (action.kind === 'merged' && replay) {
+            if (replay.role === 'user') {
+                replay.timestamp = timestamp;
+            }
+            this._appendEntry(replay);
         }
+        appState.queuedUuids = pendingPrompts.uuids;
+        // A prompt read after the turn ended starts a turn of its own: nothing else says so.
+        pendingPrompts.turnStarted();
+        appState.isBusy = true;
+        if (atBottom) {
+            queueMicrotask(() => this._scrollToBottom());
+        }
+    }
+
+    /** A prompt stopped being pending without being read. The last one to go with no turn
+     *  running is what frees the composer: nothing else will. */
+    private _pendingShrank(): void {
+        appState.queuedUuids = pendingPrompts.uuids;
+        appState.isBusy = pendingPrompts.busy;
+    }
+
+    private _onPendingRemove = (e: CustomEvent<{ uuid: string }>): void => {
+        void this._takeBack(e.detail?.uuid ?? '');
     };
 
-    /** Stop or Clear: these never reached the CLI, so the model has no idea they exist. Leaving
-     *  them on screen is the same divergence a retraction causes, from our own side. */
-    private _onQueuedDropped = (e: CustomEvent<{ uuids: string[] }>): void => {
-        const uuids = e.detail?.uuids ?? [];
-        if (uuids.length > 0) {
-            this._mutate(() => this._transcript.removeByUuid(uuids));
+    /**
+     * Take a prompt back from the CLI's queue. Only the CLI knows whether it is still there: the
+     * bubble goes, and its text returns to the composer, only on its word. Too late, and the
+     * prompt is part of the conversation: its replay has moved the bubble, or is about to.
+     */
+    private async _takeBack(uuid: string): Promise<void> {
+        if (!pendingPrompts.beginTakeBack(uuid)) {
+            return;
         }
-    };
+        let cancelled: boolean;
+        try {
+            cancelled = (await bridge.sendRequest(CancelPromptReq, { uuid })).cancelled;
+        } catch {
+            // No answer: a timeout, or the session swapped underneath. Nothing is known, so
+            // nothing is said and nothing is removed.
+            pendingPrompts.endTakeBack(uuid, false);
+            return;
+        }
+        const prompt = pendingPrompts.endTakeBack(uuid, cancelled);
+        if (!cancelled) {
+            this._systemNotices?.push({
+                key: 'pending-too-late',
+                severity: 'info',
+                message: 'That message had already been read.',
+            });
+            return;
+        }
+        if (!prompt) {
+            return;
+        }
+        this._mutate(() => this._transcript.removeByUuid([uuid]));
+        this._pendingShrank();
+        this.querySelector('cv-prompt')?.restoreToComposer(prompt);
+    }
 
     /** Stable identity of a sub-agent child: toolUseId for tools, uuid for text. */
     private static _childKey(e: UiEntry): string {
@@ -2053,7 +2142,14 @@ export class CvApp extends LitElement {
             i++;
         }
         const leadUsers = group.slice(0, i);
-        const response = group.slice(i);
+        // The pending bubbles close the group (pendingLast) without being part of the reply:
+        // they are drawn after it and outside its box, whose hover reveals the reply's actions.
+        let replyEnd = group.length;
+        while (replyEnd > i && isPending(group[replyEnd - 1], this._queuedUuids)) {
+            replyEnd--;
+        }
+        const response = group.slice(i, replyEnd);
+        const pending = group.slice(replyEnd);
         const focus = this._viewMode === 'focus';
         const runs = focus ? buildFoldRuns(response, this._pendingToolUseId) : null;
         const lastRunStart = runs && runs.size > 0 ? Math.max(...runs.keys()) : -1;
@@ -2093,7 +2189,7 @@ export class CvApp extends LitElement {
         };
         return html`<section
             class="cv-exchange"
-            ?hidden=${leadUsers.length === 0 && responseHidden}
+            ?hidden=${leadUsers.length === 0 && pending.length === 0 && responseHidden}
         >
             ${leadUsers.map((e) => this.renderEntry(e))}
             ${
@@ -2110,6 +2206,7 @@ export class CvApp extends LitElement {
                       </div>`
                     : nothing
             }
+            ${pending.map((e) => this.renderEntry(e))}
         </section>`;
     }
 
@@ -2236,7 +2333,8 @@ export class CvApp extends LitElement {
             .summary=${e.role === 'compact' ? (e.summary ?? '') : ''}
             ?loaded=${e.role === 'compact' ? !!e.loaded : false}
             .uuid=${e.role === 'compact' || e.role === 'user' ? (e.uuid ?? '') : ''}
-            ?queued=${e.role === 'user' && !!e.uuid && this._queuedUuids.has(e.uuid)}
+            ?queued=${isPending(e, this._queuedUuids)}
+            ?later=${e.role === 'user' && !!e.uuid && (pendingPrompts.get(e.uuid)?.later ?? false)}
             .images=${e.role === 'user' ? (e.images ?? EMPTY) : EMPTY}
             .files=${e.role === 'user' ? (e.files ?? EMPTY) : EMPTY}
             .ideRefs=${e.role === 'user' ? (e.ideRefs ?? EMPTY) : EMPTY}

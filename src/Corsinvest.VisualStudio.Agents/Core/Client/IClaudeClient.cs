@@ -63,7 +63,11 @@ public interface IClaudeClient : IDisposable
     /// <summary>Epoch of the Remote Control bridge currently enabled, null when there is none.
     /// Tells a `bridge_state` from the live bridge apart from one a replaced bridge sent late.</summary>
     int? BridgeEpoch { get; }
-    Task InterruptAsync();
+    /// <summary>Stop the running turn. With <paramref name="cancelQueued"/> the prompts still
+    /// waiting in the CLI's queue are dropped too, and the receipt names them.</summary>
+    Task<InterruptReceipt> InterruptAsync(bool cancelQueued);
+    /// <summary>Drop one prompt from the CLI's queue. False when the CLI had already read it.</summary>
+    Task<bool> CancelPromptAsync(string uuid);
     Task<JObject> GetUsageAsync();
     Task<JObject> GetContextUsageAsync();
     /// <summary>Merge keys into the CLI's flag-settings layer (effortLevel,
@@ -96,7 +100,9 @@ public interface IClaudeClient : IDisposable
     Task McpReconnectAsync(string serverName);
     Task McpToggleAsync(string serverName, bool enabled);
 
-    void SendPrompt(JArray contentBlocks, string uuid);
+    /// <summary><paramref name="priority"/> is `later` for a prompt that must wait for the end
+    /// of the running turn, null otherwise.</summary>
+    void SendPrompt(JArray contentBlocks, string uuid, string priority);
 
     /// <summary>Responds to a ToolPermissionRequested event, correlating by the
     /// stable <c>tool_use_id</c> (not the internal control request_id). Supports
@@ -134,6 +140,7 @@ public interface IClaudeClient : IDisposable
     event EventHandler<ModelsReceivedEventArgs> ModelsReceived;
     event EventHandler<AssistantMessageEventArgs> AssistantMessageReceived;
     event EventHandler<UserMessageEventArgs> UserMessageReceived;
+    event EventHandler<PromptLifecycleEventArgs> PromptLifecycleChanged;
     event EventHandler<ResultEventArgs> ResultReceived;
     event EventHandler<ToolPermissionRequestEventArgs> ToolPermissionRequested;
     /// <summary>The CLI cancelled a pending can_use_tool (interrupt / superseded turn): the

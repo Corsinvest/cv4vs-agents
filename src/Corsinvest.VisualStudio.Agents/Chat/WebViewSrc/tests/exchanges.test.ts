@@ -10,6 +10,7 @@ import {
     foldLiveLabel,
     isFolded,
     isHiddenToolCall,
+    pendingLast,
 } from '../core/exchanges.ts';
 import type { UiAssistantEntry, UiThinkingEntry, UiToolEntry, UiUserEntry } from '../core/types';
 
@@ -235,4 +236,19 @@ test('live label names the running tool, else streaming thinking, else nothing',
     assert.equal(foldLiveLabel(running), 'Running Bash…');
     assert.equal(foldLiveLabel(thinking), 'Thinking…');
     assert.equal(foldLiveLabel(settled), null);
+});
+
+test('pending bubbles are ordered last, in the order they were sent', () => {
+    const entries = [user(1, 'u1'), user(2, 'p1'), bot(3), user(4, 'p2'), bot(5)];
+    const out = pendingLast(entries, new Set(['p1', 'p2']));
+    assert.deepEqual(
+        out.map((e) => e.id),
+        [1, 3, 5, 2, 4],
+    );
+});
+
+test('with nothing pending the same array comes back, so memoised callers stay memoised', () => {
+    const entries = [user(1, 'u1'), bot(2)];
+    assert.equal(pendingLast(entries, new Set()), entries);
+    assert.equal(pendingLast(entries, new Set(['not-here'])), entries);
 });

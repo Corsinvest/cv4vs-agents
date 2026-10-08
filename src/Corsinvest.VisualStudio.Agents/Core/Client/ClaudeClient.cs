@@ -83,6 +83,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public event EventHandler<ModelsReceivedEventArgs> ModelsReceived;
     public event EventHandler<AssistantMessageEventArgs> AssistantMessageReceived;
     public event EventHandler<UserMessageEventArgs> UserMessageReceived;
+    public event EventHandler<PromptLifecycleEventArgs> PromptLifecycleChanged;
     public event EventHandler<ResultEventArgs> ResultReceived;
     public event EventHandler<ToolPermissionRequestEventArgs> ToolPermissionRequested;
     /// <summary>The CLI cancelled a pending can_use_tool (interrupt / superseded turn): the
@@ -635,16 +636,38 @@ internal sealed partial class ClaudeClient : IClaudeClient
     /// a wedged CLI), so a failed interrupt is invisible from the UI: it reads as stopped while the
     /// turn runs on. Callers fire and forget, and the 10s request timeout would fault this into
     /// silence, so the log is the only place the divergence can surface.</summary>
-    public async Task InterruptAsync()
+    public async Task<InterruptReceipt> InterruptAsync(bool cancelQueued)
     {
         try
         {
-            await SendControlRequestAsync(ClientMessages.ControlSubtype.Interrupt, null);
+            var resp = await SendControlRequestAsync(
+                ClientMessages.ControlSubtype.Interrupt,
+                cancelQueued ? new { cancel_queued = true } : null);
+            return PromptQueue.ParseInterruptReceipt(resp);
         }
         catch (Exception ex)
         {
             _log.LogException("[client] interrupt", ex);
             throw;
+        }
+    }
+
+    /// <summary>False when the CLI had already read the prompt, and when it refuses the request
+    /// (a CLI that has no such request answers with an error): either way the prompt is not ours
+    /// to take back.</summary>
+    public async Task<bool> CancelPromptAsync(string uuid)
+    {
+        try
+        {
+            var resp = await SendControlRequestAsync(
+                ClientMessages.ControlSubtype.CancelAsyncMessage,
+                new { message_uuid = uuid });
+            return resp?.ValBool("cancelled") ?? false;
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"[client] cancel_async_message failed (uuid={uuid}): {ex.Message}");
+            return false;
         }
     }
 
@@ -903,7 +926,7 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public Task McpToggleAsync(string serverName, bool enabled)
         => SendControlRequestAsync(ClientMessages.ControlSubtype.McpToggle, new { serverName, enabled });
 
-    public void SendPrompt(JArray contentBlocks, string uuid)
+    public void SendPrompt(JArray contentBlocks, string uuid, string priority)
     {
         // EnsureRunning already refuses to respawn a disposed client, which would leave the write
         // below going to a dead transport.
@@ -914,16 +937,18 @@ internal sealed partial class ClaudeClient : IClaudeClient
                         ? contentBlocks
                         : new JArray(new JObject { ["type"] = "text", ["text"] = "" });
 
-        var msg = new
+        var msg = new JObject
         {
-            type = "user",
-            session_id = SessionId ?? "",
-            message = new { role = "user", content },
-            parent_tool_use_id = (string)null,
-            uuid,
+            ["type"] = "user",
+            ["session_id"] = SessionId ?? "",
+            ["message"] = new JObject { ["role"] = "user", ["content"] = content },
+            ["parent_tool_use_id"] = null,
+            ["uuid"] = uuid,
         };
+        // Absent, not null: the CLI reads the field's presence.
+        if (PromptQueue.NormalizePriority(priority) is { } p) { msg["priority"] = p; }
         var transport = _transport;
-        _log.Debug(() => $"[ClaudeClient.SendPrompt] BEFORE Write running={transport.IsRunning} sessionId={SessionId ?? "(none)"} blocks={contentBlocks?.Count ?? 0}");
+        _log.Debug(() => $"[ClaudeClient.SendPrompt] BEFORE Write running={transport.IsRunning} sessionId={SessionId ?? "(none)"} blocks={contentBlocks?.Count ?? 0} priority={priority ?? "(none)"}");
         try
         {
             transport.Write(msg);
