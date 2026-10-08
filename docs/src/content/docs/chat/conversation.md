@@ -1,24 +1,37 @@
 ---
 title: The conversation
-description: Your messages, tool rows, view modes, diffs, thinking, compaction, notices, cost and time, read aloud, and how a long session stays light.
+description: Your messages, tool rows, view modes, diffs, thinking, compaction, how an answer is rendered and what becomes a link, notices, cost and time, read aloud, and how a long session stays light.
 ---
 
 What the transcript shows, and how much of it.
 
 ## Your messages
 
+A message of yours has the look of the composer it was written in: the same surface, lighter than
+the page, the same border and corners. Code is the dark surface, so the two are never mistaken for
+one another.
+
 A long message is clipped to **Preview lines**, with **Show more** / **Show less**. Hovering a
 message of yours gives, under it, how long ago it was sent, then **Copy message** and **Fork
-conversation from here** (see [Sessions](/cv4vs-agents/chat/sessions/#fork)). A message Claude has
-not read yet has a cross in place of Fork: see
-[Messages sent while Claude works](/cv4vs-agents/chat/queued-messages/#taking-a-message-back).
+conversation from here** (see [Sessions](/cv4vs-agents/chat/sessions/#fork)).
 
-Chips on the bubble show what went with it: the editor file and lines, images, attached files.
-Clicking the file chip opens it at those lines; an image opens the lightbox, which has **Copy
-image**.
+Chips on the bubble show what went with it: the editor file with its line or range
+(`Program.cs:183`, `Program.cs:35-48`), images, attached files. Clicking the file chip opens it at
+those lines; an image opens the lightbox, which has **Copy image**. A slash command is shown as you
+typed it.
 
-A message still waiting in the queue is shown dimmed. A turn you stopped leaves a *[Request
-interrupted…]* line, marked in orange.
+With **Sticky user messages** on, the message that opened the exchange stays pinned at the top
+while its answer scrolls under it, so you always see what is being answered. Expanded while
+pinned, a long message scrolls inside itself.
+
+Two states are marked:
+
+- A message **Claude has not read yet** is dimmed and waits at the bottom of the conversation,
+  with a cross in place of Fork: see
+  [Messages sent while Claude works](/cv4vs-agents/chat/queued-messages/#taking-a-message-back).
+- A **turn you stopped** leaves a *[Request interrupted…]* line with an orange bar down its left.
+  Nothing else of yours has that bar, so the places where you stopped Claude are easy to find
+  again.
 
 ## Tool rows
 
@@ -66,7 +79,9 @@ Kept in every mode: your answers to questions, plan decisions, the task list, an
 for your approval. In Focus and Hide tools an answered question starts closed, down to its header
 (`Question · Answered`); its chevron opens it.
 
-![The task list in the conversation](../../../../images/chat/todo-list.png) A fold opened while its run was still working closes again when the turn ends.
+A fold opened while its run was still working closes again when the turn ends.
+
+![The task list in the conversation](../../../../images/chat/todo-list.png)
 
 ![Focus: a run of tool calls folded into one row](../../../../images/chat/focus-row.png)
 
@@ -91,16 +106,73 @@ separator: *Compacted chat · auto · 84k tok freed*. Open it to read the summar
 earlier messages, fetched when first opened. A compaction that fails leaves a red *Compaction
 failed: …* line.
 
-## Markdown and copy
+## Claude's answers
 
-- **Full Markdown rendering**: tables, lists, blockquotes, links, and fenced code blocks rendered
-  with **syntax highlighting** (highlight.js) across all common languages.
-- **Everything is copyable**: a copy button on every message, tool row, code block and table, so
-  any part of the conversation can be lifted out. A table copies as markdown, pipes and alignment
-  included, so it parses back as the same table wherever you paste it.
-- **Clickable file references**: `ClientEvents.cs:208` in an answer is a link that opens the file;
-  see [Clickable file references](/cv4vs-agents/chat/file-links/).
-- **Image lightbox** and a **welcome screen** for empty chats.
+An answer is rendered as it arrives, not when it ends. The dot in front of it blinks while it
+is being written and turns grey when it is done; a red dot means the API refused the turn, and
+the text beside it says why.
+
+Pointing at a finished answer shows a row under it: copy, read aloud, how long ago it was
+written, and what the turn cost when that option is on.
+
+**Text and structure**
+
+- Headings, lists, block quotes and rules, as Markdown writes them.
+- **Tables** are framed, with the header on one line. A table wider than the pane scrolls
+  sideways on its own, without moving the rest of the answer.
+- **Inline code** is a pill lighter than the page, so a command or a file name stands out of the
+  sentence it sits in.
+
+**Code**
+
+- **Fenced blocks** are highlighted for their language, and a block with no language keeps its
+  spaces, so a diagram drawn in characters stays aligned.
+- A long line scrolls inside its block instead of wrapping.
+- A `diff` block colours the added and removed lines.
+
+**What becomes a link**
+
+- **A file with a line**: `ClientEvents.cs:208` opens that file in Visual Studio; see
+  [Clickable file references](/cv4vs-agents/chat/file-links/).
+- **A pull request, an issue, a commit or a release** on GitHub, GitLab, Azure DevOps or
+  Bitbucket: shown short, as `acme/widgets#312`, with the service's mark and the full address on
+  hover; see [Links to pull requests and issues](/cv4vs-agents/chat/forge-links/).
+- **Any other address** opens in your browser.
+- Nothing inside a fenced block is turned into a link: a path in an example command stays text.
+
+**Copying**
+
+- Every answer, every message of yours, every tool row and every code block has a **copy
+  button**, shown when you point at it.
+- A **table copies as Markdown**, pipes and alignment included, so it parses back as the same
+  table wherever you paste it.
+
+**Not rendered**
+
+Formulas written in LaTeX and Mermaid diagrams are shown as Claude wrote them, the diagram as a
+code block.
+
+**Also here**: an image in the conversation opens in a lightbox, and an empty chat shows a welcome
+screen.
+
+## Other lines in the transcript
+
+Not everything in the conversation is a message.
+
+- **A change of model**: *Switched to Opus 5.5*, as a small label between two rules, where you
+  made it.
+- **A session reopened after a long pause** says so under its last message: *Idle 3h 2m. Prompt
+  cache likely expired: your next message costs more…* See
+  [The prompt cache](/cv4vs-agents/chat/context-and-usage/#the-prompt-cache).
+- **The output of a slash command** (`/config`, `/model`, *Unknown command*) is shown as the
+  terminal would print it: monospace, with a bar down its left, aligned as the command wrote it.
+- **An error** is a red box with a red bar: a failure reported by Claude Code, a turn that ended
+  on one, or a slash command that wrote to its error stream. A command that only *reports* a
+  problem in its normal output is shown like any other output: the chat has no way to tell it
+  from a success.
+
+Red and orange each mean one thing here: red is something that went wrong, orange is a turn you
+stopped yourself.
 
 ## Cost and elapsed time
 
@@ -153,5 +225,7 @@ hides behind an inner scrollbar; after a `--fix` run it also says what each find
 
 ## Related options
 
-**Preview lines**, **Collapse tool results**, **View mode**, **Sticky user messages**, **Show tool
-errors inline** and **Chat font size** are under [Options → Chat](/cv4vs-agents/options/#chat).
+**Preview lines**, **Collapse tool results**, **View mode**, **Sticky user messages**, **Show cost
+and duration**, **Select lines when opening file**, **Show tool errors inline** and **Chat font
+size** are under [Options → Chat](/cv4vs-agents/options/#chat). The font size applies to the whole
+conversation: messages, answers, tool rows and their code.

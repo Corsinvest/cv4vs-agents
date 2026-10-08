@@ -16,6 +16,16 @@ And they're all good. Each of them has something I genuinely like: the raw power
 the polish of the desktop app, the rich in-editor chat. But not one of them had *everything*
 together, in the one place I actually work: Visual Studio.
 
+Someone was more direct: "There is the CLI, there is VS Code, there is the desktop app: what are
+you missing? There is a whole team at Anthropic building these products. What do you think you are
+going to do?"
+
+It was a fair question. The answer is that VS Code was not enough for me. The CLI was not enough.
+The desktop app was not enough. I work in Visual Studio, and my experience had to be immersive,
+not split across several environments.
+
+And I was not alone: I had open source, and I had Claude.
+
 So I stopped waiting for it to exist and rebuilt it, my way: the terminal *and* the rich chat,
 both belonging to Visual Studio, wired into its editor, solution, debugger and build. Everything I
 liked, under one roof.

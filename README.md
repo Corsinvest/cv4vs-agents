@@ -13,7 +13,7 @@
 
 A Visual Studio 2022 / 2026 extension that brings the **Claude Code** CLI inside the IDE: a rich
 chat experience plus an interactive terminal, both wired into Visual Studio's editor,
-solution, debugger and build system.
+solution, debugger and build system. Without ever leaving Visual Studio.
 
 It is **not** a fork of the CLI. It drives the real `claude.exe` (installed via npm,
 `@anthropic-ai/claude-code`); the binary is never bundled. Version differences are handled by
@@ -187,14 +187,14 @@ Artwork by [filocorsa](https://github.com/filocorsa), thank you.
 
 ---
 
-## Trademarks
+**By a developer, for developers.**
+
+Made with ❤️ in Italy by [Corsinvest](https://www.corsinvest.it)
+
+GPL-3.0-only, see [LICENSE](LICENSE).
 
 **Claude** and **Claude Code** are trademarks of Anthropic, PBC. **Visual Studio** is a trademark
 of Microsoft Corporation. This is an independent extension by Corsinvest Srl, not affiliated with
 or endorsed by either company; the names are used only to describe what it works with.
 
----
-
-## License
-
-GPL-3.0-only, Copyright Corsinvest Srl.
+Copyright © Corsinvest Srl

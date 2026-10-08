@@ -8,6 +8,31 @@ Days when something happened that was not in the plan. Newest first.
 
 ---
 
+## 8 October 2026: the statue is already in the marble
+
+Today I added nothing big. I spent the day on a border, on the colour of a message, on how a link
+is written.
+
+I have used this extension every day for more than two months, and I have always cared about how a
+thing is used. It took daily use to show me how much. An oddity you notice the first time and then
+ignore; by the hundredth you realise it costs you something every time. My own message that looked
+like a box to type in. An address a line long where `acme/widgets#312` was enough. A whole path
+when all I needed was the name of the file.
+
+And then the controls. I want to be able to copy anything: an answer, a block of code, a table, the
+output of a command. I do not want to look at a hundred buttons. So the button is everywhere and
+visible nowhere: it appears when I point at the thing, which is the moment my hand is already going
+there. The same for the cross that removes an attachment, for the arrow that opens a row. The
+gesture brings the tool, and when the gesture is over the tool is gone.
+
+None of these is a feature. None would make an announcement. They are still what decides whether
+you open a tool gladly or put up with it. That is what ergonomics means to me: not having to think
+about the interface while I work.
+
+They say the statue is already inside the block of marble, and that all it takes is removing the
+pieces that are too many. An interface is the same. You do not add until it is beautiful: you use
+it long enough to see what is too much, and you take it away.
+
 ## 14 September 2026: someone else showed up
 
 This started as a personal project: I wanted a better Claude Code integration in Visual Studio 2026,

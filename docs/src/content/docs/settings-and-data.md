@@ -107,9 +107,28 @@ Outside both trees: opening a tool's input or output, an attachment, or a diff w
 `%TEMP%` (`<name>_in_<id>.<ext>`, `cv4vs-agents-<name>.<ext>`). The tool copies are marked read-only
 on purpose; nothing removes them, Windows' own temp clean-up does.
 
- Because
-the store is the CLI's, a conversation started in Visual Studio also appears in the CLI and in
-the VS Code extension, and vice versa.
+Because the store is the CLI's, a conversation started in Visual Studio also appears in the CLI
+and in the VS Code extension, and vice versa.
+
+### Claude Code's other files
+
+These are Claude Code's too, and the extension neither creates nor edits them. They still count
+here: the chat and the CLI pane run the real `claude.exe`, which reads them as it does in a
+terminal.
+
+| File | What it holds |
+|---|---|
+| `~/.claude.json` | your account and Claude Code's own state, per user |
+| `<project>\.claude\settings.json` | settings shared with whoever works on the project |
+| `<project>\.claude\settings.local.json` | your own settings for that project, kept out of git |
+| `<project>\.mcp.json` | the MCP servers the project declares |
+| `CLAUDE.md` | instructions for the agent, per project or per user |
+
+What each key means is in Claude Code's documentation:
+[settings](https://code.claude.com/docs/en/settings),
+[MCP servers](https://code.claude.com/docs/en/mcp) and
+[memory files](https://code.claude.com/docs/en/memory). For `CLAUDE.md` in a Visual Studio
+solution see [Teach the agent](/cv4vs-agents/guides/teach-the-agent/).
 
 ## Removing everything
 
