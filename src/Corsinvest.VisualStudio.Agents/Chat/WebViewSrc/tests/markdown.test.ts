@@ -269,7 +269,7 @@ test('a bare forge URL is shown short, with the URL as its tooltip', () => {
     assert.match(html, />acme\/widgets#312<\/a>/);
     assert.ok(html.includes(`title="${url}"`), html);
     assert.ok(html.includes(`href="${url}"`), html);
-    assert.match(html, /class="cv-forge-icon"/);
+    assert.match(html, /class="cv-forge-icon cv-forge-github"/);
     assert.doesNotMatch(html, /<title>/);
 });
 
