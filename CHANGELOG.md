@@ -13,6 +13,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   cache likely expired: your next message costs more, it re-caches about 459k tokens.* Until now
   the figure was only in the tooltip of the clock beside the context gauge. That tooltip takes the
   same wording.
+- **Links to pull requests and issues are shown short.** An address in an answer such as
+  `https://github.com/acme/widgets/pull/312` now reads `acme/widgets#312`, with the service's mark
+  in front. Pointing at it says what it is, a line per fact: the kind in the service's own word
+  (*GitLab merge request*), the server, the repository, the number, and the full address last. Pull or merge requests, issues and work items,
+  commits, releases and CI runs, on GitHub, GitLab, Azure DevOps, Bitbucket, Codeberg, Gitee,
+  Gitea, Forgejo and Gerrit, each in that service's own notation (`!114` for a GitLab merge
+  request). A server of your own needs no configuration: it is recognised by the shape of the
+  address. A link Claude gave a name of its own keeps it. See
+  [Links to pull requests and issues](https://corsinvest.github.io/cv4vs-agents/chat/forge-links/).
 - **Manual as an initial permission mode.** **Options → Chat → Initial permission mode** has a
   `Manual` entry: every new chat asks before edits, whatever `settings.json` says.
 - **Tracepoints: the agent can watch a line without stopping on it.** The new MCP tool
@@ -37,9 +46,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   with the cross in place of Fork.
 - **One look for what you write, another for code.** A message of yours and the composer now share
   one surface, lighter than the page, with the same border and corners: a message looks the same
-  before and after it is sent. Code is the dark surface, and only code: fenced blocks, inline
-  code and the IN/OUT of a tool call. Until now your messages, the composer and code blocks were
-  all the same dark box.
+  before and after it is sent. A block of code is the dark surface, and only that: fenced blocks
+  and the IN/OUT of a tool call. Until now your messages, the composer and code blocks were all
+  the same dark box.
+  - Inline code is a pill lighter than the page, with no outline. Darker than a dark page, a
+    word or two showed only its border.
   - A message of yours no longer has the blue bar down its left. That bar now means "look here":
     orange on a turn you stopped, red on an error.
   - Attachment chips have one look for images, files and editor references: outlined, the name

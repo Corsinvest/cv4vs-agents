@@ -69,6 +69,7 @@ export default defineConfig({
             'chat/sub-agents',
             'chat/queued-messages',
             'chat/file-links',
+            'chat/forge-links',
             'chat/context-and-usage',
           ],
         },
