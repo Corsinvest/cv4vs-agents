@@ -32,6 +32,8 @@ export interface ForgeLink {
     repo: string;
     /** Plain text: escape it on output. */
     label: string;
+    /** What the link is, a line per fact, the address last. Plain text too. */
+    tooltip: string;
 }
 
 type Groups = Record<string, string>;
@@ -47,7 +49,37 @@ interface ForgeRule {
     repo?: (g: Groups) => string;
     /** What follows the repository in the label, separator included. */
     ref: (id: string) => string;
+    /** When the service's word for it is not the one NOUN gives for the kind. */
+    noun?: string;
 }
+
+const SERVICE: Record<ForgeProvider, string> = {
+    github: 'GitHub',
+    gitlab: 'GitLab',
+    azure: 'Azure DevOps',
+    bitbucket: 'Bitbucket',
+    gitea: 'Gitea',
+    codeberg: 'Codeberg',
+    gitee: 'Gitee',
+    gerrit: 'Gerrit',
+    git: '',
+};
+
+// Each service's own word, like its notation: a merge request on GitLab, a work item on Azure.
+const NOUN: Record<ForgeKind, string> = {
+    pr: 'pull request',
+    issue: 'issue',
+    commit: 'commit',
+    release: 'release',
+    run: 'run',
+};
+const NOUN_OF: Partial<Record<ForgeProvider, Partial<Record<ForgeKind, string>>>> = {
+    github: { run: 'workflow run' },
+    gitlab: { pr: 'merge request', run: 'pipeline' },
+    azure: { issue: 'work item' },
+    bitbucket: { run: 'pipeline' },
+    gerrit: { pr: 'change' },
+};
 
 const GITHUB = /^(?:www\.)?github\.com$/i;
 const BITBUCKET = /^bitbucket\.org$/i;
@@ -169,8 +201,15 @@ const RULES: readonly ForgeRule[] = [
     {
         provider: 'gitlab',
         kind: 'release',
-        path: /^(?<repo>.+?)\/-\/(?:releases|tags)\/(?<id>[^/]+)$/,
+        path: /^(?<repo>.+?)\/-\/releases\/(?<id>[^/]+)$/,
         ref: (id) => `@${decode(id)}`,
+    },
+    {
+        provider: 'gitlab',
+        kind: 'release',
+        path: /^(?<repo>.+?)\/-\/tags\/(?<id>[^/]+)$/,
+        ref: (id) => `@${decode(id)}`,
+        noun: 'tag',
     },
     {
         provider: 'gitlab',
@@ -283,11 +322,28 @@ export function parseForgeLink(url: string | undefined | null): ForgeLink | null
             continue;
         }
         const repo = rule.repo ? rule.repo(g) : g.repo;
+        const ref = rule.ref(g.id);
+        const noun = rule.noun ?? NOUN_OF[rule.provider]?.[rule.kind] ?? NOUN[rule.kind];
+        const what = `${SERVICE[rule.provider]} ${noun}`.trim();
+        // The host on a line of its own: it is what to check before a click, and in a long
+        // address it is the part the eye skips.
+        const tooltip = [
+            what[0].toUpperCase() + what.slice(1),
+            `Server: ${host}`,
+            `Repo: ${repo}`,
+            rule.kind === 'commit'
+                ? `Commit: ${ref.slice(1)}`
+                : rule.kind === 'release'
+                  ? `Tag: ${ref.slice(1)}`
+                  : `Number: ${g.id}`,
+            url,
+        ].join('\n');
         return {
             provider: rule.provider,
             kind: rule.kind,
             repo,
-            label: repo + rule.ref(g.id),
+            label: repo + ref,
+            tooltip,
         };
     }
     return null;

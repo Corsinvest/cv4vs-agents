@@ -15,7 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   same wording.
 - **Links to pull requests and issues are shown short.** An address in an answer such as
   `https://github.com/acme/widgets/pull/312` now reads `acme/widgets#312`, with the service's mark
-  in front and the full address as its tooltip. Pull or merge requests, issues and work items,
+  in front. Pointing at it says what it is, a line per fact: the kind in the service's own word
+  (*GitLab merge request*), the server, the repository, the number, and the full address last. Pull or merge requests, issues and work items,
   commits, releases and CI runs, on GitHub, GitLab, Azure DevOps, Bitbucket, Codeberg, Gitee,
   Gitea, Forgejo and Gerrit, each in that service's own notation (`!114` for a GitLab merge
   request). A server of your own needs no configuration: it is recognised by the shape of the

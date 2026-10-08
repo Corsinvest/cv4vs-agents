@@ -37,6 +37,12 @@ test('GitHub: the kind and the provider are reported', () => {
         kind: 'pr',
         repo: 'acme/widgets',
         label: 'acme/widgets#312',
+        tooltip:
+            'GitHub pull request\n' +
+            'Server: github.com\n' +
+            'Repo: acme/widgets\n' +
+            'Number: 312\n' +
+            'https://github.com/acme/widgets/pull/312',
     });
 });
 
@@ -137,6 +143,48 @@ test('the Gitea family: named where the host is known, plain Git on a host of it
     assert.equal(own?.label, 'acme/widgets#9');
     assert.equal(own?.provider, 'git');
     assert.equal(parseForgeLink('https://git.example.org/acme/widgets/issues/4'), null);
+});
+
+const tip = (url: string): string[] => (parseForgeLink(url)?.tooltip ?? '').split('\n');
+
+test('tooltip: what it is in the word of the service, the server, the repository, the address last', () => {
+    const mr = 'https://git.example.org/group/project/-/merge_requests/114';
+    assert.deepEqual(tip(mr), [
+        'GitLab merge request',
+        'Server: git.example.org',
+        'Repo: group/project',
+        'Number: 114',
+        mr,
+    ]);
+    assert.equal(
+        tip('https://dev.azure.com/acme/Shop/_workitems/edit/1402')[0],
+        'Azure DevOps work item',
+    );
+    assert.equal(tip('https://github.com/acme/widgets/issues/287')[0], 'GitHub issue');
+    assert.equal(tip('https://github.com/acme/widgets/actions/runs/7')[0], 'GitHub workflow run');
+    assert.equal(tip('https://git.example.org/g/p/-/pipelines/494')[0], 'GitLab pipeline');
+    assert.equal(tip('https://review.example.org/c/tools/+/7')[0], 'Gerrit change');
+});
+
+test('tooltip: a commit and a tag are named as such, as the label shows them', () => {
+    const c = tip(
+        'https://github.com/acme/widgets/commit/5269a595aabbccddeeff00112233445566778899',
+    );
+    assert.equal(c[0], 'GitHub commit');
+    assert.equal(c[3], 'Commit: 5269a59');
+    const r = tip('https://github.com/acme/widgets/releases/tag/v1.0%2Bbuild');
+    assert.equal(r[0], 'GitHub release');
+    assert.equal(r[3], 'Tag: v1.0+build');
+    assert.equal(tip('https://git.example.org/g/p/-/tags/v2')[0], 'GitLab tag');
+    assert.equal(tip('https://git.example.org/g/p/-/releases/v2')[0], 'GitLab release');
+});
+
+test('tooltip: a service the path does not name is not named, the address is as it was written', () => {
+    const url = 'https://git.example.org/acme/widgets/pulls/9/files?x=1#top';
+    const t = tip(url);
+    assert.equal(t[0], 'Pull request');
+    assert.equal(t[1], 'Server: git.example.org');
+    assert.equal(t[4], url);
 });
 
 test('left alone: the repository itself, a file, a list', () => {

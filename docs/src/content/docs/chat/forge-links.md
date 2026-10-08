@@ -38,10 +38,30 @@ merge or pull request and `#` for an issue or a work item, GitHub writes `#` for
 follows the number in the address (`/files`, `#issuecomment-…`, `?…`) does not change the
 reference.
 
-## The address is always one hover away
+## Point at it before you click
 
-A short reference hides where the link goes, so the **full address is the tooltip** of every link
-shown this way. Point at it before you click.
+A short reference hides where the link goes, so every link shown this way says what it is when
+you point at it:
+
+```
+GitLab merge request
+Server: gitlab.example.com
+Repo: platform/api
+Number: 114
+https://gitlab.example.com/platform/api/-/merge_requests/114
+```
+
+- **What it is**, in the service's own word: a merge request on GitLab, a work item on Azure
+  DevOps, a workflow run on GitHub. On GitHub this is also what tells a pull request from an issue,
+  which both read `#312`.
+- **The server on a line of its own.** It is the thing to check before a click, and in a long
+  address it is the part the eye skips. On a server of your own it is also the only place that
+  says which one: the mark says "a GitLab", not whose.
+- **The repository**, then the number, the commit or the tag.
+- **The full address, last**, as Claude wrote it.
+
+On a server recognised only by the shape of its address, the first line names the kind and not
+the service: *Pull request*.
 
 A link Claude gave a name of its own, such as `[the review thread](https://…/merge_requests/114)`,
 **keeps that name**. It only gains the mark and the tooltip.

@@ -100,12 +100,12 @@ renderer.link = function (token: Tokens.Link): string {
     if (/^(https?|mailto):/.test(href)) {
         const forge = parseForgeLink(href);
         if (forge) {
-            // A label the model wrote stays. The URL is the tooltip either way: the short form
-            // hides where the link goes.
+            // A label the model wrote stays. The tooltip says what the link is and ends on the
+            // URL either way: the short form hides where the link goes.
             const naked = text === href || text === escapeHtml(href);
             const label = naked ? escapeHtml(forge.label) : text;
             return (
-                `<a class="cv-forge-link" href="${escapeHtml(href)}" title="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">` +
+                `<a class="cv-forge-link" href="${escapeHtml(href)}" title="${escapeHtml(forge.tooltip)}" target="_blank" rel="noopener noreferrer">` +
                 `${FORGE_ICON[forge.provider]}${label}</a>`
             );
         }
