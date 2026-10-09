@@ -662,13 +662,15 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child {
 
 /* Actions row: cv-msg-actions sits below the bubble, on the chat background (a sibling of the
  * bubble inside the light-DOM cv-message host, NOT inside the .cv-message.user box). The slot
- * is reserved (min-height) so revealing it on hover never shifts the layout. */
+ * is reserved (min-height) so revealing it on hover never shifts the layout: the row is empty
+ * until then (reveal.ts), so this has to be the height of what will fill it, a small Fluent
+ * button's 24px. At 20px the row grew by four under the pointer and everything below moved. */
 .cv-msg-actions {
     display: flex;
     align-items: center;
     gap: 4px;
     margin: 5px 0 0 2px;
-    min-height: 20px;
+    min-height: 24px;
     opacity: 0;
     transition: opacity 0.15s;
 }
@@ -694,7 +696,8 @@ cv-message[msg-role="user"] .cv-msg-actions {
     align-items: center;
     gap: 4px;
     margin: 2px 0 0 2px;
-    min-height: 20px;
+    /* The buttons' height, as on .cv-msg-actions: the row is empty until hovered. */
+    min-height: 24px;
     opacity: 0;
     transition: opacity 0.15s;
 }
