@@ -407,7 +407,8 @@ internal sealed partial class WebViewMessageHandler
         var stripped = filePath;
         if (stripped.StartsWith("file:///", System.StringComparison.OrdinalIgnoreCase)) { stripped = stripped.Substring(8); }
         else if (stripped.StartsWith("file://", System.StringComparison.OrdinalIgnoreCase)) { stripped = stripped.Substring(7); }
-        var normalized = stripped.Replace('/', Path.DirectorySeparatorChar);
+        // The model shortens a temp path to %LOCALAPPDATA%\…; an undefined name is left as written.
+        var normalized = System.Environment.ExpandEnvironmentVariables(stripped).Replace('/', Path.DirectorySeparatorChar);
         if (Path.IsPathRooted(normalized) && File.Exists(normalized)) { return normalized; }
         var combined = Path.Combine(entry.WorkingDirectory ?? "", normalized);
         if (File.Exists(combined)) { return combined; }

@@ -145,7 +145,26 @@ internal sealed partial class WebViewMessageHandler
 
     private void HandleIdeOutputWindow(JObject data, int? id) => OutputWindowLogger.ActivatePane();
 
-    private void HandleExternalUrl(JObject data, int? id) => ShellHelpers.OpenExternal(data.ToObject<Contracts.ExternalUrlNotification>().Url ?? "");
+    private void HandleExternalUrl(JObject data, int? id)
+    {
+        var url = data.ToObject<Contracts.ExternalUrlNotification>().Url ?? "";
+        // Two characters at least, so a drive letter is not taken for a scheme. Anything with one
+        // goes to the shell untouched: in a URL a '%' is an escape, not a variable.
+        if (System.Text.RegularExpressions.Regex.IsMatch(url, @"^[A-Za-z][A-Za-z0-9+.\-]+:"))
+        {
+            ShellHelpers.OpenExternal(url);
+            return;
+        }
+        // A document link written as a bare path (an .html report): resolved like a file link, then
+        // handed to the shell as a path, which opens it in the browser.
+        var path = ResolveFilePath(url);
+        if (path == null)
+        {
+            NoticeOpenFailed(url, "not found");
+            return;
+        }
+        ShellHelpers.OpenExternal(path);
+    }
 
     private void HandleOptions(JObject data, int? id)
     {
