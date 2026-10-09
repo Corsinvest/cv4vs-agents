@@ -154,23 +154,18 @@
     margin: 0;
 }
 
-/* Copy button injected by markdown.ts as <cv-copy-btn> next to the <pre>.
+/* Copy button added by reveal.ts while the pointer is over a block marked data-copy.
  * `cv-copy-btn` is display:contents, so we position its inner button via
- * ::part(button). Layout-only: hover-reveal anchored top-right. */
-.cv-md-copy-btn::part(button) {
+ * ::part(button). Layout-only: anchored top-right. */
+[data-copy] > cv-copy-btn::part(button) {
     position: absolute;
     top: 4px;
     right: 4px;
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-.cv-md-code-wrap:hover .cv-md-copy-btn::part(button) {
-    opacity: 1;
 }
 
-/* Same hover-reveal over a table. inline-block keeps the wrapper as wide as the table and not as
- * the bubble, or the button lands far right of a narrow one; the background is what keeps it
- * readable over the header row it sits on. */
+/* inline-block keeps the wrapper as wide as the table and not as the bubble, or the button lands
+ * far right of a narrow one; the background is what keeps it readable over the header row it
+ * sits on. */
 .cv-md-table-wrap {
     position: relative;
     display: inline-block;
@@ -183,16 +178,8 @@
     overflow-x: auto;
     max-width: 100%;
 }
-.cv-md-table-copy-btn::part(button) {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    opacity: 0;
+.cv-md-table-wrap > cv-copy-btn::part(button) {
     background: var(--colorNeutralBackground1);
-    transition: opacity 0.15s;
-}
-.cv-md-table-wrap:hover .cv-md-table-copy-btn::part(button) {
-    opacity: 1;
 }
 .md blockquote {
     border-left: 3px solid var(--colorNeutralStroke1);

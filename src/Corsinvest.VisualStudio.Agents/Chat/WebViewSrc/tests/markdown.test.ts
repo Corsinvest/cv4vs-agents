@@ -57,20 +57,21 @@ test('fence: not even with a declared language', () => {
     assert.equal(links(md('```bash\nvim Foo.cs:12\n```')), 0);
 });
 
-test('fence: the Copy button stays, and reads from the pre', () => {
-    // A link inside the block would break the copy: cv-copy-btn takes its text from the sibling <pre>.
+test('fence: the block is marked for copy, empty so the text comes from the pre', () => {
+    // A link inside the block would break the copy: the button takes its text from the <pre>.
     const html = md('```\nFoo.cs:12\n```');
-    assert.match(html, /<cv-copy-btn[^>]*frompre="1"/);
+    assert.match(html, /<div class="cv-md-code-wrap" data-copy="" tabindex="0">/);
+    assert.doesNotMatch(html, /<cv-copy-btn/, 'the button is added on hover, not rendered');
 });
 
-test('table: the Copy button carries the markdown source, not the DOM', () => {
+test('table: the copy mark carries the markdown source, not the DOM', () => {
     // Pipes and the alignment row must survive: that is what makes the paste re-parsable.
     const src = '| a | b |\n|:--|--:|\n| 1 | 2 |';
     const html = md(src + '\n');
-    assert.match(html, /<div class="cv-md-table-wrap">/);
-    assert.match(html, /<cv-copy-btn[^>]*class="cv-md-table-copy-btn"/);
-    const text = /<cv-copy-btn[^>]*text="([^"]*)"/.exec(html)?.[1] ?? '';
+    const text =
+        /<div class="cv-md-table-wrap" data-copy="([^"]*)" tabindex="0">/.exec(html)?.[1] ?? '';
     assert.equal(text.replace(/&quot;/g, '"').replace(/&amp;/g, '&'), src);
+    assert.doesNotMatch(html, /<cv-copy-btn/, 'the button is added on hover, not rendered');
 });
 
 test('table: the cells stay rendered by marked', () => {
@@ -85,13 +86,13 @@ test('table: a scroll level wraps the table, inside the button wrap', () => {
     const html = md('| a | b |\n|---|---|\n| 1 | 2 |\n');
     assert.match(
         html,
-        /<div class="cv-md-table-wrap"><div class="cv-md-table-scroll"><table/,
+        /<div class="cv-md-table-wrap" data-copy="[^"]*" tabindex="0"><div class="cv-md-table-scroll"><table/,
         'the scroll level goes INSIDE the wrap and around the table',
     );
     assert.match(
         html,
-        /<\/table>\s*<\/div><cv-copy-btn/,
-        'the button is the scroll level sibling, not its child',
+        /<\/table>\s*<\/div><\/div>/,
+        'the mark is on the wrap, so the button lands as the scroll level sibling, not its child',
     );
 });
 

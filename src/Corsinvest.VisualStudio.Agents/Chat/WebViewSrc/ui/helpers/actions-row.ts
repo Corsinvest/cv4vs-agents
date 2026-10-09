@@ -55,10 +55,11 @@ function formatMetrics(m: TurnMetrics) {
 }
 
 /** Copy button (+ optional Read-aloud when `speak`) + "x ago" timestamp, and (when the turn's
- *  figures are known and the option is on) cost/tokens/duration pushed to the far end. Hover-gating
- *  is CSS: `.cv-response-actions` has base opacity 0 and a hover rule on the container reveals it;
- *  pass that container's reveal class in `extraClass`. ts=0 hides the timestamp. `speak` adds the
- *  TTS button (prose answers want it; a tool transcript doesn't). */
+ *  figures are known and the option is on) cost/tokens/duration pushed to the far end. The row is
+ *  rendered empty and reveal.ts fills it while the pointer or the focus is in its container; the
+ *  fade is CSS: `.cv-response-actions` has base opacity 0 and a hover rule on the container
+ *  reveals it; pass that container's reveal class in `extraClass`. ts=0 hides the timestamp.
+ *  `speak` adds the TTS button (prose answers want it; a tool transcript doesn't). */
 export function renderActionsRow(
     text: string,
     ts: number,
@@ -67,12 +68,18 @@ export function renderActionsRow(
     speak = false,
     metrics: TurnMetrics | null = null,
 ) {
+    const reveal = () => html`
+        <cv-copy-btn .text=${text} title=${title}></cv-copy-btn>
+        ${speak ? html`<cv-speak-btn .text=${text}></cv-speak-btn>` : nothing}
+        ${ts > 0 ? html`<cv-time-ago .ms=${ts}></cv-time-ago>` : nothing}
+        ${metrics ? html`<span class="cv-turn-metrics">${formatMetrics(metrics)}</span>` : nothing}
+    `;
     return html`
-        <div class="cv-response-actions ${extraClass}">
-            <cv-copy-btn .text=${text} title=${title}></cv-copy-btn>
-            ${speak ? html`<cv-speak-btn .text=${text}></cv-speak-btn>` : nothing}
-            ${ts > 0 ? html`<cv-time-ago .ms=${ts}></cv-time-ago>` : nothing}
-            ${metrics ? html`<span class="cv-turn-metrics">${formatMetrics(metrics)}</span>` : nothing}
-        </div>
+        <div
+            class="cv-response-actions ${extraClass}"
+            data-reveal
+            tabindex="0"
+            .reveal=${reveal}
+        ></div>
     `;
 }

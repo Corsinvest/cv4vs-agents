@@ -32,36 +32,57 @@ cv-diff-preview {
     font-size: var(--fontSizeBase200);
 }
 
-/* Inline diff rows. The grid keeps the gutter aligned while the text wraps:
- * nothing here owns a horizontal scroll. */
+/* Inline diff rows. A row is one element holding its text (diff-html.ts): the gutter is not
+ * markup but the row's left padding, with the line number and the sign drawn into it. That keeps
+ * a wrapped line under its own text, as the three-column grid this replaces did, and nothing here
+ * owns a horizontal scroll. Being generated content, the gutter is also left out of a selection.
+ * min-height: a blank line has no content to give the row one. */
 .cv-diff-row {
-    display: grid;
-    grid-template-columns: 3.4em 0.9em 1fr;
+    position: relative;
+    /* 3.4em of number and 0.9em of sign. */
+    padding-left: 4.3em;
+    padding-right: 6px;
+    min-height: 1lh;
     font-family: var(--fontFamilyMonospace);
     font-size: var(--fontSizeBase200);
     line-height: 1.45;
-}
-/* Four digits plus the padding either side: a number that fills the column
- * touches the row's left border. */
-.cv-diff-ln {
-    color: var(--colorNeutralForeground4);
-    text-align: right;
-    padding-left: 0.5em;
-    padding-right: 0.5em;
-    user-select: none;
-}
-.cv-diff-sign {
-    color: var(--colorNeutralForeground4);
-    user-select: none;
-}
-.cv-diff-txt {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    padding-right: 6px;
 }
-/* No patch yet, so no line numbers to show: the gutter goes with them. */
+/* Four digits plus the padding either side: a number that fills the column touches the row's
+ * left border. nowrap, or a fifth digit drops to a line of its own. */
+.cv-diff-row::before {
+    content: attr(data-ln);
+    position: absolute;
+    left: 0;
+    width: 3.4em;
+    box-sizing: border-box;
+    padding: 0 0.5em;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--colorNeutralForeground4);
+}
+.cv-diff-row::after {
+    position: absolute;
+    left: 3.4em;
+    top: 0;
+    color: var(--colorNeutralForeground4);
+}
+.cv-diff-ins::after {
+    content: '+';
+}
+.cv-diff-del::after {
+    content: '-';
+}
+/* No patch yet, so no line numbers to show: the gutter shrinks to the sign. */
 .cv-diff-preview-wrap.no-gutter .cv-diff-row {
-    grid-template-columns: 0.9em 1fr;
+    padding-left: 0.9em;
+}
+.cv-diff-preview-wrap.no-gutter .cv-diff-row::before {
+    content: none;
+}
+.cv-diff-preview-wrap.no-gutter .cv-diff-row::after {
+    left: 0;
 }
 /* Between two hunks, and only there: the gutter numbers already say where each
  * one starts, so the separator has nothing to spell out. */
@@ -79,21 +100,19 @@ cv-diff-preview {
  * would be a second colour over the syntax highlighting, and the code loses. */
 .cv-diff-ins {
     background: color-mix(in srgb, var(--colorPaletteGreenBackground1) 60%, transparent);
-    color: var(--colorPaletteGreenForeground1);
+    color: var(--colorNeutralForeground1);
 }
 .cv-diff-del {
     background: color-mix(in srgb, var(--colorPaletteRedBackground1) 60%, transparent);
-    color: var(--colorPaletteRedForeground1);
-}
-.cv-diff-ins .cv-diff-ln,
-.cv-diff-del .cv-diff-ln,
-.cv-diff-ins .cv-diff-sign,
-.cv-diff-del .cv-diff-sign {
-    color: inherit;
-}
-.cv-diff-ins .cv-diff-txt,
-.cv-diff-del .cv-diff-txt {
     color: var(--colorNeutralForeground1);
+}
+.cv-diff-ins::before,
+.cv-diff-ins::after {
+    color: var(--colorPaletteGreenForeground1);
+}
+.cv-diff-del::before,
+.cv-diff-del::after {
+    color: var(--colorPaletteRedForeground1);
 }
 /* Translucent on purpose: an opaque fill hides the token colour underneath, and
  * the changed word is the one place the highlighting is worth reading. */

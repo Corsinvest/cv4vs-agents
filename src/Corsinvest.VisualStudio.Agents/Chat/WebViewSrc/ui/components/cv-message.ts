@@ -255,9 +255,25 @@ export class CvMessage extends LitElement {
      * "Show more" button on the fade instead (see the user render).
      */
     private _renderActions() {
+        // Rendered empty: reveal.ts fills it while the pointer or the focus is on the message. A
+        // new function each pass, which is how it knows the row it is showing went stale.
+        const actions = html`<div
+            class="cv-msg-actions"
+            data-reveal
+            tabindex="0"
+            .reveal=${() => this._renderActionButtons()}
+        ></div>`;
+        return this.queued && this.later
+            ? html`<div class="cv-pending-row">
+                  <span class="cv-pending-note">Sent after this turn</span>${actions}
+              </div>`
+            : actions;
+    }
+
+    private _renderActionButtons() {
         const copyText = cleanMessageOnlyText(this.text);
         const showFork = !this.queued && this.role === 'user' && !!this.uuid;
-        const actions = html`<div class="cv-msg-actions">
+        return html`
             ${
                 this.timestamp > 0
                     ? html`<cv-time-ago .ms=${this.timestamp}></cv-time-ago>`
@@ -296,12 +312,7 @@ export class CvMessage extends LitElement {
                       </fluent-button>`
                     : nothing
             }
-        </div>`;
-        return this.queued && this.later
-            ? html`<div class="cv-pending-row">
-                  <span class="cv-pending-note">Sent after this turn</span>${actions}
-              </div>`
-            : actions;
+        `;
     }
 
     private _onFork = (e: Event): void => {

@@ -33,6 +33,7 @@ import type {
 } from '../core/types';
 import { applyHostKey } from './host-keys';
 import { installDebugApi } from './debug';
+import { installReveal } from './reveal';
 import { logger } from '../core/logger';
 import { initFluent, applyFluentTheme, applyFontScale } from './fluent';
 import { setVerbsConfig } from './components/cv-spinner';
@@ -293,6 +294,7 @@ export function init(): void {
 
     wireBridgeHandlers();
     installDebugApi();
+    installReveal();
     bridge.start();
 
     // Tell the host the app has mounted and painted its first frame, so it can hide the native

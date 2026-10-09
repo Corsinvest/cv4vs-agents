@@ -2,13 +2,13 @@
  * SPDX-FileCopyrightText: Copyright Corsinvest Srl
  * SPDX-License-Identifier: GPL-3.0-only
  */
-import { LitElement, html, nothing, type TemplateResult } from 'lit';
+import { LitElement, html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { buildRows, rowsFromHunks, type Row, type Seg } from '../../core/diff-rows';
+import { diffRowsHtml } from '../../core/diff-html';
+import { buildRows, rowsFromHunks } from '../../core/diff-rows';
 import type { PatchHunkDto } from '../../core/generated/PatchHunkDto';
-import { highlightCode, langForFile } from '../../core/lang';
-import { markRanges, rangesOf } from '../../core/mark-ranges';
+import { langForFile } from '../../core/lang';
 
 /** Unchanged lines kept around each change, what git and GitHub show. */
 const CONTEXT_LINES = 3;
@@ -20,9 +20,7 @@ const VISIBLE_ROWS = 12;
  * Inline diff preview for tool rows (Edit / Write / MultiEdit).
  *
  * Three layers: the patch says which rows changed, the word-diff which piece inside a row, the
- * highlighter what the code says. The highlighter needs the whole line: given a changed piece
- * alone it sees a word out of context and returns `boolean` plain, not as a keyword, so it runs
- * first and markRanges puts the marks over its HTML.
+ * highlighter what the code says. diff-html.ts turns the three into the rows' markup.
  */
 @customElement('cv-diff-preview')
 export class CvDiffPreview extends LitElement {
@@ -39,32 +37,6 @@ export class CvDiffPreview extends LitElement {
     // this component to a shadow root belongs to the CSS migration, not here.
     override createRenderRoot() {
         return this;
-    }
-
-    /** The row's text, highlighted whole and then marked. Null (unknown language, or hljs threw)
-     *  renders the segments plain, which is what an unhighlighted file should look like. */
-    private _text(segs: Seg[], lang: string): TemplateResult {
-        const line = segs.map((s) => s.text).join('');
-        const hl = highlightCode(line, lang);
-        if (!hl) {
-            return html`${segs.map((s) => (s.changed ? html`<mark>${s.text}</mark>` : s.text))}`;
-        }
-        return html`${unsafeHTML(markRanges(hl, rangesOf(segs)))}`;
-    }
-
-    private _row(row: Row, lang: string, numbered: boolean): TemplateResult {
-        if (row.kind === 'hunk') {
-            return html`<div class="cv-diff-hunk"></div>`;
-        }
-        const sign = row.kind === 'ins' ? '+' : row.kind === 'del' ? '-' : ' ';
-        // One gutter: a '-' exists only in the old file and a '+' only in the new, so every
-        // row has exactly one number worth showing.
-        const no = row.kind === 'del' ? row.oldNo : row.newNo;
-        return html`<div class="cv-diff-row cv-diff-${row.kind}">
-            ${numbered ? html`<span class="cv-diff-ln">${no ?? ''}</span>` : nothing}
-            <span class="cv-diff-sign">${sign}</span>
-            <span class="cv-diff-txt">${this._text(row.segs, lang)}</span>
-        </div>`;
     }
 
     override render() {
@@ -95,7 +67,7 @@ export class CvDiffPreview extends LitElement {
             class="cv-diff-preview-wrap ${fromCli ? '' : 'no-gutter'}"
             data-action="diff-expand"
         >
-            ${shown.map((r) => this._row(r, lang, fromCli))}
+            ${unsafeHTML(diffRowsHtml(shown, lang, fromCli))}
             ${more > 0 ? html`<div class="cv-diff-more">… ${more} more lines</div>` : nothing}
         </div>`;
     }
