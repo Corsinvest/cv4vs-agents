@@ -107,8 +107,15 @@ fluent-button[icon-only] svg {
     inset: auto;
     margin: 0;
     padding: 4px 11px 6px;
-    /* Wide enough for a path, and pre-line so a string with newlines breaks where it says to. */
-    max-width: 320px;
+    /* As wide as its text, up to the pane: what the system's own tooltip does, and what keeps an
+     * address or a path on one line where there is room for it. Fluent's stops at 240px, which
+     * broke a commit's URL in three.
+     * max-content, or the width follows the position: a fixed box with only `left` set shrinks to
+     * what is left of the viewport on its right, so the same text took two lines in the middle of
+     * the pane and three beside its edge, and was measured for placing before it had moved.
+     * pre-line so a string with newlines breaks where it says to. */
+    width: max-content;
+    max-width: min(800px, calc(100vw - 12px));
     white-space: pre-line;
     box-sizing: border-box;
     /* Fluent's tooltip has a transparent border and leaves the edge to its shadow. On a dark theme
