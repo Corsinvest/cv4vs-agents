@@ -73,8 +73,9 @@ when opening file*; with it off, the file simply opens at the first line.
 
 ## How the file is found
 
-For an editor open, the click carries the raw reference to Visual Studio, which resolves it against
-your solution:
+The click carries the raw reference to Visual Studio, which resolves it the same way whether it then
+opens in the editor or in the browser. An environment variable in it (`%LOCALAPPDATA%\Temp\report.html`,
+`%USERPROFILE%\.claude\CLAUDE.md`) is expanded first, then:
 
 1. an **absolute path** that exists → opened directly;
 2. a **path relative to the working directory** → resolved and opened;

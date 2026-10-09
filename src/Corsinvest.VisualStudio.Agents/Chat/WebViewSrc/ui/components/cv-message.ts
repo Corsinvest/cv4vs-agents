@@ -350,12 +350,10 @@ export class CvMessage extends LitElement {
         }
         const isDocument = /^file:\/\//i.test(filePath) || /\.html?($|[?#])/i.test(filePath);
         if (isDocument) {
-            // Normalize backslashes to a proper file:// URL the shell opens in the browser.
-            const url = /^file:\/\//i.test(filePath)
-                ? filePath
-                : 'file:///' + filePath.replace(/\\/g, '/').replace(/^\/+/, '');
+            // The path goes as written: only the host can resolve it (working directory,
+            // %VAR%), and a file:// URL built here would turn the '%' into a broken escape.
             bridge.sendNotification<ExternalUrlNotification>(Msg.fromWebView.open.externalUrl, {
-                url,
+                url: filePath,
             });
             return;
         }
