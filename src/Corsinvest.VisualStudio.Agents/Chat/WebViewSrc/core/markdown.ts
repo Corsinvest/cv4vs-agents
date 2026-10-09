@@ -47,17 +47,16 @@ renderer.code = function (token: Tokens.Code): string {
     const lang = resolveLang(token.lang ?? '');
     const hl = highlightCode(code, lang);
     const language = hl !== null ? lang : 'plaintext';
-    // <cv-copy-btn> is upgraded on innerHTML parse; it reads its text from
-    // the sibling <pre> at click time (`frompre` attribute).
+    // No button here: `data-copy` marks the block and copy-hover.ts adds one under the pointer,
+    // which reads its text from the <pre> at click time.
     return (
-        `<div class="cv-md-code-wrap">` +
+        `<div class="cv-md-code-wrap" data-copy="">` +
         `<pre><code class="hljs language-${language}">${hl ?? escapeHtml(code)}</code></pre>` +
-        `<cv-copy-btn class="cv-md-copy-btn" frompre="1" title="Copy"></cv-copy-btn>` +
         `</div>`
     );
 };
 
-// The button carries the markdown source: unlike a fence, a table's textContent is the cells run
+// The mark carries the markdown source: unlike a fence, a table's textContent is the cells run
 // together with no pipes or newlines, so there is nothing in the DOM to copy.
 // `.call(this)`, never `.bind`: the base renderer reaches its cells through `this.parser`, which
 // marked injects on the instance it parses with, not on the one built here.
@@ -66,11 +65,10 @@ renderer.code = function (token: Tokens.Code): string {
 const baseTable = renderer.table;
 renderer.table = function (this: Renderer, token: Tokens.Table): string {
     return (
-        `<div class="cv-md-table-wrap">` +
+        `<div class="cv-md-table-wrap" data-copy="${escapeHtml(token.raw.trim())}">` +
         `<div class="cv-md-table-scroll">` +
         baseTable.call(this, token) +
         `</div>` +
-        `<cv-copy-btn class="cv-md-table-copy-btn" text="${escapeHtml(token.raw.trim())}" title="Copy table"></cv-copy-btn>` +
         `</div>`
     );
 };
@@ -229,10 +227,9 @@ export function renderMarkdown(text: string | undefined | null): string {
     try {
         const html = marked.parse(normalized, { async: false }) as string;
         out = DOMPurify.sanitize(html, {
-            // data-line-end is what makes a range select rather than just scroll; 'text' carries
-            // the table's markdown to its copy button. Dropped here, each silently stops working.
-            ADD_ATTR: ['target', 'frompre', 'text', 'data-file', 'data-line', 'data-line-end'],
-            ADD_TAGS: ['cv-copy-btn'],
+            // data-line-end is what makes a range select rather than just scroll; data-copy is
+            // what gives a block its copy button. Dropped here, each silently stops working.
+            ADD_ATTR: ['target', 'data-copy', 'data-file', 'data-line', 'data-line-end'],
         });
     } catch (err) {
         // Not cached: an error render is cheap to redo, and caching it would pin the failure for

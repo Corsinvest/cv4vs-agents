@@ -426,12 +426,8 @@ export abstract class ToolRenderer {
                   ><code>${unsafeHTML(code)}</code></pre>`
                 : html`<pre class="cv-tool-body-pre ${extra}">${shown}</pre>`;
         };
-        const copyBtn = (text: string, slot: 'in' | 'out') =>
-            html`<cv-copy-btn
-                class="cv-tool-body-copy-btn cv-tool-body-copy-${slot}"
-                .text=${text}
-                title="Copy"
-            ></cv-copy-btn>`;
+        // No copy button in the template: the row is marked and copy-hover.ts puts one in the
+        // head while the pointer is over the row.
         return html`
             <div class="cv-tool-body">
                 <div class="cv-tool-body-box">
@@ -440,9 +436,11 @@ export abstract class ToolRenderer {
                             ? html`<div
                                   class="cv-tool-body-row cv-tool-body-row-in"
                                   style="cursor:pointer"
+                                  data-copy
+                                  .copyText=${inText}
                                   @click=${() => this.host.openOutput('in')}
                               >
-                                  <div class="cv-tool-body-head">
+                                  <div class="cv-tool-body-head" data-copy-slot>
                                       ${
                                           inLabel
                                               ? html`<span class="cv-tool-body-label"
@@ -450,7 +448,6 @@ export abstract class ToolRenderer {
                                                 >`
                                               : nothing
                                       }
-                                      ${copyBtn(inText, 'in')}
                                   </div>
                                   <div class="cv-tool-body-cell">
                                       ${cell(inText, this.clipsInput(), highlightInputAs)}
@@ -463,13 +460,14 @@ export abstract class ToolRenderer {
                             ? html`<div
                                   class="cv-tool-body-row cv-tool-body-row-out"
                                   style="cursor:pointer"
+                                  data-copy
+                                  .copyText=${outText}
                                   @click=${() => this.host.openOutput('out')}
                               >
-                                  <div class="cv-tool-body-head">
+                                  <div class="cv-tool-body-head" data-copy-slot>
                                       <span class="cv-tool-body-label"
                                           >${this.host.status === 'error' ? 'ERR' : 'OUT'}</span
                                       >
-                                      ${copyBtn(outText, 'out')}
                                   </div>
                                   <div class="cv-tool-body-cell">
                                       ${cell(
