@@ -60,7 +60,7 @@ test('fence: not even with a declared language', () => {
 test('fence: the block is marked for copy, empty so the text comes from the pre', () => {
     // A link inside the block would break the copy: the button takes its text from the <pre>.
     const html = md('```\nFoo.cs:12\n```');
-    assert.match(html, /<div class="cv-md-code-wrap" data-copy="">/);
+    assert.match(html, /<div class="cv-md-code-wrap" data-copy="" tabindex="0">/);
     assert.doesNotMatch(html, /<cv-copy-btn/, 'the button is added on hover, not rendered');
 });
 
@@ -68,7 +68,8 @@ test('table: the copy mark carries the markdown source, not the DOM', () => {
     // Pipes and the alignment row must survive: that is what makes the paste re-parsable.
     const src = '| a | b |\n|:--|--:|\n| 1 | 2 |';
     const html = md(src + '\n');
-    const text = /<div class="cv-md-table-wrap" data-copy="([^"]*)">/.exec(html)?.[1] ?? '';
+    const text =
+        /<div class="cv-md-table-wrap" data-copy="([^"]*)" tabindex="0">/.exec(html)?.[1] ?? '';
     assert.equal(text.replace(/&quot;/g, '"').replace(/&amp;/g, '&'), src);
     assert.doesNotMatch(html, /<cv-copy-btn/, 'the button is added on hover, not rendered');
 });
@@ -85,7 +86,7 @@ test('table: a scroll level wraps the table, inside the button wrap', () => {
     const html = md('| a | b |\n|---|---|\n| 1 | 2 |\n');
     assert.match(
         html,
-        /<div class="cv-md-table-wrap" data-copy="[^"]*"><div class="cv-md-table-scroll"><table/,
+        /<div class="cv-md-table-wrap" data-copy="[^"]*" tabindex="0"><div class="cv-md-table-scroll"><table/,
         'the scroll level goes INSIDE the wrap and around the table',
     );
     assert.match(

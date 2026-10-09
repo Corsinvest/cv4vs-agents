@@ -154,7 +154,7 @@
     margin: 0;
 }
 
-/* Copy button added by copy-hover.ts while the pointer is over a block marked data-copy.
+/* Copy button added by reveal.ts while the pointer is over a block marked data-copy.
  * `cv-copy-btn` is display:contents, so we position its inner button via
  * ::part(button). Layout-only: anchored top-right. */
 [data-copy] > cv-copy-btn::part(button) {

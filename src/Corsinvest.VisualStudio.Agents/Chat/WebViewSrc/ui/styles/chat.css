@@ -486,7 +486,7 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child {
 .cv-tool-body-result {
     margin: 0;
 }
-/* Copy button on each IN/OUT cell of the tool body, added by copy-hover.ts while the pointer is
+/* Copy button on each IN/OUT cell of the tool body, added by reveal.ts while the pointer is
  * over the row. It shares the label's line rather than floating over the code: the cell scrolls,
  * and a button anchored to its top corner leaves the viewport while the text is still being read.
  * `cv-copy-btn` is display:contents, so its inner button is reached via ::part. */

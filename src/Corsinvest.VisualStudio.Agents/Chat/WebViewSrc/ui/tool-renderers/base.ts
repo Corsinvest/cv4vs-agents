@@ -426,7 +426,7 @@ export abstract class ToolRenderer {
                   ><code>${unsafeHTML(code)}</code></pre>`
                 : html`<pre class="cv-tool-body-pre ${extra}">${shown}</pre>`;
         };
-        // No copy button in the template: the row is marked and copy-hover.ts puts one in the
+        // No copy button in the template: the row is marked and reveal.ts puts one in the
         // head while the pointer is over the row.
         return html`
             <div class="cv-tool-body">
@@ -437,6 +437,7 @@ export abstract class ToolRenderer {
                                   class="cv-tool-body-row cv-tool-body-row-in"
                                   style="cursor:pointer"
                                   data-copy
+                                  tabindex="0"
                                   .copyText=${inText}
                                   @click=${() => this.host.openOutput('in')}
                               >
@@ -461,6 +462,7 @@ export abstract class ToolRenderer {
                                   class="cv-tool-body-row cv-tool-body-row-out"
                                   style="cursor:pointer"
                                   data-copy
+                                  tabindex="0"
                                   .copyText=${outText}
                                   @click=${() => this.host.openOutput('out')}
                               >

@@ -47,10 +47,10 @@ renderer.code = function (token: Tokens.Code): string {
     const lang = resolveLang(token.lang ?? '');
     const hl = highlightCode(code, lang);
     const language = hl !== null ? lang : 'plaintext';
-    // No button here: `data-copy` marks the block and copy-hover.ts adds one under the pointer,
+    // No button here: `data-copy` marks the block and reveal.ts adds one under the pointer,
     // which reads its text from the <pre> at click time.
     return (
-        `<div class="cv-md-code-wrap" data-copy="">` +
+        `<div class="cv-md-code-wrap" data-copy="" tabindex="0">` +
         `<pre><code class="hljs language-${language}">${hl ?? escapeHtml(code)}</code></pre>` +
         `</div>`
     );
@@ -65,7 +65,7 @@ renderer.code = function (token: Tokens.Code): string {
 const baseTable = renderer.table;
 renderer.table = function (this: Renderer, token: Tokens.Table): string {
     return (
-        `<div class="cv-md-table-wrap" data-copy="${escapeHtml(token.raw.trim())}">` +
+        `<div class="cv-md-table-wrap" data-copy="${escapeHtml(token.raw.trim())}" tabindex="0">` +
         `<div class="cv-md-table-scroll">` +
         baseTable.call(this, token) +
         `</div>` +
@@ -228,8 +228,16 @@ export function renderMarkdown(text: string | undefined | null): string {
         const html = marked.parse(normalized, { async: false }) as string;
         out = DOMPurify.sanitize(html, {
             // data-line-end is what makes a range select rather than just scroll; data-copy is
-            // what gives a block its copy button. Dropped here, each silently stops working.
-            ADD_ATTR: ['target', 'data-copy', 'data-file', 'data-line', 'data-line-end'],
+            // what gives a block its copy button, and tabindex what lets the keyboard reach it.
+            // Dropped here, each silently stops working.
+            ADD_ATTR: [
+                'target',
+                'tabindex',
+                'data-copy',
+                'data-file',
+                'data-line',
+                'data-line-end',
+            ],
         });
     } catch (err) {
         // Not cached: an error render is cheap to redo, and caching it would pin the failure for
