@@ -12,6 +12,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Panes;
 
@@ -210,13 +211,20 @@ internal static class PaneLauncher
     /// with no pre-filled prompt. A fresh chat pane takes <paramref name="initialComposer"/> too:
     /// what a context-menu entry had for a chat that was not open yet.</summary>
     public static void OpenNew(PaneKind kind, Profile profile, string forkSessionId = null, Contracts.SetComposerNotification initialComposer = null, string resumeSessionId = null)
+        => _ = OpenNewAsync(kind, profile, forkSessionId, initialComposer, resumeSessionId, true);
+
+    /// <summary><see cref="OpenNew"/> for a caller that has to know when the pane is registered:
+    /// the restore, which holds the workspace file until its last pane is. With
+    /// <paramref name="activate"/> false the pane is shown without taking the focus: a pane the
+    /// user did not just ask for. Never faults: a failure is logged here.</summary>
+    public static Task OpenNewAsync(PaneKind kind, Profile profile, string forkSessionId, Contracts.SetComposerNotification initialComposer, string resumeSessionId, bool activate)
     {
         var pkg = AgentsPackage.Instance;
-        if (pkg == null) { OutputWindowLogger.Global.Warn("PaneLauncher: package not yet initialized"); return; }
+        if (pkg == null) { OutputWindowLogger.Global.Warn("PaneLauncher: package not yet initialized"); return Task.CompletedTask; }
         var paneType = WindowType(kind);
 
         OutputWindowLogger.Global.Debug(() => $"PaneLauncher: OpenNew({paneType.Name}) requested");
-        _ = pkg.JoinableTaskFactory.RunAsync(async () =>
+        return pkg.JoinableTaskFactory.RunAsync(async () =>
         {
             try
             {
@@ -275,11 +283,14 @@ internal static class PaneLauncher
                         // branches above need one, so without this the prompt would be dropped.
                         freshChat.SetStartupSession(null, initialComposer);
                     }
-                    if (pane.Frame is IVsWindowFrame frame) { ErrorHandler.ThrowOnFailure(frame.Show()); }
+                    if (pane.Frame is IVsWindowFrame frame)
+                    {
+                        ErrorHandler.ThrowOnFailure(activate ? frame.Show() : frame.ShowNoActivate());
+                    }
 
                     // Focus a fresh CLI terminal so the user can type immediately (FocusInput is on
                     // IPaneControl → via the window's ActivatePane; Content is a DockPanel, not the control).
-                    if (pane is CliPaneWindow newCli) { newCli.ActivatePane(); }
+                    if (activate && pane is CliPaneWindow newCli) { newCli.ActivatePane(); }
                     return;
                 }
             }
@@ -289,7 +300,7 @@ internal static class PaneLauncher
                 var inner = ex.InnerException;
                 while (inner != null) { OutputWindowLogger.Global.LogException("  inner", inner); inner = inner.InnerException; }
             }
-        });
+        }).Task;
     }
 
     // Switching to an existing pane isn't done here: VS recycles

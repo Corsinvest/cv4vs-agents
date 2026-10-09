@@ -105,6 +105,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   session. Each conversation is now restored once.
 - **A crash while the open chats were being saved could lose the list.** The file was deleted
   before the new one was in place.
+- **Reopening a solution with "Restore panes on solution open" froze Visual Studio until every
+  pane was back.** The panes were built and shown one after another without a break, and each chat
+  also asked the CLI for its version on the UI thread as it opened, which can take up to five
+  seconds. The panes now come back one at a time while Visual Studio is idle, without taking the
+  focus from the editor, and the version check runs in the background, once however many chats
+  open together. Closing the solution before the last pane is back leaves the saved list as it was.
 
 ## [1.13.0] - 2026-10-05
 
