@@ -36,6 +36,7 @@ const LANGS: Record<string, string> = {
     props: 'xml',
     targets: 'xml',
     config: 'xml',
+    settings: 'xml',
     resx: 'xml',
     nuspec: 'xml',
     ruleset: 'xml',
@@ -55,9 +56,14 @@ const LANGS: Record<string, string> = {
     axaml: 'xml',
     axml: 'xml',
 
-    // Frontend frameworks (no native hljs support)
+    // Frontend frameworks (no native hljs support). Astro's frontmatter is script, which xml
+    // leaves plain: the markup below it is what gets coloured, as with razor.
     vue: 'xml',
     svelte: 'xml',
+    astro: 'xml',
+
+    // Markdown with JSX: the prose is the bulk of it.
+    mdx: 'markdown',
 
     // Solution / config (INI-like)
     sln: 'ini',
