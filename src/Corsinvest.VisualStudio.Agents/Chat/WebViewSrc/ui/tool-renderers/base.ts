@@ -273,7 +273,7 @@ export abstract class ToolRenderer {
                                   shape="rounded"
                                   size="small"
                                   icon-only
-                                  title=${opts.open ? 'Collapse' : 'Expand'}
+                                  aria-label=${opts.open ? 'Collapse' : 'Expand'}
                                   @click=${(e: Event) => {
                                       // Always the toggle, never rowClick: a row with an onClick of
                                       // its own (Edit opens the file) would otherwise have a chevron
@@ -332,7 +332,7 @@ export abstract class ToolRenderer {
         }
         return html`<a
             class="cv-tool-row-link"
-            title=${filePath}
+            data-tip=${filePath}
             @click=${(e: Event) => {
                 e.stopPropagation();
                 this.host.openFile(filePath, startLine, endLine);
@@ -347,7 +347,7 @@ export abstract class ToolRenderer {
         }
         return html`<a
             class="cv-tool-row-link"
-            title=${filePath}
+            data-tip=${filePath}
             @click=${(e: Event) => {
                 e.stopPropagation();
                 this.host.openFileAtEdit(filePath);
@@ -359,7 +359,7 @@ export abstract class ToolRenderer {
     protected urlLink(url: string, label: unknown): TemplateResult {
         return html`<a
             class="cv-tool-row-link"
-            title=${url}
+            data-tip=${url}
             @click=${(e: Event) => {
                 e.stopPropagation();
                 this.host.openUrl(url);
@@ -558,7 +558,8 @@ export abstract class ToolRenderer {
             shape="rounded"
             size="small"
             icon-only
-            title="Show error details"
+            data-tip="Show error details"
+            aria-label="Show error details"
             @click=${(e: Event) => {
                 e.stopPropagation();
                 this.host.openError();

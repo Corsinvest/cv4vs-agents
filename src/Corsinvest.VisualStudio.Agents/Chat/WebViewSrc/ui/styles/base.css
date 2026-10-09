@@ -96,3 +96,56 @@ fluent-button[icon-only] svg {
 
 
 
+
+/* The page's one tooltip (reveal.ts), moved to whatever carries data-tip. Fluent's own tooltip in
+ * everything but being a component: same tokens, so it follows the theme, which a native title
+ * drawn by the system does not.
+ * inset and margin undo the popover defaults, which centre it in the viewport: reveal.ts sets
+ * top and left. pointer-events: it must never come between the pointer and what it names. */
+.cv-tip {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    padding: 4px 11px 6px;
+    /* As wide as its text, up to the pane: what the system's own tooltip does, and what keeps an
+     * address or a path on one line where there is room for it. Fluent's stops at 240px, which
+     * broke a commit's URL in three.
+     * max-content, or the width follows the position: a fixed box with only `left` set shrinks to
+     * what is left of the viewport on its right, so the same text took two lines in the middle of
+     * the pane and three beside its edge, and was measured for placing before it had moved.
+     * pre-line so a string with newlines breaks where it says to. */
+    width: max-content;
+    max-width: min(800px, calc(100vw - 12px));
+    white-space: pre-line;
+    box-sizing: border-box;
+    /* Fluent's tooltip has a transparent border and leaves the edge to its shadow. On a dark theme
+     * the shadow is dark on dark and the tooltip has the background of the menu it sits on: it
+     * reads as a patch of the same surface. The stroke the popover lists use draws the edge. */
+    border: 1px solid var(--colorNeutralStroke1);
+    border-radius: var(--borderRadiusMedium);
+    background: var(--colorNeutralBackground1);
+    color: var(--colorNeutralForeground1);
+    font-family: var(--fontFamilyBase);
+    font-size: var(--fontSizeBase200);
+    line-height: var(--lineHeightBase200);
+    filter: drop-shadow(0 0 2px var(--colorNeutralShadowAmbient))
+        drop-shadow(0 4px 8px var(--colorNeutralShadowKey));
+    overflow-wrap: anywhere;
+    pointer-events: none;
+    user-select: none;
+}
+/* Drawn from a template (tipContent): its newlines are the source's indentation. */
+.cv-tip.rich {
+    white-space: normal;
+}
+/* The one case with two things to say at once: what it is, then what that means. */
+.cv-tip .tip-name,
+.cv-tip .tip-desc {
+    display: block;
+}
+.cv-tip .tip-name {
+    font-weight: var(--fontWeightSemibold);
+}
+.cv-tip .tip-desc {
+    color: var(--colorNeutralForeground2);
+}

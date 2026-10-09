@@ -116,7 +116,8 @@ export class CvHeatmap extends LitElement {
         return html`<span
             class="cell"
             style="background:var(--cv-heat-${c.intensity})"
-            title=${c.tip ? '' : (c.title ?? '')}
+            data-tip=${c.tip ? '' : (c.title ?? '')}
+            data-tip-fast
             @pointerenter=${c.tip ? (e: PointerEvent) => this._showTip(c.tip!, e) : nothing}
             @pointermove=${c.tip ? (e: PointerEvent) => this._moveTip(e) : nothing}
             @pointerleave=${c.tip ? () => this._hideTip() : nothing}

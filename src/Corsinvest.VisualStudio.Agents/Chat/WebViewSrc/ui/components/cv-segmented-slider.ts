@@ -232,7 +232,7 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
                 aria-valuemax=${n - 1}
                 aria-valuenow=${idx}
                 aria-valuetext=${active?.label ?? ''}
-                title=${active?.label ?? ''}
+                data-tip=${active?.label ?? ''}
                 @pointerdown=${this._onPointerDown}
                 @keydown=${this._onKeyDown}
             >
@@ -242,7 +242,7 @@ export class CvSegmentedSlider<V = unknown> extends LitElement {
                         (s, i) =>
                             html`<span
                                 class="dot ${i <= idx ? 'filled' : ''}"
-                                title=${s.label ?? ''}
+                                data-tip=${s.label ?? ''}
                             ></span>`,
                     )}
                 </div>

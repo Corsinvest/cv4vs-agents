@@ -43,7 +43,7 @@ export class CvTimeAgo extends LitElement {
             return html``;
         }
         return html`<span
-            title=${formatAbsolute(this.ms)}
+            data-tip=${formatAbsolute(this.ms)}
             @mouseenter=${() => {
                 this._now = Date.now();
             }}

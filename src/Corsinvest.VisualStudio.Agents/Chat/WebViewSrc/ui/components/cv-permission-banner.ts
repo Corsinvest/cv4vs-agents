@@ -1154,7 +1154,7 @@ export class CvPermissionBanner extends LitElement {
                                                     <span
                                                         class="scope"
                                                         role="button"
-                                                        title=${SCOPE_TOOLTIP[SCOPE_ORDER[this._scopeIdx]]}
+                                                        data-tip=${SCOPE_TOOLTIP[SCOPE_ORDER[this._scopeIdx]]}
                                                         @click=${this._cycleScope}
                                                         >${SCOPE_LABEL[SCOPE_ORDER[this._scopeIdx]]}
                                                         ⇄</span
@@ -1245,7 +1245,7 @@ export class CvPermissionBanner extends LitElement {
                                       class="close plan-open"
                                       appearance="transparent"
                                       icon-only
-                                      title="Open in editor"
+                                      data-tip="Open in editor"
                                       aria-label="Open in editor"
                                       @click=${this._onOpenPlan}
                                   >

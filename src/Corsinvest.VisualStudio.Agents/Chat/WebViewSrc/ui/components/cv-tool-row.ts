@@ -159,7 +159,8 @@ export class CvToolRow extends LitElement implements ToolRowState {
                 shape="rounded"
                 size="small"
                 icon-only
-                title=${this.showAll ? 'Reduce' : 'Show all'}
+                data-tip=${this.showAll ? 'Reduce' : 'Show all'}
+                aria-label=${this.showAll ? 'Reduce' : 'Show all'}
                 @click=${this._onToggleShowAll}
             >
                 ${unsafeHTML(this.showAll ? ArrowCollapseAll16Regular : ArrowExpandAll16Regular)}
@@ -185,9 +186,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
                 <div class="cv-children-scroll ${this.showAll ? '' : 'cv-children-collapsed'}">
                     ${
                         hasToggle && !this.showAll
-                            ? html`<div class="cv-children-more" title="Earlier children: Show all">
-                                  …
-                              </div>`
+                            ? html`<div class="cv-children-more" data-tip="Show earlier">…</div>`
                             : nothing
                     }
                     ${shown.map((c: UiEntry) =>
@@ -236,12 +235,7 @@ export class CvToolRow extends LitElement implements ToolRowState {
             (m, c) => Math.max(m, ('timestamp' in c ? c.timestamp : 0) ?? 0),
             0,
         );
-        return renderActionsRow(
-            this._childrenToMarkdown(),
-            ts,
-            'Copy subagent output',
-            'cv-children-actions',
-        );
+        return renderActionsRow(this._childrenToMarkdown(), ts, 'cv-children-actions');
     }
 }
 

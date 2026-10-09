@@ -301,7 +301,8 @@ export class CvContextDialog extends CvDialogBase {
                         : html`<span
                               class="bar-seg"
                               style="width:${w}%;background:${categoryColor(c.color, c.name)}"
-                              title="${c.name}: ${formatTokens(c.tokens)}"
+                              data-tip="${c.name}: ${formatTokens(c.tokens)}"
+                              data-tip-fast
                           ></span>`;
                 })}
             </div>
@@ -324,7 +325,8 @@ export class CvContextDialog extends CvDialogBase {
                                                 ? categoryColor(cell.color, cell.categoryName)
                                                 : 'var(--colorNeutralBackground4)'
                                         }"
-                                        title="${cell.categoryName}: ${formatTokens(cell.tokens)}"
+                                        data-tip="${cell.categoryName}: ${formatTokens(cell.tokens)}"
+                                        data-tip-fast
                                     ></span>`,
                             )}
                         </div>`,
@@ -374,7 +376,7 @@ export class CvContextDialog extends CvDialogBase {
                         class="path-link"
                         appearance="transparent"
                         size="small"
-                        title=${path}
+                        data-tip=${path}
                         @click=${(): void => this._openFile(path)}
                         >${shown}</fluent-button
                     >${suffix}

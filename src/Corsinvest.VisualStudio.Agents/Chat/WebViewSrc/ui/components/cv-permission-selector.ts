@@ -7,7 +7,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
-import { iconStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles } from '../styles/shared';
 import type { PermissionMode } from '../../core/types';
 import { PERMISSION_MODE } from '../../core/types';
 import { permissionItems } from '../../core/permission-modes';
@@ -24,7 +24,6 @@ import { permissionItems } from '../../core/permission-modes';
 export class CvPermissionSelector extends LitElement {
     static override styles = [
         iconStyles,
-        tooltipStyles,
         css`
             :host {
                 display: contents;
@@ -77,11 +76,16 @@ export class CvPermissionSelector extends LitElement {
         // "Manual" would state the opposite of what is in force. The raw value is ugly and true.
         const item = permissionItems().find((it) => it.value === this._current);
         const danger = this._current === PERMISSION_MODE.bypassPermissions ? 'danger' : '';
+        // data-tip names the control, not the mode: three of the five modes are shown in full on
+        // the button already (Manual, Plan, Auto), so echoing the label would be the same word
+        // twice. What a mode allows, and the Shift+Tab hint, are in cv-permission-list: a click
+        // answers that better than a tooltip repeating it.
         return html`
             <fluent-button
                 id="perm-trigger"
                 class="trigger"
                 aria-label="Permission mode"
+                data-tip="Permission mode"
                 appearance="subtle"
                 size="small"
                 @click=${this._onClick}
@@ -95,13 +99,6 @@ export class CvPermissionSelector extends LitElement {
                 }
                 <span class=${danger}>${item?.short ?? this._current}</span>
             </fluent-button>
-            <!-- The name of the control, not of the mode: three of the five modes are shown in full
-                 on the button already (Manual, Plan, Auto), so echoing the label would be the same
-                 word twice. What a mode allows, and the Shift+Tab hint, are in cv-permission-list:
-                 a click answers that better than a tooltip repeating it. -->
-            <fluent-tooltip anchor="perm-trigger" positioning="above-end"
-                >Permission mode</fluent-tooltip
-            >
         `;
     }
 }

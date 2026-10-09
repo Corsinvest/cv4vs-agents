@@ -493,7 +493,8 @@ export class CvPluginManager extends CvDialogBase {
                                       slot="dismiss"
                                       appearance="transparent"
                                       icon-only
-                                      title="Dismiss"
+                                      data-tip="Dismiss"
+                                      aria-label="Dismiss"
                                       @click=${() => {
                                           this._opMessage = '';
                                       }}
@@ -568,16 +569,17 @@ export class CvPluginManager extends CvDialogBase {
                     </div>
                     <div class="ins-right">
                         <div class="dates">
-                            <span class="date-row" title="Installed"
+                            <span class="date-row" data-tip="Installed"
                                 >${unsafeHTML(ArrowDownload16Regular)}${installed}</span
                             >
-                            ${updated ? html`<span class="date-row" title="Updated">${unsafeHTML(ArrowSync16Regular)}${updated}</span>` : nothing}
+                            ${updated ? html`<span class="date-row" data-tip="Updated">${unsafeHTML(ArrowSync16Regular)}${updated}</span>` : nothing}
                         </div>
                         <div class="ins-actions">
                             <span class="switch-wrap"
                                 ><fluent-switch
                                     ?checked=${p.enabled}
-                                    title=${p.enabled ? 'Disable' : 'Enable'}
+                                    data-tip=${p.enabled ? 'Disable' : 'Enable'}
+                                    aria-label=${p.enabled ? 'Disable' : 'Enable'}
                                     @change=${(e: Event) =>
                                         this._send(Msg.fromWebView.plugins.setEnabled, {
                                             pluginId: p.id,
@@ -592,7 +594,7 @@ export class CvPluginManager extends CvDialogBase {
                                     : html`<fluent-button
                                           appearance="transparent"
                                           icon-only
-                                          title="Update to the latest version"
+                                          data-tip="Update"
                                           aria-label="Update"
                                           class=${this._updating === p.id ? 'spin' : ''}
                                           ?disabled=${this._updating !== null}
@@ -604,7 +606,7 @@ export class CvPluginManager extends CvDialogBase {
                                 appearance="transparent"
                                 icon-only
                                 class="danger-hover"
-                                title="Uninstall"
+                                data-tip="Uninstall"
                                 aria-label="Uninstall"
                                 @click=${() => this._send(Msg.fromWebView.plugins.uninstall, { pluginId: p.id })}
                                 >${unsafeHTML(Delete16Regular)}</fluent-button
@@ -684,7 +686,7 @@ export class CvPluginManager extends CvDialogBase {
                                           <fluent-button
                                               appearance="transparent"
                                               icon-only
-                                              title="Install"
+                                              data-tip="Install"
                                               aria-label="Install"
                                               @click=${() => this._send(Msg.fromWebView.plugins.install, { pluginId: p.pluginId })}
                                               >${unsafeHTML(ArrowDownload16Regular)}</fluent-button
@@ -716,7 +718,7 @@ export class CvPluginManager extends CvDialogBase {
                 <fluent-button
                     appearance="primary"
                     icon-only
-                    title="Add marketplace"
+                    data-tip="Add marketplace"
                     aria-label="Add marketplace"
                     ?disabled=${!this._addSource.trim()}
                     @click=${this._onAddMarketplace}
@@ -753,7 +755,7 @@ export class CvPluginManager extends CvDialogBase {
                                       <fluent-button
                                           appearance="transparent"
                                           icon-only
-                                          title="Refresh"
+                                          data-tip="Refresh"
                                           aria-label="Refresh"
                                           class=${refreshing ? 'spin' : ''}
                                           ?disabled=${refreshing}
@@ -764,7 +766,7 @@ export class CvPluginManager extends CvDialogBase {
                                           appearance="transparent"
                                           icon-only
                                           class="danger-hover"
-                                          title="Remove"
+                                          data-tip="Remove"
                                           aria-label="Remove"
                                           @click=${() => this._send(Msg.fromWebView.plugins.marketplaceRemove, { name: m.name })}
                                           >${unsafeHTML(Delete16Regular)}</fluent-button

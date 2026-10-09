@@ -161,11 +161,11 @@ export class CvLightbox extends CvDialogBase {
         return html`
             <fluent-dialog type="modal" aria-label="Image preview" @toggle=${this._onDialogToggle}>
                 <fluent-dialog-body>
-                    <span slot="title" class="title" title=${name}>${name}</span>
+                    <span slot="title" class="title" data-tip=${name}>${name}</span>
 
                     <!-- Copy + close together on the right (title-action slot), copy first. -->
                     <span slot="title-action" class="header-actions">
-                        <cv-copy-btn .getBlob=${fetchBlob} title="Copy image"></cv-copy-btn>
+                        <cv-copy-btn .getBlob=${fetchBlob}></cv-copy-btn>
                         <fluent-button
                             appearance="transparent"
                             icon-only

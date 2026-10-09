@@ -228,7 +228,8 @@ export class CvNoticeStack extends LitElement {
                                           slot="dismiss"
                                           appearance="transparent"
                                           icon-only
-                                          title="Dismiss"
+                                          data-tip="Dismiss"
+                                          aria-label="Dismiss"
                                           @click=${() => this._dismissByUser(n)}
                                       >
                                           ${unsafeHTML(Dismiss16Regular)}

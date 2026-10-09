@@ -313,6 +313,10 @@ export class CvPopoverList extends LitElement {
         item: unknown,
         selected: boolean,
     ) => TemplateResult;
+    /** What a row says about itself when pointed at, if anything. On the row, not on a piece of
+     *  its content: the pointer rests on the icon or on the space past the label as often as on
+     *  the letters. */
+    @property({ attribute: false }) rowTip?: (item: unknown) => string;
     /** Which items are navigable (default: all). Non-navigable rows render but are skipped by ↑/↓. */
     @property({ attribute: false }) isNavigable?: (item: unknown) => boolean;
     /** When set, rows are grouped under headings; navigation still runs over the flat navigable set. */
@@ -493,6 +497,7 @@ export class CvPopoverList extends LitElement {
         return html`
             <div
                 class=${cls}
+                data-tip=${this.rowTip?.(item) ?? ''}
                 @mousedown=${(e: Event) => e.preventDefault()}
                 @mouseenter=${() => {
                     if (navigable) {

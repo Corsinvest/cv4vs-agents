@@ -26,6 +26,18 @@ export interface CodespanDeps {
     escapeHtml: (s: unknown) => string;
 }
 
+/**
+ * The ` data-tip="…"` of a file link, or '' when it would only repeat the link.
+ *
+ * A tooltip says what the text had to leave out: here the path and the line, which a link the
+ * model labelled ("the fix") or shortened to a bare name does not show. Not what a click does:
+ * being a link says that. `path` and `label` both already escaped, so they compare as written.
+ */
+export function fileTip(path: string, line: number, end: number, label: string): string {
+    const where = line > 0 ? `${path}:${line}${end > line ? `-${end}` : ''}` : path;
+    return where === label ? '' : ` data-tip="${where}"`;
+}
+
 /** The link markup for one reference, in the shape cv-message's click handler expects. */
 function anchor(
     esc: CodespanDeps['escapeHtml'],
@@ -36,7 +48,7 @@ function anchor(
 ): string {
     return (
         `<a class="cv-file-link" data-file="${esc(path)}" data-line="${line}" ` +
-        `data-line-end="${end}" title="Open in editor">${esc(label)}</a>`
+        `data-line-end="${end}"${fileTip(esc(path), line, end, esc(label))}>${esc(label)}</a>`
     );
 }
 

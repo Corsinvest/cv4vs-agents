@@ -77,10 +77,6 @@ export class CvSegmented<V extends string = string> extends LitElement {
                 width: var(--seg-icon, unset);
                 height: var(--seg-icon, unset);
             }
-            fluent-tooltip {
-                padding: 4px 8px;
-                white-space: nowrap;
-            }
         `,
     ];
 
@@ -113,14 +109,12 @@ export class CvSegmented<V extends string = string> extends LitElement {
                 role="group"
             >
                 ${this.options.map((o) => {
-                    // A fluent-tooltip anchored by id gives a reliable tooltip (the button's own
-                    // `title` attribute isn't surfaced across the shadow boundary). Always show it:
-                    // it's essential icon-only, and a nicety for short labels (30d → "Last 30 days").
-                    const id = `seg-${o.value}`;
+                    // Always a tooltip: it's essential icon-only, and a nicety for short labels
+                    // (30d → "Last 30 days").
                     const tip = o.title ?? o.label;
                     return html`
                         <fluent-button
-                            id=${id}
+                            data-tip=${tip}
                             appearance=${o.value === this.activeValue ? 'primary' : 'subtle'}
                             size="small"
                             aria-pressed=${o.value === this.activeValue}
@@ -129,7 +123,6 @@ export class CvSegmented<V extends string = string> extends LitElement {
                             ${o.icon ? html`<span slot="start">${unsafeHTML(o.icon)}</span>` : nothing}
                             ${this.iconOnly ? nothing : o.label}
                         </fluent-button>
-                        <fluent-tooltip anchor=${id}>${tip}</fluent-tooltip>
                     `;
                 })}
             </div>

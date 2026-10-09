@@ -279,7 +279,7 @@ export class CvMessage extends LitElement {
                     ? html`<cv-time-ago .ms=${this.timestamp}></cv-time-ago>`
                     : nothing
             }
-            <cv-copy-btn .text=${copyText} title="Copy message"></cv-copy-btn>
+            <cv-copy-btn .text=${copyText}></cv-copy-btn>
             ${
                 showFork
                     ? html`<fluent-button
@@ -288,7 +288,8 @@ export class CvMessage extends LitElement {
                           shape="rounded"
                           size="small"
                           icon-only
-                          title="Fork conversation from here"
+                          data-tip="Fork from here"
+                          aria-label="Fork from here"
                           @click=${this._onFork}
                       >
                           ${unsafeHTML(BranchFork16Regular)}
@@ -303,7 +304,7 @@ export class CvMessage extends LitElement {
                           shape="rounded"
                           size="small"
                           icon-only
-                          title="Take this message back"
+                          data-tip="Take this message back"
                           aria-label="Take this message back"
                           ?disabled=${!this.uuid}
                           @click=${this._onPendingRemove}
@@ -400,7 +401,7 @@ export class CvMessage extends LitElement {
                 html`<cv-attach-chip
                     .src=${img.preview ?? iconUrl(img.name)}
                     .label=${img.name}
-                    title=${img.name}
+                    data-tip=${img.name}
                     @click=${() => this._onImageClick(img)}
                 ></cv-attach-chip>`,
         );
@@ -414,7 +415,7 @@ export class CvMessage extends LitElement {
                 html`<cv-attach-chip
                     .src=${iconUrl(f.name)}
                     .label=${f.name}
-                    title=${f.name}
+                    data-tip=${f.name}
                     @click=${() => this._onFileClick(f)}
                 ></cv-attach-chip>`,
         );
@@ -463,7 +464,7 @@ export class CvMessage extends LitElement {
             return html`<cv-attach-chip
                 .src=${iconUrl(name)}
                 .label=${`${name}${range}`}
-                title=${rel || r.filePath}
+                data-tip=${rel || r.filePath}
                 @click=${() =>
                     bridge.sendNotification<IdeFileNotification>(Msg.fromWebView.open.ideFile, {
                         filePath: r.filePath,

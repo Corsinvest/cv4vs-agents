@@ -599,7 +599,7 @@ export class ExitPlanModeRenderer extends ToolRenderer {
             shape="rounded"
             size="small"
             icon-only
-            title="Open plan in editor"
+            data-tip="Open plan in editor"
             aria-label="Open plan in editor"
             @click=${(e: Event) => {
                 e.stopPropagation();
@@ -752,11 +752,7 @@ export class AskUserQuestionRenderer extends ToolRenderer {
                 return `**${i + 1}. ${title(q)}**\n\n${rows.join('\n')}`;
             })
             .join('\n\n');
-        return html`<cv-copy-btn
-            class="cv-question-copy"
-            .text=${md}
-            title="Copy answer"
-        ></cv-copy-btn>`;
+        return html`<cv-copy-btn class="cv-question-copy" .text=${md}></cv-copy-btn>`;
     }
 
     /** The marker of one option: the banner's own radio/checkbox, so a multi-select question

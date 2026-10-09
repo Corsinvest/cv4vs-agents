@@ -15,7 +15,7 @@ import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { iconUrl } from '../../core/icon-url';
 import { displayPathUi } from '../paths';
-import { iconStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles } from '../styles/shared';
 
 /**
  * Compact "context chip" above the chat textarea, showing the file that rides along with each
@@ -26,7 +26,6 @@ import { iconStyles, tooltipStyles } from '../styles/shared';
 export class CvIdeContextBadge extends LitElement {
     static override styles = [
         iconStyles,
-        tooltipStyles,
         css`
             /* inline-flex, not the default inline: an inline host sits on the text baseline, which
                left the chip a pixel low against the icon buttons beside it. */
@@ -173,6 +172,20 @@ export class CvIdeContextBadge extends LitElement {
         return html`
             <fluent-button
                 id="ide-badge"
+                data-tip=${displayPathUi(ctx.filePath) + lineInfo}
+                data-tip-place="after"
+                .tipContent=${() => html`
+                    <span class="tip-name">${displayPathUi(ctx.filePath)}${lineInfo}</span>
+                    <span class="tip-desc"
+                        >${
+                            !this._enabled
+                                ? 'Not sent'
+                                : withCode
+                                  ? 'Sent with every message, selected code included'
+                                  : 'Sent with every message: the position, not the code'
+                        }</span
+                    >
+                `}
                 class=${cls}
                 appearance="subtle"
                 size="small"
@@ -200,23 +213,12 @@ export class CvIdeContextBadge extends LitElement {
                         : nothing
                 }
             </fluent-button>
-            <!-- The path, not the bare name the chip already shows: it says WHICH file, through
-                 displayPathUi so it follows "Show relative paths" like the tool rows and falls back
-                 to the full path outside the workdir. That line is the data, so it keeps tip-name;
-                 the second is where the trailing glyph gets its words: an icon on its own is a
-                 riddle. Not "click to stop": clicking a toggle is what a toggle is for. -->
-            <fluent-tooltip anchor="ide-badge" positioning="after">
-                <span class="tip-name">${displayPathUi(ctx.filePath)}${lineInfo}</span>
-                <span class="tip-desc"
-                    >${
-                        !this._enabled
-                            ? 'Not sent'
-                            : withCode
-                              ? 'Sent with every message, selected code included'
-                              : 'Sent with every message: the position, not the code'
-                    }</span
-                >
-            </fluent-tooltip>
+            <!-- The tooltip (tipContent above) says the path, not the bare name the chip already
+                 shows: WHICH file, through displayPathUi so it follows "Show relative paths" like
+                 the tool rows and falls back to the full path outside the workdir. That line is
+                 the data, so it keeps tip-name; the second is where the trailing glyph gets its
+                 words: an icon on its own is a riddle. Not "click to stop": clicking a toggle is
+                 what a toggle is for. -->
         `;
     }
 }

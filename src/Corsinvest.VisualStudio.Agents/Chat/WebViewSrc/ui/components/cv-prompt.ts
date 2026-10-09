@@ -5,7 +5,7 @@
 import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { iconStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles } from '../styles/shared';
 import Send16Filled from '@fluentui/svg-icons/icons/send_16_filled.svg';
 import Stop16Filled from '@fluentui/svg-icons/icons/stop_16_filled.svg';
 import { iconUrl } from '../../core/icon-url';
@@ -156,7 +156,6 @@ function readAsAttachment(file: File): Promise<Attachment> {
 export class CvPrompt extends LitElement implements CommandHost {
     static override styles = [
         iconStyles,
-        tooltipStyles,
         css`
             :host {
                 display: contents;
@@ -1635,7 +1634,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                             .src=${a.isImage ? a.dataUrl : iconUrl(a.name)}
                             .label=${a.name}
                             removable
-                            title=${a.name}
+                            data-tip=${a.name}
                             @click=${
                                 a.isImage
                                     ? () => openLightbox({ src: a.dataUrl, name: a.name })
@@ -1693,6 +1692,11 @@ export class CvPrompt extends LitElement implements CommandHost {
                             id="send"
                             class=${this._isBusy ? 'is-busy' : ''}
                             aria-label=${this._isBusy ? 'Stop' : 'Send'}
+                            data-tip=${
+                                this._isBusy
+                                    ? 'Stop: Esc'
+                                    : `Send: ${appState.ui.useCtrlEnterToSend ? 'Ctrl+Enter' : 'Enter'}`
+                            }
                             appearance="primary"
                             shape="rounded"
                             size="small"
@@ -1702,15 +1706,8 @@ export class CvPrompt extends LitElement implements CommandHost {
                         >
                             ${unsafeHTML(this._isBusy ? Stop16Filled : Send16Filled)}
                         </fluent-button>
-                        <!-- The key is named because it is configurable: this is the one place
-                             that says which of Enter / Ctrl+Enter is in force. -->
-                        <fluent-tooltip anchor="send" positioning="above-end"
-                            >${
-                                this._isBusy
-                                    ? 'Stop: Esc'
-                                    : `Send: ${appState.ui.useCtrlEnterToSend ? 'Ctrl+Enter' : 'Enter'}`
-                            }</fluent-tooltip
-                        >
+                        <!-- The tooltip names the key because it is configurable: this is the
+                             one place that says which of Enter / Ctrl+Enter is in force. -->
                     </div>
                 </div>
                 <cv-at-menu

@@ -6,7 +6,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import Mic16Regular from '@fluentui/svg-icons/icons/mic_16_regular.svg';
-import { iconStyles, iconTriggerStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, iconTriggerStyles } from '../styles/shared';
 
 /**
  * Mic button using Web Speech API. Fires a `transcript` CustomEvent with
@@ -19,7 +19,6 @@ export class CvMicButton extends LitElement {
     static override styles = [
         iconStyles,
         iconTriggerStyles,
-        tooltipStyles,
         css`
             /* While recording: red button that pulses, reads as "stop". The colour is set on the
                host, over the subtle appearance: this state is the one thing Fluent has no
@@ -130,24 +129,23 @@ export class CvMicButton extends LitElement {
         if (!this._hasSpeech) {
             return nothing;
         }
+        // data-tip-place=after, like the file chip and the remote chip further along this row: the
+        // button sits at the left end of the toolbar, so the tooltip opens towards the space there
+        // is, and above would land on the field.
         return html`<fluent-button
-                id="btn-mic"
-                class=${`trigger${this._recording ? ' is-recording' : ''}`}
-                aria-label=${this._recording ? 'Stop recording' : 'Voice recording'}
-                appearance="subtle"
-                shape="rounded"
-                size="small"
-                icon-only
-                @click=${this._onClick}
-            >
-                ${unsafeHTML(Mic16Regular)}
-            </fluent-button>
-            <!-- positioning=after, like the file chip and the remote chip further along this row:
-                 the button sits at the left end of the toolbar, so the tooltip opens towards the
-                 space there is, and above would land on the field. -->
-            <fluent-tooltip anchor="btn-mic" positioning="after"
-                >${this._recording ? 'Stop recording' : 'Voice recording'}</fluent-tooltip
-            >`;
+            id="btn-mic"
+            class=${`trigger${this._recording ? ' is-recording' : ''}`}
+            aria-label=${this._recording ? 'Stop recording' : 'Voice recording'}
+            data-tip=${this._recording ? 'Stop recording' : 'Voice recording'}
+            data-tip-place="after"
+            appearance="subtle"
+            shape="rounded"
+            size="small"
+            icon-only
+            @click=${this._onClick}
+        >
+            ${unsafeHTML(Mic16Regular)}
+        </fluent-button>`;
     }
 }
 

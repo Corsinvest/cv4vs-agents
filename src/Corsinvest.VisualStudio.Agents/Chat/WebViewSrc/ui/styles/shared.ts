@@ -36,48 +36,6 @@ export const iconTriggerStyles = css`
 `;
 
 /**
- * Shared tooltip for the composer's triggers. A `title` attribute is drawn by the OS, so it keeps
- * the system's light/dark whatever theme VS is in: `fluent-tooltip` is themed like the rest.
- *
- * Nearly every tooltip here is one bare line: a trigger showing an icon needs naming, one showing a
- * value needs only the part it had to shorten, and a trigger that opens a list needs neither:
- * the list carries a description per row already. Never a line for what clicking does, either;
- * that is what the trigger being a button says.
- *
- * `.tip-name` / `.tip-desc` are what is left, for the one case with two things to say at once.
- */
-export const tooltipStyles = css`
-    /* :popover-open, not the bare tag: fluent-tooltip is a popover, and a closed popover is hidden
-       by a UA display:none that a plain display:flex here would override, which left the tooltip
-       on screen permanently. Layout only applies once it opens. */
-    fluent-tooltip:popover-open {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-    fluent-tooltip {
-        padding: 6px 8px;
-        max-width: 320px;
-        box-sizing: border-box;
-        /* A tooltip is chrome, not content: it gets read, not copied. Without this it inherits the
-           document default and clicking an open one highlights its text in blue. */
-        user-select: none;
-        /* Lets a plain string with newlines break where it says to, so a tooltip with two or three
-           lines doesn't need an element per line. */
-        white-space: pre-line;
-    }
-    .tip-name {
-        font-weight: var(--fontWeightSemibold);
-        /* A file path has no spaces to break at, so without this one long path sets the tooltip's
-           width and max-width can only clip it. */
-        overflow-wrap: anywhere;
-    }
-    .tip-desc {
-        color: var(--colorNeutralForeground2);
-    }
-`;
-
-/**
  * Shared shell for the info dialogs (Account & Usage, Context usage, Statistics), all built
  * on fluent-dialog + fluent-dialog-body. Tall content overflows Fluent's default
  * max-height:100vh; cap the box at 85vh and let the body content part scroll inside it (the

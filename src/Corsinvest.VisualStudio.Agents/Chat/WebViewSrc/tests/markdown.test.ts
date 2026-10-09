@@ -268,7 +268,7 @@ test('a bare forge URL is shown short, with the URL as its tooltip', () => {
     const html = md(`merged in ${url} yesterday`);
     assert.match(html, /class="cv-forge-link"/);
     assert.match(html, />acme\/widgets#312<\/a>/);
-    assert.ok(html.includes('title="GitHub pull request\nServer: github.com\n'), html);
+    assert.ok(html.includes('data-tip="GitHub pull request\nServer: github.com\n'), html);
     assert.ok(html.includes(`\n${url}"`), html);
     assert.ok(html.includes(`href="${url}"`), html);
     assert.match(html, /class="cv-forge-icon cv-forge-github"/);
@@ -279,7 +279,7 @@ test('a forge link the model labelled keeps its label', () => {
     const html = md('see [the fix](https://git.example.org/g/p/-/merge_requests/114)');
     assert.match(html, /class="cv-forge-link"/);
     assert.match(html, />the fix<\/a>/);
-    assert.ok(html.includes('title="GitLab merge request\n'), html);
+    assert.ok(html.includes('data-tip="GitLab merge request\n'), html);
     assert.ok(html.includes('\nhttps://git.example.org/g/p/-/merge_requests/114"'), html);
 });
 
