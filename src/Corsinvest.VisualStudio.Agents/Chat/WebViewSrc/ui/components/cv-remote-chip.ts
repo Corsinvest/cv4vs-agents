@@ -12,7 +12,7 @@ import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
-import { iconStyles, iconTriggerStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, iconTriggerStyles } from '../styles/shared';
 
 /**
  * Remote Control indicator in the input toolbar, shown only while a bridge is up. It sits before
@@ -27,7 +27,6 @@ export class CvRemoteChip extends LitElement {
     static override styles = [
         iconStyles,
         iconTriggerStyles,
-        tooltipStyles,
         css`
             :host {
                 display: inline-flex;
@@ -99,16 +98,18 @@ export class CvRemoteChip extends LitElement {
                     slot="trigger"
                     class="trigger"
                     aria-label="Remote control"
+                    data-tip="Driven from claude.ai/code"
+                    data-tip-place="after"
                     appearance="subtle"
                     shape="rounded"
                     size="small"
                     icon-only
                 >
-                    <!-- Anchor on the span, not the button: fluent-tooltip writes anchor-name onto
-                         its target, and on the button that overwrites the one the list needs. -->
-                    <span id="remote-tip" class="tip-anchor"
-                        >${unsafeHTML(REMOTE_CONTROL_ICON)}</span
-                    >
+                    <!-- data-tip-place=after, like the file chip beside it: above would land on
+                         the textarea and cover what is being typed. One line: the chip is only on
+                         while the feature is, so what it is worth saying is what that means, not
+                         the name a menu item repeats. -->
+                    <span class="tip-anchor">${unsafeHTML(REMOTE_CONTROL_ICON)}</span>
                 </fluent-button>
                 <fluent-menu-list>
                     <fluent-menu-item @click=${this._onShowLink}>
@@ -121,13 +122,6 @@ export class CvRemoteChip extends LitElement {
                     </fluent-menu-item>
                 </fluent-menu-list>
             </fluent-menu>
-            <!-- positioning=after, like the file chip beside it: above would land on the
-                 textarea and cover what is being typed. -->
-            <!-- One line: the chip is only on while the feature is, so what it is worth saying is
-                 what that means, not the name a menu item repeats. -->
-            <fluent-tooltip anchor="remote-tip" positioning="after"
-                >Driven from claude.ai/code</fluent-tooltip
-            >
         `;
     }
 }

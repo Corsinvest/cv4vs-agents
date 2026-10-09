@@ -10,7 +10,7 @@ import DOMPurify from 'dompurify';
 import { resolveLang, highlightCode, clearHighlightCache } from './lang';
 import { escapeHtml } from './html';
 import { findFileRefs, firstRefHint, parseFileRef } from './file-links';
-import { renderCodespanInner } from './codespan-link';
+import { fileTip, renderCodespanInner } from './codespan-link';
 import { parseForgeLink, type ForgeProvider } from './forge-links';
 import AzureDevOpsMark from './forge-icons/azuredevops.svg';
 import BitbucketMark from './forge-icons/bitbucket.svg';
@@ -103,11 +103,11 @@ renderer.link = function (token: Tokens.Link): string {
             const naked = text === href || text === escapeHtml(href);
             const label = naked ? escapeHtml(forge.label) : text;
             return (
-                `<a class="cv-forge-link" href="${escapeHtml(href)}" title="${escapeHtml(forge.tooltip)}" target="_blank" rel="noopener noreferrer">` +
+                `<a class="cv-forge-link" href="${escapeHtml(href)}" data-tip="${escapeHtml(forge.tooltip)}" target="_blank" rel="noopener noreferrer">` +
                 `${FORGE_ICON[forge.provider]}${label}</a>`
             );
         }
-        return `<a href="${escapeHtml(href)}" title="${escapeHtml(title)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+        return `<a href="${escapeHtml(href)}" data-tip="${escapeHtml(title)}" target="_blank" rel="noopener noreferrer">${text}</a>`;
     }
     // A markdown link to a local file: the model writes [X.cs:192](src/.../X.cs:192). If the href
     // parses as a file ref, render a clickable file link (cv-message routes the click to VS) using
@@ -118,7 +118,7 @@ renderer.link = function (token: Tokens.Link): string {
     const ref = parseFileRef(href, 'plausible-path');
     if (ref) {
         const line = ref.lines[0] ?? 0;
-        return `<a class="cv-file-link" data-file="${escapeHtml(ref.path)}" data-line="${line}" title="Open in editor">${escapeHtml(text)}</a>`;
+        return `<a class="cv-file-link" data-file="${escapeHtml(ref.path)}" data-line="${line}"${fileTip(escapeHtml(ref.path), line, line, escapeHtml(text))}>${escapeHtml(text)}</a>`;
     }
     return escapeHtml(text);
 };
@@ -156,7 +156,7 @@ const fileLinkExtension = {
         // data-line-end carries the last line of a range so the host selects the whole block
         // (Options → Chat → SelectLinesOnOpen); it equals data-line for a single line.
         const anchor = (label: string, line: number, end = line): string =>
-            `<a class="cv-file-link" data-file="${file}" data-line="${line}" data-line-end="${end}" title="Open in editor">${label}</a>`;
+            `<a class="cv-file-link" data-file="${file}" data-line="${line}" data-line-end="${end}"${fileTip(file, line, end, label)}>${label}</a>`;
         // No line → single link on the whole path (file:// scheme dropped from the label as noise).
         if (token.lines.length === 0) {
             return anchor(escapeHtml(token.path.replace(/^file:\/\/\/?/i, '')), 0);
@@ -228,12 +228,14 @@ export function renderMarkdown(text: string | undefined | null): string {
         const html = marked.parse(normalized, { async: false }) as string;
         out = DOMPurify.sanitize(html, {
             // data-line-end is what makes a range select rather than just scroll; data-copy is
-            // what gives a block its copy button, and tabindex what lets the keyboard reach it.
+            // what gives a block its copy button, tabindex what lets the keyboard reach it, and
+            // data-tip what a link says when pointed at.
             // Dropped here, each silently stops working.
             ADD_ATTR: [
                 'target',
                 'tabindex',
                 'data-copy',
+                'data-tip',
                 'data-file',
                 'data-line',
                 'data-line-end',

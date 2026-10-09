@@ -60,7 +60,8 @@ export class CvSpeakBtn extends LitElement {
     ];
 
     @property() text = '';
-    @property() override title = 'Read aloud';
+    // Not `title`: on the host that is a native tooltip, drawn next to ours.
+    @property() tip = 'Read aloud';
 
     // idle = not reading (speaker icon) · speaking = reading (pause icon) · paused = held mid-read
     // (speaker icon, click resumes from where it left off).
@@ -132,7 +133,8 @@ export class CvSpeakBtn extends LitElement {
                 shape="rounded"
                 size="small"
                 icon-only
-                title=${speaking ? 'Pause' : this._state === 'paused' ? 'Resume' : this.title}
+                data-tip=${speaking ? 'Pause' : this._state === 'paused' ? 'Resume' : this.tip}
+                aria-label=${speaking ? 'Pause' : this._state === 'paused' ? 'Resume' : this.tip}
                 @click=${this._onClick}
             >
                 ${unsafeHTML(speaking ? Pause16Regular : Speaker216Regular)}

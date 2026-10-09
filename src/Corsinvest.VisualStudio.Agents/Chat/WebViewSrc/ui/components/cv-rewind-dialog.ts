@@ -332,7 +332,7 @@ export class CvRewindDialog extends CvDialogBase {
             <div class="files">
                 ${files.map(
                     (f) =>
-                        html`<button class="file" title=${f} @click=${() => this._openDiff(f)}>
+                        html`<button class="file" data-tip=${f} @click=${() => this._openDiff(f)}>
                             ${displayPathUi(f)}
                         </button>`,
                 )}
@@ -414,7 +414,7 @@ export class CvRewindDialog extends CvDialogBase {
                                                   value=${p.uuid}
                                                   data-uuid=${p.uuid}
                                                   ?selected=${this._selected === p.uuid}
-                                                  title=${p.text}
+                                                  data-tip=${p.text}
                                               >
                                                   <!-- Both texts in the DEFAULT slot, so they share the
                                                    content cell and can be spread apart inside it.

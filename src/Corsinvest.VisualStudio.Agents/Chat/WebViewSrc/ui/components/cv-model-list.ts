@@ -100,7 +100,7 @@ export class CvModelList extends LitElement {
     }
 
     private _renderLabel(cmd: ChatCommand) {
-        return html`<span class="footer-label" title=${cmd.description ?? ''}>
+        return html`<span class="footer-label" data-tip=${cmd.description ?? ''}>
             ${cmd.icon ? html`<span class="row-icon">${unsafeHTML(cmd.icon)}</span>` : nothing}
             <span>${cmd.label}</span>
         </span>`;

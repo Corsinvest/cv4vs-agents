@@ -49,7 +49,7 @@ export class CvFoldRow extends LitElement {
                     shape="rounded"
                     size="small"
                     icon-only
-                    title=${this.expanded ? 'Collapse' : 'Expand'}
+                    aria-label=${this.expanded ? 'Collapse' : 'Expand'}
                     @click=${(e: Event) => {
                         e.stopPropagation();
                         this._toggle();

@@ -6,7 +6,7 @@
 // it also contains anything else. The rule holds on the whole content: there are no partial links.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderCodespanInner as render } from '../core/codespan-link.ts';
+import { fileTip, renderCodespanInner as render } from '../core/codespan-link.ts';
 import { parseFileRef } from '../core/file-links.ts';
 import { escapeHtml } from '../core/html.ts';
 
@@ -129,4 +129,20 @@ test('the path ends up escaped inside the attribute', () => {
     // A name with quotes would break data-file="..." if it were not escaped.
     const html = renderCodespanInner('a"b.cs:1');
     assert.doesNotMatch(html, /data-file="a"b/);
+});
+
+// The tooltip of a file link: the path and the line, and only when the link does not show them.
+
+test('a link that already reads as its own path and line gets no tooltip', () => {
+    assert.equal(fileTip('src/Foo.cs', 12, 12, 'src/Foo.cs:12'), '');
+    assert.doesNotMatch(renderCodespanInner('Foo.cs:12'), /data-tip/);
+});
+
+test('a link labelled otherwise says which file and line it opens', () => {
+    assert.equal(fileTip('src/Foo.cs', 12, 12, 'the fix'), ' data-tip="src/Foo.cs:12"');
+});
+
+test('a range keeps its end, a bare file has no line', () => {
+    assert.equal(fileTip('Foo.cs', 35, 48, 'Foo'), ' data-tip="Foo.cs:35-48"');
+    assert.equal(fileTip('Foo.cs', 0, 0, 'Foo'), ' data-tip="Foo.cs"');
 });

@@ -63,13 +63,12 @@ function formatMetrics(m: TurnMetrics) {
 export function renderActionsRow(
     text: string,
     ts: number,
-    title: string,
     extraClass = '',
     speak = false,
     metrics: TurnMetrics | null = null,
 ) {
     const reveal = () => html`
-        <cv-copy-btn .text=${text} title=${title}></cv-copy-btn>
+        <cv-copy-btn .text=${text}></cv-copy-btn>
         ${speak ? html`<cv-speak-btn .text=${text}></cv-speak-btn>` : nothing}
         ${ts > 0 ? html`<cv-time-ago .ms=${ts}></cv-time-ago>` : nothing}
         ${metrics ? html`<span class="cv-turn-metrics">${formatMetrics(metrics)}</span>` : nothing}

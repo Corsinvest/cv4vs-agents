@@ -35,7 +35,8 @@ export class CvCopyBtn extends LitElement {
     ];
 
     @property() text = '';
-    @property() override title = 'Copy';
+    // Not `title`: on the host that is a native tooltip, drawn next to ours.
+    @property() tip = 'Copy';
     /** When truthy, read text from the previous sibling at click time. */
     @property({ attribute: 'fromprev' }) fromPrev = '';
     /** When truthy, read text from a sibling `<pre>` in the same parent (code block). */
@@ -81,7 +82,8 @@ export class CvCopyBtn extends LitElement {
                 shape="rounded"
                 size="small"
                 icon-only
-                title=${this._copied ? 'Copied' : this.title}
+                data-tip=${this._copied ? 'Copied' : this.tip}
+                aria-label=${this._copied ? 'Copied' : this.tip}
                 @click=${this._onClick}
             >
                 ${unsafeHTML(this._copied ? Checkmark16Regular : Copy16Regular)}

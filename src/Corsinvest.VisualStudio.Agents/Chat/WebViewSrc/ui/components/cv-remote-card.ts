@@ -112,7 +112,7 @@ export class CvRemoteCard extends LitElement {
                             rel="noopener noreferrer"
                             >${this.url}</fluent-link
                         >
-                        <cv-copy-btn .text=${this.url} title="Copy link"></cv-copy-btn>
+                        <cv-copy-btn .text=${this.url}></cv-copy-btn>
                     </div>
                     <div class="hint">It ends when this session restarts.</div>
                 </div>

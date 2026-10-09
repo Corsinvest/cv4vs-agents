@@ -12,7 +12,7 @@ import Add16Regular from '@fluentui/svg-icons/icons/add_16_regular.svg';
 import Attach16Regular from '@fluentui/svg-icons/icons/attach_16_regular.svg';
 import Mention16Regular from '@fluentui/svg-icons/icons/mention_16_regular.svg';
 import SlashForward16Regular from '@fluentui/svg-icons/icons/slash_forward_16_regular.svg';
-import { iconStyles, iconTriggerStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles, iconTriggerStyles } from '../styles/shared';
 
 /**
  * The input toolbar's one "put something in this message" button, built on `<fluent-menu>`:
@@ -29,7 +29,6 @@ export class CvAttachMenu extends LitElement {
     static override styles = [
         iconStyles,
         iconTriggerStyles,
-        tooltipStyles,
         css`
             :host {
                 display: inline-flex;
@@ -93,15 +92,17 @@ export class CvAttachMenu extends LitElement {
                     slot="trigger"
                     class="trigger"
                     aria-label="Add"
+                    data-tip="Add"
+                    data-tip-place="after"
                     appearance="subtle"
                     shape="rounded"
                     size="small"
                     icon-only
                 >
-                    <!-- The tooltip anchors to this span, not to the button: fluent-tooltip writes
-                         anchor-name onto whatever it points at, and on the button that overwrote
-                         the name fluent-menu-list needs: the list then opened at 0,0. -->
-                    <span id="attach-tip" class="tip-anchor">${unsafeHTML(Add16Regular)}</span>
+                    <!-- data-tip-place=after, like the mic and the file chip along this row: the
+                         button is at the left end of the toolbar. One word: the list under the
+                         button already says what is on offer, so the tooltip only names it. -->
+                    <span class="tip-anchor">${unsafeHTML(Add16Regular)}</span>
                 </fluent-button>
                 <fluent-menu-list>
                     <!-- "Attach" against "Reference" names the real difference between the two:
@@ -121,14 +122,6 @@ export class CvAttachMenu extends LitElement {
                     </fluent-menu-item>
                 </fluent-menu-list>
             </fluent-menu>
-            <!-- Outside the menu: inside it the tooltip would be a menu child, and fluent-menu lays
-                 out only its trigger and its list. Anchored to the same id the list uses: one
-                 names the anchor, the other looks the element up, and they don't collide. -->
-            <!-- positioning=after, like the mic and the file chip along this row: the button is at
-                 the left end of the toolbar, so opening before it would land off the pane.
-                 One word, no tip-* classes: the list under the button already says what is on
-                 offer, so the tooltip only has to name the button. -->
-            <fluent-tooltip anchor="attach-tip" positioning="after">Add</fluent-tooltip>
         `;
     }
 }

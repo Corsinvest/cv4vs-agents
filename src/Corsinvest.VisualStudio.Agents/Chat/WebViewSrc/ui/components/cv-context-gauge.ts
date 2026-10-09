@@ -13,7 +13,7 @@ import DataPie16Regular from '@fluentui/svg-icons/icons/data_pie_16_regular.svg'
 import Clock16Regular from '@fluentui/svg-icons/icons/clock_16_regular.svg';
 import ClockWarning16Regular from '@fluentui/svg-icons/icons/clock_warning_16_regular.svg';
 import { iconForCommandName } from '../../core/commands/command-icons';
-import { iconStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles } from '../styles/shared';
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
 import { bridge } from '../../core/bridge';
@@ -88,7 +88,6 @@ const CIRC = 2 * Math.PI * RADIUS;
 export class CvContextGauge extends LitElement {
     static override styles = [
         iconStyles,
-        tooltipStyles,
         css`
             :host {
                 display: inline-flex;
@@ -274,9 +273,16 @@ export class CvContextGauge extends LitElement {
         return html`
             <fluent-menu>
                 <!-- id="menu-trigger" is load-bearing: fluent-menu-list anchors itself to
-                     --menu-trigger, and the trigger's anchor-name comes from its id. The tooltip
-                     hangs off the span inside instead: anchoring it here would overwrite that
-                     name and drop the list at 0,0 (see cv-attach-menu). -->
+                     --menu-trigger, and the trigger's anchor-name comes from its id. -->
+                <!-- data-tip names it like the other triggers, because a ring on its own says
+                     nothing about what it measures. "left" stays: the arc fills with what has been
+                     CONSUMED while the number is what REMAINS, so a bare percentage would read as
+                     the opposite of the ring beside it. Before the first result there is no number
+                     and the name stands alone: an empty ring already says there is nothing to read
+                     yet. Nothing about clicking either: this is a menu trigger, and the menu says
+                     what it offers when it opens. The cache line only while there is no icon: with
+                     one, the icon beside it carries this, and saying it twice would answer the
+                     cache to someone pointing at the ring. -->
                 <fluent-button
                     id="menu-trigger"
                     slot="trigger"
@@ -286,8 +292,14 @@ export class CvContextGauge extends LitElement {
                     size="small"
                     icon-only
                     aria-label="Context usage"
+                    data-tip=${[
+                        known ? `Context: ${remainingPct.toFixed(0)}% left` : 'Context',
+                        cacheIcon ? '' : cacheText,
+                    ]
+                        .filter(Boolean)
+                        .join('\n')}
                 >
-                    <span id="gauge-tip" class="tip-anchor">
+                    <span class="tip-anchor">
                         ${svg`
                     <svg width=${SIZE} height=${SIZE} viewBox="0 0 ${SIZE} ${SIZE}">
                         <circle
@@ -370,35 +382,12 @@ export class CvContextGauge extends LitElement {
                 // there is nothing to act on, and the tooltip says so for anyone who looks.
                 cacheIcon
                     ? html`<span
-                          id="cache-tip"
                           class="cache-warning ${cache.kind === 'expiring' ? 'expiring' : ''}"
                           aria-label="Prompt cache"
+                          data-tip=${cacheText}
                           >${unsafeHTML(
                               cache.kind === 'expiring' ? Clock16Regular : ClockWarning16Regular,
                           )}</span
-                      >`
-                    : nothing
-            }
-            <!-- Named like the other triggers, because a ring on its own says nothing about what it
-                 measures. "left" stays: the arc fills with what has been CONSUMED while the number
-                 is what REMAINS, so a bare percentage would read as the opposite of the ring beside
-                 it. Before the first result there is no number and the name stands alone: an empty
-                 ring already says there is nothing to read yet. Nothing about clicking either: this
-                 is a menu trigger, and the menu says what it offers when it opens. -->
-            <fluent-tooltip anchor="gauge-tip" positioning="above-end"
-                >${[
-                    known ? `Context: ${remainingPct.toFixed(0)}% left` : 'Context',
-                    // Only while there is no icon: with one, the icon beside it carries this, and
-                    // saying it twice would answer the cache to someone pointing at the ring.
-                    cacheIcon ? '' : cacheText,
-                ]
-                    .filter(Boolean)
-                    .join('\n')}</fluent-tooltip
-            >
-            ${
-                cacheIcon
-                    ? html`<fluent-tooltip anchor="cache-tip" positioning="above-end"
-                          >${cacheText}</fluent-tooltip
                       >`
                     : nothing
             }

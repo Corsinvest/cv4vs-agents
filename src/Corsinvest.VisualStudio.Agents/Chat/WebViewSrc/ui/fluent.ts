@@ -27,7 +27,6 @@ import '@fluentui/web-components/tab.js';
 import '@fluentui/web-components/tablist.js';
 import '@fluentui/web-components/text-input.js';
 import '@fluentui/web-components/textarea.js';
-import '@fluentui/web-components/tooltip.js';
 import { setTheme } from '@fluentui/web-components';
 import { webDarkTheme, webLightTheme } from '@fluentui/tokens';
 

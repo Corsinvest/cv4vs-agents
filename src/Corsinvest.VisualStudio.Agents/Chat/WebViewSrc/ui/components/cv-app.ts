@@ -2246,7 +2246,7 @@ export class CvApp extends LitElement {
         // only the message it just closed, and `exchangeEnded` looks the same one up. Keying on the
         // group's last entry instead would miss a turn that ends on a tool row.
         const metrics = this._turnMetrics.get(last.id) ?? null;
-        return renderActionsRow(text, ts, 'Copy', '', /* speak */ true, metrics);
+        return renderActionsRow(text, ts, '', /* speak */ true, metrics);
     }
 
     /** File a finished message's token counts against its entry, for the actions row to show.
@@ -2398,7 +2398,8 @@ export class CvApp extends LitElement {
                     shape="circular"
                     size="small"
                     icon-only
-                    title="Jump to the latest"
+                    data-tip="Jump to the latest"
+                    aria-label="Jump to the latest"
                     ?hidden=${!this._showJump}
                     @click=${(): void => this._scrollToBottom()}
                 >

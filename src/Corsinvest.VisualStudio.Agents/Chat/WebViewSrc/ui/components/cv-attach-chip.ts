@@ -106,7 +106,12 @@ export class CvAttachChip extends LitElement {
             <span class="label">${this.label}</span>
             ${
                 this.removable
-                    ? html`<button class="remove" title="Remove" @click=${this._remove}>
+                    ? html`<button
+                          class="remove"
+                          data-tip="Remove"
+                          aria-label="Remove"
+                          @click=${this._remove}
+                      >
                           ${unsafeHTML(Dismiss16Regular)}
                       </button>`
                     : nothing

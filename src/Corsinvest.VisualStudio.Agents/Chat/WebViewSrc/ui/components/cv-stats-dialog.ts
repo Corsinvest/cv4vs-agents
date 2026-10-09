@@ -5,7 +5,6 @@
 import { html, css, nothing, type TemplateResult } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { keyed } from 'lit/directives/keyed.js';
 import Dismiss16Regular from '@fluentui/svg-icons/icons/dismiss_16_regular.svg';
 import { dialogStyles, iconStyles } from '../styles/shared';
 import './cv-segmented';
@@ -320,12 +319,6 @@ export class CvStatsDialog extends CvDialogBase {
                 min-width: 4px;
                 white-space: nowrap;
                 overflow: visible;
-            }
-            /* Bar tooltip (fluent-tooltip): the card content comes from _dayTip with inline styles
-             * (it also renders inside cv-heatmap's shadow, so it can't rely on classes here). DON'T
-             * set display on the fluent-tooltip host: it toggles none↔visible for show/hide. */
-            fluent-tooltip {
-                padding: 6px 8px;
             }
             .chart-bar {
                 flex: 1 1 auto;
@@ -677,10 +670,9 @@ export class CvStatsDialog extends CvDialogBase {
 
     /** Stacked bar chart of tokens over time, one segment per model. Bars are grouped by day, or
      *  by ISO week when there are many days, so it stays readable across ranges. Order of models
-     *  matches the breakdown (so colors line up with the bars below); native tooltip per bar. */
-    // Returns a keyed directive (not a bare TemplateResult) so the chart subtree is rebuilt on
-    // scope/range change; see the keyed() call for why (fluent-tooltip anchor re-binding).
-    private _renderModelChart(d: StatsResponse): unknown {
+     *  matches the breakdown (so colors line up with the bars below); each bar says its day when
+     *  pointed at (the card of _dayTip, through the page's shared tooltip). */
+    private _renderModelChart(d: StatsResponse): TemplateResult {
         const days = d.dailyModelTokens ?? [];
         if (days.length === 0) {
             return html``;
@@ -740,70 +732,61 @@ export class CvStatsDialog extends CvDialogBase {
         // X axis: ~10 date labels evenly spaced (all of them would overlap on wide ranges).
         const xStep = Math.max(1, Math.ceil(keys.length / 10));
 
-        // keyed on scope/range/bar-count: fluent-tooltip binds its anchor once in connectedCallback,
-        // so on a plain re-render (scope/range switch) Lit reuses the tooltip nodes and the anchor
-        // link goes stale → the tooltip jumps to 0,0 (top-left). A changing key forces Lit to discard
-        // and rebuild the chart subtree, re-running each tooltip's connectedCallback to re-anchor.
-        return keyed(
-            `${this._scope}-${this._range}-${keys.length}`,
-            html`
-                <div class="chart">
-                    <div class="chart-yaxis">
-                        ${[...ticks].reverse().map((t) => html`<span class="chart-ytick">${formatAxis(t)}</span>`)}
+        return html`
+            <div class="chart">
+                <div class="chart-yaxis">
+                    ${[...ticks].reverse().map((t) => html`<span class="chart-ytick">${formatAxis(t)}</span>`)}
+                </div>
+                <div class="chart-plot">
+                    <div class="chart-grid">
+                        ${ticks.map(() => html`<span class="chart-gridline"></span>`)}
                     </div>
-                    <div class="chart-plot">
-                        <div class="chart-grid">
-                            ${ticks.map(() => html`<span class="chart-gridline"></span>`)}
-                        </div>
-                        <div class="chart-bars">
-                            ${keys.map((k, ki) => {
-                                const byModel = buckets.get(k) ?? new Map();
-                                // The hover card, identical to the heatmap's: rows in breakdown/colour
-                                // order, non-zero; plus this bucket's activity counts.
-                                const rows: DayRow[] = d.modelBreakdown
-                                    .map((m) => ({
-                                        name: m.model,
-                                        tok: byModel.get(m.model) ?? 0,
-                                        color: colorOf.get(m.model),
-                                    }))
-                                    .filter((r) => r.tok > 0);
-                                const act = activity.get(k) ?? {
-                                    messages: 0,
-                                    sessions: 0,
-                                    tools: 0,
-                                };
-                                const info: DayInfo = { date: k, ...act, rows };
-                                const barId = `bar-${ki}`;
-                                return html`
-                                    <div
-                                        id=${barId}
-                                        class="chart-bar"
-                                        style="height:${(totals[ki] / niceMax) * 100}%"
-                                    >
-                                        ${d.modelBreakdown.map((m) => {
-                                            const tok = byModel.get(m.model) ?? 0;
-                                            if (tok === 0) {
-                                                return nothing;
-                                            }
-                                            return html`<span
-                                                class="chart-seg"
-                                                style="flex:${tok};background:${colorOf.get(m.model)}"
-                                            ></span>`;
-                                        })}
-                                    </div>
-                                    <fluent-tooltip anchor=${barId}
-                                        >${this._dayTip(info)}</fluent-tooltip
-                                    >
-                                `;
-                            })}
-                        </div>
-                    </div>
-                    <div class="chart-xaxis">
-                        ${keys.map((k, ki) => html`<span class="chart-xtick">${ki % xStep === 0 ? formatDay(k) : ''}</span>`)}
+                    <div class="chart-bars">
+                        ${keys.map((k, ki) => {
+                            const byModel = buckets.get(k) ?? new Map();
+                            // The hover card, identical to the heatmap's: rows in breakdown/colour
+                            // order, non-zero; plus this bucket's activity counts.
+                            const rows: DayRow[] = d.modelBreakdown
+                                .map((m) => ({
+                                    name: m.model,
+                                    tok: byModel.get(m.model) ?? 0,
+                                    color: colorOf.get(m.model),
+                                }))
+                                .filter((r) => r.tok > 0);
+                            const act = activity.get(k) ?? {
+                                messages: 0,
+                                sessions: 0,
+                                tools: 0,
+                            };
+                            const info: DayInfo = { date: k, ...act, rows };
+                            return html`
+                                <div
+                                    class="chart-bar"
+                                    data-tip=${formatDay(info.date)}
+                                    data-tip-fast
+                                    .tipContent=${() => this._dayTip(info)}
+                                    style="height:${(totals[ki] / niceMax) * 100}%"
+                                >
+                                    ${d.modelBreakdown.map((m) => {
+                                        const tok = byModel.get(m.model) ?? 0;
+                                        if (tok === 0) {
+                                            return nothing;
+                                        }
+                                        return html`<span
+                                            class="chart-seg"
+                                            style="flex:${tok};background:${colorOf.get(m.model)}"
+                                        ></span>`;
+                                    })}
+                                </div>
+                            `;
+                        })}
                     </div>
                 </div>
-            `,
-        );
+                <div class="chart-xaxis">
+                    ${keys.map((k, ki) => html`<span class="chart-xtick">${ki % xStep === 0 ? formatDay(k) : ''}</span>`)}
+                </div>
+            </div>
+        `;
     }
 
     private _renderModels(d: StatsResponse | null): TemplateResult {

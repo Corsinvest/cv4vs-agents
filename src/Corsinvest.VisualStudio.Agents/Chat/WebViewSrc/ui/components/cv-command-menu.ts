@@ -187,7 +187,7 @@ export class CvCommandMenu extends LitElement {
             </span>`;
         }
         if (cmd instanceof SlashCommand && cmd.argumentHint) {
-            return html`<span class="row-hint" title=${cmd.argumentHint}
+            return html`<span class="row-hint" data-tip=${cmd.argumentHint}
                 >${cmd.argumentHint}</span
             >`;
         }
@@ -209,13 +209,14 @@ export class CvCommandMenu extends LitElement {
                 searchPlaceholder="Filter actions…"
                 .query=${this.query}
                 emptyText="No matching commands"
+                .rowTip=${(cmd: ChatCommand) => this._tooltip(cmd)}
                 .renderRow=${(cmd: ChatCommand) => html`
                     ${
                         cmd.icon
                             ? html`<span class="row-icon">${unsafeHTML(cmd.icon)}</span>`
                             : html`<span class="row-icon"></span>`
                     }
-                    <span class="row-label" title=${this._tooltip(cmd)}>${cmd.label}</span>
+                    <span class="row-label">${cmd.label}</span>
                     ${this._renderTrailing(cmd)}
                 `}
                 @search-input=${(e: CustomEvent<{ query: string }>) => (this.query = e.detail.query)}

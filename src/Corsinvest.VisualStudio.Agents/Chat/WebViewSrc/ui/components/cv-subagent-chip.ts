@@ -264,9 +264,12 @@ export class CvSubagentChip extends LitElement {
         return html`<div class="row" style=${indent ? `padding-left:${indent}px` : ''}>
             <!-- The blinking dot means "working"; a paused task keeps the neutral one, which is
                  the same distinction the spinner makes. -->
-            <span class="cv-dot ${paused ? '' : 'active'}" title=${paused ? 'Paused' : ''}></span>
+            <span
+                class="cv-dot ${paused ? '' : 'active'}"
+                data-tip=${paused ? 'Paused' : ''}
+            ></span>
             <div class="main">
-                <div class="desc" title=${this._desc(t)}>${this._desc(t)}</div>
+                <div class="desc" data-tip=${this._desc(t)}>${this._desc(t)}</div>
                 <div class="meta">
                     <span class="now">${t.recentTools[t.recentTools.length - 1] ?? '-'}</span>
                     <span class="v">${t.usage.toolUses}</span>
@@ -293,8 +296,8 @@ export class CvSubagentChip extends LitElement {
                           class="stop"
                           appearance="transparent"
                           size="small"
-                          title="Run in the background: the turn stops waiting for it"
-                          aria-label="Run in the background"
+                          data-tip="Run in background"
+                          aria-label="Run in background"
                           @click=${() => this._detach(detachable)}
                           >${unsafeHTML(ArrowMinimize16Regular)}</fluent-button
                       >`
@@ -304,7 +307,7 @@ export class CvSubagentChip extends LitElement {
                 class="stop"
                 appearance="transparent"
                 size="small"
-                title="Stop"
+                data-tip="Stop"
                 aria-label="Stop"
                 @click=${() => this._stop(t.taskId)}
                 >${unsafeHTML(Stop16Filled)}</fluent-button

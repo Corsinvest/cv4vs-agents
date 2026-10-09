@@ -132,6 +132,15 @@ editing:
   order. Typically file (OrdinalIgnoreCase), then line, then column/name.
 - **Fluent UI components stay pure**: only layout CSS (display, flex, gap, padding, position,
   width) on `<fluent-*>`; never colours, borders, shadows or token overrides.
+- **A tooltip in the WebView is a `data-tip` attribute**, never `title` and never `<fluent-tooltip>`
+  (which is no longer registered: the tag would render as nothing). One tooltip serves the whole
+  page, moved by `ui/reveal.ts`: `title` is drawn by the system, in its theme and not Visual
+  Studio's, and a component per button is a shadow root on every row of a transcript. An icon-only
+  button also needs `aria-label`: `title` was its accessible name. `.tipContent` (a function
+  returning a Lit template) for more than a string, `data-tip-place="after"` to open beside the
+  target, `data-tip-fast` for values read by sweeping across them, `.rowTip` on a
+  `cv-popover-list`. It follows the pointer's position, not `pointerover`, which the WebView stops
+  sending over a list that re-renders under the pointer: do not move it back.
 - **Logging** (`OutputWindowLogger`, gated by Options → Debug → Log level, default None):
   - `LogException(ctx, ex)` always written; `Perf(...)` gated by EnablePerfLog.
   - **Warn**: a recovered anomaly on a user-facing path ("why the thing you asked for didn't

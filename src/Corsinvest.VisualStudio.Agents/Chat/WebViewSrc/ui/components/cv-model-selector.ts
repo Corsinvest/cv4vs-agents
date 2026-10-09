@@ -6,7 +6,7 @@ import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
-import { iconStyles, tooltipStyles } from '../styles/shared';
+import { iconStyles } from '../styles/shared';
 import { modelLabelShort } from '../../core/ai-models';
 import { currentEffortLevels, ultracodeActive } from '../../core/commands/model-controls';
 import { effortLabel, ULTRACODE_LABEL } from '../../core/types';
@@ -26,7 +26,6 @@ import { effortLabel, ULTRACODE_LABEL } from '../../core/types';
 export class CvModelSelector extends LitElement {
     static override styles = [
         iconStyles,
-        tooltipStyles,
         css`
             :host {
                 display: contents;
@@ -92,15 +91,15 @@ export class CvModelSelector extends LitElement {
     };
 
     override render() {
-        // fluent-tooltip, not a title attribute: the native one is drawn by the OS, so it follows
-        // Windows' light/dark rather than the theme VS is in, and VS has themes (Blue, third-party
-        // ones) that neither of the two settings a WebView2 profile can be put in would match.
-        // Same reason the gauge uses one.
+        // data-tip names the control, like the permission trigger beside it. The full name, the
+        // [1m] variant and the description are all in cv-model-list, one row each; a click answers
+        // "which model is this exactly" better than a tooltip echoing the button.
         return html`
             <fluent-button
                 id="model-trigger"
                 class="trigger"
                 aria-label="Model and effort"
+                data-tip="Model and effort"
                 appearance="subtle"
                 size="small"
                 @click=${this._onClick}
@@ -118,12 +117,6 @@ export class CvModelSelector extends LitElement {
                         : nothing
                 }
             </fluent-button>
-            <!-- The name of the control, like the permission trigger beside it. The full name, the
-                 [1m] variant and the description are all in cv-model-list, one row each; a click
-                 answers "which model is this exactly" better than a tooltip echoing the button. -->
-            <fluent-tooltip anchor="model-trigger" positioning="above-end"
-                >Model and effort</fluent-tooltip
-            >
         `;
     }
 }
