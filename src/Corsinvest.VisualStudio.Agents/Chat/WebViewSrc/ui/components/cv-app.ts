@@ -29,7 +29,6 @@ import type { CvNoticeStack } from './cv-notice-stack';
 import './cv-welcome';
 import './cv-prompt';
 import './cv-message';
-import './cv-copy-btn';
 import { renderActionsRow, type TurnMetrics } from '../helpers/actions-row';
 import { cacheResumeNote } from '../helpers/format';
 import './cv-thinking';

@@ -21,7 +21,6 @@
 import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { truncate, formatDurationSec } from '../helpers/format';
-import '../components/cv-copy-btn';
 import '../components/cv-diff-preview';
 import { cleanResult, previewText } from './tool-host';
 import { state as appState } from '../../core/state';

@@ -526,23 +526,17 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child {
     flex-direction: column;
     gap: 8px;
 }
-/* Copy-answer button: hover-reveal in the top-right of the Ask body, like the
- * OUT copy on other tool rows. Copies the raw answer (tool result). cv-copy-btn
- * is display:contents, so position its inner button via ::part. */
-.cv-tool-body:has(.cv-question-copy) {
+/* Copy-answer button, added by reveal.ts while the pointer or the focus is in the Ask body
+ * (data-copy) and anchored top-right by the rule in markdown.css. cv-copy-btn is
+ * display:contents, so its inner button is reached via ::part. */
+.cv-question-body {
     position: relative;
 }
-.cv-question-copy::part(button) {
-    position: absolute;
+.cv-question-body > cv-copy-btn::part(button) {
     top: 0;
     right: 0;
-    opacity: 0;
-    transition: opacity 0.15s;
     background: var(--colorNeutralBackground1);
     border-radius: var(--borderRadiusSmall);
-}
-.cv-tool-body:hover .cv-question-copy::part(button) {
-    opacity: 1;
 }
 .cv-question-head {
     display: flex;
