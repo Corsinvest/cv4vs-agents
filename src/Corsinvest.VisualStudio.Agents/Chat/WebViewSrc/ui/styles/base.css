@@ -86,6 +86,79 @@ fluent-button[icon-only] svg {
 }
 
 
+/* A small icon button that is a native <button>, for the ones a transcript repeats on every row
+ * (the chevron of a tool row). Measured, two thousand of each off screen: a fluent-button holding
+ * an inline <svg> costs 17.8 KB, this with a .cv-icon 0.3 KB. Not a component on purpose: the
+ * instance is half of that cost, the inline <svg> most of the rest.
+ * The values are fluent-button's own for appearance=subtle, size=small, icon-only, with the
+ * padding the app's .trigger gives it, so the two sit side by side unnoticed. A button there is
+ * one of (the composer's, a dialog's) stays a fluent-button. */
+.cv-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    /* Measured beside the fluent-button it replaces: 22 by 24. Its 24px is a minimum height; the
+     * width is the 14px icon, the 3px of .trigger either side and the border. */
+    width: 22px;
+    height: 24px;
+    margin: 0;
+    padding: 0;
+    border: var(--strokeWidthThin) solid transparent;
+    border-radius: var(--borderRadiusMedium);
+    background-color: var(--colorSubtleBackground);
+    color: var(--colorNeutralForeground2);
+    font: inherit;
+    cursor: pointer;
+    user-select: none;
+    outline-style: none;
+    transition:
+        background-color var(--durationFaster) var(--curveEasyEase),
+        color var(--durationFaster) var(--curveEasyEase);
+}
+/* The neutral hover, not the brand's. Fluent's sheet does turn a subtle button's icon to the
+ * brand colour, but that rule never reached the icons here: the app's own `fluent-button svg
+ * { fill: currentColor }` above wins over it, so every icon button in the chat has always gone
+ * from one grey to the next. */
+.cv-icon-btn:hover {
+    background-color: var(--colorSubtleBackgroundHover);
+    color: var(--colorNeutralForeground2Hover);
+}
+.cv-icon-btn:hover:active {
+    background-color: var(--colorSubtleBackgroundPressed);
+    color: var(--colorNeutralForeground2Pressed);
+}
+.cv-icon-btn:focus-visible {
+    box-shadow:
+        var(--shadow4),
+        0 0 0 2px var(--colorStrokeFocus2);
+}
+.cv-icon-btn:disabled {
+    color: var(--colorNeutralForegroundDisabled);
+    background-color: var(--colorTransparentBackground);
+    cursor: not-allowed;
+}
+/* An icon drawn by CSS: one image for every use of it, where an inline <svg> is a document of
+ * its own each time (6 KB off screen, 10 KB on). It takes the colour of the text, so it follows
+ * the theme and the hover of whatever holds it. 14px, the size every action icon is drawn at. */
+.cv-icon {
+    display: block;
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    background-color: currentColor;
+    mask: var(--cv-icon) center / contain no-repeat;
+}
+/* @fluentui/svg-icons, the 16px regular set: the path is copied, and has to be again if the
+ * package redraws one. */
+.cv-icon-chevron-down {
+    --cv-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.15 5.65c.2-.2.5-.2.7 0L8 9.79l4.15-4.14a.5.5 0 0 1 .7.7l-4.5 4.5a.5.5 0 0 1-.7 0l-4.5-4.5a.5.5 0 0 1 0-.7'/%3E%3C/svg%3E");
+}
+.cv-icon-error-circle {
+    --cv-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1m0 1a6 6 0 1 0 0 12A6 6 0 0 0 8 2m0 8a.75.75 0 1 1 0 1.5.75.75 0 0 1 0-1.5m0-5.5a.5.5 0 0 1 .5.41V8.5a.5.5 0 0 1-1 .09V5c0-.28.22-.5.5-.5'/%3E%3C/svg%3E");
+}
+
 #app {
     display: flex;
     flex-direction: column;
