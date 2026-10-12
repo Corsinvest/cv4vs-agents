@@ -4,7 +4,11 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.14.0] - 2026-10-12
+
+A message typed while Claude works now reaches it in the same turn, and links to pull requests and
+issues are shown short. The agent can set tracepoints, the chat has one look for what you write and
+another for code, tooltips follow Visual Studio's theme, and a long conversation takes less memory.
 
 ### Added
 
@@ -30,6 +34,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   It is how a value gets followed across a whole loop in one run, or code that behaves differently
   when paused gets watched at all. `debug_list_breakpoints` reports the message and `breaks`, so a
   tracepoint is not mistaken for a breakpoint that failed to stop. 80 tools now.
+- **Tooltips in the chat follow Visual Studio's theme, and come sooner.** Most were drawn by the
+  system, in its own theme whatever Visual Studio's was, and after a wait long enough that an icon
+  got clicked to find out what it does. A button is now named after a third of a second, and the
+  next one along the same row at once. A tooltip is as wide as its text, so a path or an address
+  stays on one line where there is room.
 
 ### Changed
 
@@ -62,6 +71,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Tool rows, their code and the small labels now follow the chat font size option. They were
     fixed sizes.
   - While a turn runs the composer reads *Queue another message…  ·  Esc to stop*.
+- **A long conversation takes less memory.** The copy button of a code block, a table or a tool's
+  IN/OUT, and the buttons under each message, are now made when the pointer or the keyboard
+  reaches them instead of being kept, hidden, on every row. Measured on real sessions:
+  - One of about 300 rows: 27% fewer elements on the page (10,604 in place of 14,566), 45 to
+    90 MB less.
+  - One with 54 diff previews: 66% fewer nodes (5,042 in place of 14,696). A preview row is now
+    one element.
+  - The chevron of a tool row: 98% smaller (0.3 KB in place of 17.8 KB), about 17 MB less for
+    every thousand of them. The longest session measured holds 1,735.
+  - With the keyboard, Tab lands on the block or the row, its buttons appear, and the next Tab
+    steps into them.
+  - Rows selected in a diff preview copy as the code alone, without line numbers or signs.
+- **The chevron of a tool row is always there.** It showed only while the row was pointed at, so a
+  closed row gave no sign that it could be opened.
+- **Copying a Question row copies what was asked.** A question with a header copied the header
+  alone; it now copies `Header: question`. A declined question could not be copied at all: it
+  copies what was asked, ending in a `Declined` line.
 - **`Default` as initial permission mode now leaves the choice to Claude Code.** It used to start
   every new chat in Manual, ignoring the `permissions.defaultMode` of your `settings.json`. A new
   chat now starts as `claude` does in a terminal: in that mode when one is set, user or folder,
@@ -78,6 +104,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Expanding a long message pinned at the top pushed it off the screen.** It now scrolls inside
   itself and stays the header of its exchange.
 - **Two code blocks in a row touched.** They read as one block cut in two.
+- **A link with an environment variable in its path did nothing.** A path written as
+  `%LOCALAPPDATA%\Temp\report\index.html` was shown as a link and nothing happened on click. The
+  variable is now expanded and the file opens. A relative `.html` is looked for in the working
+  directory, and one that is not found says so in the chat.
+- **Edits to `.mdx`, `.astro` and `.settings` files were shown without colours.** `.mdx` is
+  highlighted as Markdown, the other two as XML.
+- **A blank line could vanish from a diff preview** shown without line numbers.
+- **A second click on Copy had its tick cut short** by the first click's timer.
 - **`debug_set_breakpoint` on a comment line said nothing about where the breakpoint went.**
   Visual Studio moves it to the next statement, and removing or disabling it then needs that line,
   not the one asked for. The result now says it moved and where. The tool's description claimed
