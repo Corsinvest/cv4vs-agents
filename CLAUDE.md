@@ -132,6 +132,13 @@ editing:
   order. Typically file (OrdinalIgnoreCase), then line, then column/name.
 - **Fluent UI components stay pure**: only layout CSS (display, flex, gap, padding, position,
   width) on `<fluent-*>`; never colours, borders, shadows or token overrides.
+- **A button the transcript repeats on every row is a native `<button class="cv-icon-btn">`** holding
+  a `<span class="cv-icon cv-icon-…">`, not a `<fluent-button>` with an inline `<svg>`
+  (`ui/styles/base.css`). Measured, two thousand of each off screen: 17.8 KB against 0.3 KB. The
+  cost is the component instance and the inline `<svg>`, which is a document of its own each time;
+  a shadow root by itself is about 1 KB. A button there is one of (the composer's, a dialog's)
+  stays a `<fluent-button>`: it costs once. An icon repeated per row gets a `.cv-icon-…` class
+  with its path copied from `@fluentui/svg-icons`.
 - **A tooltip in the WebView is a `data-tip` attribute**, never `title` and never `<fluent-tooltip>`
   (which is no longer registered: the tag would render as nothing). One tooltip serves the whole
   page, moved by `ui/reveal.ts`: `title` is drawn by the system, in its theme and not Visual

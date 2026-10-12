@@ -350,12 +350,13 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child {
     font-family: var(--fontFamilyMonospace);
     opacity: 0.7;
 }
-/* Error icon lives inside `.cv-tool-actions` (in flow on the row, next to "Open in VS").
- * Force the SVG fill to red (Fluent's `<fluent-button>` doesn't pipe `color` through to
- * slotted SVGs reliably). */
-.cv-tool-actions-error svg,
-.cv-tool-actions-error svg path {
-    fill: var(--colorPaletteRedForeground1);
+/* Error icon lives inside `.cv-tool-actions` (in flow on the row, next to "Open in VS"). Red
+ * whatever the pointer does: on a .cv-icon-btn the hover colour is the brand's, and here the
+ * colour is the message. */
+.cv-tool-actions-error,
+.cv-tool-actions-error:hover,
+.cv-tool-actions-error:hover:active {
+    color: var(--colorPaletteRedForeground1);
 }
 /* A tool row's nested children (Agent / Skill transcript today).
  * No rule down the side: the indent already says "these belong to the row above". */
@@ -408,27 +409,19 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child {
     text-decoration: underline;
 }
 
-/* The chevron toggle is a fluent-button (icon-only). Hidden at rest, revealed on row
- * hover, except .always-shown (Agent, Question), kept visible so a near-empty collapsed row reads
- * as expandable. The button rotates 180° when open. */
+/* The chevron toggle is a .cv-icon-btn (base.css). Always visible on a row that has a body:
+ * hidden until the row was hovered, as it was at first, a collapsed row gave no sign that it
+ * could be opened. The button rotates 180° when open. */
 .cv-tool-row-chev {
     flex-shrink: 0;
-    opacity: 0;
+    /* The button's own two with it: this replaces the list, it does not add to it. */
     transition:
         transform 0.15s,
-        opacity 0.15s;
-}
-.cv-tool-wrap:hover .cv-tool-row-chev {
-    opacity: 1;
+        background-color var(--durationFaster) var(--curveEasyEase),
+        color var(--durationFaster) var(--curveEasyEase);
 }
 .cv-tool-row-chev.expanded {
     transform: rotate(180deg);
-    opacity: 1;
-}
-/* Kept visible at rest (Agent and Question rows): a near-empty collapsed row needs the chevron
- * as its only "expandable" cue, so it doesn't wait for hover. */
-.cv-tool-row-chev.always-shown {
-    opacity: 1;
 }
 /* Tool header actions (error / open-diff / sub-agent copy+expand), in flow on the row rather than
  * an absolute overlay. Buttons are .trigger fluent-buttons; the tints below colour them. */

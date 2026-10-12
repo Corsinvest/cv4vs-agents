@@ -4,8 +4,6 @@
  */
 import { LitElement, html, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
 
 /**
  * Focus view: one row standing for a run of tool calls and thinking the view folds away. It only
@@ -42,21 +40,16 @@ export class CvFoldRow extends LitElement {
                         : nothing
                 }
                 <span class="cv-tool-row-detail">${this.label}</span>
-                <!-- always-shown, like an Agent row: opening is all this row is for. -->
-                <fluent-button
-                    class="trigger cv-tool-row-chev always-shown ${this.expanded ? 'expanded' : ''}"
-                    appearance="subtle"
-                    shape="rounded"
-                    size="small"
-                    icon-only
+                <button
+                    class="cv-icon-btn cv-tool-row-chev ${this.expanded ? 'expanded' : ''}"
                     aria-label=${this.expanded ? 'Collapse' : 'Expand'}
                     @click=${(e: Event) => {
                         e.stopPropagation();
                         this._toggle();
                     }}
                 >
-                    ${unsafeHTML(ChevronDown16Regular)}
-                </fluent-button>
+                    <span class="cv-icon cv-icon-chevron-down"></span>
+                </button>
             </div>
         </div>`;
     }

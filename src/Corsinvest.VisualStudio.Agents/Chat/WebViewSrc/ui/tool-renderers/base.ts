@@ -20,8 +20,6 @@
 
 import { html, nothing, type TemplateResult } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import ErrorCircle16Regular from '@fluentui/svg-icons/icons/error_circle_16_regular.svg';
-import ChevronDown16Regular from '@fluentui/svg-icons/icons/chevron_down_16_regular.svg';
 import { truncate, formatDurationSec } from '../helpers/format';
 import '../components/cv-copy-btn';
 import '../components/cv-diff-preview';
@@ -149,9 +147,6 @@ export abstract class ToolRenderer {
             // open needs it to close as much as one that starts shut needs it to open. Gating it on
             // "starts closed" was enough while Agent was the only such row.
             chevron: expandable,
-            // Agent keeps its chevron visible at rest, so a row holding a whole transcript reads as
-            // expandable before it is hovered.
-            chevronAlwaysShown: this.defaultCollapsed(),
         });
     }
 
@@ -237,7 +232,6 @@ export abstract class ToolRenderer {
         open: boolean;
         onClick: (() => void) | null;
         chevron: boolean;
-        chevronAlwaysShown?: boolean;
     }): TemplateResult {
         // What clicking the ROW does: a custom onClick wins (Edit opens the file), otherwise a
         // chevron makes the whole row the toggle target (accordion-style). The chevron itself
@@ -265,14 +259,8 @@ export abstract class ToolRenderer {
                     ${this.headerActions()}
                     ${
                         opts.chevron
-                            ? html`<fluent-button
-                                  class="trigger cv-tool-row-chev ${opts.open ? 'expanded' : ''} ${
-                                      opts.chevronAlwaysShown ? 'always-shown' : ''
-                                  }"
-                                  appearance="subtle"
-                                  shape="rounded"
-                                  size="small"
-                                  icon-only
+                            ? html`<button
+                                  class="cv-icon-btn cv-tool-row-chev ${opts.open ? 'expanded' : ''}"
                                   aria-label=${opts.open ? 'Collapse' : 'Expand'}
                                   @click=${(e: Event) => {
                                       // Always the toggle, never rowClick: a row with an onClick of
@@ -282,8 +270,8 @@ export abstract class ToolRenderer {
                                       this.host.toggleExpanded();
                                   }}
                               >
-                                  ${unsafeHTML(ChevronDown16Regular)}
-                              </fluent-button>`
+                                  <span class="cv-icon cv-icon-chevron-down"></span>
+                              </button>`
                             : nothing
                     }
                 </div>
@@ -552,12 +540,8 @@ export abstract class ToolRenderer {
 
     /** The "show error details in VS" icon button. */
     private errorButton(): TemplateResult {
-        return html`<fluent-button
-            class="trigger cv-tool-actions-error"
-            appearance="subtle"
-            shape="rounded"
-            size="small"
-            icon-only
+        return html`<button
+            class="cv-icon-btn cv-tool-actions-error"
             data-tip="Show error details"
             aria-label="Show error details"
             @click=${(e: Event) => {
@@ -565,7 +549,7 @@ export abstract class ToolRenderer {
                 this.host.openError();
             }}
         >
-            ${unsafeHTML(ErrorCircle16Regular)}
-        </fluent-button>`;
+            <span class="cv-icon cv-icon-error-circle"></span>
+        </button>`;
     }
 }
