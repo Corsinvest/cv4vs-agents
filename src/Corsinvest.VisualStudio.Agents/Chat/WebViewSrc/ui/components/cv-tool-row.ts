@@ -9,7 +9,6 @@ import ArrowExpandAll16Regular from '@fluentui/svg-icons/icons/arrow_expand_all_
 import ArrowCollapseAll16Regular from '@fluentui/svg-icons/icons/arrow_collapse_all_16_regular.svg';
 import './cv-message';
 import './cv-thinking';
-import './cv-copy-btn';
 // The Agent row's running clock, rendered by AgentRenderer.header() into this row's light DOM.
 import './cv-elapsed';
 import type { ToolStatus, ToolUseData, UiEntry, ToolResultExtrasDto } from '../../core/types';

@@ -722,34 +722,35 @@ export class AskUserQuestionRenderer extends ToolRenderer {
         return ((this.host.input ?? {}) as { questions?: AskQuestion[] }).questions ?? [];
     }
 
-    /** Copy button for the Ask body. Copies markdown built from the questions: "**N. Header**"
-     *  + one bullet per option, a ✅ prefixing the chosen ones (the unchosen have no marker).
-     *  NOT the CLI's raw "Your questions have been answered: …" result. Only shown once
-     *  answered: a declined Ask has no answer to copy. */
-    private answerCopy(questions: AskQuestion[], answered: string): TemplateResult {
-        if (!answered || this.host.status === 'error') {
-            return html`${nothing}`;
+    /** What the Ask body's copy button copies: markdown built from the questions,
+     *  "**N. Header: question**" + one bullet per option, a ✅ prefixing the chosen ones (the
+     *  unchosen have no marker). NOT the CLI's raw "Your questions have been answered: …" result.
+     *  A declined Ask copies too, what was asked being worth pasting elsewhere: it says so on a
+     *  last line, or it would read as an answer with the ticks missing. */
+    private answerMarkdown(questions: AskQuestion[], answered: string, declined: boolean): string {
+        // The header is a one-word chip: alone, the options under it answer nothing.
+        const title = (q: AskQuestion): string =>
+            q.header && q.question ? `${q.header}: ${q.question}` : q.header || q.question || '';
+        const blocks = questions.map((q, i) => {
+            const chosen = chosenLabels(q, answered);
+            const rows = (q.options ?? []).map((o) => {
+                const label = o.label ?? '';
+                const mark = chosen.includes(label) ? '✅ ' : '';
+                const desc = o.description ? `: ${o.description}` : '';
+                return `- ${mark}${label}${desc}`;
+            });
+            // Typed into "Other": no declared option carries it, so it needs a row of
+            // its own or the copied markdown lists the choices with none of them ticked.
+            const free = chosen.length ? '' : questionAnswer(q, answered);
+            if (free) {
+                rows.push(`- ✅ ${free}`);
+            }
+            return `**${i + 1}. ${title(q)}**\n\n${rows.join('\n')}`;
+        });
+        if (declined) {
+            blocks.push('_Declined_');
         }
-        const title = (q: AskQuestion): string => q.header || q.question || '';
-        const md = questions
-            .map((q, i) => {
-                const chosen = chosenLabels(q, answered);
-                const rows = (q.options ?? []).map((o) => {
-                    const label = o.label ?? '';
-                    const mark = chosen.includes(label) ? '✅ ' : '';
-                    const desc = o.description ? `: ${o.description}` : '';
-                    return `- ${mark}${label}${desc}`;
-                });
-                // Typed into "Other": no declared option carries it, so it needs a row of
-                // its own or the copied markdown lists the choices with none of them ticked.
-                const free = chosen.length ? '' : questionAnswer(q, answered);
-                if (free) {
-                    rows.push(`- ✅ ${free}`);
-                }
-                return `**${i + 1}. ${title(q)}**\n\n${rows.join('\n')}`;
-            })
-            .join('\n\n');
-        return html`<cv-copy-btn class="cv-question-copy" .text=${md}></cv-copy-btn>`;
+        return blocks.join('\n\n');
     }
 
     /** The marker of one option: the banner's own radio/checkbox, so a multi-select question
@@ -776,8 +777,12 @@ export class AskUserQuestionRenderer extends ToolRenderer {
         const declined = this.host.status === 'error';
         const answered = cleanText(this.host.result);
         return html`
-            <div class="cv-tool-body">
-                ${this.answerCopy(questions, answered)}
+            <div
+                class="cv-tool-body cv-question-body"
+                data-copy
+                tabindex="0"
+                .copyText=${this.answerMarkdown(questions, answered, declined)}
+            >
                 <div class="cv-question-list">
                     ${questions.map((q) => {
                         const opts = q.options ?? [];

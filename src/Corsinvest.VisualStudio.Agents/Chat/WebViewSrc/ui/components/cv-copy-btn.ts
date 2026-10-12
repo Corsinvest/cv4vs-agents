@@ -45,6 +45,13 @@ export class CvCopyBtn extends LitElement {
     @property({ attribute: false }) getBlob?: () => Promise<Blob>;
 
     @state() private _copied = false;
+    private _timer = 0;
+
+    // The button is made under the pointer and removed when it leaves, often within the 1.2s.
+    override disconnectedCallback(): void {
+        super.disconnectedCallback();
+        clearTimeout(this._timer);
+    }
 
     private _onClick = async (e: Event): Promise<void> => {
         e.stopPropagation();
@@ -67,7 +74,9 @@ export class CvCopyBtn extends LitElement {
                 await navigator.clipboard.writeText(text);
             }
             this._copied = true;
-            setTimeout(() => (this._copied = false), 1200);
+            // A second click restarts the 1.2s: left running, the first timer would cut it short.
+            clearTimeout(this._timer);
+            this._timer = window.setTimeout(() => (this._copied = false), 1200);
         } catch (err) {
             console.warn('[cv-copy-btn] copy failed', err);
         }
@@ -82,8 +91,8 @@ export class CvCopyBtn extends LitElement {
                 shape="rounded"
                 size="small"
                 icon-only
-                data-tip=${this._copied ? 'Copied' : this.tip}
-                aria-label=${this._copied ? 'Copied' : this.tip}
+                data-tip=${this.tip}
+                aria-label=${this.tip}
                 @click=${this._onClick}
             >
                 ${unsafeHTML(this._copied ? Checkmark16Regular : Copy16Regular)}
