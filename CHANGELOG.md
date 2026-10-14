@@ -18,9 +18,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   ([WebView2Feedback#5398](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5398), open with
   no SDK fix; Visual Studio loads its own `WebView2.Wpf` copy anyway). The chat pane now re-points
   the browser's parent to the window that actually hosts it, once Visual Studio has finished moving
-  the pane, and moves it onto the main window before a floating window closes (the case of a pane
-  opened while already floating and then docked). It never moves keyboard focus itself, and panes
-  that stay docked, including those shown in the auto-hide flyout, are left exactly as before.
+  the pane. It never moves keyboard focus itself, and panes that stay docked, including those shown
+  in the auto-hide flyout, are left exactly as before.
+- **A chat pane opened while floating went blank for good once docked.** The conversation vanished
+  and never came back, while a pane opened docked, floated and docked again was fine. WebView2
+  closes a web view whose parent window is destroyed, and for a pane born floating that parent is
+  the floating window, which docking destroys. The pane now moves the browser onto the main window
+  just before a floating window closes, so the conversation survives the dock.
 
 ## [1.14.0] - 2026-10-12
 
