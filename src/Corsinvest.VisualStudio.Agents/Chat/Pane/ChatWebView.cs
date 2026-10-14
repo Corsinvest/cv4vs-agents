@@ -307,8 +307,9 @@ internal sealed class ChatWebView : WebView2CompositionControl
     }
 
     /// <summary>The window the controller hangs off is being destroyed: move the browser onto the
-    /// main window, which outlives every pane. The reconcile queued afterwards puts it wherever the
-    /// pane lands next.</summary>
+    /// main window, which outlives every pane. WebView2 closes a web view whose parent window is
+    /// destroyed, so a pane born floating would otherwise go blank for good on its first dock. The
+    /// reconcile queued afterwards puts it wherever the pane lands next.</summary>
     private void Park(IntPtr dying)
     {
         _watched?.RemoveHook(OnHostMessage);
