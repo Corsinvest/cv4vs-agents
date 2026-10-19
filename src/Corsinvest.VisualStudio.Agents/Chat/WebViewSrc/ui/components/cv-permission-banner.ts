@@ -58,6 +58,20 @@ interface PermissionSuggestion {
 
 const OTHER = 'Other';
 
+/** Same test as the VS Code panel: a blank preview is no preview. */
+function optionPreview(o: AskQuestion['options'][number] | undefined): string | undefined {
+    return typeof o?.preview === 'string' && o.preview.trim() !== '' ? o.preview : undefined;
+}
+
+/** A preview carrying its own fence is Markdown; anything else is shown verbatim, the way the
+ *  VS Code panel wraps it in a `text` fence. */
+function renderPreview(text: string) {
+    const body = text.replace(/\n+$/, '');
+    return /^ {0,3}`{3,}[^`]*$/m.test(body)
+        ? html`${unsafeHTML(renderMarkdown(body))}`
+        : html`<pre>${body}</pre>`;
+}
+
 /** The tool the model calls to leave plan mode. Its request is a permission request like any
  *  other, but the choice is not "may I run this"; it is which mode the session continues in,
  *  so it gets its own wording (see _renderPlanPermission). */
@@ -416,6 +430,57 @@ export class CvPermissionBanner extends LitElement {
             .other-wrap {
                 padding: 2px 8px 4px 30px;
             }
+            /* Options beside the preview once there is room for both, stacked below that. */
+            .choices.with-preview {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 10px;
+            }
+            .choices.with-preview > .options {
+                margin-bottom: 0;
+            }
+            @media (min-width: 576px) {
+                .choices.with-preview {
+                    display: grid;
+                    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+                    column-gap: 12px;
+                    align-items: start;
+                }
+            }
+            .option.previewed:not(.selected) {
+                background: var(--colorNeutralBackground1Hover);
+            }
+            .preview {
+                box-sizing: border-box;
+                height: min(calc(var(--preview-lines) * 1.3em + 3em), 40vh);
+                overflow: auto;
+                border: 1px solid var(--colorNeutralStroke2);
+                border-radius: var(--borderRadiusMedium);
+                background: var(--colorNeutralBackground3);
+                padding: 0 8px 8px;
+                font-family: var(--fontFamilyMonospace);
+                font-size: var(--fontSizeBase200);
+            }
+            .preview-caption {
+                position: sticky;
+                top: 0;
+                left: 0;
+                margin: 0 -8px 4px;
+                padding: 4px 8px;
+                background: var(--colorNeutralBackground3);
+                color: var(--colorNeutralForeground3);
+            }
+            /* Mockups are laid out with spaces: wrapping would break their columns. */
+            .preview-body pre {
+                margin: 0;
+                white-space: pre;
+                font: inherit;
+            }
+            .preview-empty {
+                color: var(--colorNeutralForeground3);
+                font-style: italic;
+            }
             .other-wrap fluent-textarea {
                 display: block;
                 width: 100%;
@@ -460,6 +525,9 @@ export class CvPermissionBanner extends LitElement {
     @state() private _picked: Map<string, Set<string>> = new Map();
     // question -> free text typed for the "Other" option
     @state() private _other: Map<string, string> = new Map();
+    // Row whose preview is shown, tagged with its question so a tab switch falls back to row 0.
+    @state() private _previewRow: { q: number; row: number } | null = null;
+    private _previewTimer = 0;
 
     // Scope cycle for the "Yes, allow … for {scope}" choice. Clicking the
     // scope word cycles through SCOPE_ORDER; the button itself confirms with
@@ -776,6 +844,8 @@ export class CvPermissionBanner extends LitElement {
         }
         this._picked = picked;
         this._other = new Map();
+        clearTimeout(this._previewTimer);
+        this._previewRow = null;
         this._scopeIdx = 0;
         this._scopeActive = false;
         this._focusedOnOpen = false;
@@ -827,6 +897,18 @@ export class CvPermissionBanner extends LitElement {
             this._qIndex = i;
         }
     };
+
+    /** Focus moves the preview at once; the pointer only after it rests, so sweeping across the
+     *  list on the way to Submit does not flicker every preview past. */
+    private _showPreview(row: number, delayMs: number): void {
+        clearTimeout(this._previewTimer);
+        const at = { q: this._qIndex, row };
+        if (delayMs === 0) {
+            this._previewRow = at;
+        } else {
+            this._previewTimer = window.setTimeout(() => (this._previewRow = at), delayMs);
+        }
+    }
 
     private _isPicked(question: string, label: string): boolean {
         return this._picked.get(question)?.has(label) ?? false;
@@ -1297,6 +1379,31 @@ export class CvPermissionBanner extends LitElement {
         `;
     }
 
+    /** Sized for the longest preview of the question, so moving between rows never resizes it. */
+    private _renderPreviewPane(q: AskQuestion, row: number) {
+        const lines = Math.max(
+            3,
+            ...q.options.map(
+                (o) => (optionPreview(o)?.replace(/\n+$/, '').split('\n').length ?? 0) + 1,
+            ),
+        );
+        const label = row === q.options.length ? OTHER : q.options[row]?.label;
+        const text = optionPreview(q.options[row]);
+        return html`<div
+            class="preview"
+            role="region"
+            aria-label=${`Preview: ${label ?? ''}`}
+            style=${`--preview-lines: ${lines}`}
+        >
+            <div class="preview-caption" aria-hidden="true">${label}</div>
+            ${
+                text === undefined
+                    ? html`<div class="preview-empty">No preview for this option</div>`
+                    : html`<div class="preview-body">${renderPreview(text)}</div>`
+            }
+        </div>`;
+    }
+
     /** Interactive AskUserQuestion UI: per-question tabs, radio/checkbox
      *  options, an "Other" free-text option, and a Submit footer. */
     private _renderQuestions() {
@@ -1307,13 +1414,19 @@ export class CvPermissionBanner extends LitElement {
         const idx = Math.min(this._qIndex, qs.length - 1);
         const q = qs[idx];
         const multi = !!q.multiSelect;
-        const renderOption = (label: string, description?: string) => {
+        // A checkbox list has no single row to preview, so VS Code shows none there either.
+        const withPreview = !multi && q.options.some((o) => optionPreview(o) !== undefined);
+        const shown = withPreview ? (this._previewRow?.q === idx ? this._previewRow.row : 0) : -1;
+        const renderOption = (label: string, row: number, description?: string) => {
             const on = this._isPicked(q.question, label);
             return html`<div
-                class="option ${on ? 'selected' : ''}"
+                class="option ${on ? 'selected' : ''} ${row === shown ? 'previewed' : ''}"
                 role=${multi ? 'checkbox' : 'radio'}
                 aria-checked=${on}
                 tabindex="0"
+                @focus=${withPreview ? () => this._showPreview(row, 0) : nothing}
+                @pointerenter=${withPreview ? () => this._showPreview(row, 150) : nothing}
+                @pointerleave=${withPreview ? () => clearTimeout(this._previewTimer) : nothing}
                 @click=${() => this._toggle(q, label)}
                 @keydown=${(e: KeyboardEvent) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -1377,27 +1490,30 @@ export class CvPermissionBanner extends LitElement {
                     </fluent-button>
                 </div>
                 ${qs.length > 1 ? html`<div class="question">${q.question}</div>` : nothing}
-                <div class="options" @keydown=${this._onOptionsKey}>
-                    ${q.options.map((o) => renderOption(o.label, o.description))}
-                    ${renderOption(OTHER, 'Provide a custom answer')}
-                    ${
-                        this._isPicked(q.question, OTHER)
-                            ? html`<div class="other-wrap">
-                                  <fluent-textarea
-                                      class="other-input"
-                                      rows="1"
-                                      placeholder="Type your answer…"
-                                      .value=${this._other.get(q.question) ?? ''}
-                                      @input=${(e: Event) =>
-                                          this._setOther(
-                                              q.question,
-                                              (e.target as HTMLTextAreaElement).value,
-                                          )}
-                                      @keydown=${this._onOtherKey}
-                                  ></fluent-textarea>
-                              </div>`
-                            : nothing
-                    }
+                <div class="choices ${withPreview ? 'with-preview' : ''}">
+                    <div class="options" @keydown=${this._onOptionsKey}>
+                        ${q.options.map((o, i) => renderOption(o.label, i, o.description))}
+                        ${renderOption(OTHER, q.options.length, 'Provide a custom answer')}
+                        ${
+                            this._isPicked(q.question, OTHER)
+                                ? html`<div class="other-wrap">
+                                      <fluent-textarea
+                                          class="other-input"
+                                          rows="1"
+                                          placeholder="Type your answer…"
+                                          .value=${this._other.get(q.question) ?? ''}
+                                          @input=${(e: Event) =>
+                                              this._setOther(
+                                                  q.question,
+                                                  (e.target as HTMLTextAreaElement).value,
+                                              )}
+                                          @keydown=${this._onOtherKey}
+                                      ></fluent-textarea>
+                                  </div>`
+                                : nothing
+                        }
+                    </div>
+                    ${withPreview ? this._renderPreviewPane(q, shown) : nothing}
                 </div>
                 <div id="permission-buttons" class="question-actions">
                     <fluent-button

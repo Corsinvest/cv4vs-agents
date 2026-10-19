@@ -4,6 +4,15 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+
+- **A question from Claude can show a preview of each choice.** When the options of a question
+  come with a mockup, a code sample or a layout to compare, the one under the pointer or the
+  keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
+  is still the choice you pick.
+
 ## [1.14.0] - 2026-10-12
 
 A message typed while Claude works now reaches it in the same turn, and links to pull requests and
