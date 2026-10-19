@@ -13,6 +13,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
   is still the choice you pick.
 
+### Fixed
+
+- **Starting the debugger with two chats side by side could keep Visual Studio busy for good.**
+  When the run-time layout put both in one group, each chat brought back to the front hid the
+  other, which was then brought back in turn. Each chat is now brought back once per layout swap.
+
 ## [1.14.0] - 2026-10-12
 
 A message typed while Claude works now reaches it in the same turn, and links to pull requests and
