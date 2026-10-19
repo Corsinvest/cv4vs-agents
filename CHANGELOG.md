@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **A question from Claude can show a preview of each choice.** When the options of a question
+  come with a mockup, a code sample or a layout to compare, the one under the pointer or the
+  keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
+  is still the choice you pick.
+
 ### Fixed
 
 - **Starting the debugger with two chats side by side could keep Visual Studio busy for good.**

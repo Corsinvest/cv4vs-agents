@@ -462,7 +462,8 @@ export interface AskQuestion {
     question: string;
     header?: string;
     multiSelect?: boolean;
-    options: { label: string; description?: string }[];
+    /** `preview` is read-only text shown beside the options; nothing of it goes back in the answer. */
+    options: { label: string; description?: string; preview?: string }[];
 }
 
 /** A tool row's nested children (the Agent tool's transcript today; the mechanism is generic).
