@@ -4,6 +4,14 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **Starting the debugger with two chats side by side could keep Visual Studio busy for good.**
+  When the run-time layout put both in one group, each chat brought back to the front hid the
+  other, which was then brought back in turn. Each chat is now brought back once per layout swap.
+
 ## [1.14.0] - 2026-10-12
 
 A message typed while Claude works now reaches it in the same turn, and links to pull requests and

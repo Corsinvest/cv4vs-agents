@@ -157,6 +157,26 @@ public class FrontChatKeeperTests
     }
 
     [Fact]
+    public void Two_chats_the_swap_puts_in_one_group_do_not_take_the_front_from_each_other_forever()
+    {
+        // Side by side at design time, tabs of one group at run time: only one can be in front,
+        // and every show of the one is the shell reporting the other as displaced.
+        var group = new Group();
+        var (a, b) = (group.Add(), group.Add());
+        var front = new HashSet<PaneEntry> { a, b };
+        var keeper = new FrontChatKeeper(
+            () => group.Open,
+            front.Contains,
+            entry => { group.Brought.Add(entry); front.Clear(); front.Add(entry); });
+
+        keeper.ModeChanged(Debugging);
+        front.Remove(a);
+        for (var shown = 0; shown < 10; shown++) { keeper.Reassert(); }
+
+        Assert.Equal(new[] { a, b }, group.Brought);
+    }
+
+    [Fact]
     public void No_chat_in_front_leaves_nothing_to_keep()
     {
         // The chats sit behind another tool window: the swap can do what it likes with them.

@@ -25,6 +25,10 @@ internal sealed class FrontChatKeeper(Func<IEnumerable<PaneEntry>> openChats,
 {
     // The chats to keep in front while a swap is under way; null the rest of the time.
     private List<PaneEntry> _kept;
+    // The chats already put back during this swap. Two noted in separate groups can land in one
+    // group of the other layout: each brought forward hides the other, whose return hides the
+    // first, and the shell never reaches the idle that ends the swap.
+    private readonly HashSet<PaneEntry> _reasserted = [];
     private bool _inDesign = true;
 
     /// <summary>The debugger changed mode. Run and Break share the run-time layout, so only crossing
@@ -39,28 +43,33 @@ internal sealed class FrontChatKeeper(Func<IEnumerable<PaneEntry>> openChats,
 
         var front = openChats().Where(isFront).ToList();
         _kept = front.Count > 0 ? front : null;
+        _reasserted.Clear();
     }
 
     /// <summary>Whether a swap is under way with chats to keep in front.</summary>
     public bool Keeping => _kept != null;
 
     /// <summary>Put the noted chats back in front, those the swap left behind a sibling's tab.
-    /// One closed in the meantime is left alone: nothing should bring it back.</summary>
-    public void Reassert()
-    {
-        if (_kept == null) { return; }
-        var open = openChats().ToList();
-        foreach (var entry in _kept.Where(e => open.Contains(e) && !isFront(e)))
-        {
-            bringForward(entry);
-        }
-    }
+    /// One closed in the meantime is left alone: nothing should bring it back. Once per chat
+    /// while the swap lasts: <see cref="Finish"/> has the last word.</summary>
+    public void Reassert() => BringBack(once: true);
 
     /// <summary>The swap is over: one last time, then stop, so a tab the user picks from now on
     /// stays picked.</summary>
     public void Finish()
     {
-        Reassert();
+        BringBack(once: false);
         _kept = null;
+    }
+
+    private void BringBack(bool once)
+    {
+        if (_kept == null) { return; }
+        var open = openChats().ToList();
+        foreach (var entry in _kept.Where(e => open.Contains(e) && !isFront(e)))
+        {
+            if (once && !_reasserted.Add(entry)) { continue; }
+            bringForward(entry);
+        }
     }
 }
