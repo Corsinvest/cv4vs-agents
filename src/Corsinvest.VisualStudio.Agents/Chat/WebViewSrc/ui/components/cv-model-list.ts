@@ -10,9 +10,16 @@ import { state as appState } from '../../core/state';
 import { StateSubscriptions } from '../../core/state-subscriptions';
 import { resolveModelValue } from '../../core/ai-models';
 import type { ChatCommand, CommandHost } from '../../core/commands/base';
-import { EffortCommand, UltracodeCommand } from '../../core/commands/model-controls';
+import {
+    EffortCommand,
+    FastModeCommand,
+    ThinkingCommand,
+    UltracodeCommand,
+} from '../../core/commands/model-controls';
 import type { ModelInfoDto } from '../../core/types';
 import './cv-popover-list';
+
+type ToggleCommand = UltracodeCommand | ThinkingCommand | FastModeCommand;
 import './cv-segmented-slider';
 import type { SliderStop } from './cv-segmented-slider';
 import type { CvPopoverList } from './cv-popover-list';
@@ -32,7 +39,12 @@ export class CvModelList extends LitElement {
     // The same command the `/` menu's Effort row uses: its stops, label and setter follow the
     // current model's levels, so the two can't disagree.
     private readonly _effort = new EffortCommand();
-    private readonly _ultracode = new UltracodeCommand();
+    // In the `/` menu's order (its `order` field).
+    private readonly _toggles: ToggleCommand[] = [
+        new UltracodeCommand(),
+        new ThinkingCommand(),
+        new FastModeCommand(),
+    ];
 
     // `default` is listed even when another entry resolves to the same model: it follows the
     // CLI's recommendation when that changes, a named entry stays put.
@@ -131,28 +143,28 @@ export class CvModelList extends LitElement {
         </div>`;
     }
 
-    private _renderUltracode() {
-        if (!this._ultracode.isEnabled()) {
-            return nothing;
-        }
+    private _renderToggle(cmd: ToggleCommand) {
         return html`<div class="footer-row">
-            ${this._renderLabel(this._ultracode)}
+            ${this._renderLabel(cmd)}
             <fluent-switch
                 class="toggle"
-                aria-label=${this._ultracode.label}
-                ?checked=${this._ultracode.checked}
+                aria-label=${cmd.label}
+                ?checked=${cmd.checked}
                 @change=${() => {
-                    this._ultracode.run(this.host);
+                    cmd.run(this.host);
                     this.requestUpdate();
                 }}
             ></fluent-switch>
         </div>`;
     }
 
-    /** Undefined when the model has no effort: the list then draws no empty band. */
+    /** Undefined when no row applies to the model: the list then draws no empty band. */
     private _renderFooter() {
-        return this._effort.isEnabled()
-            ? html`<div class="footer-rows">${this._renderEffort()}${this._renderUltracode()}</div>`
+        const toggles = this._toggles.filter((c) => c.isEnabled());
+        return this._effort.isEnabled() || toggles.length > 0
+            ? html`<div class="footer-rows">
+                  ${this._renderEffort()}${toggles.map((c) => this._renderToggle(c))}
+              </div>`
             : undefined;
     }
 
