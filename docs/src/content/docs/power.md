@@ -21,11 +21,40 @@ It does **not** hold off:
 
 - **Sleep you asked for**: closing the lid, the power button, Start → Sleep. Windows drops every
   power request on a deliberate sleep, by design: an application does not get to veto you.
-- **Modern standby on battery.** On a laptop using modern standby (S0 low power idle), Windows
-  terminates system power requests 5 minutes after the sleep timer expires, whatever we ask for. A
-  turn longer than that can still be suspended while on battery. On AC power, and on older laptops
-  using traditional S3 sleep, the hold lasts for the whole turn.
+- **Modern standby, once the sleep timer has run out.** On a laptop using modern standby (S0 low
+  power idle), Windows terminates system power requests 5 minutes after the sleep timer expires,
+  whatever we ask for. A turn longer than that can still be suspended while on battery. On AC
+  power, and on older laptops using traditional S3 sleep, the hold is meant to last for the whole
+  turn, but turns have also been seen suspended half-way through a tool call on a modern-standby
+  laptop on AC power while its sleep timer was finite. Whatever the cause, setting Sleep to Never
+  is what reliably prevents it (see below).
 - **Forced sleep**: group policy, a critical battery level, or `shutdown`-style commands.
+
+## Long unattended turns
+
+A turn that has to outlive the sleep timer is not something the extension can promise on a
+modern-standby laptop. The power plan can: set **Sleep** to **Never** while plugged in (Settings →
+System → Power & battery → Screen, sleep & hibernate timeouts → *When plugged in, put my device to
+sleep after*). The display can still turn off; only the machine keeps running.
+
+Some laptops switch between several power plans on their own, the manufacturer's performance modes
+for one. The Settings page edits the active plan only, so look at the others as well:
+
+```
+powercfg /list
+```
+
+Then, for each plan GUID (`SCHEME_CURRENT` stands for the active one):
+
+```
+powercfg /query SCHEME_CURRENT SUB_SLEEP STANDBYIDLE
+```
+
+`Current AC Power Setting Index: 0x00000000` means never; `0x00000258` is 10 minutes.
+
+You can recognise the problem by a turn that stopped half-way through a tool call while you were
+away, and whose tool result showed up a few seconds after you woke the machine. `powercfg /a` lists
+*Standby (S0 Low Power Idle)* on a modern-standby laptop.
 
 ## When it holds
 
