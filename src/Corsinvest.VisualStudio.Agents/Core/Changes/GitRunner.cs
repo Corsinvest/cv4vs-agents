@@ -30,10 +30,20 @@ internal sealed class GitResult
 /// copy (Team Explorer) is the fallback, so a machine with no Git installed still has one.</summary>
 internal static class GitExe
 {
-    private static readonly Lazy<string> Found = new(Find);
+    private static string _found;
 
-    /// <summary>The path of a git executable, or null when there is none.</summary>
-    public static string Resolve() => Found.Value;
+    /// <summary>The path of a git executable, or null when there is none. A path that was found is
+    /// remembered (until the file goes); "none" is not, so a git installed while Visual Studio runs is
+    /// found by the next chat instead of after a restart. It probes the disk: not for the UI thread.</summary>
+    public static string Resolve()
+    {
+        var known = Volatile.Read(ref _found);
+        if (known is not null && File.Exists(known)) { return known; }
+
+        var found = Find();
+        Volatile.Write(ref _found, found);
+        return found;
+    }
 
     internal static string Find()
     {

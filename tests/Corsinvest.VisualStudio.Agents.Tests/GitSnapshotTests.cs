@@ -39,6 +39,10 @@ public sealed class GitSnapshotTests : IDisposable
         return _snapshot;
     }
 
+    /// <summary>What differs between two trees, as "status:path" in the order git gives them.</summary>
+    private static async Task<string[]> DiffAsync(GitSnapshot snapshot, GitTree before, GitTree after)
+        => (await snapshot.DiffAsync(before.Oid, after.Oid)).Select(c => c.Status + ":" + c.RelativePath).ToArray();
+
     [Fact]
     public async Task A_folder_outside_any_repository_has_no_snapshot()
     {
@@ -63,27 +67,54 @@ public sealed class GitSnapshotTests : IDisposable
     }
 
     [Fact]
-    public async Task A_snapshot_records_tracked_and_untracked_files_and_not_ignored_ones()
+    public async Task A_snapshot_follows_tracked_and_untracked_files_and_not_ignored_ones()
     {
         if (_repo is null) { return; }
         _repo.Write(".gitignore", "obj/\n*.log\n");
         _repo.Write("tracked.txt", "tracked\n");
         _repo.Commit();
+        var snapshot = await OpenAsync();
+        var before = await snapshot.TakeAsync();
+
+        _repo.Write("tracked.txt", "changed\n");
         _repo.Write("new.txt", "untracked\n");
         _repo.Write("obj/out.dll", "built\n");
         _repo.Write("debug.log", "noise\n");
+        var after = await snapshot.TakeAsync();
+
+        Assert.True(before.Complete);
+        Assert.True(after.Complete);
+        Assert.Equal(new[] { "A:new.txt", "M:tracked.txt" }, await DiffAsync(snapshot, before, after));
+    }
+
+    [Fact]
+    public async Task The_latest_tree_is_the_newest_one_taken()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        var snapshot = await OpenAsync();
+        Assert.Null(snapshot.LatestTree);
+
+        var first = await snapshot.TakeAsync();
+        _repo.Write("a.txt", "b\n");
+        var second = await snapshot.TakeAsync();
+
+        Assert.NotEqual(first.Oid, second.Oid);
+        Assert.Equal(second.Oid, snapshot.LatestTree.Oid);
+    }
+
+    [Fact]
+    public async Task A_tree_that_did_not_change_has_the_same_id_and_no_differences()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
         var snapshot = await OpenAsync();
 
-        var tree = await snapshot.TakeAsync();
+        var first = await snapshot.TakeAsync();
+        var second = await snapshot.TakeAsync();
 
-        Assert.False(string.IsNullOrEmpty(tree));
-        Assert.Equal(tree, snapshot.LatestTree);
-        var blobs = await snapshot.ListBlobsAsync(tree, new[] { "tracked.txt", "new.txt", "obj/out.dll", "debug.log", ".gitignore" });
-        Assert.Contains("tracked.txt", blobs.Keys);
-        Assert.Contains("new.txt", blobs.Keys);
-        Assert.Contains(".gitignore", blobs.Keys);
-        Assert.DoesNotContain("obj/out.dll", blobs.Keys);
-        Assert.DoesNotContain("debug.log", blobs.Keys);
+        Assert.Equal(first.Oid, second.Oid);
+        Assert.Empty(await snapshot.DiffAsync(first.Oid, second.Oid));
     }
 
     [Fact]
@@ -111,97 +142,127 @@ public sealed class GitSnapshotTests : IDisposable
         _repo.Write("a.txt", "before\n");
         _repo.Commit();
         var snapshot = await OpenAsync();
-        var tree = await snapshot.TakeAsync();
-
+        var first = await snapshot.TakeAsync();
         _repo.Write("a.txt", "after\n");
+        var second = await snapshot.TakeAsync();
 
-        var blob = (await snapshot.ListBlobsAsync(tree, new[] { "a.txt" }))["a.txt"];
+        var change = Assert.Single(await snapshot.DiffAsync(first.Oid, second.Oid));
+
         var target = Path.Combine(_private, "restored.txt");
-        Assert.True(await snapshot.WriteBlobAsync(blob.Oid, "a.txt", target));
+        Assert.True(await snapshot.WriteBlobAsync(change.OldOid, change.RelativePath, target));
         Assert.Equal("before\n", File.ReadAllText(target));
     }
 
     [Fact]
-    public async Task A_file_that_was_never_there_is_absent_from_the_answer()
-    {
-        if (_repo is null) { return; }
-        _repo.Write("a.txt", "a\n");
-        var snapshot = await OpenAsync();
-        var tree = await snapshot.TakeAsync();
-
-        var blobs = await snapshot.ListBlobsAsync(tree, new[] { "a.txt", "never.txt", "dir/never.txt" });
-
-        Assert.Equal(new[] { "a.txt" }, blobs.Keys.ToArray());
-    }
-
-    [Fact]
-    public async Task A_second_snapshot_sees_what_changed_after_the_first()
+    public async Task What_was_changed_added_and_removed_between_two_snapshots_is_told_apart()
     {
         if (_repo is null) { return; }
         _repo.Write("a.txt", "one\n");
         _repo.Write("b.txt", "stays\n");
+        _repo.Write("c.txt", "goes\n");
         _repo.Commit();
         var snapshot = await OpenAsync();
         var first = await snapshot.TakeAsync();
 
         _repo.Write("a.txt", "two\n");
-        _repo.Write("c.txt", "added\n");
-        File.Delete(_repo.Path_("b.txt"));
+        _repo.Write("d.txt", "added\n");
+        File.Delete(_repo.Path_("c.txt"));
         var second = await snapshot.TakeAsync();
 
-        Assert.NotEqual(first, second);
-        var changed = await snapshot.ChangedBetweenAsync(first, second);
-        Assert.Equal(new[] { "a.txt", "b.txt", "c.txt" }, changed.OrderBy(c => c).ToArray());
+        Assert.Equal(new[] { "M:a.txt", "D:c.txt", "A:d.txt" }, await DiffAsync(snapshot, first, second));
     }
 
     [Fact]
-    public async Task Ignored_paths_are_told_from_the_ones_to_keep()
-    {
-        if (_repo is null) { return; }
-        _repo.Write(".gitignore", "obj/\n*.log\n");
-        _repo.Write("kept.txt", "x\n");
-        var snapshot = await OpenAsync();
-
-        var ignored = await snapshot.IgnoredAsync(new[] { "obj/a.dll", "x.log", "kept.txt", "src/kept.cs" });
-
-        Assert.Equal(new[] { "obj/a.dll", "x.log" }, ignored.OrderBy(p => p).ToArray());
-    }
-
-    [Fact]
-    public async Task A_tracked_file_is_never_ignored_whatever_a_pattern_says()
+    public async Task A_tracked_file_is_followed_whatever_a_pattern_says()
     {
         if (_repo is null) { return; }
         _repo.Write("tracked.log", "committed\n");
         _repo.Commit();
         _repo.Write(".gitignore", "*.log\n");
         var snapshot = await OpenAsync();
+        var first = await snapshot.TakeAsync();
 
-        var ignored = await snapshot.IgnoredAsync(new[] { "tracked.log", "other.log" });
+        _repo.Write("tracked.log", "edited\n");
+        _repo.Write("other.log", "ignored\n");
+        var second = await snapshot.TakeAsync();
 
-        Assert.Equal(new[] { "other.log" }, ignored.ToArray());
+        Assert.Equal(new[] { "M:tracked.log" }, await DiffAsync(snapshot, first, second));
     }
 
     [Fact]
-    public async Task A_path_is_made_relative_to_the_root_and_a_file_outside_it_has_none()
+    public async Task A_name_is_kept_as_the_index_has_it_when_the_file_on_disk_changed_case()
+    {
+        if (_repo is null) { return; }
+        // Git on Windows ignores case, so a rename that only changes it is not one to the index.
+        _repo.Git("config", "core.ignorecase", "true");
+        _repo.Write("Readme.md", "one\n");
+        _repo.Commit();
+        var snapshot = await OpenAsync();
+        var first = await snapshot.TakeAsync();
+
+        File.Move(_repo.Path_("Readme.md"), _repo.Path_("README.tmp"));
+        File.Move(_repo.Path_("README.tmp"), _repo.Path_("README.md"));
+        File.WriteAllText(_repo.Path_("README.md"), "two\n");
+        var second = await snapshot.TakeAsync();
+
+        // One file, changed. Not a new README.md beside a vanished Readme.md.
+        Assert.Equal(new[] { "M:Readme.md" }, await DiffAsync(snapshot, first, second));
+    }
+
+    [Fact]
+    public async Task The_path_of_a_change_is_made_absolute_under_the_root()
     {
         if (_repo is null) { return; }
         var snapshot = await OpenAsync();
 
-        Assert.Equal("src/app/a.cs", snapshot.Relative(_repo.Path_("src/app/a.cs")));
-        Assert.Null(snapshot.Relative(Path.Combine(_repo.Scratch, "elsewhere", "a.cs")));
+        Assert.Equal(_repo.Path_("src/app/a.cs"), snapshot.Absolute("src/app/a.cs"), ignoreCase: true);
     }
 
     [Fact]
-    public async Task A_file_inside_a_nested_repository_has_no_relative_path()
+    public async Task A_repository_nested_in_the_tree_is_one_entry_that_is_not_a_file()
     {
         if (_repo is null) { return; }
         _repo.Write("a.txt", "a\n");
-        Directory.CreateDirectory(_repo.Path_("vendor/lib/.git"));
-        _repo.Write("vendor/lib/code.c", "int x;\n");
         var snapshot = await OpenAsync();
+        var first = await snapshot.TakeAsync();
 
-        Assert.Null(snapshot.Relative(_repo.Path_("vendor/lib/code.c")));
-        Assert.Equal("a.txt", snapshot.Relative(_repo.Path_("a.txt")));
+        var nested = _repo.Path_("vendor/lib");
+        Directory.CreateDirectory(nested);
+        _repo.GitIn(nested, "init", "-q");
+        _repo.GitIn(nested, "config", "user.email", "test@example.com");
+        _repo.GitIn(nested, "config", "user.name", "Test");
+        File.WriteAllText(Path.Combine(nested, "code.c"), "int x;\n");
+        _repo.GitIn(nested, "add", "-A");
+        _repo.GitIn(nested, "commit", "-q", "-m", "inner");
+        var second = await snapshot.TakeAsync();
+
+        var change = Assert.Single(await snapshot.DiffAsync(first.Oid, second.Oid));
+        Assert.Equal("vendor/lib", change.RelativePath);
+        Assert.True(change.IsSubmodule);
+        Assert.False(change.NewIsFile);
+    }
+
+    [Fact]
+    public async Task A_file_another_program_holds_open_is_named_and_left_out_and_the_rest_is_followed()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        _repo.Commit();
+        var snapshot = await OpenAsync();
+        var first = await snapshot.TakeAsync();
+
+        _repo.Write("ok.txt", "fine\n");
+        var locked = _repo.Write("sub dir/locked file.txt", "busy\n");
+        using var hold = new FileStream(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var second = await snapshot.TakeAsync();
+
+        Assert.True(second.Usable);
+        Assert.False(second.Complete);
+        Assert.True(second.Skips("sub dir/locked file.txt"));
+        Assert.False(second.Skips("ok.txt"));
+        // Good enough to compare with, so it is the newest tree.
+        Assert.Equal(second.Oid, snapshot.LatestTree.Oid);
+        Assert.Equal(new[] { "A:ok.txt" }, await DiffAsync(snapshot, first, second));
     }
 
     [Fact]
@@ -240,15 +301,14 @@ public sealed class GitSnapshotTests : IDisposable
         _repo.Commit();
         var linked = Path.Combine(_repo.Scratch, "linked");
         _repo.Git("worktree", "add", "-q", "-b", "other", linked);
-        File.WriteAllText(Path.Combine(linked, "b.txt"), "only here\n");
         var snapshot = await OpenAsync(linked);
+        var first = await snapshot.TakeAsync();
 
-        var tree = await snapshot.TakeAsync();
+        File.WriteAllText(Path.Combine(linked, "b.txt"), "only here\n");
+        var second = await snapshot.TakeAsync();
 
         Assert.Equal(Path.GetFullPath(linked).TrimEnd('\\'), Path.GetFullPath(snapshot.TopLevel).TrimEnd('\\'), ignoreCase: true);
-        var blobs = await snapshot.ListBlobsAsync(tree, new[] { "a.txt", "b.txt" });
-        Assert.Contains("a.txt", blobs.Keys);
-        Assert.Contains("b.txt", blobs.Keys);
+        Assert.Equal(new[] { "A:b.txt" }, await DiffAsync(snapshot, first, second));
         // The main working tree's own index is left as it was.
         Assert.Equal("", _repo.Git("status", "--porcelain").Trim());
     }
@@ -263,4 +323,84 @@ public sealed class GitSnapshotTests : IDisposable
     [InlineData(@"D:\work", @"C:\Users\jane", false)]
     public void A_repository_that_is_a_whole_drive_or_profile_is_too_broad_to_follow(string topLevel, string home, bool expected)
         => Assert.Equal(expected, GitSnapshot.IsTooBroad(topLevel, home));
+
+    [Fact]
+    public void Raw_output_is_read_into_changes_with_their_modes_and_ids()
+    {
+        var raw = ":100644 100755 aaa bbb M\0src/a.cs\0:000000 100644 000 ccc A\0new file.txt\0:100644 000000 ddd 000 D\0gone.txt\0";
+
+        var changes = GitSnapshot.ParseRaw(raw);
+
+        Assert.Equal(new[] { "M:src/a.cs", "A:new file.txt", "D:gone.txt" }, changes.Select(c => c.Status + ":" + c.RelativePath));
+        Assert.Equal("aaa", changes[0].OldOid);
+        Assert.Equal("bbb", changes[0].NewOid);
+        Assert.True(changes[0].OldIsFile);
+        Assert.True(changes[0].NewIsFile);
+        Assert.False(changes[1].OldIsFile);
+        Assert.False(changes[2].NewIsFile);
+    }
+
+    [Fact]
+    public void A_link_and_a_nested_repository_are_not_files()
+    {
+        var raw = ":120000 120000 aaa bbb M\0link\0:160000 160000 ccc ddd M\0vendor/lib\0";
+
+        var changes = GitSnapshot.ParseRaw(raw);
+
+        Assert.False(changes[0].NewIsFile);
+        Assert.False(changes[0].IsSubmodule);
+        Assert.True(changes[1].IsSubmodule);
+    }
+
+    [Fact]
+    public void No_output_is_no_changes()
+    {
+        Assert.Empty(GitSnapshot.ParseRaw(""));
+    }
+
+    [Fact]
+    public void The_files_git_skipped_are_read_from_its_two_error_lines_each()
+    {
+        var stderr = "error: open(\"sub dir/locked file.txt\"): Permission denied\n" +
+                     "error: unable to index file 'sub dir/locked file.txt'\n" +
+                     "error: open(\"b.txt\"): Permission denied\n" +
+                     "error: unable to index file 'b.txt'\n";
+
+        var ok = GitSnapshot.TrySkippedPaths(stderr, out var skipped);
+
+        Assert.True(ok);
+        Assert.Equal(new[] { "b.txt", "sub dir/locked file.txt" }, skipped.OrderBy(p => p, StringComparer.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("error: short read while indexing a.txt\n")]
+    [InlineData("error: open(\"a.txt\"): Permission denied\nwarning: something new from a later git\n")]
+    [InlineData("some words nobody expected\n")]
+    public void A_list_with_a_line_that_is_not_understood_is_not_a_list(string stderr)
+    {
+        Assert.False(GitSnapshot.TrySkippedPaths(stderr, out var skipped));
+        Assert.Null(skipped);
+    }
+
+    [Fact]
+    public void A_tree_that_skips_a_path_by_any_case_says_nothing_about_it()
+    {
+        var tree = new GitTree("abc", new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Sub/File.txt" });
+
+        Assert.True(tree.Usable);
+        Assert.False(tree.Complete);
+        Assert.True(tree.Skips("sub/file.txt"));
+        Assert.False(tree.Skips("other.txt"));
+    }
+
+    [Fact]
+    public void A_tree_with_unknown_skips_is_unusable_and_says_nothing_about_anything()
+    {
+        var tree = new GitTree("abc", null);
+
+        Assert.False(tree.Usable);
+        Assert.False(tree.Complete);
+        Assert.True(tree.Skips("anything.txt"));
+    }
 }
