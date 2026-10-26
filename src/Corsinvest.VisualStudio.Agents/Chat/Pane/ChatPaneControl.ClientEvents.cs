@@ -194,8 +194,11 @@ public partial class ChatPaneControl
                     // The CLI runs the command once every hook has answered, so the picture of the working
                     // tree is taken first. Bounded, well inside the CLI's own hook timeout: a repository too
                     // big to photograph in this time runs its commands with no "before" rather than not at all.
-                    var work = _changes.OnBashBeginAsync(call);
+                    using var letGo = new System.Threading.CancellationTokenSource();
+                    var work = _changes.OnBashBeginAsync(call, letGo.Token);
                     await Task.WhenAny(work, Task.Delay(30000));
+                    // The answer below lets the command go: a picture that finishes after it holds its writes.
+                    letGo.Cancel();
                 }
             }
             else if (e.CallbackId == ClaudeClient.BashEndHookId && TracksCommands)

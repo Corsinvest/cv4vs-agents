@@ -88,6 +88,23 @@ public sealed class ChangeBaselinesTests : IDisposable
     }
 
     [Fact]
+    public async Task Two_copies_of_the_same_file_do_not_share_a_name_so_one_cannot_overwrite_or_delete_the_other()
+    {
+        var file = Source("a.txt", "one");
+        var first = await _baselines.CaptureAsync("s1", file);
+        File.WriteAllText(file, "two");
+        var second = await _baselines.CaptureAsync("s1", file);
+
+        Assert.NotEqual(first.Path, second.Path);
+        Assert.EndsWith("~a.txt", second.Path);
+
+        _baselines.Release(first);
+
+        Assert.False(File.Exists(first.Path));
+        Assert.Equal("two", File.ReadAllText(second.Path));
+    }
+
+    [Fact]
     public async Task Releasing_deletes_a_copy_it_owns()
     {
         var copy = await _baselines.CaptureAsync("s1", Source("a.txt", "x"));

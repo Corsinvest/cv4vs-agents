@@ -6,7 +6,6 @@
 using Corsinvest.VisualStudio.Agents.Core.Changes;
 using System;
 using System.IO;
-using System.Linq;
 using System.Threading;
 using Xunit;
 
@@ -32,29 +31,22 @@ public sealed class RepoWatchTests : IDisposable
 
     private string Path_(string name) => Path.Combine(_root, name);
 
+    private bool Sees(long mark, TimeSpan? within = null)
+        => SpinWait.SpinUntil(() => _watch.ChangedSince(mark), within ?? TimeSpan.FromSeconds(10));
+
     [Fact]
-    public void A_path_touched_after_a_mark_is_reported_for_that_mark_and_not_for_a_later_one()
+    public void A_change_after_a_mark_is_seen_from_that_mark_and_not_from_a_later_one()
     {
         var first = _watch.Mark();
         _watch.Touch(Path_("a.txt"));
         var second = _watch.Mark();
+
+        Assert.True(_watch.ChangedSince(first));
+        Assert.False(_watch.ChangedSince(second));
+
         _watch.Touch(Path_("b.txt"));
 
-        Assert.Equal(new[] { Path_("a.txt"), Path_("b.txt") }, _watch.PathsSince(first).OrderBy(p => p).ToArray());
-        Assert.Equal(new[] { Path_("b.txt") }, _watch.PathsSince(second).ToArray());
-        Assert.True(_watch.ChangedSince(first));
         Assert.True(_watch.ChangedSince(second));
-        Assert.False(_watch.ChangedSince(_watch.Mark()));
-    }
-
-    [Fact]
-    public void The_same_path_touched_twice_is_one_path_at_its_latest_moment()
-    {
-        _watch.Touch(Path_("a.txt"));
-        var between = _watch.Mark();
-        _watch.Touch(Path_("a.txt"));
-
-        Assert.Equal(new[] { Path_("a.txt") }, _watch.PathsSince(between).ToArray());
     }
 
     [Fact]
@@ -67,22 +59,31 @@ public sealed class RepoWatchTests : IDisposable
         _watch.Touch(Path_(".git"));
 
         Assert.False(_watch.ChangedSince(mark));
-        Assert.Empty(_watch.PathsSince(mark));
-        // A folder that merely has git in its name is another matter.
-        _watch.Touch(Path_(".gitignore"));
-        Assert.True(_watch.ChangedSince(mark));
     }
 
     [Fact]
-    public void Past_the_cap_the_list_is_dropped_and_the_overflow_declared()
+    public void Visual_Studios_own_cache_is_not_a_change()
     {
-        using var small = new RepoWatch(_root, OutputWindowLogger.Global, maxPaths: 3);
-        var mark = small.Mark();
+        var mark = _watch.Mark();
 
-        for (var i = 0; i < 5; i++) { small.Touch(Path_("f" + i)); }
+        _watch.Touch(Path_(Path.Combine(".vs", "app", "v17", ".suo")));
+        _watch.Touch(Path_(".vs"));
 
-        Assert.True(small.OverflowedSince(mark));
-        Assert.False(small.OverflowedSince(small.Mark()));
+        Assert.False(_watch.ChangedSince(mark));
+    }
+
+    [Theory]
+    [InlineData(".gitignore")]
+    [InlineData(".gitattributes")]
+    [InlineData(".vscode")]
+    [InlineData(".vsconfig")]
+    public void A_name_that_only_starts_like_one_of_them_is_a_change(string name)
+    {
+        var mark = _watch.Mark();
+
+        _watch.Touch(Path_(name));
+
+        Assert.True(_watch.ChangedSince(mark));
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public sealed class RepoWatchTests : IDisposable
 
         File.WriteAllText(Path_("real.txt"), "hello");
 
-        Assert.True(SpinWait.SpinUntil(() => _watch.PathsSince(mark).Contains(Path_("real.txt")), TimeSpan.FromSeconds(10)));
+        Assert.True(Sees(mark));
     }
 
     [Fact]
@@ -100,28 +101,27 @@ public sealed class RepoWatchTests : IDisposable
     {
         Directory.CreateDirectory(Path_("sub"));
         File.WriteAllText(Path_(Path.Combine("sub", "old.txt")), "x");
+        // Let what the setup raised settle, so what follows is what is being asked about.
+        Thread.Sleep(500);
         var mark = _watch.Mark();
 
-        File.WriteAllText(Path_(Path.Combine("sub", "new.txt")), "y");
         File.Delete(Path_(Path.Combine("sub", "old.txt")));
 
-        Assert.True(SpinWait.SpinUntil(() =>
-        {
-            var paths = _watch.PathsSince(mark);
-            return paths.Contains(Path_(Path.Combine("sub", "new.txt"))) && paths.Contains(Path_(Path.Combine("sub", "old.txt")));
-        }, TimeSpan.FromSeconds(10)));
+        Assert.True(Sees(mark));
     }
 
     [Fact]
-    public void A_real_write_inside_a_dot_git_folder_is_not_reported()
+    public void A_real_write_inside_a_dot_git_folder_is_not_noticed_and_a_visible_one_is()
     {
         Directory.CreateDirectory(Path_(".git"));
+        Thread.Sleep(300);
         var mark = _watch.Mark();
 
         File.WriteAllText(Path_(Path.Combine(".git", "HEAD")), "ref");
-        File.WriteAllText(Path_("visible.txt"), "x");
+        Thread.Sleep(500);
+        Assert.False(_watch.ChangedSince(mark));
 
-        Assert.True(SpinWait.SpinUntil(() => _watch.PathsSince(mark).Contains(Path_("visible.txt")), TimeSpan.FromSeconds(10)));
-        Assert.DoesNotContain(_watch.PathsSince(mark), p => p.Contains(Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar));
+        File.WriteAllText(Path_("visible.txt"), "x");
+        Assert.True(Sees(mark));
     }
 }

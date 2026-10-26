@@ -41,7 +41,7 @@ public sealed class BashChangesTests : IDisposable
         catch (Exception) { /* absent when nothing was copied */ }
     }
 
-    private SessionChanges Create(string workingDirectory, int? maxWatchedPaths = null, Func<bool> trackCommands = null)
+    private SessionChanges Create(string workingDirectory, int? maxRowsPerCommand = null, Func<bool> trackCommands = null)
     {
         var claude = new ClaudePaths(Path.Combine(_scratch, "claude"));
         return new SessionChanges(claude, workingDirectory, new SessionChangesOptions
@@ -49,7 +49,7 @@ public sealed class BashChangesTests : IDisposable
             Baselines = new ChangeBaselines(Path.Combine(_scratch, "baselines"), OutputWindowLogger.Global),
             SnapshotsRoot = Path.Combine(_scratch, "snapshots"),
             Editor = new NoEditor(),
-            MaxWatchedPaths = maxWatchedPaths,
+            MaxRowsPerCommand = maxRowsPerCommand,
             TrackCommands = trackCommands ?? (() => true),
         }, OutputWindowLogger.Global);
     }
@@ -299,19 +299,143 @@ public sealed class BashChangesTests : IDisposable
     }
 
     [Fact]
-    public async Task A_command_that_touches_more_than_the_watcher_can_hold_is_found_through_git_and_flagged()
+    public async Task A_command_that_changes_more_files_than_the_cap_lists_the_first_ones_and_flags_them()
     {
         if (_repo is null) { return; }
         for (var i = 0; i < 6; i++) { _repo.Write("f" + i + ".txt", "x\n"); }
         _repo.Commit();
-        using var changes = await StartedAsync(Create(_repo.Root, maxWatchedPaths: 2));
+        using var changes = await StartedAsync(Create(_repo.Root, maxRowsPerCommand: 4));
 
         await RunAsync(changes, "for %i in (0 1 2 3 4 5) do echo changed>> f%i.txt");
 
         var rows = changes.Set.Snapshot();
-        Assert.Equal(6, rows.Count);
+        Assert.Equal(new[] { "f0.txt", "f1.txt", "f2.txt", "f3.txt" }, rows.Select(r => Path.GetFileName(r.Path)));
         Assert.All(rows, r => Assert.True(r.Incomplete));
         Assert.All(rows, r => Assert.Equal(1, r.Added));
+    }
+
+    [Fact]
+    public async Task What_the_person_saved_while_a_command_waited_for_permission_is_not_the_commands()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        _repo.Write("mine.txt", "mine\n");
+        _repo.Commit();
+        using var changes = await StartedAsync(Create(_repo.Root));
+        var call = Call(_repo.Root);
+
+        // The hook runs when the question is asked, before the person has answered.
+        await changes.OnBashBeginAsync(call);
+        File.AppendAllText(_repo.Path_("mine.txt"), "typed while the question was open\n");
+        await System.Threading.Tasks.Task.Delay(400);
+        // The answer: the command starts now.
+        await changes.OnBashAllowedAsync(call.ToolUseId);
+        Shell(_repo.Root, "echo b>> a.txt");
+        await changes.OnBashEndAsync(call);
+
+        var row = Assert.Single(changes.Set.Snapshot());
+        Assert.Equal(_repo.Path_("a.txt"), row.Path, ignoreCase: true);
+        Assert.Equal("a\n", File.ReadAllText(row.Baseline.Path));
+    }
+
+    [Fact]
+    public async Task Allowing_a_command_that_was_never_begun_changes_nothing()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        _repo.Commit();
+        using var changes = await StartedAsync(Create(_repo.Root));
+
+        await changes.OnBashAllowedAsync("toolu_never_seen");
+
+        Assert.Empty(changes.Set.Snapshot());
+    }
+
+    [Fact]
+    public async Task A_file_whose_name_changed_case_on_disk_is_a_change_and_not_a_new_file()
+    {
+        if (_repo is null) { return; }
+        _repo.Git("config", "core.ignorecase", "true");
+        _repo.Write("Readme.md", "one\n");
+        _repo.Commit();
+        // A rename that only changes the case: git, on Windows, does not see one.
+        File.Move(_repo.Path_("Readme.md"), _repo.Path_("README.tmp"));
+        File.Move(_repo.Path_("README.tmp"), _repo.Path_("README.md"));
+        using var changes = await StartedAsync(Create(_repo.Root));
+
+        await RunAsync(changes, "echo two>> README.md");
+
+        var row = Assert.Single(changes.Set.Snapshot());
+        Assert.Equal(ChangeState.Modified, row.State);
+        Assert.True(row.Baseline.Owned);
+        Assert.Equal("one\n", File.ReadAllText(row.Baseline.Path));
+    }
+
+    [Fact]
+    public async Task A_file_another_program_held_open_at_the_start_is_not_taken_for_one_the_command_made()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        _repo.Commit();
+        var busy = _repo.Write("busy.dat", "held\n");
+        var hold = new FileStream(busy, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        using var changes = await StartedAsync(Create(_repo.Root));
+        var call = Call(_repo.Root);
+
+        // The picture before cannot read busy.dat; the one after can. Told apart from a new file by
+        // knowing which paths git could not read, and Undo would otherwise delete a file that was always there.
+        await changes.OnBashBeginAsync(call);
+        hold.Dispose();
+        Shell(_repo.Root, "echo b>> a.txt");
+        await changes.OnBashEndAsync(call);
+
+        var row = Assert.Single(changes.Set.Snapshot());
+        Assert.Equal(_repo.Path_("a.txt"), row.Path, ignoreCase: true);
+    }
+
+    [Fact]
+    public async Task A_command_that_could_not_wait_for_its_snapshot_is_not_followed_rather_than_followed_wrongly()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        _repo.Commit();
+        var set = new ChangeSet();
+        set.Reset("s1");
+        var baselines = new ChangeBaselines(Path.Combine(_scratch, "baselines"), OutputWindowLogger.Global);
+        using var tracker = await BashTracker.StartAsync(_repo.Root, Path.Combine(_scratch, "snapshots", "direct"), set, baselines, OutputWindowLogger.Global);
+        await tracker.SnapshotAsync();
+        // The person's own edit makes the picture stale, and there is no time to take another.
+        File.AppendAllText(_repo.Path_("a.txt"), "typed\n");
+        await System.Threading.Tasks.Task.Delay(400);
+
+        await tracker.BeginAsync("toolu_late", TimeSpan.Zero);
+        File.AppendAllText(_repo.Path_("a.txt"), "command\n");
+        await tracker.EndAsync("toolu_late", "s1");
+
+        Assert.Empty(set.Snapshot());
+    }
+
+    [Fact]
+    public async Task A_command_that_was_let_go_before_its_snapshot_was_ready_is_not_followed()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        _repo.Commit();
+        var set = new ChangeSet();
+        set.Reset("s1");
+        var baselines = new ChangeBaselines(Path.Combine(_scratch, "baselines"), OutputWindowLogger.Global);
+        using var tracker = await BashTracker.StartAsync(_repo.Root, Path.Combine(_scratch, "snapshots", "direct-late"), set, baselines, OutputWindowLogger.Global);
+        await tracker.SnapshotAsync();
+        // The hook has already answered the CLI, which is running the command: whatever is photographed
+        // now was photographed with the command running.
+        using var letGo = new System.Threading.CancellationTokenSource();
+        letGo.Cancel();
+
+        await tracker.BeginAsync("toolu_gone", late: letGo.Token);
+        File.AppendAllText(_repo.Path_("a.txt"), "command\n");
+        await tracker.EndAsync("toolu_gone", "s1");
+
+        Assert.Empty(set.Snapshot());
     }
 
     [Fact]
