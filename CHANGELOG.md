@@ -19,6 +19,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   needs the folder to be in a git repository, and says so in the panel when it is not. The
   snapshots live in a private store under the extension's data folder: your repository's history,
   index and objects are only read. *Track the files commands change* in Options turns it off.
+- **A file Claude changed can be reviewed in its own editor, one hunk at a time.** A file that is open
+  (or that you open from the Changes panel) shows the changes in place, inline or side by side, with
+  **Keep** and **Undo** over the hunk the caret is in, in the code window's menu and under key chords.
+  Undo puts that hunk back and saves the file the way your own save would; when the last hunk is
+  settled the file leaves the list. *Show the changes in the editor* in Options picks the form, or
+  leaves the editor alone.
 
 ## [1.15.0] - 2026-11-02
 
