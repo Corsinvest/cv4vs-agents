@@ -733,6 +733,7 @@ public partial class ChatPaneControl : PaneControlBase
         });
         // After the client has started: whether file history is on is read from its options.
         _changes?.BeginSession(_startupSessionId, resume: restoreState);
+        if (TracksCommands) { _changes?.StartTracking(); }
         if (_pageReadyEarly) { OnPageReady(); }
 
         // A fork's forked-at message, or a prompt from the editor context menu. Not gated on
@@ -848,6 +849,7 @@ public partial class ChatPaneControl : PaneControlBase
         _changes = new SessionChanges(PaneClaudePaths, Entry.WorkingDirectory, new SessionChangesOptions
         {
             FileCheckpoints = () => _client is not null && _client.FileCheckpoints,
+            TrackCommands = () => TracksCommands,
             PrepareFile = SaveBeforeCopyAsync,
         }, _log);
         _changes.Set.Changed += OnChangesChanged;

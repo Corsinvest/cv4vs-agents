@@ -214,4 +214,20 @@ public class ChangeSetTests
         Assert.Equal(2, raised);
         Assert.Null(set.DisabledReason);
     }
+
+    [Fact]
+    public void The_commands_note_is_announced_once_per_value_and_outlives_a_new_session()
+    {
+        var set = new ChangeSet();
+        var raised = 0;
+        set.Changed += () => raised++;
+
+        set.SetCommandsNote("not a repository");
+        set.SetCommandsNote("not a repository");
+        var announced = raised;
+        set.Reset("s2");
+
+        Assert.Equal(1, announced);
+        Assert.Equal("not a repository", set.CommandsNote);
+    }
 }

@@ -33,7 +33,15 @@ function list(
     files: ChangedFileDto[],
     extra: Partial<ChangedFilesNotification> = {},
 ): ChangedFilesNotification {
-    return { sessionId: 's1', files, overflow: false, maxFiles: 200, disabled: null, ...extra };
+    return {
+        sessionId: 's1',
+        files,
+        overflow: false,
+        maxFiles: 200,
+        disabled: null,
+        commandsNote: null,
+        ...extra,
+    };
 }
 
 test('a new store has nothing to show', () => {
@@ -42,6 +50,7 @@ test('a new store has nothing to show', () => {
     assert.equal(store.files.length, 0);
     assert.equal(store.overflow, false);
     assert.equal(store.disabled, null);
+    assert.equal(store.commandsNote, null);
 });
 
 test('apply replaces the list and keeps the order the host sent', () => {
@@ -65,6 +74,20 @@ test('apply carries the overflow and the reason nothing is tracked', () => {
     store.apply(list([], { disabled: 'Keep file checkpoints is off.' }));
     assert.equal(store.disabled, 'Keep file checkpoints is off.');
     assert.equal(store.overflow, false);
+});
+
+test('apply carries why commands are not followed, and clear forgets it', () => {
+    const store = new ChangedFilesStore();
+
+    store.apply(list([file('C:\\a.txt')], { commandsNote: 'git was not found.' }));
+    assert.equal(store.commandsNote, 'git was not found.');
+
+    store.apply(list([file('C:\\a.txt')]));
+    assert.equal(store.commandsNote, null);
+
+    store.apply(list([], { commandsNote: 'not a repository' }));
+    store.clear();
+    assert.equal(store.commandsNote, null);
 });
 
 test('every change notifies once, and an unsubscribed listener hears nothing more', () => {

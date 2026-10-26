@@ -20,6 +20,7 @@ export class ChangedFilesStore {
     private _overflow = false;
     private _maxFiles = 0;
     private _disabled: string | null = null;
+    private _commandsNote: string | null = null;
     private readonly _listeners = new Set<Listener>();
 
     get files(): readonly ChangedFileDto[] {
@@ -40,11 +41,17 @@ export class ChangedFilesStore {
         return this._disabled;
     }
 
+    /** Why the files a shell command changes are not listed, or null when they are. */
+    get commandsNote(): string | null {
+        return this._commandsNote;
+    }
+
     apply(list: ChangedFilesNotification): void {
         this._files = list.files;
         this._overflow = list.overflow;
         this._maxFiles = list.maxFiles;
         this._disabled = list.disabled;
+        this._commandsNote = list.commandsNote ?? null;
         this._notify();
     }
 
@@ -52,6 +59,7 @@ export class ChangedFilesStore {
         this._files = [];
         this._overflow = false;
         this._disabled = null;
+        this._commandsNote = null;
         this._notify();
     }
 

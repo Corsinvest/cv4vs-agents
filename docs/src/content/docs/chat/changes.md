@@ -16,7 +16,8 @@ edit. Its badge is the number of files. Clicking it opens the panel:
 - **The file** (its name, and the folder it is in). Clicking it opens Visual Studio's own diff, the
   file as it was before Claude's first edit on the left and as it is now on the right, the same
   viewer the chat uses to [review a change](/cv4vs-agents/chat/diff/). Nothing is written.
-- **M, A or D**: modified, added (Claude created it) or deleted.
+- **M, A or D**: modified, added (Claude created it) or deleted. Hover it to see whether a command
+  made the change rather than one of Claude's file tools.
 - **+3 −1**: lines added and removed, counted between those two versions. A file that changed in
   every line shows an approximate figure, marked ≈; a binary file, or one too large to read, shows
   no figure at all.
@@ -56,11 +57,38 @@ Two cases the CLI does not cover, and the extension covers for itself:
 
 A file whose copy the CLI has since pruned is listed without one: you can open it, but not undo it.
 
+## Files a command changed
+
+The CLI keeps no copy of what a shell command overwrites (`sed -i`, a script, `git checkout`, a
+formatter), whether Claude ran it through the Bash tool or the PowerShell tool. So for these the
+extension takes its own, as long as the folder is in a **git repository**:
+
+1. Before a command runs, it takes a snapshot of the working tree: every file git would list,
+   tracked or not, minus what `.gitignore` excludes. If nothing has changed since the last
+   snapshot it reuses that one, so a command that only reads costs nothing.
+2. While the command runs, a file watcher notes which files it touches. Git is then asked which of
+   them really differ from the snapshot, so a build writing into `obj/` does not fill the list.
+3. Those files get a row like any other, and Open, Keep and Undo work on it the same way. A file
+   you had edited by hand before the command is compared with your version, not with an older one.
+
+The snapshots are kept in a private git store under the extension's data folder (see
+[Settings and data](/cv4vs-agents/settings-and-data/)). It reads your repository's objects but never
+writes to them: nothing is added to your `.git`, your index or your history. The store is deleted
+when the chat closes. Turn this off with **Track the files commands change** in
+[Options](/cv4vs-agents/options/).
+
 ## What it does not cover
 
-- **What Claude changes by running a command** (`sed`, `git checkout`, a build script, a shell
-  redirect) is not listed, and says so at the bottom of the panel. Only changes made through
-  Claude's file tools are seen.
+- **What a command changes where git does not look.** A folder that is not in a git repository is
+  not followed, and the panel says so. Neither are files outside the repository, inside a submodule
+  or a repository nested in it, or ones `.gitignore` excludes: an ignore rule is the only thing that
+  tells source from build output, and without one every command would fill the list with its
+  scratch files.
+- **A command that rewrites a great many files** is followed through git instead of the file
+  watcher, and its rows carry a warning that others may be missing. Past 500 files from one
+  command, only the first 500 are listed.
+- **A file git can only give as a pointer** (Git LFS) is listed without a copy: you can open it, but
+  not undo it.
 - **More than 200 files** are not listed beyond the first 200; the panel says so.
 - **Closing Visual Studio forgets what you kept or undid.** Resuming a session rebuilds the list from
   the CLI's history, so a file you had already accepted comes back as a change.
@@ -68,4 +96,6 @@ A file whose copy the CLI has since pruned is listed without one: you can open i
 ## Options
 
 **Track the files Claude changes** (Options > Chat > Files) switches the list off. It sits next to
-**Keep file checkpoints (Rewind)**, which it depends on. See [Options](/cv4vs-agents/options/).
+**Keep file checkpoints (Rewind)**, which it depends on. **Track the files commands change** switches
+off only the part that follows shell commands, and with it the snapshots. See
+[Options](/cv4vs-agents/options/).
