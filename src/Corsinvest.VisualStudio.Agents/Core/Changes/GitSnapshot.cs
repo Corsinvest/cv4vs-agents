@@ -92,6 +92,7 @@ internal sealed class GitSnapshot : IDisposable
     // one asked for meanwhile: a burst of commands against a slow repository would queue a full scan each.
     // Every request takes a number; a run serves every request numbered before it began, and the others
     // that waited behind it take its result. All under the gate, but the counter.
+    private FileStream _owner;
     private long _requests;
     private long _lastRunServed;
     private GitTree _lastResult;
@@ -113,21 +114,33 @@ internal sealed class GitSnapshot : IDisposable
     /// <summary>The working tree's root, absolute.</summary>
     public string TopLevel { get; }
 
-    /// <summary>The newest <see cref="GitTree.Complete"/> tree taken, or null before the first one. An
-    /// incomplete one is never remembered here: it must not become somebody's "before".</summary>
+    /// <summary>The newest <see cref="GitTree.Usable"/> tree taken, or null before the first one. It may
+    /// <see cref="GitTree.Skipped">skip</see> some paths, and whoever compares with it has to ask
+    /// <see cref="GitTree.Skips"/> about each; one that is not usable at all is never remembered.</summary>
     public GitTree LatestTree { get { lock (_treeLock) { return _tree; } } }
 
     /// <summary>Find the repository <paramref name="workingDirectory"/> is in. Null when it is in none:
     /// without one there is nothing to take a snapshot of.</summary>
-    public static async Task<GitSnapshot> OpenAsync(GitRunner git, string workingDirectory, string folder, OutputWindowLogger log)
+    /// <param name="failed">Told what git said when it would not open the folder (empty when it did not
+    /// answer at all), so that "not a repository" can be told from "refused" and "too slow".</param>
+    public static async Task<GitSnapshot> OpenAsync(GitRunner git, string workingDirectory, string folder, OutputWindowLogger log,
+                                                    Action<string> failed = null)
     {
         var found = await git.RunAsync(workingDirectory,
             new[] { "rev-parse", "--show-toplevel", "--git-path", "objects", "--git-path", "index" },
             timeout: TimeSpan.FromSeconds(15)).ConfigureAwait(false);
-        if (!found.Ok) { return null; }
+        if (!found.Ok)
+        {
+            failed?.Invoke(found.TimedOut ? "" : found.Error ?? "");
+            return null;
+        }
 
         var lines = found.Output.Split('\n').Select(l => l.Trim('\r')).Where(l => l.Length > 0).ToArray();
-        if (lines.Length < 3) { return null; }
+        if (lines.Length < 3)
+        {
+            failed?.Invoke("git answered with something unexpected: " + FirstLine(found.Output));
+            return null;
+        }
 
         // Relative to where git ran, and in forward slashes: both made plain here.
         string Absolute(string path) => Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(workingDirectory, path));
@@ -169,9 +182,13 @@ internal sealed class GitSnapshot : IDisposable
             // A run that began after this was asked for is as good as one made for it.
             if (_lastRunServed >= request) { return _lastResult; }
             _lastRunServed = Interlocked.Read(ref _requests);
+            // Nothing until this run has a result: if it throws, those waiting behind it must not be handed
+            // the previous run's picture as if it were theirs.
+            _lastResult = null;
             Interlocked.Increment(ref _runs);
 
             Directory.CreateDirectory(Path.Combine(_folder, "objects"));
+            HoldOwnerMarker();
             SeedIndex();
             // A git that was killed (a timeout, the chat closing) leaves its lock behind. This folder is ours
             // alone and the gate is held, so no other git can be holding it: a stale lock would otherwise
@@ -334,6 +351,25 @@ internal sealed class GitSnapshot : IDisposable
         return false;
     }
 
+    /// <summary>The file a store holds open while it lives, so that a Visual Studio starting up can tell a
+    /// store that is in use (however long it has been idle) from one left behind by a crash: the sweep
+    /// leaves alone a folder whose marker it cannot open.</summary>
+    internal const string OwnerMarker = ".owner";
+
+    private void HoldOwnerMarker()
+    {
+        if (_owner is not null) { return; }
+        try
+        {
+            _owner = new FileStream(Path.Combine(_folder, OwnerMarker), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Without it the store is judged by its age, as before.
+            _log.Debug(() => $"[git] could not mark {_folder} as in use: {ex.Message}");
+        }
+    }
+
     private string IndexFile => Path.Combine(_folder, "index");
 
     private string IndexLock => IndexFile + ".lock";
@@ -384,6 +420,10 @@ internal sealed class GitSnapshot : IDisposable
         var held = false;
         try { held = _gate.Wait(TimeSpan.FromSeconds(10)); }
         catch (Exception ex) when (ex is ObjectDisposedException or InvalidOperationException) { /* disposed twice */ }
+        // Closed first: a folder cannot be deleted under a file held open in it.
+        try { _owner?.Dispose(); }
+        catch (IOException) { /* gone with the process anyway */ }
+        _owner = null;
         try
         {
             ChangeBaselines.DeleteTree(_folder);

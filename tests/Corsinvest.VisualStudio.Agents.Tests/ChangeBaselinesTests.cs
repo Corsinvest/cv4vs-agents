@@ -155,6 +155,29 @@ public sealed class ChangeBaselinesTests : IDisposable
     }
 
     [Fact]
+    public void A_folder_whose_owner_marker_is_held_open_is_not_swept_however_old_and_is_once_it_is_let_go()
+    {
+        var live = Path.Combine(_root, "live");
+        Directory.CreateDirectory(live);
+        var marker = Path.Combine(live, GitSnapshot.OwnerMarker);
+        File.WriteAllText(marker, "");
+        var old = DateTime.UtcNow.AddDays(-30);
+        File.SetCreationTimeUtc(marker, old);
+        File.SetLastWriteTimeUtc(marker, old);
+        Directory.SetCreationTimeUtc(live, old);
+        Directory.SetLastWriteTimeUtc(live, old);
+
+        using (new FileStream(marker, FileMode.Open, FileAccess.ReadWrite, FileShare.Read))
+        {
+            _baselines.Sweep(TimeSpan.FromDays(14));
+            Assert.True(Directory.Exists(live));
+        }
+
+        _baselines.Sweep(TimeSpan.FromDays(14));
+        Assert.False(Directory.Exists(live));
+    }
+
+    [Fact]
     public void A_folder_with_a_copy_made_recently_in_it_is_kept_whatever_its_own_time_says()
     {
         // The folder's time moves only when an entry is added or removed, and a copy keeps the write time

@@ -48,6 +48,10 @@ internal sealed class SessionChangesOptions
     /// the rows say so. Null = the default; a test sets it low to reach the cap without writing hundreds
     /// of files.</summary>
     public int? MaxRowsPerCommand { get; set; }
+
+    /// <summary>The largest file a command may change and still get a copy of how it was, for Undo. Null =
+    /// the default; a test sets it low.</summary>
+    public long? MaxBaselineBytes { get; set; }
 }
 
 /// <summary>Everything one chat pane knows about the files Claude changed: it feeds the
@@ -139,15 +143,16 @@ internal sealed partial class SessionChanges : IDisposable
     }
 
     /// <summary>Start following what shell commands change: find the git repository of the working
-    /// directory and watch it. In the background, and once; nothing happens outside a git working tree. No
-    /// picture of the tree is taken yet (see <see cref="WarmUp"/>): a chat that never runs a command, or is
-    /// only restored with the solution, costs no reading of the disk.</summary>
+    /// directory and watch it. In the background, and once; nothing happens outside a git working tree.
+    /// Called when Claude is about to work (<see cref="WarmUp"/>) or the first command arrives, and not
+    /// before: a chat that never runs a command, or is only restored with the solution, runs no git, watches
+    /// no folder and reads no disk.</summary>
     public void StartTracking()
     {
         if (_disposed || _bash is not null) { return; }
         var folder = Path.Combine(_options.SnapshotsRoot ?? AppPaths.SnapshotsFolder, Guid.NewGuid().ToString("N"));
         _bash = BashTracker.StartAsync(_workingDirectory, folder, _set, _baselines, _log, _options.MaxRowsPerCommand,
-                                    path => RefreshRowAsync(path, null));
+                                       path => RefreshRowAsync(path, null), _options.MaxBaselineBytes);
     }
 
     /// <summary>Claude is about to work: take the first picture of the working tree now, in the background,
