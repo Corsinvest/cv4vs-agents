@@ -162,6 +162,7 @@
     <Compile Include="Ide\Changes\CopilotReview.cs" />
     <Compile Include="Ide\Changes\ReviewRegistry.cs" />
     <Compile Include="Ide\Changes\FileNavigationCommands.cs" />
+    <Compile Include="Ide\Changes\MultiDiffReviewer.cs" />
     <Compile Include="Mcp\McpServerHost.cs" />
     <Compile Include="Mcp\McpServerHost.LockFile.cs" />
     <Compile Include="Mcp\McpTool.cs" />
@@ -290,6 +291,7 @@
     <Compile Include="Core\Changes\BaselineText.cs" />
     <Compile Include="Core\Changes\CopilotReviewShape.cs" />
     <Compile Include="Core\Changes\ReviewOwnership.cs" />
+    <Compile Include="Core\Changes\MultiDiffShape.cs" />
     <Compile Include="Core\Changes\BaselineReview.cs" />
     <Compile Include="Core\Client\ClaudeInstall.cs" />
     <Compile Include="Core\Client\ClaudeUpdate.cs" />

@@ -61,6 +61,7 @@ export const Msg = {
             undo: 'undo_changed_file',
             keepAll: 'keep_all_changed_files',
             undoAll: 'undo_all_changed_files',
+            reviewAll: 'review_all_changed_files',
         },
         chat: {
             getImage: 'get_chat_image',

@@ -29,6 +29,7 @@ public sealed class BashChangesTests : IDisposable
         public Task OpenFileAsync(string path) => Task.CompletedTask;
         public Task<bool> ShowInPlaceAsync(ChangeSet set, string path) => Task.FromResult(false);
         public Task EndReviewAsync(string path) => Task.CompletedTask;
+        public Task<bool> ShowAllAsync(ChangeSet set) => Task.FromResult(false);
     }
 
     private readonly GitRepoFixture _repo;
