@@ -41,6 +41,10 @@ internal sealed class SessionChangesOptions
     /// <summary>The editor Keep, Undo and Open act through. Null = Visual Studio.</summary>
     public IChangeEditor Editor { get; set; }
 
+    /// <summary>This pane's number: the one thing that has to be named to another pane is the file two panes list.
+    /// Null = none (a test).</summary>
+    public Func<int> PaneId { get; set; }
+
     /// <summary>Where the git snapshots of the working tree go. Null = the running extension's folder.</summary>
     public string SnapshotsRoot { get; set; }
 
@@ -102,6 +106,52 @@ internal sealed partial class SessionChanges : IDisposable
     }
 
     public ChangeSet Set => _set;
+
+    /// <summary>This pane's number, or 0 when it has none.</summary>
+    public int PaneId => _options.PaneId?.Invoke() ?? 0;
+
+    /// <summary>Where this extension's own copies go.</summary>
+    public ChangeBaselines Baselines => _baselines;
+
+    /// <summary>The session the list belongs to, or null before one is known.</summary>
+    public string SessionId => _set.SessionId;
+
+    /// <summary>Measure a listed file again, for whoever has just written it.</summary>
+    public Task RemeasureAsync(string path) => RefreshRowAsync(path, null);
+
+    /// <summary>The row's baseline becomes <paramref name="bytes"/>, a copy of this extension's own: what a hunk kept in
+    /// the editor turns the baseline into, so that it stays kept for the counts, for Open and for Undo. The copy the row had
+    /// goes, if it was ours. Returns the path of the new copy, or null when the row is gone or the copy could not be
+    /// written (the row then keeps the baseline it had).</summary>
+    public Task<string> ReplaceBaselineAsync(string path, byte[] bytes) => Task.Run(async () =>
+    {
+        if (_disposed || !_set.TryGet(path, out _)) { return null; }
+        var target = _baselines.TargetFor(_set.SessionId, path);
+        try { File.WriteAllBytes(target, bytes); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Warn($"[changes] could not write the new baseline of {path}: {ex.Message}");
+            return null;
+        }
+
+        var fresh = BaselineRef.Own(target);
+        var replaced = BaselineRef.None;
+        var updated = _set.Update(path, r =>
+        {
+            replaced = r.Baseline;
+            r.Baseline = fresh;
+            r.BaselineMissing = false;
+        });
+        if (!updated)
+        {
+            // The row went while the copy was being written: nothing holds it.
+            _baselines.Release(fresh);
+            return null;
+        }
+        _baselines.Release(replaced);
+        await RefreshRowAsync(path, null).ConfigureAwait(false);
+        return target;
+    });
 
     /// <summary>What the panel says about shell commands: why they are not followed, or null when they
     /// are (or it is not yet known, before the first look at the folder).</summary>

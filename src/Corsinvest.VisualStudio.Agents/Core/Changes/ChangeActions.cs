@@ -40,8 +40,10 @@ internal sealed class ChangeFailure
 internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IChangeEditor editor, OutputWindowLogger log,
                                     Func<string, Task> remeasure = null)
 {
-    /// <summary>Show the file against how it was before Claude's first edit, read-only, in VS's
-    /// comparison window. A file with no baseline, or one that is not text, is opened instead.</summary>
+    /// <summary>Show the file against how it was before Claude's first edit: in its own editor, with the
+    /// changes drawn in it, where that can be done (see <see cref="IChangeEditor.ShowInPlaceAsync"/>), and
+    /// otherwise read-only in VS's comparison window. A file with no baseline, or one that is not text, is
+    /// opened instead.</summary>
     public async Task OpenAsync(string path)
     {
         // Only a listed path: the WebView names it, and a name is not a licence to open any file.
@@ -51,6 +53,8 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
             await editor.OpenFileAsync(path);
             return;
         }
+
+        if (await editor.ShowInPlaceAsync(set, path)) { return; }
 
         string before, current;
         try
@@ -186,7 +190,8 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
             // with the same byte-order mark: a legacy code page decoded as UTF-8 loses its accents, and a
             // file whose mark was added or dropped since would come back without or with one it never had.
             var text = ChangeEvaluator.DecodeStrict(bytes);
-            if (text is not null && await Task.Run(() => File.Exists(path)).ConfigureAwait(false) && await SameMarkAsync(bytes, path).ConfigureAwait(false))
+            if (text is not null && await Task.Run(() => File.Exists(path)).ConfigureAwait(false)
+                && await ChangeEvaluator.SameMarkAsync(bytes, path).ConfigureAwait(false))
             {
                 switch (await editor.ReplaceDocumentTextAsync(path, text))
                 {
@@ -208,12 +213,5 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
         {
             return ex.Message;
         }
-    }
-
-    /// <summary>Whether the file on disk starts with the same byte-order mark as the baseline.</summary>
-    private static async Task<bool> SameMarkAsync(byte[] baseline, string path)
-    {
-        var head = await AsyncFile.ReadHeadAsync(path, 4).ConfigureAwait(false);
-        return ChangeEvaluator.ByteOrderMark(head) == ChangeEvaluator.ByteOrderMark(baseline);
     }
 }

@@ -40,6 +40,12 @@ internal interface IChangeEditor
     Task ShowDiffAsync(string key, string path, string before, string after, string leftLabel, string rightLabel);
 
     Task OpenFileAsync(string path);
+
+    /// <summary>Open the file in its own editor with the changes drawn in it, against the baseline of its row in
+    /// <paramref name="set"/>. False when that cannot be done here (the setting says Files, this Visual Studio's
+    /// editor cannot show a difference, the file is not plain text, another chat is reviewing it): the caller
+    /// falls back to the comparison window.</summary>
+    Task<bool> ShowInPlaceAsync(ChangeSet set, string path);
 }
 
 /// <summary>The real editor: Visual Studio, through <see cref="IdeContextService"/>.</summary>
@@ -61,4 +67,7 @@ internal sealed class IdeChangeEditor : IChangeEditor
 
     public async Task OpenFileAsync(string path)
         => await IdeContextService.Instance.OpenFileAsync(path, 0, 0, true);
+
+    public Task<bool> ShowInPlaceAsync(ChangeSet set, string path)
+        => Ide.Changes.BaselineDocumentRegistry.Instance.ShowAsync(set, path);
 }
