@@ -328,6 +328,7 @@ public partial class ChatPaneControl : PaneControlBase
     private WebViewBridge _bridge;
     private WebViewMessageHandler _handler;
     private SessionChanges _changes;
+    private System.Threading.Timer _changesPush;
     // Session id we've already tried to auto-title, so we ask the CLI only once.
     private string _titledSessionId;
     private bool _initialized;
@@ -517,6 +518,8 @@ public partial class ChatPaneControl : PaneControlBase
         // pane, and would otherwise keep WebView's window-tracking hook (and WebView itself) alive.
         WebView.ReleaseWindowTracking();
         IdeContextService.Instance.ContextChanged -= OnEditorContextChanged;
+        if (_changes is not null) { _changes.Set.Changed -= OnChangesChanged; }
+        _changesPush?.Dispose();
         _changes?.Dispose();
         _handler?.Dispose();
         // Detach the client events before disposing: an event still in flight (a final
@@ -847,7 +850,8 @@ public partial class ChatPaneControl : PaneControlBase
             FileCheckpoints = () => _client is not null && _client.FileCheckpoints,
             PrepareFile = SaveBeforeCopyAsync,
         }, _log);
-        _handler = new WebViewMessageHandler(_bridge, _client, Entry, _log);
+        _changes.Set.Changed += OnChangesChanged;
+        _handler = new WebViewMessageHandler(_bridge, _client, Entry, _log, _changes);
         // The status bar reads usage from this pane's process instead of starting one of its own. Null
         // before init has answered, or when get_usage fails: an error must not read as "no limits".
         Entry.FetchUsageAction = async () =>

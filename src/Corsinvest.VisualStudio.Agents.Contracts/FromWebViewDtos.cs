@@ -260,3 +260,16 @@ public class OpenOptionsNotification
     /// spelling out the path to it.</summary>
     public string Page { get; set; }
 }
+
+/// <summary>Which file of the Changes list an action is for (keep_changed_file, undo_changed_file).</summary>
+public class ChangedFileRequest
+{
+    /// <summary>Absolute path, as the list gave it.</summary>
+    public string Path { get; set; } = "";
+}
+
+/// <summary>Show a changed file against how it was before Claude's first edit (open_changed_file).</summary>
+public class OpenChangedFileNotification
+{
+    public string Path { get; set; } = "";
+}

@@ -275,6 +275,9 @@
     <Compile Include="Core\Changes\HookEdit.cs" />
     <Compile Include="Core\Changes\LineDiff.cs" />
     <Compile Include="Core\Changes\SessionChanges.cs" />
+    <Compile Include="Core\Changes\ChangeActions.cs" />
+    <Compile Include="Core\Changes\ChangeEditor.cs" />
+    <Compile Include="Core\Changes\ChangedFilesMapper.cs" />
     <Compile Include="Core\Client\ClaudeInstall.cs" />
     <Compile Include="Core\Client\ClaudeUpdate.cs" />
     <Compile Include="Core\Client\ClientMessages.cs" />
@@ -387,6 +390,7 @@
     <Compile Include="Chat\Host\WebViewMessageHandler.Cli.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Open.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Chat.cs" />
+    <Compile Include="Chat\Host\WebViewMessageHandler.ChangedFiles.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Plugins.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Helpers.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Rewind.cs" />
