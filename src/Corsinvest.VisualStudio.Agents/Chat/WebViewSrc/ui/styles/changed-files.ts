@@ -131,6 +131,14 @@ export const changedFilesStyles = css`
         color: var(--colorNeutralForeground3);
     }
 
+    /* Another chat lists this file too: the label follows the folder and does not shrink. */
+    .cv-changes-shared {
+        flex-shrink: 0;
+        white-space: nowrap;
+        font-size: var(--fontSizeBase200);
+        color: var(--colorNeutralForeground3);
+    }
+
     /* Where the warning goes, whether or not there is one. */
     .cv-changes-slot {
         flex-shrink: 0;

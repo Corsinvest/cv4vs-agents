@@ -13,6 +13,7 @@ import {
     changedFiles,
     countsNote,
     countsTip,
+    sharedNote,
     splitShownPath,
     stateLetter,
     undoBlocker,
@@ -191,6 +192,7 @@ export class CvChangedFilesChip extends LitElement {
         const { name, dir } = splitShownPath(displayPathUi(file.path));
         const blocker = undoBlocker(file);
         const note = countsNote(file);
+        const shared = sharedNote(file);
         // Both can hold at once (a shell command's file that also has no copy): say both.
         const warning =
             [blocker, file.incomplete ? INCOMPLETE : null].filter(Boolean).join(' ') || null;
@@ -199,6 +201,7 @@ export class CvChangedFilesChip extends LitElement {
                 <img class="cv-changes-fileicon" src=${iconUrl(file.path)} alt="" />
                 <span class="cv-changes-name">${name}</span>
                 <span class="cv-changes-dir">${dir}</span>
+                ${shared ? html`<span class="cv-changes-shared" data-tip=${shared.tip}>${shared.label}</span>` : nothing}
             </button>
             <!-- A slot of its own, empty or not, so the columns after it line up from row to row. -->
             <span class="cv-changes-slot">
