@@ -49,6 +49,45 @@ and the next edit of that file is compared with how it is now.
 - If a file cannot be restored (it is locked, or open in a designer that cannot take the text) the
   row stays, with the reason, so you can see it did not happen. Undo all carries on with the rest.
 
+## In the editor
+
+A listed file that is open in an editor shows its changes in place, in the editor's own window: the lines
+Claude removed are drawn among the file's own (or on the left, in the side-by-side form), and the hunk the
+caret is in has its **Keep** and **Undo** at the right edge of the window, above it. **Open** in the panel does
+the same for a file that is not open yet. A file opened later, or changed by Claude while it was open, is
+switched when it appears.
+
+- **Keep** accepts one hunk as it is. It stops being a difference; nothing is written to the file.
+- **Undo** puts back what was there before Claude's change, in that hunk only, as one edit that **Ctrl+Z**
+  takes back, and saves the file the way your own save would, format on save included.
+- When the last hunk has been kept or undone, the file leaves the list. A file you edit back to how it was by
+  hand does too.
+- **Keep all** and **Undo all**, in the window's menu, are the list's Keep and Undo of the whole file.
+
+The same commands are in the code window's context menu, which lists them only while the window shows a
+review, and under key chords in the text editor: **Ctrl+Alt+Y** keeps and **Ctrl+Alt+N** undoes the hunk under
+the caret, **Ctrl+Alt+Shift+Y** and **Ctrl+Alt+Shift+N** do the same for the whole file, and **Ctrl+Alt+Down**
+goes to the next change. Rebind them in Tools > Options > Keyboard, looking for *Keep this change* and its
+neighbours.
+
+**Show the changes in the editor** (Options > Chat > Files) picks the form: *Inline* (the default),
+*SideBySide*, or *Files*, which leaves the editor alone and makes Open show the comparison window described
+above.
+
+A file that cannot be shown this way is shown in the comparison window instead, and with Options > Debug >
+Log level at *Info* the log says why. The reasons: this Visual Studio's editor cannot show a difference in the
+file; the file is not plain UTF-8 or UTF-16 text, or its byte-order mark is not what it was before Claude's
+change; it is read-only; its window shows two languages in one file (Razor, for one); another extension,
+Copilot or a Git diff, is already showing a difference in it; or the list has no copy of the file from before.
+
+A few things work differently there:
+
+- A file Claude **created** is one hunk, so Keep and Undo of it are those of the file: Undo deletes it, as the
+  list's does.
+- After a **Keep** of a hunk, the baseline the list holds is the one the editor shows, so the counts, Open and
+  an Undo of the whole file all agree with it. It is kept in the file's own encoding.
+- A file that two chats list is shown for the one whose row changed last, and each row says *also in Chat N*.
+
 ## What it compares with
 
 The copy the CLI keeps before it first edits a file: the same ones [Rewind](/cv4vs-agents/chat/rewind/)
