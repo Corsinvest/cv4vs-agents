@@ -149,6 +149,15 @@ internal sealed class ChatWebView : WebView2CompositionControl
         _webview2BaseField?.FieldType.GetProperty("CoreWebView2Controller", BindingFlags.NonPublic | BindingFlags.Instance);
     private static bool _reflectionWarned;
 
+    /// <summary>Whether both members reached by reflection are still there, and the property still
+    /// hands back a controller. The unit tests assert it against the Microsoft.Web.WebView2.Wpf the
+    /// project references, so an SDK bump that renames either fails CI instead of quietly turning
+    /// the floating-pane fix off.</summary>
+    internal static bool InternalsFound
+        => _webview2BaseField != null
+           && _controllerProperty != null
+           && typeof(CoreWebView2Controller).IsAssignableFrom(_controllerProperty.PropertyType);
+
     /// <summary>The live controller behind this control, or null before init completes, or if a
     /// future SDK ever reshapes these internals: reflection is the only way to reach either
     /// member, so a missing one degrades to the stock behavior instead of throwing.</summary>
@@ -156,12 +165,15 @@ internal sealed class ChatWebView : WebView2CompositionControl
     {
         get
         {
-            if (_webview2BaseField == null || _controllerProperty == null)
+            if (!InternalsFound)
             {
                 if (!_reflectionWarned)
                 {
                     _reflectionWarned = true;
-                    Log.Warn("[webview] WebView2CompositionControl internals not found; a floating chat pane won't take typing");
+                    // LogException, not Warn: it is written whatever the log level, and the default is
+                    // None, so a Warn would never reach anyone who pastes us their Output window.
+                    Log.LogException("[webview] Controller", new MissingMemberException(
+                        "WebView2CompositionControl internals not found; a floating chat pane won't take typing"));
                 }
                 return null;
             }
@@ -274,9 +286,20 @@ internal sealed class ChatWebView : WebView2CompositionControl
         var mainHandle = main == null ? IntPtr.Zero : new WindowInteropHelper(main).Handle;
         var want = host.Handle == mainHandle ? null : host;
         if (ReferenceEquals(_watched, want)) { return; }
-        _watched?.RemoveHook(OnHostMessage);
+        Unwatch();
         _watched = want;
         want?.AddHook(OnHostMessage);
+    }
+
+    /// <summary>Drops the hook on the watched window. It also runs from inside that window's own
+    /// WM_DESTROY, where a throw would go straight to the WPF dispatcher, so it never throws. The
+    /// field is cleared first, so a failure cannot leave a dying window in it.</summary>
+    private void Unwatch()
+    {
+        var watched = _watched;
+        _watched = null;
+        try { watched?.RemoveHook(OnHostMessage); }
+        catch (Exception ex) { Log.LogException("[webview] Unwatch", ex); }
     }
 
     private const int WM_DESTROY = 0x0002;
@@ -312,8 +335,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
     /// reconcile queued afterwards puts it wherever the pane lands next.</summary>
     private void Park(IntPtr dying)
     {
-        _watched?.RemoveHook(OnHostMessage);
-        _watched = null;
+        Unwatch();
         try
         {
             var controller = Controller;
@@ -350,8 +372,21 @@ internal sealed class ChatWebView : WebView2CompositionControl
 
     private void ReconcileIfStale()
     {
-        var host = TopLevelHost();
-        if (host == null || _knownParent == IntPtr.Zero || _knownParent == host.Handle) { return; }
+        // Called from the previews, so anything thrown here would land on a click. Reconcile has its
+        // own try; the host lookup before it needs one too.
+        IntPtr hostHandle;
+        try
+        {
+            var host = TopLevelHost();
+            if (host == null) { return; }
+            hostHandle = host.Handle;
+        }
+        catch (Exception ex)
+        {
+            Log.LogException("[webview] ReconcileIfStale", ex);
+            return;
+        }
+        if (_knownParent == IntPtr.Zero || _knownParent == hostHandle) { return; }
         Reconcile();
     }
 
@@ -361,8 +396,7 @@ internal sealed class ChatWebView : WebView2CompositionControl
     {
         PresentationSource.RemoveSourceChangedHandler(this, OnPresentationSourceChanged);
         CoreWebView2InitializationCompleted -= OnCoreWebView2InitializationCompleted;
-        _watched?.RemoveHook(OnHostMessage);
-        _watched = null;
+        Unwatch();
     }
     // Static: the browser has ONE task manager, so one owner serves every pane. A per-pane field
     // grew a spare renderer for each chat that had opened it, all of them then listed in the very
