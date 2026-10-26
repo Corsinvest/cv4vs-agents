@@ -96,7 +96,9 @@ Turn this off with **Track the files commands change** in [Options](/cv4vs-agent
 ## What it does not cover
 
 - **What a command changes where git does not look.** A folder that is not in a git repository is
-  not followed, and the panel says so. Neither are files outside the repository, inside a submodule
+  not followed, and the panel says so, as it does when git refuses the repository (one that belongs
+  to another user: mark it with `git config --global --add safe.directory`) or does not answer.
+  Neither are files outside the repository, inside a submodule
   or a repository nested in it, or ones `.gitignore` excludes: an ignore rule is the only thing that
   tells source from build output, and without one every command would fill the list with its
   scratch files. A repository that is a whole drive or your profile folder (some dotfiles setups)
@@ -116,7 +118,8 @@ Turn this off with **Track the files commands change** in [Options](/cv4vs-agent
 - **A command that is slow to start**, because the repository is too big to photograph in time (30
   seconds), runs without being followed. The next one is, once the snapshot is there.
 - **A file git can only give as a pointer** (Git LFS) is listed without a copy: you can open it, but
-  not undo it.
+  not undo it. So is a file larger than 100 MB that a command changed: copying what it was would
+  fill the disk with a dataset or an installer.
 - **Closing Visual Studio forgets what you kept or undid.** Resuming a session rebuilds the list from
   the CLI's history, so a file you had already accepted comes back as a change.
 
