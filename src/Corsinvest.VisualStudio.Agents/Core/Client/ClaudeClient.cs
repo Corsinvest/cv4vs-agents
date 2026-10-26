@@ -361,6 +361,15 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public const string ChangesPreHookId = "cv_changes_pre";
     public const string ChangesHookId = "cv_changes";
 
+    /// <summary>The tools that run a shell command. The CLI offers PowerShell beside Bash on Windows,
+    /// and a command run through either changes files the edit tools never see.</summary>
+    private const string ShellTools = "Bash|PowerShell";
+
+    /// <summary>Callback ids of the hooks that bracket a shell command: before it runs (a picture of the
+    /// working tree) and after it ends or fails (what changed).</summary>
+    public const string BashBeginHookId = "cv_bash_begin";
+    public const string BashEndHookId = "cv_bash_end";
+
     private void SendInitializeHooks() =>
         // `initialize` carries the model catalogue + rich slash commands (→ ModelsReceived) and the
         // fast-mode state; get_settings adds the model + Model-menu toggles. Together they seed the UI
@@ -391,11 +400,19 @@ internal sealed partial class ClaudeClient : IClaudeClient
                         new { matcher = "Edit|Write|Read", hookCallbackIds = new[] { AutosaveHookId } },
                         new { matcher = "Edit|Write|MultiEdit", hookCallbackIds = new[] { DiagBaselineHookId } },
                         new { matcher = "Edit|Write|MultiEdit|NotebookEdit", hookCallbackIds = new[] { ChangesPreHookId } },
+                        new { matcher = ShellTools, hookCallbackIds = new[] { BashBeginHookId } },
                     },
                     PostToolUse = new[]
                     {
                         new { matcher = "Edit|Write|MultiEdit", hookCallbackIds = new[] { DiagCheckHookId } },
                         new { matcher = "Edit|Write|MultiEdit|NotebookEdit", hookCallbackIds = new[] { ChangesHookId } },
+                        new { matcher = ShellTools, hookCallbackIds = new[] { BashEndHookId } },
+                    },
+                    // A command that fails fires this instead of PostToolUse; what it changed before it
+                    // failed is still a change.
+                    PostToolUseFailure = new[]
+                    {
+                        new { matcher = ShellTools, hookCallbackIds = new[] { BashEndHookId } },
                     },
                 },
                 sdkMcpServers = sdkServers,

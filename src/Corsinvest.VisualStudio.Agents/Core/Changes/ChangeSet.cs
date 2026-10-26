@@ -41,6 +41,7 @@ internal sealed class ChangeSet
     private string _sessionId;
     private bool _overflow;
     private string _disabledReason;
+    private string _commandsNote;
 
     /// <summary>Raised after any change to the rows or flags, on the thread that made it, outside the lock.</summary>
     public event Action Changed;
@@ -50,6 +51,11 @@ internal sealed class ChangeSet
 
     /// <summary>Why nothing is being tracked, or null when something is.</summary>
     public string DisabledReason { get { lock (_gate) { return _disabledReason; } } }
+
+    /// <summary>Why the files a shell command changes are not followed, or null when they are. Belongs to
+    /// the pane, not the session: a new conversation in the same folder is no more a repository than
+    /// the last one, so a reset leaves it alone.</summary>
+    public string CommandsNote { get { lock (_gate) { return _commandsNote; } } }
 
     public bool TryGet(string path, out FileChange row)
     {
@@ -232,6 +238,16 @@ internal sealed class ChangeSet
         {
             if (string.Equals(_disabledReason, reason, StringComparison.Ordinal)) { return; }
             _disabledReason = reason;
+        }
+        RaiseAfter();
+    }
+
+    public void SetCommandsNote(string note)
+    {
+        lock (_gate)
+        {
+            if (string.Equals(_commandsNote, note, StringComparison.Ordinal)) { return; }
+            _commandsNote = note;
         }
         RaiseAfter();
     }

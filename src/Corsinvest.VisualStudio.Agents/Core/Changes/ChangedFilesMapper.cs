@@ -12,13 +12,15 @@ namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 /// where a wrong word would reach the screen, can be tested.</summary>
 internal static class ChangedFilesMapper
 {
-    public static Contracts.ChangedFilesNotification Build(ChangeSet set) => new()
+    /// <param name="commandsNote">Why shell commands are not followed, when they are not (see <see cref="SessionChanges.CommandsNote"/>).</param>
+    public static Contracts.ChangedFilesNotification Build(ChangeSet set, string commandsNote = null) => new()
     {
         SessionId = set.SessionId,
         Files = set.Snapshot().Select(ToDto).ToArray(),
         Overflow = set.Overflow,
         MaxFiles = ChangeSet.MaxFiles,
         Disabled = set.DisabledReason,
+        CommandsNote = commandsNote,
     };
 
     public static Contracts.ChangedFileDto ToDto(FileChange row) => new()
