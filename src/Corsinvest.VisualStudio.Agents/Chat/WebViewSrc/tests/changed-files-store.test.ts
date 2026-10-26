@@ -145,10 +145,21 @@ test('stateLetter names the three states and treats anything else as modified', 
 });
 
 test('countsNote says why there are no numbers, and nothing when there are', () => {
-    assert.equal(countsNote({ counts: 'exact', isBinary: false }), null);
-    assert.equal(countsNote({ counts: 'approximate', isBinary: false }), null);
-    assert.equal(countsNote({ counts: 'unavailable', isBinary: false }), 'not counted');
-    assert.equal(countsNote({ counts: 'unavailable', isBinary: true }), 'binary');
+    const base = { state: 'modified', added: 1, deleted: 1 };
+    assert.equal(countsNote({ ...base, counts: 'exact', isBinary: false }), null);
+    assert.equal(countsNote({ ...base, counts: 'approximate', isBinary: false }), null);
+    assert.equal(countsNote({ ...base, counts: 'unavailable', isBinary: false }), 'not counted');
+    assert.equal(countsNote({ ...base, counts: 'unavailable', isBinary: true }), 'binary');
+});
+
+test('a modified file with no line different is said to differ only in how its lines end', () => {
+    const none = { counts: 'exact', isBinary: false, added: 0, deleted: 0 } as const;
+
+    assert.equal(countsNote({ ...none, state: 'modified' }), 'line endings only');
+    // An empty file Claude created has no lines either, and that is not a line-ending change.
+    assert.equal(countsNote({ ...none, state: 'added' }), null);
+    // One line moved: the figures say so.
+    assert.equal(countsNote({ ...none, state: 'modified', added: 1 }), null);
 });
 
 test('undoBlocker is null when there is a baseline, else says which kind of absence', () => {
