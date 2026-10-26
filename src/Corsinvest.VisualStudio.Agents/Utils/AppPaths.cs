@@ -67,6 +67,10 @@ internal static class AppPaths
     /// wrong in the editor costs nothing that cannot be got back.</summary>
     public static readonly string RecoveryFolder = Path.Combine(DataFolder, "recovery");
 
+    /// <summary>What the person accepted with Keep in each chat, one small file per session, so that resuming the chat
+    /// does not list those files again. Written by Core/Changes (KeptLedger), which also sweeps it.</summary>
+    public static readonly string ChangesFolder = Path.Combine(DataFolder, "changes");
+
     /// <summary>Private git indexes and object stores, one folder per open chat: the pictures of a
     /// working tree that tell what a shell command changed. Deleted with the chat; what a crash leaves is
     /// swept when the next chat starts.</summary>

@@ -25,13 +25,17 @@ public sealed class SessionChangesTests : IDisposable
         catch (IOException) { /* a scratch folder; absent when nothing was copied */ }
     }
 
-    private SessionChanges Create(SessionFixture fx, Func<bool> checkpoints = null, int[] poll = null, Func<string, Task> prepare = null)
+    private string KeptFolder => Path.Combine(_baselinesRoot, "changes");
+
+    private SessionChanges Create(SessionFixture fx, Func<bool> checkpoints = null, int[] poll = null, Func<string, Task> prepare = null,
+                                  KeptLedger kept = null)
         => new(fx.Paths, fx.WorkingDirectory, new SessionChangesOptions
         {
             FileCheckpoints = checkpoints ?? (() => true),
             PollMilliseconds = poll ?? new[] { 0, 20, 40, 80 },
             PrepareFile = prepare,
             Baselines = new ChangeBaselines(_baselinesRoot, OutputWindowLogger.Global),
+            Kept = kept ?? new KeptLedger(KeptFolder, OutputWindowLogger.Global),
         }, OutputWindowLogger.Global);
 
     private static HookEdit Hook(SessionFixture fx, string file, string toolUseId, string agentId = null, string sessionId = null)
@@ -484,6 +488,41 @@ public sealed class SessionChangesTests : IDisposable
         var after = Assert.Single(changes.Set.Snapshot());
         Assert.True(File.Exists(after.Baseline.Path));
         Assert.False(after.BaselineMissing);
+    }
+
+    [Fact]
+    public async Task A_file_that_was_kept_is_not_listed_again_when_the_session_is_resumed_unless_it_changed_since()
+    {
+        using var fx = Transcript(
+            Jsonl.FileHistoryDelta("a.txt", "a@v1", 1),
+            Jsonl.FileHistoryDelta("b.txt", "b@v1", 1));
+        fx.WriteBackup("a@v1", "a\n");
+        fx.WriteBackup("b@v1", "b\n");
+        fx.WriteWork("a.txt", "a\nclaude\n");
+        fx.WriteWork("b.txt", "b\nclaude\n");
+
+        // The first run of Visual Studio: both are listed, and the person keeps one.
+        using (var first = Create(fx))
+        {
+            first.BeginSession(fx.SessionId, resume: true);
+            Assert.True(SpinWait.SpinUntil(() => first.Set.Count == 2, TimeSpan.FromSeconds(10)));
+            await first.Actions.KeepAsync(Work(fx, "a.txt"));
+        }
+
+        // The next run resumes the session: only the one that was not kept comes back.
+        using (var second = Create(fx))
+        {
+            second.BeginSession(fx.SessionId, resume: true);
+            Assert.True(SpinWait.SpinUntil(() => second.Set.Count >= 1, TimeSpan.FromSeconds(10)));
+            await Task.Delay(300);
+            Assert.Equal(new[] { Work(fx, "b.txt") }, second.Set.Snapshot().Select(r => r.Path));
+        }
+
+        // Claude changes the kept file afterwards: it is a change again, against the CLI's baseline as before.
+        fx.WriteWork("a.txt", "a\nclaude\nand again\n");
+        using var third = Create(fx);
+        third.BeginSession(fx.SessionId, resume: true);
+        Assert.True(SpinWait.SpinUntil(() => third.Set.Count == 2, TimeSpan.FromSeconds(10)));
     }
 
     [Fact]
