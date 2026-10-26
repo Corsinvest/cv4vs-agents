@@ -11,4 +11,5 @@ export interface ChangedFilesNotification {
     overflow: boolean;
     maxFiles: number;
     disabled: string | null;
+    commandsNote: string | null;
 }

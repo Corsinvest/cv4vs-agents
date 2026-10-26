@@ -119,8 +119,13 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Files")]
     [DisplayName("Track the files Claude changes")]
-    [Description("Keep a list of the files Claude changed in this chat, measured against how they were before its first edit, with Keep and Undo for each. Needs \"Keep file checkpoints\" on: those copies are what the list compares against. Only edits made through Claude's file tools are covered: what it changes by running a command is not. Takes effect on the next edit.")]
+    [Description("Keep a list of the files Claude changed in this chat, measured against how they were before its first edit, with Keep and Undo for each. Needs \"Keep file checkpoints\" on: those copies are what the list compares against. Files it changes by running a command are covered by the next setting. Takes effect on the next edit.")]
     public bool TrackChanges { get; set; } = true;
+
+    [Category("Files")]
+    [DisplayName("Track the files commands change")]
+    [Description("Also list the files Claude changes by running a command (sed, a script, git checkout), measured against a snapshot of the working tree taken just before the command. Needs the folder to be in a git repository, and \"Track the files Claude changes\" on. The snapshots are kept in a private store under the extension's data folder: nothing is written into your repository. Takes effect on the next command.")]
+    public bool TrackBashChanges { get; set; } = true;
 
     [Category("Files")]
     [DisplayName("Send post-edit diagnostics to Claude (experimental)")]

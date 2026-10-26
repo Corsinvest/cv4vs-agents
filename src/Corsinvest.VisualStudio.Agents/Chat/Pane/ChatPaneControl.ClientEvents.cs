@@ -185,6 +185,25 @@ public partial class ChatPaneControl
                 // Not awaited: the file's row can wait for the CLI to write its record; Claude must not.
                 if (edit is not null && _changes is not null) { _ = _changes.OnPostEditAsync(edit); }
             }
+            else if (e.CallbackId == ClaudeClient.BashBeginHookId && TracksCommands)
+            {
+                var call = HookBash.TryParse(e.Input, e.ToolUseId);
+                if (call is not null && _changes is not null)
+                {
+                    _changes.StartTracking();
+                    // The CLI runs the command once every hook has answered, so the picture of the working
+                    // tree is taken first. Bounded, well inside the CLI's own hook timeout: a repository too
+                    // big to photograph in this time runs its commands with no "before" rather than not at all.
+                    var work = _changes.OnBashBeginAsync(call);
+                    await Task.WhenAny(work, Task.Delay(30000));
+                }
+            }
+            else if (e.CallbackId == ClaudeClient.BashEndHookId && TracksCommands)
+            {
+                var call = HookBash.TryParse(e.Input, e.ToolUseId);
+                // Not awaited: the files can be listed after Claude has gone on.
+                if (call is not null && _changes is not null) { _ = _changes.OnBashEndAsync(call); }
+            }
             _client?.RespondToHookCallback(e.RequestId, new { @continue = true });
         }
         catch (Exception ex)
@@ -193,6 +212,10 @@ public partial class ChatPaneControl
             _client?.RespondToHookCallback(e.RequestId, new { @continue = true });
         }
     }
+
+    /// <summary>Whether files changed by a shell command are followed: the Changes list is on, and so is
+    /// its own switch for commands.</summary>
+    private static bool TracksCommands => AgentsOptions.Chat.TrackChanges && AgentsOptions.Chat.TrackBashChanges;
 
     /// <summary>Saves the file's unsaved editor changes before the Changes list copies it, so the copy
     /// is what Claude is about to change and not an older file on disk. Bounded: the save goes through
@@ -220,7 +243,7 @@ public partial class ChatPaneControl
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (_disposed || _changes is null) { return; }
-                _bridge?.Send(BridgeMessages.ToWebView.ChangedFiles.Updated, Core.Changes.ChangedFilesMapper.Build(_changes.Set));
+                _bridge?.Send(BridgeMessages.ToWebView.ChangedFiles.Updated, Core.Changes.ChangedFilesMapper.Build(_changes.Set, _changes.CommandsNote));
             }));
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.Threading.Tasks.TaskCanceledException)

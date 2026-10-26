@@ -110,6 +110,15 @@ public class ChangedFilesMapperTests
         Assert.False(list.Overflow);
         Assert.Equal(ChangeSet.MaxFiles, list.MaxFiles);
         Assert.Equal("off", list.Disabled);
+        Assert.Null(list.CommandsNote);
+    }
+
+    [Fact]
+    public void The_note_about_commands_travels_with_the_list()
+    {
+        var set = new ChangeSet();
+
+        Assert.Equal("git was not found.", ChangedFilesMapper.Build(set, "git was not found.").CommandsNote);
     }
 
     [Fact]
