@@ -34,6 +34,22 @@ internal static class BaselineText
         return crlf >= lf ? Crlf : Lf;
     }
 
+    /// <summary>Whether the text has both kinds of line break, CRLF and a lone LF. Such a file cannot be shown in one line ending
+    /// and written back as it was, so it is not reviewed in the editor.</summary>
+    public static bool HasMixedLineEndings(string text)
+    {
+        if (string.IsNullOrEmpty(text)) { return false; }
+        var crlf = false;
+        var lf = false;
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (text[i] != '\n') { continue; }
+            if (i > 0 && text[i - 1] == '\r') { crlf = true; } else { lf = true; }
+            if (crlf && lf) { return true; }
+        }
+        return false;
+    }
+
     /// <summary>Every line break of <paramref name="text"/> written as <paramref name="lineEnding"/>. Null
     /// leaves the text alone: a file with no line break gives no reason to pick one.</summary>
     public static string WithLineEnding(string text, string lineEnding)

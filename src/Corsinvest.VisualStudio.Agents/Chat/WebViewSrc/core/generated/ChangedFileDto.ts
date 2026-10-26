@@ -14,5 +14,5 @@ export interface ChangedFileDto {
     hasBaseline: boolean;
     baselineMissing: boolean;
     incomplete: boolean;
-    sharedWithPane?: number;
+    sharedWithPane?: number | null;
 }

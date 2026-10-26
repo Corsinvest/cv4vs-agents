@@ -852,7 +852,8 @@ public partial class ChatPaneControl : PaneControlBase
             FileCheckpoints = () => _client is not null && _client.FileCheckpoints,
             TrackCommands = () => TracksCommands,
             PrepareFile = SaveBeforeCopyAsync,
-            PaneId = () => Entry?.PaneId ?? 0,
+            // The number the tab shows ("Chat 5"), not VS's own id for the pane, which starts at 0 and counts each kind apart.
+            PaneNumber = () => Entry?.SeqNo ?? 0,
         }, _log);
         _changes.Set.Changed += OnChangesChanged;
         Ide.Changes.BaselineDocumentRegistry.Instance.Register(_changes);
