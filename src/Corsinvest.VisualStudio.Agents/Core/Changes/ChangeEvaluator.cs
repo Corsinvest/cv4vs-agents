@@ -51,6 +51,23 @@ internal static class ChangeEvaluator
 
     private static Task<Stat> StatAsync(string path) => Task.Run(() =>
     {
+        try
+        {
+            return EvaluateCore(path, baseline);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Locked by a build, or gone between the check and the read: it cannot be measured now. One
+            // such file must not stop the rest of a list being built, so it is listed as changed with no
+            // numbers, and given a stamp no real file has so that the next refresh tries it again.
+            var unreadable = NoBaseline(new ChangeEvaluation(), File.Exists(path));
+            unreadable.Length = -1;
+            return unreadable;
+        }
+    }
+
+    private static ChangeEvaluation EvaluateCore(string path, BaselineRef baseline)
+    {
         var info = new FileInfo(path);
         var exists = info.Exists;
         return new Stat(exists, exists ? info.Length : 0, exists ? info.LastWriteTimeUtc : default);
@@ -159,6 +176,45 @@ internal static class ChangeEvaluator
             return null;
         }
         return Encoding.UTF8.GetString(bytes);
+    }
+
+    /// <summary>The text of a file's bytes only when turning it back into those bytes gives the same ones: a
+    /// valid UTF-8 or UTF-16 text, with or without its byte-order mark. Null for anything else (a legacy code
+    /// page, UTF-32, binary). <see cref="Decode"/> is for counting lines, where a replaced letter does no
+    /// harm; this is for putting a file back, where the letter would be the file's.</summary>
+    internal static string DecodeStrict(byte[] bytes)
+    {
+        if (bytes.Length == 0) { return ""; }
+        try
+        {
+            switch (ByteOrderMark(bytes))
+            {
+                case Mark.Utf8: return new UTF8Encoding(false, true).GetString(bytes, 3, bytes.Length - 3);
+                case Mark.Utf16LittleEndian: return new UnicodeEncoding(false, false, true).GetString(bytes, 2, bytes.Length - 2);
+                case Mark.Utf16BigEndian: return new UnicodeEncoding(true, false, true).GetString(bytes, 2, bytes.Length - 2);
+                case Mark.Utf32LittleEndian: return null;
+            }
+            if (Array.IndexOf(bytes, (byte)0, 0, Math.Min(bytes.Length, 8000)) >= 0) { return null; }
+            return new UTF8Encoding(false, true).GetString(bytes);
+        }
+        catch (DecoderFallbackException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Which byte-order mark a file starts with. Two files that read alike but start differently
+    /// would not be the same file once saved by an editor that decides the mark from what it loaded.</summary>
+    internal enum Mark { None, Utf8, Utf16LittleEndian, Utf16BigEndian, Utf32LittleEndian }
+
+    internal static Mark ByteOrderMark(byte[] bytes)
+    {
+        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) { return Mark.Utf8; }
+        // FF FE 00 00 is a UTF-32 mark: it would read as UTF-16 with a stray NUL.
+        if (bytes.Length >= 4 && bytes[0] == 0xFF && bytes[1] == 0xFE && bytes[2] == 0 && bytes[3] == 0) { return Mark.Utf32LittleEndian; }
+        if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE) { return Mark.Utf16LittleEndian; }
+        if (bytes.Length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF) { return Mark.Utf16BigEndian; }
+        return Mark.None;
     }
 
     private static async Task<bool> SameBytesAsync(string a, string b, CancellationToken cancel)

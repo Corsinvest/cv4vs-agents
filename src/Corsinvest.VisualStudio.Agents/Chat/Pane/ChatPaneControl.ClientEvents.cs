@@ -175,8 +175,11 @@ public partial class ChatPaneControl
                     // to be taken before this returns. Bounded like the others: the save inside goes
                     // through the UI thread, and a stall must not hold the tool for the CLI's own
                     // hook timeout.
-                    var work = _changes.OnPreEditAsync(edit);
+                    using var letGo = new System.Threading.CancellationTokenSource();
+                    var work = _changes.OnPreEditAsync(edit, letGo.Token);
                     await Task.WhenAny(work, Task.Delay(4000));
+                    // The answer below lets the edit go: a copy that finishes after it holds the edit.
+                    letGo.Cancel();
                 }
             }
             else if (e.CallbackId == ClaudeClient.ChangesHookId && AgentsOptions.Chat.TrackChanges)

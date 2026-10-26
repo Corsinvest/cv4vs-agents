@@ -259,6 +259,49 @@ public sealed class SessionChangesTests : IDisposable
     }
 
     [Fact]
+    public async Task A_copy_that_finishes_after_the_edit_was_let_go_is_not_kept_because_it_would_hold_the_edit()
+    {
+        using var fx = Transcript(Jsonl.UserPrompt("u1", "go"));
+        fx.WriteWork("a.txt", "before\n");
+        using var changes = Create(fx, poll: new[] { 0 });
+        using var letGo = new CancellationTokenSource();
+        letGo.Cancel();
+
+        await changes.OnPreEditAsync(Hook(fx, "a.txt", "toolu_1", agentId: "agent1"), letGo.Token);
+
+        Assert.Equal(0, CopiesTaken);
+    }
+
+    [Fact]
+    public async Task A_copy_is_not_taken_for_an_edit_that_names_no_tool_call_because_nothing_could_claim_it()
+    {
+        using var fx = Transcript(Jsonl.UserPrompt("u1", "go"));
+        fx.WriteWork("a.txt", "before\n");
+        using var changes = Create(fx, poll: new[] { 0 });
+
+        await changes.OnPreEditAsync(Hook(fx, "a.txt", "", agentId: "agent1"));
+
+        Assert.Equal(0, CopiesTaken);
+    }
+
+    [Fact]
+    public async Task A_file_that_was_kept_and_whose_next_copy_is_missing_is_listed_without_the_one_from_before_the_session()
+    {
+        // The CLI's backup is from before the whole session: comparing the edit after a Keep with it would
+        // offer to undo what the person already accepted.
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "h@v1", 1));
+        fx.WriteBackup("h@v1", "the very first version\n");
+        fx.WriteWork("a.txt", "accepted\nmore\n");
+        using var changes = Create(fx, poll: new[] { 0 });
+        changes.Set.SetCaptureNext(Work(fx, "a.txt"));
+
+        await changes.OnPostEditAsync(Hook(fx, "a.txt", "toolu_2"));
+
+        var row = Assert.Single(changes.Set.Snapshot());
+        Assert.False(row.Baseline.IsKnown);
+    }
+
+    [Fact]
     public async Task Unsaved_editor_changes_are_written_before_the_copy_is_taken()
     {
         using var fx = Transcript(Jsonl.UserPrompt("u1", "go"));

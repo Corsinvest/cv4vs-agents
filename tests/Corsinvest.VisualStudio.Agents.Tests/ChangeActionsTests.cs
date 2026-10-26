@@ -19,6 +19,7 @@ public sealed class ChangeActionsTests : IDisposable
     private sealed class FakeEditor : IChangeEditor
     {
         public DocumentReplaceResult Result = DocumentReplaceResult.NotOpen;
+        public bool Dirty;
         public readonly List<string> ReplacedWith = new();
         public readonly List<string> Closed = new();
         public readonly List<string> Opened = new();
@@ -35,6 +36,8 @@ public sealed class ChangeActionsTests : IDisposable
             Closed.Add(path);
             return Task.CompletedTask;
         }
+
+        public Task<bool> IsDirtyAsync(string path) => Task.FromResult(Dirty);
 
         public Task ShowDiffAsync(string key, string path, string before, string after, string leftLabel, string rightLabel)
         {
@@ -85,7 +88,17 @@ public sealed class ChangeActionsTests : IDisposable
 
     private FileChange Row(string path, BaselineRef baseline, ChangeState state = ChangeState.Modified)
     {
-        var row = new FileChange { Path = path, State = state, Baseline = baseline, Source = ChangeSource.Edit };
+        // Measured as the list would have, when it last looked: what Undo checks the file against.
+        var info = new FileInfo(path);
+        var row = new FileChange
+        {
+            Path = path,
+            State = state,
+            Baseline = baseline,
+            Source = ChangeSource.Edit,
+            StampLength = info.Exists ? info.Length : 0,
+            StampWriteUtc = info.Exists ? info.LastWriteTimeUtc : default,
+        };
         _set.Add(row);
         return row;
     }
@@ -286,6 +299,126 @@ public sealed class ChangeActionsTests : IDisposable
             Assert.NotNull(failure);
             Assert.Single(_set.Snapshot());
         }
+    }
+
+    [Fact]
+    public async Task A_file_that_changed_after_the_list_measured_it_is_measured_again_and_not_undone()
+    {
+        var baseline = Write("backup@v1", "original\n");
+        var file = Write("a.txt", "claude's version\n");
+        Row(file, BaselineRef.Cli(baseline));
+        var remeasured = new List<string>();
+        var actions = new ChangeActions(_set, _baselines, _editor, OutputWindowLogger.Global,
+                                        path => { remeasured.Add(path); return Task.CompletedTask; });
+        // The person saved more work into it since.
+        File.WriteAllText(file, "claude's version\nand what I added\n");
+
+        var failure = await actions.UndoAsync(file);
+
+        Assert.NotNull(failure);
+        Assert.Contains("changed after", failure.Reason);
+        Assert.Equal("claude's version\nand what I added\n", File.ReadAllText(file));
+        Assert.Equal(new[] { file }, remeasured);
+        Assert.Single(_set.Snapshot());
+        Assert.Empty(_editor.ReplacedWith);
+    }
+
+    [Fact]
+    public async Task Once_the_list_has_seen_the_file_as_it_is_now_undo_goes_ahead()
+    {
+        var baseline = Write("backup@v1", "original\n");
+        var file = Write("a.txt", "claude's version\n");
+        Row(file, BaselineRef.Cli(baseline));
+        File.WriteAllText(file, "something else\n");
+        Assert.NotNull(await _actions.UndoAsync(file));
+
+        var info = new FileInfo(file);
+        _set.Update(file, r =>
+        {
+            r.StampLength = info.Length;
+            r.StampWriteUtc = info.LastWriteTimeUtc;
+        });
+
+        Assert.Null(await _actions.UndoAsync(file));
+        Assert.Equal("original\n", File.ReadAllText(file));
+    }
+
+    [Fact]
+    public async Task A_created_file_with_unsaved_changes_in_the_editor_is_not_deleted()
+    {
+        var file = Write("made.txt", "new\n");
+        Row(file, BaselineRef.Empty, ChangeState.Added);
+        _editor.Dirty = true;
+
+        var failure = await _actions.UndoAsync(file);
+
+        Assert.NotNull(failure);
+        Assert.Contains("not saved", failure.Reason);
+        Assert.True(File.Exists(file));
+        Assert.Empty(_editor.Closed);
+        Assert.Single(_set.Snapshot());
+    }
+
+    [Fact]
+    public async Task Unsaved_changes_in_the_editor_do_not_stop_an_undo_that_goes_through_its_buffer()
+    {
+        // The buffer is replaced as one edit, so Ctrl+Z brings the unsaved work back.
+        var baseline = Write("backup@v1", "original\n");
+        var file = Write("a.txt", "claude's version\n");
+        Row(file, BaselineRef.Cli(baseline));
+        _editor.Dirty = true;
+        _editor.Result = DocumentReplaceResult.Replaced;
+
+        Assert.Null(await _actions.UndoAsync(file));
+        Assert.Equal(new[] { "original\n" }, _editor.ReplacedWith);
+    }
+
+    [Fact]
+    public async Task A_file_in_a_legacy_code_page_is_written_back_as_bytes_not_decoded_into_the_editor()
+    {
+        // Latin-1 "café": decoded as UTF-8 the accent would become U+FFFD, and be saved that way.
+        var latin1 = new byte[] { 0x63, 0x61, 0x66, 0xE9, 0x0A };
+        var baseline = Write("backup@v1", latin1);
+        var file = Write("a.txt", "claude's version\n");
+        Row(file, BaselineRef.Cli(baseline));
+        _editor.Result = DocumentReplaceResult.Replaced;
+
+        Assert.Null(await _actions.UndoAsync(file));
+
+        Assert.Empty(_editor.ReplacedWith);
+        Assert.Equal(latin1, File.ReadAllBytes(file));
+    }
+
+    [Fact]
+    public async Task A_byte_order_mark_that_the_file_has_gained_or_lost_sends_the_undo_through_the_disk()
+    {
+        var withMark = new byte[] { 0xEF, 0xBB, 0xBF }.Concat(Encoding.UTF8.GetBytes("original\n")).ToArray();
+        var baseline = Write("backup@v1", withMark);
+        // Claude's edit wrote the file without the mark.
+        var file = Write("a.txt", "claude's version\n");
+        Row(file, BaselineRef.Cli(baseline));
+        _editor.Result = DocumentReplaceResult.Replaced;
+
+        Assert.Null(await _actions.UndoAsync(file));
+
+        Assert.Empty(_editor.ReplacedWith);
+        Assert.Equal(withMark, File.ReadAllBytes(file));
+    }
+
+    [Fact]
+    public async Task Open_of_a_file_that_cannot_be_read_opens_the_file_instead()
+    {
+        var baseline = Write("backup@v1", "before\n");
+        var file = Write("a.txt", "after\n");
+        Row(file, BaselineRef.Cli(baseline));
+
+        using (new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            await _actions.OpenAsync(file);
+        }
+
+        Assert.Equal(new[] { file }, _editor.Opened);
+        Assert.Empty(_editor.Diffs);
     }
 
     [Fact]
