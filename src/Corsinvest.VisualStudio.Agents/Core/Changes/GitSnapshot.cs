@@ -88,6 +88,18 @@ internal sealed class GitSnapshot : IDisposable
     // Whether the last git add ran out of time. Written and read under the gate.
     private bool _timedOut;
 
+    // A picture asked for while another is being taken would be taken after it, and so would every other
+    // one asked for meanwhile: a burst of commands against a slow repository would queue a full scan each.
+    // Every request takes a number; a run serves every request numbered before it began, and the others
+    // that waited behind it take its result. All under the gate, but the counter.
+    private long _requests;
+    private long _lastRunServed;
+    private GitTree _lastResult;
+    private int _runs;
+
+    /// <summary>How many pictures were really taken, as against asked for.</summary>
+    internal int Runs => Volatile.Read(ref _runs);
+
     private GitSnapshot(GitRunner git, string topLevel, string repoObjects, string repoIndex, string folder, OutputWindowLogger log)
     {
         _git = git;
@@ -147,12 +159,18 @@ internal sealed class GitSnapshot : IDisposable
     /// two runs over the same index would trip over each other.</summary>
     public async Task<GitTree> TakeAsync(CancellationToken cancel = default)
     {
+        var request = Interlocked.Increment(ref _requests);
         await _gate.WaitAsync(cancel).ConfigureAwait(false);
         try
         {
             // A picture requested just before the chat closed would otherwise remake the folder that
             // closing it removed.
             if (_disposed) { return null; }
+            // A run that began after this was asked for is as good as one made for it.
+            if (_lastRunServed >= request) { return _lastResult; }
+            _lastRunServed = Interlocked.Read(ref _requests);
+            Interlocked.Increment(ref _runs);
+
             Directory.CreateDirectory(Path.Combine(_folder, "objects"));
             SeedIndex();
             // A git that was killed (a timeout, the chat closing) leaves its lock behind. This folder is ours
@@ -174,6 +192,7 @@ internal sealed class GitSnapshot : IDisposable
             {
                 lock (_treeLock) { _tree = tree; }
             }
+            _lastResult = tree;
             return tree;
         }
         finally
@@ -235,16 +254,17 @@ internal sealed class GitSnapshot : IDisposable
     private static readonly Regex IndexError = new(@"^error: unable to index file '?(?<p>.*?)'?$", RegexOptions.Compiled);
 
     /// <summary>The files <c>git add --ignore-errors</c> skipped, from what it printed: an "open" error and an
-    /// "unable to index" error per file. Every line has to be one of those two shapes: a line that is neither
-    /// (a read error halfway through a file, a format of a git newer than this) means the list cannot be
-    /// trusted to be all of them, and <paramref name="skipped"/> is null.</summary>
+    /// "unable to index" error per file. Every error line has to be one of those two shapes: one that is
+    /// neither (a read error halfway through a file, a format of a git newer than this) means the list cannot
+    /// be trusted to be all of them, and <paramref name="skipped"/> is null. Warnings and hints are advice,
+    /// not skipped files (a repository nested in this one brings a few on every add), and are not read.</summary>
     internal static bool TrySkippedPaths(string stderr, out HashSet<string> skipped)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var raw in (stderr ?? "").Split('\n'))
         {
             var line = raw.Trim();
-            if (line.Length == 0) { continue; }
+            if (line.Length == 0 || line.StartsWith("warning:", StringComparison.Ordinal) || line.StartsWith("hint:", StringComparison.Ordinal)) { continue; }
 
             var match = OpenError.Match(line);
             if (!match.Success) { match = IndexError.Match(line); }

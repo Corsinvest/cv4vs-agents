@@ -40,9 +40,12 @@ internal sealed class BashTracker : IDisposable
     // The list holds no more than this in all, so a larger number would only be work thrown away.
     private const int DefaultMaxRows = ChangeSet.MaxFiles;
 
-    // A file the command made has a creation time after the command began. The slack covers a file
-    // system that keeps time to two seconds, and a clock read a moment before the command's first write.
-    private static readonly TimeSpan CreationSlack = TimeSpan.FromSeconds(2);
+    // A file the command made has a creation time after the command began. The slack covers the coarse tick
+    // a file system stamps a new file with, which can read a little before a clock taken just ahead of it.
+    // No more: a file the person or the editor made in the moments before is not the command's, and Undo
+    // deletes what it takes for new. A file system that keeps coarser time than this errs the safe way,
+    // taking a new file for an old one, which is listed without a copy.
+    private static readonly TimeSpan CreationSlack = TimeSpan.FromMilliseconds(250);
 
     private const string LfsPointer = "version https://git-lfs.github.com/spec/v1";
 
@@ -66,6 +69,10 @@ internal sealed class BashTracker : IDisposable
         // then runs untracked.
         public GitTree Tree;
         public DateTime AtUtc;
+
+        // The conversation it began in: a command that ends after the person started another is not
+        // part of that one's list.
+        public string SessionId;
     }
 
     private readonly GitSnapshot _git;
@@ -74,11 +81,13 @@ internal sealed class BashTracker : IDisposable
     private readonly ChangeBaselines _baselines;
     private readonly OutputWindowLogger _log;
     private readonly int _maxRows;
+    private readonly Func<string, Task> _refreshRow;
     private readonly ConcurrentDictionary<string, Call> _calls = new();
     private readonly CancellationTokenSource _lifetime = new();
     private long _snapshotMark = -1;
 
-    private BashTracker(GitSnapshot git, RepoWatch watch, ChangeSet set, ChangeBaselines baselines, OutputWindowLogger log, int maxRows)
+    private BashTracker(GitSnapshot git, RepoWatch watch, ChangeSet set, ChangeBaselines baselines, OutputWindowLogger log,
+                        int maxRows, Func<string, Task> refreshRow)
     {
         _git = git;
         _watch = watch;
@@ -86,12 +95,16 @@ internal sealed class BashTracker : IDisposable
         _baselines = baselines;
         _log = log;
         _maxRows = maxRows;
+        _refreshRow = refreshRow;
     }
 
     /// <summary>Start looking after a working directory. Null when it is not in a git repository, or git
-    /// is not there: nothing is then tracked and nothing is listed, and the set says why.</summary>
+    /// is not there: nothing is then tracked and nothing is listed, and the set says why.
+    /// <paramref name="refreshRow"/> measures a file that already has a row again: a command that changes it
+    /// once more, or puts it back, must show.</summary>
     public static async Task<BashTracker> StartAsync(string workingDirectory, string snapshotFolder, ChangeSet set,
-                                                     ChangeBaselines baselines, OutputWindowLogger log, int? maxRows = null)
+                                                     ChangeBaselines baselines, OutputWindowLogger log, int? maxRows = null,
+                                                     Func<string, Task> refreshRow = null)
     {
         // Looks along PATH on disk: off the thread that asked.
         var exe = await Task.Run(GitExe.Resolve).ConfigureAwait(false);
@@ -135,7 +148,7 @@ internal sealed class BashTracker : IDisposable
         set.SetCommandsNote(null);
         // No picture yet: reading every file of a working tree is not for a chat that has done nothing.
         // See WarmUpAsync, and BeginAsync for the command that arrives first.
-        return new BashTracker(snapshot, watch, set, baselines, log, maxRows ?? DefaultMaxRows);
+        return new BashTracker(snapshot, watch, set, baselines, log, maxRows ?? DefaultMaxRows, refreshRow);
     }
 
     /// <summary>The root of the working tree being watched.</summary>
@@ -177,7 +190,7 @@ internal sealed class BashTracker : IDisposable
         // The mark comes first: whatever happens from here on may already be the command's.
         var mark = _watch.Mark();
         // Already let go: whatever a picture holds now, it was taken with the command running.
-        if (late.IsCancellationRequested) { return new Call { Mark = mark, AtUtc = DateTime.UtcNow }; }
+        if (late.IsCancellationRequested) { return new Call { Mark = mark, AtUtc = DateTime.UtcNow, SessionId = _set.SessionId }; }
 
         var tree = _git.LatestTree;
         if (tree is null || _watch.ChangedSince(Interlocked.Read(ref _snapshotMark)))
@@ -190,7 +203,7 @@ internal sealed class BashTracker : IDisposable
             if (late.IsCancellationRequested) { tree = null; }
             if (tree is null) { _log.Debug(() => "[changes] no snapshot in time: this command is not followed"); }
         }
-        return new Call { Mark = mark, Tree = tree, AtUtc = DateTime.UtcNow };
+        return new Call { Mark = mark, Tree = tree, AtUtc = DateTime.UtcNow, SessionId = _set.SessionId };
     }
 
     /// <summary>A command has finished (or failed). Lists what it changed.</summary>
@@ -212,6 +225,8 @@ internal sealed class BashTracker : IDisposable
         // Their new content is the next command's "before".
         Interlocked.Exchange(ref _snapshotMark, mark);
         if (after.Oid == call.Tree.Oid) { return; }
+        // The person started another conversation while this ran: what it changed belongs to the old one.
+        if (!string.Equals(call.SessionId, _set.SessionId, StringComparison.Ordinal)) { return; }
 
         var changes = await _git.DiffAsync(call.Tree.Oid, after.Oid).ConfigureAwait(false);
         if (changes is null) { return; }
@@ -245,8 +260,13 @@ internal sealed class BashTracker : IDisposable
         if (before.Skips(change.RelativePath) || after.Skips(change.RelativePath)) { return; }
 
         var path = _git.Absolute(change.RelativePath);
-        // The edit tools already changed this file: it has its row, and its baseline from the CLI.
-        if (_set.TryGet(path, out _)) { return; }
+        // Already listed (the edit tools changed it, or an earlier command did): the row keeps its baseline,
+        // and its numbers move. A file put back to how it was leaves the list.
+        if (_set.TryGet(path, out _))
+        {
+            if (_refreshRow is not null) { await _refreshRow(path).ConfigureAwait(false); }
+            return;
+        }
 
         if (change.Status == 'D')
         {
@@ -331,9 +351,12 @@ internal sealed class BashTracker : IDisposable
             var read = stream.Read(buffer, 0, buffer.Length);
             return read == buffer.Length && Encoding.ASCII.GetString(buffer) == LfsPointer;
         }
-        catch (IOException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return false;
+            // Not read, so not known not to be a pointer, and a pointer restored over the real file would
+            // destroy it: taken for one, which leaves the file listed without a copy.
+            OutputWindowLogger.Global.Warn($"[changes] could not read {file} to check it for a Git LFS pointer: {ex.Message}");
+            return true;
         }
     }
 
