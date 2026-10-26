@@ -54,14 +54,20 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
+    private int _sequence;
+
     /// <summary>Where a copy of <paramref name="path"/> belongs, with its folder made. The hash keeps two
     /// files of the same name apart; the name after it keeps the extension, so the copy opens with the
-    /// editor the original would. For a caller that writes the copy itself (git, for a blob).</summary>
+    /// editor the original would. Every copy has a name of its own, even of the same file: a command and
+    /// an edit can be in flight on it together, as can two sub-agents, and one must not overwrite, or
+    /// delete, the copy the other is going to compare with. For a caller that writes the copy itself
+    /// (git, for a blob).</summary>
     public string TargetFor(string sessionId, string path)
     {
         var folder = FolderFor(sessionId);
         Directory.CreateDirectory(folder);
-        return Path.Combine(folder, ShortHash(path) + "~" + Path.GetFileName(path));
+        var copy = Interlocked.Increment(ref _sequence).ToString("x");
+        return Path.Combine(folder, ShortHash(path) + "." + copy + "~" + Path.GetFileName(path));
     }
 
     /// <summary>Delete a copy this extension took. A CLI backup, or anything outside the baselines
