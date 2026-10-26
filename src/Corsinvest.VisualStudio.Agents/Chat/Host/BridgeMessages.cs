@@ -122,6 +122,8 @@ internal static class BridgeMessages
             public const string Undo = "undo_changed_file";
             public const string KeepAll = "keep_all_changed_files";
             public const string UndoAll = "undo_all_changed_files";
+            /// <summary>Show every listed file's changes in the one window Visual Studio 18 has for it.</summary>
+            public const string ReviewAll = "review_all_changed_files";
         }
 
         /// <summary>Lazy fetch of stripped chat blocks (images, documents, …) and paged history.</summary>

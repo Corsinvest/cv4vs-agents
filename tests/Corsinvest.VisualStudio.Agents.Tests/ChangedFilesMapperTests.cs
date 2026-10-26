@@ -20,6 +20,16 @@ public class ChangedFilesMapperTests
         Source = ChangeSource.Edit,
     };
 
+    [Fact]
+    public void The_notification_says_whether_the_window_with_every_change_can_be_opened()
+    {
+        var set = new ChangeSet();
+
+        Assert.False(ChangedFilesMapper.Build(set).CanReviewAll);
+        Assert.False(ChangedFilesMapper.Build(set, null, canReviewAll: false).CanReviewAll);
+        Assert.True(ChangedFilesMapper.Build(set, null, canReviewAll: true).CanReviewAll);
+    }
+
     [Theory]
     [InlineData("Modified", "modified")]
     [InlineData("Added", "added")]

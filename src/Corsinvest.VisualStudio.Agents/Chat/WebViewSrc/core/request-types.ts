@@ -152,3 +152,10 @@ export const UndoAllChangedFilesReq = new RequestType<
     Record<string, never>,
     ChangedFilesActionResult
 >(Msg.fromWebView.changedFiles.undoAll, Msg.toWebView.changedFiles.actionResult);
+
+/** Show every listed file's changes together, in the one window Visual Studio 18 has for it. Nothing
+ *  is changed: a failure comes back like the others, as a reason to show. */
+export const ReviewAllChangedFilesReq = new RequestType<
+    Record<string, never>,
+    ChangedFilesActionResult
+>(Msg.fromWebView.changedFiles.reviewAll, Msg.toWebView.changedFiles.actionResult);

@@ -883,6 +883,10 @@ public class ChangedFilesNotification
     /// <summary>Why the files a shell command changes are not being followed (the setting is off, git is
     /// missing, the folder is not a repository), or null when they are.</summary>
     public string CommandsNote { get; set; }
+
+    /// <summary>This Visual Studio has the window that shows every listed file's changes together, so the panel offers
+    /// "Review all".</summary>
+    public bool CanReviewAll { get; set; }
 }
 
 /// <summary>A file an action could not deal with.</summary>

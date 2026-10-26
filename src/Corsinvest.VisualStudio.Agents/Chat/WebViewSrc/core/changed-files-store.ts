@@ -21,6 +21,7 @@ export class ChangedFilesStore {
     private _maxFiles = 0;
     private _disabled: string | null = null;
     private _commandsNote: string | null = null;
+    private _canReviewAll = false;
     private readonly _listeners = new Set<Listener>();
 
     get files(): readonly ChangedFileDto[] {
@@ -46,12 +47,18 @@ export class ChangedFilesStore {
         return this._commandsNote;
     }
 
+    /** This Visual Studio has the window that shows every listed file's changes together. */
+    get canReviewAll(): boolean {
+        return this._canReviewAll;
+    }
+
     apply(list: ChangedFilesNotification): void {
         this._files = list.files;
         this._overflow = list.overflow;
         this._maxFiles = list.maxFiles;
         this._disabled = list.disabled;
         this._commandsNote = list.commandsNote ?? null;
+        this._canReviewAll = list.canReviewAll === true;
         this._notify();
     }
 
@@ -60,6 +67,7 @@ export class ChangedFilesStore {
         this._overflow = false;
         this._disabled = null;
         this._commandsNote = null;
+        this._canReviewAll = false;
         this._notify();
     }
 
