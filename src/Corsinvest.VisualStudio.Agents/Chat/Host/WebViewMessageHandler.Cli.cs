@@ -84,7 +84,7 @@ internal sealed partial class WebViewMessageHandler
         // A shell command starts the moment the CLI has this answer. What the person changed in the editor
         // while the question was open is theirs, not the command's, so the picture of the working tree
         // that tells the two apart is brought up to date before the answer goes.
-        if (response.Allow && changes is { TracksCommands: true } && (toolName == "Bash" || toolName == "PowerShell"))
+        if (response.Allow && changes is { FollowsCommands: true } && (toolName == "Bash" || toolName == "PowerShell"))
         {
             _ = RespondAfterSnapshotAsync(toolUseId, response);
             return;
