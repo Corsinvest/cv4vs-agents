@@ -147,7 +147,7 @@ internal sealed class GitRunner(string exe, OutputWindowLogger log)
     {
         var info = new ProcessStartInfo(exe)
         {
-            Arguments = string.Join(" ", args.Select(Quote)),
+            Arguments = string.Join(" ", args.Select(Helpers.StringHelpers.QuoteProcessArgument)),
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -208,33 +208,5 @@ internal sealed class GitRunner(string exe, OutputWindowLogger log)
             // It ended on its own while we decided.
         }
         return false;
-    }
-
-    /// <summary>One argument as the Windows command line wants it: quoted when it has a space or a
-    /// quote in it, backslashes doubled only where they precede a quote.</summary>
-    internal static string Quote(string arg)
-    {
-        if (arg.Length > 0 && arg.IndexOfAny(new[] { ' ', '\t', '"', '\n' }) < 0) { return arg; }
-
-        var quoted = new StringBuilder("\"");
-        var backslashes = 0;
-        foreach (var c in arg)
-        {
-            if (c == '\\')
-            {
-                backslashes++;
-                continue;
-            }
-            if (c == '"')
-            {
-                quoted.Append('\\', backslashes * 2 + 1).Append('"');
-            }
-            else
-            {
-                quoted.Append('\\', backslashes).Append(c);
-            }
-            backslashes = 0;
-        }
-        return quoted.Append('\\', backslashes * 2).Append('"').ToString();
     }
 }
