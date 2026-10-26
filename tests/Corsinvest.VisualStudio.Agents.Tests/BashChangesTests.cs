@@ -394,6 +394,71 @@ public sealed class BashChangesTests : IDisposable
     }
 
     [Fact]
+    public async Task A_file_the_gitignore_hid_until_the_command_changed_the_rules_is_not_taken_for_a_new_one()
+    {
+        if (_repo is null) { return; }
+        _repo.Write(".gitignore", "secret.env\n");
+        _repo.Write("a.txt", "a\n");
+        _repo.Commit();
+        // The person's own file, there for a long time and ignored: absent from the picture before.
+        var secret = _repo.Write("secret.env", "KEY=1\n");
+        File.SetCreationTimeUtc(secret, DateTime.UtcNow.AddMinutes(-10));
+        using var changes = await StartedAsync(Create(_repo.Root));
+
+        // The command rewrites the rules, and the file is no longer ignored.
+        await RunAsync(changes, "echo # nothing is ignored now> .gitignore");
+
+        var rows = changes.Set.Snapshot().ToDictionary(r => Path.GetFileName(r.Path), StringComparer.OrdinalIgnoreCase);
+        Assert.True(rows.ContainsKey(".gitignore"));
+        // Listed, because it did appear in the picture after, but with no copy to restore: Undo would
+        // otherwise delete a file that was always there.
+        Assert.True(rows.ContainsKey("secret.env"));
+        Assert.False(rows["secret.env"].Baseline.IsKnown);
+        Assert.False(rows["secret.env"].Baseline.IsEmpty);
+    }
+
+    [Fact]
+    public async Task A_command_that_changes_more_files_than_the_list_can_hold_fills_it_and_says_so()
+    {
+        if (_repo is null) { return; }
+        for (var i = 0; i < 4; i++) { _repo.Write("f" + i + ".txt", "x\n"); }
+        _repo.Commit();
+        using var changes = await StartedAsync(Create(_repo.Root));
+        // Room for two more.
+        for (var i = 0; i < ChangeSet.MaxFiles - 2; i++)
+        {
+            changes.Set.Add(new FileChange { Path = Path.Combine(_scratch, "other" + i + ".txt"), State = ChangeState.Modified });
+        }
+
+        await RunAsync(changes, "for %i in (0 1 2 3) do echo changed>> f%i.txt");
+
+        Assert.Equal(ChangeSet.MaxFiles, changes.Set.Count);
+        Assert.True(changes.Set.Overflow);
+        // The copies of the files that did not fit are not left behind.
+        var copies = Directory.Exists(Path.Combine(_scratch, "baselines"))
+            ? Directory.GetFiles(Path.Combine(_scratch, "baselines"), "*", SearchOption.AllDirectories).Length
+            : 0;
+        Assert.Equal(2, copies);
+    }
+
+    [Fact]
+    public async Task Following_commands_reads_nothing_until_the_chat_is_about_to_work()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        _repo.Commit();
+        var snapshots = Path.Combine(_scratch, "snapshots");
+        using var changes = Create(_repo.Root);
+
+        changes.StartTracking();
+        await System.Threading.Tasks.Task.Delay(1500);
+        Assert.False(Directory.Exists(snapshots));
+
+        changes.WarmUp();
+        Assert.True(SpinWait_Until(() => Directory.Exists(snapshots) && Directory.EnumerateDirectories(snapshots).Any()));
+    }
+
+    [Fact]
     public async Task A_command_that_could_not_wait_for_its_snapshot_is_not_followed_rather_than_followed_wrongly()
     {
         if (_repo is null) { return; }

@@ -85,6 +85,9 @@ internal sealed class GitSnapshot : IDisposable
     private GitTree _tree;
     private volatile bool _disposed;
 
+    // Whether the last git add ran out of time. Written and read under the gate.
+    private bool _timedOut;
+
     private GitSnapshot(GitRunner git, string topLevel, string repoObjects, string repoIndex, string folder, OutputWindowLogger log)
     {
         _git = git;
@@ -151,13 +154,20 @@ internal sealed class GitSnapshot : IDisposable
             // closing it removed.
             if (_disposed) { return null; }
             Directory.CreateDirectory(Path.Combine(_folder, "objects"));
-            var seeded = SeedIndex();
+            SeedIndex();
+            // A git that was killed (a timeout, the chat closing) leaves its lock behind. This folder is ours
+            // alone and the gate is held, so no other git can be holding it: a stale lock would otherwise
+            // fail every picture from here on.
+            TryDelete(IndexLock);
+            _timedOut = false;
             var tree = await AddAndWriteAsync(cancel).ConfigureAwait(false);
-            if (tree is null && seeded && !cancel.IsCancellationRequested)
+            if (tree is null && !_timedOut && !cancel.IsCancellationRequested)
             {
-                // The copy of the repo's index may have been taken while git was writing it. Start
-                // from nothing: slower the once, and right.
+                // The index may be a copy taken while git was writing the repo's own, or hurt by a run that
+                // was killed, or name objects the repo has since dropped. Start from nothing: slower the
+                // once, and right. Not after a timeout: it would only time out again.
                 TryDelete(IndexFile);
+                TryDelete(IndexLock);
                 tree = await AddAndWriteAsync(cancel).ConfigureAwait(false);
             }
             if (tree is { Usable: true })
@@ -183,6 +193,7 @@ internal sealed class GitSnapshot : IDisposable
         if (cancel.IsCancellationRequested) { return null; }
         if (add.TimedOut)
         {
+            _timedOut = true;
             _log.Warn("[git] snapshot: git add did not finish in time");
             return null;
         }
@@ -304,6 +315,8 @@ internal sealed class GitSnapshot : IDisposable
     }
 
     private string IndexFile => Path.Combine(_folder, "index");
+
+    private string IndexLock => IndexFile + ".lock";
 
     private Dictionary<string, string> Env() => new()
     {

@@ -64,16 +64,20 @@ formatter), whether Claude ran it through the Bash tool or the PowerShell tool. 
 extension takes its own, as long as the folder is in a **git repository**:
 
 1. Before a command runs, it takes a snapshot of the working tree: every file git would list,
-   tracked or not, minus what `.gitignore` excludes. If nothing has changed since the last
-   snapshot it reuses that one, so a command that only reads costs nothing. When Claude asks your
-   permission first, the snapshot is brought up to date when you answer, so what you changed in
-   the editor meanwhile is yours and not the command's.
+   tracked or not, minus what `.gitignore` excludes. The first one is taken when you send the
+   chat's first message, so it is ready by the time Claude needs it. If nothing has changed since
+   the last snapshot it is reused, so a command that only reads costs nothing while the tree is
+   quiet; a build or a dev server writing files all the time makes each command take a new one.
+   When Claude asks your permission first, the snapshot is brought up to date when you answer, so
+   what you changed in the editor meanwhile is yours and not the command's.
 2. When the command ends, and a file watcher saw something change, it takes a second snapshot and
    git compares the two. Both come from the same view of the tree, so they agree on what is
    ignored and on the case of a name: a build writing into `obj/` does not fill the list.
 3. The files that differ get a row like any other, and Open, Keep and Undo work on it the same way.
    A file you had edited by hand before the command is compared with your version, not with an
-   older one.
+   older one. Undo writes the old content back as git would check the file out, so its line endings
+   follow your git settings (`core.autocrlf`, `.gitattributes`); where those do not convert
+   anything, the bytes are the same ones.
 
 The snapshots are kept in a private git store under the extension's data folder (see
 [Settings and data](/cv4vs-agents/settings-and-data/)). It reads your repository's objects but never
@@ -90,9 +94,14 @@ Turn this off with **Track the files commands change** in [Options](/cv4vs-agent
   or a repository nested in it, or ones `.gitignore` excludes: an ignore rule is the only thing that
   tells source from build output, and without one every command would fill the list with its
   scratch files. A repository that is a whole drive or your profile folder (some dotfiles setups)
-  is not followed either, since a snapshot would copy everything in it that is not ignored.
-- **A command that changes more than 500 files** lists the first 500, and their rows carry a warning
-  that others may be missing.
+  is not followed either, since a snapshot would copy everything in it that is not ignored. And
+  only the chat's own repository is followed: a command that works in another repository or
+  worktree is not.
+- **A file the command made is told from one that was always there** by its creation time. One that
+  was ignored until a command changed the ignore rules, or that was moved in from elsewhere with
+  its old creation time, is listed but has no copy to restore, so it cannot be undone.
+- **More than 200 files** are not listed beyond the first 200, whatever changed them; the panel
+  says so. When one command alone changes more than that, its rows also carry a warning.
 - **A file another program holds open**, so that git cannot read it, is left out of the comparison
   until it is released: it is neither listed nor taken for a new file.
 - **Anything that happens after the command returns**, such as a job it left running in the
@@ -102,7 +111,6 @@ Turn this off with **Track the files commands change** in [Options](/cv4vs-agent
   seconds), runs without being followed. The next one is, once the snapshot is there.
 - **A file git can only give as a pointer** (Git LFS) is listed without a copy: you can open it, but
   not undo it.
-- **More than 200 files** are not listed beyond the first 200; the panel says so.
 - **Closing Visual Studio forgets what you kept or undid.** Resuming a session rebuilds the list from
   the CLI's history, so a file you had already accepted comes back as a change.
 

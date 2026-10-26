@@ -100,7 +100,10 @@ internal sealed partial class SessionChanges : IDisposable
 
     /// <summary>What the panel says about shell commands: why they are not followed, or null when they
     /// are (or it is not yet known, before the first look at the folder).</summary>
-    public string CommandsNote => _options.TrackCommands() ? _set.CommandsNote : CommandsOffNote;
+    public string CommandsNote => TracksCommands ? _set.CommandsNote : CommandsOffNote;
+
+    /// <summary>Whether the files a shell command changes are followed (the setting).</summary>
+    public bool TracksCommands => _options.TrackCommands();
 
     internal const string CommandsOffNote = "Files changed by running a command are not listed: that is turned off in Options.";
 
@@ -130,13 +133,41 @@ internal sealed partial class SessionChanges : IDisposable
     }
 
     /// <summary>Start following what shell commands change: find the git repository of the working
-    /// directory and take the first picture of it. In the background, and once; nothing happens
-    /// outside a git working tree.</summary>
+    /// directory and watch it. In the background, and once; nothing happens outside a git working tree. No
+    /// picture of the tree is taken yet (see <see cref="WarmUp"/>): a chat that never runs a command, or is
+    /// only restored with the solution, costs no reading of the disk.</summary>
     public void StartTracking()
     {
         if (_disposed || _bash is not null) { return; }
         var folder = Path.Combine(_options.SnapshotsRoot ?? AppPaths.SnapshotsFolder, Guid.NewGuid().ToString("N"));
         _bash = BashTracker.StartAsync(_workingDirectory, folder, _set, _baselines, _log, _options.MaxRowsPerCommand);
+    }
+
+    /// <summary>Claude is about to work: take the first picture of the working tree now, in the background,
+    /// so that it is there by the time the first command arrives and that command does not wait for it.
+    /// Later pictures are taken when a command finds the tree has changed.</summary>
+    public void WarmUp()
+    {
+        if (_disposed || !TracksCommands) { return; }
+        StartTracking();
+        _ = WarmUpAsync();
+    }
+
+    private async Task WarmUpAsync()
+    {
+        try
+        {
+            var tracker = await Tracker().ConfigureAwait(false);
+            if (tracker is not null) { await tracker.WarmUpAsync().ConfigureAwait(false); }
+        }
+        catch (OperationCanceledException)
+        {
+            // The pane closed.
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("SessionChanges.WarmUpAsync", ex);
+        }
     }
 
     /// <summary>A shell command is about to run. Brings the snapshot of the working tree up to date when
@@ -346,13 +377,12 @@ internal sealed partial class SessionChanges : IDisposable
 
         var row = NewRow(path, found, evaluation, toolUseId);
         var alreadyFull = _set.Overflow;
-        if (_set.Add(row))
-        {
-            _set.ConsumeCaptureNext(path);
-            return;
-        }
+        var added = _set.TryAdd(row);
+        if (added != AddResult.Full) { _set.ConsumeCaptureNext(path); }
+        if (added == AddResult.Added) { return; }
+        // Not stored, so nothing holds the copy that was taken for it: a row that was there first keeps its own.
         _baselines.Release(found.Baseline);
-        if (!alreadyFull) { _log.Warn($"[changes] more than {ChangeSet.MaxFiles} files changed: the rest are not listed"); }
+        if (added == AddResult.Full && !alreadyFull) { _log.Warn($"[changes] more than {ChangeSet.MaxFiles} files changed: the rest are not listed"); }
     }
 
     private static FileChange NewRow(string path, Found found, ChangeEvaluation evaluation, string toolUseId)

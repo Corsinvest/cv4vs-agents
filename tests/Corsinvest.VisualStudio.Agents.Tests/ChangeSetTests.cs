@@ -230,4 +230,37 @@ public class ChangeSetTests
         Assert.Equal(1, announced);
         Assert.Equal("not a repository", set.CommandsNote);
     }
+
+    [Fact]
+    public void TryAdd_says_whether_the_row_was_stored_was_already_there_or_found_no_room()
+    {
+        var set = new ChangeSet();
+
+        Assert.Equal(AddResult.Added, set.TryAdd(Row(@"C:\a.txt", BaselineRef.Cli("first"))));
+        Assert.Equal(AddResult.AlreadyListed, set.TryAdd(Row(@"C:\A.TXT", BaselineRef.Cli("second"))));
+        Assert.Equal("first", set.Snapshot().Single().Baseline.Path);
+
+        for (var i = 0; i < ChangeSet.MaxFiles - 1; i++) { set.Add(Row(@"C:\f" + i)); }
+        Assert.Equal(AddResult.Full, set.TryAdd(Row(@"C:\one-too-many")));
+        Assert.True(set.Overflow);
+    }
+
+    [Fact]
+    public void A_set_knows_when_it_is_full_and_can_be_told_rows_were_dropped()
+    {
+        var set = new ChangeSet();
+        Assert.False(set.IsFull);
+
+        for (var i = 0; i < ChangeSet.MaxFiles; i++) { set.Add(Row(@"C:\f" + i)); }
+        Assert.True(set.IsFull);
+        Assert.False(set.Overflow);
+
+        var raised = 0;
+        set.Changed += () => raised++;
+        set.NoteOverflow();
+        set.NoteOverflow();
+
+        Assert.True(set.Overflow);
+        Assert.Equal(1, raised);
+    }
 }
