@@ -921,6 +921,13 @@ public partial class ChatPaneControl
         ThreadHelper.ThrowIfNotOnUIThread();
         if (Entry == null) { return; }
 
+        _log.Debug(() => $"[activity] turn={TurnInFlight} background={HasBackgroundTasks} permission={AwaitingPermission} working={IsWorking}");
+        if (Entry.IsWorking != IsWorking)
+        {
+            Entry.IsWorking = IsWorking;
+            RepushCaption();
+        }
+
         Core.Power.KeepAwakeService.Instance.SetBusy(
             Entry.SeqNo,
             AgentsOptions.General.PreventSleepWhileRunning && IsWorking);

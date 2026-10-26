@@ -150,10 +150,8 @@ public abstract class PaneWindowBase : ToolWindowPane
     /// <summary>Set the pane caption from the entry's single-source <see cref="PaneEntry.Title"/>
     /// (e.g. "Chat 3 (z.ai)"), the same text the toolbar's open-panes list shows.</summary>
     internal void SetSessionCaption(PaneEntry entry) =>
-        // Sets the pane title only. The docked TAB caption can't be changed here:
-        // VS derives it from the window name + instance number and ignores every
-        // frame caption property (Caption/ShortCaption/Owner/Editor/OverrideCaption).
-        Caption = entry.Title;
+        // The prefix marks a working pane in the tab strip (#248).
+        Caption = entry.IsWorking ? $"● {entry.Title}" : entry.Title;
 
     public override void OnToolWindowCreated()
     {

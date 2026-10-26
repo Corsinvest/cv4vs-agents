@@ -75,6 +75,10 @@ public sealed class PaneEntry
     /// known, and always null for a CLI pane.</summary>
     public string SessionTitle { get; internal set; }
 
+    /// <summary>Whether claude.exe is computing for this pane right now. Set by the chat pane on
+    /// every activity change; always false for a CLI pane.</summary>
+    public bool IsWorking { get; internal set; }
+
     /// <summary>"Chat 3 (Default): Fix the drag and drop", for the two menus that list open panes.
     /// The number stays: two panes can sit on the same session, and it is what the docked tab
     /// shows. The title arrives single-line and already cut (SessionManager.MaxTitleLength).</summary>
