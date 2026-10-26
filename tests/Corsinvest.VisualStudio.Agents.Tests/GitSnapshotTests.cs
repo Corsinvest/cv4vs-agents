@@ -252,4 +252,15 @@ public sealed class GitSnapshotTests : IDisposable
         // The main working tree's own index is left as it was.
         Assert.Equal("", _repo.Git("status", "--porcelain").Trim());
     }
+
+    [Theory]
+    [InlineData(@"C:\", null, true)]
+    [InlineData(@"D:\", null, true)]
+    [InlineData(@"C:\Users\jane", @"C:\Users\jane", true)]
+    [InlineData(@"C:\Users\jane\", @"C:\Users\jane", true)]
+    [InlineData(@"c:\users\JANE", @"C:\Users\jane", true)]
+    [InlineData(@"C:\Users\jane\source\repos\app", @"C:\Users\jane", false)]
+    [InlineData(@"D:\work", @"C:\Users\jane", false)]
+    public void A_repository_that_is_a_whole_drive_or_profile_is_too_broad_to_follow(string topLevel, string home, bool expected)
+        => Assert.Equal(expected, GitSnapshot.IsTooBroad(topLevel, home));
 }

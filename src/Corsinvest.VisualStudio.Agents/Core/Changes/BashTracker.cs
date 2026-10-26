@@ -63,6 +63,9 @@ internal sealed class BashTracker : IDisposable
     /// <summary>What the panel says when the working directory is not in a git repository.</summary>
     internal const string NoRepositoryNote = "Files changed by running a command are not listed: this folder is not in a git repository.";
 
+    /// <summary>What the panel says when the repository is a whole drive or the profile folder.</summary>
+    internal const string TooBroadNote = "Files changed by running a command are not listed: the git repository here is your whole profile folder or drive.";
+
     /// <summary>Start looking after a working directory. Null when it is not in a git repository, or git
     /// is not there: nothing is then tracked and nothing is listed, and the set says why.</summary>
     public static async Task<BashTracker> StartAsync(string workingDirectory, string snapshotFolder, ChangeSet set,
@@ -81,6 +84,14 @@ internal sealed class BashTracker : IDisposable
         {
             log.Info($"[changes] {workingDirectory} is not in a git repository: files changed by commands are not tracked");
             set.SetCommandsNote(NoRepositoryNote);
+            return null;
+        }
+
+        if (GitSnapshot.IsTooBroad(snapshot.TopLevel))
+        {
+            log.Info($"[changes] the repository at {snapshot.TopLevel} is a whole drive or profile: files changed by commands are not tracked");
+            snapshot.Dispose();
+            set.SetCommandsNote(TooBroadNote);
             return null;
         }
 

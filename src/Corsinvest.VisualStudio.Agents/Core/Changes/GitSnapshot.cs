@@ -77,6 +77,22 @@ internal sealed class GitSnapshot : IDisposable
         return new GitSnapshot(git, Absolute(lines[0]), Absolute(lines[1]), Absolute(lines[2]), folder, log);
     }
 
+    /// <summary>A repository rooted at a drive or at the user's profile folder (dotfiles set up that way
+    /// do it, and a solution folder that is not a repository then resolves to it). Everything under it
+    /// that is not ignored counts as an untracked file, so a snapshot would copy the whole profile or disk
+    /// into the store. Not worth following. <paramref name="home"/> is a parameter for the tests.</summary>
+    public static bool IsTooBroad(string topLevel, string home = null)
+    {
+        if (string.IsNullOrEmpty(topLevel)) { return false; }
+        string Plain(string path) => Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var top = Plain(topLevel);
+        var root = Path.GetPathRoot(Path.GetFullPath(topLevel))?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.Equals(top, root, StringComparison.OrdinalIgnoreCase)) { return true; }
+
+        home ??= Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return !string.IsNullOrEmpty(home) && string.Equals(top, Plain(home), StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Take a snapshot of the working tree as it is now. Returns its tree id, or null when git
     /// could not do it (logged). One at a time: two runs over the same index would trip over each other.</summary>
     public async Task<string> TakeAsync(CancellationToken cancel = default)
