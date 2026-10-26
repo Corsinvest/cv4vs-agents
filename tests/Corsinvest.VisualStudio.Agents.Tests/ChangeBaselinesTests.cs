@@ -145,12 +145,29 @@ public sealed class ChangeBaselinesTests : IDisposable
         var recent = Path.Combine(_root, "recent");
         Directory.CreateDirectory(old);
         Directory.CreateDirectory(recent);
+        Directory.SetCreationTimeUtc(old, DateTime.UtcNow.AddDays(-30));
         Directory.SetLastWriteTimeUtc(old, DateTime.UtcNow.AddDays(-30));
 
         _baselines.Sweep(TimeSpan.FromDays(14));
 
         Assert.False(Directory.Exists(old));
         Assert.True(Directory.Exists(recent));
+    }
+
+    [Fact]
+    public void A_folder_with_a_copy_made_recently_in_it_is_kept_whatever_its_own_time_says()
+    {
+        // The folder's time moves only when an entry is added or removed, and a copy keeps the write time
+        // of its source: a chat open for weeks would look abandoned to another Visual Studio starting up.
+        var busy = Path.Combine(_root, "busy");
+        Directory.CreateDirectory(busy);
+        File.WriteAllText(Path.Combine(busy, "abc~a.txt"), "x");
+        Directory.SetCreationTimeUtc(busy, DateTime.UtcNow.AddDays(-30));
+        Directory.SetLastWriteTimeUtc(busy, DateTime.UtcNow.AddDays(-30));
+
+        _baselines.Sweep(TimeSpan.FromDays(14));
+
+        Assert.True(Directory.Exists(busy));
     }
 
     [Fact]

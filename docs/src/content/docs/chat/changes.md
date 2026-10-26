@@ -35,11 +35,17 @@ and the next edit of that file is compared with how it is now.
 **Undo** puts the file back as it was before Claude's first edit of it, then drops the row.
 
 - A file open in an editor is replaced as one edit and saved, so **Ctrl+Z** brings back what was
-  there, and format on save runs as it does for your own saves.
+  there, and format on save runs as it does for your own saves. This is for plain UTF-8 or UTF-16
+  text. A file in another code page, or one whose byte-order mark is not what the editor would save,
+  is written back on disk instead, and Visual Studio reloads it.
 - A file that is not open is written back byte for byte, so its encoding, byte-order mark and line
   endings come back as they were.
 - A file Claude **created** is deleted, its tab closed first. A file Claude **deleted** is
-  recreated, folders included.
+  recreated, folders included. A created file the editor holds unsaved changes to is not deleted:
+  save or close it first.
+- **Undo only acts on a file the list has measured.** If the file changed since (you saved it, a tool
+  wrote it), the list measures it again and refuses that one Undo, with the reason. Look at what is
+  in it now, and undo it again if you still want to.
 - If a file cannot be restored (it is locked, or open in a designer that cannot take the text) the
   row stays, with the reason, so you can see it did not happen. Undo all carries on with the rest.
 

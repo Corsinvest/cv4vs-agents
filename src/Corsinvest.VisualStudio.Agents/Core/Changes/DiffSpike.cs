@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+#if DEBUG
+
 // IVsDifferenceCodeWindow2 is marked provisional ([Obsolete]) in the SDK. Whether it works on a
 // given Visual Studio is exactly what this probe exists to find out.
 #pragma warning disable CS0618
@@ -279,3 +281,5 @@ internal static class DiffSpike
             "cv4vs Agents: diff spike", warning: false);
     }
 }
+
+#endif

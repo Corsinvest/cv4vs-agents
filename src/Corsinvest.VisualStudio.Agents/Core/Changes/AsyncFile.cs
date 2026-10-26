@@ -51,6 +51,16 @@ internal static class AsyncFile
         return bytes;
     }
 
+    /// <summary>The first <paramref name="count"/> bytes of a file, or fewer when it is shorter.</summary>
+    public static async Task<byte[]> ReadHeadAsync(string path, int count, CancellationToken cancel = default)
+    {
+        using var stream = await OpenReadAsync(path).ConfigureAwait(false);
+        var head = new byte[count];
+        var read = await FillAsync(stream, head, cancel).ConfigureAwait(false);
+        if (read != count) { Array.Resize(ref head, read); }
+        return head;
+    }
+
     /// <summary>Write a file, replacing what was there.</summary>
     public static async Task WriteAllBytesAsync(string path, byte[] bytes, CancellationToken cancel = default)
     {
