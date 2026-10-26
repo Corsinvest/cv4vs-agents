@@ -49,6 +49,7 @@ public sealed class BaselineReviewTests : IDisposable
         Assert.Null(why);
         Assert.Equal("old\r\n", baseline.Text);
         Assert.Equal(ChangeEvaluator.Mark.None, baseline.Mark);
+        Assert.Equal("\r\n", baseline.LineEnding);
         Assert.False(baseline.IsEmpty);
     }
 
@@ -119,6 +120,57 @@ public sealed class BaselineReviewTests : IDisposable
 
         Assert.Contains("no copy", BaselineReview.Prepare(Row(file, BaselineRef.None), out _));
         Assert.Contains("cannot be read", BaselineReview.Prepare(Row(file, BaselineRef.Cli(Path.Combine(_folder, "gone@v1"))), out _));
+    }
+
+    [Theory]
+    [InlineData("old\nlines\n", "\n")]
+    [InlineData("old\r\nlines\r\n", "\r\n")]
+    [InlineData("one line", null)]
+    public void The_baseline_says_which_line_ending_it_is_written_back_in(string before, string ending)
+    {
+        var file = Write("a.txt", "new\n");
+        var copy = Write("backup@v1", before);
+
+        Assert.Null(BaselineReview.Prepare(Row(file, BaselineRef.Cli(copy)), out var baseline));
+
+        Assert.Equal(ending, baseline.LineEnding);
+    }
+
+    [Fact]
+    public void A_baseline_that_mixes_line_endings_is_left_to_the_comparison_window()
+    {
+        var file = Write("a.txt", "new\n");
+        var copy = Write("backup@v1", "one\r\ntwo\nthree\r\n");
+
+        var why = BaselineReview.Prepare(Row(file, BaselineRef.Cli(copy)), out var baseline);
+
+        Assert.Contains("mixes line endings", why);
+        Assert.Null(baseline);
+    }
+
+    [Fact]
+    public void A_file_that_mixes_line_endings_is_left_to_the_comparison_window()
+    {
+        var file = Write("a.txt", "one\r\ntwo\nthree\r\n");
+        var copy = Write("backup@v1", "one\ntwo\n");
+
+        var why = BaselineReview.Prepare(Row(file, BaselineRef.Cli(copy)), out var baseline);
+
+        Assert.Contains("mixes line endings", why);
+        Assert.Null(baseline);
+    }
+
+    [Fact]
+    public void A_file_that_is_not_plain_text_now_is_left_to_the_comparison_window_though_its_copy_was()
+    {
+        // Claude's edit left the file in a legacy code page (an e with an acute accent as one byte, which is not UTF-8).
+        var file = Write("a.txt", new byte[] { 0x63, 0x61, 0x66, 0xE9, 0x0A });
+        var copy = Write("backup@v1", "cafe\n");
+
+        var why = BaselineReview.Prepare(Row(file, BaselineRef.Cli(copy)), out var baseline);
+
+        Assert.Contains("not plain UTF-8 or UTF-16 text now", why);
+        Assert.Null(baseline);
     }
 
     [Fact]

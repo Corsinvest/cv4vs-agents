@@ -27,6 +27,7 @@ function file(path: string, extra: Partial<ChangedFileDto> = {}): ChangedFileDto
         hasBaseline: true,
         baselineMissing: false,
         incomplete: false,
+        sharedWithPane: null,
         ...extra,
     };
 }
@@ -177,6 +178,7 @@ test('countsTip explains the figures only where they need it', () => {
 test('a row says which other chat lists the same file, and nothing when none does', () => {
     assert.equal(sharedNote({}), null);
     assert.equal(sharedNote({ sharedWithPane: undefined }), null);
+    assert.equal(sharedNote({ sharedWithPane: null }), null);
 
     const note = sharedNote({ sharedWithPane: 2 });
     assert.equal(note?.label, 'also in Chat 2');

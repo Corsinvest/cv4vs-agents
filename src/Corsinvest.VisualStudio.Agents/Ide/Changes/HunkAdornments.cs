@@ -172,7 +172,7 @@ internal sealed class HunkAdornments : IDisposable
             }
         }
 
-        private void OnCaretMoved(object sender, CaretPositionChangedEventArgs e) => Update();
+        private void OnCaretMoved(object sender, CaretPositionChangedEventArgs e) => _view.QueuePostLayoutAction(Update);
         private void OnLayoutChanged(object sender, TextViewLayoutChangedEventArgs e) => Update();
 
         public void Update()
@@ -181,7 +181,8 @@ internal sealed class HunkAdornments : IDisposable
             try { UpdateCore(); }
             catch (Exception ex)
             {
-                OutputWindowLogger.Global.LogException("HunkAdornments.Update", ex);
+                // The text of a view that is being laid out cannot always be asked: the next layout draws them.
+                OutputWindowLogger.Global.Debug(() => $"[changes] the buttons were not drawn: {ex.Message}");
                 Hide();
             }
         }
@@ -190,6 +191,8 @@ internal sealed class HunkAdornments : IDisposable
         {
             if (_disposed || !_focused || _view.IsClosed || _controller.Exited || _controller.IsBusy) { Hide(); return; }
             if (!HunkLocator.TryGetHunkAtCaret(_view, out _hunk) || !HunkLocator.TryGetModel(_view, out var model)) { Hide(); return; }
+            // Buttons over a hunk that an edit has already moved would act on something else.
+            if (!_controller.IsCurrent(_hunk)) { Hide(); return; }
             var difference = HunkLocator.Current(model);
             var anchor = HunkLocator.AnchorIn(_view, model, difference, _hunk);
             if (anchor is null) { Hide(); return; }

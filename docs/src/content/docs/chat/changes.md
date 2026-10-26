@@ -60,34 +60,41 @@ switched when it appears.
 - **Keep** accepts one hunk as it is. It stops being a difference; nothing is written to the file.
 - **Undo** puts back what was there before Claude's change, in that hunk only, as one edit that **Ctrl+Z**
   takes back, and saves the file the way your own save would, format on save included.
-- When the last hunk has been kept or undone, the file leaves the list. A file you edit back to how it was by
-  hand does too.
+- When the last hunk has been kept or undone, the file leaves the list if it is now what it was before, byte
+  for byte. A difference that is only in how the lines end, or an edit you have not saved yet, leaves it
+  listed, for Keep and Undo in the panel.
 - **Keep all** and **Undo all**, in the window's menu, are the list's Keep and Undo of the whole file.
 
 The same commands are in the code window's context menu, which lists them only while the window shows a
-review, and under key chords in the text editor: **Ctrl+Alt+Y** keeps and **Ctrl+Alt+N** undoes the hunk under
-the caret, **Ctrl+Alt+Shift+Y** and **Ctrl+Alt+Shift+N** do the same for the whole file, and **Ctrl+Alt+Down**
-goes to the next change. Rebind them in Tools > Options > Keyboard, looking for *Keep this change* and its
-neighbours.
+review. No key is assigned to them: the obvious ones belong to Visual Studio, or are AltGr and a letter on some
+keyboard layouts. Assign your own in Tools > Options > Environment > Keyboard, in the Text Editor scope, by the
+names of the commands without their spaces (*KeepThisChange*, *UndoThisChange*, *KeepAllChangesInThisFile*,
+*UndoAllChangesInThisFile*, *GoToTheNextChange*).
 
 **Show the changes in the editor** (Options > Chat > Files) picks the form: *Inline* (the default),
 *SideBySide*, or *Files*, which leaves the editor alone and makes Open show the comparison window described
-above.
+above. Changing it applies at once to the files already shown.
 
 A file that cannot be shown this way is shown in the comparison window instead, and with Options > Debug >
 Log level at *Info* the log says why. The reasons: this Visual Studio's editor cannot show a difference in the
-file; the file is not plain UTF-8 or UTF-16 text, or its byte-order mark is not what it was before Claude's
-change; it is read-only; its window shows two languages in one file (Razor, for one); another extension,
-Copilot or a Git diff, is already showing a difference in it; or the list has no copy of the file from before.
+file; the file, or its copy from before, is not plain UTF-8 or UTF-16 text; its byte-order mark is not what it
+was before Claude's change; it mixes CRLF and LF line endings, which showing and keeping a hunk would level; it is
+read-only; its window shows two languages in one file (Razor, for one); another extension, Copilot or a Git
+diff, is already showing a difference in it; or the list has no copy of the file from before. A file that was
+declined is tried again when it changes.
 
 A few things work differently there:
 
+- A hunk is acted on only from a difference that describes the file as it is. For a moment after any edit it is
+  worked out again, and the buttons are hidden and the commands unavailable until it is; one asked for in that
+  moment is refused with a word in the status bar. Undo of a hunk is also refused while the editor shows an older
+  file than the one on disk, which it has not reloaded yet.
 - A file Claude **created** is one hunk, so Keep and Undo of it are those of the file: Undo deletes it, as the
   list's does.
 - After a **Keep** of a hunk, the baseline the list holds is the one the editor shows, so the counts, Open and
-  an Undo of the whole file all agree with it. It is kept in the file's own encoding.
-- A file that two chats list is shown for the one whose row changed last, and each row says *also in Chat N*.
-
+  an Undo of the whole file all agree with it. It is kept in the file's own encoding and line ending.
+- A file that two chats list is shown for the one that listed or changed it last, or the one where you pressed
+  Open, and each row says *also in Chat N*, naming the other chat.
 ## What it compares with
 
 The copy the CLI keeps before it first edits a file: the same ones [Rewind](/cv4vs-agents/chat/rewind/)

@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -410,6 +411,79 @@ public sealed class SessionChangesTests : IDisposable
         Assert.Equal(new[] { Work(fx, "a.txt"), Work(fx, "b.txt") }, rows.Select(r => r.Path));
         Assert.Equal(ChangeState.Modified, rows[0].State);
         Assert.Equal(ChangeState.Added, rows[1].State);
+    }
+
+    [Fact]
+    public async Task A_baseline_replaced_for_the_row_it_names_is_measured_again_and_the_copy_it_had_goes()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1));
+        var backup = fx.WriteBackup("a@v1", "a\nb\n");
+        fx.WriteWork("a.txt", "a\nB\nc\n");
+        using var changes = Create(fx);
+        await changes.OnPostEditAsync(Hook(fx, "a.txt", "toolu_1"));
+        var row = Assert.Single(changes.Set.Snapshot());
+
+        // The first changed line was kept in the editor: the baseline is now "a" with the B in it.
+        var first = await changes.ReplaceBaselineAsync(row.Path, row.Serial, Encoding.UTF8.GetBytes("a\nB\n"));
+
+        Assert.NotNull(first);
+        var after = Assert.Single(changes.Set.Snapshot());
+        Assert.True(after.Baseline.Owned);
+        Assert.Equal(first, after.Baseline.Path);
+        Assert.Equal(1, after.Added);
+        Assert.Equal(0, after.Deleted);
+        Assert.True(File.Exists(backup), "the CLI's own backup is never touched");
+
+        // The second keep makes the baseline the file: the copy of the first goes, and the file is nothing to review.
+        var second = await changes.ReplaceBaselineAsync(row.Path, row.Serial, Encoding.UTF8.GetBytes("a\nB\nc\n"));
+
+        Assert.NotNull(second);
+        Assert.False(File.Exists(first));
+        Assert.Empty(changes.Set.Snapshot());
+        Assert.False(File.Exists(second));
+        Assert.True(File.Exists(backup));
+    }
+
+    [Fact]
+    public async Task A_baseline_is_not_replaced_for_a_row_other_than_the_one_named_or_one_that_is_gone()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1));
+        fx.WriteBackup("a@v1", "a\n");
+        fx.WriteWork("a.txt", "a\nb\n");
+        using var changes = Create(fx);
+        await changes.OnPostEditAsync(Hook(fx, "a.txt", "toolu_1"));
+        var row = Assert.Single(changes.Set.Snapshot());
+
+        Assert.Null(await changes.ReplaceBaselineAsync(row.Path, row.Serial + 1, Encoding.UTF8.GetBytes("x\n")));
+        var untouched = Assert.Single(changes.Set.Snapshot());
+        Assert.False(untouched.Baseline.Owned);
+        Assert.Equal(0, CopiesTaken);
+
+        await changes.Actions.KeepAsync(row.Path);
+        Assert.Null(await changes.ReplaceBaselineAsync(row.Path, row.Serial, Encoding.UTF8.GetBytes("x\n")));
+        Assert.Equal(0, CopiesTaken);
+    }
+
+    [Fact]
+    public async Task Two_replacements_of_one_file_at_once_leave_one_copy_not_two()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1));
+        fx.WriteBackup("a@v1", "a\n");
+        fx.WriteWork("a.txt", "a\nb\nc\nd\n");
+        using var changes = Create(fx);
+        await changes.OnPostEditAsync(Hook(fx, "a.txt", "toolu_1"));
+        var row = Assert.Single(changes.Set.Snapshot());
+
+        var one = changes.ReplaceBaselineAsync(row.Path, row.Serial, Encoding.UTF8.GetBytes("a\nb\n"));
+        var two = changes.ReplaceBaselineAsync(row.Path, row.Serial, Encoding.UTF8.GetBytes("a\nb\nc\n"));
+        await Task.WhenAll(one, two);
+
+        Assert.NotNull(one.Result);
+        Assert.NotNull(two.Result);
+        Assert.Equal(1, CopiesTaken);
+        var after = Assert.Single(changes.Set.Snapshot());
+        Assert.True(File.Exists(after.Baseline.Path));
+        Assert.False(after.BaselineMissing);
     }
 
     [Fact]

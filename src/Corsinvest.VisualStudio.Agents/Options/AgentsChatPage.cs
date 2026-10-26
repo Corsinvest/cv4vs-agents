@@ -144,7 +144,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Files")]
     [DisplayName("Show the changes in the editor")]
-    [Description("How a file Claude changed looks while it is open. Inline draws the changes in the editor's own window, with Keep and Undo on each hunk; SideBySide puts how the file was on the left and how it is on the right; Files leaves the editor alone, and Open shows the comparison window. Needs a Visual Studio whose editor can show a difference, and a file that is plain UTF-8 or UTF-16 text: otherwise the comparison window is used. Takes effect on the next file you open or Claude changes.")]
+    [Description("How a file Claude changed looks while it is open. Inline draws the changes in the editor's own window, with Keep and Undo on each hunk; SideBySide puts how the file was on the left and how it is on the right; Files leaves the editor alone, and Open shows the comparison window. Needs a Visual Studio whose editor can show a difference, and a file that is plain UTF-8 or UTF-16 text: otherwise the comparison window is used. Takes effect at once for the files already shown, and for the ones after.")]
     public ChangesViewMode ChangesViewMode { get; set; } = ChangesViewMode.Inline;
 
     [Category("Files")]
