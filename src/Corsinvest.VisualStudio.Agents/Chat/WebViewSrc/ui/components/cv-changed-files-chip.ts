@@ -12,6 +12,7 @@ import { iconUrl } from '../../core/icon-url';
 import {
     changedFiles,
     countsNote,
+    countsTip,
     splitShownPath,
     stateLetter,
     undoBlocker,
@@ -215,10 +216,7 @@ export class CvChangedFilesChip extends LitElement {
                 data-tip=${file.source === 'bash' ? `${file.state} by a command` : file.state}
                 >${stateLetter(file.state)}</span
             >
-            <span
-                class="cv-changes-counts"
-                data-tip=${file.counts === 'approximate' ? 'Approximate: the files differ too much to count exactly.' : ''}
-            >
+            <span class="cv-changes-counts" data-tip=${countsTip(file)}>
                 ${
                     note
                         ? html`<span class="cv-changes-quiet">${note}</span>`
