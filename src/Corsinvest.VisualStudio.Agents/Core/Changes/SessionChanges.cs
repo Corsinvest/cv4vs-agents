@@ -45,6 +45,9 @@ internal sealed class SessionChangesOptions
     /// two panes list. Null = none (a test).</summary>
     public Func<int> PaneNumber { get; set; }
 
+    /// <summary>What was kept in this session, remembered across a restart. Null = a ledger in the running extension's folder.</summary>
+    public KeptLedger Kept { get; set; }
+
     /// <summary>Where the git snapshots of the working tree go. Null = the running extension's folder.</summary>
     public string SnapshotsRoot { get; set; }
 
@@ -74,6 +77,10 @@ internal sealed partial class SessionChanges : IDisposable
     private static readonly TimeSpan SweepAge = TimeSpan.FromDays(14);
     private static int _swept;
 
+    // What was kept in a chat that nobody has resumed or kept anything in for this long goes, once per process.
+    private static readonly TimeSpan KeptAge = TimeSpan.FromDays(30);
+
+    private readonly KeptLedger _kept;
     private readonly ClaudePaths _paths;
     private readonly string _workingDirectory;
     private readonly SessionChangesOptions _options;
@@ -93,14 +100,16 @@ internal sealed partial class SessionChanges : IDisposable
         _options = options ?? new SessionChangesOptions();
         _log = log ?? OutputWindowLogger.Global;
         _baselines = _options.Baselines ?? ChangeBaselines.Default;
+        _kept = _options.Kept ?? new KeptLedger(AppPaths.ChangesFolder, _log);
         Actions = new ChangeActions(_set, _baselines, _options.Editor ?? IdeChangeEditor.Instance, _log,
-                                    path => RefreshRowAsync(path, null));
+                                    path => RefreshRowAsync(path, null), path => _kept.KeepAsync(path));
         if (_baselines == ChangeBaselines.Default && Interlocked.Exchange(ref _swept, 1) == 0)
         {
             _ = Task.Run(() =>
             {
                 _baselines.Sweep(SweepAge);
                 new ChangeBaselines(AppPaths.SnapshotsFolder, _log).Sweep(SweepAge);
+                KeptLedger.Sweep(AppPaths.ChangesFolder, KeptAge, _log);
             });
         }
     }
@@ -198,6 +207,7 @@ internal sealed partial class SessionChanges : IDisposable
     public void BeginSession(string sessionId, bool resume)
     {
         ReleaseAll(_set.Reset(sessionId));
+        _kept.Open(sessionId);
         var generation = Interlocked.Increment(ref _generation);
         if (resume && !string.IsNullOrEmpty(sessionId)) { _ = RebuildAsync(sessionId, generation); }
     }
@@ -211,6 +221,8 @@ internal sealed partial class SessionChanges : IDisposable
             ReleaseAll(released);
             Interlocked.Increment(ref _generation);
         }
+        // Idempotent: a hook names the session each time, and only the first one after a change of session does anything.
+        _kept.Open(_set.SessionId);
     }
 
     /// <summary>Start following what shell commands change: find the git repository of the working
@@ -599,6 +611,8 @@ internal sealed partial class SessionChanges : IDisposable
             foreach (var kv in history.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
             {
                 if (generation != Volatile.Read(ref _generation) || _disposed) { break; }
+                // Accepted before the restart, and not changed since: not a change to review.
+                if (_kept.IsStillKept(kv.Key)) { continue; }
                 var baseline = ToFound(sessions, sessionId, kv.Value.Earliest);
                 var evaluation = await ChangeEvaluator.EvaluateAsync(kv.Key, baseline.Baseline).ConfigureAwait(false);
                 if (evaluation.Unchanged) { continue; }
@@ -652,6 +666,7 @@ internal sealed partial class SessionChanges : IDisposable
         // the token, and a disposed source throws from it.
         _lifetime.Cancel();
         ReleaseAll(_set.Reset(null));
+        _kept.Dispose();
 
         // Its folder of git snapshots goes with it, once it has finished starting (or failing to).
         var bash = _bash;

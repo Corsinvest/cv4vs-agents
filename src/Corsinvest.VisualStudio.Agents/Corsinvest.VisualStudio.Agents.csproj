@@ -291,6 +291,7 @@
     <Compile Include="Core\Changes\BaselineText.cs" />
     <Compile Include="Core\Changes\CopilotReviewShape.cs" />
     <Compile Include="Core\Changes\ReviewOwnership.cs" />
+    <Compile Include="Core\Changes\KeptLedger.cs" />
     <Compile Include="Core\Changes\MultiDiffShape.cs" />
     <Compile Include="Core\Changes\BaselineReview.cs" />
     <Compile Include="Core\Client\ClaudeInstall.cs" />
