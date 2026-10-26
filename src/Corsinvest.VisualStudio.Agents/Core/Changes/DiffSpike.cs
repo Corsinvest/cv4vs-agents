@@ -149,7 +149,7 @@ internal static class DiffSpike
 
         var text = view.TextSnapshot.GetText();
         var eol = text.Contains("\r\n") ? "\r\n" : "\n";
-        var folder = Path.Combine(AppPaths.DataFolder, "baselines", "spike");
+        var folder = Path.Combine(AppPaths.BaselinesFolder, "spike");
         Directory.CreateDirectory(folder);
         // The tilde keeps the extension, so the editor picks the same language service and the
         // baseline side is coloured like the document.
@@ -266,7 +266,7 @@ internal static class DiffSpike
         ThreadHelper.ThrowIfNotOnUIThread();
         try
         {
-            var folder = Path.Combine(AppPaths.DataFolder, "baselines", "spike");
+            var folder = Path.Combine(AppPaths.BaselinesFolder, "spike");
             Directory.CreateDirectory(folder);
             File.WriteAllText(Path.Combine(folder, "report.txt"), report, Encoding.UTF8);
         }
