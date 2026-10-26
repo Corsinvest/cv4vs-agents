@@ -89,6 +89,12 @@ Things that break in ways the compiler won't tell you about:
   caches). Changing it moves the user's data.
 - **`.gitignore` excludes `[Dd]ebug/`** with an explicit exception for `Mcp/Tools/Debug/`. Renaming
   paths without updating it silently untracks those tools.
+- **A light-DOM component still sits inside its parent's shadow root.** `createRenderRoot() { return
+  this }` keeps it out of its own, but `CvPrompt` and almost every chat component render into a
+  shadow root, and the page's `bundle.css` does not reach into one: the Changes chip came out
+  unstyled, laid over the toolbar. Anything under the prompt takes its styles through `static
+  styles` (`ui/styles/shared.ts`). Try a new one in a harness with the element inside a shadow
+  root, not in the document: there it renders fine and proves nothing.
 
 ## Architecture notes
 
