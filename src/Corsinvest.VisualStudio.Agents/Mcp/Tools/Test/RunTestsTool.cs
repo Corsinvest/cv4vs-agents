@@ -22,7 +22,8 @@ internal sealed class RunTestsTool : McpTool<RunTestsArgs>
     public override string Description =>
         "Run tests through the IDE's Test Explorer, on the build and the active configuration the " +
         "IDE already has: no separate restore, no second opinion about which configuration is " +
-        "current. Blocks until the run ends, then says whether it ran; test_get_results has the " +
+        "current; it is reported back as 'configuration', and solution_set_configuration changes " +
+        "it. Blocks until the run ends, then says whether it ran; test_get_results has the " +
         "per-test outcome, including the failures with their message and stack trace. Covers every " +
         "framework the IDE supports, not only .NET. Use test_run_with_debugger instead to stop on " +
         "a failure and inspect it with the debug_* tools.";
@@ -32,12 +33,15 @@ internal sealed class RunTestsTool : McpTool<RunTestsArgs>
 
     protected override async Task<object> InvokeAsync(RunTestsArgs args)
     {
+        // Read before the run: that is the configuration the Test Explorer builds and runs.
+        var configuration = (await IdeContextService.Instance.GetConfigurationAsync()).Configuration;
         var outcome = await IdeTestService.RunTestsAsync(args?.Filter, debug: false);
         if (!outcome.Supported) { return new { supported = false, reason = outcome.Message }; }
         return new
         {
             supported = true,
             started = outcome.Started,
+            configuration,
             // Told plainly: "did not start" reads like "nothing failed" if the caller only looks at
             // the results, and the two are opposite situations.
             message = outcome.Started
@@ -65,12 +69,14 @@ internal sealed class DebugTestsTool : McpTool<RunTestsArgs>
 
     protected override async Task<object> InvokeAsync(RunTestsArgs args)
     {
+        var configuration = (await IdeContextService.Instance.GetConfigurationAsync()).Configuration;
         var outcome = await IdeTestService.RunTestsAsync(args?.Filter, debug: true);
         if (!outcome.Supported) { return new { supported = false, reason = outcome.Message }; }
         return new
         {
             supported = true,
             started = outcome.Started,
+            configuration,
             message = outcome.Started
                 ? "Debug run finished. If it stopped at a breakpoint, debug_get_state says so."
                 : "The Test Explorer did not start a run: nothing matched the filter, the build "
