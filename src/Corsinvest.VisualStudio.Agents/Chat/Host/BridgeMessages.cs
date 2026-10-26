@@ -112,6 +112,18 @@ internal static class BridgeMessages
             public const string MarketplaceRefresh = "marketplace_refresh";
         }
 
+        /// <summary>The files Claude changed in this session, and what to do with each.</summary>
+        public static class ChangedFiles
+        {
+            public const string Get = "get_changed_files";
+            /// <summary>Show the file against how it was before Claude's first edit. One-way.</summary>
+            public const string Open = "open_changed_file";
+            public const string Keep = "keep_changed_file";
+            public const string Undo = "undo_changed_file";
+            public const string KeepAll = "keep_all_changed_files";
+            public const string UndoAll = "undo_all_changed_files";
+        }
+
         /// <summary>Lazy fetch of stripped chat blocks (images, documents, …) and paged history.</summary>
         public static class Chat
         {
@@ -269,6 +281,17 @@ internal static class BridgeMessages
             public const string HostKey = "ui_host_key";
             /// <summary>See <c>FilesDroppedNotification</c>.</summary>
             public const string FilesDropped = "ui_files_dropped";
+        }
+
+        /// <summary>The list of files Claude changed, and the outcome of acting on it.</summary>
+        public static class ChangedFiles
+        {
+            /// <summary>Answer to get_changed_files.</summary>
+            public const string List = "changed_files";
+            /// <summary>The list changed. Pushed, debounced, whenever a row or a flag does.</summary>
+            public const string Updated = "changed_files_updated";
+            /// <summary>Answer to keep / undo / keep all / undo all: which files could not be dealt with.</summary>
+            public const string ActionResult = "changed_files_action_result";
         }
 
         /// <summary>Plugin-manager results + the "plugins changed" notice.</summary>
