@@ -154,6 +154,25 @@ public sealed class GitSnapshotTests : IDisposable
     }
 
     [Fact]
+    public async Task A_burst_of_requests_is_served_by_a_run_that_began_after_the_last_of_them_was_made()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        var snapshot = await OpenAsync();
+        var first = await snapshot.TakeAsync();
+        Assert.Equal(1, snapshot.Runs);
+
+        _repo.Write("b.txt", "b\n");
+        var burst = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => snapshot.TakeAsync()));
+
+        // Not eight scans: the one that was under way when most were asked for cannot have seen b.txt, so
+        // one more is taken, and serves everything that waited behind it.
+        Assert.True(snapshot.Runs <= 3, "runs: " + snapshot.Runs);
+        Assert.All(burst, tree => Assert.NotNull(tree));
+        Assert.Contains("A:b.txt", await DiffAsync(snapshot, first, burst.Last()));
+    }
+
+    [Fact]
     public async Task What_was_changed_added_and_removed_between_two_snapshots_is_told_apart()
     {
         if (_repo is null) { return; }
@@ -404,10 +423,27 @@ public sealed class GitSnapshotTests : IDisposable
         Assert.Equal(new[] { "b.txt", "sub dir/locked file.txt" }, skipped.OrderBy(p => p, StringComparer.Ordinal));
     }
 
+    [Fact]
+    public void Warnings_and_hints_beside_the_skipped_files_are_advice_and_do_not_spoil_the_list()
+    {
+        // A repository nested in this one makes git say this on every add.
+        var stderr = "warning: adding embedded git repository: vendor/lib\n" +
+                     "hint: You've added another git repository inside your current repository.\n" +
+                     "hint:\n" +
+                     "hint: \tgit submodule add <url> vendor/lib\n" +
+                     "warning: in the working copy of 'a.txt', LF will be replaced by CRLF the next time Git touches it\n" +
+                     "error: open(\"locked.txt\"): Permission denied\n" +
+                     "error: unable to index file 'locked.txt'\n";
+
+        Assert.True(GitSnapshot.TrySkippedPaths(stderr, out var skipped));
+        Assert.Equal(new[] { "locked.txt" }, skipped);
+    }
+
     [Theory]
     [InlineData("")]
+    [InlineData("warning: only advice, and nothing skipped\n")]
     [InlineData("error: short read while indexing a.txt\n")]
-    [InlineData("error: open(\"a.txt\"): Permission denied\nwarning: something new from a later git\n")]
+    [InlineData("error: open(\"a.txt\"): Permission denied\nfatal: something nobody expected\n")]
     [InlineData("some words nobody expected\n")]
     public void A_list_with_a_line_that_is_not_understood_is_not_a_list(string stderr)
     {
