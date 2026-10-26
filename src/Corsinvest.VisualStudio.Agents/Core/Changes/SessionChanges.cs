@@ -85,7 +85,8 @@ internal sealed partial class SessionChanges : IDisposable
         _options = options ?? new SessionChangesOptions();
         _log = log ?? OutputWindowLogger.Global;
         _baselines = _options.Baselines ?? ChangeBaselines.Default;
-        Actions = new ChangeActions(_set, _baselines, _options.Editor ?? IdeChangeEditor.Instance, _log);
+        Actions = new ChangeActions(_set, _baselines, _options.Editor ?? IdeChangeEditor.Instance, _log,
+                                    path => RefreshRowAsync(path, null));
         if (_baselines == ChangeBaselines.Default && Interlocked.Exchange(ref _swept, 1) == 0)
         {
             _ = Task.Run(() =>
@@ -244,20 +245,29 @@ internal sealed partial class SessionChanges : IDisposable
 
     /// <summary>The hook that runs before an edit. Takes the copy the CLI will not: only for a
     /// sub-agent, or for a file the user just kept or undid. Bounded by the caller, because the CLI
-    /// waits for this answer before it runs the tool.</summary>
-    public async Task OnPreEditAsync(HookEdit edit)
+    /// waits for this answer before it runs the tool, and <paramref name="late"/> is cancelled the
+    /// moment it is given: a copy finished after that was taken with the edit under way, and would
+    /// hold it.</summary>
+    public async Task OnPreEditAsync(HookEdit edit, CancellationToken late = default)
     {
         try
         {
-            if (!Active(edit)) { return; }
+            // No tool call to pair the copy with: the hook after the edit could never claim it.
+            if (!Active(edit) || string.IsNullOrEmpty(edit.ToolUseId)) { return; }
             var path = ChangePaths.Normalize(edit.FilePath, string.IsNullOrEmpty(edit.Cwd) ? _workingDirectory : edit.Cwd);
             if (path is null || _set.TryGet(path, out _)) { return; }
             if (!edit.IsSubAgent && !_set.WantsCapture(path)) { return; }
 
             ReleaseAll(_set.PrunePending(PendingLifetime));
             if (_options.PrepareFile is not null) { await _options.PrepareFile(path).ConfigureAwait(false); }
+            if (late.IsCancellationRequested) { return; }
             var sessionId = _set.SessionId;
             var baseline = await _baselines.CaptureAsync(sessionId, path).ConfigureAwait(false);
+            if (late.IsCancellationRequested)
+            {
+                _baselines.Release(baseline);
+                return;
+            }
             _set.StorePending(edit.ToolUseId, path, baseline);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -305,8 +315,22 @@ internal sealed partial class SessionChanges : IDisposable
         }
 
         Found found;
-        if (_set.TakePending(edit.ToolUseId, path, out var captured)) { found = new Found(captured, false); }
-        else { found = await FindCliBaselineAsync(edit, path).ConfigureAwait(false); }
+        if (_set.TakePending(edit.ToolUseId, path, out var captured))
+        {
+            found = new Found(captured, false);
+        }
+        else if (_set.WantsCapture(path))
+        {
+            // Kept or undone earlier, and the copy for this edit is missing (the hook was late, or named no
+            // tool call). The CLI's own copy is from before the whole session: comparing with it would offer
+            // to undo what the person already accepted. Better listed with no copy than with that one.
+            _log.Warn($"[changes] no copy was taken before this edit of {path}, which was kept or undone before: it is listed without one");
+            found = new Found(BaselineRef.None, false);
+        }
+        else
+        {
+            found = await FindCliBaselineAsync(edit, path).ConfigureAwait(false);
+        }
 
         // A new session began while this waited: the result belongs to the old one.
         if (generation != Volatile.Read(ref _generation))

@@ -24,6 +24,7 @@ public sealed class BashChangesTests : IDisposable
     {
         public Task<DocumentReplaceResult> ReplaceDocumentTextAsync(string path, string text) => Task.FromResult(DocumentReplaceResult.NotOpen);
         public Task CloseDocumentAsync(string path) => Task.CompletedTask;
+        public Task<bool> IsDirtyAsync(string path) => Task.FromResult(false);
         public Task ShowDiffAsync(string key, string path, string before, string after, string leftLabel, string rightLabel) => Task.CompletedTask;
         public Task OpenFileAsync(string path) => Task.CompletedTask;
     }

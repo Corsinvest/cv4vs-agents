@@ -92,7 +92,7 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
             var limit = DateTime.UtcNow - olderThan;
             foreach (var folder in Directory.GetDirectories(root))
             {
-                if (Directory.GetLastWriteTimeUtc(folder) >= limit) { continue; }
+                if (NewestActivity(folder) >= limit) { continue; }
                 try { DeleteTree(folder); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
@@ -105,6 +105,22 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
             log.Warn($"[changes] could not sweep {root}: {ex.Message}");
         }
     }
+
+    /// <summary>The newest time anything in the folder was made or changed. The folder's own time moves only
+    /// when an entry is added or removed, and a copy keeps the write time of the file it came from, so the
+    /// time a copy was made counts too: otherwise a chat left open for weeks, with copies that were never
+    /// added to or removed, looks abandoned to the next Visual Studio that starts.</summary>
+    private static DateTime NewestActivity(string folder)
+    {
+        var newest = Latest(Directory.GetCreationTimeUtc(folder), Directory.GetLastWriteTimeUtc(folder));
+        foreach (var file in Directory.EnumerateFiles(folder))
+        {
+            newest = Latest(newest, Latest(File.GetCreationTimeUtc(file), File.GetLastWriteTimeUtc(file)));
+        }
+        return newest;
+    }
+
+    private static DateTime Latest(DateTime a, DateTime b) => a > b ? a : b;
 
     public string FolderFor(string sessionId)
         => Path.Combine(root, SessionManager.IsSafePathToken(sessionId) ? sessionId : "unsaved");
