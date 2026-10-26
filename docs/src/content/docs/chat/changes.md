@@ -65,18 +65,23 @@ extension takes its own, as long as the folder is in a **git repository**:
 
 1. Before a command runs, it takes a snapshot of the working tree: every file git would list,
    tracked or not, minus what `.gitignore` excludes. If nothing has changed since the last
-   snapshot it reuses that one, so a command that only reads costs nothing.
-2. While the command runs, a file watcher notes which files it touches. Git is then asked which of
-   them really differ from the snapshot, so a build writing into `obj/` does not fill the list.
-3. Those files get a row like any other, and Open, Keep and Undo work on it the same way. A file
-   you had edited by hand before the command is compared with your version, not with an older one.
+   snapshot it reuses that one, so a command that only reads costs nothing. When Claude asks your
+   permission first, the snapshot is brought up to date when you answer, so what you changed in
+   the editor meanwhile is yours and not the command's.
+2. When the command ends, and a file watcher saw something change, it takes a second snapshot and
+   git compares the two. Both come from the same view of the tree, so they agree on what is
+   ignored and on the case of a name: a build writing into `obj/` does not fill the list.
+3. The files that differ get a row like any other, and Open, Keep and Undo work on it the same way.
+   A file you had edited by hand before the command is compared with your version, not with an
+   older one.
 
 The snapshots are kept in a private git store under the extension's data folder (see
 [Settings and data](/cv4vs-agents/settings-and-data/)). It reads your repository's objects but never
-writes to them: nothing is added to your `.git`, your index or your history. The store is deleted
-when the chat closes. Files git does not ignore are copied into it, so keep build output and large
-downloads in `.gitignore`. Turn this off with **Track the files commands change** in
-[Options](/cv4vs-agents/options/).
+writes to them: nothing is added to your history, your index or your object store. The store is
+deleted when the chat closes. Files git does not ignore are copied into it, so keep build output and
+large downloads in `.gitignore`. A repository that uses Git LFS is the one exception to "never
+writes": git's own LFS filter keeps its large files in a cache under `.git/lfs`, whatever asks it.
+Turn this off with **Track the files commands change** in [Options](/cv4vs-agents/options/).
 
 ## What it does not cover
 
@@ -86,9 +91,15 @@ downloads in `.gitignore`. Turn this off with **Track the files commands change*
   tells source from build output, and without one every command would fill the list with its
   scratch files. A repository that is a whole drive or your profile folder (some dotfiles setups)
   is not followed either, since a snapshot would copy everything in it that is not ignored.
-- **A command that rewrites a great many files** is followed through git instead of the file
-  watcher, and its rows carry a warning that others may be missing. Past 500 files from one
-  command, only the first 500 are listed.
+- **A command that changes more than 500 files** lists the first 500, and their rows carry a warning
+  that others may be missing.
+- **A file another program holds open**, so that git cannot read it, is left out of the comparison
+  until it is released: it is neither listed nor taken for a new file.
+- **Anything that happens after the command returns**, such as a job it left running in the
+  background, is not followed. And what you change in the editor *while* a command runs is listed
+  as the command's, the same as whatever else changed in that time.
+- **A command that is slow to start**, because the repository is too big to photograph in time (30
+  seconds), runs without being followed. The next one is, once the snapshot is there.
 - **A file git can only give as a pointer** (Git LFS) is listed without a copy: you can open it, but
   not undo it.
 - **More than 200 files** are not listed beyond the first 200; the panel says so.

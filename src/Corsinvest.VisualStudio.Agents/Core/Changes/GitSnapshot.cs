@@ -7,20 +7,56 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 
-/// <summary>What git holds for a path in a tree.</summary>
-internal sealed class TreeBlob
+/// <summary>A tree object that records the working tree at a moment.</summary>
+internal sealed class GitTree(string oid, HashSet<string> skipped)
 {
-    public string Mode { get; set; }
-    public string Oid { get; set; }
+    public string Oid { get; } = oid;
 
-    /// <summary>A plain file. A symlink (120000) or a submodule (160000) is not something to restore
-    /// by writing bytes.</summary>
-    public bool IsRegularFile => Mode == "100644" || Mode == "100755";
+    /// <summary>The paths git could not read (a program holds them open), so the tree holds an older version
+    /// of each, or none. Null when git said some files were skipped without saying which: such a tree is no
+    /// basis for any conclusion about any file.</summary>
+    public HashSet<string> Skipped { get; } = skipped;
+
+    /// <summary>Good for comparing, apart from <see cref="Skipped"/>.</summary>
+    public bool Usable => Skipped is not null;
+
+    /// <summary>Every file was recorded.</summary>
+    public bool Complete => Skipped is { Count: 0 };
+
+    /// <summary>Whether this tree says nothing reliable about <paramref name="relativePath"/>.</summary>
+    public bool Skips(string relativePath) => Skipped is null || Skipped.Contains(relativePath);
+}
+/// <summary>One path that differs between two trees, as <c>git diff-tree --raw</c> reports it.</summary>
+internal sealed class TreeChange
+{
+    /// <summary>Relative to the repository's root, in forward slashes.</summary>
+    public string RelativePath { get; set; }
+
+    /// <summary>A (only in the later tree), D (only in the earlier), M, or T (the kind of entry changed).</summary>
+    public char Status { get; set; }
+
+    public string OldMode { get; set; }
+    public string NewMode { get; set; }
+    public string OldOid { get; set; }
+    public string NewOid { get; set; }
+
+    /// <summary>A plain file. A symlink (120000) or a submodule (160000) is not something to restore by
+    /// writing bytes.</summary>
+    public bool OldIsFile => IsFile(OldMode);
+
+    public bool NewIsFile => IsFile(NewMode);
+
+    /// <summary>A repository nested in this one shows up as a single entry, its commit: what changes inside
+    /// it is its own repository's business.</summary>
+    public bool IsSubmodule => OldMode == "160000" || NewMode == "160000";
+
+    private static bool IsFile(string mode) => mode == "100644" || mode == "100755";
 }
 
 /// <summary>A picture of a working tree at a moment, kept as a git tree object: the "everything goes
@@ -28,7 +64,12 @@ internal sealed class TreeBlob
 /// <para>Taken with a private index and a private object store, so nothing is written into the user's
 /// repository: <c>git add -A</c> runs against a copy of the repo's index (seeded once, so the stat cache
 /// is warm and only files that differ are read) and writes its new objects into this folder, with the
-/// repo's own object store as an alternate, so the blobs git already has are reused rather than stored twice.</para>
+/// repo's own object store as an alternate, so the blobs git already has are reused rather than stored twice.
+/// A repository that uses Git LFS is the exception: its clean filter keeps its large files in its own
+/// folder under <c>.git</c>, whichever object store is asked.</para>
+/// <para>Two snapshots are compared as trees (<see cref="DiffAsync"/>), never path by path: the same
+/// <c>add -A</c> built both, so they agree on what is ignored, on the case of a name and on what a file
+/// is, which a lookup of paths seen by a file watcher would not.</para>
 /// <para>Content is read back through git's own filters (<c>cat-file --filters</c>): under
 /// <c>core.autocrlf</c> or an <c>eol</c> attribute the blob is LF while the file on disk is CRLF, and writing
 /// the raw blob back would change every line ending.</para></summary>
@@ -41,7 +82,7 @@ internal sealed class GitSnapshot : IDisposable
     private readonly OutputWindowLogger _log;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly object _treeLock = new();
-    private string _tree;
+    private GitTree _tree;
     private volatile bool _disposed;
 
     private GitSnapshot(GitRunner git, string topLevel, string repoObjects, string repoIndex, string folder, OutputWindowLogger log)
@@ -57,8 +98,9 @@ internal sealed class GitSnapshot : IDisposable
     /// <summary>The working tree's root, absolute.</summary>
     public string TopLevel { get; }
 
-    /// <summary>The newest tree taken, or null before the first one.</summary>
-    public string LatestTree { get { lock (_treeLock) { return _tree; } } }
+    /// <summary>The newest <see cref="GitTree.Complete"/> tree taken, or null before the first one. An
+    /// incomplete one is never remembered here: it must not become somebody's "before".</summary>
+    public GitTree LatestTree { get { lock (_treeLock) { return _tree; } } }
 
     /// <summary>Find the repository <paramref name="workingDirectory"/> is in. Null when it is in none:
     /// without one there is nothing to take a snapshot of.</summary>
@@ -93,9 +135,14 @@ internal sealed class GitSnapshot : IDisposable
         return !string.IsNullOrEmpty(home) && string.Equals(top, Plain(home), StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>Take a snapshot of the working tree as it is now. Returns its tree id, or null when git
-    /// could not do it (logged). One at a time: two runs over the same index would trip over each other.</summary>
-    public async Task<string> TakeAsync(CancellationToken cancel = default)
+    /// <summary>The full path of a repository-relative one (as <see cref="TreeChange.RelativePath"/> has it).</summary>
+    public string Absolute(string relativePath)
+        => Path.GetFullPath(Path.Combine(TopLevel, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+
+    /// <summary>Take a snapshot of the working tree as it is now. Null when git could not do it (logged); a
+    /// tree with some <see cref="GitTree.Skipped"/> paths when it could do it only in part. One at a time:
+    /// two runs over the same index would trip over each other.</summary>
+    public async Task<GitTree> TakeAsync(CancellationToken cancel = default)
     {
         await _gate.WaitAsync(cancel).ConfigureAwait(false);
         try
@@ -106,14 +153,14 @@ internal sealed class GitSnapshot : IDisposable
             Directory.CreateDirectory(Path.Combine(_folder, "objects"));
             var seeded = SeedIndex();
             var tree = await AddAndWriteAsync(cancel).ConfigureAwait(false);
-            if (tree is null && seeded)
+            if (tree is null && seeded && !cancel.IsCancellationRequested)
             {
                 // The copy of the repo's index may have been taken while git was writing it. Start
                 // from nothing: slower the once, and right.
                 TryDelete(IndexFile);
                 tree = await AddAndWriteAsync(cancel).ConfigureAwait(false);
             }
-            if (tree is not null)
+            if (tree is { Usable: true })
             {
                 lock (_treeLock) { _tree = tree; }
             }
@@ -125,7 +172,7 @@ internal sealed class GitSnapshot : IDisposable
         }
     }
 
-    private async Task<string> AddAndWriteAsync(CancellationToken cancel)
+    private async Task<GitTree> AddAndWriteAsync(CancellationToken cancel)
     {
         var env = Env();
         // --ignore-errors: a file locked by a build must not stop the rest being recorded, though git
@@ -133,67 +180,115 @@ internal sealed class GitSnapshot : IDisposable
         var add = await _git.RunAsync(TopLevel,
             new[] { "-c", "core.fsmonitor=false", "-c", "core.safecrlf=false", "add", "-A", "--ignore-errors", "--", "." },
             env, TimeSpan.FromMinutes(3), cancel: cancel).ConfigureAwait(false);
+        if (cancel.IsCancellationRequested) { return null; }
         if (add.TimedOut)
         {
             _log.Warn("[git] snapshot: git add did not finish in time");
             return null;
         }
 
+        // Exit 0: everything was recorded. Exit 1 with "error:" lines and no "fatal:": --ignore-errors
+        // skipped some files and recorded the rest. Anything else (a lock, a corrupt index) recorded nothing,
+        // and a tree written from what the index held before would be a stale picture passed off as a new one.
+        HashSet<string> skipped;
+        if (add.ExitCode == 0)
+        {
+            skipped = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+        else if (add.ExitCode == 1 && !add.Error.Contains("fatal:"))
+        {
+            // Which files, if git said so in words this knows. If not, the tree is kept out of every
+            // comparison: guessing which paths to trust is how a file that exists gets called new.
+            TrySkippedPaths(add.Error, out skipped);
+            _log.Debug(() => skipped is null
+                ? $"[git] snapshot: some files could not be read, and git did not say which: {FirstLine(add.Error)}"
+                : $"[git] snapshot: {skipped.Count} file(s) could not be read: {string.Join(", ", skipped)}");
+        }
+        else
+        {
+            _log.Debug(() => $"[git] snapshot: git add failed ({add.ExitCode}): {FirstLine(add.Error)}");
+            return null;
+        }
+
         var write = await _git.RunAsync(TopLevel, new[] { "write-tree" }, env, TimeSpan.FromSeconds(60), cancel: cancel).ConfigureAwait(false);
         if (!write.Ok)
         {
-            _log.Debug(() => $"[git] snapshot: write-tree failed ({write.ExitCode}): {write.Error.Trim()}");
+            if (!cancel.IsCancellationRequested) { _log.Debug(() => $"[git] snapshot: write-tree failed ({write.ExitCode}): {FirstLine(write.Error)}"); }
             return null;
         }
-        var tree = write.Output.Trim();
-        return tree.Length >= 40 ? tree : null;
+        var oid = write.Output.Trim();
+        return oid.Length >= 40 ? new GitTree(oid, skipped) : null;
     }
 
-    /// <summary>Which paths among <paramref name="relativePaths"/> are ignored by the repo's rules. A
-    /// tracked file is never ignored, whatever a pattern says: that is git's own definition.</summary>
-    public async Task<HashSet<string>> IgnoredAsync(IReadOnlyCollection<string> relativePaths)
-    {
-        var ignored = new HashSet<string>(StringComparer.Ordinal);
-        if (relativePaths.Count == 0) { return ignored; }
+    private static readonly Regex OpenError = new(@"^error: open\(""(?<p>.*)""\): .*$", RegexOptions.Compiled);
+    private static readonly Regex IndexError = new(@"^error: unable to index file '?(?<p>.*?)'?$", RegexOptions.Compiled);
 
-        var run = await _git.RunAsync(TopLevel, new[] { "check-ignore", "-z", "--stdin" },
-            timeout: TimeSpan.FromSeconds(60), stdin: string.Join("\0", relativePaths) + "\0").ConfigureAwait(false);
-        // 0 = some ignored, 1 = none: both are answers. Anything else is git failing.
-        if (run.TimedOut || run.ExitCode > 1)
+    /// <summary>The files <c>git add --ignore-errors</c> skipped, from what it printed: an "open" error and an
+    /// "unable to index" error per file. Every line has to be one of those two shapes: a line that is neither
+    /// (a read error halfway through a file, a format of a git newer than this) means the list cannot be
+    /// trusted to be all of them, and <paramref name="skipped"/> is null.</summary>
+    internal static bool TrySkippedPaths(string stderr, out HashSet<string> skipped)
+    {
+        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in (stderr ?? "").Split('\n'))
         {
-            _log.Debug(() => $"[git] check-ignore failed ({run.ExitCode}): {run.Error.Trim()}");
-            return ignored;
+            var line = raw.Trim();
+            if (line.Length == 0) { continue; }
+
+            var match = OpenError.Match(line);
+            if (!match.Success) { match = IndexError.Match(line); }
+            if (!match.Success)
+            {
+                skipped = null;
+                return false;
+            }
+            paths.Add(match.Groups["p"].Value);
         }
-        foreach (var path in run.Output.Split('\0').Where(p => p.Length > 0)) { ignored.Add(path); }
-        return ignored;
+
+        skipped = paths.Count > 0 ? paths : null;
+        return skipped is not null;
     }
 
-    /// <summary>What <paramref name="tree"/> holds for each of the paths (forward slashes, relative to
-    /// the repo's root). A path it does not hold is simply absent from the answer.</summary>
-    public async Task<Dictionary<string, TreeBlob>> ListBlobsAsync(string tree, IReadOnlyList<string> relativePaths)
+    /// <summary>The paths that differ between two trees. Null when git could not say (logged): not the
+    /// same as an empty list, which is the answer "nothing changed".</summary>
+    public async Task<List<TreeChange>> DiffAsync(string beforeTree, string afterTree)
     {
-        var found = new Dictionary<string, TreeBlob>(StringComparer.Ordinal);
-        foreach (var chunk in Chunks(relativePaths, 6000))
+        var run = await _git.RunAsync(TopLevel,
+            new[] { "diff-tree", "-r", "--raw", "-z", "--no-renames", "--no-abbrev", beforeTree, afterTree },
+            Env(), TimeSpan.FromSeconds(60)).ConfigureAwait(false);
+        if (!run.Ok)
         {
-            var args = new List<string> { "ls-tree", "-r", "-z", tree, "--" };
-            args.AddRange(chunk);
-            var run = await _git.RunAsync(TopLevel, args, Env(), TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-            if (!run.Ok)
-            {
-                _log.Debug(() => $"[git] ls-tree failed ({run.ExitCode}): {run.Error.Trim()}");
-                continue;
-            }
-            foreach (var entry in run.Output.Split('\0').Where(e => e.Length > 0))
-            {
-                // "<mode> <type> <oid>\t<path>"
-                var tab = entry.IndexOf('\t');
-                if (tab < 0) { continue; }
-                var meta = entry.Substring(0, tab).Split(' ');
-                if (meta.Length < 3 || meta[1] != "blob") { continue; }
-                found[entry.Substring(tab + 1)] = new TreeBlob { Mode = meta[0], Oid = meta[2] };
-            }
+            _log.Warn($"[git] could not compare two snapshots ({run.ExitCode}): {FirstLine(run.Error)}");
+            return null;
         }
-        return found;
+        return ParseRaw(run.Output);
+    }
+
+    /// <summary>Read <c>diff-tree --raw -z</c>: <c>:oldmode newmode oldoid newoid status NUL path NUL</c>,
+    /// repeated.</summary>
+    internal static List<TreeChange> ParseRaw(string output)
+    {
+        var changes = new List<TreeChange>();
+        var parts = output.Split('\0');
+        for (var i = 0; i < parts.Length; i++)
+        {
+            var header = parts[i];
+            if (header.Length == 0 || header[0] != ':' || i + 1 >= parts.Length) { continue; }
+
+            var meta = header.Substring(1).Split(' ');
+            if (meta.Length < 5 || meta[4].Length == 0) { continue; }
+            changes.Add(new TreeChange
+            {
+                OldMode = meta[0],
+                NewMode = meta[1],
+                OldOid = meta[2],
+                NewOid = meta[3],
+                Status = meta[4][0],
+                RelativePath = parts[i + 1],
+            });
+            i++;
+        }
+        return changes;
     }
 
     /// <summary>Write a blob to <paramref name="targetFile"/> as git would check it out: the filters
@@ -203,38 +298,9 @@ internal sealed class GitSnapshot : IDisposable
         var run = await _git.RunToFileAsync(TopLevel,
             new[] { "cat-file", "--filters", "--path=" + relativePath, oid }, targetFile, Env(), TimeSpan.FromSeconds(60)).ConfigureAwait(false);
         if (run.Ok) { return true; }
-        _log.Debug(() => $"[git] cat-file {oid} failed ({run.ExitCode}): {run.Error.Trim()}");
+        _log.Debug(() => $"[git] cat-file {oid} failed ({run.ExitCode}): {FirstLine(run.Error)}");
         TryDelete(targetFile);
         return false;
-    }
-
-    /// <summary>The files that differ between two trees.</summary>
-    public async Task<List<string>> ChangedBetweenAsync(string before, string after)
-    {
-        var run = await _git.RunAsync(TopLevel, new[] { "diff-tree", "-r", "--name-only", "-z", "--no-renames", before, after },
-            Env(), TimeSpan.FromSeconds(60)).ConfigureAwait(false);
-        if (!run.Ok) { return new List<string>(); }
-        return run.Output.Split('\0').Where(p => p.Length > 0).ToList();
-    }
-
-    /// <summary>The path relative to the repo's root, in forward slashes, or null when the file is
-    /// outside it or inside a repository of its own (a submodule: <c>add -A</c> records only its
-    /// commit, so there is nothing to compare a file in it with).</summary>
-    public string Relative(string fullPath)
-    {
-        var root = TopLevel.TrimEnd('\\', '/') + Path.DirectorySeparatorChar;
-        string full;
-        try { full = Path.GetFullPath(fullPath); }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return null; }
-        if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase)) { return null; }
-
-        var dir = Path.GetDirectoryName(full);
-        while (dir is not null && dir.Length > root.Length - 1)
-        {
-            if (Directory.Exists(Path.Combine(dir, ".git")) || File.Exists(Path.Combine(dir, ".git"))) { return null; }
-            dir = Path.GetDirectoryName(dir);
-        }
-        return full.Substring(root.Length).Replace('\\', '/');
     }
 
     private string IndexFile => Path.Combine(_folder, "index");
@@ -264,23 +330,8 @@ internal sealed class GitSnapshot : IDisposable
         }
     }
 
-    private static IEnumerable<List<string>> Chunks(IReadOnlyList<string> paths, int maxChars)
-    {
-        var chunk = new List<string>();
-        var size = 0;
-        foreach (var path in paths)
-        {
-            if (chunk.Count > 0 && size + path.Length + 1 > maxChars)
-            {
-                yield return chunk;
-                chunk = new List<string>();
-                size = 0;
-            }
-            chunk.Add(path);
-            size += path.Length + 1;
-        }
-        if (chunk.Count > 0) { yield return chunk; }
-    }
+    private static string FirstLine(string text)
+        => (text ?? "").Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "";
 
     private static void TryDelete(string path)
     {

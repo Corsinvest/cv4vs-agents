@@ -71,7 +71,7 @@ replaced by `-` (`C--Users-jane--claude`), which is why stats are per (solution,
 [Changes list](/cv4vs-agents/chat/changes/) compares against and restores from: the first the files
 Claude is about to change that the CLI keeps no copy of, the second a git object store with the
 working tree as it was before a shell command (only what differs from your repository's own
-objects is stored there; your `.git` is read and never written). Both are plain files readable by
+objects is stored there; your `.git` is read and not written, apart from the cache Git LFS keeps under `.git/lfs` when the repository uses it). Both are plain files readable by
 anything running as your user. They go when the chat closes, and what a crash leaves is swept after
 14 days, the next time a chat starts.
 

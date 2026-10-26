@@ -44,9 +44,10 @@ internal sealed class SessionChangesOptions
     /// <summary>Where the git snapshots of the working tree go. Null = the running extension's folder.</summary>
     public string SnapshotsRoot { get; set; }
 
-    /// <summary>How many paths the change watcher keeps before it declares itself overflowed. Null = its
-    /// own default; a test sets it low to reach the fallback without writing fifty thousand files.</summary>
-    public int? MaxWatchedPaths { get; set; }
+    /// <summary>How many files one shell command may add to the list before the rest are left out and
+    /// the rows say so. Null = the default; a test sets it low to reach the cap without writing hundreds
+    /// of files.</summary>
+    public int? MaxRowsPerCommand { get; set; }
 }
 
 /// <summary>Everything one chat pane knows about the files Claude changed: it feeds the
@@ -135,19 +136,20 @@ internal sealed partial class SessionChanges : IDisposable
     {
         if (_disposed || _bash is not null) { return; }
         var folder = Path.Combine(_options.SnapshotsRoot ?? AppPaths.SnapshotsFolder, Guid.NewGuid().ToString("N"));
-        _bash = BashTracker.StartAsync(_workingDirectory, folder, _set, _baselines, _log, _options.MaxWatchedPaths);
+        _bash = BashTracker.StartAsync(_workingDirectory, folder, _set, _baselines, _log, _options.MaxRowsPerCommand);
     }
 
     /// <summary>A shell command is about to run. Brings the snapshot of the working tree up to date when
     /// something has changed since it was taken, so there is a true "before" to compare with. Bounded by
-    /// the caller: the CLI waits for this answer before it runs the command.</summary>
-    public async Task OnBashBeginAsync(HookBash call)
+    /// the caller: the CLI waits for this answer before it runs the command, and <paramref name="late"/> is
+    /// cancelled the moment it is given, since a picture that finishes after that holds the command's own writes.</summary>
+    public async Task OnBashBeginAsync(HookBash call, CancellationToken late = default)
     {
         try
         {
             if (!Active(call.SessionId)) { return; }
             var tracker = await Tracker().ConfigureAwait(false);
-            if (tracker is not null) { await tracker.BeginAsync(call.ToolUseId).ConfigureAwait(false); }
+            if (tracker is not null) { await tracker.BeginAsync(call.ToolUseId, late: late).ConfigureAwait(false); }
         }
         catch (OperationCanceledException)
         {
@@ -156,6 +158,31 @@ internal sealed partial class SessionChanges : IDisposable
         catch (Exception ex)
         {
             _log.LogException("SessionChanges.OnBashBeginAsync", ex);
+        }
+    }
+
+    /// <summary>How long the answer to a permission question is held for the snapshot, at most.</summary>
+    public static readonly TimeSpan AllowedWait = TimeSpan.FromSeconds(10);
+
+    /// <summary>The person allowed a shell command that was waiting for an answer. The hook before it ran
+    /// when the question was asked; what the person did in the editor since is not the command's, so the
+    /// picture of the working tree is brought up to date now. Bounded by the caller, which holds the answer
+    /// back (the CLI runs the command as soon as it has it) and cancels <paramref name="late"/> before it
+    /// gives it.</summary>
+    public async Task OnBashAllowedAsync(string toolUseId, CancellationToken late = default)
+    {
+        try
+        {
+            var tracker = await Tracker().ConfigureAwait(false);
+            if (tracker is not null) { await tracker.AllowedAsync(toolUseId, AllowedWait, late).ConfigureAwait(false); }
+        }
+        catch (OperationCanceledException)
+        {
+            // The pane closed.
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("SessionChanges.OnBashAllowedAsync", ex);
         }
     }
 
