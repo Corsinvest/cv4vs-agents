@@ -15,10 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   copies Rewind restores from, and takes its own for a sub-agent's edits.
 - **The list also follows what a shell command changes.** A file rewritten by `sed -i`, a script or
   `git checkout`, run through the Bash or the PowerShell tool, is listed against a snapshot of the
-  working tree taken just before the command, so Undo restores it byte for byte. It needs the
-  folder to be in a git repository, and says so in the panel when it is not. The snapshots live in
-  a private store under the extension's data folder: your repository's history, index and objects
-  are only read. *Track the files commands change* in Options turns it off.
+  working tree taken just before the command, so Undo puts it back as git would check it out. It
+  needs the folder to be in a git repository, and says so in the panel when it is not. The
+  snapshots live in a private store under the extension's data folder: your repository's history,
+  index and objects are only read. *Track the files commands change* in Options turns it off.
 - **A question from Claude can show a preview of each choice.** When the options of a question
   come with a mockup, a code sample or a layout to compare, the one under the pointer or the
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer

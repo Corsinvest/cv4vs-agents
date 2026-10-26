@@ -42,7 +42,8 @@ public sealed class BashChangesTests : IDisposable
         catch (Exception) { /* absent when nothing was copied */ }
     }
 
-    private SessionChanges Create(string workingDirectory, int? maxRowsPerCommand = null, Func<bool> trackCommands = null)
+    private SessionChanges Create(string workingDirectory, int? maxRowsPerCommand = null, Func<bool> trackCommands = null,
+                                  Func<bool> checkpoints = null)
     {
         var claude = new ClaudePaths(Path.Combine(_scratch, "claude"));
         return new SessionChanges(claude, workingDirectory, new SessionChangesOptions
@@ -52,6 +53,7 @@ public sealed class BashChangesTests : IDisposable
             Editor = new NoEditor(),
             MaxRowsPerCommand = maxRowsPerCommand,
             TrackCommands = trackCommands ?? (() => true),
+            FileCheckpoints = checkpoints ?? (() => true),
         }, OutputWindowLogger.Global);
     }
 
@@ -457,6 +459,66 @@ public sealed class BashChangesTests : IDisposable
 
         changes.WarmUp();
         Assert.True(SpinWait_Until(() => Directory.Exists(snapshots) && Directory.EnumerateDirectories(snapshots).Any()));
+    }
+
+    [Fact]
+    public async Task A_file_a_second_command_changes_again_is_measured_again_and_one_it_puts_back_leaves_the_list()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "one\n");
+        _repo.Commit();
+        using var changes = await StartedAsync(Create(_repo.Root));
+
+        await RunAsync(changes, "echo two>> a.txt");
+        Assert.Equal(1, Assert.Single(changes.Set.Snapshot()).Added);
+
+        // The row keeps its baseline, from before the first command, and its numbers move.
+        await RunAsync(changes, "echo three>> a.txt");
+        Assert.Equal(2, Assert.Single(changes.Set.Snapshot()).Added);
+
+        var call = Call(_repo.Root);
+        await changes.OnBashBeginAsync(call);
+        _repo.Git("checkout", "--", "a.txt");
+        await changes.OnBashEndAsync(call);
+
+        Assert.Empty(changes.Set.Snapshot());
+    }
+
+    [Fact]
+    public async Task A_command_that_ends_in_another_conversation_than_it_began_in_adds_nothing()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        _repo.Commit();
+        var set = new ChangeSet();
+        set.Reset("s1");
+        var baselines = new ChangeBaselines(Path.Combine(_scratch, "baselines"), OutputWindowLogger.Global);
+        using var tracker = await BashTracker.StartAsync(_repo.Root, Path.Combine(_scratch, "snapshots", "direct-session"), set, baselines, OutputWindowLogger.Global);
+        await tracker.SnapshotAsync();
+
+        await tracker.BeginAsync("toolu_old");
+        File.AppendAllText(_repo.Path_("a.txt"), "command\n");
+        // The person starts another conversation while it runs.
+        set.Reset("s2");
+        await tracker.EndAsync("toolu_old", "s2");
+
+        Assert.Empty(set.Snapshot());
+    }
+
+    [Fact]
+    public async Task Warming_up_does_nothing_while_the_list_itself_is_off()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        _repo.Commit();
+        var snapshots = Path.Combine(_scratch, "snapshots");
+        using var changes = Create(_repo.Root, checkpoints: () => false);
+
+        changes.WarmUp();
+        await System.Threading.Tasks.Task.Delay(1500);
+
+        Assert.False(changes.FollowsCommands);
+        Assert.False(Directory.Exists(snapshots));
     }
 
     [Fact]

@@ -106,6 +106,11 @@ internal sealed partial class SessionChanges : IDisposable
     /// <summary>Whether the files a shell command changes are followed (the setting).</summary>
     public bool TracksCommands => _options.TrackCommands();
 
+    /// <summary>Whether anything would come of following them now: the setting is on, and so is the list
+    /// itself, which needs the CLI's file checkpoints. Without them nothing is listed, and a picture taken
+    /// or an answer held back would be for nothing.</summary>
+    public bool FollowsCommands => TracksCommands && _options.FileCheckpoints();
+
     internal const string CommandsOffNote = "Files changed by running a command are not listed: that is turned off in Options.";
 
     /// <summary>What the Open, Keep and Undo buttons do.</summary>
@@ -141,7 +146,8 @@ internal sealed partial class SessionChanges : IDisposable
     {
         if (_disposed || _bash is not null) { return; }
         var folder = Path.Combine(_options.SnapshotsRoot ?? AppPaths.SnapshotsFolder, Guid.NewGuid().ToString("N"));
-        _bash = BashTracker.StartAsync(_workingDirectory, folder, _set, _baselines, _log, _options.MaxRowsPerCommand);
+        _bash = BashTracker.StartAsync(_workingDirectory, folder, _set, _baselines, _log, _options.MaxRowsPerCommand,
+                                    path => RefreshRowAsync(path, null));
     }
 
     /// <summary>Claude is about to work: take the first picture of the working tree now, in the background,
@@ -149,7 +155,7 @@ internal sealed partial class SessionChanges : IDisposable
     /// Later pictures are taken when a command finds the tree has changed.</summary>
     public void WarmUp()
     {
-        if (_disposed || !TracksCommands) { return; }
+        if (_disposed || !FollowsCommands) { return; }
         StartTracking();
         _ = WarmUpAsync();
     }

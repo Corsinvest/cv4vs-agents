@@ -142,8 +142,11 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
         if (length != row.StampLength || written != row.StampWriteUtc)
         {
             if (remeasure is not null) { await remeasure(row.Path).ConfigureAwait(false); }
-            return "The file changed after the list last looked at it, so it has been measured again. " +
-                   "Check what is in it now, and undo it if you still want to.";
+            // -1 is the stamp of a file the list could not read (locked, perhaps by a build) when it looked.
+            return row.StampLength == -1
+                ? "The list could not read this file when it last looked at it, so it has been measured again. Try again."
+                : "The file changed after the list last looked at it, so it has been measured again. " +
+                  "Check what is in it now, and undo it if you still want to.";
         }
 
         // Taking away a file the editor holds unsaved changes to would lose them with it.

@@ -89,7 +89,9 @@ internal static class GitExe
 /// <summary>Runs git without a window and without waiting on the UI thread. Every call has a time
 /// limit: a git that hangs (a credential prompt, a network drive) must not hold up a hook the CLI is
 /// waiting on, and is killed rather than left running.</summary>
-internal sealed class GitRunner(string exe, OutputWindowLogger log)
+/// <param name="drainLimit">How long to wait for the output once git has gone: null = ten seconds, or two
+/// when it was killed. A test sets it short.</param>
+internal sealed class GitRunner(string exe, OutputWindowLogger log, TimeSpan? drainLimit = null)
 {
     private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
@@ -108,12 +110,13 @@ internal sealed class GitRunner(string exe, OutputWindowLogger log)
         var error = process.StandardError.ReadToEndAsync();
         await Feed(process, stdin).ConfigureAwait(false);
         var timedOut = !await Exit(process, timeout ?? DefaultTimeout, cancel).ConfigureAwait(false);
+        var drained = await Drained(timedOut, output, error).ConfigureAwait(false);
 
         return new GitResult
         {
             ExitCode = timedOut ? -1 : process.ExitCode,
-            Output = await output.ConfigureAwait(false),
-            Error = await error.ConfigureAwait(false),
+            Output = drained && output.Status == TaskStatus.RanToCompletion ? output.Result : "",
+            Error = error.Status == TaskStatus.RanToCompletion ? error.Result : "",
             TimedOut = timedOut,
         };
     }
@@ -133,14 +136,28 @@ internal sealed class GitRunner(string exe, OutputWindowLogger log)
         // limit; a killed process closes its pipe, which ends the copy.
         var copy = process.StandardOutput.BaseStream.CopyToAsync(file);
         var timedOut = !await Exit(process, timeout ?? DefaultTimeout, cancel).ConfigureAwait(false);
-        await copy.ConfigureAwait(false);
+        var drained = await Drained(timedOut, copy, error).ConfigureAwait(false);
 
         return new GitResult
         {
-            ExitCode = timedOut ? -1 : process.ExitCode,
-            Error = await error.ConfigureAwait(false),
+            // A copy that never finished is a file that is not all there: not a success, whatever git said.
+            ExitCode = timedOut || !drained ? -1 : process.ExitCode,
+            Error = error.Status == TaskStatus.RanToCompletion ? error.Result : "",
             TimedOut = timedOut,
         };
+    }
+
+    // The pipes close when git exits, unless something git started (a filter such as git-lfs, a credential
+    // helper) inherited them and is still running: killing git does not end that, and reading to the end
+    // would then wait for it with nothing to stop it. Whatever came through is kept; the rest is let go.
+    private async Task<bool> Drained(bool killed, params Task[] readers)
+    {
+        var all = Task.WhenAll(readers);
+        var limit = drainLimit ?? (killed ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(10));
+        if (await Task.WhenAny(all, Task.Delay(limit)).ConfigureAwait(false) == all) { return !all.IsFaulted; }
+
+        log.Warn("[git] a program started by git kept its output open: not waiting for it");
+        return false;
     }
 
     private Process Start(string workingDirectory, IEnumerable<string> args, IDictionary<string, string> env, bool redirectInput)
