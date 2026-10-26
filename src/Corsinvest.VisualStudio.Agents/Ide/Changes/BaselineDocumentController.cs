@@ -18,9 +18,10 @@ using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Task = System.Threading.Tasks.Task;
 
 namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
@@ -31,20 +32,18 @@ namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
 /// every hunk action is a plain edit of one of the two buffers: <b>Keep</b> writes the document's text of the hunk into
 /// the baseline's buffer, so the hunk is no longer a difference; <b>Undo</b> writes the baseline's text of the hunk into
 /// the document, and saves it. Keep also has to survive the window: the baseline the row keeps is rewritten (see
-/// <see cref="SessionChanges.ReplaceBaselineAsync"/>) in the file's own encoding, so that Open, the counts and a later Undo
-/// of the whole file agree with what the editor shows.</para>
+/// <see cref="SessionChanges.ReplaceBaselineAsync"/>) in the file's own encoding and line ending, so that Open, the counts
+/// and a later Undo of the whole file agree with what the editor shows.</para>
+/// <para>An action is only made from a difference that describes the buffers as they are now: the spans a difference holds
+/// mean something only for the snapshots it was computed from, and an edit made with stale ones lands somewhere else. So an
+/// action asked for in the moment between an edit and the recomputation that follows it is refused, not corrected.</para>
 /// <para>Everything here runs on the UI thread. <see cref="BaselineDocumentRegistry"/> decides which file gets one.</para></summary>
 internal sealed class BaselineDocumentController
 {
     private const string ViewModeOption = "Diff/View/ViewMode";
 
-    // A hunk action edits a buffer and the difference is recomputed in the background: until it has been, the spans a second
-    // action would use are the old ones. The flag is cleared by the recompute, and by this limit if there is none.
-    private static readonly TimeSpan PendingLimit = TimeSpan.FromSeconds(2);
-
     private readonly BaselineDocumentRegistry _registry;
     private readonly OutputWindowLogger _log = OutputWindowLogger.Global;
-    private readonly IVsWindowFrame _frame;
     private readonly IVsDifferenceCodeWindow2 _window;
     private readonly IDifferenceTextViewModel _model;
     private readonly ReviewBaseline _baseline;
@@ -56,13 +55,14 @@ internal sealed class BaselineDocumentController
     private ITextBuffer _left;
     private IDifferenceBuffer _differences;
     private IDisposable _adornments;
+    private DifferenceViewMode _mode;
     private bool _entered;
     private bool _sawDifferences;
-    private bool _undoingAll;
+    private bool _actionRunning;
+    private int _measureQueued;
     private bool _goToNext;
     private bool _goToFirst;
     private IWpfTextView _navigateIn;
-    private DateTime _busyUntilUtc;
 
     public BaselineDocumentController(BaselineDocumentRegistry registry, SessionChanges owner, FileChange row, IVsWindowFrame frame,
                                       IWpfTextView view, ITextDocument document, IVsDifferenceCodeWindow2 window,
@@ -72,7 +72,7 @@ internal sealed class BaselineDocumentController
         Owner = owner;
         Path = row.Path;
         RowSerial = row.Serial;
-        _frame = frame;
+        Frame = frame;
         View = view;
         _document = document;
         _window = window;
@@ -86,6 +86,9 @@ internal sealed class BaselineDocumentController
     /// <summary>Which row this review began with: when the row is replaced (a Keep, then another edit) the review is too.</summary>
     public long RowSerial { get; }
 
+    /// <summary>The window frame the review is in.</summary>
+    public IVsWindowFrame Frame { get; }
+
     /// <summary>The document's own view, the one that existed before the window switched.</summary>
     public IWpfTextView View { get; }
 
@@ -98,8 +101,8 @@ internal sealed class BaselineDocumentController
     /// <summary>The viewer shared by the window's views, to tell a view that belongs to this review from one that does not.</summary>
     public IWpfDifferenceViewer Viewer => _model.Viewer;
 
-    /// <summary>A hunk action is under way and the difference has not caught up with it.</summary>
-    public bool IsBusy => DateTime.UtcNow < _busyUntilUtc;
+    /// <summary>A hunk action is under way.</summary>
+    public bool IsBusy => _actionRunning;
 
     /// <summary>The file did not exist before: its one hunk is the whole file, so Keep and Undo of a hunk are those of the file
     /// (an Undo deletes it, as the list's does).</summary>
@@ -111,6 +114,13 @@ internal sealed class BaselineDocumentController
     /// <summary>The current difference, or null before the viewer has computed one.</summary>
     public ISnapshotDifference Difference => _differences?.CurrentSnapshotDifference;
 
+    /// <summary>Whether the hunk describes the two buffers as they are now. One computed before the last edit of either does not,
+    /// and no action is made from it.</summary>
+    public bool IsCurrent(Hunk hunk)
+        => !Exited && _left is not null
+           && ReferenceEquals(hunk.Right.Snapshot, _document.TextBuffer.CurrentSnapshot)
+           && ReferenceEquals(hunk.Left.Snapshot, _left.CurrentSnapshot);
+
     /// <summary>Switch the window into a difference view, in <paramref name="mode"/>. False, with the editor left as it was,
     /// when anything on the way does not work: the registry then declines the file.</summary>
     public bool Enter(DifferenceViewMode mode)
@@ -119,7 +129,7 @@ internal sealed class BaselineDocumentController
         try
         {
             // The baseline in the document's line endings: the two sides then differ in lines and not in how they end, and a
-            // hunk moved between them brings no foreign line ending along.
+            // hunk moved between them brings no foreign line ending along. (A file that mixes the two is not reviewed.)
             var text = BaselineText.WithLineEnding(_baseline.Text, BaselineText.DominantLineEnding(View.TextSnapshot.GetText()));
 
             _scratch = Owner.Baselines.TargetFor(Owner.SessionId, Path);
@@ -139,13 +149,17 @@ internal sealed class BaselineDocumentController
             if (_left is null) { throw new InvalidOperationException("the baseline has no editor buffer"); }
 
             // The mode before the baseline, as Copilot's does: assigning the baseline is what draws, and it draws in the mode set.
+            _mode = mode;
             _model.Viewer.Options.SetOptionValue(ViewModeOption, mode);
             _window.Baseline = (IVsTextBuffer)_lines;
 
-            _differences = _window.DifferenceBuffer;
+            // From here on the window holds the baseline: whatever fails next, Exit has to take it off again.
+            _entered = true;
+            _differences = _window.DifferenceBuffer
+                           ?? throw new InvalidOperationException("the window has no difference buffer once the baseline is set");
             _differences.SnapshotDifferenceChanged += OnSnapshotDifferenceChanged;
             View.Closed += OnViewClosed;
-            _entered = true;
+            _document.FileActionOccurred += OnFileAction;
             EnteredUtc = DateTime.UtcNow;
             _log.Debug(() => $"[changes] {Path} is shown in place ({mode})");
 
@@ -161,8 +175,25 @@ internal sealed class BaselineDocumentController
         }
     }
 
+    /// <summary>Show the review in another form (inline, side by side), without ending it.</summary>
+    public void ApplyMode(DifferenceViewMode mode)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (Exited || _mode == mode) { return; }
+        try
+        {
+            _model.Viewer.Options.SetOptionValue(ViewModeOption, mode);
+            _mode = mode;
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"[changes] could not switch {Path} to {mode}: {ex.Message}");
+        }
+    }
+
     /// <summary>Put the window back as it was and let go of everything the review held. Safe to call twice. A window that is
-    /// closing is not touched: there is nothing to put back.</summary>
+    /// closing may refuse to be touched, which is then not worth a line in the log; one that stays open and is left with a
+    /// baseline nobody owns would refuse every later review of the file, so it is always tried.</summary>
     public void Exit(bool viewClosed = false)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
@@ -172,15 +203,20 @@ internal sealed class BaselineDocumentController
         try { if (_differences is not null) { _differences.SnapshotDifferenceChanged -= OnSnapshotDifferenceChanged; } }
         catch (Exception ex) { _log.Debug(() => $"[changes] could not stop listening to the difference of {Path}: {ex.Message}"); }
         View.Closed -= OnViewClosed;
+        _document.FileActionOccurred -= OnFileAction;
 
         try { _adornments?.Dispose(); }
         catch (Exception ex) { _log.LogException("BaselineDocumentController.Exit(adornments)", ex); }
         _adornments = null;
 
-        if (_entered && !viewClosed)
+        if (_entered)
         {
             try { if (_window.Baseline is not null) { _window.Baseline = null; } }
-            catch (Exception ex) { _log.Warn($"[changes] could not take the difference off {Path}: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                if (viewClosed) { _log.Debug(() => $"[changes] the closing window of {Path} kept its baseline: {ex.Message}"); }
+                else { _log.Warn($"[changes] could not take the difference off {Path}: {ex.Message}"); }
+            }
         }
 
         ReleaseCom(ref _lines);
@@ -202,23 +238,10 @@ internal sealed class BaselineDocumentController
     public void Reveal()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        try { _frame.Show(); }
+        try { Frame.Show(); }
         catch (Exception ex) { _log.Debug(() => $"[changes] could not show the window of {Path}: {ex.Message}"); }
         if (Difference?.LineDifferences.Differences.Count > 0) { GoToHunk(ShownView(), 0); }
         else { _goToFirst = true; }
-    }
-
-    // The view that is on screen: the one inline view, or the document's own on the right. Not the document's view in the inline
-    // form, which is there and not shown.
-    private IWpfTextView ShownView()
-    {
-        var viewer = _model.Viewer;
-        if (viewer is IDifferenceViewer2 two)
-        {
-            if (two.InlineViewExists && viewer.InlineView is not null) { return viewer.InlineView; }
-            if (two.RightViewExists && viewer.RightView is not null) { return viewer.RightView; }
-        }
-        return View;
     }
 
     /// <summary>Move the caret of <paramref name="view"/> to the first hunk that starts after it, wrapping round.</summary>
@@ -233,23 +256,43 @@ internal sealed class BaselineDocumentController
         var shown = FocusedView(view);
         if (!HunkLocator.TryGetModel(shown, out var model)) { return; }
         var difference = HunkLocator.Current(model);
-        var hunks = HunkLocator.All(difference);
-        if (hunks.Count == 0) { return; }
 
-        var anchors = hunks.Select(h => HunkLocator.AnchorIn(shown, model, difference, h)?.Position ?? -1).ToList();
+        // Where each hunk starts in this view; a hunk with no place in it is not a place to go to.
+        var anchors = new List<int>();
+        foreach (var hunk in HunkLocator.All(difference))
+        {
+            var anchor = HunkLocator.AnchorIn(shown, model, difference, hunk);
+            if (anchor is not null) { anchors.Add(anchor.Value.Position); }
+        }
+        if (anchors.Count == 0) { return; }
+
         var target = index ?? HunkNavigation.NextAfter(anchors, shown.Caret.Position.BufferPosition.Position);
-        if (target < 0 || target >= anchors.Count || anchors[target] < 0) { return; }
-
-        var point = new SnapshotPoint(shown.TextSnapshot, anchors[target]);
-        shown.Caret.MoveTo(point);
+        if (target < 0 || target >= anchors.Count) { return; }
+        shown.Caret.MoveTo(new SnapshotPoint(shown.TextSnapshot, anchors[target]));
         shown.Caret.EnsureVisible();
     }
 
     // The view the person is in, when there is one of the review's: in a side-by-side window the caret that matters is the
-    // one on the side they are working in, and a second view can be in the way.
+    // one on the side they are working in.
     private IWpfTextView FocusedView(IWpfTextView view)
     {
         if (view is not null && Matches(view) && HunkLocator.TryGetModel(view, out _)) { return view; }
+        return ShownView();
+    }
+
+    // The view that is on screen: the one inline view in the inline form, the document's own on the right in the others. Not the
+    // document's view in the inline form, which is there and not shown, and not the inline view in the others, which may still
+    // exist after the form was changed.
+    private IWpfTextView ShownView()
+    {
+        var viewer = _model.Viewer;
+        if (viewer is IDifferenceViewer2 two)
+        {
+            var inline = ((IDifferenceViewer)viewer).ViewMode == DifferenceViewMode.Inline;
+            if (inline && two.InlineViewExists && viewer.InlineView is not null) { return viewer.InlineView; }
+            if (two.RightViewExists && viewer.RightView is not null) { return viewer.RightView; }
+            if (two.InlineViewExists && viewer.InlineView is not null) { return viewer.InlineView; }
+        }
         return View;
     }
 
@@ -258,32 +301,55 @@ internal sealed class BaselineDocumentController
     public async System.Threading.Tasks.Task<bool> KeepHunkAsync(Hunk hunk, IWpfTextView from = null)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (Exited || IsBusy) { return false; }
+        if (Exited || _actionRunning) { return false; }
         if (IsWholeFile)
         {
             await KeepAllAsync();
             return true;
         }
 
+        _actionRunning = true;
         try
         {
-            if (!TryTranslate(hunk, out var left, out var right)) { return false; }
-            if (!Replace(_left, left.Span, right.GetText())) { return false; }
-            MarkBusy();
+            if (!TryResolve(hunk, out var left, out var right)) { return false; }
+
+            // Asked for before the edit, not after the awaits that follow it: the difference is recomputed meanwhile.
             _navigateIn = from;
+            _goToNext = true;
+            if (!Replace(_left, left.Span, right.GetText()))
+            {
+                _goToNext = false;
+                return false;
+            }
+
+            // The text before the scratch copy is saved: a formatter that runs on save must not reach the baseline.
+            var text = _left.CurrentSnapshot.GetText();
             SaveScratch();
 
-            // What the row keeps is now the baseline as the editor has it, in the encoding it was in.
+            // What the row keeps is now the baseline as the editor has it, in the encoding and the line ending it came in.
+            var bytes = BaselineText.Encode(BaselineText.WithLineEnding(text, _baseline.LineEnding), _baseline.Mark);
             IsReplacingBaseline = true;
-            try { await Owner.ReplaceBaselineAsync(Path, BaselineText.Encode(_left.CurrentSnapshot.GetText(), _baseline.Mark)); }
+            string stored;
+            try { stored = await Owner.ReplaceBaselineAsync(Path, RowSerial, bytes); }
             finally { IsReplacingBaseline = false; }
-            _goToNext = true;
+            if (stored is null)
+            {
+                _log.Warn($"[changes] the hunk was kept in the editor, but the list could not take it into its baseline of {Path}");
+                Say("The change was kept in the editor, but the list could not remember it.");
+            }
+
+            // The list may have changed while the flag was up, and a pass that saw it up left this review alone.
+            _registry.Poke();
             return true;
         }
         catch (Exception ex)
         {
             _log.LogException("BaselineDocumentController.KeepHunkAsync", ex);
             return false;
+        }
+        finally
+        {
+            _actionRunning = false;
         }
     }
 
@@ -292,22 +358,36 @@ internal sealed class BaselineDocumentController
     public async System.Threading.Tasks.Task<bool> UndoHunkAsync(Hunk hunk, IWpfTextView from = null)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-        if (Exited || IsBusy) { return false; }
+        if (Exited || _actionRunning) { return false; }
         if (IsWholeFile) { return await UndoAllAsync(); }
 
+        _actionRunning = true;
         try
         {
-            if (!TryTranslate(hunk, out var left, out var right)) { return false; }
+            // A document with no unsaved edits is what is on disk. When it is not, the editor has not caught up with a write
+            // (Claude's, a formatter's, git's), and saving would put its older text over the newer.
+            if (!_document.IsDirty && !await BufferMatchesDiskAsync())
+            {
+                Say("The file changed on disk and the editor has not reloaded it yet: try again in a moment.");
+                return false;
+            }
+            if (!TryResolve(hunk, out var left, out var right)) { return false; }
+
             var document = _document.TextBuffer;
             if (document.IsReadOnly(right.Span))
             {
                 _log.Warn($"[changes] {Path} is read-only where this hunk is: it cannot be undone");
+                Say("This change cannot be undone here: the text is read-only.");
                 return false;
             }
-            if (!Replace(document, right.Span, left.GetText())) { return false; }
-            MarkBusy();
+
             _navigateIn = from;
             _goToNext = true;
+            if (!Replace(document, right.Span, left.GetText()))
+            {
+                _goToNext = false;
+                return false;
+            }
 
             await IdeContextService.Instance.SaveDocumentAsync(Path);
             await Owner.RemeasureAsync(Path);
@@ -317,6 +397,10 @@ internal sealed class BaselineDocumentController
         {
             _log.LogException("BaselineDocumentController.UndoHunkAsync", ex);
             return false;
+        }
+        finally
+        {
+            _actionRunning = false;
         }
     }
 
@@ -336,13 +420,7 @@ internal sealed class BaselineDocumentController
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (Exited) { return false; }
 
-        // The document becomes the baseline while this runs, which is no hunks left: that must not end the review as a Keep
-        // before the Undo has said whether it worked.
-        _undoingAll = true;
-        ChangeFailure failure;
-        try { failure = await Owner.Actions.UndoAsync(Path); }
-        finally { _undoingAll = false; }
-
+        var failure = await Owner.Actions.UndoAsync(Path);
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (failure is not null)
         {
@@ -356,27 +434,26 @@ internal sealed class BaselineDocumentController
     private void OnSnapshotDifferenceChanged(object sender, SnapshotDifferenceChangeEventArgs e)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        _busyUntilUtc = default;
         OnDifferencesChanged();
     }
 
     private void OnDifferencesChanged()
     {
         if (Exited) { return; }
-        var count = Difference?.LineDifferences.Differences.Count ?? 0;
+        var difference = Difference;
+        if (difference is null) { return; }
+
+        var count = difference.LineDifferences.Differences.Count;
         if (count > 0)
         {
             _sawDifferences = true;
         }
-        else if (_sawDifferences && !_undoingAll)
+        else if (_sawDifferences)
         {
-            // The last hunk was kept or undone, or the file was put back by hand: nothing is left to review.
-            _log.Debug(() => $"[changes] nothing is left to review in {Path}");
-            ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-            {
-                await KeepAllAsync();
-            }).FileAndForget("BaselineDocumentController.Finish");
-            return;
+            // Nothing left to draw. Whether nothing is left to review is for the file to say: it is the file that was measured, not
+            // the editor's picture of it. One that equals its baseline byte for byte leaves the list, and the registry then ends
+            // the review; one that does not (an edit not saved yet, a different line ending) stays, with the review.
+            RequestMeasure();
         }
 
         if (count > 0 && (_goToNext || _goToFirst))
@@ -386,30 +463,67 @@ internal sealed class BaselineDocumentController
             _goToNext = false;
             _goToFirst = false;
             _navigateIn = null;
-            GoToHunk(from, first ? 0 : null);
+            try { GoToHunk(from, first ? 0 : null); }
+            catch (Exception ex) { _log.Debug(() => $"[changes] could not move to the next hunk of {Path}: {ex.Message}"); }
         }
         (_adornments as HunkAdornments)?.Refresh();
     }
 
+    private void OnFileAction(object sender, TextDocumentFileActionEventArgs e)
+    {
+        if ((e.FileActionType & FileActionTypes.ContentSavedToDisk) != 0) { RequestMeasure(); }
+    }
+
+    // Measured a moment later, off the viewer's own dispatch: tearing the window down from inside its notification would leave
+    // whatever else is listening running against a viewer that has just gone.
+    private void RequestMeasure()
+    {
+        if (Interlocked.Exchange(ref _measureQueued, 1) == 1) { return; }
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(alwaysYield: true);
+            Interlocked.Exchange(ref _measureQueued, 0);
+            if (Exited) { return; }
+            await Owner.RemeasureAsync(Path);
+        }).FileAndForget("BaselineDocumentController.Measure");
+    }
+
     private void OnViewClosed(object sender, EventArgs e) => Exit(viewClosed: true);
 
-    private void MarkBusy() => _busyUntilUtc = DateTime.UtcNow + PendingLimit;
-
-    /// <summary>The hunk's two spans, moved to the buffers' current snapshots, which have moved on since the difference was
-    /// computed. False, and said, when a span is not in the buffer it should be: an edit made from the wrong place would be one
-    /// somewhere else in the file.</summary>
-    private bool TryTranslate(Hunk hunk, out SnapshotSpan left, out SnapshotSpan right)
+    /// <summary>The hunk's two spans, when they can be acted on: both in the buffers they should be in, both from the buffers as
+    /// they are now, and both made of whole lines. False, and said, when not.</summary>
+    private bool TryResolve(Hunk hunk, out SnapshotSpan left, out SnapshotSpan right)
     {
-        left = default;
-        right = default;
-        if (!ReferenceEquals(hunk.Right.Snapshot.TextBuffer, _document.TextBuffer) || !ReferenceEquals(hunk.Left.Snapshot.TextBuffer, _left))
+        left = hunk.Left;
+        right = hunk.Right;
+        if (!ReferenceEquals(right.Snapshot.TextBuffer, _document.TextBuffer) || !ReferenceEquals(left.Snapshot.TextBuffer, _left))
         {
             _log.Warn($"[changes] the difference of {Path} is not between the document and its baseline buffer: the hunk was not touched");
             return false;
         }
-        right = hunk.Right.TranslateTo(_document.TextBuffer.CurrentSnapshot, SpanTrackingMode.EdgeExclusive);
-        left = hunk.Left.TranslateTo(_left.CurrentSnapshot, SpanTrackingMode.EdgeExclusive);
+        if (!IsCurrent(hunk))
+        {
+            Say("The difference is being worked out again: try once more in a moment.");
+            return false;
+        }
+        if (!HunkLocator.IsWholeLines(left) || !HunkLocator.IsWholeLines(right))
+        {
+            _log.Warn($"[changes] a hunk of {Path} does not start and end at line boundaries, so it was not touched: an edit from it would join lines");
+            Say("This change cannot be handled here: it does not start and end at line boundaries.");
+            return false;
+        }
         return true;
+    }
+
+    private async System.Threading.Tasks.Task<bool> BufferMatchesDiskAsync()
+    {
+        var bytes = await System.Threading.Tasks.Task.Run(() =>
+        {
+            try { return ChangeEvaluator.ReadShared(Path); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
+        });
+        var disk = bytes is null ? null : ChangeEvaluator.DecodeStrict(bytes);
+        return disk is not null && string.Equals(disk, _document.TextBuffer.CurrentSnapshot.GetText(), StringComparison.Ordinal);
     }
 
     private bool Replace(ITextBuffer buffer, Span span, string text)
@@ -419,6 +533,7 @@ internal sealed class BaselineDocumentController
         {
             edit.Cancel();
             _log.Warn($"[changes] the editor refused the edit of {Path}: the text there is read-only");
+            Say("This change cannot be handled here: the text is read-only.");
             return false;
         }
         edit.Apply();
@@ -435,6 +550,20 @@ internal sealed class BaselineDocumentController
         catch (Exception ex)
         {
             _log.Debug(() => $"[changes] could not save the scratch copy of the baseline of {Path}: {ex.Message}");
+        }
+    }
+
+    // A word in the status bar: a refusal the person has to be told of, not worth a dialog.
+    private static void Say(string text)
+    {
+        try
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (Package.GetGlobalService(typeof(SVsStatusbar)) is IVsStatusbar bar) { bar.SetText(text); }
+        }
+        catch (Exception)
+        {
+            // The status bar is a courtesy.
         }
     }
 
