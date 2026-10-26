@@ -74,6 +74,38 @@ internal sealed partial class IdeContextService
         return null;
     }
 
+    /// <summary>The window frame of an open document, or null when it is not open. Matched the way the shell
+    /// sees the path. UI thread.</summary>
+    internal static IVsWindowFrame FindDocumentFrame(string path)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        foreach (var frame in DocumentFrames())
+        {
+            if (PathEquals(FrameMoniker(frame), path)) { return frame; }
+        }
+        return null;
+    }
+
+    /// <summary>Every open document's frame, by <see cref="FrameKey"/> of its path: for a caller that looks up many files and
+    /// should not walk the frames for each. UI thread.</summary>
+    internal static Dictionary<string, IVsWindowFrame> OpenDocumentFrames()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var frames = new Dictionary<string, IVsWindowFrame>(StringComparer.OrdinalIgnoreCase);
+        foreach (var frame in DocumentFrames())
+        {
+            var moniker = FrameMoniker(frame);
+            if (!string.IsNullOrEmpty(moniker)) { frames[FrameKey(moniker)] = frame; }
+        }
+        return frames;
+    }
+
+    /// <summary>A path spelt the way <see cref="PathEquals"/> compares them: one separator, none at the end.</summary>
+    internal static string FrameKey(string path) => path.Replace('/', '\\').TrimEnd('\\');
+
+    /// <summary>The path of the document in a frame, as the shell spells it. UI thread.</summary>
+    internal static string DocumentMoniker(IVsWindowFrame frame) => FrameMoniker(frame);
+
     private static bool PathEquals(string a, string b)
         => !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b)
            && string.Equals(a.Replace('/', '\\').TrimEnd('\\'),

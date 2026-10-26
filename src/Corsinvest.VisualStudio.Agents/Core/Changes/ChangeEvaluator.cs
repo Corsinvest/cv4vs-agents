@@ -217,6 +217,15 @@ internal static class ChangeEvaluator
         return Mark.None;
     }
 
+    /// <summary>Whether the file on disk starts with the same byte-order mark as <paramref name="baseline"/>.
+    /// What is put back into an editor is saved by it with the mark the document has, so a baseline whose mark
+    /// differs would come back with one the file never had, or without the one it did.</summary>
+    internal static async Task<bool> SameMarkAsync(byte[] baseline, string path)
+    {
+        var head = await AsyncFile.ReadHeadAsync(path, 4).ConfigureAwait(false);
+        return ByteOrderMark(head) == ByteOrderMark(baseline);
+    }
+
     private static async Task<bool> SameBytesAsync(string a, string b, CancellationToken cancel)
     {
         using var left = await AsyncFile.OpenReadAsync(a).ConfigureAwait(false);

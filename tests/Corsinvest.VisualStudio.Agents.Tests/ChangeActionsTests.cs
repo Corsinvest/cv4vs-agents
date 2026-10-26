@@ -24,6 +24,8 @@ public sealed class ChangeActionsTests : IDisposable
         public readonly List<string> Closed = new();
         public readonly List<string> Opened = new();
         public readonly List<Diff> Diffs = new();
+        public bool InPlace;
+        public readonly List<string> ShownInPlace = new();
 
         public Task<DocumentReplaceResult> ReplaceDocumentTextAsync(string path, string text)
         {
@@ -49,6 +51,12 @@ public sealed class ChangeActionsTests : IDisposable
         {
             Opened.Add(path);
             return Task.CompletedTask;
+        }
+
+        public Task<bool> ShowInPlaceAsync(ChangeSet set, string path)
+        {
+            ShownInPlace.Add(path);
+            return Task.FromResult(InPlace);
         }
     }
 
@@ -438,6 +446,48 @@ public sealed class ChangeActionsTests : IDisposable
         Assert.Equal("Before Claude", diff.Left);
         Assert.Equal("Current", diff.Right);
         Assert.Empty(_editor.Opened);
+    }
+
+    [Fact]
+    public async Task Open_shows_the_changes_in_the_files_own_editor_when_it_can_and_opens_nothing_else()
+    {
+        var baseline = Write("backup@v1", "before\n");
+        var file = Write("a.txt", "after\n");
+        Row(file, BaselineRef.Cli(baseline));
+        _editor.InPlace = true;
+
+        await _actions.OpenAsync(file);
+
+        Assert.Equal(new[] { file }, _editor.ShownInPlace);
+        Assert.Empty(_editor.Diffs);
+        Assert.Empty(_editor.Opened);
+    }
+
+    [Fact]
+    public async Task Open_falls_back_to_the_comparison_window_when_the_editor_cannot_show_the_changes()
+    {
+        var baseline = Write("backup@v1", "before\n");
+        var file = Write("a.txt", "after\n");
+        Row(file, BaselineRef.Cli(baseline));
+        _editor.InPlace = false;
+
+        await _actions.OpenAsync(file);
+
+        Assert.Equal(new[] { file }, _editor.ShownInPlace);
+        Assert.Single(_editor.Diffs);
+    }
+
+    [Fact]
+    public async Task Open_of_a_file_with_no_copy_does_not_ask_the_editor_to_draw_a_difference()
+    {
+        var file = Write("a.txt", "x\n");
+        Row(file, BaselineRef.None);
+        _editor.InPlace = true;
+
+        await _actions.OpenAsync(file);
+
+        Assert.Empty(_editor.ShownInPlace);
+        Assert.Equal(new[] { file }, _editor.Opened);
     }
 
     [Fact]
