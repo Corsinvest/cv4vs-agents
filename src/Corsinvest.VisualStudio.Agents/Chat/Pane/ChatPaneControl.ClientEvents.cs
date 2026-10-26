@@ -204,6 +204,32 @@ public partial class ChatPaneControl
         await Task.WhenAny(save, Task.Delay(3000)).ConfigureAwait(false);
     }
 
+    /// <summary>The list changed: tell the WebView, but not once per row. A turn that edits ten files
+    /// raises ten of these within a second, and the panel wants the last word, not ten.</summary>
+    private void OnChangesChanged()
+    {
+        if (_disposed) { return; }
+        (_changesPush ??= new System.Threading.Timer(_ => PushChangedFiles(), null, System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite))
+            .Change(150, System.Threading.Timeout.Infinite);
+    }
+
+    private void PushChangedFiles()
+    {
+        try
+        {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (_disposed || _changes is null) { return; }
+                _bridge?.Send(BridgeMessages.ToWebView.ChangedFiles.Updated, Core.Changes.ChangedFilesMapper.Build(_changes.Set));
+            }));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Threading.Tasks.TaskCanceledException)
+        {
+            // The dispatcher is shutting down with VS: nobody is left to tell.
+            _log.Debug(() => $"[changes] push dropped: {ex.Message}");
+        }
+    }
+
     /// <summary>The post-edit diagnostics work (visibility probe + new-diagnostics diff), as one
     /// awaitable so OnHookCallback can race it against a timeout.</summary>
     private async Task<string> DiagnosticsContextAsync(string toolUseId, string filePath)

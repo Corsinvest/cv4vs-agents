@@ -32,6 +32,9 @@ internal sealed class SessionChangesOptions
 
     /// <summary>Where this extension's own copies go. Null = the running extension's folder.</summary>
     public ChangeBaselines Baselines { get; set; }
+
+    /// <summary>The editor Keep, Undo and Open act through. Null = Visual Studio.</summary>
+    public IChangeEditor Editor { get; set; }
 }
 
 /// <summary>Everything one chat pane knows about the files Claude changed: it feeds the
@@ -68,10 +71,14 @@ internal sealed partial class SessionChanges : IDisposable
         _options = options ?? new SessionChangesOptions();
         _log = log ?? OutputWindowLogger.Global;
         _baselines = _options.Baselines ?? ChangeBaselines.Default;
+        Actions = new ChangeActions(_set, _baselines, _options.Editor ?? IdeChangeEditor.Instance, _log);
         if (_baselines == ChangeBaselines.Default && Interlocked.Exchange(ref _swept, 1) == 0) { _ = Task.Run(() => _baselines.Sweep(SweepAge)); }
     }
 
     public ChangeSet Set => _set;
+
+    /// <summary>What the Open, Keep and Undo buttons do.</summary>
+    public ChangeActions Actions { get; }
 
     private SessionManager Sessions => new(_paths, _workingDirectory, _log);
 
