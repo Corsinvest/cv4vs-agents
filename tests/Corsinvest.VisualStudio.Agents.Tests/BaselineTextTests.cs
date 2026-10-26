@@ -95,6 +95,20 @@ public class BaselineTextTests
         Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, BaselineText.Encode("", ChangeEvaluator.Mark.Utf8));
     }
 
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData("one line", false)]
+    [InlineData("a\nb\n", false)]
+    [InlineData("a\r\nb\r\n", false)]
+    [InlineData("a\rb\r\n", false)]
+    [InlineData("a\r\nb\n", true)]
+    [InlineData("a\nb\r\nc\n", true)]
+    public void A_mixture_of_crlf_and_lone_lf_is_told_and_nothing_else_is(string text, bool mixed)
+    {
+        Assert.Equal(mixed, BaselineText.HasMixedLineEndings(text));
+    }
+
     [Fact]
     public void A_utf32_file_is_not_written_back_from_text()
     {

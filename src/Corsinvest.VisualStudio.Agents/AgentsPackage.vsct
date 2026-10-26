@@ -362,7 +362,10 @@
         <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings><ButtonText>Diff spike (active document)</ButtonText></Strings>
       </Button>
-      <!-- The review of a file in its own editor (Ide/Changes/HunkCommands.cs). Hidden until the window is one. -->
+      <!-- The review of a file in its own editor (Ide/Changes/HunkCommands.cs). Hidden until the window is one.
+           No chord is bound to them: Ctrl+Alt and a letter is AltGr and that letter on several keyboard layouts (Ctrl+Alt+N
+           types an n with an acute accent on the Polish one), and the arrow chords are Visual Studio's own. The person
+           assigns one in Tools > Options > Environment > Keyboard. -->
       <Button guid="guidAgentsCommandSet" id="KeepHunkCommandId" priority="0x0100" type="Button">
         <Parent guid="guidAgentsCommandSet" id="ChangesHunkGroup"/>
         <Icon guid="ImageCatalogGuid" id="Checkmark"/>
@@ -487,16 +490,6 @@
     </CommandPlacement>
   </CommandPlacements>
 
-  <!-- Chords for the review's commands, in the text editor's scope so they mean nothing anywhere else. The person can
-       rebind them in Tools > Options > Keyboard. -->
-  <KeyBindings>
-    <KeyBinding guid="guidAgentsCommandSet" id="KeepHunkCommandId" editor="guidTextEditorScope" key1="Y" mod1="Control Alt"/>
-    <KeyBinding guid="guidAgentsCommandSet" id="UndoHunkCommandId" editor="guidTextEditorScope" key1="N" mod1="Control Alt"/>
-    <KeyBinding guid="guidAgentsCommandSet" id="KeepAllInFileCommandId" editor="guidTextEditorScope" key1="Y" mod1="Control Alt Shift"/>
-    <KeyBinding guid="guidAgentsCommandSet" id="UndoAllInFileCommandId" editor="guidTextEditorScope" key1="N" mod1="Control Alt Shift"/>
-    <KeyBinding guid="guidAgentsCommandSet" id="NextHunkCommandId" editor="guidTextEditorScope" key1="VK_DOWN" mod1="Control Alt"/>
-  </KeyBindings>
-
   <Symbols>
     <GuidSymbol name="guidAgentsPackage" value="{b1c2d3e4-f5a6-7890-bcde-fa1234567890}" />
     <GuidSymbol name="guidAgentsCommandSet" value="{a2b3c4d5-e6f7-8901-cdef-ab1234567890}">
@@ -572,8 +565,7 @@
       <IDSymbol name="ErrorListPromptCommandId" value="0x0500" />
       <IDSymbol name="OutputPromptCommandId" value="0x0600" />
     </GuidSymbol>
-    <!-- The text editor's key binding scope: the one Tools > Options > Keyboard calls "Text Editor". -->
-    <GuidSymbol name="guidTextEditorScope" value="{8B382828-6202-11D1-8870-0000F87579D2}" />
+
     <GuidSymbol name="guidImages" value="{c3d4e5f6-a7b8-9012-defa-bc1234567890}">
       <IDSymbol name="bmpPic1" value="1" />
     </GuidSymbol>

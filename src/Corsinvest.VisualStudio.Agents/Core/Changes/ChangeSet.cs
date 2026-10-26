@@ -161,6 +161,21 @@ internal sealed class ChangeSet
         return removed;
     }
 
+    /// <summary>Drop a row if <paramref name="predicate"/> holds for it, under the lock, and return it. Null when there is no
+    /// such row or the predicate did not hold. The predicate runs on the live row: it must not call back into the set.</summary>
+    public FileChange RemoveIf(string path, Func<FileChange, bool> predicate)
+    {
+        FileChange removed;
+        lock (_gate)
+        {
+            if (!_rows.TryGetValue(path, out removed) || !predicate(removed)) { return null; }
+            _rows.Remove(path);
+            _overflow &= _rows.Count >= MaxFiles;
+        }
+        RaiseAfter();
+        return removed;
+    }
+
     public void SetCaptureNext(string path)
     {
         lock (_gate) { _captureNext.Add(path); }
