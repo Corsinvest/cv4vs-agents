@@ -7,6 +7,7 @@ import {
     ChangedFilesStore,
     countsNote,
     countsTip,
+    sharedNote,
     splitShownPath,
     stateLetter,
     undoBlocker,
@@ -171,6 +172,15 @@ test('countsTip explains the figures only where they need it', () => {
     assert.match(countsTip({ ...base, counts: 'approximate' }), /Approximate/);
     assert.match(countsTip(none), /byte-order mark/);
     assert.equal(countsTip({ ...none, state: 'added' }), '');
+});
+
+test('a row says which other chat lists the same file, and nothing when none does', () => {
+    assert.equal(sharedNote({}), null);
+    assert.equal(sharedNote({ sharedWithPane: undefined }), null);
+
+    const note = sharedNote({ sharedWithPane: 2 });
+    assert.equal(note?.label, 'also in Chat 2');
+    assert.match(note?.tip ?? '', /Chat 2 lists this file too/);
 });
 
 test('undoBlocker is null when there is a baseline, else says which kind of absence', () => {

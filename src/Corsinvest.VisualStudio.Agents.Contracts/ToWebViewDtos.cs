@@ -859,6 +859,10 @@ public class ChangedFileDto
 
     /// <summary>A shell command changed more files than could be tracked, so this row may be one of several missing.</summary>
     public bool Incomplete { get; set; }
+
+    /// <summary>Another chat pane lists this file too, and its editor is the one showing the changes: that pane's
+    /// number. Null when no other pane lists it.</summary>
+    public int? SharedWithPane { get; set; }
 }
 
 /// <summary>The Changes list (changed_files, changed_files_updated): every file Claude changed in
