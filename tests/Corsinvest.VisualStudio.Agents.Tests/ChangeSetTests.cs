@@ -22,6 +22,37 @@ public class ChangeSetTests
     };
 
     [Fact]
+    public void RemoveIf_removes_a_row_only_when_the_predicate_holds_for_it_and_hands_it_back()
+    {
+        var set = new ChangeSet();
+        set.Add(Row(@"C:\a.txt"));
+
+        Assert.Null(set.RemoveIf(@"C:\a.txt", r => r.Baseline.Path == "other"));
+        Assert.Single(set.Snapshot());
+
+        var removed = set.RemoveIf(@"C:\a.txt", r => r.Baseline.Path == @"C:\a.txt.bak");
+
+        Assert.Equal(@"C:\a.txt", removed.Path);
+        Assert.Empty(set.Snapshot());
+        Assert.Null(set.RemoveIf(@"C:\a.txt", _ => true));
+    }
+
+    [Fact]
+    public void A_row_is_given_a_serial_that_is_not_reused_after_it_goes()
+    {
+        var set = new ChangeSet();
+        set.Add(Row(@"C:\a.txt"));
+        set.TryGet(@"C:\a.txt", out var first);
+
+        set.Remove(@"C:\a.txt");
+        set.Add(Row(@"C:\a.txt"));
+        set.TryGet(@"C:\a.txt", out var second);
+
+        Assert.True(first.Serial > 0);
+        Assert.True(second.Serial > first.Serial);
+    }
+
+    [Fact]
     public void Rows_come_back_sorted_by_path_whatever_the_case()
     {
         var set = new ChangeSet();

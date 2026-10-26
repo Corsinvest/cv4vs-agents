@@ -153,7 +153,7 @@ export function sharedNote(
     }
     return {
         label: `also in Chat ${pane}`,
-        tip: `Chat ${pane} lists this file too. The editor shows its changes for whichever chat changed it last.`,
+        tip: `Chat ${pane} lists this file too. When Visual Studio shows the changes in the editor, it does so for the chat that changed the file last.`,
     };
 }
 

@@ -57,7 +57,8 @@ internal static class HunkCommands
         var view = ActiveView();
         var review = BaselineDocumentRegistry.Instance.ControllerFor(view);
         command.Visible = review is not null;
-        command.Enabled = review is not null && !review.IsBusy && (!atCaret || HunkLocator.TryGetHunkAtCaret(view, out _));
+        command.Enabled = review is not null && !review.IsBusy
+                          && (!atCaret || (HunkLocator.TryGetHunkAtCaret(view, out var hunk) && review.IsCurrent(hunk)));
     }
 
     private static void Execute(bool atCaret, Func<IWpfTextView, BaselineDocumentController, Hunk, Task> run)

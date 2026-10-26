@@ -30,36 +30,64 @@ namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
 /// <para>It works by reconciliation rather than by events about single files: whenever any list changes, or a document
 /// window is about to be shown, <see cref="SyncAsync"/> compares what every pane lists with what is being reviewed, ends the
 /// reviews that have lost their row and starts the ones that have gained a file. So a Keep or an Undo in the panel, which
-/// only touch the list, end the review without anything having to tell it.</para>
+/// only touch the list, end the review without anything having to tell it. A pass is always a turn of the dispatcher of its
+/// own and never runs inside another: it edits rows, which asks for a pass.</para>
 /// <para>No MEF: documents are found through the running document table, as the comparison window is.</para>
-/// <para>A file two panes list is reviewed for one of them, the one whose row changed last, and both rows say so
+/// <para>A file two panes list is reviewed for one of them (<see cref="ReviewOwnership"/>), and both rows say so
 /// (<see cref="FileChange.SharedWithPane"/>): the person is told in the panel, not left to find out in the log.</para>
 /// All of it runs on the UI thread.</summary>
 internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
 {
     public static BaselineDocumentRegistry Instance { get; } = new();
 
+    // A review that ended within this of its window opening, with the very frame it was opened in still there, was ended by the
+    // switch and not by the person: see Detached.
+    private static readonly TimeSpan EarlyClose = TimeSpan.FromSeconds(3);
+
     private readonly OutputWindowLogger _log = OutputWindowLogger.Global;
     private readonly List<SessionChanges> _owners = new();
     private readonly Dictionary<SessionChanges, Action> _subscriptions = new();
     private readonly Dictionary<string, BaselineDocumentController> _controllers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Declined> _declined = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Claim> _claims = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _attaching = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<IWpfTextView> _waitingForLoad = new();
+    private readonly Dictionary<IWpfTextView, LoadWait> _waitingForLoad = new();
 
     private int _syncQueued;
+    private bool _syncRunning;
+    private bool _syncAgain;
     private bool _servicesTried;
     private IVsEditorAdaptersFactoryService _adapters;
     private ITextDocumentFactoryService _documents;
     private uint _rdtCookie;
 
-    // A review that ended within this of its window opening was ended by the window, not by the person: see Detached.
-    private static readonly TimeSpan EarlyClose = TimeSpan.FromSeconds(3);
-
+    /// <summary>A file that could not be shown, as it was when that was found out: another row of it, or the same row measured
+    /// again after the file changed, is another chance.</summary>
     private sealed class Declined
     {
+        public SessionChanges Owner;
         public long Serial;
-        public string Why;
+        public long StampLength;
+        public DateTime StampWriteUtc;
+    }
+
+    /// <summary>A pane that was asked to show a file (the person pressed Open in it).</summary>
+    private sealed class Claim
+    {
+        public Claim(SessionChanges owner, DateTime atUtc)
+        {
+            Owner = owner;
+            AtUtc = atUtc;
+        }
+
+        public SessionChanges Owner { get; }
+        public DateTime AtUtc { get; }
+    }
+
+    private sealed class LoadWait
+    {
+        public RoutedEventHandler Loaded;
+        public EventHandler Closed;
     }
 
     private readonly struct Listing
@@ -72,6 +100,14 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
 
         public SessionChanges Owner { get; }
         public FileChange Row { get; }
+    }
+
+    private sealed class Parts
+    {
+        public IWpfTextView View;
+        public ITextDocument Document;
+        public IVsDifferenceCodeWindow2 Window;
+        public IDifferenceTextViewModel Model;
     }
 
     /// <summary>The editor's adapters, for whoever has to turn a shell object into an editor one. Null before the first sync.</summary>
@@ -127,16 +163,22 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         return view is null ? null : _controllers.Values.FirstOrDefault(c => c.Matches(view));
     }
 
-    /// <summary>A review ended. A window that closed on its own right after the difference was switched on is not shown that
-    /// file again: it is a sign the window does not take it, and trying again would switch it on, and it would close, for ever.</summary>
+    /// <summary>Something a review did may have changed what the lists say about it: look again.</summary>
+    public void Poke() => ScheduleSync();
+
+    /// <summary>A review ended. One whose window closed on its own right after the difference was switched on, while the very
+    /// frame it was switched in is still open, is not started again for that row: the editor does not take it, and trying
+    /// again would switch it on and it would close, for ever. A window the person closed is not that: its frame is gone, or it
+    /// is another window of the same file.</summary>
     internal void Detached(BaselineDocumentController controller, bool viewClosed)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (_controllers.TryGetValue(controller.Path, out var held) && ReferenceEquals(held, controller)) { _controllers.Remove(controller.Path); }
         if (viewClosed && controller.EnteredUtc != default && DateTime.UtcNow - controller.EnteredUtc < EarlyClose
-            && IdeContextService.FindDocumentFrame(controller.Path) is not null)
+            && IdeContextService.FindDocumentFrames(controller.Path).Contains(controller.Frame)
+            && controller.Owner.Set.TryGet(controller.Path, out var row))
         {
-            Decline(controller.Path, controller.RowSerial, "the editor closed the view as soon as the difference was switched on");
+            Decline(controller.Owner, row, "the editor closed the view as soon as the difference was switched on");
         }
     }
 
@@ -154,6 +196,8 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             var owner = _owners.FirstOrDefault(o => ReferenceEquals(o.Set, set));
             if (owner is null || !set.TryGet(path, out var row)) { return false; }
 
+            // The person asked for this file in this chat: it is this chat's to show, until another chat changes it later.
+            _claims[path] = new Claim(owner, DateTime.UtcNow);
             if (_controllers.TryGetValue(path, out var held))
             {
                 if (ReferenceEquals(held.Owner, owner) && held.RowSerial == row.Serial)
@@ -161,7 +205,6 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
                     held.Reveal();
                     return true;
                 }
-                // Asked for from this pane: it takes the review from whoever was showing the file.
                 held.Exit();
             }
             _declined.Remove(path);
@@ -171,8 +214,8 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             // The editor's view is made a moment after the file is opened, and has to be loaded before it can be switched.
             for (var attempt = 0; attempt < 40; attempt++)
             {
-                var frame = IdeContextService.FindDocumentFrame(path);
-                if (frame is not null) { await TryAttachAsync(owner, row, frame); }
+                var frames = IdeContextService.FindDocumentFrames(path);
+                if (frames.Count > 0) { await TryAttachAsync(owner, row, frames); }
                 if (_controllers.TryGetValue(path, out var attached) && ReferenceEquals(attached.Owner, owner))
                 {
                     attached.Reveal();
@@ -199,116 +242,155 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
             if (delayMs > 0) { await Task.Delay(delayMs); }
-            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            // Always a later turn of the dispatcher, never inside the call that asked, or the row a pass edits would start a
+            // pass inside it, and that one a third.
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(alwaysYield: true);
             if (delayMs == 0) { Interlocked.Exchange(ref _syncQueued, 0); }
             await SyncAsync();
         }).FileAndForget("BaselineDocumentRegistry.Sync");
     }
 
+    // One pass at a time: a pass waits for a file to be read, and one asked for meanwhile makes the running one go round again
+    // instead of running beside it.
     private async Task SyncAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        if (_syncRunning)
+        {
+            _syncAgain = true;
+            return;
+        }
+        _syncRunning = true;
         try
         {
-            EnsureServices();
-            var mode = AgentsOptions.Chat.ChangesViewMode;
-
-            var listed = new Dictionary<string, List<Listing>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var owner in _owners.ToList())
+            do
             {
-                foreach (var row in owner.Set.Snapshot())
-                {
-                    if (!listed.TryGetValue(row.Path, out var rows)) { listed[row.Path] = rows = new List<Listing>(); }
-                    rows.Add(new Listing(owner, row));
-                }
+                _syncAgain = false;
+                await SyncOnceAsync();
             }
-
-            var winners = new Dictionary<string, Listing>(StringComparer.OrdinalIgnoreCase);
-            foreach (var pair in listed) { winners[pair.Key] = ChooseWinner(pair.Key, pair.Value); }
-            MarkShared(listed, winners);
-
-            // A review whose row is gone (kept, undone, back to how it was), or has been replaced, or whose pane lost the
-            // file to another, ends: nothing here tells it, the list is the only thing that changed.
-            foreach (var controller in _controllers.Values.ToList())
-            {
-                if (controller.IsReplacingBaseline) { continue; }
-                if (mode == ChangesViewMode.Files
-                    || !winners.TryGetValue(controller.Path, out var winner)
-                    || !ReferenceEquals(winner.Owner, controller.Owner)
-                    || winner.Row.Serial != controller.RowSerial)
-                {
-                    controller.Exit();
-                }
-            }
-
-            _declined.Keys.Where(p => !winners.TryGetValue(p, out var w) || w.Row.Serial != _declined[p].Serial).ToList()
-                     .ForEach(p => _declined.Remove(p));
-
-            if (mode == ChangesViewMode.Files || _adapters is null) { return; }
-            // Only a file that is open can be shown: one walk over the frames, not one per row.
-            var open = IdeContextService.OpenDocumentFrames();
-            foreach (var winner in winners.Values)
-            {
-                if (_controllers.ContainsKey(winner.Row.Path)) { continue; }
-                if (!open.TryGetValue(IdeContextService.FrameKey(winner.Row.Path), out var frame)) { continue; }
-                await TryAttachAsync(winner.Owner, winner.Row, frame);
-            }
+            while (_syncAgain);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _log.LogException("BaselineDocumentRegistry.SyncAsync", ex);
         }
+        finally
+        {
+            _syncRunning = false;
+        }
     }
 
-    /// <summary>Whose review a file gets when more than one pane lists it: the one whose row changed last, and the one that has
-    /// it already when they tie, so that two panes do not take it from each other.</summary>
-    private Listing ChooseWinner(string path, List<Listing> listings)
+    private async Task SyncOnceAsync()
     {
-        var current = _controllers.TryGetValue(path, out var held) ? held.Owner : null;
-        return listings
-            .OrderByDescending(l => l.Row.LastChangedUtc)
-            .ThenByDescending(l => ReferenceEquals(l.Owner, current))
-            .First();
-    }
+        EnsureServices();
+        var mode = AgentsOptions.Chat.ChangesViewMode;
+        var form = mode == ChangesViewMode.SideBySide ? DifferenceViewMode.SideBySide : DifferenceViewMode.Inline;
 
-    /// <summary>Tell every row of a file two panes list which other pane has it, and clear it from a row that is alone again.
-    /// Only a row that has to change is touched: a touch is a change, and a change comes back here.</summary>
-    private static void MarkShared(Dictionary<string, List<Listing>> listed, Dictionary<string, Listing> winners)
-    {
+        var listed = new Dictionary<string, List<Listing>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var owner in _owners.ToList())
+        {
+            foreach (var row in owner.Set.Snapshot())
+            {
+                if (!listed.TryGetValue(row.Path, out var rows)) { listed[row.Path] = rows = new List<Listing>(); }
+                rows.Add(new Listing(owner, row));
+            }
+        }
+
+        // Whose review a file gets, and what each pane's row says of the other: the rule is ReviewOwnership's.
+        var winners = new Dictionary<string, Listing>(StringComparer.OrdinalIgnoreCase);
         foreach (var pair in listed)
         {
-            var winner = winners[pair.Key];
-            foreach (var listing in pair.Value)
+            var listings = pair.Value;
+            var candidates = listings.Select(l => new ReviewOwnership.Candidate<SessionChanges>(l.Owner, l.Row.LastChangedUtc, l.Owner.PaneNumber)).ToList();
+            _controllers.TryGetValue(pair.Key, out var held);
+            _claims.TryGetValue(pair.Key, out var claim);
+            var winner = ReviewOwnership.Winner(candidates, held?.Owner, claim?.Owner, claim?.AtUtc ?? default);
+            winners[pair.Key] = listings[winner];
+
+            // Only a row that has to change is touched: a touch is a change, and a change brings another pass.
+            var marks = ReviewOwnership.SharedWith(candidates, winner);
+            for (var i = 0; i < listings.Count; i++)
             {
-                int? shared = null;
-                if (pair.Value.Count > 1)
-                {
-                    var other = ReferenceEquals(listing.Owner, winner.Owner)
-                        ? pair.Value.First(l => !ReferenceEquals(l.Owner, listing.Owner))
-                        : winner;
-                    shared = other.Owner.PaneId;
-                }
-                if (listing.Row.SharedWithPane == shared) { continue; }
-                listing.Owner.Set.Update(pair.Key, r => r.SharedWithPane = shared);
+                var mark = marks[i];
+                if (listings[i].Row.SharedWithPane == mark) { continue; }
+                listings[i].Owner.Set.Update(pair.Key, r => r.SharedWithPane = mark);
             }
+        }
+
+        // What is remembered about a file the panes no longer list, or that this pane no longer lists, goes.
+        foreach (var path in _claims.Keys.ToList())
+        {
+            var claimed = _claims[path].Owner;
+            if (!listed.TryGetValue(path, out var rows) || !rows.Any(l => ReferenceEquals(l.Owner, claimed))) { _claims.Remove(path); }
+        }
+        foreach (var path in _declined.Keys.ToList())
+        {
+            var declined = _declined[path];
+            if (!listed.TryGetValue(path, out var rows) || !rows.Any(l => ReferenceEquals(l.Owner, declined.Owner) && l.Row.Serial == declined.Serial))
+            {
+                _declined.Remove(path);
+            }
+        }
+
+        // A review whose row is gone (kept, undone, back to how it was), or has been replaced, or whose pane lost the file to
+        // another, ends: nothing here tells it, the list is the only thing that changed. One that stays takes the form asked for.
+        foreach (var controller in _controllers.Values.ToList())
+        {
+            if (controller.IsReplacingBaseline) { continue; }
+            if (mode == ChangesViewMode.Files
+                || !winners.TryGetValue(controller.Path, out var winner)
+                || !ReferenceEquals(winner.Owner, controller.Owner)
+                || winner.Row.Serial != controller.RowSerial)
+            {
+                controller.Exit();
+            }
+            else
+            {
+                controller.ApplyMode(form);
+            }
+        }
+
+        if (mode == ChangesViewMode.Files || _adapters is null) { return; }
+        // Only a file that is open can be shown: one walk over the frames, not one per row.
+        var open = IdeContextService.OpenDocumentFrames();
+        foreach (var winner in winners.Values.ToList())
+        {
+            if (_controllers.ContainsKey(winner.Row.Path)) { continue; }
+            if (!open.TryGetValue(IdeContextService.FrameKey(winner.Row.Path), out var frames)) { continue; }
+            await TryAttachAsync(winner.Owner, winner.Row, frames);
         }
     }
 
     /// <summary>Show a file in place if it is open and can be. A file that is not open is left for the window event that
     /// comes when it is; one that cannot be shown is declined, once, with the reason in the log.</summary>
-    private async Task TryAttachAsync(SessionChanges owner, FileChange row, IVsWindowFrame frame)
+    private async Task TryAttachAsync(SessionChanges owner, FileChange row, IReadOnlyList<IVsWindowFrame> frames)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var path = row.Path;
         if (!_attaching.Add(path)) { return; }
         try
         {
-            if (_declined.TryGetValue(path, out var declined) && declined.Serial == row.Serial) { return; }
+            if (IsDeclined(owner, row)) { return; }
 
-            var parts = Inspect(frame, out var why, out var pending);
+            // The frame that has the code editor: a file in two windows, or a designer with its code view, has more than one.
+            Parts parts = null;
+            IVsWindowFrame frame = null;
+            string why = null;
+            foreach (var candidate in frames)
+            {
+                var found = Inspect(candidate, out var reason, out _);
+                if (found is not null)
+                {
+                    parts = found;
+                    frame = candidate;
+                    break;
+                }
+                why ??= reason;
+            }
             if (parts is null)
             {
-                if (!pending) { Decline(path, row.Serial, why); }
+                // No reason is "not yet": the view of a document that has only just been opened does not exist for a moment.
+                if (why is not null) { Decline(owner, row, why); }
                 return;
             }
             if (!parts.View.VisualElement.IsLoaded)
@@ -318,23 +400,23 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             }
 
             ReviewBaseline baseline = null;
-            string reason = null;
-            await Task.Run(() => { reason = BaselineReview.Prepare(row, out baseline); });
-            if (reason is not null)
+            string problem = null;
+            await Task.Run(() => { problem = BaselineReview.Prepare(row, out baseline); });
+            if (problem is not null)
             {
-                Decline(path, row.Serial, reason);
+                Decline(owner, row, problem);
                 return;
             }
 
             // Things may have moved while the baseline was read.
-            if (_controllers.ContainsKey(path) || IdeContextService.FindDocumentFrame(path) != frame) { return; }
+            if (_controllers.ContainsKey(path) || !_owners.Contains(owner) || !IdeContextService.FindDocumentFrames(path).Contains(frame)) { return; }
             if (!owner.Set.TryGet(path, out var now) || now.Serial != row.Serial) { return; }
 
             var mode = AgentsOptions.Chat.ChangesViewMode == ChangesViewMode.SideBySide ? DifferenceViewMode.SideBySide : DifferenceViewMode.Inline;
             var controller = new BaselineDocumentController(this, owner, now, frame, parts.View, parts.Document, parts.Window, parts.Model, baseline);
             if (!controller.Enter(mode))
             {
-                Decline(path, row.Serial, "the editor would not switch to a difference view");
+                Decline(owner, now, "the editor would not switch to a difference view");
                 return;
             }
             _controllers[path] = controller;
@@ -346,16 +428,8 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         }
     }
 
-    private sealed class Parts
-    {
-        public IWpfTextView View;
-        public ITextDocument Document;
-        public IVsDifferenceCodeWindow2 Window;
-        public IDifferenceTextViewModel Model;
-    }
-
     /// <summary>What the frame's editor is made of, or null with <paramref name="why"/>. <paramref name="pending"/> says the
-    /// answer is "not yet": the view of a document that has only just been opened does not exist for a moment.</summary>
+    /// answer is "not yet", and there is then no reason.</summary>
     private Parts Inspect(IVsWindowFrame frame, out string why, out bool pending)
     {
         why = null;
@@ -411,25 +485,41 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         return new Parts { View = view, Document = document, Window = window, Model = model };
     }
 
-    private void Decline(string path, long serial, string why)
+    private bool IsDeclined(SessionChanges owner, FileChange row)
+        => _declined.TryGetValue(row.Path, out var known)
+           && ReferenceEquals(known.Owner, owner) && known.Serial == row.Serial
+           && known.StampLength == row.StampLength && known.StampWriteUtc == row.StampWriteUtc;
+
+    private void Decline(SessionChanges owner, FileChange row, string why)
     {
-        if (_declined.TryGetValue(path, out var known) && known.Serial == serial) { return; }
-        _declined[path] = new Declined { Serial = serial, Why = why };
-        _log.Info($"[changes] {path} is not shown in place: {why}");
+        if (IsDeclined(owner, row)) { return; }
+        _declined[row.Path] = new Declined { Owner = owner, Serial = row.Serial, StampLength = row.StampLength, StampWriteUtc = row.StampWriteUtc };
+        _log.Info($"[changes] {row.Path} is not shown in place: {why}");
     }
 
     // The view of a document that has only just opened is not loaded yet, and the editor will not take a baseline until it is.
+    // A view that is closed before that is not waited for any more: the registry outlives every view it has ever seen.
     private void WaitForLoad(IWpfTextView view)
     {
-        if (!_waitingForLoad.Add(view)) { return; }
-        RoutedEventHandler loaded = null;
-        loaded = (_, _) =>
+        if (_waitingForLoad.ContainsKey(view)) { return; }
+        var wait = new LoadWait();
+        wait.Loaded = (_, _) =>
         {
-            view.VisualElement.Loaded -= loaded;
-            _waitingForLoad.Remove(view);
+            StopWaiting(view);
             ScheduleSync();
         };
-        view.VisualElement.Loaded += loaded;
+        wait.Closed = (_, _) => StopWaiting(view);
+        _waitingForLoad[view] = wait;
+        view.VisualElement.Loaded += wait.Loaded;
+        view.Closed += wait.Closed;
+    }
+
+    private void StopWaiting(IWpfTextView view)
+    {
+        if (!_waitingForLoad.TryGetValue(view, out var wait)) { return; }
+        _waitingForLoad.Remove(view);
+        view.VisualElement.Loaded -= wait.Loaded;
+        view.Closed -= wait.Closed;
     }
 
     private void EnsureServices()
@@ -452,6 +542,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             {
                 rdt.AdviseRunningDocTableEvents(this, out _rdtCookie);
             }
+            // The form the person picked applies at once, not at the next change of a list.
             AgentsOptions.Applied += () => ScheduleSync();
         }
         catch (Exception ex)

@@ -182,7 +182,8 @@ public class BridgeGenerationSpec : GenerationSpec
 
         // The Changes list. sessionId is null before the CLI has named one; disabled is null while
         // tracking is on; commandsNote is null while shell commands are followed.
-        AddInterface<ChangedFileDto>();
+        AddInterface<ChangedFileDto>()
+            .Member(x => nameof(x.SharedWithPane)).Null();
         AddInterface<ChangedFilesNotification>()
             .Member(x => nameof(x.SessionId)).Null()
             .Member(x => nameof(x.Disabled)).Null()

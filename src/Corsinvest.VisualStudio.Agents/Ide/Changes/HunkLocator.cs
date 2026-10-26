@@ -6,6 +6,7 @@
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
+using System;
 using System.Collections.Generic;
 
 namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
@@ -34,7 +35,9 @@ internal readonly struct Hunk
 /// numbers things, and nothing else needs to.
 /// <para>The lookups follow what Copilot's own hunk commands do for the same views, because the service's answer is not
 /// always where the caret is: in the inline view a deleted line is drawn from the baseline's buffer, so a caret on it is
-/// in no hunk of the document's, and the hunk has to be found by mapping the baseline's span up into the view.</para></summary>
+/// in no hunk of the document's, and the hunk has to be found by mapping the baseline's span up into the view.</para>
+/// <para>A hunk the service describes in a way that does not fit its buffers (a range of lines past the end of what it
+/// tokenised) is not a hunk here: an edit made from it would land at the top of the file.</para></summary>
 internal static class HunkLocator
 {
     public static bool TryGetModel(ITextView view, out IDifferenceTextViewModel model)
@@ -52,11 +55,10 @@ internal static class HunkLocator
     {
         var hunks = new List<Hunk>();
         if (difference is null) { return hunks; }
-        var lines = difference.LineDifferences;
-        var differences = lines.Differences;
+        var differences = difference.LineDifferences.Differences;
         for (var i = 0; i < differences.Count; i++)
         {
-            hunks.Add(ToHunk(difference, differences[i], i));
+            if (TryToHunk(difference, differences[i], i, out var hunk)) { hunks.Add(hunk); }
         }
         return hunks;
     }
@@ -86,8 +88,7 @@ internal static class HunkLocator
         if (found is null) { return false; }
 
         var index = difference.LineDifferences.Differences.IndexOf(found);
-        hunk = ToHunk(difference, found, index);
-        return true;
+        return TryToHunk(difference, found, index, out hunk);
     }
 
     /// <summary>Where the hunk starts in the text of <paramref name="view"/>, for moving the caret there and for
@@ -112,24 +113,53 @@ internal static class HunkLocator
         return point.Snapshot is null ? null : point.TranslateTo(view.TextSnapshot, PointTrackingMode.Negative);
     }
 
-    private static Hunk ToHunk(ISnapshotDifference difference, Difference d, int index)
+    /// <summary>Whether the span is made of whole lines: it starts where a line starts, and ends where one does (a line break
+    /// included) or at the end of the text. An edit made with a span that is not would join two lines or leave a blank one
+    /// behind, so the review refuses it: the differencing service numbers lines, and whether its spans carry the break is
+    /// something this code relies on and cannot check without the editor.</summary>
+    public static bool IsWholeLines(SnapshotSpan span)
     {
-        var lines = difference.LineDifferences;
-        return new Hunk(index,
-                        Span(difference.LeftBufferSnapshot, lines.LeftDecomposition, d.Left),
-                        Span(difference.RightBufferSnapshot, lines.RightDecomposition, d.Right));
+        var snapshot = span.Snapshot;
+        if (snapshot is null) { return false; }
+        if (span.Start.GetContainingLine().Start.Position != span.Start.Position) { return false; }
+        if (span.IsEmpty || span.End.Position == snapshot.Length) { return true; }
+        return span.End.GetContainingLine().Start.Position == span.End.Position;
     }
 
-    /// <summary>A difference counts lines; this turns its range of lines into the span of text they are. An empty buffer,
-    /// or a range past the end of it, has no span to give: it is an empty one at the start, which is where a hunk against
-    /// nothing begins.</summary>
-    private static SnapshotSpan Span(ITextSnapshot snapshot, ITokenizedStringList decomposition, Span lines)
+    private static bool TryToHunk(ISnapshotDifference difference, Difference d, int index, out Hunk hunk)
     {
-        if (snapshot.Length == 0 || lines.Start < 0 || lines.End > ((ICollection<string>)decomposition).Count)
+        hunk = default;
+        var lines = difference.LineDifferences;
+        if (!TrySpan(difference.LeftBufferSnapshot, lines.LeftDecomposition, d.Left, out var left)
+            || !TrySpan(difference.RightBufferSnapshot, lines.RightDecomposition, d.Right, out var right))
         {
-            return new SnapshotSpan(snapshot, 0, 0);
+            return false;
         }
-        return new SnapshotSpan(snapshot, decomposition.GetSpanInOriginal(lines));
+        hunk = new Hunk(index, left, right);
+        return true;
+    }
+
+    /// <summary>A difference counts lines; this turns its range of lines into the span of text they are. An empty buffer has no
+    /// text to point into: its span is an empty one at the start, which is where a hunk against nothing begins. A range that is not
+    /// inside what was tokenised has no span.</summary>
+    private static bool TrySpan(ITextSnapshot snapshot, ITokenizedStringList decomposition, Span lines, out SnapshotSpan span)
+    {
+        span = default;
+        if (lines.Start < 0 || lines.End > ((ICollection<string>)decomposition).Count) { return false; }
+        if (snapshot.Length == 0)
+        {
+            span = new SnapshotSpan(snapshot, 0, 0);
+            return true;
+        }
+        try
+        {
+            span = new SnapshotSpan(snapshot, decomposition.GetSpanInOriginal(lines));
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or IndexOutOfRangeException)
+        {
+            return false;
+        }
     }
 
     private static Difference FromLeftPosition(ISnapshotDifference difference, int position)

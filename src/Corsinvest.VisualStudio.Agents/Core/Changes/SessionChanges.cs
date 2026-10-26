@@ -41,9 +41,9 @@ internal sealed class SessionChangesOptions
     /// <summary>The editor Keep, Undo and Open act through. Null = Visual Studio.</summary>
     public IChangeEditor Editor { get; set; }
 
-    /// <summary>This pane's number: the one thing that has to be named to another pane is the file two panes list.
-    /// Null = none (a test).</summary>
-    public Func<int> PaneId { get; set; }
+    /// <summary>The number this pane's tab shows ("Chat 5"): the one thing that has to be named to another pane is the file
+    /// two panes list. Null = none (a test).</summary>
+    public Func<int> PaneNumber { get; set; }
 
     /// <summary>Where the git snapshots of the working tree go. Null = the running extension's folder.</summary>
     public string SnapshotsRoot { get; set; }
@@ -107,8 +107,8 @@ internal sealed partial class SessionChanges : IDisposable
 
     public ChangeSet Set => _set;
 
-    /// <summary>This pane's number, or 0 when it has none.</summary>
-    public int PaneId => _options.PaneId?.Invoke() ?? 0;
+    /// <summary>The number this pane's tab shows, or 0 when it has none.</summary>
+    public int PaneNumber => _options.PaneNumber?.Invoke() ?? 0;
 
     /// <summary>Where this extension's own copies go.</summary>
     public ChangeBaselines Baselines => _baselines;
@@ -121,36 +121,51 @@ internal sealed partial class SessionChanges : IDisposable
 
     /// <summary>The row's baseline becomes <paramref name="bytes"/>, a copy of this extension's own: what a hunk kept in
     /// the editor turns the baseline into, so that it stays kept for the counts, for Open and for Undo. The copy the row had
-    /// goes, if it was ours. Returns the path of the new copy, or null when the row is gone or the copy could not be
-    /// written (the row then keeps the baseline it had).</summary>
-    public Task<string> ReplaceBaselineAsync(string path, byte[] bytes) => Task.Run(async () =>
+    /// goes, if it was ours. Only the row <paramref name="serial"/> names: a row that has been replaced since (kept, then
+    /// changed again) is not the one the editor was showing, and its fresh baseline is not to be overwritten. Calls for one file
+    /// go one at a time, so the last one asked is the last one done. Returns the path of the new copy, or null when the row is
+    /// gone, is another, or the copy could not be written (the row then keeps the baseline it had).</summary>
+    public Task<string> ReplaceBaselineAsync(string path, long serial, byte[] bytes) => Task.Run(async () =>
     {
-        if (_disposed || !_set.TryGet(path, out _)) { return null; }
-        var target = _baselines.TargetFor(_set.SessionId, path);
-        try { File.WriteAllBytes(target, bytes); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        var gate = _locks.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
+        try { await gate.WaitAsync(_lifetime.Token).ConfigureAwait(false); }
+        catch (OperationCanceledException) { return null; }
+        try
         {
-            _log.Warn($"[changes] could not write the new baseline of {path}: {ex.Message}");
-            return null;
-        }
+            if (_disposed || !_set.TryGet(path, out var row) || row.Serial != serial) { return null; }
+            var target = _baselines.TargetFor(_set.SessionId, path);
+            try { File.WriteAllBytes(target, bytes); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                _log.Warn($"[changes] could not write the new baseline of {path}: {ex.Message}");
+                return null;
+            }
 
-        var fresh = BaselineRef.Own(target);
-        var replaced = BaselineRef.None;
-        var updated = _set.Update(path, r =>
-        {
-            replaced = r.Baseline;
-            r.Baseline = fresh;
-            r.BaselineMissing = false;
-        });
-        if (!updated)
-        {
-            // The row went while the copy was being written: nothing holds it.
-            _baselines.Release(fresh);
-            return null;
+            var fresh = BaselineRef.Own(target);
+            var replaced = BaselineRef.None;
+            var applied = false;
+            _set.Update(path, r =>
+            {
+                if (r.Serial != serial) { return; }
+                replaced = r.Baseline;
+                r.Baseline = fresh;
+                r.BaselineMissing = false;
+                applied = true;
+            });
+            if (!applied)
+            {
+                // The row went, or was replaced, while the copy was being written: nothing holds it.
+                _baselines.Release(fresh);
+                return null;
+            }
+            _baselines.Release(replaced);
+            await RefreshRowAsync(path, null).ConfigureAwait(false);
+            return target;
         }
-        _baselines.Release(replaced);
-        await RefreshRowAsync(path, null).ConfigureAwait(false);
-        return target;
+        finally
+        {
+            gate.Release();
+        }
     });
 
     /// <summary>What the panel says about shell commands: why they are not followed, or null when they
@@ -510,24 +525,37 @@ internal sealed partial class SessionChanges : IDisposable
     /// the list: whatever undid the change, there is nothing left to review.</summary>
     private async Task RefreshRowAsync(string path, string toolUseId)
     {
-        if (!_set.TryGet(path, out var row)) { return; }
-        var evaluation = await ChangeEvaluator.EvaluateAsync(path, row.Baseline).ConfigureAwait(false);
-        if (evaluation.Unchanged)
+        // A hunk kept in the editor replaces the row's baseline while this measures against the old one, and deletes it: that
+        // measurement is of a copy that is gone, and says nothing about the row. It is thrown away and made again.
+        for (var attempt = 0; attempt < 3; attempt++)
         {
-            var removed = _set.Remove(path);
-            if (removed is not null) { _baselines.Release(removed.Baseline); }
-            _set.SetCaptureNext(path);
-            return;
-        }
+            if (!_set.TryGet(path, out var row)) { return; }
+            var measured = row.Baseline;
+            var evaluation = await ChangeEvaluator.EvaluateAsync(path, measured).ConfigureAwait(false);
+            if (evaluation.Unchanged)
+            {
+                var removed = _set.RemoveIf(path, r => SameBaseline(r.Baseline, measured));
+                if (removed is null) { continue; }
+                _baselines.Release(removed.Baseline);
+                _set.SetCaptureNext(path);
+                return;
+            }
 
-        _set.Update(path, r =>
-        {
-            Apply(r, evaluation, r.BaselineMissing);
-            if (toolUseId is null) { return; }
-            r.LastToolUseId = toolUseId;
-            r.LastChangedUtc = DateTime.UtcNow;
-        });
+            var stale = false;
+            var updated = _set.Update(path, r =>
+            {
+                if (!SameBaseline(r.Baseline, measured)) { stale = true; return; }
+                Apply(r, evaluation, r.BaselineMissing);
+                if (toolUseId is null) { return; }
+                r.LastToolUseId = toolUseId;
+                r.LastChangedUtc = DateTime.UtcNow;
+            });
+            if (!updated || !stale) { return; }
+        }
     }
+
+    private static bool SameBaseline(BaselineRef a, BaselineRef b)
+        => a.IsEmpty == b.IsEmpty && string.Equals(a.Path, b.Path, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Bring every listed file up to date with the disk, for files the user edited, reverted
     /// or deleted since. A file whose size and write time have not moved is not measured again, so
