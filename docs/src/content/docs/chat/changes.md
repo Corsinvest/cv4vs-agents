@@ -104,6 +104,18 @@ A few things work differently there:
   do during the review (a change undone with Undo, your own typing) can still be taken back. A change you kept cannot: Keep
   does not edit the file, and the list's Undo puts the file back to how it was before Claude's change with that change
   in it.
+
+## Every change in one window
+
+On Visual Studio 2026 the panel's header also has **Review all**. It opens the changes of every listed file in the one
+window the editor has for that: a section per file, how it was before on the left and the file itself on the right, which
+is opened for editing. It is for looking at everything together. Keep and Undo stay in the panel, and the window is the
+list as it was when you pressed the button: a file kept afterwards stays in it until you close it, and pressing Review all
+again shows the list as it is then.
+
+Only files that can be shown as text are in it: not a deleted file, not a binary one, not one the list has no copy of from
+before. A Visual Studio that does not have the window (2022 does not) has no button, and nothing else differs.
+
 ## What it compares with
 
 The copy the CLI keeps before it first edits a file: the same ones [Rewind](/cv4vs-agents/chat/rewind/)
