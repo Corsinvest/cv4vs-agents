@@ -33,7 +33,7 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
         {
             // Whether the file exists and the folder have no async form, so they go to the pool; the content is copied through
             // an asynchronous stream.
-            target = await Task.Run(() => CopyTargetIfExists(sessionId, path), cancel).ConfigureAwait(false);
+            target = await Task.Run(() => File.Exists(path) ? TargetFor(sessionId, path) : null, cancel).ConfigureAwait(false);
             if (target is null) { return BaselineRef.Empty; }
             await AsyncFile.CopyAsync(path, target, cancel).ConfigureAwait(false);
             return BaselineRef.Own(target);
@@ -47,22 +47,21 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
         }
     }
 
-    // Null when there is nothing to copy.
-    private string CopyTargetIfExists(string sessionId, string path)
-    {
-        if (!File.Exists(path)) { return null; }
-        var folder = FolderFor(sessionId);
-        Directory.CreateDirectory(folder);
-        // The hash keeps two files of the same name apart; the name after it keeps the
-        // extension, so the copy opens with the editor the original would.
-        return Path.Combine(folder, ShortHash(path) + "~" + Path.GetFileName(path));
-    }
-
     private static void DeleteQuietly(string path)
     {
         if (path is null) { return; }
         try { File.Delete(path); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
+    /// <summary>Where a copy of <paramref name="path"/> belongs, with its folder made. The hash keeps two
+    /// files of the same name apart; the name after it keeps the extension, so the copy opens with the
+    /// editor the original would. For a caller that writes the copy itself (git, for a blob).</summary>
+    public string TargetFor(string sessionId, string path)
+    {
+        var folder = FolderFor(sessionId);
+        Directory.CreateDirectory(folder);
+        return Path.Combine(folder, ShortHash(path) + "~" + Path.GetFileName(path));
     }
 
     /// <summary>Delete a copy this extension took. A CLI backup, or anything outside the baselines
@@ -88,7 +87,7 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
             foreach (var folder in Directory.GetDirectories(root))
             {
                 if (Directory.GetLastWriteTimeUtc(folder) >= limit) { continue; }
-                try { Directory.Delete(folder, true); }
+                try { DeleteTree(folder); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
                     log.Warn($"[changes] could not sweep {folder}: {ex.Message}");
@@ -115,6 +114,18 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
         {
             return false;
         }
+    }
+
+    /// <summary>Delete a folder and everything in it, read-only files included. Git writes its objects
+    /// read-only, and a plain recursive delete stops at the first of them, leaving the store behind.</summary>
+    internal static void DeleteTree(string folder)
+    {
+        if (!Directory.Exists(folder)) { return; }
+        foreach (var file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
+        {
+            if ((File.GetAttributes(file) & FileAttributes.ReadOnly) != 0) { File.SetAttributes(file, FileAttributes.Normal); }
+        }
+        Directory.Delete(folder, true);
     }
 
     // FNV-1a over the lower-cased path. Not a security hash: it only has to keep names apart, and

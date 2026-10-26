@@ -180,11 +180,13 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<MarketplaceListResponse>();
         AddInterface<PluginOpResultNotification>();
 
-        // The Changes list. sessionId is null before the CLI has named one; disabled is null while tracking is on.
+        // The Changes list. sessionId is null before the CLI has named one; disabled is null while
+        // tracking is on; commandsNote is null while shell commands are followed.
         AddInterface<ChangedFileDto>();
         AddInterface<ChangedFilesNotification>()
             .Member(x => nameof(x.SessionId)).Null()
-            .Member(x => nameof(x.Disabled)).Null();
+            .Member(x => nameof(x.Disabled)).Null()
+            .Member(x => nameof(x.CommandsNote)).Null();
         AddInterface<ChangedFileFailureDto>();
         AddInterface<ChangedFilesActionResult>();
     }
