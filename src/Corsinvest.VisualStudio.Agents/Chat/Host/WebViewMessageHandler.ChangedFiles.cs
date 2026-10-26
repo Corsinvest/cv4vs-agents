@@ -37,7 +37,7 @@ internal sealed partial class WebViewMessageHandler
             await changes.RefreshAsync();
         }
         catch (Exception ex) { log.LogException("[changes] refresh", ex); }
-        bridge.SendResponse(BridgeMessages.ToWebView.ChangedFiles.List, reqId, ChangedFilesMapper.Build(changes.Set));
+        bridge.SendResponse(BridgeMessages.ToWebView.ChangedFiles.List, reqId, ChangedFilesMapper.Build(changes.Set, changes.CommandsNote));
     }
 
     private void HandleOpenChangedFile(JObject data, int? id)

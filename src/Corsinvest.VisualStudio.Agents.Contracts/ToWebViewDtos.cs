@@ -875,6 +875,10 @@ public class ChangedFilesNotification
 
     /// <summary>Why nothing is tracked (file checkpoints are off), or null when something is.</summary>
     public string Disabled { get; set; }
+
+    /// <summary>Why the files a shell command changes are not being followed (the setting is off, git is
+    /// missing, the folder is not a repository), or null when they are.</summary>
+    public string CommandsNote { get; set; }
 }
 
 /// <summary>A file an action could not deal with.</summary>

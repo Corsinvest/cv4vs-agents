@@ -8,6 +8,7 @@ using Corsinvest.VisualStudio.Agents.Core.Sessions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,6 +23,10 @@ internal sealed class SessionChangesOptions
     /// baselines to compare against, and tracking is switched off rather than half-working.</summary>
     public Func<bool> FileCheckpoints { get; set; } = () => true;
 
+    /// <summary>Whether the files a shell command changes are followed (the setting). Read each time the
+    /// panel is built, so the note it shows follows the setting.</summary>
+    public Func<bool> TrackCommands { get; set; } = () => true;
+
     /// <summary>Runs before a file is copied, to get unsaved editor changes onto disk: the copy must
     /// be of what Claude is about to change, not of a stale file. Null = nothing to do.</summary>
     public Func<string, Task> PrepareFile { get; set; }
@@ -35,6 +40,13 @@ internal sealed class SessionChangesOptions
 
     /// <summary>The editor Keep, Undo and Open act through. Null = Visual Studio.</summary>
     public IChangeEditor Editor { get; set; }
+
+    /// <summary>Where the git snapshots of the working tree go. Null = the running extension's folder.</summary>
+    public string SnapshotsRoot { get; set; }
+
+    /// <summary>How many paths the change watcher keeps before it declares itself overflowed. Null = its
+    /// own default; a test sets it low to reach the fallback without writing fifty thousand files.</summary>
+    public int? MaxWatchedPaths { get; set; }
 }
 
 /// <summary>Everything one chat pane knows about the files Claude changed: it feeds the
@@ -63,6 +75,7 @@ internal sealed partial class SessionChanges : IDisposable
     private readonly CancellationTokenSource _lifetime = new();
     private int _generation;
     private bool _disposed;
+    private Task<BashTracker> _bash;
 
     public SessionChanges(ClaudePaths paths, string workingDirectory, SessionChangesOptions options, OutputWindowLogger log)
     {
@@ -72,10 +85,23 @@ internal sealed partial class SessionChanges : IDisposable
         _log = log ?? OutputWindowLogger.Global;
         _baselines = _options.Baselines ?? ChangeBaselines.Default;
         Actions = new ChangeActions(_set, _baselines, _options.Editor ?? IdeChangeEditor.Instance, _log);
-        if (_baselines == ChangeBaselines.Default && Interlocked.Exchange(ref _swept, 1) == 0) { _ = Task.Run(() => _baselines.Sweep(SweepAge)); }
+        if (_baselines == ChangeBaselines.Default && Interlocked.Exchange(ref _swept, 1) == 0)
+        {
+            _ = Task.Run(() =>
+            {
+                _baselines.Sweep(SweepAge);
+                new ChangeBaselines(AppPaths.SnapshotsFolder, _log).Sweep(SweepAge);
+            });
+        }
     }
 
     public ChangeSet Set => _set;
+
+    /// <summary>What the panel says about shell commands: why they are not followed, or null when they
+    /// are (or it is not yet known, before the first look at the folder).</summary>
+    public string CommandsNote => _options.TrackCommands() ? _set.CommandsNote : CommandsOffNote;
+
+    internal const string CommandsOffNote = "Files changed by running a command are not listed: that is turned off in Options.";
 
     /// <summary>What the Open, Keep and Undo buttons do.</summary>
     public ChangeActions Actions { get; }
@@ -100,6 +126,62 @@ internal sealed partial class SessionChanges : IDisposable
             ReleaseAll(released);
             Interlocked.Increment(ref _generation);
         }
+    }
+
+    /// <summary>Start following what shell commands change: find the git repository of the working
+    /// directory and take the first picture of it. In the background, and once; nothing happens
+    /// outside a git working tree.</summary>
+    public void StartTracking()
+    {
+        if (_disposed || _bash is not null) { return; }
+        var folder = Path.Combine(_options.SnapshotsRoot ?? AppPaths.SnapshotsFolder, Guid.NewGuid().ToString("N"));
+        _bash = BashTracker.StartAsync(_workingDirectory, folder, _set, _baselines, _log, _options.MaxWatchedPaths);
+    }
+
+    /// <summary>A shell command is about to run. Brings the snapshot of the working tree up to date when
+    /// something has changed since it was taken, so there is a true "before" to compare with. Bounded by
+    /// the caller: the CLI waits for this answer before it runs the command.</summary>
+    public async Task OnBashBeginAsync(HookBash call)
+    {
+        try
+        {
+            if (!Active(call.SessionId)) { return; }
+            var tracker = await Tracker().ConfigureAwait(false);
+            if (tracker is not null) { await tracker.BeginAsync(call.ToolUseId).ConfigureAwait(false); }
+        }
+        catch (OperationCanceledException)
+        {
+            // The pane closed.
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("SessionChanges.OnBashBeginAsync", ex);
+        }
+    }
+
+    /// <summary>A shell command has finished, or failed: list the files it changed. Not waited for.</summary>
+    public async Task OnBashEndAsync(HookBash call)
+    {
+        try
+        {
+            if (!Active(call.SessionId)) { return; }
+            var tracker = await Tracker().ConfigureAwait(false);
+            if (tracker is not null) { await tracker.EndAsync(call.ToolUseId, _set.SessionId).ConfigureAwait(false); }
+        }
+        catch (OperationCanceledException)
+        {
+            // The pane closed.
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("SessionChanges.OnBashEndAsync", ex);
+        }
+    }
+
+    private async Task<BashTracker> Tracker()
+    {
+        var started = _bash;
+        return started is null ? null : await started.ConfigureAwait(false);
     }
 
     /// <summary>The hook that runs before an edit. Takes the copy the CLI will not: only for a
@@ -354,7 +436,9 @@ internal sealed partial class SessionChanges : IDisposable
     /// <summary>Why nothing is listed when file history is off.</summary>
     public const string NoCheckpoints = "Keep file checkpoints is off, so there is nothing to compare Claude's edits with.";
 
-    private bool Active(HookEdit edit)
+    private bool Active(HookEdit edit) => Active(edit.SessionId);
+
+    private bool Active(string sessionId)
     {
         if (_disposed) { return false; }
         if (!_options.FileCheckpoints())
@@ -363,7 +447,7 @@ internal sealed partial class SessionChanges : IDisposable
             return false;
         }
         _set.SetDisabled(null);
-        EnsureSession(edit.SessionId);
+        EnsureSession(sessionId);
         return true;
     }
 
@@ -383,5 +467,14 @@ internal sealed partial class SessionChanges : IDisposable
         // the token, and a disposed source throws from it.
         _lifetime.Cancel();
         ReleaseAll(_set.Reset(null));
+
+        // Its folder of git snapshots goes with it, once it has finished starting (or failing to).
+        var bash = _bash;
+        _bash = null;
+        if (bash is not null)
+        {
+            _ = bash.ContinueWith(t => { if (t.Status == TaskStatus.RanToCompletion) { t.Result?.Dispose(); } },
+                                  TaskScheduler.Default);
+        }
     }
 }

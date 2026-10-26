@@ -179,7 +179,9 @@ export class CvChangedFilesChip extends LitElement {
                         : nothing
                 }
             </span>
-            <span class="cv-changes-state ${file.state}" data-tip=${file.state}
+            <span
+                class="cv-changes-state ${file.state}"
+                data-tip=${file.source === 'bash' ? `${file.state} by a command` : file.state}
                 >${stateLetter(file.state)}</span
             >
             <span
@@ -293,7 +295,11 @@ export class CvChangedFilesChip extends LitElement {
                       </div>`
                     : nothing
             }
-            <div class="cv-changes-note">Edits made by running a command are not listed.</div>`;
+            ${
+                changedFiles.commandsNote
+                    ? html`<div class="cv-changes-note">${changedFiles.commandsNote}</div>`
+                    : nothing
+            }`;
     }
 
     override render() {

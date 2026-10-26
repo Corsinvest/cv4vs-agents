@@ -50,3 +50,28 @@ internal sealed class HookEdit
         };
     }
 }
+
+/// <summary>The part of a Bash PreToolUse / PostToolUse / PostToolUseFailure callback the Changes list
+/// needs: which call it is, and where it ran. The command itself is deliberately not read: what a
+/// command did is found by looking at the files, not by guessing from its text.</summary>
+internal sealed class HookBash
+{
+    public string ToolUseId { get; private set; }
+    public string SessionId { get; private set; }
+    public string Cwd { get; private set; }
+
+    /// <summary>Null when the callback names no tool call.</summary>
+    public static HookBash TryParse(JToken input, string toolUseId)
+    {
+        if (input is not JObject obj) { return null; }
+        var id = !string.IsNullOrEmpty(toolUseId) ? toolUseId : (string)obj["tool_use_id"];
+        if (string.IsNullOrEmpty(id)) { return null; }
+
+        return new HookBash
+        {
+            ToolUseId = id,
+            SessionId = (string)obj["session_id"] ?? "",
+            Cwd = (string)obj["cwd"] ?? "",
+        };
+    }
+}

@@ -12,8 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   its panel shows each one against how it was before Claude's first edit, with the lines added and
   removed, and Open, Keep and Undo for the file or for all of them. Undo puts a file back as it
   was, through the editor when it is open, so Ctrl+Z gives back what was there. It compares with the
-  copies Rewind restores from, and takes its own for a sub-agent's edits. Edits made by running a
-  command are not listed.
+  copies Rewind restores from, and takes its own for a sub-agent's edits.
+- **The list also follows what a shell command changes.** A file rewritten by `sed -i`, a script or
+  `git checkout`, run through the Bash or the PowerShell tool, is listed against a snapshot of the
+  working tree taken just before the command, so Undo restores it byte for byte. It needs the
+  folder to be in a git repository, and says so in the panel when it is not. The snapshots live in
+  a private store under the extension's data folder: nothing is written into your repository.
+  *Track the files commands change* in Options turns it off.
 - **A question from Claude can show a preview of each choice.** When the options of a question
   come with a mockup, a code sample or a layout to compare, the one under the pointer or the
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
