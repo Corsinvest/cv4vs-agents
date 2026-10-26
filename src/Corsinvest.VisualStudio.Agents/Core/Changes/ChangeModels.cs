@@ -11,8 +11,22 @@ namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 internal enum ChangeState { Modified, Added, Deleted }
 
 /// <summary>How the extension learned of the change. Edit = an Edit/Write/NotebookEdit tool call
-/// that reported itself through a hook; Bash = a shell command, found by watching the disk.</summary>
+/// that reported itself through a hook; Bash = a shell command (Bash or PowerShell), found by comparing
+/// two snapshots of the working tree.</summary>
 internal enum ChangeSource { Edit, Bash }
+
+/// <summary>What <see cref="ChangeSet.TryAdd"/> did with a row.</summary>
+internal enum AddResult
+{
+    /// <summary>The row is in the set, with the baseline it came with.</summary>
+    Added,
+
+    /// <summary>The path already had a row, which keeps its own baseline: the new one is not used.</summary>
+    AlreadyListed,
+
+    /// <summary>The set is full: the row was dropped.</summary>
+    Full,
+}
 
 /// <summary>Exact = a line diff; Approximate = a bound, because the texts were too large or too
 /// different for the shortest-edit search; Unavailable = no numbers (binary, or too large to read).</summary>

@@ -313,6 +313,38 @@ public sealed class GitSnapshotTests : IDisposable
         Assert.Equal("", _repo.Git("status", "--porcelain").Trim());
     }
 
+    [Fact]
+    public async Task A_lock_left_by_a_killed_git_does_not_stop_the_next_picture()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        var snapshot = await OpenAsync();
+        await snapshot.TakeAsync();
+        File.WriteAllText(Path.Combine(_private, "index.lock"), "");
+
+        var tree = await snapshot.TakeAsync();
+
+        Assert.NotNull(tree);
+        Assert.False(File.Exists(Path.Combine(_private, "index.lock")));
+    }
+
+    [Fact]
+    public async Task A_damaged_private_index_is_started_again_from_nothing()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        var snapshot = await OpenAsync();
+        var first = await snapshot.TakeAsync();
+        File.WriteAllText(Path.Combine(_private, "index"), "this is not an index");
+        _repo.Write("b.txt", "b\n");
+
+        var second = await snapshot.TakeAsync();
+
+        Assert.NotNull(second);
+        Assert.True(second.Complete);
+        Assert.Equal(new[] { "A:b.txt" }, await DiffAsync(snapshot, first, second));
+    }
+
     [Theory]
     [InlineData(@"C:\", null, true)]
     [InlineData(@"D:\", null, true)]

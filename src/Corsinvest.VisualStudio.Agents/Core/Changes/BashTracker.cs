@@ -37,7 +37,12 @@ internal sealed class BashTracker : IDisposable
     internal static readonly TimeSpan DefaultSnapshotWait = TimeSpan.FromSeconds(30);
 
     // More files than this from one command are not listed one by one: the rest are said to be missing.
-    private const int DefaultMaxRows = 500;
+    // The list holds no more than this in all, so a larger number would only be work thrown away.
+    private const int DefaultMaxRows = ChangeSet.MaxFiles;
+
+    // A file the command made has a creation time after the command began. The slack covers a file
+    // system that keeps time to two seconds, and a clock read a moment before the command's first write.
+    private static readonly TimeSpan CreationSlack = TimeSpan.FromSeconds(2);
 
     private const string LfsPointer = "version https://git-lfs.github.com/spec/v1";
 
@@ -128,15 +133,21 @@ internal sealed class BashTracker : IDisposable
         }
 
         set.SetCommandsNote(null);
-        var tracker = new BashTracker(snapshot, watch, set, baselines, log, maxRows ?? DefaultMaxRows);
-        // The first picture, in the background: by the time a command arrives it is usually there, and
-        // if it is not the command's own hook waits for it.
-        _ = tracker.SnapshotAsync();
-        return tracker;
+        // No picture yet: reading every file of a working tree is not for a chat that has done nothing.
+        // See WarmUpAsync, and BeginAsync for the command that arrives first.
+        return new BashTracker(snapshot, watch, set, baselines, log, maxRows ?? DefaultMaxRows);
     }
 
     /// <summary>The root of the working tree being watched.</summary>
     public string TopLevel => _git.TopLevel;
+
+    /// <summary>Take the first picture of the tree, if there is none yet. Called when Claude starts working,
+    /// so it is there by the time the first command arrives; a command that arrives before it is done waits
+    /// for it, as it would have anyway.</summary>
+    public async Task WarmUpAsync()
+    {
+        if (_git.LatestTree is null) { await SnapshotAsync().ConfigureAwait(false); }
+    }
 
     /// <summary>A command is about to run. Brings the snapshot of the working tree up to date when anything
     /// has changed since it was taken, so it is a true "before"; a quiet working tree costs nothing here.
@@ -216,11 +227,17 @@ internal sealed class BashTracker : IDisposable
         foreach (var change in rows)
         {
             if (_lifetime.IsCancellationRequested) { return; }
-            await AddRowAsync(change, call.Tree, after, sessionId, incomplete).ConfigureAwait(false);
+            if (_set.IsFull)
+            {
+                // No room: the rest would be read, compared and thrown away.
+                _set.NoteOverflow();
+                return;
+            }
+            await AddRowAsync(change, call.Tree, after, call.AtUtc, sessionId, incomplete).ConfigureAwait(false);
         }
     }
 
-    private async Task AddRowAsync(TreeChange change, GitTree before, GitTree after, string sessionId, bool incomplete)
+    private async Task AddRowAsync(TreeChange change, GitTree before, GitTree after, DateTime beganUtc, string sessionId, bool incomplete)
     {
         // A file git could not read, in either picture, says nothing about what the command did to it: the
         // tree holds an older version of it, or none. Calling it new or changed is how a file that was
@@ -245,8 +262,12 @@ internal sealed class BashTracker : IDisposable
         BaselineRef baseline;
         if (change.Status == 'A')
         {
-            // Not in the picture before (which could read it), and in the one after: the command made it.
-            baseline = BaselineRef.Empty;
+            // Absent from the picture before is not proof the command made the file: one the repository
+            // ignored until the command changed the rules (an edit of .gitignore, a checkout) was there all
+            // along, and an Undo that deletes a file that is new deletes this one too. The command made it
+            // if its creation time is after the command began. Anything else is left without a copy, so
+            // it is listed but not undone.
+            baseline = File.GetCreationTimeUtc(path) >= beganUtc - CreationSlack ? BaselineRef.Empty : BaselineRef.None;
         }
         else if (change.OldIsFile)
         {
@@ -281,7 +302,9 @@ internal sealed class BashTracker : IDisposable
             StampLength = evaluation.Length,
             StampWriteUtc = evaluation.WriteUtc,
         };
-        if (!_set.Add(row)) { _baselines.Release(baseline); }
+        // Stored or not, the copy is the row's only if the row is. One that got in first (the edit tools, or
+        // another command ending) keeps its own baseline, and this copy is surplus.
+        if (_set.TryAdd(row) != AddResult.Added) { _baselines.Release(baseline); }
     }
 
     /// <summary>The file as it was before the command, written where a copy of it belongs. None when git

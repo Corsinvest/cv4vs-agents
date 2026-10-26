@@ -85,27 +85,51 @@ internal sealed class ChangeSet
 
     public int Count { get { lock (_gate) { return _rows.Count; } } }
 
+    /// <summary>No room for another row: whatever is added now is dropped.</summary>
+    public bool IsFull { get { lock (_gate) { return _rows.Count >= MaxFiles; } } }
+
     /// <summary>Add a row. False when the set is full, which also raises <see cref="Overflow"/>; a
-    /// path already present is left as it is (its baseline is the first one, by design).</summary>
-    public bool Add(FileChange row)
+    /// path already present is left as it is (its baseline is the first one, by design). A caller that
+    /// owns a copy of the file for the row needs to tell "stored" from "already there": see
+    /// <see cref="TryAdd"/>.</summary>
+    public bool Add(FileChange row) => TryAdd(row) != AddResult.Full;
+
+    /// <summary>Add a row, and say what became of it: only <see cref="AddResult.Added"/> means the row now
+    /// holds <paramref name="row"/>'s baseline. For anything else the caller still owns its copy.</summary>
+    public AddResult TryAdd(FileChange row)
     {
-        bool added;
+        AddResult result;
         lock (_gate)
         {
-            if (_rows.ContainsKey(row.Path)) { return true; }
-            if (_rows.Count >= MaxFiles)
+            if (_rows.ContainsKey(row.Path))
+            {
+                result = AddResult.AlreadyListed;
+            }
+            else if (_rows.Count >= MaxFiles)
             {
                 _overflow = true;
-                added = false;
+                result = AddResult.Full;
             }
             else
             {
                 _rows[row.Path] = row.Clone();
-                added = true;
+                result = AddResult.Added;
             }
         }
+        // Even a refusal is news: the overflow flag may have just been raised.
         RaiseAfter();
-        return added;
+        return result;
+    }
+
+    /// <summary>Say that rows were dropped for want of room, without trying to add one.</summary>
+    public void NoteOverflow()
+    {
+        lock (_gate)
+        {
+            if (_overflow) { return; }
+            _overflow = true;
+        }
+        RaiseAfter();
     }
 
     /// <summary>Change a row in place, if there is one.</summary>
