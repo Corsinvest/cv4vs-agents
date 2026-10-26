@@ -98,6 +98,14 @@ internal sealed class FileChange
     public string LastToolUseId { get; set; }
     public DateTime LastChangedUtc { get; set; }
 
+    /// <summary>Another chat pane lists this file too and is the one whose editor shows the review: that
+    /// pane's number. Null while no other pane lists it. Set by the review surface, never by the list.</summary>
+    public int? SharedWithPane { get; set; }
+
+    /// <summary>Which row this is: a number the set gives each row it stores and never reuses, so a review of the file
+    /// can tell the row it began with from one that took its place after a Keep.</summary>
+    public long Serial { get; set; }
+
     // The file's stamps when the counts were last computed: a refresh skips a row whose file has
     // not moved, so reopening the panel costs one stat per row rather than one diff.
     public long StampLength { get; set; }

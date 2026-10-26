@@ -38,6 +38,7 @@ internal sealed class ChangeSet
         public DateTime AtUtc;
     }
 
+    private long _serial;
     private string _sessionId;
     private bool _overflow;
     private string _disabledReason;
@@ -112,7 +113,9 @@ internal sealed class ChangeSet
             }
             else
             {
-                _rows[row.Path] = row.Clone();
+                var stored = row.Clone();
+                stored.Serial = ++_serial;
+                _rows[row.Path] = stored;
                 result = AddResult.Added;
             }
         }
