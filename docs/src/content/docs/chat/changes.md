@@ -84,7 +84,8 @@ downloads in `.gitignore`. Turn this off with **Track the files commands change*
   not followed, and the panel says so. Neither are files outside the repository, inside a submodule
   or a repository nested in it, or ones `.gitignore` excludes: an ignore rule is the only thing that
   tells source from build output, and without one every command would fill the list with its
-  scratch files.
+  scratch files. A repository that is a whole drive or your profile folder (some dotfiles setups)
+  is not followed either, since a snapshot would copy everything in it that is not ignored.
 - **A command that rewrites a great many files** is followed through git instead of the file
   watcher, and its rows carry a warning that others may be missing. Past 500 files from one
   command, only the first 500 are listed.
