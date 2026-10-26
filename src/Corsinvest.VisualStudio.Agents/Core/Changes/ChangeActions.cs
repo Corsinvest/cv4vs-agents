@@ -37,8 +37,10 @@ internal sealed class ChangeFailure
 /// look at, and a file that would be deleted while the editor holds unsaved changes to it is not.</para></summary>
 /// <param name="remeasure">Measures a row's file again and updates the row. Null in a test that does not
 /// need it: a file that has moved is then still refused.</param>
+/// <param name="kept">Told of a file as it is when the person accepts it, so that it can be remembered across a restart of
+/// Visual Studio. Null in a test that does not need it.</param>
 internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IChangeEditor editor, OutputWindowLogger log,
-                                    Func<string, Task> remeasure = null)
+                                    Func<string, Task> remeasure = null, Func<string, Task> kept = null)
 {
     /// <summary>Show the file against how it was before Claude's first edit: in its own editor, with Copilot's review
     /// drawn in it, where that can be done (see <see cref="IChangeEditor.ShowInPlaceAsync"/>), and
@@ -90,10 +92,16 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
     /// not be done, which the panel then says. Nothing is changed by it.</summary>
     public Task<bool> ReviewAllAsync() => editor.ShowAllAsync(set);
 
-    /// <summary>Accept the file as it is. Never fails: there is nothing to write.</summary>
+    /// <summary>Accept the file as it is. Never fails: there is nothing to write to it, and not being able to remember the
+    /// Keep is not a reason to refuse it.</summary>
     public async Task KeepAsync(string path)
     {
         await editor.EndReviewAsync(path).ConfigureAwait(false);
+        if (kept is not null)
+        {
+            try { await kept(path).ConfigureAwait(false); }
+            catch (Exception ex) { log.Warn($"[changes] could not remember that {path} was kept: {ex.Message}"); }
+        }
         Forget(path);
     }
 

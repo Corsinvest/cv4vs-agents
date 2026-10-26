@@ -52,6 +52,7 @@ public sealed class BashChangesTests : IDisposable
         return new SessionChanges(claude, workingDirectory, new SessionChangesOptions
         {
             Baselines = new ChangeBaselines(Path.Combine(_scratch, "baselines"), OutputWindowLogger.Global),
+            Kept = new KeptLedger(Path.Combine(_scratch, "kept"), OutputWindowLogger.Global),
             SnapshotsRoot = Path.Combine(_scratch, "snapshots"),
             Editor = new NoEditor(),
             MaxRowsPerCommand = maxRowsPerCommand,
