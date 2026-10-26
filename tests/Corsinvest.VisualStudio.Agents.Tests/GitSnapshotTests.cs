@@ -299,6 +299,65 @@ public sealed class GitSnapshotTests : IDisposable
     }
 
     [Fact]
+    public async Task A_run_that_fails_hands_nothing_to_those_waiting_behind_it_and_above_all_not_the_picture_before()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        var snapshot = await OpenAsync();
+        var good = await snapshot.TakeAsync();
+        // The next run cannot even make its folder: a file is where the objects go.
+        ChangeBaselines.DeleteTree(Path.Combine(_private, "objects"));
+        File.WriteAllText(Path.Combine(_private, "objects"), "in the way");
+
+        var outcomes = new System.Collections.Generic.List<GitTree>();
+        var failures = 0;
+        foreach (var task in Enumerable.Range(0, 3).Select(_ => snapshot.TakeAsync()).ToList())
+        {
+            try { outcomes.Add(await task); }
+            catch (IOException) { failures++; }
+        }
+
+        Assert.True(failures >= 1);
+        Assert.DoesNotContain(good, outcomes);
+    }
+
+    [Fact]
+    public async Task A_store_that_is_in_use_is_marked_so_and_a_disposed_one_is_gone()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        var snapshot = await OpenAsync();
+        await snapshot.TakeAsync();
+        var marker = Path.Combine(_private, GitSnapshot.OwnerMarker);
+        Assert.True(File.Exists(marker));
+
+        // Nobody else can have it open exclusively while the store lives: that is how a sweep tells.
+        Assert.Throws<IOException>(() => new FileStream(marker, FileMode.Open, FileAccess.Read, FileShare.None).Dispose());
+
+        snapshot.Dispose();
+        Assert.False(Directory.Exists(_private));
+    }
+
+    [Fact]
+    public async Task What_git_said_when_it_would_not_open_a_folder_is_handed_back()
+    {
+        if (_repo is null) { return; }
+        var outside = Path.Combine(Path.GetTempPath(), "cv4vs-tests-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outside);
+        try
+        {
+            string said = null;
+            var runner = new GitRunner(GitExe.Resolve(), OutputWindowLogger.Global);
+
+            var snapshot = await GitSnapshot.OpenAsync(runner, outside, _private, OutputWindowLogger.Global, text => said = text);
+
+            Assert.Null(snapshot);
+            Assert.Contains("not a git repository", said);
+        }
+        finally { Directory.Delete(outside, true); }
+    }
+
+    [Fact]
     public async Task A_picture_asked_for_after_disposing_makes_nothing()
     {
         if (_repo is null) { return; }
