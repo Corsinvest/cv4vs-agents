@@ -124,7 +124,7 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Files")]
     [DisplayName("Track the files commands change")]
-    [Description("Also list the files Claude changes by running a command (sed, a script, git checkout), measured against a snapshot of the working tree taken just before the command. Needs the folder to be in a git repository, and \"Track the files Claude changes\" on. The snapshots are kept in a private store under the extension's data folder: nothing is written into your repository. Files git does not ignore are copied into that store, so keep build output and large downloads in .gitignore. Takes effect on the next command.")]
+    [Description("Also list the files Claude changes by running a command (sed, a script, git checkout), measured against a snapshot of the working tree taken just before the command. Needs the folder to be in a git repository, and \"Track the files Claude changes\" on. The snapshots are kept in a private store under the extension's data folder: your repository's history, index and objects are only read. Files git does not ignore are copied into that store, so keep build output and large downloads in .gitignore. Takes effect on the next command.")]
     public bool TrackBashChanges { get; set; } = true;
 
     [Category("Files")]

@@ -52,12 +52,15 @@ internal sealed class GitRepoFixture : IDisposable
     }
 
     /// <summary>Run git in the working tree and return what it printed. Fails the test on a bad exit.</summary>
-    public string Git(params string[] args)
+    public string Git(params string[] args) => GitIn(Root, args);
+
+    /// <summary>Run git in another folder (a repository nested in this one, a linked worktree).</summary>
+    public string GitIn(string directory, params string[] args)
     {
         var info = new ProcessStartInfo(GitExe.Resolve())
         {
             Arguments = string.Join(" ", Array.ConvertAll(args, GitRunner.Quote)),
-            WorkingDirectory = Root,
+            WorkingDirectory = directory,
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
