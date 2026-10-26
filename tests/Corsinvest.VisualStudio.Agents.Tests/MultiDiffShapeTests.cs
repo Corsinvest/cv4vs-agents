@@ -40,7 +40,11 @@ namespace Microsoft.VisualStudio.Text.Differencing
     {
         public Uri TextUri { get; set; }
         public object TextBuffer { get; set; }
-        public bool ReadOnly { get; set; } = true;
+        private bool _readOnly = true;
+
+        // True until it is set, as the real one reads; and whether the code set it, which a default cannot show.
+        public bool ReadOnly { get => _readOnly; set { _readOnly = value; ReadOnlyWasSet = true; } }
+        public bool ReadOnlyWasSet { get; private set; }
     }
 }
 
@@ -114,21 +118,26 @@ namespace Corsinvest.VisualStudio.Agents.Tests
 
             Assert.Equal("the baseline", entry.Left.TextBuffer);
             Assert.True(entry.Left.ReadOnly);
+            Assert.True(entry.Left.ReadOnlyWasSet);
             Assert.Null(entry.Left.TextUri);
             Assert.Equal(new Uri(@"C:\work\a.cs"), entry.Right.TextUri);
             Assert.False(entry.Right.ReadOnly);
+            Assert.True(entry.Right.ReadOnlyWasSet);
             Assert.Null(entry.Right.TextBuffer);
         }
 
         [Fact]
         public void A_failure_in_the_service_comes_back_as_itself_not_as_a_reflection_wrapper()
         {
-            var service = new FakeService { Fails = new InvalidOperationException("no tool window today") };
+            var failure = new ArgumentException("no tool window today");
+            var service = new FakeService { Fails = failure };
             var shape = MultiDiffShape.TryResolve(service, out _);
 
-            var thrown = Assert.Throws<InvalidOperationException>(() => shape.CreateSession("x"));
+            var thrown = Assert.Throws<ArgumentException>(() => shape.CreateSession("x"));
 
-            Assert.Equal("no tool window today", thrown.Message);
+            Assert.Same(failure, thrown);
+            // The stack still names the service that threw, not only the helper that called it.
+            Assert.Contains("CreateToolWindowSession", thrown.StackTrace);
         }
     }
 }
