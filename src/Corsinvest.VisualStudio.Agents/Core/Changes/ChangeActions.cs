@@ -86,6 +86,10 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
         catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) { return ""; }
     }
 
+    /// <summary>Show every listed file's changes together, in the one window Visual Studio 18 has for it. False when that could
+    /// not be done, which the panel then says. Nothing is changed by it.</summary>
+    public Task<bool> ReviewAllAsync() => editor.ShowAllAsync(set);
+
     /// <summary>Accept the file as it is. Never fails: there is nothing to write.</summary>
     public async Task KeepAsync(string path)
     {

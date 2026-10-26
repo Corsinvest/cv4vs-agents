@@ -249,7 +249,7 @@ public partial class ChatPaneControl
             Dispatcher.BeginInvoke(new Action(() =>
             {
                 if (_disposed || _changes is null) { return; }
-                _bridge?.Send(BridgeMessages.ToWebView.ChangedFiles.Updated, Core.Changes.ChangedFilesMapper.Build(_changes.Set, _changes.CommandsNote));
+                _bridge?.Send(BridgeMessages.ToWebView.ChangedFiles.Updated, Core.Changes.ChangedFilesMapper.Build(_changes.Set, _changes.CommandsNote, Ide.Changes.MultiDiffReviewer.IsAvailable));
             }));
         }
         catch (Exception ex) when (ex is InvalidOperationException or System.Threading.Tasks.TaskCanceledException)

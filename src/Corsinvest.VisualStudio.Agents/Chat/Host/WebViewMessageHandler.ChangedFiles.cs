@@ -37,7 +37,8 @@ internal sealed partial class WebViewMessageHandler
             await changes.RefreshAsync();
         }
         catch (Exception ex) { log.LogException("[changes] refresh", ex); }
-        bridge.SendResponse(BridgeMessages.ToWebView.ChangedFiles.List, reqId, ChangedFilesMapper.Build(changes.Set, changes.CommandsNote));
+        bridge.SendResponse(BridgeMessages.ToWebView.ChangedFiles.List, reqId,
+            ChangedFilesMapper.Build(changes.Set, changes.CommandsNote, Ide.Changes.MultiDiffReviewer.IsAvailable));
     }
 
     private void HandleOpenChangedFile(JObject data, int? id)
@@ -83,6 +84,18 @@ internal sealed partial class WebViewMessageHandler
     {
         if (id is not int reqId) { return; }
         _ = ReplyActionAsync(reqId, () => changes.Actions.UndoAllAsync());
+    }
+
+    private void HandleReviewAllChangedFiles(JObject data, int? id)
+    {
+        if (id is not int reqId) { return; }
+        _ = ReplyActionAsync(reqId, async () => await changes.Actions.ReviewAllAsync()
+            ? NoFailures
+            : new[]
+            {
+                new ChangeFailure("", "The window with every change could not be opened: none of the listed files can be shown in it, " +
+                                      "or this Visual Studio cannot open it. The log says which."),
+            });
     }
 
     private async Task ReplyActionAsync(int reqId, Func<Task<IReadOnlyList<ChangeFailure>>> run)
