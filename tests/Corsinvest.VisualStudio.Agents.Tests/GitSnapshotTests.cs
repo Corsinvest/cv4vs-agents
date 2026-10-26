@@ -217,4 +217,39 @@ public sealed class GitSnapshotTests : IDisposable
 
         Assert.False(Directory.Exists(_private));
     }
+
+    [Fact]
+    public async Task A_picture_asked_for_after_disposing_makes_nothing()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "a\n");
+        var snapshot = await OpenAsync();
+        snapshot.Dispose();
+
+        var tree = await snapshot.TakeAsync();
+
+        Assert.Null(tree);
+        Assert.False(Directory.Exists(_private));
+    }
+
+    [Fact]
+    public async Task A_linked_worktree_is_snapshotted_from_its_own_folder()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "main\n");
+        _repo.Commit();
+        var linked = Path.Combine(_repo.Scratch, "linked");
+        _repo.Git("worktree", "add", "-q", "-b", "other", linked);
+        File.WriteAllText(Path.Combine(linked, "b.txt"), "only here\n");
+        var snapshot = await OpenAsync(linked);
+
+        var tree = await snapshot.TakeAsync();
+
+        Assert.Equal(Path.GetFullPath(linked).TrimEnd('\\'), Path.GetFullPath(snapshot.TopLevel).TrimEnd('\\'), ignoreCase: true);
+        var blobs = await snapshot.ListBlobsAsync(tree, new[] { "a.txt", "b.txt" });
+        Assert.Contains("a.txt", blobs.Keys);
+        Assert.Contains("b.txt", blobs.Keys);
+        // The main working tree's own index is left as it was.
+        Assert.Equal("", _repo.Git("status", "--porcelain").Trim());
+    }
 }
