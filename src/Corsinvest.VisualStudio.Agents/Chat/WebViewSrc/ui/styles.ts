@@ -9,3 +9,4 @@ import './styles/base.css';
 import './styles/chat.css';
 import './styles/markdown.css';
 import './styles/diff.css';
+import './styles/changed-files.css';
