@@ -113,6 +113,30 @@ public sealed class BashChangesTests : IDisposable
     }
 
     [Fact]
+    public async Task A_command_in_a_linked_worktree_is_followed_like_any_other()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "one\n");
+        _repo.Commit();
+        // The usual way to work on a second branch: `.git` there is a file, and the index is not the main one.
+        var linked = Path.Combine(_repo.Scratch, "linked");
+        _repo.Git("worktree", "add", "-q", "-b", "other", linked);
+        using var changes = await StartedAsync(Create(linked));
+
+        var call = Call(linked);
+        await changes.OnBashBeginAsync(call);
+        Shell(linked, "echo two>> a.txt");
+        await changes.OnBashEndAsync(call);
+
+        var row = Assert.Single(changes.Set.Snapshot());
+        Assert.Equal(Path.Combine(linked, "a.txt"), row.Path, ignoreCase: true);
+        Assert.Equal(ChangeSource.Bash, row.Source);
+        Assert.Equal(1, row.Added);
+        Assert.Equal("one\n", File.ReadAllText(row.Baseline.Path));
+        Assert.Equal("one\n", File.ReadAllText(_repo.Path_("a.txt")));
+    }
+
+    [Fact]
     public async Task A_command_that_creates_a_file_lists_it_as_added()
     {
         if (_repo is null) { return; }

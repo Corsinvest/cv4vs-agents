@@ -74,7 +74,8 @@ extension takes its own, as long as the folder is in a **git repository**:
 The snapshots are kept in a private git store under the extension's data folder (see
 [Settings and data](/cv4vs-agents/settings-and-data/)). It reads your repository's objects but never
 writes to them: nothing is added to your `.git`, your index or your history. The store is deleted
-when the chat closes. Turn this off with **Track the files commands change** in
+when the chat closes. Files git does not ignore are copied into it, so keep build output and large
+downloads in `.gitignore`. Turn this off with **Track the files commands change** in
 [Options](/cv4vs-agents/options/).
 
 ## What it does not cover
