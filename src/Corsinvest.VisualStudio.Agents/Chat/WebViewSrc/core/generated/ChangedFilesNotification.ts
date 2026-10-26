@@ -12,4 +12,5 @@ export interface ChangedFilesNotification {
     maxFiles: number;
     disabled: string | null;
     commandsNote: string | null;
+    canReviewAll: boolean;
 }

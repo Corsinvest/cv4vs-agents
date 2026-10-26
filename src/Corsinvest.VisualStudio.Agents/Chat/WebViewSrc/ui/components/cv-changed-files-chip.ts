@@ -21,6 +21,7 @@ import {
 import {
     ChangedFilesReq,
     KeepAllChangedFilesReq,
+    ReviewAllChangedFilesReq,
     KeepChangedFileReq,
     UndoAllChangedFilesReq,
     UndoChangedFileReq,
@@ -183,6 +184,10 @@ export class CvChangedFilesChip extends LitElement {
         void this._run(() => bridge.sendRequest(KeepAllChangedFilesReq, {}, ALL_TIMEOUT_MS));
     };
 
+    private _reviewAll = (): void => {
+        void this._run(() => bridge.sendRequest(ReviewAllChangedFilesReq, {}, ALL_TIMEOUT_MS));
+    };
+
     private _undoAll = (): void => {
         this._confirmUndoAll = false;
         void this._run(() => bridge.sendRequest(UndoAllChangedFilesReq, {}, ALL_TIMEOUT_MS));
@@ -282,6 +287,18 @@ export class CvChangedFilesChip extends LitElement {
                           >
                       </span>`
                     : html`<span class="cv-changes-bulk">
+                          ${
+                              changedFiles.canReviewAll
+                                  ? html`<fluent-button
+                                        appearance="subtle"
+                                        size="small"
+                                        data-tip="Show every change in one window"
+                                        ?disabled=${this._busy}
+                                        @click=${this._reviewAll}
+                                        >Review all</fluent-button
+                                    >`
+                                  : nothing
+                          }
                           <fluent-button
                               appearance="subtle"
                               size="small"

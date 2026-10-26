@@ -43,6 +43,7 @@ function list(
         maxFiles: 200,
         disabled: null,
         commandsNote: null,
+        canReviewAll: false,
         ...extra,
     };
 }
@@ -77,6 +78,22 @@ test('apply carries the overflow and the reason nothing is tracked', () => {
     store.apply(list([], { disabled: 'Keep file checkpoints is off.' }));
     assert.equal(store.disabled, 'Keep file checkpoints is off.');
     assert.equal(store.overflow, false);
+});
+
+test('apply carries whether the window with every change can be opened, and clear forgets it', () => {
+    const store = new ChangedFilesStore();
+    assert.equal(store.canReviewAll, false);
+
+    store.apply(list([file('C:\\a.txt')], { canReviewAll: true }));
+    assert.equal(store.canReviewAll, true);
+
+    // A later notification that says no is a no, not a leftover of the last one.
+    store.apply(list([file('C:\\a.txt')]));
+    assert.equal(store.canReviewAll, false);
+
+    store.apply(list([], { canReviewAll: true }));
+    store.clear();
+    assert.equal(store.canReviewAll, false);
 });
 
 test('apply carries why commands are not followed, and clear forgets it', () => {
