@@ -33,6 +33,9 @@ internal interface IChangeEditor
     /// <summary>Close the file's tabs without saving.</summary>
     Task CloseDocumentAsync(string path);
 
+    /// <summary>The file is open and has changes in the editor that are not saved.</summary>
+    Task<bool> IsDirtyAsync(string path);
+
     /// <summary>Show two texts side by side in VS's comparison window. Read-only.</summary>
     Task ShowDiffAsync(string key, string path, string before, string after, string leftLabel, string rightLabel);
 
@@ -49,6 +52,9 @@ internal sealed class IdeChangeEditor : IChangeEditor
 
     public async Task CloseDocumentAsync(string path)
         => await IdeContextService.Instance.CloseDocumentAsync(path);
+
+    public async Task<bool> IsDirtyAsync(string path)
+        => await IdeContextService.Instance.IsDocumentDirtyAsync(path) == true;
 
     public Task ShowDiffAsync(string key, string path, string before, string after, string leftLabel, string rightLabel)
         => IdeContextService.Instance.ShowDiffAsync(key, path, before, after, leftLabel, rightLabel);
