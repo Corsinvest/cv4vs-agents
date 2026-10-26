@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   extension's previous and next file of the list. When the last change is settled the file leaves the list. It needs GitHub
   Copilot in Visual Studio 18, signed in: without it nothing is drawn and Open shows the comparison window. *Review the
   changes in the editor* in Options turns it off.
+- **Every change in one window, on Visual Studio 2026.** *Review all* in the Changes panel opens the
+  changes of all the listed files together in the editor's own multi-file difference window, each
+  file with how it was before on the left and the file itself on the right. A Visual Studio that
+  does not have the window does not show the button.
 
 ## [1.15.0] - 2026-11-02
 
