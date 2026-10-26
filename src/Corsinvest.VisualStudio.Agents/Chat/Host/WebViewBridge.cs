@@ -46,6 +46,7 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         try
         {
             Directory.CreateDirectory(AppPaths.WebView2Folder);
+            EnsureVsLoaderPath();
 
             // Initialize CoreWebView2 with our own user-data folder. Required
             // before touching any CoreWebView2 member below.
@@ -108,6 +109,40 @@ internal sealed partial class WebViewBridge(Microsoft.Web.WebView2.Wpf.WebView2C
         {
             log.LogException("WebViewBridge.Init", ex);
             throw;
+        }
+    }
+
+    private static bool _vsLoaderPathEnsured;
+
+    /// <summary>Let Visual Studio set the WebView2 loader path before we touch WebView2 (#329).
+    /// <para>devenv.exe.config redirects every Microsoft.Web.WebView2.Core to its own copy, so the
+    /// whole process shares one CoreWebView2Environment, and SetLoaderDllFolderPath throws once
+    /// any other member of it has run. VS's ScriptedHost calls it lazily, the first time one of its
+    /// WebView2 surfaces opens (the Markdown preview among them): if our CreateAsync came first,
+    /// that call throws and every such surface stays blank until VS restarts. Running VS's own
+    /// guard first sets its flag, so its later call is skipped. Internal type, hence reflection:
+    /// where it is missing nothing changes.</para></summary>
+    private void EnsureVsLoaderPath()
+    {
+        if (_vsLoaderPathEnsured) { return; }
+        _vsLoaderPathEnsured = true;
+        try
+        {
+            // 17.0.0.0: devenv.exe.config redirects older versions up to the installed one.
+            var asm = System.Reflection.Assembly.Load("Microsoft.VisualStudio.ScriptedHost, Version=17.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a");
+            var method = asm.GetType("Microsoft.VisualStudio.ScriptedHost.WebView2Wrappers.WebView2LoaderPath")
+                            ?.GetMethod("EnsureWebView2LoaderPath", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (method == null)
+            {
+                log.Debug(() => "[webview] ScriptedHost loader-path guard not found: skipped");
+                return;
+            }
+            method.Invoke(null, null);
+            log.Debug(() => "[webview] ScriptedHost loader path ensured");
+        }
+        catch (Exception ex)
+        {
+            log.Warn($"[webview] could not let Visual Studio set the WebView2 loader path, its Markdown preview may stay blank: {(ex.InnerException ?? ex).Message}");
         }
     }
 
