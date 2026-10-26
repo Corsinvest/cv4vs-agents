@@ -102,11 +102,26 @@ export function stateLetter(state: string): string {
 }
 
 /** What to say in place of the numbers when they cannot be shown as plain figures. */
-export function countsNote(file: Pick<ChangedFileDto, 'counts' | 'isBinary'>): string | null {
+export function countsNote(
+    file: Pick<ChangedFileDto, 'counts' | 'isBinary' | 'state' | 'added' | 'deleted'>,
+): string | null {
     if (file.isBinary) {
         return 'binary';
     }
-    return file.counts === 'unavailable' ? 'not counted' : null;
+    if (file.counts === 'unavailable') {
+        return 'not counted';
+    }
+    // Changed, and not one line differs: what moved is how the lines end, or whether the last one
+    // has a newline. "+0 −0" would read as a file that is not different, beside an M.
+    if (
+        file.counts === 'exact' &&
+        file.state === 'modified' &&
+        file.added === 0 &&
+        file.deleted === 0
+    ) {
+        return 'line endings only';
+    }
+    return null;
 }
 
 /** Why a file cannot be undone, or null when it can. */

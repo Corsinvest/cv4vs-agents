@@ -31,10 +31,16 @@ import type {
     OpenChangedFileNotification,
 } from '../../core/types';
 import { displayPathUi } from '../paths';
+import { changedFilesStyles } from '../styles/changed-files';
+import { iconStyles, iconTriggerStyles } from '../styles/shared';
 
 // Keep all / Undo all close and restore every file one after the other, which on a long list is
 // more than the default wait for a reply.
 const ALL_TIMEOUT_MS = 120_000;
+
+// The panel is this wide when there is room, and never closer than this to an edge of the chat.
+const PANEL_WIDTH = 540;
+const PANEL_MARGIN = 8;
 
 const INCOMPLETE = 'A command changed more files than could be followed, so others may be missing.';
 
@@ -43,19 +49,18 @@ const INCOMPLETE = 'A command changed more files than could be followed, so othe
  * with one row per file (state, +/- lines, Open / Keep / Undo) and Keep all / Undo all above them.
  * Hidden while the list is empty.
  *
- * Light DOM, unlike the other chips: the row buttons are the document's `.cv-icon-btn` and their
- * icons its `.cv-icon-*` masks (base.css), which a shadow root would cut off, and with up to two
- * hundred rows the component-per-button route is the expensive one (see CLAUDE.md). The rules
- * that are this component's own are in styles/changed-files.css.
+ * Shadow DOM with static styles, like the other chips: it sits inside the prompt's shadow root,
+ * and a global sheet does not reach into one (it was light DOM first, and came out unstyled).
+ * The row buttons are still native `<button class="cv-icon-btn">` with a CSS-drawn glyph, not
+ * fluent-buttons, because there are up to two hundred rows (see CLAUDE.md); their rules, and the
+ * glyphs, are in styles/changed-files.ts for that reason.
  *
  * The host owns the list and pushes it whenever it changes; this only shows it and sends the
  * clicks back. An action's effect arrives the same way, as the next push.
  */
 @customElement('cv-changed-files-chip')
 export class CvChangedFilesChip extends LitElement {
-    override createRenderRoot(): HTMLElement {
-        return this;
-    }
+    static override styles = [iconStyles, iconTriggerStyles, changedFilesStyles];
 
     @state() private _open = false;
     @state() private _confirmUndoAll = false;
@@ -67,6 +72,7 @@ export class CvChangedFilesChip extends LitElement {
     override connectedCallback(): void {
         super.connectedCallback();
         document.addEventListener('pointerdown', this._onDocPointerDown, true);
+        window.addEventListener('resize', this._onResize);
         this._stops.push(
             changedFiles.subscribe(() => this.requestUpdate()),
             bridge.onNotification<ChangedFilesNotification>(
@@ -81,6 +87,7 @@ export class CvChangedFilesChip extends LitElement {
     override disconnectedCallback(): void {
         super.disconnectedCallback();
         document.removeEventListener('pointerdown', this._onDocPointerDown, true);
+        window.removeEventListener('resize', this._onResize);
         for (const stop of this._stops) {
             stop();
         }
@@ -94,6 +101,29 @@ export class CvChangedFilesChip extends LitElement {
             this._confirmUndoAll = false;
         }
     };
+
+    private _onResize = (): void => {
+        if (this._open) {
+            this._place();
+        }
+    };
+
+    // Where the panel goes: above the chip, as wide as the chat allows. The chip is a few buttons in
+    // from the left edge of the row, so a panel that started at the chip's edge would run off the
+    // right of a narrow chat and take its buttons with it. It is pushed left by what would run over,
+    // and never past the left margin either.
+    private _place(): void {
+        const panel = this.renderRoot.querySelector<HTMLElement>('.cv-changes-popover');
+        if (!panel) {
+            return;
+        }
+        const room = document.documentElement.clientWidth;
+        const width = Math.min(PANEL_WIDTH, room - 2 * PANEL_MARGIN);
+        const chipLeft = this.getBoundingClientRect().left;
+        const overflow = Math.max(0, chipLeft + width - (room - PANEL_MARGIN));
+        panel.style.width = `${width}px`;
+        panel.style.left = `${-Math.min(overflow, Math.max(0, chipLeft - PANEL_MARGIN))}px`;
+    }
 
     private async _load(): Promise<void> {
         try {
@@ -117,6 +147,7 @@ export class CvChangedFilesChip extends LitElement {
         if (this._open) {
             // Opening is when the numbers matter: the host measures the files against the disk again.
             void this._load();
+            void this.updateComplete.then(() => this._place());
         }
     };
 
@@ -311,8 +342,9 @@ export class CvChangedFilesChip extends LitElement {
         const n = files.length;
         const tip = disabled ?? `${n} file${n === 1 ? '' : 's'} changed by Claude`;
         return html`<fluent-button
-                class="cv-changes-chip ${disabled ? 'off' : ''}"
+                class="trigger ${disabled ? 'off' : ''}"
                 appearance="subtle"
+                shape="rounded"
                 size="small"
                 icon-only
                 aria-label=${tip}
