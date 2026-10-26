@@ -54,6 +54,7 @@ icons/                              file-type icons rasterised from VS KnownMoni
 baselines/<session-id>/             copies of files taken just before Claude changes them, for the Changes list
 recovery/                           the text of a file that was emptied while it was reviewed in the editor (the newest twenty)
 snapshots/<id>/                     one private git store per open chat: the working tree before each shell command
+changes/<session-id>.json           the files you kept in a chat, as a length and a hash each, so that resuming it does not list them again
 data/projects/<name>-<hash>/
     project.json                    the folder this data belongs to ({"path": "…"})
     workspace.json                  panes open for this solution (+ each pane's profile)
@@ -74,7 +75,9 @@ Claude is about to change that the CLI keeps no copy of, the second a git object
 working tree as it was before a shell command (only what differs from your repository's own
 objects is stored there; your `.git` is read and not written, apart from the cache Git LFS keeps under `.git/lfs` when the repository uses it). Both are plain files readable by
 anything running as your user. They go when the chat closes, and what a crash leaves is swept after
-14 days, the next time a chat starts.
+14 days, the next time a chat starts. `changes/` holds nothing of your files' content: a length and a hash
+for each file you kept in a chat, so that resuming the chat does not list it as a change again. It is
+swept after 30 days.
 
 `profiles.json` holds the environment variables you enter in the Profiles page,
 `ANTHROPIC_AUTH_TOKEN` among them. It is a plain file with no encryption, readable by anything
