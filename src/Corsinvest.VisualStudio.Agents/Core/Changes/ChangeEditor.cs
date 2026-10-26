@@ -51,6 +51,10 @@ internal interface IChangeEditor
     /// baseline, with nothing done to the document. Asked before Keep and Undo act on the file, which would otherwise be
     /// rewritten under a review that is still drawing against it.</summary>
     Task EndReviewAsync(string path);
+
+    /// <summary>Show every file of <paramref name="set"/> that can be shown in text in the one window Visual Studio 18 has for
+    /// all changes. False when it cannot be done.</summary>
+    Task<bool> ShowAllAsync(ChangeSet set);
 }
 
 /// <summary>The real editor: Visual Studio, through <see cref="IdeContextService"/>.</summary>
@@ -78,4 +82,6 @@ internal sealed class IdeChangeEditor : IChangeEditor
 
     public Task EndReviewAsync(string path)
         => Ide.Changes.ReviewRegistry.Instance.EndAsync(path);
+
+    public Task<bool> ShowAllAsync(ChangeSet set) => Ide.Changes.MultiDiffReviewer.ShowAsync(set);
 }

@@ -26,6 +26,8 @@ public sealed class ChangeActionsTests : IDisposable
         public readonly List<Diff> Diffs = new();
         public bool InPlace;
         public readonly List<string> ShownInPlace = new();
+        public bool AllShown;
+        public int AllAsked;
 
         // What the actions did, in order: an Undo has to end the review before the file is rewritten.
         public readonly List<string> Calls = new();
@@ -70,6 +72,12 @@ public sealed class ChangeActionsTests : IDisposable
         {
             ShownInPlace.Add(path);
             return Task.FromResult(InPlace);
+        }
+
+        public Task<bool> ShowAllAsync(ChangeSet set)
+        {
+            AllAsked++;
+            return Task.FromResult(AllShown);
         }
     }
 
@@ -500,6 +508,23 @@ public sealed class ChangeActionsTests : IDisposable
         Assert.Equal("Before Claude", diff.Left);
         Assert.Equal("Current", diff.Right);
         Assert.Empty(_editor.Opened);
+    }
+
+    [Fact]
+    public async Task Review_all_asks_the_editor_for_the_one_window_and_says_whether_it_opened()
+    {
+        var file = Write("a.txt", "after\n");
+        Row(file, BaselineRef.Cli(Write("backup@v1", "before\n")));
+
+        _editor.AllShown = true;
+        Assert.True(await _actions.ReviewAllAsync());
+        _editor.AllShown = false;
+        Assert.False(await _actions.ReviewAllAsync());
+
+        Assert.Equal(2, _editor.AllAsked);
+        // Looking at everything changes nothing: the row is still there, the file as it was.
+        Assert.Single(_set.Snapshot());
+        Assert.Equal("after\n", File.ReadAllText(file));
     }
 
     [Fact]

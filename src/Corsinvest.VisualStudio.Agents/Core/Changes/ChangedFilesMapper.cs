@@ -13,7 +13,8 @@ namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 internal static class ChangedFilesMapper
 {
     /// <param name="commandsNote">Why shell commands are not followed, when they are not (see <see cref="SessionChanges.CommandsNote"/>).</param>
-    public static Contracts.ChangedFilesNotification Build(ChangeSet set, string commandsNote = null) => new()
+    /// <param name="canReviewAll">The "all changes" window of Visual Studio 18 is there to be opened.</param>
+    public static Contracts.ChangedFilesNotification Build(ChangeSet set, string commandsNote = null, bool canReviewAll = false) => new()
     {
         SessionId = set.SessionId,
         Files = set.Snapshot().Select(ToDto).ToArray(),
@@ -21,6 +22,7 @@ internal static class ChangedFilesMapper
         MaxFiles = ChangeSet.MaxFiles,
         Disabled = set.DisabledReason,
         CommandsNote = commandsNote,
+        CanReviewAll = canReviewAll,
     };
 
     public static Contracts.ChangedFileDto ToDto(FileChange row) => new()

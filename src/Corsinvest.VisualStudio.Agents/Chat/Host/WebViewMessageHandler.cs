@@ -216,6 +216,10 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
                 HandleUndoAllChangedFiles(data, id);
                 break;
 
+            case BridgeMessages.FromWebView.ChangedFiles.ReviewAll:
+                HandleReviewAllChangedFiles(data, id);
+                break;
+
             case BridgeMessages.FromWebView.Open.IdeOutputWindow:
                 HandleIdeOutputWindow(data, id);
                 break;
