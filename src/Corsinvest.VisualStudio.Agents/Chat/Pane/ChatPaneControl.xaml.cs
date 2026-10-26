@@ -733,7 +733,6 @@ public partial class ChatPaneControl : PaneControlBase
         });
         // After the client has started: whether file history is on is read from its options.
         _changes?.BeginSession(_startupSessionId, resume: restoreState);
-        if (TracksCommands) { _changes?.StartTracking(); }
         if (_pageReadyEarly) { OnPageReady(); }
 
         // A fork's forked-at message, or a prompt from the editor context menu. Not gated on

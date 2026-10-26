@@ -92,7 +92,7 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
             var limit = DateTime.UtcNow - olderThan;
             foreach (var folder in Directory.GetDirectories(root))
             {
-                if (NewestActivity(folder) >= limit) { continue; }
+                if (NewestActivity(folder) >= limit || IsOwned(folder)) { continue; }
                 try { DeleteTree(folder); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
@@ -121,6 +121,24 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
     }
 
     private static DateTime Latest(DateTime a, DateTime b) => a > b ? a : b;
+
+    /// <summary>The folder belongs to a process that is running: its owner marker is held open. However long
+    /// the store has been idle it is not an orphan, and deleting it would take the pictures a chat still
+    /// compares with. A folder with no marker (baselines have none) is judged by its age alone.</summary>
+    private static bool IsOwned(string folder)
+    {
+        var marker = Path.Combine(folder, GitSnapshot.OwnerMarker);
+        if (!File.Exists(marker)) { return false; }
+        try
+        {
+            // Nobody else may have it open for this to work, so it fails exactly when somebody has.
+            using (new FileStream(marker, FileMode.Open, FileAccess.Read, FileShare.None)) { return false; }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return true;
+        }
+    }
 
     public string FolderFor(string sessionId)
         => Path.Combine(root, SessionManager.IsSafePathToken(sessionId) ? sessionId : "unsaved");

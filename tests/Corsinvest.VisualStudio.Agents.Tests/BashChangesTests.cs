@@ -43,7 +43,7 @@ public sealed class BashChangesTests : IDisposable
     }
 
     private SessionChanges Create(string workingDirectory, int? maxRowsPerCommand = null, Func<bool> trackCommands = null,
-                                  Func<bool> checkpoints = null)
+                                  Func<bool> checkpoints = null, long? maxBaselineBytes = null)
     {
         var claude = new ClaudePaths(Path.Combine(_scratch, "claude"));
         return new SessionChanges(claude, workingDirectory, new SessionChangesOptions
@@ -54,6 +54,7 @@ public sealed class BashChangesTests : IDisposable
             MaxRowsPerCommand = maxRowsPerCommand,
             TrackCommands = trackCommands ?? (() => true),
             FileCheckpoints = checkpoints ?? (() => true),
+            MaxBaselineBytes = maxBaselineBytes,
         }, OutputWindowLogger.Global);
     }
 
@@ -519,6 +520,72 @@ public sealed class BashChangesTests : IDisposable
 
         Assert.False(changes.FollowsCommands);
         Assert.False(Directory.Exists(snapshots));
+    }
+
+    [Fact]
+    public async Task A_full_list_still_measures_the_files_it_has_when_a_command_changes_them_again()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("z.txt", "one\n");
+        _repo.Write("0.txt", "x\n");
+        _repo.Commit();
+        using var changes = await StartedAsync(Create(_repo.Root));
+        await RunAsync(changes, "echo two>> z.txt");
+        for (var i = 0; i < ChangeSet.MaxFiles - 1; i++)
+        {
+            changes.Set.Add(new FileChange { Path = Path.Combine(_scratch, "other" + i + ".txt"), State = ChangeState.Modified });
+        }
+        Assert.True(changes.Set.IsFull);
+
+        // A new file that sorts first, and the listed one changed again: the first finds no room, which
+        // must not stop the second being measured.
+        await RunAsync(changes, "echo new> 0new.txt & echo three>> z.txt");
+
+        var z = changes.Set.Snapshot().Single(r => r.Path.EndsWith("z.txt", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(2, z.Added);
+        Assert.True(changes.Set.Overflow);
+    }
+
+    [Fact]
+    public async Task A_file_larger_than_the_limit_is_listed_without_a_copy_so_it_cannot_be_undone()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("big.dat", new string('x', 100) + "\n");
+        _repo.Write("small.txt", "s\n");
+        _repo.Commit();
+        using var changes = await StartedAsync(Create(_repo.Root, maxBaselineBytes: 50));
+
+        await RunAsync(changes, "echo more>> big.dat & echo more>> small.txt");
+
+        var rows = changes.Set.Snapshot().ToDictionary(r => Path.GetFileName(r.Path), StringComparer.OrdinalIgnoreCase);
+        Assert.False(rows["big.dat"].Baseline.IsKnown);
+        Assert.True(rows["small.txt"].Baseline.Owned);
+    }
+
+    [Theory]
+    [InlineData("fatal: not a git repository (or any of the parent directories): .git\n", "NoRepositoryNote")]
+    [InlineData("fatal: detected dubious ownership in repository at 'D:/x'\n", "NotYoursNote")]
+    [InlineData("", "NoAnswerNote")]
+    [InlineData(null, "NoAnswerNote")]
+    public void What_git_said_when_it_would_not_open_the_folder_is_told_apart(string said, string note)
+    {
+        var expected = note switch
+        {
+            "NoRepositoryNote" => BashTracker.NoRepositoryNote,
+            "NotYoursNote" => BashTracker.NotYoursNote,
+            _ => BashTracker.NoAnswerNote,
+        };
+
+        Assert.Equal(expected, BashTracker.FailureNote(said));
+    }
+
+    [Fact]
+    public void Something_else_git_said_is_passed_on_in_its_own_words()
+    {
+        var note = BashTracker.FailureNote("fatal: unable to access the thing\nmore detail\n");
+
+        Assert.Contains("git said fatal: unable to access the thing", note);
+        Assert.DoesNotContain("more detail", note);
     }
 
     [Fact]

@@ -47,6 +47,15 @@ internal sealed class BashTracker : IDisposable
     // taking a new file for an old one, which is listed without a copy.
     private static readonly TimeSpan CreationSlack = TimeSpan.FromMilliseconds(250);
 
+    // An event can arrive late on a busy machine. After the settle time, nothing seen is looked at once more
+    // before the command is taken to have changed nothing: the cost is a second of waiting nobody is
+    // waiting for, and what it buys is a change that is not absorbed into the next command's "before".
+    private static readonly TimeSpan LateEventsWait = TimeSpan.FromSeconds(1);
+
+    // A file larger than this is not copied for an Undo: a command that rewrites a dataset or an installer
+    // should not fill the disk with the version before it. Listed with no copy, so it cannot be undone.
+    internal const long DefaultMaxBaselineBytes = 100L * 1024 * 1024;
+
     private const string LfsPointer = "version https://git-lfs.github.com/spec/v1";
 
     /// <summary>What the panel says when git is not installed.</summary>
@@ -57,6 +66,12 @@ internal sealed class BashTracker : IDisposable
 
     /// <summary>What the panel says when the repository is a whole drive or the profile folder.</summary>
     internal const string TooBroadNote = "Files changed by running a command are not listed: the git repository here is your whole profile folder or drive.";
+
+    /// <summary>What the panel says when git refuses the repository because it belongs to another user.</summary>
+    internal const string NotYoursNote = "Files changed by running a command are not listed: git refuses this repository because it belongs to another user (see git config --global --add safe.directory).";
+
+    /// <summary>What the panel says when git did not answer in time.</summary>
+    internal const string NoAnswerNote = "Files changed by running a command are not listed: git did not answer for this folder.";
 
     /// <summary>What the panel says when the folder cannot be watched.</summary>
     internal const string NoWatchNote = "Files changed by running a command are not listed: the folder could not be watched.";
@@ -82,13 +97,15 @@ internal sealed class BashTracker : IDisposable
     private readonly OutputWindowLogger _log;
     private readonly int _maxRows;
     private readonly Func<string, Task> _refreshRow;
+    private readonly long _maxBaselineBytes;
     private readonly ConcurrentDictionary<string, Call> _calls = new();
     private readonly CancellationTokenSource _lifetime = new();
     private long _snapshotMark = -1;
 
     private BashTracker(GitSnapshot git, RepoWatch watch, ChangeSet set, ChangeBaselines baselines, OutputWindowLogger log,
-                        int maxRows, Func<string, Task> refreshRow)
+                        int maxRows, Func<string, Task> refreshRow, long maxBaselineBytes)
     {
+        _maxBaselineBytes = maxBaselineBytes;
         _git = git;
         _watch = watch;
         _set = set;
@@ -104,7 +121,7 @@ internal sealed class BashTracker : IDisposable
     /// once more, or puts it back, must show.</summary>
     public static async Task<BashTracker> StartAsync(string workingDirectory, string snapshotFolder, ChangeSet set,
                                                      ChangeBaselines baselines, OutputWindowLogger log, int? maxRows = null,
-                                                     Func<string, Task> refreshRow = null)
+                                                     Func<string, Task> refreshRow = null, long? maxBaselineBytes = null)
     {
         // Looks along PATH on disk: off the thread that asked.
         var exe = await Task.Run(GitExe.Resolve).ConfigureAwait(false);
@@ -115,11 +132,12 @@ internal sealed class BashTracker : IDisposable
             return null;
         }
 
-        var snapshot = await GitSnapshot.OpenAsync(new GitRunner(exe, log), workingDirectory, snapshotFolder, log).ConfigureAwait(false);
+        string whyNot = null;
+        var snapshot = await GitSnapshot.OpenAsync(new GitRunner(exe, log), workingDirectory, snapshotFolder, log, said => whyNot = said).ConfigureAwait(false);
         if (snapshot is null)
         {
-            log.Info($"[changes] {workingDirectory} is not in a git repository: files changed by commands are not tracked");
-            set.SetCommandsNote(NoRepositoryNote);
+            log.Info($"[changes] {workingDirectory}: git would not open it ({(string.IsNullOrWhiteSpace(whyNot) ? "no answer" : whyNot.Trim())}): files changed by commands are not tracked");
+            set.SetCommandsNote(FailureNote(whyNot));
             return null;
         }
 
@@ -148,7 +166,21 @@ internal sealed class BashTracker : IDisposable
         set.SetCommandsNote(null);
         // No picture yet: reading every file of a working tree is not for a chat that has done nothing.
         // See WarmUpAsync, and BeginAsync for the command that arrives first.
-        return new BashTracker(snapshot, watch, set, baselines, log, maxRows ?? DefaultMaxRows, refreshRow);
+        return new BashTracker(snapshot, watch, set, baselines, log, maxRows ?? DefaultMaxRows, refreshRow, maxBaselineBytes ?? DefaultMaxBaselineBytes);
+    }
+
+    /// <summary>What the panel says for what git answered when it would not open the folder: "not a
+    /// repository" is the common case and the plain one, but a repository git refuses (it belongs to
+    /// another user) or does not answer for would otherwise be reported as no repository at all.</summary>
+    internal static string FailureNote(string stderr)
+    {
+        if (stderr is null || stderr.Trim().Length == 0) { return NoAnswerNote; }
+        if (stderr.IndexOf("dubious ownership", StringComparison.OrdinalIgnoreCase) >= 0) { return NotYoursNote; }
+        if (stderr.IndexOf("not a git repository", StringComparison.OrdinalIgnoreCase) >= 0) { return NoRepositoryNote; }
+
+        var said = stderr.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "";
+        if (said.Length > 120) { said = said.Substring(0, 120) + "..."; }
+        return "Files changed by running a command are not listed: git said " + said;
     }
 
     /// <summary>The root of the working tree being watched.</summary>
@@ -212,8 +244,13 @@ internal sealed class BashTracker : IDisposable
         if (!_calls.TryRemove(toolUseId, out var call)) { return; }
         await Task.Delay(SettleTime, _lifetime.Token).ConfigureAwait(false);
 
-        // Nothing moved: a command that only reads costs nothing.
-        if (!_watch.ChangedSince(call.Mark) || call.Tree is null) { return; }
+        if (call.Tree is null) { return; }
+        if (!_watch.ChangedSince(call.Mark))
+        {
+            await Task.Delay(LateEventsWait, _lifetime.Token).ConfigureAwait(false);
+            // Still nothing: a command that only reads costs nothing.
+            if (!_watch.ChangedSince(call.Mark)) { return; }
+        }
 
         var mark = _watch.Mark();
         var after = await _git.TakeAsync(_lifetime.Token).ConfigureAwait(false);
@@ -242,11 +279,12 @@ internal sealed class BashTracker : IDisposable
         foreach (var change in rows)
         {
             if (_lifetime.IsCancellationRequested) { return; }
-            if (_set.IsFull)
+            if (_set.IsFull && !_set.TryGet(_git.Absolute(change.RelativePath), out _))
             {
-                // No room: the rest would be read, compared and thrown away.
+                // No room for a file that is not listed: it would be read, compared and thrown away. One
+                // that is listed costs no room, and is still measured again.
                 _set.NoteOverflow();
-                return;
+                continue;
             }
             await AddRowAsync(change, call.Tree, after, call.AtUtc, sessionId, incomplete).ConfigureAwait(false);
         }
@@ -289,7 +327,7 @@ internal sealed class BashTracker : IDisposable
             // it is listed but not undone.
             baseline = File.GetCreationTimeUtc(path) >= beganUtc - CreationSlack ? BaselineRef.Empty : BaselineRef.None;
         }
-        else if (change.OldIsFile)
+        else if (change.OldIsFile && (change.Status == 'D' || new FileInfo(path).Length <= _maxBaselineBytes))
         {
             baseline = await CopyBlobAsync(change.OldOid, change.RelativePath, path, sessionId).ConfigureAwait(false);
         }
@@ -334,7 +372,7 @@ internal sealed class BashTracker : IDisposable
     {
         var target = _baselines.TargetFor(sessionId, path);
         if (!await _git.WriteBlobAsync(oid, relativePath, target).ConfigureAwait(false)) { return BaselineRef.None; }
-        if (LooksLikeLfsPointer(target))
+        if (LooksLikeAnLfsPointer(target))
         {
             _baselines.Release(BaselineRef.Own(target));
             return BaselineRef.None;
@@ -342,7 +380,7 @@ internal sealed class BashTracker : IDisposable
         return BaselineRef.Own(target);
     }
 
-    private static bool LooksLikeLfsPointer(string file)
+    private bool LooksLikeAnLfsPointer(string file)
     {
         try
         {
@@ -355,7 +393,7 @@ internal sealed class BashTracker : IDisposable
         {
             // Not read, so not known not to be a pointer, and a pointer restored over the real file would
             // destroy it: taken for one, which leaves the file listed without a copy.
-            OutputWindowLogger.Global.Warn($"[changes] could not read {file} to check it for a Git LFS pointer: {ex.Message}");
+            _log.Warn($"[changes] could not read {file} to check it for a Git LFS pointer: {ex.Message}");
             return true;
         }
     }
