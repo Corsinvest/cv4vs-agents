@@ -6,6 +6,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 
@@ -148,13 +149,15 @@ internal sealed class MultiDiffShape
 
     public void AddDiff(object session, object entry) => Invoke(_addDiff, session, entry);
 
-    // A reflected call wraps what the callee threw: the caller wants that.
+    // A reflected call wraps what the callee threw: the caller wants that, as it was thrown. The log of an integration nobody can
+    // step through is the stack of the callee, and a new exception made here would show this method instead.
     private static object Invoke(MethodInfo method, object target, object argument)
     {
         try { return method.Invoke(target, new[] { argument }); }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
-            throw new InvalidOperationException(ex.InnerException.Message, ex.InnerException);
+            ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+            throw;
         }
     }
 }

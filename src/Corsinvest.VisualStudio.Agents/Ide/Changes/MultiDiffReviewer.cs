@@ -112,14 +112,24 @@ internal static class MultiDiffReviewer
     /// then differ in lines and not in how they end. Reads the disk, so not for the UI thread.</summary>
     private static List<Item> Collect(IReadOnlyList<FileChange> rows)
     {
+        var log = OutputWindowLogger.Global;
         var items = new List<Item>();
         foreach (var row in rows)
         {
             // The same rule as the review in the editor: where text and bytes agree. Deleted files have no side to show.
-            if (BaselineReview.Prepare(row, out var baseline) is not null) { continue; }
+            var why = BaselineReview.Prepare(row, out var baseline);
+            if (why is not null)
+            {
+                log.Info($"[changes] {row.Path} is left out of the all-changes window: {why}");
+                continue;
+            }
             string current;
             try { current = File.ReadAllText(row.Path); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { continue; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                log.Warn($"[changes] {row.Path} is left out of the all-changes window, it could not be read: {ex.Message}");
+                continue;
+            }
             items.Add(new Item(row.Path, BaselineText.WithLineEnding(baseline.Text, BaselineText.DominantLineEnding(current))));
         }
         return items;
