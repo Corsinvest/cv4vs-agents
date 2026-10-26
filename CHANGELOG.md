@@ -29,6 +29,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   changes of all the listed files together in the editor's own multi-file difference window, each
   file with how it was before on the left and the file itself on the right. A Visual Studio that
   does not have the window does not show the button.
+- **A file you kept stays kept when you resume the chat.** After a restart of Visual Studio the
+  Changes list used to list again every file you had accepted with Keep, since the CLI's history
+  knows what Claude touched and not what you decided. The extension now remembers, for each chat,
+  how each kept file looked (a length and a hash, none of its content) and leaves it out unless it
+  has changed since.
 - **A question from Claude can show a preview of each choice.** When the options of a question
   come with a mockup, a code sample or a layout to compare, the one under the pointer or the
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
