@@ -51,7 +51,7 @@ editor-prompts.json                 the editor's prompts before prompts.json: re
 picker-ignore.gitignore             extra `@` picker ignore rules, on top of the workspace's own
 WebView2/                           WebView2 user-data (chat UI cache/storage)
 icons/                              file-type icons rasterised from VS KnownMonikers
-baselines/<session-id>/             copies of files taken just before Claude changes them, for the Changes list
+baselines/<session-id>/             copies of files taken just before Claude changes them, and the baseline of a file shown in the editor, for the Changes list
 snapshots/<id>/                     one private git store per open chat: the working tree before each shell command
 data/projects/<name>-<hash>/
     project.json                    the folder this data belongs to ({"path": "…"})
