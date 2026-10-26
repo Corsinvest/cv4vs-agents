@@ -44,6 +44,13 @@ internal static class PackageIds
     public const int UpdateClaudeCommandId = 0x0214;
     public const int DiffSpikeCommandId = 0x0215;
 
+    // The review of a file in its own editor (Ide/Changes/HunkCommands.cs).
+    public const int KeepHunkCommandId = 0x0216;
+    public const int UndoHunkCommandId = 0x0217;
+    public const int KeepAllInFileCommandId = 0x0218;
+    public const int UndoAllInFileCommandId = 0x0219;
+    public const int NextHunkCommandId = 0x021A;
+
     // Seeds the dynamic open-panes range, which grows with the number of open panes: its own
     // 0x0300 block, clear of the fixed ids above.
     public const int ActiveSessionCommandId = 0x0300;

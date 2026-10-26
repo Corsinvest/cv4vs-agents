@@ -34,6 +34,21 @@ public enum InitialPermissionMode
     BypassPermissions,
 }
 
+/// <summary>How a file in the Changes list looks when it is open in an editor. The member names are what
+/// VS serializes into the settings store: renaming one drops everyone's saved choice.</summary>
+public enum ChangesViewMode
+{
+    /// <summary>The editor's own window draws the changes in place, deleted lines among the file's own, with Keep and
+    /// Undo on each hunk.</summary>
+    Inline,
+
+    /// <summary>The same, with how the file was on the left and how it is on the right.</summary>
+    SideBySide,
+
+    /// <summary>The editor is left alone, and Open shows the comparison window.</summary>
+    Files,
+}
+
 /// <summary>How much of Claude's work the chat shows. The member names are what VS serializes into
 /// the settings store: renaming one drops everyone's saved choice.</summary>
 public enum ChatViewMode
@@ -126,6 +141,11 @@ public class AgentsChatPage : AgentsOptionsPage
     [DisplayName("Track the files commands change")]
     [Description("Also list the files Claude changes by running a command (sed, a script, git checkout), measured against a snapshot of the working tree taken just before the command. Needs the folder to be in a git repository, and \"Track the files Claude changes\" on. The snapshots are kept in a private store under the extension's data folder: your repository's history, index and objects are only read. Files git does not ignore are copied into that store, so keep build output and large downloads in .gitignore. Takes effect on the next command.")]
     public bool TrackBashChanges { get; set; } = true;
+
+    [Category("Files")]
+    [DisplayName("Show the changes in the editor")]
+    [Description("How a file Claude changed looks while it is open. Inline draws the changes in the editor's own window, with Keep and Undo on each hunk; SideBySide puts how the file was on the left and how it is on the right; Files leaves the editor alone, and Open shows the comparison window. Needs a Visual Studio whose editor can show a difference, and a file that is plain UTF-8 or UTF-16 text: otherwise the comparison window is used. Takes effect on the next file you open or Claude changes.")]
+    public ChangesViewMode ChangesViewMode { get; set; } = ChangesViewMode.Inline;
 
     [Category("Files")]
     [DisplayName("Send post-edit diagnostics to Claude (experimental)")]
