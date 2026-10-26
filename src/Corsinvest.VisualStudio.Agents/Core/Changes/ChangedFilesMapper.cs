@@ -35,6 +35,7 @@ internal static class ChangedFilesMapper
         HasBaseline = row.Baseline.IsKnown && !row.BaselineMissing,
         BaselineMissing = row.BaselineMissing,
         Incomplete = row.Incomplete,
+        SharedWithPane = row.SharedWithPane,
     };
 
     public static IReadOnlyList<Contracts.ChangedFileFailureDto> ToDtos(IEnumerable<ChangeFailure> failed)

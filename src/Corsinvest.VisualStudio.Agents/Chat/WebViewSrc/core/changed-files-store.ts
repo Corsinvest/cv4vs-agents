@@ -143,6 +143,20 @@ export function countsTip(
         : '';
 }
 
+/** What a row says when another chat lists the same file too, and so shares the editor's review of it. Null when none does. */
+export function sharedNote(
+    file: Pick<ChangedFileDto, 'sharedWithPane'>,
+): { label: string; tip: string } | null {
+    const pane = file.sharedWithPane;
+    if (typeof pane !== 'number') {
+        return null;
+    }
+    return {
+        label: `also in Chat ${pane}`,
+        tip: `Chat ${pane} lists this file too. The editor shows its changes for whichever chat changed it last.`,
+    };
+}
+
 /** Why a file cannot be undone, or null when it can. */
 export function undoBlocker(
     file: Pick<ChangedFileDto, 'hasBaseline' | 'baselineMissing'>,
