@@ -266,6 +266,14 @@
     <Compile Include="Core\Panes\PaneRegistry.cs" />
     <Compile Include="Core\Panes\PaneControlBase.cs" />
     <Compile Include="Core\Changes\DiffSpike.cs" />
+    <Compile Include="Core\Changes\ChangeBaselines.cs" />
+    <Compile Include="Core\Changes\ChangeEvaluator.cs" />
+    <Compile Include="Core\Changes\ChangeModels.cs" />
+    <Compile Include="Core\Changes\ChangePaths.cs" />
+    <Compile Include="Core\Changes\ChangeSet.cs" />
+    <Compile Include="Core\Changes\HookEdit.cs" />
+    <Compile Include="Core\Changes\LineDiff.cs" />
+    <Compile Include="Core\Changes\SessionChanges.cs" />
     <Compile Include="Core\Client\ClaudeInstall.cs" />
     <Compile Include="Core\Client\ClaudeUpdate.cs" />
     <Compile Include="Core\Client\ClientMessages.cs" />
@@ -363,6 +371,7 @@
     <Compile Include="Core\Sessions\SessionInfo.cs" />
     <Compile Include="Core\Sessions\SessionManager.cs" />
     <Compile Include="Core\Sessions\SessionManager.History.cs" />
+    <Compile Include="Core\Sessions\SessionManager.FileHistory.cs" />
     <Compile Include="Core\Sessions\SessionManager.Common.cs" />
     <Compile Include="Core\Plugins\PluginService.cs" />
     <Compile Include="Chat\Host\BridgeMessages.cs" />

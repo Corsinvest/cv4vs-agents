@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Chat.Host;
+using Corsinvest.VisualStudio.Agents.Core.Changes;
 using Corsinvest.VisualStudio.Agents.Core.Client;
 using Corsinvest.VisualStudio.Agents.Core.Panes;
 using Corsinvest.VisualStudio.Agents.Core.Sessions;
@@ -165,6 +166,25 @@ public partial class ChatPaneControl
                     }
                 }
             }
+            else if (e.CallbackId == ClaudeClient.ChangesPreHookId && AgentsOptions.Chat.TrackChanges)
+            {
+                var edit = HookEdit.TryParse(e.Input, e.ToolUseId);
+                if (edit is not null && _changes is not null)
+                {
+                    // The CLI runs the tool once every hook has answered, so any copy of the file has
+                    // to be taken before this returns. Bounded like the others: the save inside goes
+                    // through the UI thread, and a stall must not hold the tool for the CLI's own
+                    // hook timeout.
+                    var work = _changes.OnPreEditAsync(edit);
+                    await Task.WhenAny(work, Task.Delay(4000));
+                }
+            }
+            else if (e.CallbackId == ClaudeClient.ChangesHookId && AgentsOptions.Chat.TrackChanges)
+            {
+                var edit = HookEdit.TryParse(e.Input, e.ToolUseId);
+                // Not awaited: the file's row can wait for the CLI to write its record; Claude must not.
+                if (edit is not null && _changes is not null) { _ = _changes.OnPostEditAsync(edit); }
+            }
             _client?.RespondToHookCallback(e.RequestId, new { @continue = true });
         }
         catch (Exception ex)
@@ -172,6 +192,16 @@ public partial class ChatPaneControl
             _log.LogException("ChatPaneControl.OnHookCallback", ex);
             _client?.RespondToHookCallback(e.RequestId, new { @continue = true });
         }
+    }
+
+    /// <summary>Saves the file's unsaved editor changes before the Changes list copies it, so the copy
+    /// is what Claude is about to change and not an older file on disk. Bounded: the save goes through
+    /// the UI thread, and the CLI is waiting on the hook that called this.</summary>
+    private static async Task SaveBeforeCopyAsync(string path)
+    {
+        if (!AgentsOptions.Chat.Autosave) { return; }
+        var save = IdeContextService.Instance.SaveIfDirtyAsync(path);
+        await Task.WhenAny(save, Task.Delay(3000)).ConfigureAwait(false);
     }
 
     /// <summary>The post-edit diagnostics work (visibility probe + new-diagnostics diff), as one
@@ -815,6 +845,7 @@ public partial class ChatPaneControl
             // reflects a mid-life session change, not just the one from ProcessStarted. Entry is
             // never null (set-once via Init).
             Entry.ActiveSessionId = id;
+            _changes?.EnsureSession(id);
             RefreshTitleFromDisk();
         });
 
@@ -833,6 +864,7 @@ public partial class ChatPaneControl
         {
             _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
             SetSessionTitle(null);
+            _changes?.BeginSession(null, resume: false);
         });
 
     /// <summary><para>
