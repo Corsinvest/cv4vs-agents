@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
     ChangedFilesStore,
     countsNote,
+    countsTip,
     splitShownPath,
     stateLetter,
     undoBlocker,
@@ -152,14 +153,24 @@ test('countsNote says why there are no numbers, and nothing when there are', () 
     assert.equal(countsNote({ ...base, counts: 'unavailable', isBinary: true }), 'binary');
 });
 
-test('a modified file with no line different is said to differ only in how its lines end', () => {
+test('a modified file with no line different is said so, instead of showing +0 -0', () => {
     const none = { counts: 'exact', isBinary: false, added: 0, deleted: 0 } as const;
 
-    assert.equal(countsNote({ ...none, state: 'modified' }), 'line endings only');
-    // An empty file Claude created has no lines either, and that is not a line-ending change.
+    assert.equal(countsNote({ ...none, state: 'modified' }), 'no line differs');
+    // An empty file Claude created has no lines either, and nothing in it changed.
     assert.equal(countsNote({ ...none, state: 'added' }), null);
     // One line moved: the figures say so.
     assert.equal(countsNote({ ...none, state: 'modified', added: 1 }), null);
+});
+
+test('countsTip explains the figures only where they need it', () => {
+    const base = { state: 'modified', added: 1, deleted: 1 } as const;
+    const none = { ...base, counts: 'exact', added: 0, deleted: 0 } as const;
+
+    assert.equal(countsTip({ ...base, counts: 'exact' }), '');
+    assert.match(countsTip({ ...base, counts: 'approximate' }), /Approximate/);
+    assert.match(countsTip(none), /byte-order mark/);
+    assert.equal(countsTip({ ...none, state: 'added' }), '');
 });
 
 test('undoBlocker is null when there is a baseline, else says which kind of absence', () => {

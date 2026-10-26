@@ -111,17 +111,36 @@ export function countsNote(
     if (file.counts === 'unavailable') {
         return 'not counted';
     }
-    // Changed, and not one line differs: what moved is how the lines end, or whether the last one
-    // has a newline. "+0 −0" would read as a file that is not different, beside an M.
-    if (
+    if (sameLines(file)) {
+        return 'no line differs';
+    }
+    return null;
+}
+
+/**
+ * Changed, and not one line differs: what moved is how the lines end, whether the last one has a
+ * newline, the byte-order mark or the encoding (the host counts lines of text). "+0 −0" would read
+ * as a file that is not different, beside an M.
+ */
+function sameLines(file: Pick<ChangedFileDto, 'counts' | 'state' | 'added' | 'deleted'>): boolean {
+    return (
         file.counts === 'exact' &&
         file.state === 'modified' &&
         file.added === 0 &&
         file.deleted === 0
-    ) {
-        return 'line endings only';
+    );
+}
+
+/** What the figures cannot say on their own, for a tip. Empty when there is nothing to add. */
+export function countsTip(
+    file: Pick<ChangedFileDto, 'counts' | 'state' | 'added' | 'deleted'>,
+): string {
+    if (file.counts === 'approximate') {
+        return 'Approximate: the files differ too much to count exactly.';
     }
-    return null;
+    return sameLines(file)
+        ? 'Every line reads the same: only the line endings, the final newline, the byte-order mark or the encoding changed.'
+        : '';
 }
 
 /** Why a file cannot be undone, or null when it can. */
