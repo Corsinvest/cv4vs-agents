@@ -59,7 +59,7 @@ internal sealed class GitRepoFixture : IDisposable
     {
         var info = new ProcessStartInfo(GitExe.Resolve())
         {
-            Arguments = string.Join(" ", Array.ConvertAll(args, GitRunner.Quote)),
+            Arguments = string.Join(" ", Array.ConvertAll(args, Corsinvest.VisualStudio.Agents.Helpers.StringHelpers.QuoteProcessArgument)),
             WorkingDirectory = directory,
             UseShellExecute = false,
             CreateNoWindow = true,
