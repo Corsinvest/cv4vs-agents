@@ -96,6 +96,11 @@ A few things work differently there:
 - A file that two chats list is shown for the one that listed or changed it last, or the one where you pressed
   Open, and each row says *also in Chat N*, naming the other chat.
 - Closing the file's tab ends its review; opening it again, while it is still listed, starts it again.
+- **Ctrl+Z** does not go back past the start of a review. Claude changes the file on disk and the editor takes the new text
+  in as one edit, so Ctrl+Z would otherwise take back the whole of Claude's change at once, in the editor only. What you
+  do during the review (a change undone with Undo, your own typing) can still be taken back. A change you kept cannot: Keep
+  does not edit the file, and the list's Undo puts the file back to how it was before Claude's change with that change
+  in it.
 ## What it compares with
 
 The copy the CLI keeps before it first edits a file: the same ones [Rewind](/cv4vs-agents/chat/rewind/)
