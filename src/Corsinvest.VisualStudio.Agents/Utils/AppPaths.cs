@@ -63,6 +63,10 @@ internal static class AppPaths
     /// deleting them; nothing here is the user's data, so a missing folder only means "no baseline".</summary>
     public static readonly string BaselinesFolder = Path.Combine(DataFolder, "baselines");
 
+    /// <summary>The text a file held just before something in a review of it emptied it: the newest twenty, so that an Undo that goes
+    /// wrong in the editor costs nothing that cannot be got back.</summary>
+    public static readonly string RecoveryFolder = Path.Combine(DataFolder, "recovery");
+
     /// <summary>Private git indexes and object stores, one folder per open chat: the pictures of a
     /// working tree that tell what a shell command changed. Deleted with the chat; what a crash leaves is
     /// swept when the next chat starts.</summary>
