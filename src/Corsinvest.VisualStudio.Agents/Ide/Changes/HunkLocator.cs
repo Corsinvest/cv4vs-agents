@@ -11,9 +11,10 @@ using System.Collections.Generic;
 
 namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
 
-/// <summary>One difference between the baseline and the document, as the two places it is: in the baseline's buffer
-/// (<see cref="Left"/>) and in the document's (<see cref="Right"/>). Either can be empty: a hunk that only adds lines has
-/// an empty left span, one that only removes them an empty right span.</summary>
+/// <summary>One difference between the baseline and the document, as the two places it is: in the editor's read-only mirror of
+/// the baseline's buffer (<see cref="Left"/>; the buffer itself is behind it, see <c>BaselineDocumentController</c>) and in the
+/// document's (<see cref="Right"/>). Either can be empty: a hunk that only adds lines has an empty left span, one that only
+/// removes them an empty right span.</summary>
 internal readonly struct Hunk
 {
     public Hunk(int index, SnapshotSpan left, SnapshotSpan right)
@@ -33,9 +34,9 @@ internal readonly struct Hunk
 /// <summary>Finding hunks in a difference view, whichever of the three views it is (inline, the baseline on the left, the
 /// document on the right). Editor types only: this is the part of the review that knows how the differencing service
 /// numbers things, and nothing else needs to.
-/// <para>The lookups follow what Copilot's own hunk commands do for the same views, because the service's answer is not
-/// always where the caret is: in the inline view a deleted line is drawn from the baseline's buffer, so a caret on it is
-/// in no hunk of the document's, and the hunk has to be found by mapping the baseline's span up into the view.</para>
+/// <para>The lookups follow what Copilot's own hunk commands do for the same views. In the inline view the service finds the
+/// hunk of a caret on a deleted line too (it maps the point down to the baseline's side); a caret at the very end of a deleted
+/// range is the one it does not, and the hunk is then found by mapping the baseline's span up into the view.</para>
 /// <para>A hunk the service describes in a way that does not fit its buffers (a range of lines past the end of what it
 /// tokenised) is not a hunk here: an edit made from it would land at the top of the file.</para></summary>
 internal static class HunkLocator
