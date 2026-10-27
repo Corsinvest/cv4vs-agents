@@ -606,13 +606,18 @@ internal sealed partial class SessionChanges : IDisposable
             _set.SetDisabled(null);
 
             var sessions = Sessions;
+            var keptPaths = new List<string>();
             var rows = new List<FileChange>();
             var history = await sessions.ReadFileHistoryAsync(sessionId).ConfigureAwait(false);
             foreach (var kv in history.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
             {
                 if (generation != Volatile.Read(ref _generation) || _disposed) { break; }
                 // Accepted before the restart, and not changed since: not a change to review.
-                if (_kept.IsStillKept(kv.Key)) { continue; }
+                if (_kept.IsStillKept(kv.Key))
+                {
+                    keptPaths.Add(kv.Key);
+                    continue;
+                }
                 var baseline = ToFound(sessions, sessionId, kv.Value.Earliest);
                 var evaluation = await ChangeEvaluator.EvaluateAsync(kv.Key, baseline.Baseline).ConfigureAwait(false);
                 if (evaluation.Unchanged) { continue; }
@@ -620,6 +625,13 @@ internal sealed partial class SessionChanges : IDisposable
                 if (rows.Count > ChangeSet.MaxFiles) { break; }
             }
 
+            // The next edit of a file kept before the restart is compared with a copy taken just before it, as after a Keep in this
+            // run: the CLI's own copy is from before the whole session, and Undo against it would take back what was accepted.
+            foreach (var path in keptPaths)
+            {
+                if (generation != Volatile.Read(ref _generation) || _disposed) { return; }
+                _set.SetCaptureNext(path);
+            }
             foreach (var row in rows)
             {
                 if (generation != Volatile.Read(ref _generation) || _disposed) { return; }
