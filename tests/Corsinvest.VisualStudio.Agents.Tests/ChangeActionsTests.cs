@@ -149,6 +149,38 @@ public sealed class ChangeActionsTests : IDisposable
     }
 
     [Fact]
+    public async Task Keep_tells_the_ledger_of_a_listed_file_and_of_nothing_else()
+    {
+        var file = Write("a.txt", "new\n");
+        Row(file, BaselineRef.Cli(Write("backup@v1", "old\n")));
+        var told = new List<string>();
+        var actions = new ChangeActions(_set, _baselines, _editor, OutputWindowLogger.Global,
+                                        kept: path => { told.Add(path); return Task.CompletedTask; });
+
+        await actions.KeepAsync(Write("elsewhere.txt", "not in the list\n"));
+        await actions.KeepAsync(file);
+
+        Assert.Equal(new[] { file }, told);
+    }
+
+    [Fact]
+    public async Task Undo_is_never_remembered_as_a_keep()
+    {
+        var baseline = Write("backup@v1", "old\n");
+        var file = Write("a.txt", "new\n");
+        Row(file, BaselineRef.Cli(baseline));
+        var told = new List<string>();
+        var actions = new ChangeActions(_set, _baselines, _editor, OutputWindowLogger.Global,
+                                        kept: path => { told.Add(path); return Task.CompletedTask; });
+
+        var failure = await actions.UndoAsync(file);
+
+        Assert.Null(failure);
+        Assert.Equal("old\n", File.ReadAllText(file));
+        Assert.Empty(told);
+    }
+
+    [Fact]
     public async Task Keep_deletes_a_copy_the_extension_took_but_never_the_clis_backup()
     {
         var own = await _baselines.CaptureAsync("s1", Write("a.txt", "before\n"));

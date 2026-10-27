@@ -21,11 +21,15 @@ public sealed class SessionChangesTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_baselinesRoot, true); }
-        catch (IOException) { /* a scratch folder; absent when nothing was copied */ }
+        foreach (var folder in new[] { _baselinesRoot, KeptFolder })
+        {
+            try { Directory.Delete(folder, true); }
+            catch (IOException) { /* a scratch folder; absent when nothing was copied or kept */ }
+        }
     }
 
-    private string KeptFolder => Path.Combine(_baselinesRoot, "changes");
+    // Beside the copies and not under them: CopiesTaken counts everything under the root.
+    private string KeptFolder => _baselinesRoot + "-kept";
 
     private SessionChanges Create(SessionFixture fx, Func<bool> checkpoints = null, int[] poll = null, Func<string, Task> prepare = null,
                                   KeptLedger kept = null)
@@ -523,6 +527,36 @@ public sealed class SessionChangesTests : IDisposable
         using var third = Create(fx);
         third.BeginSession(fx.SessionId, resume: true);
         Assert.True(SpinWait.SpinUntil(() => third.Set.Count == 2, TimeSpan.FromSeconds(10)));
+    }
+
+    [Fact]
+    public async Task A_file_kept_before_the_restart_is_copied_before_its_next_edit_and_not_compared_with_the_clis_old_copy()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1));
+        fx.WriteBackup("a@v1", "a\n");
+        fx.WriteWork("a.txt", "a\nclaude\n");
+        using (var first = Create(fx))
+        {
+            first.BeginSession(fx.SessionId, resume: true);
+            Assert.True(SpinWait.SpinUntil(() => first.Set.Count == 1, TimeSpan.FromSeconds(10)));
+            await first.Actions.KeepAsync(Work(fx, "a.txt"));
+        }
+
+        // The next run resumes the session: the file is not listed, and the next edit of it is to be copied first.
+        using var second = Create(fx);
+        second.BeginSession(fx.SessionId, resume: true);
+        Assert.True(SpinWait.SpinUntil(() => second.Set.WantsCapture(Work(fx, "a.txt")), TimeSpan.FromSeconds(10)));
+        Assert.Empty(second.Set.Snapshot());
+
+        await second.OnPreEditAsync(Hook(fx, "a.txt", "toolu_2"));
+        fx.WriteWork("a.txt", "a\nclaude\nand more\n");
+        await second.OnPostEditAsync(Hook(fx, "a.txt", "toolu_2"));
+
+        // Against what was accepted: one line added. Against the CLI's copy it would be two, and Undo would take back the kept one.
+        var row = Assert.Single(second.Set.Snapshot());
+        Assert.True(row.Baseline.Owned);
+        Assert.Equal(1, row.Added);
+        Assert.Equal(0, row.Deleted);
     }
 
     [Fact]

@@ -93,11 +93,12 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
     public Task<bool> ReviewAllAsync() => editor.ShowAllAsync(set);
 
     /// <summary>Accept the file as it is. Never fails: there is nothing to write to it, and not being able to remember the
-    /// Keep is not a reason to refuse it.</summary>
+    /// Keep is not a reason to refuse it. Only a listed path is remembered: the WebView names it, and a name is not a licence to
+    /// read any file.</summary>
     public async Task KeepAsync(string path)
     {
         await editor.EndReviewAsync(path).ConfigureAwait(false);
-        if (kept is not null)
+        if (kept is not null && set.TryGet(path, out _))
         {
             try { await kept(path).ConfigureAwait(false); }
             catch (Exception ex) { log.Warn($"[changes] could not remember that {path} was kept: {ex.Message}"); }
