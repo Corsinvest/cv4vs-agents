@@ -528,7 +528,7 @@ internal static class CopilotSpike
             + $"BaselineDiffChanged raised {s.DiffEvents}x");
         Say(EditorLine(s));
         Say($"state: {DescribeState(s.State)}");
-        Say($"panel option on the viewer: {Read(() => s.Window.PrimaryDifferenceViewer.Options.GetOptionValue<bool>(ActionPanelOption))}; "
+        Say($"panel option on the viewer: {Read(() => s.Window.PrimaryDifferenceViewer?.Options.GetOptionValue<bool>(ActionPanelOption))}; "
             + $"view model wired to the view: {ViewModelKeys(s.View)}");
         Say($"adornments: {Adornments(s)}");
         Say($"document: dirty {IsDirty(s)}, undo: {Undo(s)}, buffer version {s.View.TextDataModel.DocumentBuffer.CurrentSnapshot.Version.VersionNumber}");
@@ -539,8 +539,10 @@ internal static class CopilotSpike
 
     private static string EditorLine(Session s)
     {
-        return $"differences {Read(() => s.Window.DifferenceBuffer.CurrentSnapshotDifference.LineDifferences.Differences.Count)}, "
-            + $"view mode {Read(() => s.Window.PrimaryDifferenceViewer.ViewMode)}, left side {Read(() => LeftText(s.Window)?.Length)} chars";
+        // A window out of diff mode has no snapshot difference: that is an answer, not a throw (a debugger set to break on
+        // NullReferenceException, the Visual Studio default, would stop the whole instance on it).
+        return $"differences {Read(() => s.Window.DifferenceBuffer?.CurrentSnapshotDifference?.LineDifferences?.Differences.Count)}, "
+            + $"view mode {Read(() => s.Window.PrimaryDifferenceViewer?.ViewMode)}, left side {Read(() => LeftText(s.Window)?.Length)} chars";
     }
 
     private static string Adornments(Session s)
