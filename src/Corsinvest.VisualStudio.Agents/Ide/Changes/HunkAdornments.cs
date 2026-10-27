@@ -3,15 +3,11 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
-#pragma warning disable CS0618
-
-using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.TextManager.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,25 +25,25 @@ namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
 internal sealed class HunkAdornments : IDisposable
 {
     private readonly BaselineDocumentController _controller;
-    private readonly IVsDifferenceCodeWindow2 _window;
     private readonly Dictionary<IWpfTextView, ViewAdornment> _views = new();
-    private IDifferenceViewer _viewer;
+    private readonly IWpfDifferenceViewer _viewer;
     private bool _disposed;
 
-    private HunkAdornments(BaselineDocumentController controller, IVsDifferenceCodeWindow2 window)
+    // The viewer of the view the review began in, not the window's active pane's: in a split window the two are not the same
+    // viewer, and the review is the one that began where it did.
+    private HunkAdornments(BaselineDocumentController controller)
     {
         _controller = controller;
-        _window = window;
-        _viewer = ((IVsDifferenceCodeWindow)window).DifferenceViewer;
+        _viewer = controller.Viewer;
         _viewer.ViewModeChanged += OnViewModeChanged;
     }
 
     /// <summary>Null when the window cannot be drawn on: the review then has the commands and the list, without the buttons.</summary>
-    public static HunkAdornments TryCreate(BaselineDocumentController controller, IVsDifferenceCodeWindow2 window)
+    public static HunkAdornments TryCreate(BaselineDocumentController controller)
     {
         try
         {
-            var adornments = new HunkAdornments(controller, window);
+            var adornments = new HunkAdornments(controller);
             adornments.Refresh();
             return adornments;
         }
@@ -91,12 +87,12 @@ internal sealed class HunkAdornments : IDisposable
     // whose view has gone is let go.
     private void EnsureViews()
     {
-        var viewer = (IDifferenceViewer3)((IVsDifferenceCodeWindow)_window).DifferenceViewer;
-        var wpf = (IWpfDifferenceViewer)viewer;
+        var wpf = _viewer;
+        var two = (IDifferenceViewer2)wpf;
         var live = new List<IWpfTextView>();
-        if (((IDifferenceViewer2)viewer).InlineViewExists && wpf.InlineView is not null) { live.Add(wpf.InlineView); }
-        if (((IDifferenceViewer2)viewer).LeftViewExists && wpf.LeftView is not null) { live.Add(wpf.LeftView); }
-        if (((IDifferenceViewer2)viewer).RightViewExists && wpf.RightView is not null) { live.Add(wpf.RightView); }
+        if (two.InlineViewExists && wpf.InlineView is not null) { live.Add(wpf.InlineView); }
+        if (two.LeftViewExists && wpf.LeftView is not null) { live.Add(wpf.LeftView); }
+        if (two.RightViewExists && wpf.RightView is not null) { live.Add(wpf.RightView); }
 
         foreach (var gone in _views.Keys.Where(v => !live.Contains(v)).ToList())
         {
@@ -120,6 +116,8 @@ internal sealed class HunkAdornments : IDisposable
         private Hunk _hunk;
         private bool _focused;
         private bool _disposed;
+        private bool _placed;
+        private (bool Clipped, double Top, double Left, int Anchor)? _lastPlace;
 
         public ViewAdornment(BaselineDocumentController controller, IWpfTextView view)
         {
@@ -219,21 +217,35 @@ internal sealed class HunkAdornments : IDisposable
                 return;
             }
 
-            Canvas.SetTop(_buttons, top);
-            Canvas.SetLeft(_buttons, Math.Max(0, _view.ViewportWidth - _buttons.DesiredSize.Width));
+            // The layer is in the document's coordinates, scrolled with it: the right edge of what is shown is the viewport's
+            // right, and not its width, which only agrees with it until the view has been scrolled sideways.
+            var left = Math.Max(_view.ViewportLeft, _view.ViewportRight - _buttons.DesiredSize.Width);
+
+            // Already there, and nothing has moved: leave them. Taking a button out of the layer and putting it back in the middle
+            // of a click (a layout comes with every difference the editor works out) would lose the click.
+            var place = (clipped, top, left, anchor.Value.Position);
+            if (_placed && _lastPlace == place) { return; }
+
             Hide();
-            if (clipped)
-            {
-                _layer.AddAdornment(AdornmentPositioningBehavior.ViewportRelative, null, _tag, _buttons, null);
-            }
-            else
-            {
-                _layer.AddAdornment(new SnapshotSpan(anchor.Value, 0), _tag, _buttons);
-            }
+            Canvas.SetTop(_buttons, top);
+            Canvas.SetLeft(_buttons, left);
+            _placed = clipped
+                ? _layer.AddAdornment(AdornmentPositioningBehavior.ViewportRelative, null, _tag, _buttons, OnRemovedByLayer)
+                : _layer.AddAdornment(AdornmentPositioningBehavior.TextRelative, new SnapshotSpan(anchor.Value, 0), _tag, _buttons, OnRemovedByLayer);
+            _lastPlace = _placed ? place : null;
+        }
+
+        // The layer takes an adornment away by itself when the text it is beside is laid out again.
+        private void OnRemovedByLayer(object tag, UIElement element)
+        {
+            _placed = false;
+            _lastPlace = null;
         }
 
         private void Hide()
         {
+            _placed = false;
+            _lastPlace = null;
             try { _layer.RemoveAdornmentsByTag(_tag); }
             catch (Exception) { /* a view that is closing */ }
         }
