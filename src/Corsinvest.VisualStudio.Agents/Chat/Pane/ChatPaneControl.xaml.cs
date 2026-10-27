@@ -521,7 +521,7 @@ public partial class ChatPaneControl : PaneControlBase
         if (_changes is not null) { _changes.Set.Changed -= OnChangesChanged; }
         _changesPush?.Dispose();
         // Before the list is disposed: the reviews it started in the editor end with it.
-        if (_changes is not null) { Ide.Changes.BaselineDocumentRegistry.Instance.Unregister(_changes); }
+        if (_changes is not null) { Ide.Changes.ReviewRegistry.Instance.Unregister(_changes); }
         _changes?.Dispose();
         _handler?.Dispose();
         // Detach the client events before disposing: an event still in flight (a final
@@ -856,7 +856,7 @@ public partial class ChatPaneControl : PaneControlBase
             PaneNumber = () => Entry?.SeqNo ?? 0,
         }, _log);
         _changes.Set.Changed += OnChangesChanged;
-        Ide.Changes.BaselineDocumentRegistry.Instance.Register(_changes);
+        Ide.Changes.ReviewRegistry.Instance.Register(_changes);
         _handler = new WebViewMessageHandler(_bridge, _client, Entry, _log, _changes);
         // The status bar reads usage from this pane's process instead of starting one of its own. Null
         // before init has answered, or when get_usage fails: an error must not read as "no limits".

@@ -40,8 +40,8 @@ internal sealed class ChangeFailure
 internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IChangeEditor editor, OutputWindowLogger log,
                                     Func<string, Task> remeasure = null)
 {
-    /// <summary>Show the file against how it was before Claude's first edit: in its own editor, with the
-    /// changes drawn in it, where that can be done (see <see cref="IChangeEditor.ShowInPlaceAsync"/>), and
+    /// <summary>Show the file against how it was before Claude's first edit: in its own editor, with Copilot's review
+    /// drawn in it, where that can be done (see <see cref="IChangeEditor.ShowInPlaceAsync"/>), and
     /// otherwise read-only in VS's comparison window. A file with no baseline, or one that is not text, is
     /// opened instead.</summary>
     public async Task OpenAsync(string path)
@@ -87,10 +87,10 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
     }
 
     /// <summary>Accept the file as it is. Never fails: there is nothing to write.</summary>
-    public Task KeepAsync(string path)
+    public async Task KeepAsync(string path)
     {
+        await editor.EndReviewAsync(path).ConfigureAwait(false);
         Forget(path);
-        return Task.CompletedTask;
     }
 
     /// <summary>Put the file back. Null on success, or what went wrong; the row stays on a failure,
@@ -98,7 +98,14 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
     public async Task<ChangeFailure> UndoAsync(string path)
     {
         if (!set.TryGet(path, out var row)) { return null; }
-        var reason = await GuardAsync(row).ConfigureAwait(false) ?? await RestoreAsync(row).ConfigureAwait(false);
+        var reason = await GuardAsync(row).ConfigureAwait(false);
+        // Only now, when the file is going to be put back: a review is not ended for an Undo that is refused. And before the
+        // file is rewritten, so that the review is not drawing against a document that is replaced under it.
+        if (reason is null)
+        {
+            await editor.EndReviewAsync(path).ConfigureAwait(false);
+            reason = await RestoreAsync(row).ConfigureAwait(false);
+        }
         if (reason is not null)
         {
             log.Warn($"[changes] could not undo {path}: {reason}");

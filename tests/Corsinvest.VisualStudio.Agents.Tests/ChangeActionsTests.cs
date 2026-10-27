@@ -27,15 +27,28 @@ public sealed class ChangeActionsTests : IDisposable
         public bool InPlace;
         public readonly List<string> ShownInPlace = new();
 
+        // What the actions did, in order: an Undo has to end the review before the file is rewritten.
+        public readonly List<string> Calls = new();
+        public readonly List<string> ReviewsEnded = new();
+
         public Task<DocumentReplaceResult> ReplaceDocumentTextAsync(string path, string text)
         {
+            Calls.Add("replace");
             ReplacedWith.Add(text);
             return Task.FromResult(Result);
         }
 
         public Task CloseDocumentAsync(string path)
         {
+            Calls.Add("close");
             Closed.Add(path);
+            return Task.CompletedTask;
+        }
+
+        public Task EndReviewAsync(string path)
+        {
+            Calls.Add("end-review");
+            ReviewsEnded.Add(path);
             return Task.CompletedTask;
         }
 
@@ -142,6 +155,47 @@ public sealed class ChangeActionsTests : IDisposable
         Assert.False(File.Exists(own.Path));
         Assert.True(File.Exists(theirs));
         Assert.Empty(_set.Snapshot());
+    }
+
+    [Fact]
+    public async Task Keep_ends_the_review_of_the_file_before_the_row_goes()
+    {
+        var file = Write("a.txt", "new\n");
+        Row(file, BaselineRef.Cli(Write("backup@v1", "old\n")));
+
+        await _actions.KeepAsync(file);
+
+        Assert.Equal(new[] { file }, _editor.ReviewsEnded);
+        Assert.Empty(_set.Snapshot());
+    }
+
+    [Fact]
+    public async Task Undo_ends_the_review_before_the_file_is_rewritten_under_it()
+    {
+        var file = Write("a.txt", "claude's version\n");
+        Row(file, BaselineRef.Cli(Write("backup@v1", "original\n")));
+        _editor.Result = DocumentReplaceResult.Replaced;
+
+        var failure = await _actions.UndoAsync(file);
+
+        Assert.Null(failure);
+        Assert.Equal(new[] { "end-review", "replace" }, _editor.Calls);
+        Assert.Equal(new[] { file }, _editor.ReviewsEnded);
+    }
+
+    [Fact]
+    public async Task An_undo_that_is_refused_leaves_the_review_alone()
+    {
+        var file = Write("a.txt", "claude's version\n");
+        Row(file, BaselineRef.Cli(Write("backup@v1", "original\n")));
+        // The file moved on after the list measured it: the undo is refused, and what the person is looking at stays.
+        File.WriteAllText(file, "something else, longer\n");
+
+        var failure = await _actions.UndoAsync(file);
+
+        Assert.NotNull(failure);
+        Assert.Empty(_editor.ReviewsEnded);
+        Assert.Empty(_editor.ReplacedWith);
     }
 
     [Fact]

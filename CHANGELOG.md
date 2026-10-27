@@ -19,12 +19,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   needs the folder to be in a git repository, and says so in the panel when it is not. The
   snapshots live in a private store under the extension's data folder: your repository's history,
   index and objects are only read. *Track the files commands change* in Options turns it off.
-- **A file Claude changed can be reviewed in its own editor, one hunk at a time.** A file that is open
-  (or that you open from the Changes panel) shows the changes in place, inline or side by side, with
-  **Keep** and **Undo** over the hunk the caret is in, and in the code window's menu.
-  Undo puts that hunk back and saves the file the way your own save would; when the last hunk is
-  settled the file leaves the list. *Show the changes in the editor* in Options picks the form, or
-  leaves the editor alone.
+- **A file Claude changed can be reviewed in its own editor, one change at a time, with GitHub Copilot's review.** A file
+  that is open (or that you open from the Changes panel) shows the changes in place, with Copilot's own **Keep** and
+  **Undo** on each change and **Keep** and **Undo** for the whole file in the bar at the bottom; the bar also gets this
+  extension's previous and next file of the list. When the last change is settled the file leaves the list. It needs GitHub
+  Copilot in Visual Studio 18, signed in: without it nothing is drawn and Open shows the comparison window. *Review the
+  changes in the editor* in Options turns it off.
 - **A question from Claude can show a preview of each choice.** When the options of a question
   come with a mockup, a code sample or a layout to compare, the one under the pointer or the
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
