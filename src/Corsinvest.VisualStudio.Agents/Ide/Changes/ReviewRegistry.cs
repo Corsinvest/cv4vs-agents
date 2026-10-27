@@ -66,6 +66,9 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
     private bool _syncAgain;
     private bool _servicesTried;
     private IVsEditorAdaptersFactoryService _adapters;
+
+    /// <summary>The editor's adapters, for a review that has to reach the shell's side of its document. Null before the first pass.</summary>
+    internal IVsEditorAdaptersFactoryService Adapters => _adapters;
     private ITextDocumentFactoryService _documents;
     private IVsRunningDocumentTable _rdt;
     private uint _rdtCookie;
