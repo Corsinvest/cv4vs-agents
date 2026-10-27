@@ -219,6 +219,7 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (_reviews.TryGetValue(review.Path, out var held) && ReferenceEquals(held, review)) { Untrack(review.Path); }
+        RefreshCommands();
         if (viewClosed) { ScheduleSync(400); }
         else { ScheduleSync(); }
     }
@@ -308,6 +309,22 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
                 _claims.Remove(path);
                 ScheduleSync();
             }
+        }
+    }
+
+    // The buttons this extension puts in Copilot's panel show only for a file that is reviewed, in a list of more than one: the shell
+    // asks again when something in the interface tells it to (a click, a change of window), not when a review starts or the list
+    // changes while the person is in the chat, so it is told.
+    private static void RefreshCommands()
+    {
+        try
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (Package.GetGlobalService(typeof(SVsUIShell)) is IVsUIShell shell) { shell.UpdateCommandUI(0); }
+        }
+        catch (Exception)
+        {
+            // A courtesy: the buttons are right at the next click.
         }
     }
 
@@ -440,6 +457,7 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
             }
         }
 
+        RefreshCommands();
         if (!enabled || _adapters is null) { return; }
         // Only a file that is open can be shown: one walk over the frames, not one per row.
         var open = IdeContextService.OpenDocumentFrames();
@@ -538,6 +556,7 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
                 case ReviewStart.Started:
                     _declined.Remove(path);
                     _notYet.Remove(path);
+                    RefreshCommands();
                     // The row may have gone while it started: a pass ends what has lost its row.
                     ScheduleSync();
                     return Attach.Reviewing;
