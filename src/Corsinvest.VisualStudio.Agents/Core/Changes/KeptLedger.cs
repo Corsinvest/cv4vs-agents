@@ -28,6 +28,15 @@ namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 internal sealed class KeptLedger : IDisposable
 {
     private const int Version = 1;
+
+    /// <summary>The stamp of a file that is not there: accepting a deletion is a Keep too, and a deleted file would come back
+    /// after a restart as a row unless it is remembered as gone.</summary>
+    public const string Absent = "absent";
+
+    /// <summary>A file larger than this is not stamped: reading it all would hold the Keep up for seconds, for a file that is
+    /// rarely a thing Claude edited.</summary>
+    public const long MaxStampBytes = 256L * 1024 * 1024;
+
     private static readonly TimeSpan SaveDelay = TimeSpan.FromMilliseconds(400);
 
     private readonly string _folder;
@@ -84,7 +93,11 @@ internal sealed class KeptLedger : IDisposable
         try
         {
             var stamp = await Task.Run(() => Stamp(path)).ConfigureAwait(false);
-            if (stamp is null) { return; }
+            if (stamp is null)
+            {
+                _log.Warn($"[changes] {path} could not be read just now, or is larger than {MaxStampBytes >> 20} MB: keeping it will not outlast a restart of Visual Studio");
+                return;
+            }
             lock (_gate)
             {
                 if (_disposed) { return; }
@@ -109,17 +122,6 @@ internal sealed class KeptLedger : IDisposable
         return now is not null && string.Equals(now, recorded, StringComparison.Ordinal);
     }
 
-    /// <summary>A path is no longer accepted: the file was changed after the Keep, or put back.</summary>
-    public void Forget(string path)
-    {
-        lock (_gate)
-        {
-            if (!_kept.Remove(path)) { return; }
-            _dirty = true;
-        }
-        ScheduleSave();
-    }
-
     /// <summary>Write what is waiting to be written, now.</summary>
     public void Flush()
     {
@@ -129,6 +131,7 @@ internal sealed class KeptLedger : IDisposable
     public void Dispose()
     {
         Timer timer;
+        string file;
         lock (_gate)
         {
             if (_disposed) { return; }
@@ -136,17 +139,28 @@ internal sealed class KeptLedger : IDisposable
             _disposed = true;
             timer = _saveTimer;
             _saveTimer = null;
+            file = _sessionId is null ? null : PathFor(_sessionId);
         }
         timer?.Dispose();
+
+        // The file's age is when the session was last open, not when something was last kept in it: a chat that is worked in
+        // for weeks is not one for the sweep to take.
+        try { if (file is not null && File.Exists(file)) { File.SetLastWriteTimeUtc(file, DateTime.UtcNow); } }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Debug(() => $"[changes] could not touch {file}: {ex.Message}");
+        }
     }
 
-    /// <summary>The length and a hash of the file's bytes, or null when it cannot be read. FNV-1a over 64 bits: it only has to tell
+    /// <summary>The length and a hash of the file's bytes; <see cref="Absent"/> when there is no such file; null when it cannot
+    /// be read (held by another process) or is larger than <paramref name="maxBytes"/>. FNV-1a over 64 bits: it only has to tell
     /// a file from another that someone changed, and the framework's own hashes throw on a machine with FIPS mode on.</summary>
-    public static string Stamp(string path)
+    public static string Stamp(string path, long maxBytes = MaxStampBytes)
     {
         try
         {
             using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            if (stream.Length > maxBytes) { return null; }
             var hash = 14695981039346656037UL;
             var buffer = new byte[64 * 1024];
             int read;
@@ -159,20 +173,28 @@ internal sealed class KeptLedger : IDisposable
             }
             return stream.Length.ToString("x") + ":" + hash.ToString("x16");
         }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return Absent;
+        }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             return null;
         }
     }
 
-    /// <summary>Delete the files of sessions nobody has kept anything in for <paramref name="olderThan"/>.</summary>
+    /// <summary>Delete the files of sessions nobody has had open for <paramref name="olderThan"/>, and what a crash left of one
+    /// being written.</summary>
     public static void Sweep(string folder, TimeSpan olderThan, OutputWindowLogger log)
     {
         try
         {
             if (!Directory.Exists(folder)) { return; }
             var limit = DateTime.UtcNow - olderThan;
-            foreach (var file in Directory.EnumerateFiles(folder, "*.json"))
+            var files = Directory.EnumerateFiles(folder)
+                                 .Where(f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+                                             || f.EndsWith(".tmp", StringComparison.OrdinalIgnoreCase));
+            foreach (var file in files.ToList())
             {
                 if (File.GetLastWriteTimeUtc(file) >= limit) { continue; }
                 try { File.Delete(file); }
@@ -198,7 +220,8 @@ internal sealed class KeptLedger : IDisposable
         try
         {
             var root = JObject.Parse(File.ReadAllText(file, Encoding.UTF8));
-            if (root.Value<int?>("version") != Version) { return kept; }
+            // Anything but the number this writes is another format, or damage: no ledger, as the class says.
+            if (!((root["version"] as JValue)?.Value is long version && version == Version)) { return kept; }
             if (root["kept"] is JObject entries)
             {
                 foreach (var entry in entries.Properties())
@@ -208,9 +231,11 @@ internal sealed class KeptLedger : IDisposable
                 }
             }
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or Newtonsoft.Json.JsonException)
+        catch (Exception ex)
         {
-            _log.Debug(() => $"[changes] could not read {file}, so nothing is remembered from it: {ex.Message}");
+            // Whatever is wrong with it, this runs where a chat starts: it must not stop the chat from starting.
+            _log.Warn($"[changes] could not read {file}, so nothing is remembered from it: {ex.Message}");
+            kept.Clear();
         }
         return kept;
     }
@@ -230,9 +255,20 @@ internal sealed class KeptLedger : IDisposable
         if (!_dirty || _sessionId is null) { return; }
         var file = PathFor(_sessionId);
         if (file is null) { _dirty = false; return; }
+
+        // A name of its own: two writers of one session (two chats, two Visual Studios) must not write the same temporary file.
+        var temp = file + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             Directory.CreateDirectory(_folder);
+
+            // Something may have been kept in this session by another since this one read the file: what it wrote and this
+            // does not hold is carried over, not dropped. A path both hold keeps this one's stamp, the later.
+            foreach (var pair in Read(file))
+            {
+                if (!_kept.ContainsKey(pair.Key)) { _kept[pair.Key] = pair.Value; }
+            }
+
             var json = new JObject
             {
                 ["version"] = Version,
@@ -241,7 +277,6 @@ internal sealed class KeptLedger : IDisposable
             }.ToIndentedString();
 
             // Written beside and moved over, so a crash in the middle leaves the old file and not half of the new one.
-            var temp = file + ".tmp";
             File.WriteAllText(temp, json, new UTF8Encoding(false));
             if (File.Exists(file)) { File.Replace(temp, file, null); }
             else { File.Move(temp, file); }
@@ -250,6 +285,8 @@ internal sealed class KeptLedger : IDisposable
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _log.Warn($"[changes] could not write {file}: {ex.Message}");
+            try { File.Delete(temp); }
+            catch (Exception) { /* left for the sweep */ }
         }
     }
 }
