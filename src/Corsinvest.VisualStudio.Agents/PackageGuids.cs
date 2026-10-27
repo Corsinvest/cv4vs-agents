@@ -44,17 +44,18 @@ internal static class PackageIds
     public const int UpdateClaudeCommandId = 0x0214;
     public const int DiffSpikeCommandId = 0x0215;
 
-    // The review of a file in its own editor (Ide/Changes/HunkCommands.cs).
-    public const int KeepHunkCommandId = 0x0216;
-    public const int UndoHunkCommandId = 0x0217;
-    public const int KeepAllInFileCommandId = 0x0218;
-    public const int UndoAllInFileCommandId = 0x0219;
-    public const int NextHunkCommandId = 0x021A;
+    // 0x0216 to 0x021A were the buttons of a review this extension drew itself, before it moved to Copilot's. Not reused: an id
+    // that a build once registered may still be in a Visual Studio's menu cache.
 
     // Debug builds only: the Copilot review probe (Core/Changes/CopilotSpike.cs) and the button it parents
     // into the editor's own action panel.
     public const int CopilotSpikeCommandId = 0x021B;
     public const int CopilotSpikePanelCommandId = 0x021C;
+
+    // Previous and next changed file, in the action panel Copilot's review draws at the bottom of the editor
+    // (Ide/Changes/FileNavigationCommands.cs).
+    public const int PreviousFileCommandId = 0x021D;
+    public const int NextFileCommandId = 0x021E;
 
     // Seeds the dynamic open-panes range, which grows with the number of open panes: its own
     // 0x0300 block, clear of the fixed ids above.

@@ -34,20 +34,6 @@ public enum InitialPermissionMode
     BypassPermissions,
 }
 
-/// <summary>How a file in the Changes list looks when it is open in an editor. The member names are what
-/// VS serializes into the settings store: renaming one drops everyone's saved choice.</summary>
-public enum ChangesViewMode
-{
-    /// <summary>The editor's own window draws the changes in place, deleted lines among the file's own, with Keep and
-    /// Undo on each hunk.</summary>
-    Inline,
-
-    /// <summary>The same, with how the file was on the left and how it is on the right.</summary>
-    SideBySide,
-
-    /// <summary>The editor is left alone, and Open shows the comparison window.</summary>
-    Files,
-}
 
 /// <summary>How much of Claude's work the chat shows. The member names are what VS serializes into
 /// the settings store: renaming one drops everyone's saved choice.</summary>
@@ -143,9 +129,9 @@ public class AgentsChatPage : AgentsOptionsPage
     public bool TrackBashChanges { get; set; } = true;
 
     [Category("Files")]
-    [DisplayName("Show the changes in the editor")]
-    [Description("How a file Claude changed looks while it is open. Inline draws the changes in the editor's own window, with Keep and Undo on each hunk; SideBySide puts how the file was on the left and how it is on the right; Files leaves the editor alone, and Open shows the comparison window. Needs a Visual Studio whose editor can show a difference, and a file that is plain UTF-8 or UTF-16 text: otherwise the comparison window is used. Takes effect at once for the files already shown, and for the ones after.")]
-    public ChangesViewMode ChangesViewMode { get; set; } = ChangesViewMode.Inline;
+    [DisplayName("Review the changes in the editor")]
+    [Description("Show a file Claude changed in its own editor, with GitHub Copilot's review drawn in it: the changes in place, Keep and Undo on each change, and the Keep all and Undo all bar at the bottom. Needs GitHub Copilot in Visual Studio 18, signed in, and a file that is plain UTF-8 or UTF-16 text and was not created by Claude: otherwise Open shows the comparison window. Off leaves the editor alone, and Open always shows the comparison window. Takes effect at once for the files already shown, and for the ones after.")]
+    public bool ReviewInEditor { get; set; } = true;
 
     [Category("Files")]
     [DisplayName("Send post-edit diagnostics to Claude (experimental)")]

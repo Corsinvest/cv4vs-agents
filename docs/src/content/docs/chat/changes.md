@@ -51,58 +51,51 @@ and the next edit of that file is compared with how it is now.
 
 ## In the editor
 
-A listed file that is open in an editor shows its changes in place, in the editor's own window: the lines
-Claude removed are drawn among the file's own (or on the left, in the side-by-side form), and the hunk the
-caret is in has its **Keep** and **Undo** at the right edge of the window, above it. **Open** in the panel does
-the same for a file that is not open yet. A file opened later, or changed by Claude while it was open, is
+A listed file that is open in an editor shows its changes in place, in the editor's own window, with
+**GitHub Copilot's own review**: the lines Claude removed are drawn among the file's own, each change has its
+**Keep** and **Undo**, and a bar at the bottom of the window has **Keep** and **Undo** for the whole file. The
+review is Copilot's, not this extension's: it looks and behaves as it does when Copilot's agent has changed a
+file, and Copilot counts the Keep and Undo you press as its own review actions. **Open** in the panel does the
+same for a file that is not open yet. A file opened later, or changed by Claude while it was open, is
 switched when it appears.
 
-- **Keep** accepts one hunk as it is. It stops being a difference; nothing is written to the file.
-- **Undo** puts back what was there before Claude's change, in that hunk only, as one edit that **Ctrl+Z**
-  takes back, and saves the file the way your own save would, format on save included.
-- When the last hunk has been kept or undone, the file leaves the list if it is now what it was before, byte
-  for byte. A difference that is only in how the lines end, or an edit you have not saved yet, leaves it
-  listed, for Keep and Undo in the panel.
-- **Keep all** and **Undo all**, in the panel below and in the window's menu, are the list's Keep and Undo of
-  the whole file.
+- **Keep** on a change accepts it as it is. It stops being a difference; nothing is written to the file.
+- **Undo** on a change puts back what was there before Claude's change, in that change only, and Copilot
+  saves the file.
+- **Keep** and **Undo** in the bar at the bottom do the same for every change in the file. When Undo has put the file back
+  as it was, byte for byte, it leaves the list; **Keep** accepts the file, and it leaves the list.
+- When the last change has been kept or undone, the file leaves the list if it is now what it was before, byte
+  for byte. A difference that is only in how the lines end leaves it listed, for Keep and Undo in the panel.
+- **Keep** and **Undo** in the panel's row end the review first, and then do what they always do to the file.
 
-A small floating panel at the bottom of the window has the way round the review: the previous and next change
-(*Change 2 of 5*, where the caret is among them), **Keep all** and **Undo all** for the file, and, when more
-than one file is listed, the previous and next file of the list (*File 1 of 3*), which opens that file the way
-Open does. It stays while the window is on screen, and goes with the review.
+When more than one file is listed, the bar at the bottom also has two buttons of this extension's, the previous and the
+next file of the list. They open that file the way Open does. The file list Copilot's bar carries is Copilot's own
+working set, which has nothing of Claude's in it.
 
-The same commands are in the code window's context menu, which lists them only while the window shows a
-review. No key is assigned to them: the obvious ones belong to Visual Studio, or are AltGr and a letter on some
-keyboard layouts. Assign your own in Tools > Options > Environment > Keyboard, in the Text Editor scope, by the
-names of the commands without their spaces (*KeepThisChange*, *UndoThisChange*, *KeepAllChangesInThisFile*,
-*UndoAllChangesInThisFile*, *GoToTheNextChange*).
+**Review the changes in the editor** (Options > Chat > Files) turns this off: the editor is left alone, and Open
+shows the comparison window described above. Changing it applies at once to the files already shown.
 
-**Show the changes in the editor** (Options > Chat > Files) picks the form: *Inline* (the default),
-*SideBySide*, or *Files*, which leaves the editor alone and makes Open show the comparison window described
-above. Changing it applies at once to the files already shown.
+This needs **GitHub Copilot in Visual Studio 18**, signed in to GitHub: the review is Copilot's, and where it is not
+there nothing is drawn in the editor, Open shows the comparison window, and with Options > Debug > Log level at
+*Info* the log says that Copilot's review is not available.
 
-A file that cannot be shown this way is shown in the comparison window instead, and with Options > Debug >
-Log level at *Info* the log says why. The reasons: this Visual Studio's editor cannot show a difference in the
-file; the file, or its copy from before, is not plain UTF-8 or UTF-16 text; its byte-order mark is not what it
-was before Claude's change; it mixes CRLF and LF line endings, which showing and keeping a hunk would level; it is
-read-only; its window shows two languages in one file (Razor, for one); another extension, Copilot or a Git
-diff, is already showing a difference in it; or the list has no copy of the file from before. A file that was
-declined is tried again when it changes.
+A file that cannot be reviewed this way is shown in the comparison window instead, and the log says why. The reasons:
+Copilot is already reviewing the file for its own agent; another difference (a Git diff) is already shown in it; the
+file, or its copy from before, is not plain UTF-8 or UTF-16 text; its byte-order mark is not what it was before
+Claude's change; it mixes CRLF and LF line endings; it is read-only; its window shows two languages in one file
+(Razor, for one); this Visual Studio's editor cannot show a difference in it; the list has no copy of the file
+from before; or Claude **created** the file, which has no earlier text to show a difference against (the list's Keep and
+Undo take it whole, and Undo deletes it). A file that was declined is tried again when it changes.
 
 A few things work differently there:
 
-- White space counts. The comparison window can be set to ignore it, and that setting is left alone, but the review compares the
-  lines exactly: an edit that only changes indentation or adds a final newline is a hunk, and can be kept or undone.
-- A hunk is acted on only from a difference that describes the file as it is. For a moment after any edit it is
-  worked out again, and the buttons are hidden and the commands unavailable until it is; one asked for in that
-  moment is refused with a word in the status bar. Undo of a hunk is also refused while the editor shows an older
-  file than the one on disk, which it has not reloaded yet.
-- A file Claude **created** is one hunk, so Keep and Undo of it are those of the file: Undo deletes it, as the
-  list's does.
-- After a **Keep** of a hunk, the baseline the list holds is the one the editor shows, so the counts, Open and
+- A file with changes of yours that are not saved is reviewed once you save it, and so is one that the editor has not
+  reloaded since Claude wrote it: the difference would not be the one the list measured.
+- After a **Keep** of a change, the baseline the list holds is the one the editor shows, so the counts, Open and
   an Undo of the whole file all agree with it. It is kept in the file's own encoding and line ending.
 - A file that two chats list is shown for the one that listed or changed it last, or the one where you pressed
   Open, and each row says *also in Chat N*, naming the other chat.
+- Closing the file's tab ends its review; opening it again, while it is still listed, starts it again.
 ## What it compares with
 
 The copy the CLI keeps before it first edits a file: the same ones [Rewind](/cv4vs-agents/chat/rewind/)

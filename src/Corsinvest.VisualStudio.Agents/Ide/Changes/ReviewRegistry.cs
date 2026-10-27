@@ -26,29 +26,40 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
 
-/// <summary>Which listed files are being reviewed in their own editor, process-wide: every chat pane's list is fed
-/// in, and each file that is open, and can be shown, gets a <see cref="BaselineDocumentController"/>.
+/// <summary>Which listed files are being reviewed in their own editor, process-wide: every chat pane's list is fed in, and each
+/// file that is open, and can be shown, gets a <see cref="CopilotReview"/>: GitHub Copilot's own review UI, against the baseline
+/// of its row. Without Copilot nothing is drawn, and Open shows the comparison window.
 /// <para>It works by reconciliation rather than by events about single files: whenever any list changes, or a document
 /// window is about to be shown, <see cref="SyncAsync"/> compares what every pane lists with what is being reviewed, ends the
 /// reviews that have lost their row and starts the ones that have gained a file. So a Keep or an Undo in the panel, which
 /// only touch the list, end the review without anything having to tell it. A pass is always a turn of the dispatcher of its
 /// own and never runs inside another: it edits rows, which asks for a pass.</para>
-/// <para>No MEF: documents are found through the running document table, as the comparison window is.</para>
+/// <para>No MEF of our own: documents are found through the running document table, as the comparison window is, and Copilot's
+/// parts are asked for by name (<see cref="CopilotReviews"/>).</para>
 /// <para>A file two panes list is reviewed for one of them (<see cref="ReviewOwnership"/>), and both rows say so
 /// (<see cref="FileChange.SharedWithPane"/>): the person is told in the panel, not left to find out in the log.</para>
 /// All of it runs on the UI thread.</summary>
-internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
+internal sealed class ReviewRegistry : IVsRunningDocTableEvents
 {
-    public static BaselineDocumentRegistry Instance { get; } = new();
+    // A file whose editor has not caught up with the disk is tried again a few times, a second apart, and then left for the
+    // event that says the editor has: a save, or a reload.
+    private const int MaxNotYet = 6;
+
+    public static ReviewRegistry Instance { get; } = new();
 
     private readonly OutputWindowLogger _log = OutputWindowLogger.Global;
     private readonly List<SessionChanges> _owners = new();
     private readonly Dictionary<SessionChanges, Action> _subscriptions = new();
-    private readonly Dictionary<string, BaselineDocumentController> _controllers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, CopilotReview> _reviews = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Declined> _declined = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Claim> _claims = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _notYet = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _attaching = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<IWpfTextView, LoadWait> _waitingForLoad = new();
+
+    // How many reviews there are, readable from any thread: Keep and Undo ask to end a file's review from wherever they run, and
+    // when nothing is reviewed (no Copilot, or a test) that is answered without the UI thread.
+    private int _reviewCount;
 
     private int _syncQueued;
     private bool _syncRunning;
@@ -56,6 +67,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
     private bool _servicesTried;
     private IVsEditorAdaptersFactoryService _adapters;
     private ITextDocumentFactoryService _documents;
+    private IVsRunningDocumentTable _rdt;
     private uint _rdtCookie;
 
     /// <summary>A file that could not be shown, as it was when that was found out: another row of it, or the same row measured
@@ -99,16 +111,28 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         public FileChange Row { get; }
     }
 
+    /// <summary>What an attempt to review a file came to.</summary>
+    private enum Attach
+    {
+        /// <summary>The review is on.</summary>
+        Reviewing,
+
+        /// <summary>The file is not open in a window that is ready: the window events try again.</summary>
+        Waiting,
+
+        /// <summary>The editor and the disk do not agree yet, or the document has unsaved changes.</summary>
+        NotYet,
+
+        /// <summary>This file is not reviewed, and the log says why.</summary>
+        Declined,
+    }
+
     private sealed class Parts
     {
         public IWpfTextView View;
         public ITextDocument Document;
         public IVsDifferenceCodeWindow2 Window;
-        public IDifferenceTextViewModel Model;
     }
-
-    /// <summary>The editor's adapters, for whoever has to turn a shell object into an editor one. Null before the first sync.</summary>
-    public IVsEditorAdaptersFactoryService Adapters => _adapters;
 
     /// <summary>Start following a pane's list. Called once, when the pane makes it.</summary>
     public void Register(SessionChanges owner)
@@ -119,7 +143,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 Register(owner);
-            }).FileAndForget("BaselineDocumentRegistry.Register");
+            }).FileAndForget("ReviewRegistry.Register");
             return;
         }
         if (owner is null || _owners.Contains(owner)) { return; }
@@ -139,7 +163,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
                 Unregister(owner);
-            }).FileAndForget("BaselineDocumentRegistry.Unregister");
+            }).FileAndForget("ReviewRegistry.Unregister");
             return;
         }
         if (owner is null || !_owners.Remove(owner)) { return; }
@@ -148,32 +172,58 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             owner.Set.Changed -= changed;
             _subscriptions.Remove(owner);
         }
-        foreach (var controller in _controllers.Values.Where(c => ReferenceEquals(c.Owner, owner)).ToList()) { controller.Exit(); }
+        foreach (var review in _reviews.Values.Where(r => ReferenceEquals(r.Owner, owner)).ToList())
+        {
+            ThreadHelper.JoinableTaskFactory.RunAsync(() => review.EndAsync()).FileAndForget("ReviewRegistry.Unregister.End");
+        }
         ScheduleSync();
     }
 
-    /// <summary>The review whose window <paramref name="view"/> is one of, if any: for the commands, which act on the
-    /// view the caret is in.</summary>
-    public BaselineDocumentController ControllerFor(IWpfTextView view)
+    /// <summary>The review that is on for the document the person is in, if any: for the buttons Copilot's panel carries for us,
+    /// which act on the file whose window it is.</summary>
+    public CopilotReview ReviewForActiveDocument()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        return view is null ? null : _controllers.Values.FirstOrDefault(c => c.Matches(view));
+        if (_reviews.Count == 0) { return null; }
+        if (Package.GetGlobalService(typeof(SVsShellMonitorSelection)) is not IVsMonitorSelection monitor
+            || monitor.GetCurrentElementValue((uint)VSConstants.VSSELELEMID.SEID_DocumentFrame, out var frameObject) != VSConstants.S_OK
+            || frameObject is not IVsWindowFrame frame)
+        {
+            return null;
+        }
+        var path = IdeContextService.DocumentMoniker(frame);
+        if (path is null) { return null; }
+        var key = IdeContextService.FrameKey(path);
+        return _reviews.Values.FirstOrDefault(r => r.IsActive
+                                                   && string.Equals(IdeContextService.FrameKey(r.Path), key, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Something a review did may have changed what the lists say about it: look again.</summary>
     public void Poke() => ScheduleSync();
 
+    /// <summary>End the review of a file, if there is one, and return when Copilot has let go of it. For Keep and Undo, which are
+    /// about to act on the file itself.</summary>
+    public async System.Threading.Tasks.Task EndAsync(string path)
+    {
+        if (Volatile.Read(ref _reviewCount) == 0) { return; }
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var key = IdeContextService.FrameKey(path);
+        var review = _reviews.Values.FirstOrDefault(r => string.Equals(IdeContextService.FrameKey(r.Path), key, StringComparison.OrdinalIgnoreCase));
+        if (review is not null) { await review.EndAsync(); }
+    }
+
     /// <summary>A review ended. When its view was closed under it (the pane of a split that was removed, say) and the file is
     /// still listed and open, the file gets another review in what is left of the window, a moment later: by then a tab the
     /// person closed is gone from the frames, and nothing is started for it.</summary>
-    internal void Detached(BaselineDocumentController controller, bool viewClosed)
+    internal void Detached(CopilotReview review, bool viewClosed)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        if (_controllers.TryGetValue(controller.Path, out var held) && ReferenceEquals(held, controller)) { _controllers.Remove(controller.Path); }
+        if (_reviews.TryGetValue(review.Path, out var held) && ReferenceEquals(held, review)) { Untrack(review.Path); }
         if (viewClosed) { ScheduleSync(400); }
+        else { ScheduleSync(); }
     }
 
-    /// <summary>Show a listed file in its own editor with the changes drawn in it, for the pane whose list is
+    /// <summary>Show a listed file in its own editor with Copilot's review drawn in it, for the pane whose list is
     /// <paramref name="set"/>, opening the file if it is not open. False, with nothing done to the editor, when it cannot be
     /// shown there: the caller then opens the comparison window.</summary>
     public async System.Threading.Tasks.Task<bool> ShowAsync(ChangeSet set, string path)
@@ -183,32 +233,41 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         var shown = false;
         try
         {
-            if (AgentsOptions.Chat.ChangesViewMode == ChangesViewMode.Files) { return false; }
+            if (!AgentsOptions.Chat.ReviewInEditor) { return false; }
             EnsureServices();
-            if (_adapters is null) { return false; }
+            if (_adapters is null || CopilotReviews.Shape(_log) is null) { return false; }
             owner = _owners.FirstOrDefault(o => ReferenceEquals(o.Set, set));
             if (owner is null || !set.TryGet(path, out var row)) { return false; }
 
             // The person asked for this file in this chat: it is this chat's to show, until another chat changes it later.
             _claims[path] = new Claim(owner, DateTime.UtcNow);
             _declined.Remove(path);
+            _notYet.Remove(path);
 
-            // The editor's view is made a moment after the file is opened, and has to be loaded before it can be switched. The row
-            // and whoever holds the file are looked at again each time round: a pass of the registry runs in between.
+            // The editor's view is made a moment after the file is opened, and has to be loaded before it can be switched; the
+            // review itself takes a moment to be drawn. The row and whoever holds the file are looked at again each time round:
+            // a pass of the registry runs in between.
             var opened = false;
-            for (var attempt = 0; attempt < 40; attempt++)
+            for (var attempt = 0; attempt < 100; attempt++)
             {
                 if (!set.TryGet(path, out row)) { return false; }
-                if (_controllers.TryGetValue(path, out var held))
+                if (_reviews.TryGetValue(path, out var held))
                 {
                     if (ReferenceEquals(held.Owner, owner) && held.RowSerial == row.Serial)
                     {
-                        held.Reveal();
-                        shown = true;
-                        return true;
+                        if (held.IsActive)
+                        {
+                            held.Reveal();
+                            shown = true;
+                            return true;
+                        }
+                        // Starting, or being taken down: a moment.
+                        await Task.Delay(50);
+                        continue;
                     }
                     // Another chat's review of the file, or this chat's of a row that has gone: the file is this chat's to show now.
-                    held.Exit();
+                    await held.EndAsync();
+                    continue;
                 }
 
                 if (!opened)
@@ -218,8 +277,17 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
                 }
 
                 var frames = IdeContextService.FindDocumentFrames(path);
-                if (frames.Count > 0) { await TryAttachAsync(owner, row, frames); }
-                if (_controllers.ContainsKey(path)) { continue; }
+                if (frames.Count > 0)
+                {
+                    var outcome = await TryAttachAsync(owner, row, frames, fromOpen: true);
+                    // Not ready, and waiting does not make it so within the time a click can wait: the comparison window is the answer.
+                    if (outcome == Attach.NotYet)
+                    {
+                        _log.Info($"[changes] {path} is shown in the comparison window: the editor has not caught up with the file, or it has unsaved changes");
+                        return false;
+                    }
+                }
+                if (_reviews.ContainsKey(path)) { continue; }
                 if (_declined.ContainsKey(path)) { return false; }
                 await Task.Delay(50);
             }
@@ -228,7 +296,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _log.LogException("BaselineDocumentRegistry.ShowAsync", ex);
+            _log.LogException("ReviewRegistry.ShowAsync", ex);
             return false;
         }
         finally
@@ -241,6 +309,18 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
                 ScheduleSync();
             }
         }
+    }
+
+    private void Track(string path, CopilotReview review)
+    {
+        _reviews[path] = review;
+        Volatile.Write(ref _reviewCount, _reviews.Count);
+    }
+
+    private void Untrack(string path)
+    {
+        _reviews.Remove(path);
+        Volatile.Write(ref _reviewCount, _reviews.Count);
     }
 
     /// <summary>Queue a reconciliation on the UI thread, after <paramref name="delayMs"/>. One that is already waiting covers
@@ -256,7 +336,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(alwaysYield: true);
             if (delayMs == 0) { Interlocked.Exchange(ref _syncQueued, 0); }
             await SyncAsync();
-        }).FileAndForget("BaselineDocumentRegistry.Sync");
+        }).FileAndForget("ReviewRegistry.Sync");
     }
 
     // One pass at a time: a pass waits for a file to be read, and one asked for meanwhile makes the running one go round again
@@ -279,7 +359,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     // A request that came in during the pass that failed is still owed its pass.
-                    _log.LogException("BaselineDocumentRegistry.SyncAsync", ex);
+                    _log.LogException("ReviewRegistry.SyncAsync", ex);
                 }
             }
             while (_syncAgain);
@@ -293,8 +373,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
     private async Task SyncOnceAsync()
     {
         EnsureServices();
-        var mode = AgentsOptions.Chat.ChangesViewMode;
-        var form = mode == ChangesViewMode.SideBySide ? DifferenceViewMode.SideBySide : DifferenceViewMode.Inline;
+        var enabled = AgentsOptions.Chat.ReviewInEditor;
 
         var listed = new Dictionary<string, List<Listing>>(StringComparer.OrdinalIgnoreCase);
         foreach (var owner in _owners.ToList())
@@ -312,7 +391,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         {
             var listings = pair.Value;
             var candidates = listings.Select(l => new ReviewOwnership.Candidate<SessionChanges>(l.Owner, l.Row.LastChangedUtc, l.Owner.PaneNumber)).ToList();
-            _controllers.TryGetValue(pair.Key, out var held);
+            _reviews.TryGetValue(pair.Key, out var held);
             _claims.TryGetValue(pair.Key, out var claim);
             var winner = ReviewOwnership.Winner(candidates, held?.Owner, claim?.Owner, claim?.AtUtc ?? default);
             winners[pair.Key] = listings[winner];
@@ -341,51 +420,56 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
                 _declined.Remove(path);
             }
         }
+        foreach (var path in _notYet.Keys.ToList())
+        {
+            if (!listed.ContainsKey(path)) { _notYet.Remove(path); }
+        }
 
         // A review whose row is gone (kept, undone, back to how it was), or has been replaced, or whose pane lost the file to
-        // another, ends: nothing here tells it, the list is the only thing that changed. One that stays takes the form asked for.
-        foreach (var controller in _controllers.Values.ToList())
+        // another, ends: nothing here tells it, the list is the only thing that changed. One that is still starting or already
+        // being taken down is not touched: it is somebody's already.
+        foreach (var review in _reviews.Values.ToList())
         {
-            if (controller.IsReplacingBaseline) { continue; }
-            if (mode == ChangesViewMode.Files
-                || !winners.TryGetValue(controller.Path, out var winner)
-                || !ReferenceEquals(winner.Owner, controller.Owner)
-                || winner.Row.Serial != controller.RowSerial)
+            if (!review.IsActive || review.IsReplacingBaseline) { continue; }
+            if (!enabled
+                || !winners.TryGetValue(review.Path, out var winner)
+                || !ReferenceEquals(winner.Owner, review.Owner)
+                || winner.Row.Serial != review.RowSerial)
             {
-                controller.Exit();
-            }
-            else
-            {
-                controller.ApplyMode(form);
+                await review.EndAsync();
             }
         }
 
-        if (mode == ChangesViewMode.Files || _adapters is null) { return; }
+        if (!enabled || _adapters is null) { return; }
         // Only a file that is open can be shown: one walk over the frames, not one per row.
         var open = IdeContextService.OpenDocumentFrames();
         foreach (var winner in winners.Values.ToList())
         {
-            if (_controllers.ContainsKey(winner.Row.Path)) { continue; }
+            if (_reviews.ContainsKey(winner.Row.Path)) { continue; }
             if (!open.TryGetValue(IdeContextService.FrameKey(winner.Row.Path), out var frames)) { continue; }
-            try { await TryAttachAsync(winner.Owner, winner.Row, frames); }
+            try { await TryAttachAsync(winner.Owner, winner.Row, frames, fromOpen: false); }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _log.LogException("BaselineDocumentRegistry.TryAttach", ex);
+                _log.LogException("ReviewRegistry.TryAttach", ex);
             }
         }
     }
 
-    /// <summary>Show a file in place if it is open and can be. A file that is not open is left for the window event that
+    /// <summary>Review a file in place if it is open and can be. A file that is not open is left for the window event that
     /// comes when it is; one that cannot be shown is declined, once, with the reason in the log.</summary>
-    private async Task TryAttachAsync(SessionChanges owner, FileChange row, IReadOnlyList<IVsWindowFrame> frames)
+    private async System.Threading.Tasks.Task<Attach> TryAttachAsync(SessionChanges owner, FileChange row, IReadOnlyList<IVsWindowFrame> frames, bool fromOpen)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var path = row.Path;
-        if (!_attaching.Add(path)) { return; }
+        if (!_attaching.Add(path)) { return Attach.Waiting; }
         try
         {
-            // Reviewed already: the baseline that window holds is this registry's own, not another extension's.
-            if (_controllers.ContainsKey(path) || IsDeclined(owner, row)) { return; }
+            if (_reviews.ContainsKey(path)) { return Attach.Reviewing; }
+            if (IsDeclined(owner, row)) { return Attach.Declined; }
+
+            // Said once, by the probe: without Copilot there is nothing to draw the review with.
+            var shape = CopilotReviews.Shape(_log);
+            if (shape is null) { return Attach.Declined; }
 
             // The frame that has the code editor: a file in two windows, or a designer with its code view, has more than one.
             Parts parts = null;
@@ -413,13 +497,14 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             if (parts is null)
             {
                 // No reason is "not yet": the view of a document that has only just been opened does not exist for a moment.
-                if (why is not null) { Decline(owner, row, why); }
-                return;
+                if (why is null) { return Attach.Waiting; }
+                Decline(owner, row, why);
+                return Attach.Declined;
             }
             if (!parts.View.VisualElement.IsLoaded)
             {
                 WaitForLoad(parts.View);
-                return;
+                return Attach.Waiting;
             }
 
             ReviewBaseline baseline = null;
@@ -428,29 +513,62 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             if (problem is not null)
             {
                 Decline(owner, row, problem);
-                return;
+                return Attach.Declined;
+            }
+            // A file Claude created has no earlier text: Copilot's review draws a difference, and its Undo all would leave an
+            // empty file where the list's Undo deletes it. The list's own Keep and Undo take such a file whole.
+            if (baseline.IsEmpty)
+            {
+                Decline(owner, row, "the file is new, so there is no earlier text to show a difference against (the list's Keep and Undo take it whole)");
+                return Attach.Declined;
             }
 
             // Things may have moved while the baseline was read.
-            if (_controllers.ContainsKey(path) || !_owners.Contains(owner) || !IdeContextService.FindDocumentFrames(path).Contains(frame)) { return; }
-            if (!owner.Set.TryGet(path, out var now) || now.Serial != row.Serial) { return; }
+            if (_reviews.ContainsKey(path) || !_owners.Contains(owner) || !IdeContextService.FindDocumentFrames(path).Contains(frame)) { return Attach.Waiting; }
+            if (!owner.Set.TryGet(path, out var now) || now.Serial != row.Serial) { return Attach.Waiting; }
 
-            var mode = AgentsOptions.Chat.ChangesViewMode == ChangesViewMode.SideBySide ? DifferenceViewMode.SideBySide : DifferenceViewMode.Inline;
-            var controller = new BaselineDocumentController(this, owner, now, frame, parts.View, parts.Document, parts.Window, parts.Model, baseline);
-            if (!controller.Enter(mode))
+            var review = new CopilotReview(this, owner, now, frame, parts.View, parts.Document, parts.Window, baseline, shape);
+            Track(path, review);
+            var (result, reason2) = await review.StartAsync();
+            // Taken down by its own end while it started (the view was closed): the registry has been told already.
+            if (_reviews.TryGetValue(path, out var held) && ReferenceEquals(held, review) && result != ReviewStart.Started) { Untrack(path); }
+
+            switch (result)
             {
-                Decline(owner, now, "the editor would not switch to a difference view");
-                return;
+                case ReviewStart.Started:
+                    _declined.Remove(path);
+                    _notYet.Remove(path);
+                    // The row may have gone while it started: a pass ends what has lost its row.
+                    ScheduleSync();
+                    return Attach.Reviewing;
+
+                case ReviewStart.NotYet:
+                    NotYet(path, reason2, fromOpen);
+                    return Attach.NotYet;
+
+                default:
+                    if (reason2 is not null) { Decline(owner, now, reason2); }
+                    return reason2 is not null ? Attach.Declined : Attach.Waiting;
             }
-            // Ended already, by an event of the window during the switch: nothing to keep.
-            if (controller.Exited) { return; }
-            _controllers[path] = controller;
-            _declined.Remove(path);
         }
         finally
         {
             _attaching.Remove(path);
         }
+    }
+
+    // The editor and the disk do not agree yet, or the document has changes of the person's that are not saved. Tried again a few
+    // times; after that the events of the editor do it (a save, a reload).
+    private void NotYet(string path, string why, bool fromOpen)
+    {
+        _notYet.TryGetValue(path, out var misses);
+        _notYet[path] = ++misses;
+        _log.Debug(() => $"[changes] {path} is not ready to be reviewed yet ({why}), try {misses}");
+        if (misses == MaxNotYet && !fromOpen)
+        {
+            _log.Info($"[changes] {path} is not reviewed in the editor for now: {why}. It is tried again when the editor saves or reloads it");
+        }
+        if (misses < MaxNotYet) { ScheduleSync(1000); }
     }
 
     /// <summary>What the frame's editor is made of, or null with <paramref name="why"/>. <paramref name="pending"/> says the
@@ -481,6 +599,12 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             why = "it is read-only";
             return null;
         }
+        // Copilot's review wires itself to a view of this kind: every document of this Visual Studio's editor has one.
+        if (view.TextViewModel is not IDifferenceTextViewModel)
+        {
+            why = "its view is not one the editor can show a difference in";
+            return null;
+        }
 
         view.Properties.TryGetProperty(typeof(IVsCodeWindow), out IVsCodeWindow codeWindow);
         if (codeWindow is null && frame.GetProperty((int)__VSFPROPID.VSFPROPID_DocView, out var docView) == VSConstants.S_OK)
@@ -499,15 +623,10 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         }
         if (window.Baseline is not null)
         {
-            why = "another extension is already showing a difference in it (Copilot, or a Git diff)";
+            why = "a difference is already shown in it (by Copilot's own agent, or a Git diff)";
             return null;
         }
-        if (!HunkLocator.TryGetModel(view, out var model))
-        {
-            why = "its view is not a difference view";
-            return null;
-        }
-        return new Parts { View = view, Document = document, Window = window, Model = model };
+        return new Parts { View = view, Document = document, Window = window };
     }
 
     private bool IsDeclined(SessionChanges owner, FileChange row)
@@ -519,7 +638,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
     {
         if (IsDeclined(owner, row)) { return; }
         _declined[row.Path] = new Declined { Owner = owner, Serial = row.Serial, StampLength = row.StampLength, StampWriteUtc = row.StampWriteUtc };
-        _log.Info($"[changes] {row.Path} is not shown in place: {why}");
+        _log.Info($"[changes] {row.Path} is not reviewed in the editor: {why}");
     }
 
     // The view of a document that has only just opened is not loaded yet, and the editor will not take a baseline until it is.
@@ -560,38 +679,35 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             if (_adapters is null || _documents is null)
             {
                 _adapters = null;
-                _log.Warn("[changes] the editor services are not available: files are not shown in place");
+                _log.Warn("[changes] the editor services are not available: files are not reviewed in the editor");
                 return;
             }
             if (Package.GetGlobalService(typeof(SVsRunningDocumentTable)) is IVsRunningDocumentTable rdt)
             {
+                _rdt = rdt;
                 rdt.AdviseRunningDocTableEvents(this, out _rdtCookie);
             }
-            // The form the person picked applies at once, not at the next change of a list.
+            // The setting applies at once, not at the next change of a list.
             AgentsOptions.Applied += () => ScheduleSync();
         }
         catch (Exception ex)
         {
             _adapters = null;
-            _log.LogException("BaselineDocumentRegistry.EnsureServices", ex);
+            _log.LogException("ReviewRegistry.EnsureServices", ex);
         }
     }
 
-    // A tab that comes back to the front has lost what the review drew over it: the adorner layer takes an element's adorners out of
-    // itself when the element leaves the tree. The buttons and the panel are drawn again. Not at once: the event comes before the
-    // content is put back, so the first of these may find the view still hidden.
-    private void RefreshLater(BaselineDocumentController controller)
+    private string DocumentPath(uint docCookie)
     {
-        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
-        {
-            foreach (var delay in new[] { 0, 250, 1000 })
-            {
-                if (delay > 0) { await Task.Delay(delay); }
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(alwaysYield: true);
-                controller.RefreshAdornments();
-            }
-        }).FileAndForget("BaselineDocumentRegistry.Refresh");
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (_rdt is null) { return null; }
+        _rdt.GetDocumentInfo(docCookie, out _, out _, out _, out var moniker, out _, out _, out var docData);
+        // The table hands the document's data over with a reference of its own.
+        if (docData != IntPtr.Zero) { Marshal.Release(docData); }
+        return moniker;
     }
+
+    private bool IsListed(string path) => path is not null && _owners.Any(o => o.Set.TryGet(path, out _));
 
     // A window is about to be shown: if it is a listed file, it is a candidate. The view and its code window may not exist
     // yet on a first show, so the pass is repeated while they come up.
@@ -600,24 +716,66 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         try
         {
             var path = pFrame is null ? null : IdeContextService.DocumentMoniker(pFrame);
-            if (path is not null && _owners.Any(o => o.Set.TryGet(path, out _)))
+            if (IsListed(path))
             {
+                _notYet.Remove(path);
                 ScheduleSync();
                 ScheduleSync(400);
                 ScheduleSync(1500);
             }
-            if (path is not null && _controllers.TryGetValue(path, out var shown)) { RefreshLater(shown); }
         }
         catch (Exception ex)
         {
-            _log.LogException("BaselineDocumentRegistry.OnBeforeDocumentWindowShow", ex);
+            _log.LogException("ReviewRegistry.OnBeforeDocumentWindowShow", ex);
+        }
+        return VSConstants.S_OK;
+    }
+
+    // A document with changes of the person's that were not saved, and so was not reviewed, is saved: it is what the disk has now,
+    // and the list has not measured it. The save is what the review of a file that is on waits for as well, in its own handler.
+    int IVsRunningDocTableEvents.OnAfterSave(uint docCookie)
+    {
+        try
+        {
+            var path = DocumentPath(docCookie);
+            if (IsListed(path) && !_reviews.ContainsKey(path))
+            {
+                _notYet.Remove(path);
+                foreach (var owner in _owners.ToList())
+                {
+                    if (owner.Set.TryGet(path, out _)) { owner.RemeasureAsync(path).FileAndForget("ReviewRegistry.Remeasure"); }
+                }
+                ScheduleSync(200);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("ReviewRegistry.OnAfterSave", ex);
+        }
+        return VSConstants.S_OK;
+    }
+
+    // The editor has reloaded a file from the disk: for a file that was waiting for that, it is now what the disk holds.
+    int IVsRunningDocTableEvents.OnAfterAttributeChange(uint docCookie, uint grfAttribs)
+    {
+        try
+        {
+            if ((grfAttribs & (uint)__VSRDTATTRIB.RDTA_DocDataReloaded) == 0) { return VSConstants.S_OK; }
+            var path = DocumentPath(docCookie);
+            if (IsListed(path) && !_reviews.ContainsKey(path))
+            {
+                _notYet.Remove(path);
+                ScheduleSync(200);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("ReviewRegistry.OnAfterAttributeChange", ex);
         }
         return VSConstants.S_OK;
     }
 
     int IVsRunningDocTableEvents.OnAfterFirstDocumentLock(uint docCookie, uint dwRDTLockType, uint dwReadLocksRemaining, uint dwEditLocksRemaining) => VSConstants.S_OK;
     int IVsRunningDocTableEvents.OnBeforeLastDocumentUnlock(uint docCookie, uint dwRDTLockType, uint dwReadLocksRemaining, uint dwEditLocksRemaining) => VSConstants.S_OK;
-    int IVsRunningDocTableEvents.OnAfterSave(uint docCookie) => VSConstants.S_OK;
-    int IVsRunningDocTableEvents.OnAfterAttributeChange(uint docCookie, uint grfAttribs) => VSConstants.S_OK;
     int IVsRunningDocTableEvents.OnAfterDocumentWindowHide(uint docCookie, IVsWindowFrame pFrame) => VSConstants.S_OK;
 }
