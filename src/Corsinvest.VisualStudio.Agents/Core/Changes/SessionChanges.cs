@@ -123,8 +123,8 @@ internal sealed partial class SessionChanges : IDisposable
     /// the editor turns the baseline into, so that it stays kept for the counts, for Open and for Undo. The copy the row had
     /// goes, if it was ours. Only the row <paramref name="serial"/> names: a row that has been replaced since (kept, then
     /// changed again) is not the one the editor was showing, and its fresh baseline is not to be overwritten. Calls for one file
-    /// go one at a time, so the last one asked is the last one done. Returns the path of the new copy, or null when the row is
-    /// gone, is another, or the copy could not be written (the row then keeps the baseline it had).</summary>
+    /// go one at a time. Returns the path of the new copy, or null when the row is gone, is another, or the copy could not be
+    /// written (the row then keeps the baseline it had).</summary>
     public Task<string> ReplaceBaselineAsync(string path, long serial, byte[] bytes) => Task.Run(async () =>
     {
         var gate = _locks.GetOrAdd(path, _ => new SemaphoreSlim(1, 1));
@@ -133,11 +133,17 @@ internal sealed partial class SessionChanges : IDisposable
         try
         {
             if (_disposed || !_set.TryGet(path, out var row) || row.Serial != serial) { return null; }
-            var target = _baselines.TargetFor(_set.SessionId, path);
-            try { File.WriteAllBytes(target, bytes); }
+            string target = null;
+            try
+            {
+                target = _baselines.TargetFor(_set.SessionId, path);
+                File.WriteAllBytes(target, bytes);
+            }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 _log.Warn($"[changes] could not write the new baseline of {path}: {ex.Message}");
+                // Half a copy is of no use to anybody, and nothing else holds it.
+                if (target is not null) { _baselines.Release(BaselineRef.Own(target)); }
                 return null;
             }
 
