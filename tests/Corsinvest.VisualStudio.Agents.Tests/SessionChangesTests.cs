@@ -530,6 +530,33 @@ public sealed class SessionChangesTests : IDisposable
     }
 
     [Fact]
+    public async Task A_file_whose_changes_were_all_kept_one_by_one_in_the_editor_stays_kept_when_the_session_is_resumed()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1));
+        fx.WriteBackup("a@v1", "a\nb\n");
+        fx.WriteWork("a.txt", "a\nB\nc\n");
+
+        using (var first = Create(fx))
+        {
+            first.BeginSession(fx.SessionId, resume: true);
+            Assert.True(SpinWait.SpinUntil(() => first.Set.Count == 1, TimeSpan.FromSeconds(10)));
+            var row = Assert.Single(first.Set.Snapshot());
+
+            // Each change kept in the editor in turn: the baseline is replaced until it is the file, and the row leaves the list
+            // without Keep having been pressed.
+            Assert.NotNull(await first.ReplaceBaselineAsync(row.Path, row.Serial, Encoding.UTF8.GetBytes("a\nB\n")));
+            Assert.NotNull(await first.ReplaceBaselineAsync(row.Path, row.Serial, Encoding.UTF8.GetBytes("a\nB\nc\n")));
+            Assert.Empty(first.Set.Snapshot());
+        }
+
+        // The next run compares the file with the CLI's copy, which it differs from: it is not listed again, because it was kept.
+        using var second = Create(fx);
+        second.BeginSession(fx.SessionId, resume: true);
+        await Task.Delay(500);
+        Assert.Empty(second.Set.Snapshot());
+    }
+
+    [Fact]
     public async Task A_file_kept_before_the_restart_is_copied_before_its_next_edit_and_not_compared_with_the_clis_old_copy()
     {
         using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1));
