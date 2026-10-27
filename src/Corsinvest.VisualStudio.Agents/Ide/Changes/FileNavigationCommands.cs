@@ -34,12 +34,20 @@ internal static class FileNavigationCommands
         commands.AddCommand(command);
     }
 
+    private static bool? _lastVisible;
+
     private static void Query(OleMenuCommand command)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         var review = ReviewRegistry.Instance.ReviewForActiveDocument();
         command.Visible = review is not null && review.FilePosition().Count > 1;
         command.Enabled = command.Visible;
+        if (_lastVisible != command.Visible)
+        {
+            _lastVisible = command.Visible;
+            OutputWindowLogger.Global.Debug(() => $"[changes] the previous and next file buttons are {(command.Visible ? "shown" : "hidden")} "
+                                                  + $"(a review of the active document: {review is not null}, files listed: {review?.FilePosition().Count ?? 0})");
+        }
     }
 
     private static void Execute(int delta)

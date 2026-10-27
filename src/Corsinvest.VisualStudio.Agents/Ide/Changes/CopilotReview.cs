@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -200,8 +201,12 @@ internal sealed class CopilotReview
             }
 
             _document.FileActionOccurred += OnFileAction;
+            _document.TextBuffer.Changed += OnDocumentChanged;
             _phase = Phase.Active;
             _log.Info($"[changes] {Path} is reviewed in the editor, with Copilot's own Keep and Undo");
+            _log.Debug(() => $"[changes] {Path}: the document has {_document.TextBuffer.CurrentSnapshot.Length} characters, the baseline "
+                             + $"{_lastBaselineText.Length}, Copilot's copy {((ITextSnapshot)_shape.BaselineSnapshot(_state)).Length}, the left side {LeftText()?.Length.ToString() ?? "none"}; "
+                             + $"line ending {(BaselineText.DominantLineEnding(_lastBaselineText) == BaselineText.Crlf ? "CRLF" : "LF or none")}");
             if (_endWhenStarted)
             {
                 await EndCoreAsync(viewClosed: false);
@@ -395,6 +400,7 @@ internal sealed class CopilotReview
         _phase = Phase.Ended;
         View.Closed -= OnViewClosed;
         _document.FileActionOccurred -= OnFileAction;
+        _document.TextBuffer.Changed -= OnDocumentChanged;
         // Ours first: the dismissal below is answered by an event that is not news to anybody here.
         UnhookCopilot();
         try { await DismissAsync(viewClosed); }
@@ -476,6 +482,7 @@ internal sealed class CopilotReview
 
     private Task OnDifferenceChanged(int changes)
     {
+        _log.Debug(() => $"[changes] {Path}: Copilot counts {changes} change(s)");
         // No hunk left: whether nothing is left to review is for the file to say, not for the editor's picture of it. One that
         // equals its baseline byte for byte leaves the list, and the registry then ends the review.
         if (_phase == Phase.Active && changes == 0) { RequestMeasure(); }
@@ -504,7 +511,12 @@ internal sealed class CopilotReview
                 _replacePending = false;
                 var text = ((ITextSnapshot)_shape.BaselineSnapshot(_state)).GetText();
                 // A hunk undone raises it too, and the baseline is what it was.
-                if (string.Equals(text, _lastBaselineText, StringComparison.Ordinal)) { continue; }
+                if (string.Equals(text, _lastBaselineText, StringComparison.Ordinal))
+                {
+                    _log.Debug(() => $"[changes] {Path}: a change was undone in the editor, the baseline is as it was ({text.Length} characters)");
+                    continue;
+                }
+                _log.Debug(() => $"[changes] {Path}: a change was kept in the editor, the baseline went from {_lastBaselineText.Length} to {text.Length} characters");
                 _lastBaselineText = text;
 
                 var bytes = BaselineText.Encode(BaselineText.WithLineEnding(text, _baseline.LineEnding), _baseline.Mark);
@@ -541,6 +553,7 @@ internal sealed class CopilotReview
         _phase = Phase.Ended;
         View.Closed -= OnViewClosed;
         _document.FileActionOccurred -= OnFileAction;
+        _document.TextBuffer.Changed -= OnDocumentChanged;
         UnhookCopilot();
         // Copilot has ended it itself: nobody has to wait for this review any more, and Keep below asks for its end.
         _over.TrySetResult(true);
@@ -557,7 +570,8 @@ internal sealed class CopilotReview
 
             var current = _document.TextBuffer.CurrentSnapshot.GetText();
             var undone = string.Equals(current, _lastBaselineText, StringComparison.Ordinal);
-            _log.Info($"[changes] Copilot ended the review of {Path}: {(undone ? "undone, the document is the baseline" : "kept as it is")}");
+            _log.Info($"[changes] Copilot ended the review of {Path}: {(undone ? "undone, the document is the baseline" : "kept as it is")} "
+                      + $"(the document has {current.Length} characters, the baseline {_lastBaselineText.Length}, the file on disk {SafeDiskLength()})");
 
             // A file Copilot has left empty was not accepted by anybody: its earlier text is what the row's Undo puts back, so the row
             // stays, and is not forgotten as a Keep would.
@@ -586,7 +600,47 @@ internal sealed class CopilotReview
     // the list.
     private void OnFileAction(object sender, TextDocumentFileActionEventArgs e)
     {
-        if ((e.FileActionType & FileActionTypes.ContentSavedToDisk) != 0) { RequestMeasure(); }
+        if ((e.FileActionType & FileActionTypes.ContentSavedToDisk) == 0) { return; }
+        _log.Debug(() => $"[changes] {Path}: saved, the document has {_document.TextBuffer.CurrentSnapshot.Length} characters");
+        RequestMeasure();
+    }
+
+    // Every change to the document while the review is on is written down, with its size: whatever Copilot's buttons did to the file
+    // is then in the log, not a guess. A document that comes out empty is a loss nobody asked for (Undo writes the baseline, which
+    // is not empty): what it held is kept first, so that it can be got back, and said.
+    private void OnDocumentChanged(object sender, TextContentChangedEventArgs e)
+    {
+        var before = e.Before.Length;
+        var after = e.After.Length;
+        _log.Debug(() => $"[changes] {Path}: the document changed, {before} to {after} characters, {e.Changes.Count} edit(s)");
+        if (after == 0 && before > 0) { KeepRecoveryCopy(e.Before); }
+    }
+
+    private void KeepRecoveryCopy(ITextSnapshot before)
+    {
+        try
+        {
+            Directory.CreateDirectory(AppPaths.RecoveryFolder);
+            var file = System.IO.Path.Combine(AppPaths.RecoveryFolder, $"{System.IO.Path.GetFileName(Path)}.{DateTime.Now:yyyyMMdd-HHmmss-fff}.txt");
+            File.WriteAllText(file, before.GetText(), new UTF8Encoding(false));
+            foreach (var old in new DirectoryInfo(AppPaths.RecoveryFolder).GetFiles().OrderByDescending(f => f.LastWriteTimeUtc).Skip(20))
+            {
+                try { old.Delete(); }
+                catch (IOException) { /* an old copy that is in use stays */ }
+            }
+            _log.Warn($"[changes] {Path} was emptied while its review was on: what it held before ({before.Length} characters) is kept in {file}");
+            Say($"{System.IO.Path.GetFileName(Path)} was emptied: its text before is kept in {file}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Warn($"[changes] {Path} was emptied while its review was on, and what it held could not be kept: {ex.Message}");
+        }
+    }
+
+    private string SafeDiskLength()
+    {
+        try { return new FileInfo(Path).Length.ToString(); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return "unknown"; }
     }
 
     // Measured a moment later, off Copilot's own dispatch: tearing the review down from inside its notification would leave
