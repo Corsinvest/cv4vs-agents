@@ -52,6 +52,7 @@ picker-ignore.gitignore             extra `@` picker ignore rules, on top of the
 WebView2/                           WebView2 user-data (chat UI cache/storage)
 icons/                              file-type icons rasterised from VS KnownMonikers
 baselines/<session-id>/             copies of files taken just before Claude changes them, for the Changes list
+recovery/                           the text of a file that was emptied while it was reviewed in the editor (the newest twenty)
 snapshots/<id>/                     one private git store per open chat: the working tree before each shell command
 data/projects/<name>-<hash>/
     project.json                    the folder this data belongs to ({"path": "…"})
