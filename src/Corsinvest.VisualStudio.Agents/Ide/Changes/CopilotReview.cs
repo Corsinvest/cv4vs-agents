@@ -8,6 +8,7 @@
 #pragma warning disable CS0618
 
 using Corsinvest.VisualStudio.Agents.Core.Changes;
+using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Editor;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
@@ -19,8 +20,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
 using Task = System.Threading.Tasks.Task;
 
 namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
@@ -86,6 +91,7 @@ internal sealed class CopilotReview
 
     private Phase _phase = Phase.Starting;
     private IDifferenceBuffer _differences;
+    private string _tempPath;
     private object _state;
     private string _lastBaselineText;
     private bool _endWhenStarted;
@@ -159,12 +165,18 @@ internal sealed class CopilotReview
             _state = await _shape.GetOrCreateAsync(Path, id);
             if (_state is null) { return Finish(ReviewStart.Declined, "GitHub Copilot made no review state for it"); }
             Subscribe();
+            _tempPath = _shape.BaselineFilePath(_state);
+            // A copy of the baseline that an earlier review of this file left open would be shown in place of the file written below.
+            CloseBaselineDocument();
 
             var inert = ((ITextSnapshot)_shape.BaselineSnapshot(_state)).TextBuffer;
             Replace(inert, _lastBaselineText);
             // With a byte-order mark, as Copilot writes it itself: the code window reads this file back as UTF-8 whatever it holds.
-            File.WriteAllText(_shape.BaselineFilePath(_state), _lastBaselineText, new UTF8Encoding(true));
+            File.WriteAllText(_tempPath, _lastBaselineText, new UTF8Encoding(true));
 
+            // Before Copilot gives the window its baseline: the first difference it works out is then the exact one, and nothing is
+            // redrawn after it (the inline view lost its deleted lines when the option came a moment after the first drawing).
+            CompareLinesExactly();
             _shape.UpdateDiffState(_state, _shape.NewDiffState(0, 0, 1));
             await _shape.MarkAsync(View, id);
             await ObserveAsync();
@@ -175,6 +187,16 @@ internal sealed class CopilotReview
             {
                 await AbandonAsync();
                 return Finish(ReviewStart.Declined, "GitHub Copilot found no difference to show");
+            }
+
+            // What Copilot's buttons act on is the left side of the difference: its spans are applied to Copilot's own copy of the
+            // baseline. A left side that is not that copy (a stale document) would have Undo write the wrong text, or none, over
+            // the file, so a review that is not drawn against the baseline it made is not left on the screen.
+            if (!await LeftSideIsOursAsync())
+            {
+                _log.Warn($"[changes] the left side of Copilot's difference of {Path} is not the baseline this review made ({LeftText()?.Length.ToString() ?? "none"} characters, not {_lastBaselineText.Length}): the review is not shown");
+                await AbandonAsync();
+                return Finish(ReviewStart.Declined, "the left side of the difference is not the baseline this review made");
             }
 
             _document.FileActionOccurred += OnFileAction;
@@ -231,6 +253,81 @@ internal sealed class CopilotReview
             if (_window.Baseline is not null && DifferenceCount() > 0) { break; }
         }
         _log.Debug(() => $"[changes] Copilot drew the difference of {Path} after {clock.ElapsedMilliseconds} ms");
+    }
+
+    private string LeftText()
+    {
+        try { return _window.DifferenceBuffer?.LeftBuffer?.CurrentSnapshot?.GetText(); }
+        catch (Exception ex) when (ex is InvalidOperationException or COMException)
+        {
+            _log.Debug(() => $"[changes] the left side of the difference of {Path} cannot be read yet: {ex.Message}");
+            return null;
+        }
+    }
+
+    // The editor loads the left side from the file a moment after it is given: waited for, not assumed.
+    private async System.Threading.Tasks.Task<bool> LeftSideIsOursAsync()
+    {
+        var clock = Stopwatch.StartNew();
+        while (true)
+        {
+            if (string.Equals(LeftText(), _lastBaselineText, StringComparison.Ordinal)) { return true; }
+            if (clock.Elapsed > TimeSpan.FromMilliseconds(1500)) { return false; }
+            await Task.Delay(50);
+        }
+    }
+
+    // Copilot opens its temp copy of the baseline in the running document table with an edit lock, and when a review ends it forgets
+    // that lock without letting go of it (its frame handler's ReleaseFrame drops only its own record of the cookie). The document
+    // stays open for good with the text that review had, and the next review of a file whose temp copy is named the same is handed
+    // that document and not the file: the left side of the difference is another review's baseline, and the buttons act on spans of
+    // it. It is closed here, by letting go of the locks that are left, before a review starts and after it ends. Not while a window
+    // shows it, nor while the difference still has it as its baseline.
+    private void CloseBaselineDocument()
+    {
+        if (string.IsNullOrEmpty(_tempPath)) { return; }
+        try
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (_window.Baseline is not null || IdeContextService.FindDocumentFrames(_tempPath).Count > 0) { return; }
+            if (Package.GetGlobalService(typeof(SVsRunningDocumentTable)) is not IVsRunningDocumentTable rdt) { return; }
+            for (var i = 0; i < 8; i++)
+            {
+                var found = rdt.FindAndLockDocument((uint)_VSRDTFLAGS.RDT_NoLock, _tempPath, out _, out _, out var data, out var cookie);
+                if (data != IntPtr.Zero) { Marshal.Release(data); }
+                if (ErrorHandler.Failed(found) || cookie == VSConstants.VSCOOKIE_NIL) { return; }
+
+                rdt.GetDocumentInfo(cookie, out _, out _, out var editLocks, out _, out _, out _, out var info);
+                if (info != IntPtr.Zero) { Marshal.Release(info); }
+                if (editLocks == 0) { return; }
+                ErrorHandler.ThrowOnFailure(rdt.UnlockDocument((uint)_VSRDTFLAGS.RDT_EditLock, cookie));
+                _log.Debug(() => $"[changes] let go of an edit lock Copilot left on its baseline copy {_tempPath}");
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _log.Warn($"[changes] could not close Copilot's copy of the baseline of {Path}: {ex.Message}");
+        }
+    }
+
+    // Copilot closes the second view its review is drawn in when the review ends, and keyboard focus goes with it when the person had
+    // just pressed a button of the panel: the editor's commands (undo, redo) then reach no view until focus lands in one again, which
+    // is what switching to another window and back does. Put in the document's own view, but only when it is nowhere: focus that is
+    // in the chat, or in another window, is not taken.
+    private void RestoreEditorFocus()
+    {
+        try
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            if (View.IsClosed || !View.VisualElement.IsVisible) { return; }
+            var focused = Keyboard.FocusedElement as DependencyObject;
+            var lost = focused is null || (focused is Visual visual && PresentationSource.FromVisual(visual) is null);
+            if (lost) { Keyboard.Focus(View.VisualElement); }
+        }
+        catch (Exception ex)
+        {
+            _log.Debug(() => $"[changes] could not give the editor of {Path} its focus back: {ex.Message}");
+        }
     }
 
     // By default the editor's difference ignores white space at the ends of a line, and a line break is white space to it: a change that
@@ -300,7 +397,6 @@ internal sealed class CopilotReview
         _document.FileActionOccurred -= OnFileAction;
         // Ours first: the dismissal below is answered by an event that is not news to anybody here.
         UnhookCopilot();
-        GiveBackDifferenceOptions();
         try { await DismissAsync(viewClosed); }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -309,6 +405,10 @@ internal sealed class CopilotReview
         finally
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+            // After Copilot's own clean-up: with the difference still up, they would redraw it.
+            GiveBackDifferenceOptions();
+            CloseBaselineDocument();
+            if (!viewClosed) { RestoreEditorFocus(); }
             _registry.Detached(this, viewClosed);
             _over.TrySetResult(true);
         }
@@ -330,8 +430,9 @@ internal sealed class CopilotReview
         try
         {
             UnhookCopilot();
-            GiveBackDifferenceOptions();
             if (_state is not null) { await DismissAsync(viewClosed: false); }
+            GiveBackDifferenceOptions();
+            CloseBaselineDocument();
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -441,15 +542,32 @@ internal sealed class CopilotReview
         View.Closed -= OnViewClosed;
         _document.FileActionOccurred -= OnFileAction;
         UnhookCopilot();
-        GiveBackDifferenceOptions();
         // Copilot has ended it itself: nobody has to wait for this review any more, and Keep below asks for its end.
         _over.TrySetResult(true);
         try
         {
             await Task.Delay(SettleTime);
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var undone = string.Equals(_document.TextBuffer.CurrentSnapshot.GetText(), _lastBaselineText, StringComparison.Ordinal);
+            // Its clean-up hides the difference and then lets go of the state, which deletes the temp copy: after that nothing of this
+            // review is on the screen, and what it left is let go of.
+            await WaitForAsync(() => !ReferenceEquals(_shape.TryGetState(Path), _state), 1500);
+            GiveBackDifferenceOptions();
+            CloseBaselineDocument();
+            RestoreEditorFocus();
+
+            var current = _document.TextBuffer.CurrentSnapshot.GetText();
+            var undone = string.Equals(current, _lastBaselineText, StringComparison.Ordinal);
             _log.Info($"[changes] Copilot ended the review of {Path}: {(undone ? "undone, the document is the baseline" : "kept as it is")}");
+
+            // A file Copilot has left empty was not accepted by anybody: its earlier text is what the row's Undo puts back, so the row
+            // stays, and is not forgotten as a Keep would.
+            if (current.Length == 0 && _lastBaselineText.Length > 0)
+            {
+                _log.Warn($"[changes] {Path} is empty after Copilot ended its review: it is left in the list, where Undo puts the earlier text back");
+                Say("This file is empty now. Undo in the Changes list puts back how it was before Claude's change.");
+                await Owner.RemeasureAsync(Path);
+                return;
+            }
             if (undone) { await Owner.RemeasureAsync(Path); }
             else { await Owner.Actions.KeepAsync(Path); }
         }
