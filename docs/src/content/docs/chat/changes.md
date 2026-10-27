@@ -63,7 +63,13 @@ switched when it appears.
 - When the last hunk has been kept or undone, the file leaves the list if it is now what it was before, byte
   for byte. A difference that is only in how the lines end, or an edit you have not saved yet, leaves it
   listed, for Keep and Undo in the panel.
-- **Keep all** and **Undo all**, in the window's menu, are the list's Keep and Undo of the whole file.
+- **Keep all** and **Undo all**, in the panel below and in the window's menu, are the list's Keep and Undo of
+  the whole file.
+
+A small floating panel at the bottom of the window has the way round the review: the previous and next change
+(*Change 2 of 5*, where the caret is among them), **Keep all** and **Undo all** for the file, and, when more
+than one file is listed, the previous and next file of the list (*File 1 of 3*), which opens that file the way
+Open does. It stays while the window is on screen, and goes with the review.
 
 The same commands are in the code window's context menu, which lists them only while the window shows a
 review. No key is assigned to them: the obvious ones belong to Visual Studio, or are AltGr and a letter on some
