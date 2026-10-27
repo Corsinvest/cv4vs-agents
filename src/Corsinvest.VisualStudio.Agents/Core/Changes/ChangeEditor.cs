@@ -42,10 +42,15 @@ internal interface IChangeEditor
     Task OpenFileAsync(string path);
 
     /// <summary>Open the file in its own editor with the changes drawn in it, against the baseline of its row in
-    /// <paramref name="set"/>. False when that cannot be done here (the setting says Files, this Visual Studio's
-    /// editor cannot show a difference, the file is not plain text, another chat is reviewing it): the caller
-    /// falls back to the comparison window.</summary>
+    /// <paramref name="set"/>: GitHub Copilot's review, with its Keep and Undo on each hunk. False when that cannot be done
+    /// here (the setting is off, Copilot is not in this Visual Studio, the file is not plain text, another chat or Copilot is
+    /// reviewing it): the caller falls back to the comparison window.</summary>
     Task<bool> ShowInPlaceAsync(ChangeSet set, string path);
+
+    /// <summary>End the review of the file in its editor, if there is one: the diff goes and Copilot lets go of its copy of the
+    /// baseline, with nothing done to the document. Asked before Keep and Undo act on the file, which would otherwise be
+    /// rewritten under a review that is still drawing against it.</summary>
+    Task EndReviewAsync(string path);
 }
 
 /// <summary>The real editor: Visual Studio, through <see cref="IdeContextService"/>.</summary>
@@ -69,5 +74,8 @@ internal sealed class IdeChangeEditor : IChangeEditor
         => await IdeContextService.Instance.OpenFileAsync(path, 0, 0, true);
 
     public Task<bool> ShowInPlaceAsync(ChangeSet set, string path)
-        => Ide.Changes.BaselineDocumentRegistry.Instance.ShowAsync(set, path);
+        => Ide.Changes.ReviewRegistry.Instance.ShowAsync(set, path);
+
+    public Task EndReviewAsync(string path)
+        => Ide.Changes.ReviewRegistry.Instance.EndAsync(path);
 }
