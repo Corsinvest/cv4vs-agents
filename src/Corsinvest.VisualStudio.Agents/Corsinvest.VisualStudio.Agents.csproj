@@ -158,11 +158,10 @@
     <Compile Include="Ide\IdeNavigationService.Search.cs" />
     <Compile Include="Ide\IdeDiffViewer.cs" />
     <Compile Include="Ide\IdeDiffViewer.Listeners.cs" />
-    <Compile Include="Ide\Changes\HunkLocator.cs" />
-    <Compile Include="Ide\Changes\HunkAdornments.cs" />
-    <Compile Include="Ide\Changes\BaselineDocumentController.cs" />
-    <Compile Include="Ide\Changes\BaselineDocumentRegistry.cs" />
-    <Compile Include="Ide\Changes\HunkCommands.cs" />
+    <Compile Include="Ide\Changes\CopilotReviews.cs" />
+    <Compile Include="Ide\Changes\CopilotReview.cs" />
+    <Compile Include="Ide\Changes\ReviewRegistry.cs" />
+    <Compile Include="Ide\Changes\FileNavigationCommands.cs" />
     <Compile Include="Mcp\McpServerHost.cs" />
     <Compile Include="Mcp\McpServerHost.LockFile.cs" />
     <Compile Include="Mcp\McpTool.cs" />
@@ -289,7 +288,7 @@
     <Compile Include="Core\Changes\GitSnapshot.cs" />
     <Compile Include="Core\Changes\RepoWatch.cs" />
     <Compile Include="Core\Changes\BaselineText.cs" />
-    <Compile Include="Core\Changes\HunkNavigation.cs" />
+    <Compile Include="Core\Changes\CopilotReviewShape.cs" />
     <Compile Include="Core\Changes\ReviewOwnership.cs" />
     <Compile Include="Core\Changes\BaselineReview.cs" />
     <Compile Include="Core\Client\ClaudeInstall.cs" />
