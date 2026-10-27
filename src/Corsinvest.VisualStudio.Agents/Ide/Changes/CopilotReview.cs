@@ -16,6 +16,7 @@ using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
+using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.TextManager.Interop;
 using System;
 using System.Collections.Generic;
@@ -102,6 +103,13 @@ internal sealed class CopilotReview
     private int _measureQueued;
     private DateTime _revealUntil;
     private bool _revealRunning;
+
+    // The last edit of the document while the review is on, and the text an Undo of Copilot's put back with it, until the editor
+    // has been made to show that text (see ShowPutBack).
+    private TextContentChangedEventArgs _lastEdit;
+    private ITrackingPoint _putBackStart;
+    private ITrackingPoint _putBackEnd;
+    private int _putBackVersion;
 
     public CopilotReview(ReviewRegistry registry, SessionChanges owner, FileChange row, IVsWindowFrame frame, IWpfTextView view,
                          ITextDocument document, IVsDifferenceCodeWindow2 window, ReviewBaseline baseline, CopilotReviewShape shape)
@@ -203,6 +211,7 @@ internal sealed class CopilotReview
 
             _document.FileActionOccurred += OnFileAction;
             _document.TextBuffer.Changed += OnDocumentChanged;
+            if (_differences is not null) { _differences.SnapshotDifferenceChanged += OnDifferenceWorkedOut; }
             DiscardUndoHistory("the review started");
             _phase = Phase.Active;
             _log.Info($"[changes] {Path} is reviewed in the editor, with Copilot's own Keep and Undo");
@@ -403,6 +412,7 @@ internal sealed class CopilotReview
         View.Closed -= OnViewClosed;
         _document.FileActionOccurred -= OnFileAction;
         _document.TextBuffer.Changed -= OnDocumentChanged;
+        if (_differences is not null) { _differences.SnapshotDifferenceChanged -= OnDifferenceWorkedOut; }
         // Ours first: the dismissal below is answered by an event that is not news to anybody here.
         UnhookCopilot();
         try { await DismissAsync(viewClosed); }
@@ -416,7 +426,15 @@ internal sealed class CopilotReview
             // After Copilot's own clean-up: with the difference still up, they would redraw it.
             GiveBackDifferenceOptions();
             CloseBaselineDocument();
-            if (!viewClosed) { RestoreEditorFocus(); }
+            if (!viewClosed)
+            {
+                RestoreEditorFocus();
+                // A change undone that left no other ends the review here, with no dismissal: the document is the baseline, and the
+                // last edit put it back. Copilot takes the difference down before it lets go of the state, so by now the document's
+                // own view has the caret and the top of the view.
+                if (_putBackStart is null && DocumentIsBaseline()) { NotePutBack(); }
+                ShowPutBack(View);
+            }
             _registry.Detached(this, viewClosed);
             _over.TrySetResult(true);
         }
@@ -516,6 +534,9 @@ internal sealed class CopilotReview
                 if (string.Equals(text, _lastBaselineText, StringComparison.Ordinal))
                 {
                     _log.Debug(() => $"[changes] {Path}: a change was undone in the editor, the baseline is as it was ({text.Length} characters)");
+                    NotePutBack();
+                    // Once the editor has worked the difference out on the new text: already, or in a moment (OnDifferenceWorkedOut).
+                    if (DifferenceIncludesPutBack()) { ShowPutBack(ShownViewNow()); }
                     continue;
                 }
                 _log.Debug(() => $"[changes] {Path}: a change was kept in the editor, the baseline went from {_lastBaselineText.Length} to {text.Length} characters");
@@ -556,6 +577,7 @@ internal sealed class CopilotReview
         View.Closed -= OnViewClosed;
         _document.FileActionOccurred -= OnFileAction;
         _document.TextBuffer.Changed -= OnDocumentChanged;
+        if (_differences is not null) { _differences.SnapshotDifferenceChanged -= OnDifferenceWorkedOut; }
         UnhookCopilot();
         // Copilot has ended it itself: nobody has to wait for this review any more, and Keep below asks for its end.
         _over.TrySetResult(true);
@@ -574,6 +596,10 @@ internal sealed class CopilotReview
             var undone = string.Equals(current, _lastBaselineText, StringComparison.Ordinal);
             _log.Info($"[changes] Copilot ended the review of {Path}: {(undone ? "undone, the document is the baseline" : "kept as it is")} "
                       + $"(the document has {current.Length} characters, the baseline {_lastBaselineText.Length}, the file on disk {SafeDiskLength()})");
+            // Undo all wrote the baseline over the whole document. Copilot took the difference down before it let go of the state,
+            // so the editor is done placing the caret and the top of the view.
+            if (undone) { NotePutBack(); }
+            ShowPutBack(View);
 
             // A file Copilot has left empty was not accepted by anybody: its earlier text is what the row's Undo puts back, so the row
             // stays, and is not forgotten as a Keep would.
@@ -645,6 +671,7 @@ internal sealed class CopilotReview
     // is not empty): what it held is kept first, so that it can be got back, and said.
     private void OnDocumentChanged(object sender, TextContentChangedEventArgs e)
     {
+        _lastEdit = e;
         var before = e.Before.Length;
         var after = e.After.Length;
         _log.Debug(() => $"[changes] {Path}: the document changed, {before} to {after} characters, {e.Changes.Count} edit(s)");
@@ -804,6 +831,105 @@ internal sealed class CopilotReview
             if (two.InlineViewExists && viewer.InlineView is not null) { return viewer.InlineView; }
         }
         return View;
+    }
+
+    // The view on the screen now: the difference's while it is up, the document's own once it is taken down.
+    private IWpfTextView ShownViewNow()
+        => _window.Baseline is not null && (View.TextViewModel as IDifferenceTextViewModel)?.Viewer is { } viewer ? ShownView(viewer) : View;
+
+    // What the last edit put back: from where its old and new text first differ (Undo all replaces the document from its first
+    // character, wherever the change is) to the end of what it wrote.
+    private void NotePutBack()
+    {
+        var edit = _lastEdit;
+        if (edit is null || edit.Changes.Count == 0) { return; }
+        var first = edit.Changes[0];
+        var start = first.NewPosition + CommonPrefixLength(first.OldText, first.NewText);
+        _putBackStart = edit.After.CreateTrackingPoint(start, PointTrackingMode.Negative);
+        _putBackEnd = edit.After.CreateTrackingPoint(edit.Changes[edit.Changes.Count - 1].NewEnd, PointTrackingMode.Positive);
+        _putBackVersion = edit.After.Version.VersionNumber;
+    }
+
+    private static int CommonPrefixLength(string a, string b)
+    {
+        var length = Math.Min(a.Length, b.Length);
+        var i = 0;
+        while (i < length && a[i] == b[i]) { i++; }
+        return i;
+    }
+
+    private bool DocumentIsBaseline()
+        => string.Equals(_document.TextBuffer.CurrentSnapshot.GetText(), _lastBaselineText, StringComparison.Ordinal);
+
+    // Whether the editor's difference has been worked out on the document since the put back: its viewer has moved the caret and
+    // the view by then.
+    private bool DifferenceIncludesPutBack()
+    {
+        var right = _differences?.CurrentSnapshotDifference?.RightBufferSnapshot;
+        return right is not null && right.TextBuffer == _document.TextBuffer && right.Version.VersionNumber >= _putBackVersion;
+    }
+
+    // The editor has worked the difference out again, and its viewer has put the caret and the top of the view back where it
+    // carries them: past the text an Undo put back, maybe. Handled a turn later, once every handler of this event has run, the
+    // viewer's among them.
+    private void OnDifferenceWorkedOut(object sender, SnapshotDifferenceChangeEventArgs e)
+    {
+        if (_putBackStart is null || !DifferenceIncludesPutBack()) { return; }
+        Post(() =>
+        {
+            if (_phase == Phase.Active) { ShowPutBack(ShownViewNow()); }
+            return Task.CompletedTask;
+        });
+    }
+
+    // Copilot's Undo writes the earlier text over the whole of a change in one edit (Undo all: over the whole document), and the
+    // editor carries the caret and the top of the view through it to its end: its difference viewer translates both with positive
+    // tracking when it works the difference out again, and hands them to the document's own view when the difference is taken
+    // down. For a change that ran to the end of the file, the window then shows the last line alone, with the text put back above
+    // it and off the screen: a file that looks emptied. (Copilot scrolls to the top after Undo all, but in the document's view while
+    // the inline one is on the screen, and before the editor moves them.) Once the editor is done, the caret goes to where the put
+    // back text starts if it was pushed to its end, and the view shows that line if it is not on the screen.
+    private void ShowPutBack(IWpfTextView view)
+    {
+        var startPoint = _putBackStart;
+        var endPoint = _putBackEnd;
+        _putBackStart = _putBackEnd = null;
+        if (startPoint is null || view is null || view.IsClosed) { return; }
+        try
+        {
+            var snapshot = _document.TextBuffer.CurrentSnapshot;
+            var start = startPoint.GetPoint(snapshot).GetContainingLine();
+            var shown = view.BufferGraph.MapUpToSnapshot(start.Start, PointTrackingMode.Negative, PositionAffinity.Successor, view.TextSnapshot);
+            if (shown is null) { return; }
+
+            var caret = view.Caret.Position.Point.GetPoint(_document.TextBuffer, PositionAffinity.Successor);
+            var pushed = caret is not null && caret.Value.Position == endPoint.GetPosition(snapshot);
+            var line = view.TextViewLines?.GetTextViewLineContainingBufferPosition(shown.Value);
+            var onScreen = line is not null && line.VisibilityState == VisibilityState.FullyVisible;
+            var top = view.TextViewLines?.FirstVisibleLine;
+            var left = $"the caret on line {(caret is null ? "-" : (caret.Value.GetContainingLine().LineNumber + 1).ToString())}, "
+                       + $"line {(top is null ? "-" : DocumentLine(view, top.Start).ToString())} at the top";
+            if (onScreen && !pushed)
+            {
+                _log.Debug(() => $"[changes] {Path}: Copilot's Undo put text back from line {start.LineNumber + 1}, which is on the screen ({left})");
+                return;
+            }
+            view.Selection.Clear();
+            view.Caret.MoveTo(shown.Value);
+            if (!onScreen) { view.ViewScroller.EnsureSpanVisible(new SnapshotSpan(shown.Value, 0), EnsureSpanVisibleOptions.AlwaysCenter); }
+            _log.Debug(() => $"[changes] {Path}: Copilot's Undo put text back from line {start.LineNumber + 1}, and the editor left {left}: moved there");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            _log.Debug(() => $"[changes] could not show where Copilot's Undo put text back in {Path}: {ex.Message}");
+        }
+    }
+
+    // The document's line a point of a view is on, from 1; 0 for one that is not the document's (a deleted line of the inline view).
+    private int DocumentLine(IWpfTextView view, SnapshotPoint point)
+    {
+        var mapped = view.BufferGraph.MapDownToBuffer(point, PointTrackingMode.Negative, _document.TextBuffer, PositionAffinity.Successor);
+        return mapped is null ? 0 : mapped.Value.GetContainingLine().LineNumber + 1;
     }
 
     /// <summary>Which of the listed files this one is, and how many there are, in the order the list has them.</summary>
