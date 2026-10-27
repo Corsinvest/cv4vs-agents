@@ -295,14 +295,21 @@ internal sealed class BaselineDocumentController
         else { _goToFirstUntil = DateTime.UtcNow + RevealWindow; }
     }
 
-    /// <summary>Move the caret of <paramref name="view"/> to the first hunk that starts after it, wrapping round.</summary>
+    /// <summary>Move the caret of <paramref name="view"/> to the next hunk, wrapping round.</summary>
     public void GoToNextHunk(IWpfTextView view)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        GoToHunk(view, null);
+        GoToHunk(view, null, 1);
     }
 
-    private void GoToHunk(IWpfTextView view, int? index)
+    /// <summary>Move the caret of <paramref name="view"/> to the previous hunk, wrapping round.</summary>
+    public void GoToPreviousHunk(IWpfTextView view)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        GoToHunk(view, null, -1);
+    }
+
+    private void GoToHunk(IWpfTextView view, int? index, int direction = 1)
     {
         var shown = FocusedView(view);
         if (!HunkLocator.TryGetModel(shown, out var model)) { return; }
@@ -310,17 +317,83 @@ internal sealed class BaselineDocumentController
 
         // Where each hunk starts in this view; a hunk with no place in it is not a place to go to.
         var anchors = new List<int>();
+        var indexes = new List<int>();
         foreach (var hunk in HunkLocator.All(difference))
         {
             var anchor = HunkLocator.AnchorIn(shown, model, difference, hunk);
-            if (anchor is not null) { anchors.Add(anchor.Value.Position); }
+            if (anchor is null) { continue; }
+            anchors.Add(anchor.Value.Position);
+            indexes.Add(hunk.Index);
         }
         if (anchors.Count == 0) { return; }
 
-        var target = index ?? HunkNavigation.NextAfter(anchors, shown.Caret.Position.BufferPosition.Position);
+        var target = index ?? Step(shown, anchors, indexes, direction);
         if (target < 0 || target >= anchors.Count) { return; }
         shown.Caret.MoveTo(new SnapshotPoint(shown.TextSnapshot, anchors[target]));
         shown.Caret.EnsureVisible();
+    }
+
+    // One hunk on from the one the caret is in; from a caret that is in none, by where it is.
+    private static int Step(IWpfTextView view, IReadOnlyList<int> anchors, IReadOnlyList<int> indexes, int direction)
+    {
+        if (HunkLocator.TryGetHunkAtCaret(view, out var current))
+        {
+            for (var i = 0; i < indexes.Count; i++)
+            {
+                if (indexes[i] == current.Index) { return ((i + direction) % anchors.Count + anchors.Count) % anchors.Count; }
+            }
+        }
+        var position = view.Caret.Position.BufferPosition.Position;
+        return direction >= 0 ? HunkNavigation.NextAfter(anchors, position) : HunkNavigation.PreviousBefore(anchors, position);
+    }
+
+    /// <summary>How many hunks the difference has, and which of them the caret of <paramref name="view"/> is in (-1 when it is
+    /// in none).</summary>
+    public (int Index, int Count) ChangePosition(IWpfTextView view)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var difference = Difference;
+        if (difference is null) { return (-1, 0); }
+        var hunks = HunkLocator.All(difference);
+        var at = -1;
+        if (view is not null && HunkLocator.TryGetHunkAtCaret(view, out var current))
+        {
+            for (var i = 0; i < hunks.Count; i++)
+            {
+                if (hunks[i].Index == current.Index) { at = i; break; }
+            }
+        }
+        return (at, hunks.Count);
+    }
+
+    /// <summary>Which of the listed files this one is, and how many there are, in the order the list has them.</summary>
+    public (int Index, int Count) FilePosition()
+    {
+        var rows = Owner.Set.Snapshot();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (string.Equals(rows[i].Path, Path, StringComparison.OrdinalIgnoreCase)) { return (i, rows.Count); }
+        }
+        return (-1, rows.Count);
+    }
+
+    /// <summary>Show the file that is <paramref name="delta"/> places on in the list (wrapping round), the way Open does in the
+    /// panel: in its own editor where that can be done.</summary>
+    public async Task GoToFileAsync(int delta)
+    {
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        if (Exited) { return; }
+        var rows = Owner.Set.Snapshot();
+        var (at, count) = FilePosition();
+        if (count < 2 || at < 0) { return; }
+        await Owner.Actions.OpenAsync(rows[((at + delta) % count + count) % count].Path);
+    }
+
+    /// <summary>Bring the buttons and the panel up to date, for whoever knows that the window has been shown again.</summary>
+    public void RefreshAdornments()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (!Exited) { (_adornments as HunkAdornments)?.Refresh(); }
     }
 
     // The view the person is in, when there is one of the review's: in a side-by-side window the caret that matters is the
@@ -334,7 +407,7 @@ internal sealed class BaselineDocumentController
     // The view that is on screen: the one inline view in the inline form, the document's own on the right in the others. Not the
     // document's view in the inline form, which is there and not shown, and not the inline view in the others, which may still
     // exist after the form was changed.
-    private IWpfTextView ShownView()
+    public IWpfTextView ShownView()
     {
         var viewer = _model.Viewer;
         if (viewer is IDifferenceViewer2 two)

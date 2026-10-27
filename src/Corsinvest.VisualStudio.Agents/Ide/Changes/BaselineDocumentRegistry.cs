@@ -577,6 +577,21 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         }
     }
 
+    // A tab that comes back to the front may have a new adorner layer, and what the review drew in the old one is gone with it:
+    // the buttons and the panel are drawn again. Not at once, the window is laid out a moment after it is shown.
+    private void RefreshLater(BaselineDocumentController controller)
+    {
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            foreach (var delay in new[] { 0, 250, 1000 })
+            {
+                if (delay > 0) { await Task.Delay(delay); }
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(alwaysYield: true);
+                controller.RefreshAdornments();
+            }
+        }).FileAndForget("BaselineDocumentRegistry.Refresh");
+    }
+
     // A window is about to be shown: if it is a listed file, it is a candidate. The view and its code window may not exist
     // yet on a first show, so the pass is repeated while they come up.
     int IVsRunningDocTableEvents.OnBeforeDocumentWindowShow(uint docCookie, int fFirstShow, IVsWindowFrame pFrame)
@@ -590,6 +605,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
                 ScheduleSync(400);
                 ScheduleSync(1500);
             }
+            if (path is not null && _controllers.TryGetValue(path, out var shown)) { RefreshLater(shown); }
         }
         catch (Exception ex)
         {
