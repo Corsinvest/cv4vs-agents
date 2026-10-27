@@ -97,17 +97,101 @@ public sealed class KeptLedgerTests : IDisposable
     }
 
     [Fact]
-    public async Task A_file_that_cannot_be_read_is_not_recorded()
+    public async Task A_file_that_cannot_be_read_just_now_is_not_recorded()
     {
+        var file = Write("a.txt", "accepted\n");
         using var ledger = Ledger();
         ledger.Open("s1");
-        var missing = Path.Combine(_folder, "work", "missing.txt");
 
-        await ledger.KeepAsync(missing);
+        // Held by another process, as a build can hold a file.
+        using (new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            await ledger.KeepAsync(file);
+        }
 
-        Assert.False(ledger.IsStillKept(missing));
+        Assert.False(ledger.IsStillKept(file));
         ledger.Flush();
         Assert.False(File.Exists(LedgerFile("s1")));
+    }
+
+    [Fact]
+    public async Task A_deletion_that_was_kept_is_remembered_until_the_file_is_there_again()
+    {
+        var file = Path.Combine(_folder, "work", "gone.txt");
+        using var ledger = Ledger();
+        ledger.Open("s1");
+
+        await ledger.KeepAsync(file);
+        Assert.True(ledger.IsStillKept(file));
+
+        ledger.Flush();
+        using var next = Ledger();
+        next.Open("s1");
+        Assert.True(next.IsStillKept(file));
+
+        Directory.CreateDirectory(Path.GetDirectoryName(file));
+        File.WriteAllText(file, "Claude wrote it again\n");
+        Assert.False(next.IsStillKept(file));
+    }
+
+    [Theory]
+    [InlineData("{ \"version\": \"x\", \"kept\": {} }")]
+    [InlineData("{ \"version\": {}, \"kept\": {} }")]
+    [InlineData("{ \"version\": [1], \"kept\": {} }")]
+    [InlineData("{ \"version\": 1, \"kept\": [] }")]
+    [InlineData("[1]")]
+    [InlineData("null")]
+    [InlineData("")]
+    public void A_ledger_of_a_shape_it_does_not_know_is_the_same_as_none_and_does_not_throw(string content)
+    {
+        var file = Write("a.txt", "accepted\n");
+        Directory.CreateDirectory(Path.Combine(_folder, "changes"));
+        File.WriteAllText(LedgerFile("s1"), content);
+        using var ledger = Ledger();
+
+        ledger.Open("s1");
+
+        Assert.False(ledger.IsStillKept(file));
+    }
+
+    [Fact]
+    public async Task Two_ledgers_of_one_session_do_not_drop_each_other_s_files()
+    {
+        var one = Write("a.txt", "one\n");
+        var two = Write("b.txt", "two\n");
+        using var first = Ledger();
+        using var second = Ledger();
+        // Neither has read anything of the other's.
+        first.Open("s1");
+        second.Open("s1");
+
+        await first.KeepAsync(one);
+        first.Flush();
+        await second.KeepAsync(two);
+        second.Flush();
+
+        using var later = Ledger();
+        later.Open("s1");
+        Assert.True(later.IsStillKept(one));
+        Assert.True(later.IsStillKept(two));
+        // And no temporary file is left beside the ledger's.
+        Assert.Empty(Directory.GetFiles(Path.Combine(_folder, "changes"), "*.tmp"));
+    }
+
+    [Fact]
+    public async Task A_session_that_was_open_recently_is_not_swept_though_nothing_was_kept_in_it_for_long()
+    {
+        var file = Write("a.txt", "accepted\n");
+        var ledger = Ledger();
+        ledger.Open("s1");
+        await ledger.KeepAsync(file);
+        ledger.Flush();
+        File.SetLastWriteTimeUtc(LedgerFile("s1"), DateTime.UtcNow - TimeSpan.FromDays(40));
+
+        ledger.Dispose();
+        KeptLedger.Sweep(Path.Combine(_folder, "changes"), TimeSpan.FromDays(30), OutputWindowLogger.Global);
+
+        Assert.True(File.Exists(LedgerFile("s1")));
     }
 
     [Fact]
@@ -176,18 +260,6 @@ public sealed class KeptLedgerTests : IDisposable
         Assert.True(ledger.IsStillKept(file));
     }
 
-    [Fact]
-    public async Task Forgetting_a_file_removes_it()
-    {
-        var file = Write("a.txt", "accepted\n");
-        using var ledger = Ledger();
-        ledger.Open("s1");
-        await ledger.KeepAsync(file);
-
-        ledger.Forget(file);
-
-        Assert.False(ledger.IsStillKept(file));
-    }
 
     [Fact]
     public async Task A_session_id_that_is_not_safe_in_a_path_is_kept_in_memory_and_never_written()
@@ -201,7 +273,8 @@ public sealed class KeptLedgerTests : IDisposable
 
         Assert.True(ledger.IsStillKept(file));
         Assert.False(Directory.Exists(Path.Combine(_folder, "changes")) && Directory.EnumerateFiles(Path.Combine(_folder, "changes")).Any());
-        Assert.False(File.Exists(Path.Combine(_folder, "elsewhere.json")));
+        // Where the id would lead if it were used as it is: two folders above the ledger's, beside this test's own.
+        Assert.False(File.Exists(Path.GetFullPath(Path.Combine(_folder, "changes", @"..\..\elsewhere.json"))));
     }
 
     [Fact]
@@ -212,7 +285,8 @@ public sealed class KeptLedgerTests : IDisposable
 
         Assert.NotEqual(KeptLedger.Stamp(one), KeptLedger.Stamp(two));
         Assert.Equal(KeptLedger.Stamp(one), KeptLedger.Stamp(one));
-        Assert.Null(KeptLedger.Stamp(Path.Combine(_folder, "work", "missing.txt")));
+        Assert.Equal(KeptLedger.Absent, KeptLedger.Stamp(Path.Combine(_folder, "work", "missing.txt")));
+        Assert.Null(KeptLedger.Stamp(one, maxBytes: 1));
     }
 
     [Fact]
@@ -221,14 +295,18 @@ public sealed class KeptLedgerTests : IDisposable
         var folder = Path.Combine(_folder, "changes");
         Directory.CreateDirectory(folder);
         var old = Path.Combine(folder, "old.json");
+        var oldTemp = Path.Combine(folder, "old.json.0123456789abcdef.tmp");
         var recent = Path.Combine(folder, "recent.json");
         File.WriteAllText(old, "{}");
+        File.WriteAllText(oldTemp, "{");
         File.WriteAllText(recent, "{}");
         File.SetLastWriteTimeUtc(old, DateTime.UtcNow - TimeSpan.FromDays(40));
+        File.SetLastWriteTimeUtc(oldTemp, DateTime.UtcNow - TimeSpan.FromDays(40));
 
         KeptLedger.Sweep(folder, TimeSpan.FromDays(30), OutputWindowLogger.Global);
 
         Assert.False(File.Exists(old));
+        Assert.False(File.Exists(oldTemp));
         Assert.True(File.Exists(recent));
     }
 }
