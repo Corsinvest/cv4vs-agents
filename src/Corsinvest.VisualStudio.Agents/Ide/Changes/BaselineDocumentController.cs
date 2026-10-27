@@ -50,6 +50,10 @@ internal sealed class BaselineDocumentController
     // longer, so that a difference that never gets another hunk does not move the caret at some later edit of the person's.
     private static readonly TimeSpan NavigationWindow = TimeSpan.FromSeconds(5);
 
+    // The same for the jump to the first hunk that opening the window asks for; longer, because the first difference of a big
+    // file takes a while to be worked out.
+    private static readonly TimeSpan RevealWindow = TimeSpan.FromSeconds(15);
+
     private readonly BaselineDocumentRegistry _registry;
     private readonly OutputWindowLogger _log = OutputWindowLogger.Global;
     private readonly IVsDifferenceCodeWindow2 _window;
@@ -69,7 +73,7 @@ internal sealed class BaselineDocumentController
     private bool _actionRunning;
     private int _measureQueued;
     private DateTime _goToNextUntil;
-    private bool _goToFirst;
+    private DateTime _goToFirstUntil;
     private IWpfTextView _navigateIn;
 
     public BaselineDocumentController(BaselineDocumentRegistry registry, SessionChanges owner, FileChange row, IVsWindowFrame frame,
@@ -131,6 +135,7 @@ internal sealed class BaselineDocumentController
     /// and no action is made from it.</summary>
     public bool IsCurrent(Hunk hunk)
         => !Exited && _left is not null && _differences is not null
+           && ReferenceEquals(_differences.BaseLeftBuffer, _left)
            && ReferenceEquals(hunk.Right.Snapshot, _document.TextBuffer.CurrentSnapshot)
            && ReferenceEquals(hunk.Left.Snapshot, _differences.LeftBuffer.CurrentSnapshot);
 
@@ -184,9 +189,10 @@ internal sealed class BaselineDocumentController
             _differences.Options.SetOptionValue(DifferenceBufferOptions.IgnoreWhiteSpaceBehaviorId, IgnoreWhiteSpaceBehavior.None);
 
             _differences.SnapshotDifferenceChanged += OnSnapshotDifferenceChanged;
+            ((IDifferenceBuffer2)_differences).BaseLeftBufferChanged += OnBaselineChanged;
             View.Closed += OnViewClosed;
             _document.FileActionOccurred += OnFileAction;
-            _log.Debug(() => $"[changes] {Path} is shown in place ({mode})");
+            _log.Info($"[changes] {Path} is shown in place ({mode})");
 
             _adornments = HunkAdornments.TryCreate(this);
             OnDifferencesChanged();
@@ -227,7 +233,14 @@ internal sealed class BaselineDocumentController
 
         try
         {
-            try { if (_differences is not null) { _differences.SnapshotDifferenceChanged -= OnSnapshotDifferenceChanged; } }
+            try
+            {
+                if (_differences is not null)
+                {
+                    _differences.SnapshotDifferenceChanged -= OnSnapshotDifferenceChanged;
+                    ((IDifferenceBuffer2)_differences).BaseLeftBufferChanged -= OnBaselineChanged;
+                }
+            }
             catch (Exception ex) { _log.Debug(() => $"[changes] could not stop listening to the difference of {Path}: {ex.Message}"); }
             View.Closed -= OnViewClosed;
             _document.FileActionOccurred -= OnFileAction;
@@ -242,7 +255,9 @@ internal sealed class BaselineDocumentController
                 try { _differences?.Options.ClearOptionValue(DifferenceBufferOptions.IgnoreWhiteSpaceBehaviorId); }
                 catch (Exception ex) { _log.Debug(() => $"[changes] could not give back the white space option of {Path}: {ex.Message}"); }
 
-                try { if (_window.Baseline is not null) { _window.Baseline = null; } }
+                // Only a baseline that is this review's: another extension's (Copilot, a Git diff) may have replaced it, and taking
+                // that off would take its difference away.
+                try { if (HoldsOurBaseline()) { _window.Baseline = null; } }
                 catch (Exception ex)
                 {
                     if (viewClosed) { _log.Debug(() => $"[changes] the closing window of {Path} kept its baseline: {ex.Message}"); }
@@ -277,7 +292,7 @@ internal sealed class BaselineDocumentController
         try { Frame.Show(); }
         catch (Exception ex) { _log.Debug(() => $"[changes] could not show the window of {Path}: {ex.Message}"); }
         if (Difference?.LineDifferences.Differences.Count > 0) { GoToHunk(ShownView(), 0); }
-        else { _goToFirst = true; }
+        else { _goToFirstUntil = DateTime.UtcNow + RevealWindow; }
     }
 
     /// <summary>Move the caret of <paramref name="view"/> to the first hunk that starts after it, wrapping round.</summary>
@@ -496,6 +511,7 @@ internal sealed class BaselineDocumentController
     {
         _navigateIn = null;
         _goToNextUntil = default;
+        _goToFirstUntil = default;
     }
 
     private void OnSnapshotDifferenceChanged(object sender, SnapshotDifferenceChangeEventArgs e)
@@ -523,12 +539,12 @@ internal sealed class BaselineDocumentController
             RequestMeasure();
         }
 
-        if (count > 0 && (DateTime.UtcNow < _goToNextUntil || _goToFirst))
+        var now = DateTime.UtcNow;
+        if (count > 0 && (now < _goToNextUntil || now < _goToFirstUntil))
         {
-            var first = _goToFirst;
+            var first = now < _goToFirstUntil;
             var from = _navigateIn ?? ShownView();
             DisarmNavigation();
-            _goToFirst = false;
             try { GoToHunk(from, first ? 0 : null); }
             catch (Exception ex) { _log.Debug(() => $"[changes] could not move to the next hunk of {Path}: {ex.Message}"); }
         }
@@ -561,6 +577,28 @@ internal sealed class BaselineDocumentController
 
     private void OnViewClosed(object sender, EventArgs e) => Exit(viewClosed: true);
 
+    // Another extension (Copilot, a Git diff) put its own baseline on the window while this review was on: the difference is
+    // theirs now, and the buttons here would stand on their hunks. Ended a turn later, not inside the difference buffer's own
+    // notification of the change.
+    private void OnBaselineChanged(object sender, BaseLeftBufferChangedEventArgs e)
+    {
+        if (Exited || ReferenceEquals(e.NewBuffer, _left)) { return; }
+        if (e.NewBuffer is null) { _log.Debug(() => $"[changes] the baseline of {Path} was taken off the window: the review ends"); }
+        else { _log.Info($"[changes] the difference of {Path} was replaced by another extension's: the review ends"); }
+        ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
+        {
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(alwaysYield: true);
+            Exit();
+        }).FileAndForget("BaselineDocumentController.BaselineReplaced");
+    }
+
+    // The window's baseline is the one this review gave it: the buffer behind it is the one that was opened for the review.
+    private bool HoldsOurBaseline()
+    {
+        var current = _window.Baseline;
+        return current is not null && _left is not null && ReferenceEquals(_registry.Adapters.GetDocumentBuffer(current), _left);
+    }
+
     /// <summary>The hunk's two spans, when they can be acted on: both in the buffers they should be in, both from the buffers as
     /// they are now, and both made of whole lines. <paramref name="baseline"/> is where the hunk is in the baseline's own buffer,
     /// which is the one an edit goes to. False, and said, when not.</summary>
@@ -574,6 +612,7 @@ internal sealed class BaselineDocumentController
             || !ReferenceEquals(left.Snapshot.TextBuffer, _differences.LeftBuffer))
         {
             _log.Warn($"[changes] the difference of {Path} is not between the document and its baseline: the hunk was not touched");
+            Say("This change cannot be handled here: the difference is not the one this review made.");
             return false;
         }
         if (!IsCurrent(hunk))
@@ -590,6 +629,7 @@ internal sealed class BaselineDocumentController
         if (!TryMapToBaseline(left, out baseline))
         {
             _log.Warn($"[changes] the baseline's mirror in the difference of {Path} is not the whole of its buffer as it is now: the hunk was not touched");
+            Say("This change cannot be handled here: the difference is not the one this review made.");
             return false;
         }
         return true;
