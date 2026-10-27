@@ -10,6 +10,7 @@
 using Corsinvest.VisualStudio.Agents.Core.Changes;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Editor;
+using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
@@ -202,6 +203,7 @@ internal sealed class CopilotReview
 
             _document.FileActionOccurred += OnFileAction;
             _document.TextBuffer.Changed += OnDocumentChanged;
+            DiscardUndoHistory("the review started");
             _phase = Phase.Active;
             _log.Info($"[changes] {Path} is reviewed in the editor, with Copilot's own Keep and Undo");
             _log.Debug(() => $"[changes] {Path}: the document has {_document.TextBuffer.CurrentSnapshot.Length} characters, the baseline "
@@ -600,9 +602,42 @@ internal sealed class CopilotReview
     // the list.
     private void OnFileAction(object sender, TextDocumentFileActionEventArgs e)
     {
+        // Claude wrote the file again while it was reviewed, and the editor took the new text from the disk: that, too, is not for
+        // Ctrl+Z to take back. A turn later, once the editor has finished the reload it records.
+        if ((e.FileActionType & FileActionTypes.ContentLoadedFromDisk) != 0)
+        {
+            Post(() =>
+            {
+                if (_phase == Phase.Active) { DiscardUndoHistory("the file was reloaded from the disk"); }
+                return Task.CompletedTask;
+            });
+        }
         if ((e.FileActionType & FileActionTypes.ContentSavedToDisk) == 0) { return; }
         _log.Debug(() => $"[changes] {Path}: saved, the document has {_document.TextBuffer.CurrentSnapshot.Length} characters");
         RequestMeasure();
+    }
+
+    // Claude writes the file on disk, and the editor takes the new text into the open document as an edit of its own, which Ctrl+Z
+    // takes back: all of Claude's change at once, in the editor only, under a review that is drawing against it. A person who pressed
+    // Keep on one change and then Ctrl+Z to take the Keep back (a Keep is not an edit of the document, so there is nothing of it to
+    // take back) got the other changes wiped out of the editor instead, and the file on disk still had them. So what Ctrl+Z could take
+    // back from before the review is forgotten when it starts, and again whenever the file is reloaded during it. What is done in the
+    // editor during the review (a change undone with Copilot's button, the person's own typing) stays undoable. The document is never
+    // dirty here: a review only starts on a document that is what the disk holds.
+    private void DiscardUndoHistory(string why)
+    {
+        try
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+            var adapter = _registry.Adapters?.GetBufferAdapter(_document.TextBuffer);
+            if (adapter is null || adapter.GetUndoManager(out var undo) != VSConstants.S_OK || undo is null) { return; }
+            undo.DiscardFrom(null);
+            _log.Debug(() => $"[changes] {Path}: Ctrl+Z no longer goes back before this point ({why})");
+        }
+        catch (Exception ex) when (ex is COMException or InvalidOperationException)
+        {
+            _log.Warn($"[changes] could not clear the undo history of {Path}: {ex.Message}. Ctrl+Z may take back Claude's change at once");
+        }
     }
 
     // Every change to the document while the review is on is written down, with its size: whatever Copilot's buttons did to the file
