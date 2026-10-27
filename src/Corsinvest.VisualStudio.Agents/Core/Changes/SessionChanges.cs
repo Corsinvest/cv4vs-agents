@@ -556,6 +556,10 @@ internal sealed partial class SessionChanges : IDisposable
                 if (removed is null) { continue; }
                 _baselines.Release(removed.Baseline);
                 _set.SetCaptureNext(path);
+                // A baseline that is this extension's own is one a hunk kept in the editor made: the file that has become equal to it
+                // was kept, change by change, and never passed Keep. It is remembered like one, or the next run, which compares the
+                // file with the CLI's copy, would list it again with the changes the person had accepted.
+                if (removed.Baseline.Owned) { await _kept.KeepAsync(path).ConfigureAwait(false); }
                 return;
             }
 
