@@ -85,6 +85,7 @@ internal sealed class CopilotReview
         = new(System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
 
     private Phase _phase = Phase.Starting;
+    private IDifferenceBuffer _differences;
     private object _state;
     private string _lastBaselineText;
     private bool _endWhenStarted;
@@ -202,6 +203,7 @@ internal sealed class CopilotReview
         // Not started: nothing is held, and the registry forgets this review. What it was told to end meanwhile is moot.
         View.Closed -= OnViewClosed;
         UnhookCopilot();
+        GiveBackDifferenceOptions();
         _phase = Phase.Ended;
         _over.TrySetResult(true);
         return (result, why);
@@ -225,9 +227,41 @@ internal sealed class CopilotReview
         while (clock.Elapsed < DifferenceWait)
         {
             await Task.Delay(50);
+            CompareLinesExactly();
             if (_window.Baseline is not null && DifferenceCount() > 0) { break; }
         }
         _log.Debug(() => $"[changes] Copilot drew the difference of {Path} after {clock.ElapsedMilliseconds} ms");
+    }
+
+    // By default the editor's difference ignores white space at the ends of a line, and a line break is white space to it: a change that
+    // adds or removes a last line then ends before its own line break, and Copilot's Undo, which writes the baseline's text over the
+    // span the change has, leaves the break behind (a blank line where the line was). Lines as they are, for as long as the review is
+    // on: the same way Copilot counts the changes itself, so the number it shows is the number of changes it draws. Said once the
+    // difference buffer exists, which is a moment after the view is wired.
+    private void CompareLinesExactly()
+    {
+        if (_differences is not null) { return; }
+        try
+        {
+            var buffer = _window.DifferenceBuffer;
+            if (buffer is null) { return; }
+            buffer.Options.SetOptionValue(DifferenceBufferOptions.IgnoreWhiteSpaceBehaviorId, IgnoreWhiteSpaceBehavior.None);
+            _differences = buffer;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException)
+        {
+            _log.Warn($"[changes] could not make the difference of {Path} compare lines exactly: {ex.Message}. A change on a last line may leave its line break behind when it is undone");
+        }
+    }
+
+    // The option was this review's, and the buffer it is on outlives the review.
+    private void GiveBackDifferenceOptions()
+    {
+        var buffer = _differences;
+        _differences = null;
+        if (buffer is null) { return; }
+        try { buffer.Options.ClearOptionValue(DifferenceBufferOptions.IgnoreWhiteSpaceBehaviorId); }
+        catch (Exception ex) { _log.Debug(() => $"[changes] could not give back the white space option of {Path}: {ex.Message}"); }
     }
 
     private int DifferenceCount()
@@ -266,6 +300,7 @@ internal sealed class CopilotReview
         _document.FileActionOccurred -= OnFileAction;
         // Ours first: the dismissal below is answered by an event that is not news to anybody here.
         UnhookCopilot();
+        GiveBackDifferenceOptions();
         try { await DismissAsync(viewClosed); }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -295,6 +330,7 @@ internal sealed class CopilotReview
         try
         {
             UnhookCopilot();
+            GiveBackDifferenceOptions();
             if (_state is not null) { await DismissAsync(viewClosed: false); }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -405,6 +441,7 @@ internal sealed class CopilotReview
         View.Closed -= OnViewClosed;
         _document.FileActionOccurred -= OnFileAction;
         UnhookCopilot();
+        GiveBackDifferenceOptions();
         // Copilot has ended it itself: nobody has to wait for this review any more, and Keep below asks for its end.
         _over.TrySetResult(true);
         try
