@@ -28,8 +28,9 @@ namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
 /// <para>No MEF, so no layer of our own in the editor. Both are WPF adorners over the view (the layer the editor's own margins
 /// use for the same purpose), and not adornments of the text view's "Caret" layer, which is the obvious place and the wrong one:
 /// the editor blinks the caret by changing the opacity of that whole layer, so they would blink with it.</para>
-/// <para>The adorner layer is part of the tab's tree, and may not be the same one when the tab comes back: it is looked up at
-/// every update, and what was put in the old one is put in the new.</para></summary>
+/// <para>The adorner layer is the main window's, and WPF takes the adorners of an element out of it as soon as the element has left
+/// the visual tree, which is what a tab that is not shown does. Nothing puts them back: they are put back by the first update
+/// that finds them gone.</para></summary>
 internal sealed class HunkAdornments : IDisposable
 {
     private readonly BaselineDocumentController _controller;
@@ -135,6 +136,7 @@ internal sealed class HunkAdornments : IDisposable
         private readonly HunkButtons _buttons;
         private readonly ReviewPanel _panel;
         private Hunk _hunk;
+        private readonly HashSet<string> _failed = new();
         private bool _disposed;
         private bool _noLayerLogged;
 
@@ -198,17 +200,21 @@ internal sealed class HunkAdornments : IDisposable
         {
             ThreadHelper.ThrowIfNotOnUIThread();
             if (_disposed) { return; }
-            try
-            {
-                if (_view.IsClosed || _controller.Exited || !_view.VisualElement.IsVisible) { HideAll(); return; }
-                UpdateButtons();
-                UpdatePanel();
-            }
+            if (_view.IsClosed || _controller.Exited || !_view.VisualElement.IsVisible) { HideAll(); return; }
+            Guarded("buttons", UpdateButtons, _buttonsSlot);
+            Guarded("panel", UpdatePanel, _panelSlot);
+        }
+
+        // One of the two failing does not take the other with it. A failure is a defect, not an editor that is not ready (the text of
+        // a view that is being laid out can always be asked), so the first of each is written whatever the log level, and the rest are
+        // not repeated: an update comes with every caret move.
+        private void Guarded(string what, Action update, AdornerSlot slot)
+        {
+            try { update(); }
             catch (Exception ex)
             {
-                // The text of a view that is being laid out cannot always be asked: the next layout draws them.
-                OutputWindowLogger.Global.Debug(() => $"[changes] the buttons were not drawn: {ex.Message}");
-                HideAll();
+                slot.Hide();
+                if (_failed.Add(what)) { OutputWindowLogger.Global.LogException("HunkAdornments." + what, ex); }
             }
         }
 
@@ -286,9 +292,10 @@ internal sealed class HunkAdornments : IDisposable
             => ThreadHelper.JoinableTaskFactory.RunAsync(async () => { await action(); }).FileAndForget("HunkAdornments.Panel");
     }
 
-    /// <summary>One element in the adorner layer of a view, at a point of the view. Looks the layer up every time it is shown: the
-    /// layer belongs to the tab's tree, which may be built again when the tab comes back, and an adorner left in the old layer is
-    /// never seen again. The element is shown and hidden itself, not the adorner: the layer sets the visibility of its adorners.</summary>
+    /// <summary>One element in the adorner layer of a view, at a point of the view. Puts the adorner back every time it is shown and
+    /// finds it gone: the layer removes the adorners of an element that has left the visual tree (a tab that is not shown) and never
+    /// returns them. The element is hidden, not collapsed: a collapsed element measures to nothing, and where the buttons and the panel
+    /// go is worked out from what they measure.</summary>
     private sealed class AdornerSlot : IDisposable
     {
         private readonly IWpfTextView _view;
@@ -300,7 +307,7 @@ internal sealed class HunkAdornments : IDisposable
         {
             _view = view;
             _content = content;
-            _content.Visibility = Visibility.Collapsed;
+            _content.Visibility = Visibility.Hidden;
         }
 
         /// <summary>False when the view is in no tree that has an adorner layer, which is a tab that is not shown.</summary>
@@ -315,9 +322,9 @@ internal sealed class HunkAdornments : IDisposable
             }
             if (_adorner is null || !ReferenceEquals(VisualTreeHelper.GetParent(_adorner), layer))
             {
-                if (_layer is not null && !ReferenceEquals(_layer, layer))
+                if (_adorner is not null)
                 {
-                    OutputWindowLogger.Global.Info("[changes] the adorner layer of a review view is another one than before (a tab was switched, probably): what it draws moved to the new one");
+                    OutputWindowLogger.Global.Debug(() => "[changes] the adorner layer had dropped what a review view draws (its tab was away): put back");
                 }
                 Detach();
                 _adorner = new ContentAdorner(_view.VisualElement, _content);
@@ -329,7 +336,7 @@ internal sealed class HunkAdornments : IDisposable
             return true;
         }
 
-        public void Hide() => _content.Visibility = Visibility.Collapsed;
+        public void Hide() => _content.Visibility = Visibility.Hidden;
 
         public void Dispose() => Detach();
 
