@@ -19,6 +19,7 @@ using Microsoft.VisualStudio.TextManager.Interop;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using Task = System.Threading.Tasks.Task;
@@ -39,10 +40,6 @@ namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
 internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
 {
     public static BaselineDocumentRegistry Instance { get; } = new();
-
-    // A review that ended within this of its window opening, with the very frame it was opened in still there, was ended by the
-    // switch and not by the person: see Detached.
-    private static readonly TimeSpan EarlyClose = TimeSpan.FromSeconds(3);
 
     private readonly OutputWindowLogger _log = OutputWindowLogger.Global;
     private readonly List<SessionChanges> _owners = new();
@@ -166,20 +163,14 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
     /// <summary>Something a review did may have changed what the lists say about it: look again.</summary>
     public void Poke() => ScheduleSync();
 
-    /// <summary>A review ended. One whose window closed on its own right after the difference was switched on, while the very
-    /// frame it was switched in is still open, is not started again for that row: the editor does not take it, and trying
-    /// again would switch it on and it would close, for ever. A window the person closed is not that: its frame is gone, or it
-    /// is another window of the same file.</summary>
+    /// <summary>A review ended. When its view was closed under it (the pane of a split that was removed, say) and the file is
+    /// still listed and open, the file gets another review in what is left of the window, a moment later: by then a tab the
+    /// person closed is gone from the frames, and nothing is started for it.</summary>
     internal void Detached(BaselineDocumentController controller, bool viewClosed)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (_controllers.TryGetValue(controller.Path, out var held) && ReferenceEquals(held, controller)) { _controllers.Remove(controller.Path); }
-        if (viewClosed && controller.EnteredUtc != default && DateTime.UtcNow - controller.EnteredUtc < EarlyClose
-            && IdeContextService.FindDocumentFrames(controller.Path).Contains(controller.Frame)
-            && controller.Owner.Set.TryGet(controller.Path, out var row))
-        {
-            Decline(controller.Owner, row, "the editor closed the view as soon as the difference was switched on");
-        }
+        if (viewClosed) { ScheduleSync(400); }
     }
 
     /// <summary>Show a listed file in its own editor with the changes drawn in it, for the pane whose list is
@@ -188,39 +179,47 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
     public async System.Threading.Tasks.Task<bool> ShowAsync(ChangeSet set, string path)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        SessionChanges owner = null;
+        var shown = false;
         try
         {
             if (AgentsOptions.Chat.ChangesViewMode == ChangesViewMode.Files) { return false; }
             EnsureServices();
             if (_adapters is null) { return false; }
-            var owner = _owners.FirstOrDefault(o => ReferenceEquals(o.Set, set));
+            owner = _owners.FirstOrDefault(o => ReferenceEquals(o.Set, set));
             if (owner is null || !set.TryGet(path, out var row)) { return false; }
 
             // The person asked for this file in this chat: it is this chat's to show, until another chat changes it later.
             _claims[path] = new Claim(owner, DateTime.UtcNow);
-            if (_controllers.TryGetValue(path, out var held))
-            {
-                if (ReferenceEquals(held.Owner, owner) && held.RowSerial == row.Serial)
-                {
-                    held.Reveal();
-                    return true;
-                }
-                held.Exit();
-            }
             _declined.Remove(path);
 
-            if (!await IdeContextService.Instance.OpenFileAsync(path, 0, 0, true)) { return false; }
-
-            // The editor's view is made a moment after the file is opened, and has to be loaded before it can be switched.
+            // The editor's view is made a moment after the file is opened, and has to be loaded before it can be switched. The row
+            // and whoever holds the file are looked at again each time round: a pass of the registry runs in between.
+            var opened = false;
             for (var attempt = 0; attempt < 40; attempt++)
             {
+                if (!set.TryGet(path, out row)) { return false; }
+                if (_controllers.TryGetValue(path, out var held))
+                {
+                    if (ReferenceEquals(held.Owner, owner) && held.RowSerial == row.Serial)
+                    {
+                        held.Reveal();
+                        shown = true;
+                        return true;
+                    }
+                    // Another chat's review of the file, or this chat's of a row that has gone: the file is this chat's to show now.
+                    held.Exit();
+                }
+
+                if (!opened)
+                {
+                    if (!await IdeContextService.Instance.OpenFileAsync(path, 0, 0, true)) { return false; }
+                    opened = true;
+                }
+
                 var frames = IdeContextService.FindDocumentFrames(path);
                 if (frames.Count > 0) { await TryAttachAsync(owner, row, frames); }
-                if (_controllers.TryGetValue(path, out var attached) && ReferenceEquals(attached.Owner, owner))
-                {
-                    attached.Reveal();
-                    return true;
-                }
+                if (_controllers.ContainsKey(path)) { continue; }
                 if (_declined.ContainsKey(path)) { return false; }
                 await Task.Delay(50);
             }
@@ -231,6 +230,16 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         {
             _log.LogException("BaselineDocumentRegistry.ShowAsync", ex);
             return false;
+        }
+        finally
+        {
+            // A claim that came to nothing must not keep this chat the winner of a file it is not showing: the chat whose review
+            // was taken down for it gets it back.
+            if (!shown && owner is not null && _claims.TryGetValue(path, out var claim) && ReferenceEquals(claim.Owner, owner))
+            {
+                _claims.Remove(path);
+                ScheduleSync();
+            }
         }
     }
 
@@ -266,13 +275,14 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             do
             {
                 _syncAgain = false;
-                await SyncOnceAsync();
+                try { await SyncOnceAsync(); }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // A request that came in during the pass that failed is still owed its pass.
+                    _log.LogException("BaselineDocumentRegistry.SyncAsync", ex);
+                }
             }
             while (_syncAgain);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _log.LogException("BaselineDocumentRegistry.SyncAsync", ex);
         }
         finally
         {
@@ -357,7 +367,11 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         {
             if (_controllers.ContainsKey(winner.Row.Path)) { continue; }
             if (!open.TryGetValue(IdeContextService.FrameKey(winner.Row.Path), out var frames)) { continue; }
-            await TryAttachAsync(winner.Owner, winner.Row, frames);
+            try { await TryAttachAsync(winner.Owner, winner.Row, frames); }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _log.LogException("BaselineDocumentRegistry.TryAttach", ex);
+            }
         }
     }
 
@@ -370,7 +384,8 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         if (!_attaching.Add(path)) { return; }
         try
         {
-            if (IsDeclined(owner, row)) { return; }
+            // Reviewed already: the baseline that window holds is this registry's own, not another extension's.
+            if (_controllers.ContainsKey(path) || IsDeclined(owner, row)) { return; }
 
             // The frame that has the code editor: a file in two windows, or a designer with its code view, has more than one.
             Parts parts = null;
@@ -378,7 +393,15 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
             string why = null;
             foreach (var candidate in frames)
             {
-                var found = Inspect(candidate, out var reason, out _);
+                Parts found;
+                string reason;
+                try { found = Inspect(candidate, out reason, out _); }
+                catch (COMException ex)
+                {
+                    // A window that is still being made has no code window view yet, and says so with a failure.
+                    _log.Debug(() => $"[changes] the window of {path} cannot be inspected yet: {ex.Message}");
+                    continue;
+                }
                 if (found is not null)
                 {
                     parts = found;
@@ -419,6 +442,8 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
                 Decline(owner, now, "the editor would not switch to a difference view");
                 return;
             }
+            // Ended already, by an event of the window during the switch: nothing to keep.
+            if (controller.Exited) { return; }
             _controllers[path] = controller;
             _declined.Remove(path);
         }
@@ -436,7 +461,7 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         pending = false;
         var vsView = VsShellUtilities.GetTextView(frame);
         var view = vsView is null ? null : _adapters.GetWpfTextView(vsView);
-        if (view is null)
+        if (view is null || view.IsClosed)
         {
             pending = true;
             return null;

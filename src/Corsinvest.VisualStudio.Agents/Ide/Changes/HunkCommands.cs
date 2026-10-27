@@ -15,8 +15,8 @@ using Task = System.Threading.Tasks.Task;
 namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
 
 /// <summary>The review's commands: Keep and Undo for the hunk the caret is in, Keep and Undo for the whole file, and the move
-/// to the next hunk. In the code window's context menu, where they show only while the window is a review, and under key
-/// chords in the text editor's scope (<c>AgentsPackage.vsct</c>), which the person can rebind in Tools > Options > Keyboard.
+/// to the next hunk. In the code window's context menu, where they show only while the window is a review. No key chord is
+/// bound to them (<c>AgentsPackage.vsct</c> says why); the person assigns one in Tools > Options > Environment > Keyboard.
 /// <para>Plain <see cref="OleMenuCommand"/>s, not editor command handlers: those are MEF exports, which this extension does
 /// not have. The window that has the caret is found through the text manager, so the commands act on the view the person is
 /// working in, whichever of the review's views that is.</para></summary>

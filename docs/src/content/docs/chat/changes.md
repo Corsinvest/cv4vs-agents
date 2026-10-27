@@ -85,6 +85,8 @@ declined is tried again when it changes.
 
 A few things work differently there:
 
+- White space counts. The comparison window can be set to ignore it, and that setting is left alone, but the review compares the
+  lines exactly: an edit that only changes indentation or adds a final newline is a hunk, and can be kept or undone.
 - A hunk is acted on only from a difference that describes the file as it is. For a moment after any edit it is
   worked out again, and the buttons are hidden and the commands unavailable until it is; one asked for in that
   moment is refused with a word in the status bar. Undo of a hunk is also refused while the editor shows an older
