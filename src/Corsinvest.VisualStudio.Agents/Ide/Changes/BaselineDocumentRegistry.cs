@@ -577,8 +577,9 @@ internal sealed class BaselineDocumentRegistry : IVsRunningDocTableEvents
         }
     }
 
-    // A tab that comes back to the front may have a new adorner layer, and what the review drew in the old one is gone with it:
-    // the buttons and the panel are drawn again. Not at once, the window is laid out a moment after it is shown.
+    // A tab that comes back to the front has lost what the review drew over it: the adorner layer takes an element's adorners out of
+    // itself when the element leaves the tree. The buttons and the panel are drawn again. Not at once: the event comes before the
+    // content is put back, so the first of these may find the view still hidden.
     private void RefreshLater(BaselineDocumentController controller)
     {
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
