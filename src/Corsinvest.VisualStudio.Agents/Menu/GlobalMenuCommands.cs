@@ -66,6 +66,10 @@ internal static class GlobalMenuCommands
         // invisible (DefaultInvisible in the .vsct), so a Release build never shows it.
         Add(svc, PackageIds.DiffSpikeCommandId, Core.Changes.DiffSpike.Run).BeforeQueryStatus +=
             (sender, _) => ((OleMenuCommand)sender).Visible = true;
+        Add(svc, PackageIds.CopilotSpikeCommandId, Core.Changes.CopilotSpike.Run).BeforeQueryStatus +=
+            (sender, _) => ((OleMenuCommand)sender).Visible = true;
+        Add(svc, PackageIds.CopilotSpikePanelCommandId, Core.Changes.CopilotSpike.ProbeClicked).BeforeQueryStatus +=
+            (sender, _) => ((OleMenuCommand)sender).Visible = Core.Changes.CopilotSpike.IsLive;
 #endif
     }
 
