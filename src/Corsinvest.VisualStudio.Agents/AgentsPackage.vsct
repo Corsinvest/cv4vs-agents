@@ -362,6 +362,29 @@
         <CommandFlag>DynamicVisibility</CommandFlag>
         <Strings><ButtonText>Diff spike (active document)</ButtonText></Strings>
       </Button>
+      <!-- Debug builds only: the probe of Copilot's review UI (Core/Changes/CopilotSpike.cs). -->
+      <Button guid="guidAgentsCommandSet" id="CopilotSpikeCommandId" priority="0x0310" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="DeveloperGroup"/>
+        <Icon guid="ImageCatalogGuid" id="CompareFiles"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Copilot review spike (active document)</ButtonText></Strings>
+      </Button>
+      <!-- Debug builds only: a button in the group of the editor's own action panel, the one at the bottom of a
+           difference view (Copilot puts its Keep and Undo there). The probe shows it while its review is on: a click
+           that reaches CopilotSpike.ProbeClicked is the proof that the shell routes a command of another package placed
+           on that panel. A .vsct priority is 16 bits and the compiled table holds it shifted left by 16, so Copilot's Keep
+           and Undo (0x1000000, 0x2000000 in the table) are 0x0100 and 0x0200 here, the editor's view-mode toggle 0x0F00:
+           this one goes between them. -->
+      <Button guid="guidAgentsCommandSet" id="CopilotSpikePanelCommandId" priority="0x0300" type="Button">
+        <Parent guid="guidUbiDiffCmdSet" id="UbiDiffActionsMenuGroup"/>
+        <Icon guid="ImageCatalogGuid" id="Checkmark"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>cv4vs probe</ButtonText></Strings>
+      </Button>
       <!-- The review of a file in its own editor (Ide/Changes/HunkCommands.cs). Hidden until the window is one.
            No chord is bound to them: Ctrl+Alt and a letter is AltGr and that letter on several keyboard layouts (Ctrl+Alt+N
            types an n with an acute accent on the Polish one), and the arrow chords are Visual Studio's own. The person
@@ -556,6 +579,8 @@
       <IDSymbol name="KeepAllInFileCommandId" value="0x0218" />
       <IDSymbol name="UndoAllInFileCommandId" value="0x0219" />
       <IDSymbol name="NextHunkCommandId" value="0x021A" />
+      <IDSymbol name="CopilotSpikeCommandId" value="0x021B" />
+      <IDSymbol name="CopilotSpikePanelCommandId" value="0x021C" />
       <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
            number of open panes and must not run into the fixed ids above. -->
       <IDSymbol name="ActiveSessionCommandId" value="0x0300" />
@@ -564,6 +589,13 @@
       <!-- The Error List's and the Output window's, a block each for the same reason. -->
       <IDSymbol name="ErrorListPromptCommandId" value="0x0500" />
       <IDSymbol name="OutputPromptCommandId" value="0x0600" />
+    </GuidSymbol>
+
+    <!-- The editor's own command set (Microsoft.VisualStudio.Editor.Implementation): its action panel is the toolbar
+         0x9D00 and holds one group, 0x9E00. Declared only so that a button can be parented into that group; the
+         editor's command table owns both. -->
+    <GuidSymbol name="guidUbiDiffCmdSet" value="{5d4c0442-c0a2-4be8-9b4d-ab1c28450942}">
+      <IDSymbol name="UbiDiffActionsMenuGroup" value="0x9E00" />
     </GuidSymbol>
 
     <GuidSymbol name="guidImages" value="{c3d4e5f6-a7b8-9012-defa-bc1234567890}">

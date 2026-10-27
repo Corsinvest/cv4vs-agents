@@ -51,6 +51,11 @@ internal static class PackageIds
     public const int UndoAllInFileCommandId = 0x0219;
     public const int NextHunkCommandId = 0x021A;
 
+    // Debug builds only: the Copilot review probe (Core/Changes/CopilotSpike.cs) and the button it parents
+    // into the editor's own action panel.
+    public const int CopilotSpikeCommandId = 0x021B;
+    public const int CopilotSpikePanelCommandId = 0x021C;
+
     // Seeds the dynamic open-panes range, which grows with the number of open panes: its own
     // 0x0300 block, clear of the fixed ids above.
     public const int ActiveSessionCommandId = 0x0300;
