@@ -22,4 +22,16 @@ internal static class HunkNavigation
         }
         return 0;
     }
+
+    /// <summary>The index of the last hunk that starts before <paramref name="position"/>, wrapping to the last one when there
+    /// is none further back; -1 when there are no hunks. The counterpart of <see cref="NextAfter"/>.</summary>
+    public static int PreviousBefore(IReadOnlyList<int> starts, int position)
+    {
+        if (starts is null || starts.Count == 0) { return -1; }
+        for (var i = starts.Count - 1; i >= 0; i--)
+        {
+            if (starts[i] < position) { return i; }
+        }
+        return starts.Count - 1;
+    }
 }
