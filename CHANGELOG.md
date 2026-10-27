@@ -18,6 +18,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Starting the debugger with two chats side by side could keep Visual Studio busy for good.**
   When the run-time layout put both in one group, each chat brought back to the front hid the
   other, which was then brought back in turn. Each chat is now brought back once per layout swap.
+- **A floating chat pane stopped taking typed keys.** A click still landed (the caret showed in
+  the composer for a moment), but the letters that followed went to whatever Visual Studio window
+  had focus instead, sometimes driving Solution Explorer's type-ahead. `WebView2CompositionControl`
+  points its browser's keyboard focus at the window that hosted the control the first time it
+  loaded, and never updates that. Docking never moves a pane out of the main window, so the bug
+  showed only when floating: VS reparents the content into a separate window for the float, and the
+  browser kept targeting the old one
+  ([WebView2Feedback#5398](https://github.com/MicrosoftEdge/WebView2Feedback/issues/5398), open with
+  no SDK fix; Visual Studio loads its own `WebView2.Wpf` copy anyway). The chat pane now re-points
+  the browser's parent to the window that actually hosts it, once Visual Studio has finished moving
+  the pane. It never moves keyboard focus itself, and panes that stay docked, including those shown
+  in the auto-hide flyout, are left exactly as before.
+- **A chat pane opened while floating went blank for good once docked.** The conversation vanished
+  and never came back, while a pane opened docked, floated and docked again was fine. WebView2
+  closes a web view whose parent window is destroyed, and for a pane born floating that parent is
+  the floating window, which docking destroys. The pane now moves the browser onto the main window
+  just before a floating window closes, so the conversation survives the dock.
 
 ## [1.14.0] - 2026-10-12
 
