@@ -51,6 +51,13 @@ internal static class AsyncFile
         return bytes;
     }
 
+    /// <summary>Write a file, replacing what was there.</summary>
+    public static async Task WriteAllBytesAsync(string path, byte[] bytes, CancellationToken cancel = default)
+    {
+        using var stream = await CreateAsync(path).ConfigureAwait(false);
+        await stream.WriteAsync(bytes, 0, bytes.Length, cancel).ConfigureAwait(false);
+    }
+
     /// <summary>Copy a file, reading it shared. Replaces <paramref name="target"/>.</summary>
     public static async Task CopyAsync(string path, string target, CancellationToken cancel = default)
     {

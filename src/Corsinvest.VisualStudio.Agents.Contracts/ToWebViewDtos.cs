@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using System.Collections.Generic;
+
 namespace Corsinvest.VisualStudio.Agents.Contracts;
 
 /// <summary>Severity of a notice/message-bar (wire values lowercase).
@@ -893,7 +895,7 @@ public class ChangedFileDto
 public class ChangedFilesNotification
 {
     public string SessionId { get; set; }
-    public ChangedFileDto[] Files { get; set; } = [];
+    public IReadOnlyList<ChangedFileDto> Files { get; set; } = [];
 
     /// <summary>More files changed than are listed: <see cref="MaxFiles"/> is the cap.</summary>
     public bool Overflow { get; set; }
@@ -917,5 +919,5 @@ public class ChangedFileFailureDto
 /// <see cref="Failed"/> means everything asked for was done.</summary>
 public class ChangedFilesActionResult
 {
-    public ChangedFileFailureDto[] Failed { get; set; } = [];
+    public IReadOnlyList<ChangedFileFailureDto> Failed { get; set; } = [];
 }
