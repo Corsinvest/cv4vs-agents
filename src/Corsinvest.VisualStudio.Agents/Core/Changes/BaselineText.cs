@@ -74,12 +74,18 @@ internal static class BaselineText
             case ChangeEvaluator.Mark.Utf16BigEndian: encoding = new UnicodeEncoding(true, true); break;
             default: throw new NotSupportedException($"A file with the byte-order mark {mark} is not written back from text.");
         }
-        var body = encoding.GetBytes(text ?? "");
+        return Encode(text, encoding);
+    }
+
+    /// <summary>The text in <paramref name="encoding"/>, its preamble in front: the bytes <c>File.WriteAllText</c> would write.
+    /// One array, since the result is handed on and kept, so there is nothing to give back to a pool.</summary>
+    public static byte[] Encode(string text, Encoding encoding)
+    {
+        text ??= "";
         var preamble = encoding.GetPreamble();
-        if (preamble.Length == 0) { return body; }
-        var bytes = new byte[preamble.Length + body.Length];
+        var bytes = new byte[preamble.Length + encoding.GetByteCount(text)];
         Buffer.BlockCopy(preamble, 0, bytes, 0, preamble.Length);
-        Buffer.BlockCopy(body, 0, bytes, preamble.Length, body.Length);
+        encoding.GetBytes(text, 0, text.Length, bytes, preamble.Length);
         return bytes;
     }
 }

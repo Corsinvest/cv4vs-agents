@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using Task = System.Threading.Tasks.Task;
 
@@ -220,7 +221,7 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
 
     /// <summary>End the review of a file, if there is one, and return when Copilot has let go of it. For Keep and Undo, which are
     /// about to act on the file itself.</summary>
-    public async System.Threading.Tasks.Task EndAsync(string path)
+    public async Task EndAsync(string path)
     {
         if (Volatile.Read(ref _reviewCount) == 0) { return; }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
@@ -244,7 +245,7 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
     /// <summary>Show a listed file in its own editor with Copilot's review drawn in it, for the pane whose list is
     /// <paramref name="set"/>, opening the file if it is not open. False, with nothing done to the editor, when it cannot be
     /// shown there: the caller then opens the comparison window.</summary>
-    public async System.Threading.Tasks.Task<bool> ShowAsync(ChangeSet set, string path)
+    public async Task<bool> ShowAsync(ChangeSet set, string path)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         SessionChanges owner = null;
@@ -492,7 +493,7 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
 
     /// <summary>Review a file in place if it is open and can be. A file that is not open is left for the window event that
     /// comes when it is; one that cannot be shown is declined, once, with the reason in the log.</summary>
-    private async System.Threading.Tasks.Task<Attach> TryAttachAsync(SessionChanges owner, FileChange row, IReadOnlyList<IVsWindowFrame> frames, bool fromOpen)
+    private async Task<Attach> TryAttachAsync(SessionChanges owner, FileChange row, IReadOnlyList<IVsWindowFrame> frames, bool fromOpen)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var path = row.Path;
@@ -542,9 +543,7 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
                 return Attach.Waiting;
             }
 
-            ReviewBaseline baseline = null;
-            string problem = null;
-            await Task.Run(() => { problem = BaselineReview.Prepare(row, out baseline); });
+            var (problem, baseline) = await BaselineReview.PrepareAsync(row);
             if (problem is not null)
             {
                 Decline(owner, row, problem);
