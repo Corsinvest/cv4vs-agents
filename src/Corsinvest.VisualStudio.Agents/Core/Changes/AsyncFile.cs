@@ -5,6 +5,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -67,6 +68,10 @@ internal static class AsyncFile
         using var stream = await CreateAsync(path).ConfigureAwait(false);
         await stream.WriteAsync(bytes, 0, bytes.Length, cancel).ConfigureAwait(false);
     }
+
+    /// <summary>Write a file as <c>File.WriteAllText</c> would: the encoding's preamble, then the text.</summary>
+    public static Task WriteAllTextAsync(string path, string text, Encoding encoding, CancellationToken cancel = default)
+        => WriteAllBytesAsync(path, BaselineText.Encode(text, encoding), cancel);
 
     /// <summary>Copy a file, reading it shared. Replaces <paramref name="target"/>.</summary>
     public static async Task CopyAsync(string path, string target, CancellationToken cancel = default)
