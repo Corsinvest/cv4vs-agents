@@ -222,6 +222,12 @@ export type { RewindRequest } from './generated/RewindRequest';
 export type { RewindResultNotification } from './generated/RewindResultNotification';
 export type { RewindDiffNotification } from './generated/RewindDiffNotification';
 export type { RewindPointsNotification } from './generated/RewindPointsNotification';
+export type { ChangedFileDto } from './generated/ChangedFileDto';
+export type { ChangedFilesNotification } from './generated/ChangedFilesNotification';
+export type { ChangedFileFailureDto } from './generated/ChangedFileFailureDto';
+export type { ChangedFilesActionResult } from './generated/ChangedFilesActionResult';
+export type { ChangedFileRequest } from './generated/ChangedFileRequest';
+export type { OpenChangedFileNotification } from './generated/OpenChangedFileNotification';
 
 /** One user message as the rewind dialog needs it: what to show, and what to rewind to. Not a wire
  *  type: it is built from the transcript, which is why it lives here and not in generated/. */

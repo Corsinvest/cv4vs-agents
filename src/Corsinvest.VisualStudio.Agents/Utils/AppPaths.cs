@@ -58,6 +58,16 @@ internal static class AppPaths
     /// </summary>
     public static readonly string IconCacheFolder = Path.Combine(DataFolder, "icons");
 
+    /// <summary>Copies of files the extension keeps to compare against: what Claude was about to
+    /// change, or what a user kept. One folder per session. Written by Core/Changes, which also owns
+    /// deleting them; nothing here is the user's data, so a missing folder only means "no baseline".</summary>
+    public static readonly string BaselinesFolder = Path.Combine(DataFolder, "baselines");
+
+    /// <summary>Private git indexes and object stores, one folder per open chat: the pictures of a
+    /// working tree that tell what a shell command changed. Deleted with the chat; what a crash leaves is
+    /// swept when the next chat starts.</summary>
+    public static readonly string SnapshotsFolder = Path.Combine(DataFolder, "snapshots");
+
     /// <summary>Where the per-project folders live. ProjectStore names what goes inside: it needs
     /// the root without going back through ProjectFolder, which delegates to it.</summary>
     public static readonly string ProjectsRoot = Path.Combine(DataFolder, "data", "projects");
