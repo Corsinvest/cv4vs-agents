@@ -131,7 +131,7 @@ internal sealed class GitRunner(string exe, OutputWindowLogger log, TimeSpan? dr
         if (process is null) { return new GitResult { ExitCode = -1, Error = "git could not be started" }; }
 
         var error = process.StandardError.ReadToEndAsync();
-        using var file = new FileStream(targetFile, FileMode.Create, FileAccess.Write, FileShare.Read);
+        using var file = await AsyncFile.CreateAsync(targetFile).ConfigureAwait(false);
         // Copied while the wait below runs, so a git that stops talking is still caught by the time
         // limit; a killed process closes its pipe, which ends the copy.
         var copy = process.StandardOutput.BaseStream.CopyToAsync(file);

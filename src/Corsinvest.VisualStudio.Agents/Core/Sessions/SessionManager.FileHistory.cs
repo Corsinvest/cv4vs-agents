@@ -71,7 +71,12 @@ internal sealed partial class SessionManager
         if (path is null) { return tracks; }
         try
         {
-            await foreach (var line in ReadLinesSharedAsync(path).ConfigureAwait(false))
+            // Opened shared: the CLI may be appending to the transcript while a resume reads it, and File.ReadLines, which is not,
+            // would read nothing at all when it races the CLI's own writes.
+            using var stream = await AsyncFile.OpenReadAsync(path).ConfigureAwait(false);
+            using var reader = new StreamReader(stream, new UTF8Encoding(false));
+            string line;
+            while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) is not null)
             {
                 if (string.IsNullOrWhiteSpace(line)) { continue; }
                 // IsType rather than a literal match: a writer that pretty-prints is valid JSON too.
@@ -100,16 +105,6 @@ internal sealed partial class SessionManager
         }
         catch (Exception ex) { log.LogException("SessionManager.ReadFileHistory", ex); }
         return tracks;
-    }
-
-    /// <summary>The lines of a transcript the CLI may be appending to as it is read: opened shared, which
-    /// File.ReadLines is not, or a resume that races the CLI's own writes reads nothing at all.</summary>
-    private static async IAsyncEnumerable<string> ReadLinesSharedAsync(string path)
-    {
-        using var stream = await AsyncFile.OpenReadAsync(path).ConfigureAwait(false);
-        using var reader = new StreamReader(stream, new UTF8Encoding(false));
-        string line;
-        while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) is not null) { yield return line; }
     }
 
     /// <summary>The newest delta in the transcript tail that is about <paramref name="hookPath"/>.
