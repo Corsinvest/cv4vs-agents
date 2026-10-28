@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using System.Collections.Generic;
+
 namespace Corsinvest.VisualStudio.Agents.Contracts;
 
 /// <summary>Severity of a notice/message-bar (wire values lowercase).
@@ -824,4 +826,69 @@ public class SetRemoteControlAtStartupResponse
 public class RemoteControlAtStartupChangedNotification
 {
     public bool Value { get; set; }
+}
+
+/// <summary>One file Claude changed in this session: a row of the Changes list.</summary>
+public class ChangedFileDto
+{
+    /// <summary>Absolute path.</summary>
+    public string Path { get; set; } = "";
+
+    /// <summary>"modified", "added" or "deleted", measured against the file as it was before Claude's first edit.</summary>
+    public string State { get; set; } = "modified";
+
+    /// <summary>"edit" (a file tool) or "bash" (a shell command).</summary>
+    public string Source { get; set; } = "edit";
+
+    public int Added { get; set; }
+    public int Deleted { get; set; }
+
+    /// <summary>"exact", "approximate" (a bound: the files were too large or too different) or
+    /// "unavailable" (binary, or too large to read): whether <see cref="Added"/> and
+    /// <see cref="Deleted"/> can be shown as numbers.</summary>
+    public string Counts { get; set; } = "exact";
+
+    public bool IsBinary { get; set; }
+
+    /// <summary>There is a copy from before Claude's change to compare with and restore from. When
+    /// false the file is still listed: Open just opens it and Undo is not offered.</summary>
+    public bool HasBaseline { get; set; }
+
+    /// <summary>The CLI named a backup and it is gone, which is why <see cref="HasBaseline"/> is false.</summary>
+    public bool BaselineMissing { get; set; }
+
+    /// <summary>A shell command changed more files than could be tracked, so this row may be one of several missing.</summary>
+    public bool Incomplete { get; set; }
+}
+
+/// <summary>The Changes list (changed_files, changed_files_updated): every file Claude changed in
+/// this session, sorted by path, or why there is none to show.</summary>
+public class ChangedFilesNotification
+{
+    public string SessionId { get; set; }
+    public IReadOnlyList<ChangedFileDto> Files { get; set; } = [];
+
+    /// <summary>More files changed than are listed: <see cref="MaxFiles"/> is the cap.</summary>
+    public bool Overflow { get; set; }
+
+    public int MaxFiles { get; set; }
+
+    /// <summary>Why nothing is tracked (file checkpoints are off), or null when something is.</summary>
+    public string Disabled { get; set; }
+}
+
+/// <summary>A file an action could not deal with.</summary>
+public class ChangedFileFailureDto
+{
+    public string Path { get; set; } = "";
+
+    /// <summary>In words for the person who clicked.</summary>
+    public string Reason { get; set; } = "";
+}
+
+/// <summary>Answer to keep / undo / keep all / undo all (changed_files_action_result). Empty
+/// <see cref="Failed"/> means everything asked for was done.</summary>
+public class ChangedFilesActionResult
+{
+    public IReadOnlyList<ChangedFileFailureDto> Failed { get; set; } = [];
 }
