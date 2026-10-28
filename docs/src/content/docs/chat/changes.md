@@ -192,8 +192,9 @@ Turn this off with **Track the files commands change** in [Options](/cv4vs-agent
   **kept** (a deletion you kept included) does not come back unless it has changed since: the extension
   remembers, for each chat, how each kept file looked (its length and a hash, nothing of its content)
   under `changes/` in the data folder, and forgets a chat's file after 30 days without the chat being
-  open. A file over 256 MB is not remembered. What you kept **hunk by hunk** is not remembered, so those files
-  come back with all their hunks, against the CLI's copy; and the files a command or a sub-agent
+  open. A file over 256 MB is not remembered. A file you went through **change by change** in the editor is
+  remembered once no change is left in it, each one kept or undone; while some are still there, it comes back
+  with all of them, the ones you kept included, against the CLI's copy. And the files a command or a sub-agent
   changed are not rebuilt at all, since the CLI's history has no record of them.
 
 ## Options
