@@ -189,7 +189,7 @@ internal sealed class GitSnapshot : IDisposable
 
             Directory.CreateDirectory(Path.Combine(_folder, "objects"));
             HoldOwnerMarker();
-            SeedIndex();
+            await SeedIndexAsync().ConfigureAwait(false);
             // A git that was killed (a timeout, the chat closing) leaves its lock behind. This folder is ours
             // alone and the gate is held, so no other git can be holding it: a stale lock would otherwise
             // fail every picture from here on.
@@ -384,12 +384,12 @@ internal sealed class GitSnapshot : IDisposable
 
     /// <summary>Copy the repo's index the first time, so the stat cache is warm and a file is read
     /// again only if it differs. Whether a copy was made.</summary>
-    private bool SeedIndex()
+    private async Task<bool> SeedIndexAsync()
     {
         if (File.Exists(IndexFile) || !File.Exists(_repoIndex)) { return false; }
         try
         {
-            File.Copy(_repoIndex, IndexFile, false);
+            await AsyncFile.CopyAsync(_repoIndex, IndexFile).ConfigureAwait(false);
             return true;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

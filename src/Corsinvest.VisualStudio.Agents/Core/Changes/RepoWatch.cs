@@ -19,11 +19,14 @@ namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 /// lost to an overflow count as a change: the answer is then "maybe", which is read as "yes".</para></summary>
 internal sealed class RepoWatch : IDisposable
 {
-    private static readonly string GitSegment = Path.DirectorySeparatorChar + ".git" + Path.DirectorySeparatorChar;
+    // The folder inside a path, and the folder as the end of one.
+    private static readonly string GitSegment = $"{Path.DirectorySeparatorChar}.git{Path.DirectorySeparatorChar}";
+    private static readonly string GitTail = $"{Path.DirectorySeparatorChar}.git";
 
     // Visual Studio's own cache for a solution: rewritten constantly, never anybody's source, and
     // ignored by every Visual Studio .gitignore. Counting it would make the tree look busy forever.
-    private static readonly string VsSegment = Path.DirectorySeparatorChar + ".vs" + Path.DirectorySeparatorChar;
+    private static readonly string VsSegment = $"{Path.DirectorySeparatorChar}.vs{Path.DirectorySeparatorChar}";
+    private static readonly string VsTail = $"{Path.DirectorySeparatorChar}.vs";
 
     private readonly FileSystemWatcher _watcher;
     private long _sequence;
@@ -70,8 +73,8 @@ internal sealed class RepoWatch : IDisposable
     private static bool IsIgnored(string path)
         => path.IndexOf(GitSegment, StringComparison.OrdinalIgnoreCase) >= 0
            || path.IndexOf(VsSegment, StringComparison.OrdinalIgnoreCase) >= 0
-           || path.EndsWith(Path.DirectorySeparatorChar + ".git", StringComparison.OrdinalIgnoreCase)
-           || path.EndsWith(Path.DirectorySeparatorChar + ".vs", StringComparison.OrdinalIgnoreCase);
+           || path.EndsWith(GitTail, StringComparison.OrdinalIgnoreCase)
+           || path.EndsWith(VsTail, StringComparison.OrdinalIgnoreCase);
 
     public void Dispose() => _watcher.Dispose();
 }
