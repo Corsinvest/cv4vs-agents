@@ -67,6 +67,9 @@ switched when it appears.
 - When the last change has been kept or undone, the file leaves the list if it is now what it was before, byte
   for byte. A difference that is only in how the lines end leaves it listed, for Keep and Undo in the panel.
 - **Keep** and **Undo** in the panel's row end the review first, and then do what they always do to the file.
+- Copilot's keys, by default: with the caret on a line of a change, **Ctrl+Y** keeps that change and **Ctrl+N**
+  undoes it; **Ctrl+Shift+Y** and **Ctrl+Shift+N** keep and undo the whole file. So during a review Ctrl+Y redoes
+  only away from a change: **Ctrl+Shift+Z** redoes anywhere.
 
 When more than one file is listed, the bar at the bottom also has two buttons of this extension's, the previous and the
 next file of the list. They open that file the way Open does. The file list Copilot's bar carries is Copilot's own
