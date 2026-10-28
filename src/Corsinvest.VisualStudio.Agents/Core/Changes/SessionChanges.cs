@@ -412,12 +412,21 @@ internal sealed partial class SessionChanges : IDisposable
 
         var row = NewRow(path, found, evaluation, toolUseId);
         var alreadyFull = _set.Overflow;
-        var added = _set.TryAdd(row);
-        if (added != AddResult.Full) { _set.ConsumeCaptureNext(path); }
-        if (added == AddResult.Added) { return; }
-        // Not stored, so nothing holds the copy that was taken for it: a row that was there first keeps its own.
-        _baselines.Release(found.Baseline);
-        if (added == AddResult.Full && !alreadyFull) { _log.Warn($"[changes] more than {ChangeSet.MaxFiles} files changed: the rest are not listed"); }
+        switch (_set.TryAdd(row))
+        {
+            case AddResult.Added:
+                _set.ConsumeCaptureNext(path);
+                return;
+            case AddResult.AlreadyListed:
+                _set.ConsumeCaptureNext(path);
+                // Not stored, so nothing holds the copy that was taken for it: a row that was there first keeps its own.
+                _baselines.Release(found.Baseline);
+                return;
+            case AddResult.Full:
+                _baselines.Release(found.Baseline);
+                if (!alreadyFull) { _log.Warn($"[changes] more than {ChangeSet.MaxFiles} files changed: the rest are not listed"); }
+                return;
+        }
     }
 
     private static FileChange NewRow(string path, Found found, ChangeEvaluation evaluation, string toolUseId)

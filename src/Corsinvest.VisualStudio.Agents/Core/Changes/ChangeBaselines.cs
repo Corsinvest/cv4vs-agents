@@ -67,7 +67,7 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
         var folder = FolderFor(sessionId);
         Directory.CreateDirectory(folder);
         var copy = Interlocked.Increment(ref _sequence).ToString("x");
-        return Path.Combine(folder, ShortHash(path) + "." + copy + "~" + Path.GetFileName(path));
+        return Path.Combine(folder, $"{ShortHash(path)}.{copy}~{Path.GetFileName(path)}");
     }
 
     /// <summary>Delete a copy this extension took. A CLI backup, or anything outside the baselines

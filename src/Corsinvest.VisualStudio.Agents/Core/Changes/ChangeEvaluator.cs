@@ -51,29 +51,29 @@ internal static class ChangeEvaluator
 
     private static Task<Stat> StatAsync(string path) => Task.Run(() =>
     {
-        try
-        {
-            return EvaluateCore(path, baseline);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            // Locked by a build, or gone between the check and the read: it cannot be measured now. One
-            // such file must not stop the rest of a list being built, so it is listed as changed with no
-            // numbers, and given a stamp no real file has so that the next refresh tries it again.
-            var unreadable = NoBaseline(new ChangeEvaluation(), File.Exists(path));
-            unreadable.Length = -1;
-            return unreadable;
-        }
-    }
-
-    private static ChangeEvaluation EvaluateCore(string path, BaselineRef baseline)
-    {
         var info = new FileInfo(path);
         var exists = info.Exists;
         return new Stat(exists, exists ? info.Length : 0, exists ? info.LastWriteTimeUtc : default);
     });
 
     public static async Task<ChangeEvaluation> EvaluateAsync(string path, BaselineRef baseline, CancellationToken cancel = default)
+    {
+        try
+        {
+            return await EvaluateCoreAsync(path, baseline, cancel).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Locked by a build, or gone between the check and the read: it cannot be measured now. One
+            // such file must not stop the rest of a list being built, so it is listed as changed with no
+            // numbers, and given a stamp no real file has so that the next refresh tries it again.
+            var unreadable = NoBaseline(new ChangeEvaluation(), (await StatAsync(path).ConfigureAwait(false)).Exists);
+            unreadable.Length = -1;
+            return unreadable;
+        }
+    }
+
+    private static async Task<ChangeEvaluation> EvaluateCoreAsync(string path, BaselineRef baseline, CancellationToken cancel)
     {
         var info = await StatAsync(path).ConfigureAwait(false);
         var result = new ChangeEvaluation
