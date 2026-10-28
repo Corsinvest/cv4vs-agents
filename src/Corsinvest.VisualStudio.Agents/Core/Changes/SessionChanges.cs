@@ -617,7 +617,7 @@ internal sealed partial class SessionChanges : IDisposable
             {
                 if (generation != Volatile.Read(ref _generation) || _disposed) { break; }
                 // Accepted before the restart, and not changed since: not a change to review.
-                if (_kept.IsStillKept(kv.Key))
+                if (await _kept.IsStillKeptAsync(kv.Key).ConfigureAwait(false))
                 {
                     keptPaths.Add(kv.Key);
                     continue;

@@ -44,10 +44,10 @@ public sealed class KeptLedgerTests : IDisposable
         ledger.Open("s1");
 
         await ledger.KeepAsync(file);
-        Assert.True(ledger.IsStillKept(file));
+        Assert.True(await ledger.IsStillKeptAsync(file));
 
         File.WriteAllText(file, "accepted, and then Claude touched it\n");
-        Assert.False(ledger.IsStillKept(file));
+        Assert.False(await ledger.IsStillKeptAsync(file));
     }
 
     [Fact]
@@ -58,13 +58,13 @@ public sealed class KeptLedgerTests : IDisposable
         {
             first.Open("s1");
             await first.KeepAsync(file);
-            first.Flush();
+            await first.FlushAsync();
         }
 
         using var second = Ledger();
         second.Open("s1");
 
-        Assert.True(second.IsStillKept(file));
+        Assert.True(await second.IsStillKeptAsync(file));
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public sealed class KeptLedgerTests : IDisposable
         using var other = Ledger();
         other.Open("s2");
 
-        Assert.False(other.IsStillKept(file));
+        Assert.False(await other.IsStillKeptAsync(file));
     }
 
     [Fact]
@@ -109,8 +109,8 @@ public sealed class KeptLedgerTests : IDisposable
             await ledger.KeepAsync(file);
         }
 
-        Assert.False(ledger.IsStillKept(file));
-        ledger.Flush();
+        Assert.False(await ledger.IsStillKeptAsync(file));
+        await ledger.FlushAsync();
         Assert.False(File.Exists(LedgerFile("s1")));
     }
 
@@ -122,16 +122,16 @@ public sealed class KeptLedgerTests : IDisposable
         ledger.Open("s1");
 
         await ledger.KeepAsync(file);
-        Assert.True(ledger.IsStillKept(file));
+        Assert.True(await ledger.IsStillKeptAsync(file));
 
-        ledger.Flush();
+        await ledger.FlushAsync();
         using var next = Ledger();
         next.Open("s1");
-        Assert.True(next.IsStillKept(file));
+        Assert.True(await next.IsStillKeptAsync(file));
 
         Directory.CreateDirectory(Path.GetDirectoryName(file));
         File.WriteAllText(file, "Claude wrote it again\n");
-        Assert.False(next.IsStillKept(file));
+        Assert.False(await next.IsStillKeptAsync(file));
     }
 
     [Theory]
@@ -142,7 +142,7 @@ public sealed class KeptLedgerTests : IDisposable
     [InlineData("[1]")]
     [InlineData("null")]
     [InlineData("")]
-    public void A_ledger_of_a_shape_it_does_not_know_is_the_same_as_none_and_does_not_throw(string content)
+    public async Task A_ledger_of_a_shape_it_does_not_know_is_the_same_as_none_and_does_not_throw(string content)
     {
         var file = Write("a.txt", "accepted\n");
         Directory.CreateDirectory(Path.Combine(_folder, "changes"));
@@ -151,7 +151,7 @@ public sealed class KeptLedgerTests : IDisposable
 
         ledger.Open("s1");
 
-        Assert.False(ledger.IsStillKept(file));
+        Assert.False(await ledger.IsStillKeptAsync(file));
     }
 
     [Fact]
@@ -166,14 +166,14 @@ public sealed class KeptLedgerTests : IDisposable
         second.Open("s1");
 
         await first.KeepAsync(one);
-        first.Flush();
+        await first.FlushAsync();
         await second.KeepAsync(two);
-        second.Flush();
+        await second.FlushAsync();
 
         using var later = Ledger();
         later.Open("s1");
-        Assert.True(later.IsStillKept(one));
-        Assert.True(later.IsStillKept(two));
+        Assert.True(await later.IsStillKeptAsync(one));
+        Assert.True(await later.IsStillKeptAsync(two));
         // And no temporary file is left beside the ledger's.
         Assert.Empty(Directory.GetFiles(Path.Combine(_folder, "changes"), "*.tmp"));
     }
@@ -185,7 +185,7 @@ public sealed class KeptLedgerTests : IDisposable
         var ledger = Ledger();
         ledger.Open("s1");
         await ledger.KeepAsync(file);
-        ledger.Flush();
+        await ledger.FlushAsync();
         File.SetLastWriteTimeUtc(LedgerFile("s1"), DateTime.UtcNow - TimeSpan.FromDays(40));
 
         ledger.Dispose();
@@ -204,17 +204,17 @@ public sealed class KeptLedgerTests : IDisposable
 
         ledger.Open("s1");
 
-        Assert.False(ledger.IsStillKept(file));
+        Assert.False(await ledger.IsStillKeptAsync(file));
         // And it can be written over.
         await ledger.KeepAsync(file);
-        ledger.Flush();
+        await ledger.FlushAsync();
         using var again = Ledger();
         again.Open("s1");
-        Assert.True(again.IsStillKept(file));
+        Assert.True(await again.IsStillKeptAsync(file));
     }
 
     [Fact]
-    public void A_version_the_ledger_does_not_know_is_ignored()
+    public async Task A_version_the_ledger_does_not_know_is_ignored()
     {
         var file = Write("a.txt", "accepted\n");
         Directory.CreateDirectory(Path.Combine(_folder, "changes"));
@@ -224,7 +224,7 @@ public sealed class KeptLedgerTests : IDisposable
 
         ledger.Open("s1");
 
-        Assert.False(ledger.IsStillKept(file));
+        Assert.False(await ledger.IsStillKeptAsync(file));
     }
 
     [Fact]
@@ -236,13 +236,13 @@ public sealed class KeptLedgerTests : IDisposable
             first.Open(null);
             await first.KeepAsync(file);
             first.Open("s1");
-            first.Flush();
+            await first.FlushAsync();
         }
 
         using var second = Ledger();
         second.Open("s1");
 
-        Assert.True(second.IsStillKept(file));
+        Assert.True(await second.IsStillKeptAsync(file));
     }
 
     [Fact]
@@ -254,10 +254,10 @@ public sealed class KeptLedgerTests : IDisposable
         await ledger.KeepAsync(file);
 
         ledger.Open(null);
-        Assert.False(ledger.IsStillKept(file));
+        Assert.False(await ledger.IsStillKeptAsync(file));
 
         ledger.Open("s1");
-        Assert.True(ledger.IsStillKept(file));
+        Assert.True(await ledger.IsStillKeptAsync(file));
     }
 
 
@@ -269,24 +269,24 @@ public sealed class KeptLedgerTests : IDisposable
         ledger.Open(@"..\..\elsewhere");
 
         await ledger.KeepAsync(file);
-        ledger.Flush();
+        await ledger.FlushAsync();
 
-        Assert.True(ledger.IsStillKept(file));
+        Assert.True(await ledger.IsStillKeptAsync(file));
         Assert.False(Directory.Exists(Path.Combine(_folder, "changes")) && Directory.EnumerateFiles(Path.Combine(_folder, "changes")).Any());
         // Where the id would lead if it were used as it is: two folders above the ledger's, beside this test's own.
         Assert.False(File.Exists(Path.GetFullPath(Path.Combine(_folder, "changes", @"..\..\elsewhere.json"))));
     }
 
     [Fact]
-    public void The_stamp_tells_apart_files_of_the_same_length()
+    public async Task The_stamp_tells_apart_files_of_the_same_length()
     {
         var one = Write("a.txt", "ab");
         var two = Write("b.txt", "ac");
 
-        Assert.NotEqual(KeptLedger.Stamp(one), KeptLedger.Stamp(two));
-        Assert.Equal(KeptLedger.Stamp(one), KeptLedger.Stamp(one));
-        Assert.Equal(KeptLedger.Absent, KeptLedger.Stamp(Path.Combine(_folder, "work", "missing.txt")));
-        Assert.Null(KeptLedger.Stamp(one, maxBytes: 1));
+        Assert.NotEqual(await KeptLedger.StampAsync(one), await KeptLedger.StampAsync(two));
+        Assert.Equal(await KeptLedger.StampAsync(one), await KeptLedger.StampAsync(one));
+        Assert.Equal(KeptLedger.Absent, await KeptLedger.StampAsync(Path.Combine(_folder, "work", "missing.txt")));
+        Assert.Null(await KeptLedger.StampAsync(one, maxBytes: 1));
     }
 
     [Fact]
