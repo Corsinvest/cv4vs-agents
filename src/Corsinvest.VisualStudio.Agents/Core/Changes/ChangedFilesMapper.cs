@@ -35,7 +35,7 @@ internal static class ChangedFilesMapper
         Incomplete = row.Incomplete,
     };
 
-    public static Contracts.ChangedFileFailureDto[] ToDtos(IEnumerable<ChangeFailure> failed)
+    public static IReadOnlyList<Contracts.ChangedFileFailureDto> ToDtos(IEnumerable<ChangeFailure> failed)
         => failed.Select(f => new Contracts.ChangedFileFailureDto { Path = f.Path, Reason = f.Reason }).ToArray();
 
     // The wire spells an enum in lower case: "modified", "approximate". The names are the contract
