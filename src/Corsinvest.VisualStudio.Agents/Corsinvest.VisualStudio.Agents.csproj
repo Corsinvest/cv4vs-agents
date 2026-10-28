@@ -108,6 +108,11 @@
          redirect, MissingMethodException at runtime; the package fails
          to load. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <!-- Which legacy code page a file without a byte-order mark and not UTF-8 is in (ChangeEvaluator.DetectLegacy).
+         2.6.0 on purpose: its only dependency is System.Text.Encoding.CodePages. From 2.7.0 on the netstandard2.0 build asks for
+         System.Memory 4.6.3, newer than the one Visual Studio binds. The library is MPL 1.1 / GPL 2.0 or later / LGPL 2.1 or later,
+         and is used here under the GPL 2.0 or later alternative, which GPL 3.0 includes. -->
+    <PackageReference Include="UTF.Unknown" Version="2.6.0" />
     <!-- Mads Kristensen's helper toolkit. We use it for `toolkit:Themes.UseVsTheme="True"`
          which auto-applies the official VS WPF styling (TextBox, ListBox, Button,
          caret colors, foreground/background per theme) without us hand-picking

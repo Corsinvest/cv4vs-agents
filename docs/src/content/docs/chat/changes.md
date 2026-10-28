@@ -27,6 +27,12 @@ edit. Its badge is the number of files. Clicking it opens the panel:
 The list refreshes when you open it: a file you edited or put back yourself since is measured
 again, and one that is back to how it was leaves the list.
 
+The figures and the comparison window read a file as text: UTF-8, UTF-16 with a byte-order mark, or,
+for a file that is neither, the legacy code page it is most likely in (Windows-1251, Windows-1252,
+Shift_JIS and the like), found from its content. When there are too few letters outside ASCII to tell,
+the file is read as UTF-8 and those letters show as �, which does not change the line counts. Putting a
+file back (Undo) is a different matter: it is byte for byte, in whatever code page the file was in.
+
 ## What Keep and Undo do
 
 **Keep** accepts the file as it is. Nothing is written, to the file or anywhere else: the row goes,
