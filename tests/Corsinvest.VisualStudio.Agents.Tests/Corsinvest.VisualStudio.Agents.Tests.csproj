@@ -39,6 +39,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <!-- What the extension's UTF.Unknown brings: the tests reference its built assembly, not the project, so its packages do not come with it. -->
+    <PackageReference Include="UTF.Unknown" Version="2.6.0" />
   </ItemGroup>
 
   <!--
