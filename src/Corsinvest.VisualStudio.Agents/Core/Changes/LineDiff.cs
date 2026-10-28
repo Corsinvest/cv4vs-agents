@@ -26,9 +26,9 @@ internal readonly struct LineCounts
     public bool Approximate { get; }
 }
 
-/// <summary>A pure line-level diff, for the +/- numbers next to a file. Not the editor's differencer:
-/// that one needs a text buffer and the UI thread, and these counts are computed off it, for files
-/// that are not open.
+/// <summary>A pure line-level diff, for the +/- numbers next to a file. Not the editor's differencing
+/// services (<c>IDifferenceService</c>, <c>ITextDifferencingService</c>): those are MEF parts, which a unit
+/// test cannot compose, and these counts are computed for files that are not open.
 /// <para>A changed line counts once on each side (one removed, one added), as a unified diff does.
 /// Line endings are not content: <c>\r\n</c> and <c>\n</c> compare equal, so a CRLF file read against
 /// an LF backup is not "every line changed".</para></summary>

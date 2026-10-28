@@ -6,6 +6,8 @@
 using Corsinvest.VisualStudio.Agents.Core.Sessions;
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 
@@ -20,30 +22,51 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
     /// <summary>The folder the running extension uses.</summary>
     public static ChangeBaselines Default { get; } = new(AppPaths.BaselinesFolder, OutputWindowLogger.Global);
 
+    private string _rootPrefix;
+
     /// <summary>Copy <paramref name="path"/> as it is now. <see cref="BaselineRef.Empty"/> when it does
     /// not exist (the baseline is "nothing"), <see cref="BaselineRef.None"/> when it could not be read.</summary>
-    public BaselineRef Capture(string sessionId, string path)
+    public async Task<BaselineRef> CaptureAsync(string sessionId, string path, CancellationToken cancel = default)
     {
+        string target = null;
         try
         {
-            if (!File.Exists(path)) { return BaselineRef.Empty; }
-            var folder = FolderFor(sessionId);
-            Directory.CreateDirectory(folder);
-            // The hash keeps two files of the same name apart; the name after it keeps the
-            // extension, so the copy opens with the editor the original would.
-            var target = Path.Combine(folder, ShortHash(path) + "~" + Path.GetFileName(path));
-            File.Copy(path, target, true);
+            // Whether the file exists and the folder have no async form, so they go to the pool; the content is copied through
+            // an asynchronous stream.
+            target = await Task.Run(() => CopyTargetIfExists(sessionId, path), cancel).ConfigureAwait(false);
+            if (target is null) { return BaselineRef.Empty; }
+            await AsyncFile.CopyAsync(path, target, cancel).ConfigureAwait(false);
             return BaselineRef.Own(target);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             log.Warn($"[changes] could not keep a copy of {path}: {ex.Message}");
+            // What was written before the failure is not a copy of anything.
+            DeleteQuietly(target);
             return BaselineRef.None;
         }
     }
 
+    // Null when there is nothing to copy.
+    private string CopyTargetIfExists(string sessionId, string path)
+    {
+        if (!File.Exists(path)) { return null; }
+        var folder = FolderFor(sessionId);
+        Directory.CreateDirectory(folder);
+        // The hash keeps two files of the same name apart; the name after it keeps the
+        // extension, so the copy opens with the editor the original would.
+        return Path.Combine(folder, ShortHash(path) + "~" + Path.GetFileName(path));
+    }
+
+    private static void DeleteQuietly(string path)
+    {
+        if (path is null) { return; }
+        try { File.Delete(path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
     /// <summary>Delete a copy this extension took. A CLI backup, or anything outside the baselines
-    /// folder, is left alone whatever the caller believes it owns.</summary>
+    /// folder, is left alone whatever the caller believes it owns. There is no async delete.</summary>
     public void Release(BaselineRef baseline)
     {
         if (!baseline.Owned || string.IsNullOrEmpty(baseline.Path) || !IsInside(baseline.Path)) { return; }
@@ -85,8 +108,8 @@ internal sealed class ChangeBaselines(string root, OutputWindowLogger log)
     {
         try
         {
-            var prefix = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            return Path.GetFullPath(path).StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+            _rootPrefix ??= Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return Path.GetFullPath(path).StartsWith(_rootPrefix, StringComparison.OrdinalIgnoreCase);
         }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {

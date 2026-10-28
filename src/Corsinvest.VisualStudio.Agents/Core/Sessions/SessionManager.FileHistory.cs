@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Sessions;
 
@@ -63,14 +64,18 @@ internal sealed partial class SessionManager
 
     /// <summary>Every file the CLI has backed up in a session, by absolute path. One pass over the
     /// transcript, so it is for a resume, not for each edit: see <see cref="FindRecentDelta"/>.</summary>
-    public Dictionary<string, FileHistoryTrack> ReadFileHistory(string sessionId)
+    public async Task<Dictionary<string, FileHistoryTrack>> ReadFileHistoryAsync(string sessionId)
     {
         var tracks = new Dictionary<string, FileHistoryTrack>(StringComparer.OrdinalIgnoreCase);
         var path = FileFor(sessionId);
-        if (path is null || !File.Exists(path)) { return tracks; }
+        if (path is null) { return tracks; }
         try
         {
-            foreach (var line in File.ReadLines(path, Encoding.UTF8))
+            // Shared: the CLI may be appending to the transcript while a resume reads it.
+            using var stream = await AsyncFile.OpenReadAsync(path).ConfigureAwait(false);
+            using var reader = new StreamReader(stream, new UTF8Encoding(false));
+            string line;
+            while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) is not null)
             {
                 if (string.IsNullOrWhiteSpace(line)) { continue; }
                 // IsType rather than a literal match: a writer that pretty-prints is valid JSON too.
@@ -93,6 +98,10 @@ internal sealed partial class SessionManager
                 }
             }
         }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // No transcript yet: nothing was tracked.
+        }
         catch (Exception ex) { log.LogException("SessionManager.ReadFileHistory", ex); }
         return tracks;
     }
@@ -101,13 +110,14 @@ internal sealed partial class SessionManager
     /// Reads the transcript the hook named, not one derived from the session id: the CLI says where
     /// it is writing, and that cannot be wrong; the session id is only the fallback for a CLI that
     /// names none. Null when there is no such record yet.</summary>
-    public FileHistoryEntry FindRecentDelta(string sessionId, string transcriptPath, string hookPath)
+    public async Task<FileHistoryEntry> FindRecentDeltaAsync(string sessionId, string transcriptPath, string hookPath)
     {
         try
         {
             var path = string.IsNullOrEmpty(transcriptPath) ? FileFor(sessionId) : LongPath(transcriptPath);
-            if (path is null || !File.Exists(path)) { return null; }
-            foreach (var line in ReadTailLines(path, FreshTailBytes).AsEnumerable().Reverse())
+            if (path is null) { return null; }
+            var tail = await ReadTailLinesAsync(path, FreshTailBytes).ConfigureAwait(false);
+            foreach (var line in tail.AsEnumerable().Reverse())
             {
                 if (!IsType(line, "file-history-delta")) { continue; }
                 JObject obj;
@@ -118,6 +128,10 @@ internal sealed partial class SessionManager
                     if (ChangePaths.Matches(hookPath, entry.TrackingPath, entry.RealParentDir, workingDirectory)) { return entry; }
                 }
             }
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            // The CLI has not created the transcript yet; the caller asks again.
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -154,20 +168,14 @@ internal sealed partial class SessionManager
     /// <summary>The last whole lines in the final <paramref name="maxBytes"/> of a file, oldest first.
     /// The first line is dropped when the window starts inside it, so a cut line is never parsed. The
     /// file is opened shared: the CLI is appending to it.</summary>
-    internal static List<string> ReadTailLines(string path, int maxBytes)
+    internal static async Task<List<string>> ReadTailLinesAsync(string path, int maxBytes)
     {
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var stream = await AsyncFile.OpenReadAsync(path).ConfigureAwait(false);
         var length = stream.Length;
         var take = (int)Math.Min(length, maxBytes);
         stream.Seek(length - take, SeekOrigin.Begin);
         var buffer = new byte[take];
-        var read = 0;
-        while (read < take)
-        {
-            var n = stream.Read(buffer, read, take - read);
-            if (n == 0) { break; }
-            read += n;
-        }
+        var read = await AsyncFile.FillAsync(stream, buffer).ConfigureAwait(false);
 
         // A newline byte never occurs inside a multi-byte UTF-8 sequence, so decoding from the middle
         // of one only garbles the first line, which is dropped below.

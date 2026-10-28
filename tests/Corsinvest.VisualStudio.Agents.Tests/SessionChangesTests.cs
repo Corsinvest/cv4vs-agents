@@ -332,10 +332,10 @@ public sealed class SessionChangesTests : IDisposable
     }
 
     [Fact]
-    public void Beginning_a_session_clears_the_list_and_drops_the_copies_it_owned()
+    public async Task Beginning_a_session_clears_the_list_and_drops_the_copies_it_owned()
     {
         using var fx = Transcript(Jsonl.UserPrompt("u1", "go"));
-        var copy = new ChangeBaselines(_baselinesRoot, OutputWindowLogger.Global).Capture("s1", fx.WriteWork("a.txt", "x\n"));
+        var copy = await new ChangeBaselines(_baselinesRoot, OutputWindowLogger.Global).CaptureAsync("s1", fx.WriteWork("a.txt", "x\n"));
         using var changes = Create(fx);
         changes.Set.Add(new FileChange { Path = Work(fx, "a.txt"), Baseline = copy });
         Assert.True(File.Exists(copy.Path));
