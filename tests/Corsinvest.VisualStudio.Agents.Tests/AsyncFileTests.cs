@@ -6,6 +6,7 @@
 using Corsinvest.VisualStudio.Agents.Core.Changes;
 using System;
 using System.IO;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -82,6 +83,40 @@ public sealed class AsyncFileTests : IDisposable
 
         Assert.Equal(new byte[] { 1, 2, 3, 4 }, File.ReadAllBytes(target));
         Assert.Equal(new byte[] { 1, 2, 3, 4 }, File.ReadAllBytes(source));
+    }
+
+    [Fact]
+    public async Task Writing_bytes_replaces_what_was_there_and_creates_what_was_not()
+    {
+        var path = Write("w.bin", new byte[] { 9, 9, 9, 9, 9, 9 });
+
+        await AsyncFile.WriteAllBytesAsync(path, new byte[] { 1, 2 });
+        Assert.Equal(new byte[] { 1, 2 }, File.ReadAllBytes(path));
+
+        var created = Path.Combine(_folder, "created.bin");
+        await AsyncFile.WriteAllBytesAsync(created, new byte[] { 3 });
+        Assert.Equal(new byte[] { 3 }, File.ReadAllBytes(created));
+    }
+
+    [Fact]
+    public async Task Writing_text_puts_the_preamble_first_as_File_WriteAllText_does()
+    {
+        var withMark = Path.Combine(_folder, "mark.txt");
+        var without = Path.Combine(_folder, "plain.txt");
+
+        await AsyncFile.WriteAllTextAsync(withMark, "é\n", new UTF8Encoding(true));
+        await AsyncFile.WriteAllTextAsync(without, "é\n", new UTF8Encoding(false));
+
+        Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF, 0xC3, 0xA9, 0x0A }, File.ReadAllBytes(withMark));
+        Assert.Equal(new byte[] { 0xC3, 0xA9, 0x0A }, File.ReadAllBytes(without));
+    }
+
+    [Fact]
+    public async Task The_head_of_a_file_is_what_there_is_of_it_up_to_the_count()
+    {
+        Assert.Equal(new byte[] { 1, 2, 3 }, await AsyncFile.ReadHeadAsync(Write("long.bin", new byte[] { 1, 2, 3, 4, 5 }), 3));
+        Assert.Equal(new byte[] { 1, 2 }, await AsyncFile.ReadHeadAsync(Write("short.bin", new byte[] { 1, 2 }), 4));
+        Assert.Empty(await AsyncFile.ReadHeadAsync(Write("empty.bin", new byte[0]), 4));
     }
 
     [Fact]

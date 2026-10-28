@@ -137,7 +137,7 @@ internal sealed partial class SessionChanges : IDisposable
             try
             {
                 target = _baselines.TargetFor(_set.SessionId, path);
-                File.WriteAllBytes(target, bytes);
+                await AsyncFile.WriteAllBytesAsync(target, bytes).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
