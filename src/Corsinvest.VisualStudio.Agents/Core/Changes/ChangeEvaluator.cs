@@ -8,6 +8,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using UtfUnknown;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 
@@ -134,9 +135,10 @@ internal static class ChangeEvaluator
             return;
         }
 
-        var before = beforePath is null ? "" : Decode(await AsyncFile.ReadAllBytesAsync(beforePath, cancel).ConfigureAwait(false));
-        var after = afterPath is null ? "" : Decode(await AsyncFile.ReadAllBytesAsync(afterPath, cancel).ConfigureAwait(false));
-        if ((beforePath is not null && before is null) || (afterPath is not null && after is null))
+        var beforeBytes = beforePath is null ? null : await AsyncFile.ReadAllBytesAsync(beforePath, cancel).ConfigureAwait(false);
+        var afterBytes = afterPath is null ? null : await AsyncFile.ReadAllBytesAsync(afterPath, cancel).ConfigureAwait(false);
+        var (before, after) = DecodePair(beforeBytes, afterBytes);
+        if ((beforeBytes is not null && before is null) || (afterBytes is not null && after is null))
         {
             result.IsBinary = true;
             result.Counts = CountsKind.Unavailable;
@@ -149,11 +151,68 @@ internal static class ChangeEvaluator
         result.Counts = counts.Approximate ? CountsKind.Approximate : CountsKind.Exact;
     }
 
+    /// <summary>Two versions of one file as text, null for a version that is not text and "" for one that is not there (null
+    /// bytes). Read in the same code page: a file that is not UTF-8 is in one, found from either version, or the two sides
+    /// would not agree about the letters in it and every line with an accent would count as changed.</summary>
+    internal static (string Before, string After) DecodePair(byte[] before, byte[] after)
+    {
+        // Found once, and only if a version asks for it: most files are UTF-8, and the detector is not free.
+        var legacy = new Lazy<Encoding>(() => DetectLegacy(after) ?? DetectLegacy(before));
+        return (before is null ? "" : Decode(before, () => legacy.Value),
+                after is null ? "" : Decode(after, () => legacy.Value));
+    }
+
+    // Measured, and the right code page every time: a text of a few hundred bytes in Windows-1252, KOI8-R or Windows-1251 (Russian) comes
+    // out at 0.74 to 0.79, in Windows-1250 (Polish) at 0.62, in Windows-1251 (Ukrainian) at 0.59 to 0.65, and a source file with a few
+    // Ukrainian comments at 0.48 to 0.54. Random bytes the detector still answers for come out at about 0.50. So the floor is low, and
+    // what keeps a file from being guessed at on too little is the amount of evidence below, not the confidence.
+    private const float LegacyConfidence = 0.45f;
+
+    // A file with fewer letters outside ASCII than this fits several code pages equally well.
+    private const int LegacyMinimumHighBytes = 8;
+
+    // The start of a file says as much as the whole of it, at a fraction of the time.
+    private const int LegacySampleBytes = 64 * 1024;
+
+    /// <summary>The legacy code page (Windows-1251, Windows-1252, Shift_JIS, GBK...) that bytes which are not UTF-8 and have no
+    /// byte-order mark are most likely in, or null when there are too few letters outside ASCII to say, the detector is not sure
+    /// enough, or it has no encoding for what it found.</summary>
+    internal static Encoding DetectLegacy(byte[] bytes)
+    {
+        if (bytes is null || bytes.Length == 0) { return null; }
+        try
+        {
+            var sample = bytes;
+            if (bytes.Length > LegacySampleBytes)
+            {
+                sample = new byte[LegacySampleBytes];
+                Buffer.BlockCopy(bytes, 0, sample, 0, LegacySampleBytes);
+            }
+            var high = 0;
+            foreach (var b in sample)
+            {
+                if (b >= 0x80 && ++high >= LegacyMinimumHighBytes) { break; }
+            }
+            if (high < LegacyMinimumHighBytes) { return null; }
+
+            var found = CharsetDetector.DetectFromBytes(sample).Detected;
+            if (found?.Encoding is null || found.Confidence < LegacyConfidence) { return null; }
+            // UTF-8 and UTF-16 are decided before this is asked, and other forms of Unicode are not a legacy code page.
+            return found.Encoding.CodePage is 65001 or 1200 or 1201 or 12000 or 12001 ? null : found.Encoding;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException)
+        {
+            // A code page this machine does not have.
+            return null;
+        }
+    }
+
     /// <summary>The text of a file's bytes, or null when they are not text. A byte-order mark decides
-    /// the encoding; without one a NUL in the first 8000 bytes means binary, anything else is read as
-    /// UTF-8, which for an ANSI file merely swaps its accented letters for the same replacement
-    /// character on both sides, leaving the line counts right.</summary>
-    internal static string Decode(byte[] bytes)
+    /// the encoding; without one a NUL in the first 8000 bytes means binary, valid UTF-8 is read as it is,
+    /// and anything else is read in the code page <paramref name="legacy"/> names, when it names one, or as
+    /// UTF-8 with its accented letters replaced by the same replacement character on both sides, which leaves
+    /// the line counts right.</summary>
+    internal static string Decode(byte[] bytes, Func<Encoding> legacy = null)
     {
         if (bytes.Length == 0) { return ""; }
         if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
@@ -175,7 +234,13 @@ internal static class ChangeEvaluator
             if (bytes[i] != 0) { continue; }
             return null;
         }
-        return Encoding.UTF8.GetString(bytes);
+
+        try { return new UTF8Encoding(false, true).GetString(bytes); }
+        catch (DecoderFallbackException)
+        {
+            // Not UTF-8: the editor shows such a file in the code page of the system, and its authors saved it in their own.
+            return (legacy?.Invoke() ?? Encoding.UTF8).GetString(bytes);
+        }
     }
 
     /// <summary>The text of a file's bytes only when turning it back into those bytes gives the same ones: a

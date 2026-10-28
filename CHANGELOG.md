@@ -34,6 +34,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   knows what Claude touched and not what you decided. The extension now remembers, for each chat,
   how each kept file looked (a length and a hash, none of its content) and leaves it out unless it
   has changed since.
+- **The Changes list reads a file in a legacy code page as the text it is.** A source file saved in
+  Windows-1251, Windows-1252 or another code page, with no byte-order mark, showed its letters as
+  replacement characters in the comparison window. The code page is now found from the content (with
+  the UTF.Unknown library) and both sides of a file are read in it. Undo still writes the bytes back
+  as they were.
 - **A question from Claude can show a preview of each choice.** When the options of a question
   come with a mockup, a code sample or a layout to compare, the one under the pointer or the
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer

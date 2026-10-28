@@ -61,8 +61,9 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
         string before, current;
         try
         {
-            before = row.Baseline.IsEmpty ? "" : ChangeEvaluator.Decode(await AsyncFile.ReadAllBytesAsync(row.Baseline.Path).ConfigureAwait(false));
-            current = await ReadCurrentTextAsync(path).ConfigureAwait(false);
+            var beforeBytes = row.Baseline.IsEmpty ? null : await AsyncFile.ReadAllBytesAsync(row.Baseline.Path).ConfigureAwait(false);
+            var currentBytes = await ReadCurrentBytesAsync(path).ConfigureAwait(false);
+            (before, current) = ChangeEvaluator.DecodePair(beforeBytes, currentBytes);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -81,11 +82,11 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
         await editor.ShowDiffAsync("changes:" + path, path, before, current, "Before Claude", "Current");
     }
 
-    // A file Claude deleted has no text now, which is an empty side of the comparison, not a failure.
-    private static async Task<string> ReadCurrentTextAsync(string path)
+    // A file Claude deleted has no bytes now, which is an empty side of the comparison, not a failure.
+    private static async Task<byte[]> ReadCurrentBytesAsync(string path)
     {
-        try { return ChangeEvaluator.Decode(await AsyncFile.ReadAllBytesAsync(path).ConfigureAwait(false)); }
-        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) { return ""; }
+        try { return await AsyncFile.ReadAllBytesAsync(path).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) { return null; }
     }
 
     /// <summary>Show every listed file's changes together, in the one window Visual Studio 18 has for it. False when that could
