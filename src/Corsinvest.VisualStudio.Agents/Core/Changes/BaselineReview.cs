@@ -5,6 +5,7 @@
 
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 
@@ -41,45 +42,43 @@ internal sealed class ReviewBaseline
 /// file.</summary>
 internal static class BaselineReview
 {
-    /// <summary>Null when the row can be reviewed in place, with <paramref name="baseline"/> set; otherwise why not,
-    /// in words for the log. Reads the baseline and the file, so not for the UI thread.</summary>
-    public static string Prepare(FileChange row, out ReviewBaseline baseline)
+    /// <summary>Why the row cannot be reviewed in place, in words for the log, or null with the baseline it is reviewed
+    /// against. Reads the baseline and the file; asynchronously, so a caller on the UI thread does not wait for the disk.</summary>
+    public static async Task<(string Why, ReviewBaseline Baseline)> PrepareAsync(FileChange row)
     {
-        baseline = null;
-        if (row.State == ChangeState.Deleted) { return "the file was deleted: there is no editor to draw in"; }
-        if (row.IsBinary || row.Counts == CountsKind.Unavailable) { return "the file is not text, or too large to compare"; }
-        if (!row.Baseline.IsKnown) { return "there is no copy of the file from before the change"; }
+        if (row.State == ChangeState.Deleted) { return Not("the file was deleted: there is no editor to draw in"); }
+        if (row.IsBinary || row.Counts == CountsKind.Unavailable) { return Not("the file is not text, or too large to compare"); }
+        if (!row.Baseline.IsKnown) { return Not("there is no copy of the file from before the change"); }
         if (row.Baseline.IsEmpty)
         {
-            baseline = new ReviewBaseline("", ChangeEvaluator.Mark.None, isEmpty: true, lineEnding: null);
-            return null;
+            return (null, new ReviewBaseline("", ChangeEvaluator.Mark.None, isEmpty: true, lineEnding: null));
         }
 
         byte[] bytes;
-        try { bytes = ChangeEvaluator.ReadShared(row.Baseline.Path); }
+        try { bytes = await AsyncFile.ReadAllBytesAsync(row.Baseline.Path).ConfigureAwait(false); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return $"the copy of the file from before the change cannot be read: {ex.Message}";
+            return Not($"the copy of the file from before the change cannot be read: {ex.Message}");
         }
 
         // Plain UTF-8 or UTF-16 only: the same text Undo hands to the editor, and for the same reason. A legacy code
         // page decoded as UTF-8 would lose its accents in the baseline, and keep or undo a hunk with the loss in it.
         var text = ChangeEvaluator.DecodeStrict(bytes);
-        if (text is null) { return "the file is not plain UTF-8 or UTF-16 text"; }
+        if (text is null) { return Not("the file is not plain UTF-8 or UTF-16 text"); }
 
         // The editor shows the baseline in the document's line ending and writes a kept hunk back as one: a baseline with
         // two kinds could not be put back as it was.
-        if (BaselineText.HasMixedLineEndings(text)) { return "the copy from before the change mixes line endings, which keeping a hunk would level"; }
+        if (BaselineText.HasMixedLineEndings(text)) { return Not("the copy from before the change mixes line endings, which keeping a hunk would level"); }
 
         byte[] current;
-        try
+        try { current = await AsyncFile.ReadAllBytesAsync(row.Path).ConfigureAwait(false); }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
         {
-            if (!File.Exists(row.Path)) { return "the file is gone"; }
-            current = ChangeEvaluator.ReadShared(row.Path);
+            return Not("the file is gone");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            return $"the file cannot be read: {ex.Message}";
+            return Not($"the file cannot be read: {ex.Message}");
         }
 
         // The editor saves a document with the mark it has: a baseline with another would come back with one the file never
@@ -87,15 +86,16 @@ internal static class BaselineReview
         var mark = ChangeEvaluator.ByteOrderMark(bytes);
         if (ChangeEvaluator.ByteOrderMark(current) != mark)
         {
-            return "its byte-order mark is not the one the copy from before the change has: the editor would save it with the wrong one";
+            return Not("its byte-order mark is not the one the copy from before the change has: the editor would save it with the wrong one");
         }
 
         // The file as it is must be text the same way: a code page decoded as UTF-8 is not what the editor would save.
         var now = ChangeEvaluator.DecodeStrict(current);
-        if (now is null) { return "the file is not plain UTF-8 or UTF-16 text now"; }
-        if (BaselineText.HasMixedLineEndings(now)) { return "the file mixes line endings, which the review would level"; }
+        if (now is null) { return Not("the file is not plain UTF-8 or UTF-16 text now"); }
+        if (BaselineText.HasMixedLineEndings(now)) { return Not("the file mixes line endings, which the review would level"); }
 
-        baseline = new ReviewBaseline(text, mark, isEmpty: false, BaselineText.DominantLineEnding(text));
-        return null;
+        return (null, new ReviewBaseline(text, mark, isEmpty: false, BaselineText.DominantLineEnding(text)));
     }
+
+    private static (string Why, ReviewBaseline Baseline) Not(string why) => (why, null);
 }
