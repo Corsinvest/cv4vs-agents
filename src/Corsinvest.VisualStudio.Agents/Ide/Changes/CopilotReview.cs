@@ -26,6 +26,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -89,8 +90,8 @@ internal sealed class CopilotReview
     private readonly List<IDisposable> _subscriptions = new();
 
     // Completed when Copilot has let go of the file: what a caller that asked for the end waits for.
-    private readonly System.Threading.Tasks.TaskCompletionSource<bool> _over
-        = new(System.Threading.Tasks.TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<bool> _over
+        = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private Phase _phase = Phase.Starting;
     private IDifferenceBuffer _differences;
@@ -154,7 +155,7 @@ internal sealed class CopilotReview
     /// document as the baseline); then its two copies of the baseline are rewritten; then it is told there is a change, because
     /// its view model works out the first difference at attach time only when it has been told so; and only then is the view
     /// wired. Telling it afterwards would draw nothing until the document next changed.</para></summary>
-    public async System.Threading.Tasks.Task<(ReviewStart Result, string Why)> StartAsync()
+    public async Task<(ReviewStart Result, string Why)> StartAsync()
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         View.Closed += OnViewClosed;
@@ -182,7 +183,7 @@ internal sealed class CopilotReview
             var inert = ((ITextSnapshot)_shape.BaselineSnapshot(_state)).TextBuffer;
             Replace(inert, _lastBaselineText);
             // With a byte-order mark, as Copilot writes it itself: the code window reads this file back as UTF-8 whatever it holds.
-            File.WriteAllText(_tempPath, _lastBaselineText, new UTF8Encoding(true));
+            await AsyncFile.WriteAllTextAsync(_tempPath, _lastBaselineText, new UTF8Encoding(true));
 
             // Before Copilot gives the window its baseline: the first difference it works out is then the exact one, and nothing is
             // redrawn after it (the inline view lost its deleted lines when the option came a moment after the first drawing).
@@ -250,7 +251,7 @@ internal sealed class CopilotReview
     // Not now: a document with unsaved changes shows more than the disk, and one the editor has not reloaded since Claude wrote
     // it shows less. Either way the difference would not be the one the row measured, and a hunk undone in it would save over a
     // file that is newer.
-    private async System.Threading.Tasks.Task<string> NotReadyAsync()
+    private async Task<string> NotReadyAsync()
     {
         if (_document.IsDirty) { return "it has changes that are not saved"; }
         var matches = await BufferMatchesDiskAsync();
@@ -282,7 +283,7 @@ internal sealed class CopilotReview
     }
 
     // The editor loads the left side from the file a moment after it is given: waited for, not assumed.
-    private async System.Threading.Tasks.Task<bool> LeftSideIsOursAsync()
+    private async Task<bool> LeftSideIsOursAsync()
     {
         var clock = Stopwatch.StartNew();
         while (true)
@@ -738,27 +739,39 @@ internal sealed class CopilotReview
         var before = e.Before.Length;
         var after = e.After.Length;
         _log.Debug(() => $"[changes] {Path}: the document changed, {before} to {after} characters, {e.Changes.Count} edit(s)");
-        if (after == 0 && before > 0) { KeepRecoveryCopy(e.Before); }
+        if (after == 0 && before > 0) { _ = KeepRecoveryCopyAsync(e.Before); }
     }
 
-    private void KeepRecoveryCopy(ITextSnapshot before)
+    // Not awaited by the event: the copy is written off the editor's own dispatch, and says so when it is done.
+    private async Task KeepRecoveryCopyAsync(ITextSnapshot before)
     {
         try
         {
-            Directory.CreateDirectory(AppPaths.RecoveryFolder);
             var file = System.IO.Path.Combine(AppPaths.RecoveryFolder, $"{System.IO.Path.GetFileName(Path)}.{DateTime.Now:yyyyMMdd-HHmmss-fff}.txt");
-            File.WriteAllText(file, before.GetText(), new UTF8Encoding(false));
-            foreach (var old in new DirectoryInfo(AppPaths.RecoveryFolder).GetFiles().OrderByDescending(f => f.LastWriteTimeUtc).Skip(20))
-            {
-                try { old.Delete(); }
-                catch (IOException) { /* an old copy that is in use stays */ }
-            }
+            // The folder, and the old copies, have no async form: the pool.
+            await Task.Run(() => Directory.CreateDirectory(AppPaths.RecoveryFolder)).ConfigureAwait(false);
+            await AsyncFile.WriteAllTextAsync(file, before.GetText(), new UTF8Encoding(false)).ConfigureAwait(false);
+            await Task.Run(TrimRecoveryFolder).ConfigureAwait(false);
             _log.Warn($"[changes] {Path} was emptied while its review was on: what it held before ({before.Length} characters) is kept in {file}");
+            await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             Say($"{System.IO.Path.GetFileName(Path)} was emptied: its text before is kept in {file}");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _log.Warn($"[changes] {Path} was emptied while its review was on, and what it held could not be kept: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("CopilotReview.KeepRecoveryCopy", ex);
+        }
+    }
+
+    private static void TrimRecoveryFolder()
+    {
+        foreach (var old in new DirectoryInfo(AppPaths.RecoveryFolder).GetFiles().OrderByDescending(f => f.LastWriteTimeUtc).Skip(20))
+        {
+            try { old.Delete(); }
+            catch (IOException) { /* an old copy that is in use stays */ }
         }
     }
 
@@ -1021,18 +1034,15 @@ internal sealed class CopilotReview
     // --- the document ------------------------------------------------------------------------------------
 
     /// <summary>Whether the editor holds the file as it is on disk: null when the disk could not be read.</summary>
-    private async System.Threading.Tasks.Task<bool?> BufferMatchesDiskAsync()
+    private async Task<bool?> BufferMatchesDiskAsync()
     {
-        var bytes = await System.Threading.Tasks.Task.Run(() =>
+        byte[] bytes;
+        try { bytes = await AsyncFile.ReadAllBytesAsync(Path); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            try { return ChangeEvaluator.ReadShared(Path); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                _log.Debug(() => $"[changes] could not read {Path} to compare it with the editor: {ex.Message}");
-                return null;
-            }
-        });
-        if (bytes is null) { return null; }
+            _log.Debug(() => $"[changes] could not read {Path} to compare it with the editor: {ex.Message}");
+            return null;
+        }
         var disk = ChangeEvaluator.DecodeStrict(bytes);
         return disk is not null && string.Equals(disk, _document.TextBuffer.CurrentSnapshot.GetText(), StringComparison.Ordinal);
     }
