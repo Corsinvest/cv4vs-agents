@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Core.Changes;
 using Corsinvest.VisualStudio.Agents.Core.Client;
 using Corsinvest.VisualStudio.Agents.Core.Panes;
 using Corsinvest.VisualStudio.Agents.Core.Sessions;
@@ -17,7 +18,8 @@ namespace Corsinvest.VisualStudio.Agents.Chat.Host;
 internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
                                                    IClaudeClient client,
                                                    PaneEntry entry,
-                                                   OutputWindowLogger log)
+                                                   OutputWindowLogger log,
+                                                   SessionChanges changes)
 {
     // Subscribe to the stats indexer's completion once (first GetStats), so we forward a
     // StatsIndexDone notification to this WebView when a background pass finishes.
@@ -180,6 +182,30 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
 
             case BridgeMessages.FromWebView.Session.GetRewindPoints:
                 HandleGetRewindPoints(data, id);
+                break;
+
+            case BridgeMessages.FromWebView.ChangedFiles.Get:
+                HandleGetChangedFiles(data, id);
+                break;
+
+            case BridgeMessages.FromWebView.ChangedFiles.Open:
+                HandleOpenChangedFile(data, id);
+                break;
+
+            case BridgeMessages.FromWebView.ChangedFiles.Keep:
+                HandleKeepChangedFile(data, id);
+                break;
+
+            case BridgeMessages.FromWebView.ChangedFiles.Undo:
+                HandleUndoChangedFile(data, id);
+                break;
+
+            case BridgeMessages.FromWebView.ChangedFiles.KeepAll:
+                HandleKeepAllChangedFiles(data, id);
+                break;
+
+            case BridgeMessages.FromWebView.ChangedFiles.UndoAll:
+                HandleUndoAllChangedFiles(data, id);
                 break;
 
             case BridgeMessages.FromWebView.Open.IdeOutputWindow:
