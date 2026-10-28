@@ -681,6 +681,54 @@ internal sealed class CopilotReview
         }
     }
 
+    /// <summary>Writes down a command run on this document while it is reviewed (see <see cref="ReviewRegistry"/>), with the line
+    /// the caret is on and what Ctrl+Z and Redo have to work on: on a line of a change Ctrl+Y is Copilot's Keep, not Redo.</summary>
+    internal void NoteCommand(string name)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (_phase != Phase.Active) { return; }
+        _log.Debug(() =>
+        {
+            var view = ShownViewNow();
+            return $"[changes] {Path}: {name}, the caret on line {DocumentLine(view, view.Caret.Position.BufferPosition)}; {UndoState()}";
+        });
+    }
+
+    // As the shell's undo manager of the document counts them, which is what Ctrl+Z and Redo act on.
+    private string UndoState()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            var adapter = _registry.Adapters?.GetBufferAdapter(_document.TextBuffer);
+            if (adapter is null || adapter.GetUndoManager(out var undo) != VSConstants.S_OK || undo is null) { return "no undo manager"; }
+            undo.EnumUndoable(out var undoable);
+            undo.EnumRedoable(out var redoable);
+            var steps = Count(undoable);
+            var last = "";
+            if (steps > 0)
+            {
+                undo.GetLastUndoDescription(out var text);
+                last = $" (the last: {text})";
+            }
+            return $"{steps} step(s) for Ctrl+Z{last}, {Count(redoable)} for Redo";
+        }
+        catch (COMException ex)
+        {
+            return $"the undo manager could not be read: {ex.Message}";
+        }
+    }
+
+    private static int Count(IEnumOleUndoUnits units)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (units is null) { return 0; }
+        var count = 0;
+        var one = new IOleUndoUnit[1];
+        while (units.Next(1, one, out var fetched) == VSConstants.S_OK && fetched == 1) { count++; }
+        return count;
+    }
+
     // Every change to the document while the review is on is written down, with its size: whatever Copilot's buttons did to the file
     // is then in the log, not a guess. A document that comes out empty is a loss nobody asked for (Undo writes the baseline, which
     // is not empty): what it held is kept first, so that it can be got back, and said.
