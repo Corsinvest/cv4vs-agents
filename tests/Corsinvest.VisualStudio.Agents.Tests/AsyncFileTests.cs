@@ -120,6 +120,18 @@ public sealed class AsyncFileTests : IDisposable
     }
 
     [Fact]
+    public async Task Text_is_read_as_utf8_unless_a_byte_order_mark_says_otherwise()
+    {
+        var utf8 = Write("utf8.txt", new UTF8Encoding(false).GetBytes("é\n"));
+        var withMark = Write("mark.txt", new UTF8Encoding(true).GetPreamble().Concat(new UTF8Encoding(true).GetBytes("é\n")));
+        var utf16 = Write("utf16.txt", Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes("é\n")));
+
+        Assert.Equal("é\n", await AsyncFile.ReadAllTextAsync(utf8));
+        Assert.Equal("é\n", await AsyncFile.ReadAllTextAsync(withMark));
+        Assert.Equal("é\n", await AsyncFile.ReadAllTextAsync(utf16));
+    }
+
+    [Fact]
     public async Task A_cancelled_read_stops()
     {
         using var cancelled = new CancellationTokenSource();
