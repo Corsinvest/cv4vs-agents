@@ -632,24 +632,39 @@ internal sealed class CopilotReview
         // Ctrl+Z to take back. A turn later, once the editor has finished the reload it records.
         if ((e.FileActionType & FileActionTypes.ContentLoadedFromDisk) != 0)
         {
-            Post(() =>
+            if (ReloadChangedNothing())
             {
-                if (_phase == Phase.Active) { DiscardUndoHistory("the file was reloaded from the disk"); }
-                return Task.CompletedTask;
-            });
+                _log.Debug(() => $"[changes] {Path}: reloaded from the disk with the text it had, Ctrl+Z still takes back what was done before");
+            }
+            else
+            {
+                Post(() =>
+                {
+                    if (_phase == Phase.Active) { DiscardUndoHistory("the file was reloaded from the disk"); }
+                    return Task.CompletedTask;
+                });
+            }
         }
         if ((e.FileActionType & FileActionTypes.ContentSavedToDisk) == 0) { return; }
         _log.Debug(() => $"[changes] {Path}: saved, the document has {_document.TextBuffer.CurrentSnapshot.Length} characters");
         RequestMeasure();
     }
 
+    // Copilot saves a change it undid through the document, a save the editor does not count as its own: it sees the file change
+    // on the disk and reloads it, with the text it already has. Such a reload records nothing for Ctrl+Z, and clearing the history
+    // after it took away the Undo itself, the one thing there was to take back. The editor tags its reload with the document, and
+    // says the file was loaded right after it.
+    private bool ReloadChangedNothing()
+        => _lastEdit is { } reload && reload.EditTag is ITextDocument && reload.After == _document.TextBuffer.CurrentSnapshot
+           && (reload.Changes.Count == 0 || string.Equals(reload.Before.GetText(), reload.After.GetText(), StringComparison.Ordinal));
+
     // Claude writes the file on disk, and the editor takes the new text into the open document as an edit of its own, which Ctrl+Z
     // takes back: all of Claude's change at once, in the editor only, under a review that is drawing against it. A person who pressed
     // Keep on one change and then Ctrl+Z to take the Keep back (a Keep is not an edit of the document, so there is nothing of it to
     // take back) got the other changes wiped out of the editor instead, and the file on disk still had them. So what Ctrl+Z could take
-    // back from before the review is forgotten when it starts, and again whenever the file is reloaded during it. What is done in the
-    // editor during the review (a change undone with Copilot's button, the person's own typing) stays undoable. The document is never
-    // dirty here: a review only starts on a document that is what the disk holds.
+    // back from before the review is forgotten when it starts, and again whenever a reload during it brings new text. What is done
+    // in the editor during the review (a change undone with Copilot's button, the person's own typing) stays undoable. The document
+    // is never dirty here: a review only starts on a document that is what the disk holds.
     private void DiscardUndoHistory(string why)
     {
         try
