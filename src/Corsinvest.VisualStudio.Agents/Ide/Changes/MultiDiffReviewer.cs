@@ -14,6 +14,7 @@ using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Primitives;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Task = System.Threading.Tasks.Task;
 
 namespace Corsinvest.VisualStudio.Agents.Ide.Changes;
@@ -59,7 +60,7 @@ internal static class MultiDiffReviewer
 
     /// <summary>Open the window with every listed file that can be shown in text. False when it could not be opened, or when no
     /// listed file can be shown there.</summary>
-    public static async System.Threading.Tasks.Task<bool> ShowAsync(ChangeSet set)
+    public static async Task<bool> ShowAsync(ChangeSet set)
     {
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         var shape = Resolve();
@@ -67,7 +68,7 @@ internal static class MultiDiffReviewer
 
         try
         {
-            var items = await Task.Run(() => Collect(set.Snapshot()));
+            var items = await CollectAsync(set.Snapshot());
             if (items.Count == 0)
             {
                 OutputWindowLogger.Global.Info("[changes] no listed file can be shown in the all-changes window");
@@ -109,22 +110,22 @@ internal static class MultiDiffReviewer
     }
 
     /// <summary>The files the window can take, each with its baseline as text in the file's own line endings: the two sides
-    /// then differ in lines and not in how they end. Reads the disk, so not for the UI thread.</summary>
-    private static List<Item> Collect(IReadOnlyList<FileChange> rows)
+    /// then differ in lines and not in how they end. Reads the disk, asynchronously.</summary>
+    private static async Task<List<Item>> CollectAsync(IReadOnlyList<FileChange> rows)
     {
         var log = OutputWindowLogger.Global;
         var items = new List<Item>();
         foreach (var row in rows)
         {
             // The same rule as the review in the editor: where text and bytes agree. Deleted files have no side to show.
-            var why = BaselineReview.Prepare(row, out var baseline);
+            var (why, baseline) = await BaselineReview.PrepareAsync(row).ConfigureAwait(false);
             if (why is not null)
             {
                 log.Info($"[changes] {row.Path} is left out of the all-changes window: {why}");
                 continue;
             }
             string current;
-            try { current = File.ReadAllText(row.Path); }
+            try { current = await AsyncFile.ReadAllTextAsync(row.Path).ConfigureAwait(false); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 log.Warn($"[changes] {row.Path} is left out of the all-changes window, it could not be read: {ex.Message}");

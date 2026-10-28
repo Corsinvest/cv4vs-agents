@@ -62,6 +62,14 @@ internal static class AsyncFile
         return head;
     }
 
+    /// <summary>A file as text, the way <c>File.ReadAllText</c> reads it: UTF-8, unless a byte-order mark says otherwise.</summary>
+    public static async Task<string> ReadAllTextAsync(string path)
+    {
+        using var stream = await OpenReadAsync(path).ConfigureAwait(false);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return await reader.ReadToEndAsync().ConfigureAwait(false);
+    }
+
     /// <summary>Write a file, replacing what was there.</summary>
     public static async Task WriteAllBytesAsync(string path, byte[] bytes, CancellationToken cancel = default)
     {
