@@ -38,8 +38,15 @@ Redistributable runtime packages referenced by the VS package.
 | [Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json) | 13.0.1 | MIT |
 | [Microsoft.Web.WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) | 1.0.3912.50 | Microsoft Software License (redistributable) |
 | [Community.VisualStudio.Toolkit.17](https://github.com/VsixCommunity/Community.VisualStudio.Toolkit) | 17.0.551 | MIT |
+| [UTF.Unknown](https://github.com/CharsetDetector/UTF-unknown) | 2.6.0 | MPL-1.1 OR GPL-2.0-or-later OR LGPL-2.1-or-later (used under GPL-2.0-or-later, see below) |
+| [System.Text.Encoding.CodePages](https://github.com/dotnet/runtime) | 4.7.1 | MIT (a dependency of UTF.Unknown) |
 | [Microsoft.VisualStudio.SDK](https://github.com/microsoft/vs-sdk) | 17.0.31902.203 | Microsoft Software License |
 | Microsoft.Terminal.Wpf | (ships with Visual Studio) | Microsoft Software License |
+
+UTF.Unknown is a port of the Mozilla Universal Charset Detector, and each of its source files offers the
+code under the MPL 1.1, the GPL 2 or later, or the LGPL 2.1 or later, at the recipient's choice. This
+extension is GPL-3.0-only (see `LICENSE`), so it uses the library under the GPL 2 or later option, which
+allows version 3. The three license texts are in the library's repository, under `license/`.
 
 The Visual Studio SDK and `Microsoft.Terminal.Wpf` assemblies are provided by
 the installed Visual Studio and are **not** bundled in the VSIX; they are listed
