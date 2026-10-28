@@ -136,9 +136,12 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
     {
         if (!row.Baseline.IsKnown) { return null; }
 
-        var info = new FileInfo(row.Path);
-        var length = info.Exists ? info.Length : 0;
-        var written = info.Exists ? info.LastWriteTimeUtc : default;
+        // No async form: the pool, not the caller's thread, which is the UI thread when a button was clicked.
+        var (length, written) = await Task.Run(() =>
+        {
+            var info = new FileInfo(row.Path);
+            return info.Exists ? (info.Length, info.LastWriteTimeUtc) : (0L, default(DateTime));
+        }).ConfigureAwait(false);
         if (length != row.StampLength || written != row.StampWriteUtc)
         {
             if (remeasure is not null) { await remeasure(row.Path).ConfigureAwait(false); }

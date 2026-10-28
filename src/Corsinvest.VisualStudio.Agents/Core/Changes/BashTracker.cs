@@ -336,7 +336,7 @@ internal sealed class BashTracker : IDisposable
             baseline = BaselineRef.None;
         }
 
-        var evaluation = await Task.Run(() => ChangeEvaluator.Evaluate(path, baseline)).ConfigureAwait(false);
+        var evaluation = await ChangeEvaluator.EvaluateAsync(path, baseline).ConfigureAwait(false);
         if (evaluation.Unchanged)
         {
             // Touched, not changed: a mode, or a file written with what it already held.
@@ -372,7 +372,7 @@ internal sealed class BashTracker : IDisposable
     {
         var target = _baselines.TargetFor(sessionId, path);
         if (!await _git.WriteBlobAsync(oid, relativePath, target).ConfigureAwait(false)) { return BaselineRef.None; }
-        if (LooksLikeAnLfsPointer(target))
+        if (await LooksLikeAnLfsPointerAsync(target).ConfigureAwait(false))
         {
             _baselines.Release(BaselineRef.Own(target));
             return BaselineRef.None;
@@ -380,14 +380,12 @@ internal sealed class BashTracker : IDisposable
         return BaselineRef.Own(target);
     }
 
-    private bool LooksLikeAnLfsPointer(string file)
+    private async Task<bool> LooksLikeAnLfsPointerAsync(string file)
     {
         try
         {
-            using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var buffer = new byte[LfsPointer.Length];
-            var read = stream.Read(buffer, 0, buffer.Length);
-            return read == buffer.Length && Encoding.ASCII.GetString(buffer) == LfsPointer;
+            var head = await AsyncFile.ReadHeadAsync(file, LfsPointer.Length).ConfigureAwait(false);
+            return head.Length == LfsPointer.Length && Encoding.ASCII.GetString(head) == LfsPointer;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

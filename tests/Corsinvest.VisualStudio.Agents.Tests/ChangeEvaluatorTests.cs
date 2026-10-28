@@ -188,14 +188,14 @@ public sealed class ChangeEvaluatorTests : IDisposable
     }
 
     [Fact]
-    public void A_file_that_cannot_be_read_is_listed_as_changed_with_no_numbers_rather_than_throwing()
+    public async Task A_file_that_cannot_be_read_is_listed_as_changed_with_no_numbers_rather_than_throwing()
     {
         var before = Write("before.txt", "one\n");
         var file = Write("file.txt", "one\nlocked\n");
 
         using (new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None))
         {
-            var result = ChangeEvaluator.Evaluate(file, BaselineRef.Cli(before));
+            var result = await ChangeEvaluator.EvaluateAsync(file, BaselineRef.Cli(before));
 
             Assert.False(result.Unchanged);
             Assert.Equal(ChangeState.Modified, result.State);
