@@ -109,7 +109,7 @@ public sealed class ChangeActionsTests : IDisposable
     [Fact]
     public async Task Keep_deletes_a_copy_the_extension_took_but_never_the_clis_backup()
     {
-        var own = _baselines.Capture("s1", Write("a.txt", "before\n"));
+        var own = await _baselines.CaptureAsync("s1", Write("a.txt", "before\n"));
         var theirs = Write("backup@v1", "x\n");
         var fileA = Write("a.txt", "after\n");
         var fileB = Write("b.txt", "after\n");

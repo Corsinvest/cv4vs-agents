@@ -46,19 +46,23 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
             return;
         }
 
-        var texts = await Task.Run(() => new[]
-        {
-            row.Baseline.IsEmpty ? "" : ChangeEvaluator.Decode(File.ReadAllBytes(row.Baseline.Path)),
-            File.Exists(path) ? ChangeEvaluator.Decode(File.ReadAllBytes(path)) : "",
-        }).ConfigureAwait(false);
+        var before = row.Baseline.IsEmpty ? "" : ChangeEvaluator.Decode(await AsyncFile.ReadAllBytesAsync(row.Baseline.Path).ConfigureAwait(false));
+        var current = await ReadCurrentTextAsync(path).ConfigureAwait(false);
 
         // A comparison of two walls of bytes says nothing; the file itself is the better answer.
-        if (texts[0] is null || texts[1] is null)
+        if (before is null || current is null)
         {
             await editor.OpenFileAsync(path);
             return;
         }
-        await editor.ShowDiffAsync("changes:" + path, path, texts[0], texts[1], "Before Claude", "Current");
+        await editor.ShowDiffAsync("changes:" + path, path, before, current, "Before Claude", "Current");
+    }
+
+    // A file Claude deleted has no text now, which is an empty side of the comparison, not a failure.
+    private static async Task<string> ReadCurrentTextAsync(string path)
+    {
+        try { return ChangeEvaluator.Decode(await AsyncFile.ReadAllBytesAsync(path).ConfigureAwait(false)); }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException) { return ""; }
     }
 
     /// <summary>Accept the file as it is. Never fails: there is nothing to write.</summary>
@@ -129,9 +133,9 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
                 return null;
             }
 
-            var bytes = await Task.Run(() => File.ReadAllBytes(row.Baseline.Path)).ConfigureAwait(false);
+            var bytes = await AsyncFile.ReadAllBytesAsync(row.Baseline.Path).ConfigureAwait(false);
             var text = ChangeEvaluator.Decode(bytes);
-            if (text is not null && File.Exists(path))
+            if (text is not null && await Task.Run(() => File.Exists(path)).ConfigureAwait(false))
             {
                 switch (await editor.ReplaceDocumentTextAsync(path, text))
                 {
@@ -145,11 +149,8 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
             }
 
             // Not open (or deleted, or not text): the bytes go back as they were.
-            await Task.Run(() =>
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                File.WriteAllBytes(path, bytes);
-            }).ConfigureAwait(false);
+            await Task.Run(() => Directory.CreateDirectory(Path.GetDirectoryName(path))).ConfigureAwait(false);
+            await AsyncFile.WriteAllBytesAsync(path, bytes).ConfigureAwait(false);
             return null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
