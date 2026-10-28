@@ -66,6 +66,7 @@ export default defineConfig({
             'chat/sessions',
             'chat/diff',
             'chat/rewind',
+            'chat/changes',
             'chat/sub-agents',
             'chat/queued-messages',
             'chat/file-links',

@@ -179,6 +179,17 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<PluginListResponse>();
         AddInterface<MarketplaceListResponse>();
         AddInterface<PluginOpResultNotification>();
+
+        // The Changes list. sessionId is null before the CLI has named one; disabled is null while
+        // tracking is on; commandsNote is null while shell commands are followed.
+        AddInterface<ChangedFileDto>()
+            .Member(x => nameof(x.SharedWithPane)).Null();
+        AddInterface<ChangedFilesNotification>()
+            .Member(x => nameof(x.SessionId)).Null()
+            .Member(x => nameof(x.Disabled)).Null()
+            .Member(x => nameof(x.CommandsNote)).Null();
+        AddInterface<ChangedFileFailureDto>();
+        AddInterface<ChangedFilesActionResult>();
     }
 
     // WebView → C# payloads (FromWebViewDtos.cs). sessionId/agentId can arrive absent (the
@@ -227,6 +238,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<ForkNotification>().Member(x => nameof(x.SessionId)).Optional();
         AddInterface<ExternalUrlNotification>();
         AddInterface<OpenOptionsNotification>().Member(x => nameof(x.Page)).Optional();
+        AddInterface<ChangedFileRequest>();
+        AddInterface<OpenChangedFileNotification>();
 
         // Plugin-manager requests. Scope is omitted by the WebView (host defaults to "user").
         AddInterface<PluginInstallNotification>().Member(x => nameof(x.Scope)).Optional();

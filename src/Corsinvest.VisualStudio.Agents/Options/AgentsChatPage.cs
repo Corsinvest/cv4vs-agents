@@ -34,6 +34,7 @@ public enum InitialPermissionMode
     BypassPermissions,
 }
 
+
 /// <summary>How much of Claude's work the chat shows. The member names are what VS serializes into
 /// the settings store: renaming one drops everyone's saved choice.</summary>
 public enum ChatViewMode
@@ -114,8 +115,23 @@ public class AgentsChatPage : AgentsOptionsPage
 
     [Category("Files")]
     [DisplayName("Keep file checkpoints (Rewind)")]
-    [Description("Let Claude keep a copy of each file before it edits one, so the Rewind command can put them back the way they were before a message. The copies live under ~/.claude/file-history and are never cleaned up, which is the reason to turn this off if you do not use Rewind. Only files Claude edits are covered: what it changes by running a command is not. Takes effect on the next chat you open.")]
+    [Description("Let Claude keep a copy of each file before it edits one, so the Rewind command can put them back the way they were before a message, and the list of changed files can compare against them. The copies live under ~/.claude/file-history and are never cleaned up, which is the reason to turn this off if you do not use Rewind. Only files Claude edits are covered: what it changes by running a command is not. Takes effect on the next chat you open.")]
     public bool FileCheckpoints { get; set; } = true;
+
+    [Category("Files")]
+    [DisplayName("Track the files Claude changes")]
+    [Description("Keep a list of the files Claude changed in this chat, measured against how they were before its first edit, with Keep and Undo for each. Needs \"Keep file checkpoints\" on: those copies are what the list compares against. Files it changes by running a command are covered by the next setting. Takes effect on the next edit.")]
+    public bool TrackChanges { get; set; } = true;
+
+    [Category("Files")]
+    [DisplayName("Track the files commands change")]
+    [Description("Also list the files Claude changes by running a command (sed, a script, git checkout), measured against a snapshot of the working tree taken just before the command. Needs the folder to be in a git repository, and \"Track the files Claude changes\" on. The snapshots are kept in a private store under the extension's data folder: your repository's history, index and objects are only read. Files git does not ignore are copied into that store, so keep build output and large downloads in .gitignore. Takes effect on the next command.")]
+    public bool TrackBashChanges { get; set; } = true;
+
+    [Category("Files")]
+    [DisplayName("Review the changes in the editor")]
+    [Description("Show a file Claude changed in its own editor, with GitHub Copilot's review drawn in it: the changes in place, Keep and Undo on each change, and the Keep all and Undo all bar at the bottom. Needs GitHub Copilot in Visual Studio 18, signed in, and a file that is plain UTF-8 or UTF-16 text and was not created by Claude: otherwise Open shows the comparison window. Off leaves the editor alone, and Open always shows the comparison window. Takes effect at once for the files already shown, and for the ones after.")]
+    public bool ReviewInEditor { get; set; } = true;
 
     [Category("Files")]
     [DisplayName("Send post-edit diagnostics to Claude (experimental)")]
