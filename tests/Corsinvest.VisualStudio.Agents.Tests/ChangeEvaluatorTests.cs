@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Text;
 using Xunit;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Tests;
 
@@ -38,12 +39,12 @@ public sealed class ChangeEvaluatorTests : IDisposable
     }
 
     [Fact]
-    public void A_file_that_differs_from_its_baseline_is_modified_with_counts()
+    public async Task A_file_that_differs_from_its_baseline_is_modified_with_counts()
     {
         var before = Write("before.txt", "one\ntwo\n");
         var file = Write("file.txt", "one\nTWO\nthree\n");
 
-        var result = ChangeEvaluator.Evaluate(file, BaselineRef.Cli(before));
+        var result = await ChangeEvaluator.EvaluateAsync(file, BaselineRef.Cli(before));
 
         Assert.False(result.Unchanged);
         Assert.Equal(ChangeState.Modified, result.State);
@@ -53,20 +54,20 @@ public sealed class ChangeEvaluatorTests : IDisposable
     }
 
     [Fact]
-    public void A_file_identical_to_its_baseline_is_not_a_change()
+    public async Task A_file_identical_to_its_baseline_is_not_a_change()
     {
         var before = Write("before.txt", "same\n");
         var file = Write("file.txt", "same\n");
 
-        Assert.True(ChangeEvaluator.Evaluate(file, BaselineRef.Cli(before)).Unchanged);
+        Assert.True((await ChangeEvaluator.EvaluateAsync(file, BaselineRef.Cli(before))).Unchanged);
     }
 
     [Fact]
-    public void A_file_that_did_not_exist_is_added()
+    public async Task A_file_that_did_not_exist_is_added()
     {
         var file = Write("new.txt", "a\nb\nc\n");
 
-        var result = ChangeEvaluator.Evaluate(file, BaselineRef.Empty);
+        var result = await ChangeEvaluator.EvaluateAsync(file, BaselineRef.Empty);
 
         Assert.Equal(ChangeState.Added, result.State);
         Assert.Equal(3, result.Added);
@@ -74,20 +75,20 @@ public sealed class ChangeEvaluatorTests : IDisposable
     }
 
     [Fact]
-    public void A_file_created_and_removed_again_is_not_a_change()
+    public async Task A_file_created_and_removed_again_is_not_a_change()
     {
         var gone = Path.Combine(_folder, "gone.txt");
 
-        Assert.True(ChangeEvaluator.Evaluate(gone, BaselineRef.Empty).Unchanged);
+        Assert.True((await ChangeEvaluator.EvaluateAsync(gone, BaselineRef.Empty)).Unchanged);
     }
 
     [Fact]
-    public void A_file_that_was_there_and_is_gone_is_deleted()
+    public async Task A_file_that_was_there_and_is_gone_is_deleted()
     {
         var before = Write("before.txt", "a\nb\n");
         var gone = Path.Combine(_folder, "gone.txt");
 
-        var result = ChangeEvaluator.Evaluate(gone, BaselineRef.Cli(before));
+        var result = await ChangeEvaluator.EvaluateAsync(gone, BaselineRef.Cli(before));
 
         Assert.Equal(ChangeState.Deleted, result.State);
         Assert.Equal(0, result.Added);
@@ -95,11 +96,11 @@ public sealed class ChangeEvaluatorTests : IDisposable
     }
 
     [Fact]
-    public void Without_a_baseline_the_file_is_listed_but_not_counted()
+    public async Task Without_a_baseline_the_file_is_listed_but_not_counted()
     {
         var file = Write("file.txt", "a\n");
 
-        var result = ChangeEvaluator.Evaluate(file, BaselineRef.None);
+        var result = await ChangeEvaluator.EvaluateAsync(file, BaselineRef.None);
 
         Assert.Equal(ChangeState.Modified, result.State);
         Assert.Equal(CountsKind.Unavailable, result.Counts);
@@ -107,24 +108,24 @@ public sealed class ChangeEvaluatorTests : IDisposable
     }
 
     [Fact]
-    public void A_baseline_the_cli_pruned_is_reported_as_missing()
+    public async Task A_baseline_the_cli_pruned_is_reported_as_missing()
     {
         var file = Write("file.txt", "a\n");
         var pruned = Path.Combine(_folder, "pruned@v1");
 
-        var result = ChangeEvaluator.Evaluate(file, BaselineRef.Cli(pruned));
+        var result = await ChangeEvaluator.EvaluateAsync(file, BaselineRef.Cli(pruned));
 
         Assert.True(result.BaselineMissing);
         Assert.Equal(CountsKind.Unavailable, result.Counts);
     }
 
     [Fact]
-    public void A_line_ending_change_is_modified_with_nothing_counted()
+    public async Task A_line_ending_change_is_modified_with_nothing_counted()
     {
         var before = Write("before.txt", "a\nb\n");
         var file = Write("file.txt", "a\r\nb\r\n");
 
-        var result = ChangeEvaluator.Evaluate(file, BaselineRef.Cli(before));
+        var result = await ChangeEvaluator.EvaluateAsync(file, BaselineRef.Cli(before));
 
         // The bytes differ, so it is a change, but no line did.
         Assert.False(result.Unchanged);
@@ -133,25 +134,25 @@ public sealed class ChangeEvaluatorTests : IDisposable
     }
 
     [Fact]
-    public void A_byte_order_mark_is_not_part_of_the_first_line()
+    public async Task A_byte_order_mark_is_not_part_of_the_first_line()
     {
         var before = WriteBytes("before.txt", Encoding.UTF8.GetBytes("a\nb\n"));
         var withBom = new byte[] { 0xEF, 0xBB, 0xBF }.Concat(Encoding.UTF8.GetBytes("a\nb\n"));
         var file = WriteBytes("file.txt", withBom);
 
-        var result = ChangeEvaluator.Evaluate(file, BaselineRef.Cli(before));
+        var result = await ChangeEvaluator.EvaluateAsync(file, BaselineRef.Cli(before));
 
         Assert.Equal(0, result.Added);
         Assert.Equal(0, result.Deleted);
     }
 
     [Fact]
-    public void A_utf16_file_is_read_as_text()
+    public async Task A_utf16_file_is_read_as_text()
     {
         var before = WriteBytes("before.txt", Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes("a\nb\n")));
         var file = WriteBytes("file.txt", Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes("a\nc\n")));
 
-        var result = ChangeEvaluator.Evaluate(file, BaselineRef.Cli(before));
+        var result = await ChangeEvaluator.EvaluateAsync(file, BaselineRef.Cli(before));
 
         Assert.False(result.IsBinary);
         Assert.Equal(1, result.Added);
@@ -159,12 +160,12 @@ public sealed class ChangeEvaluatorTests : IDisposable
     }
 
     [Fact]
-    public void Binary_content_is_modified_without_counts()
+    public async Task Binary_content_is_modified_without_counts()
     {
         var before = WriteBytes("before.bin", new byte[] { 1, 2, 0, 3 });
         var file = WriteBytes("file.bin", new byte[] { 1, 2, 0, 4 });
 
-        var result = ChangeEvaluator.Evaluate(file, BaselineRef.Cli(before));
+        var result = await ChangeEvaluator.EvaluateAsync(file, BaselineRef.Cli(before));
 
         Assert.True(result.IsBinary);
         Assert.Equal(CountsKind.Unavailable, result.Counts);
@@ -172,16 +173,16 @@ public sealed class ChangeEvaluatorTests : IDisposable
     }
 
     [Fact]
-    public void A_file_too_large_to_read_into_memory_is_not_counted_but_still_compared()
+    public async Task A_file_too_large_to_read_into_memory_is_not_counted_but_still_compared()
     {
         var big = new string('x', (int)ChangeEvaluator.MaxCountedBytes + 10);
         var before = Write("before.txt", big);
         var same = Write("same.txt", big);
         var different = Write("different.txt", big.Substring(0, big.Length - 1) + "y");
 
-        Assert.True(ChangeEvaluator.Evaluate(same, BaselineRef.Cli(before)).Unchanged);
+        Assert.True((await ChangeEvaluator.EvaluateAsync(same, BaselineRef.Cli(before))).Unchanged);
 
-        var result = ChangeEvaluator.Evaluate(different, BaselineRef.Cli(before));
+        var result = await ChangeEvaluator.EvaluateAsync(different, BaselineRef.Cli(before));
         Assert.False(result.Unchanged);
         Assert.Equal(CountsKind.Unavailable, result.Counts);
     }
