@@ -73,6 +73,20 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
     private IVsRunningDocumentTable _rdt;
     private uint _rdtCookie;
 
+    // What is pressed in a reviewed document goes into the log by name: Ctrl+Z, Copilot's buttons and its keys are all "undo" in
+    // a report, and Ctrl+Y is Copilot's Keep on a line of a change and Redo anywhere else. A click on the Keep or Undo drawn by a
+    // change is not a command and shows only as what it did. DTE stops raising the events of a sink nothing holds.
+    private static readonly (string Guid, int Id, string Name)[] WatchedCommands =
+    {
+        ("{5EFC7975-14BC-11CF-9B2B-00AA00573819}", 43, "Edit.Undo"),
+        ("{5EFC7975-14BC-11CF-9B2B-00AA00573819}", 29, "Edit.Redo"),
+        ("{39B0DEDE-D931-4A92-9AA2-3447BC4998DC}", 2048, "Copilot.KeepAll"),
+        ("{39B0DEDE-D931-4A92-9AA2-3447BC4998DC}", 2049, "Copilot.UndoAll"),
+        ("{39B0DEDE-D931-4A92-9AA2-3447BC4998DC}", 2050, "Copilot.KeepCurrentChange"),
+        ("{39B0DEDE-D931-4A92-9AA2-3447BC4998DC}", 2051, "Copilot.UndoCurrentChange"),
+    };
+    private readonly List<EnvDTE.CommandEvents> _watchedCommands = new();
+
     /// <summary>A file that could not be shown, as it was when that was found out: another row of it, or the same row measured
     /// again after the file changed, is another chance.</summary>
     private sealed class Declined
@@ -711,11 +725,46 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
             }
             // The setting applies at once, not at the next change of a list.
             AgentsOptions.Applied += () => ScheduleSync();
+            WatchCommands();
         }
         catch (Exception ex)
         {
             _adapters = null;
             _log.LogException("ReviewRegistry.EnsureServices", ex);
+        }
+    }
+
+    private void WatchCommands()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (Package.GetGlobalService(typeof(EnvDTE.DTE)) is not EnvDTE.DTE dte) { return; }
+        foreach (var (guid, id, name) in WatchedCommands)
+        {
+            try
+            {
+                var events = dte.Events.get_CommandEvents(guid, id);
+                events.BeforeExecute += (string _, int _, object _, object _, ref bool _) => OnCommand(dte, name);
+                _watchedCommands.Add(events);
+            }
+            catch (Exception ex) when (ex is COMException or ArgumentException)
+            {
+                _log.Debug(() => $"[changes] {name} run on a reviewed document is not logged: {ex.Message}");
+            }
+        }
+    }
+
+    private void OnCommand(EnvDTE.DTE dte, string name)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (_reviewCount == 0) { return; }
+        try
+        {
+            var path = dte.ActiveDocument?.FullName;
+            if (path is not null && _reviews.TryGetValue(path, out var review)) { review.NoteCommand(name); }
+        }
+        catch (COMException ex)
+        {
+            _log.Debug(() => $"[changes] could not tell which document {name} ran on: {ex.Message}");
         }
     }
 
