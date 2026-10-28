@@ -266,6 +266,7 @@
     <Compile Include="Core\Panes\PaneRegistry.cs" />
     <Compile Include="Core\Panes\PaneControlBase.cs" />
     <Compile Include="Core\Changes\DiffSpike.cs" />
+    <Compile Include="Core\Changes\AsyncFile.cs" />
     <Compile Include="Core\Changes\ChangeBaselines.cs" />
     <Compile Include="Core\Changes\ChangeEvaluator.cs" />
     <Compile Include="Core\Changes\ChangeModels.cs" />

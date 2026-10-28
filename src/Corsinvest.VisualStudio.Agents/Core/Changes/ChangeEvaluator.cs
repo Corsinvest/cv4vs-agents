@@ -6,6 +6,8 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Core.Changes;
 
@@ -38,49 +40,64 @@ internal static class ChangeEvaluator
     // streaming, so a large file that did not change is not listed.
     public const long MaxCountedBytes = 8L * 1024 * 1024;
 
-    public static ChangeEvaluation Evaluate(string path, BaselineRef baseline)
+    /// <summary>What the file system says about a path. There is no async form of any of it, so it is read on the
+    /// pool.</summary>
+    private readonly struct Stat(bool exists, long length, DateTime writeUtc)
+    {
+        public bool Exists { get; } = exists;
+        public long Length { get; } = length;
+        public DateTime WriteUtc { get; } = writeUtc;
+    }
+
+    private static Task<Stat> StatAsync(string path) => Task.Run(() =>
     {
         var info = new FileInfo(path);
         var exists = info.Exists;
+        return new Stat(exists, exists ? info.Length : 0, exists ? info.LastWriteTimeUtc : default);
+    });
+
+    public static async Task<ChangeEvaluation> EvaluateAsync(string path, BaselineRef baseline, CancellationToken cancel = default)
+    {
+        var info = await StatAsync(path).ConfigureAwait(false);
         var result = new ChangeEvaluation
         {
-            Length = exists ? info.Length : 0,
-            WriteUtc = exists ? info.LastWriteTimeUtc : default,
+            Length = info.Length,
+            WriteUtc = info.WriteUtc,
         };
 
-        if (!baseline.IsKnown) { return NoBaseline(result, exists); }
+        if (!baseline.IsKnown) { return NoBaseline(result, info.Exists); }
         if (baseline.IsEmpty)
         {
-            if (!exists)
+            if (!info.Exists)
             {
                 result.Unchanged = true;
                 return result;
             }
             result.State = ChangeState.Added;
-            Count(result, null, path, 0, info.Length);
+            await CountAsync(result, null, path, 0, info.Length, cancel).ConfigureAwait(false);
             return result;
         }
 
-        var before = new FileInfo(baseline.Path);
+        var before = await StatAsync(baseline.Path).ConfigureAwait(false);
         if (!before.Exists)
         {
             result.BaselineMissing = true;
-            return NoBaseline(result, exists);
+            return NoBaseline(result, info.Exists);
         }
-        if (!exists)
+        if (!info.Exists)
         {
             result.State = ChangeState.Deleted;
-            Count(result, baseline.Path, null, before.Length, 0);
+            await CountAsync(result, baseline.Path, null, before.Length, 0, cancel).ConfigureAwait(false);
             return result;
         }
 
-        if (before.Length == info.Length && SameBytes(baseline.Path, path))
+        if (before.Length == info.Length && await SameBytesAsync(baseline.Path, path, cancel).ConfigureAwait(false))
         {
             result.Unchanged = true;
             return result;
         }
         result.State = ChangeState.Modified;
-        Count(result, baseline.Path, path, before.Length, info.Length);
+        await CountAsync(result, baseline.Path, path, before.Length, info.Length, cancel).ConfigureAwait(false);
         return result;
     }
 
@@ -91,7 +108,8 @@ internal static class ChangeEvaluator
         return result;
     }
 
-    private static void Count(ChangeEvaluation result, string beforePath, string afterPath, long beforeLength, long afterLength)
+    private static async Task CountAsync(ChangeEvaluation result, string beforePath, string afterPath, long beforeLength, long afterLength,
+                                         CancellationToken cancel)
     {
         if (beforeLength > MaxCountedBytes || afterLength > MaxCountedBytes)
         {
@@ -99,8 +117,8 @@ internal static class ChangeEvaluator
             return;
         }
 
-        var before = beforePath is null ? "" : Decode(ReadShared(beforePath));
-        var after = afterPath is null ? "" : Decode(ReadShared(afterPath));
+        var before = beforePath is null ? "" : Decode(await AsyncFile.ReadAllBytesAsync(beforePath, cancel).ConfigureAwait(false));
+        var after = afterPath is null ? "" : Decode(await AsyncFile.ReadAllBytesAsync(afterPath, cancel).ConfigureAwait(false));
         if ((beforePath is not null && before is null) || (afterPath is not null && after is null))
         {
             result.IsBinary = true;
@@ -143,35 +161,16 @@ internal static class ChangeEvaluator
         return Encoding.UTF8.GetString(bytes);
     }
 
-    // Shared, so a file the editor or a build still has open reads the same as any other.
-    private static FileStream OpenShared(string path)
-        => new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-
-    private static byte[] ReadShared(string path)
+    private static async Task<bool> SameBytesAsync(string a, string b, CancellationToken cancel)
     {
-        using var stream = OpenShared(path);
-        var bytes = new byte[stream.Length];
-        var read = 0;
-        while (read < bytes.Length)
-        {
-            var n = stream.Read(bytes, read, bytes.Length - read);
-            if (n == 0) { break; }
-            read += n;
-        }
-        if (read != bytes.Length) { Array.Resize(ref bytes, read); }
-        return bytes;
-    }
-
-    private static bool SameBytes(string a, string b)
-    {
-        using var left = OpenShared(a);
-        using var right = OpenShared(b);
+        using var left = await AsyncFile.OpenReadAsync(a).ConfigureAwait(false);
+        using var right = await AsyncFile.OpenReadAsync(b).ConfigureAwait(false);
         var x = new byte[16 * 1024];
         var y = new byte[16 * 1024];
         while (true)
         {
-            var nx = Fill(left, x);
-            var ny = Fill(right, y);
+            var nx = await AsyncFile.FillAsync(left, x, cancel).ConfigureAwait(false);
+            var ny = await AsyncFile.FillAsync(right, y, cancel).ConfigureAwait(false);
             if (nx != ny) { return false; }
             if (nx == 0) { return true; }
             for (var i = 0; i < nx; i++)
@@ -179,17 +178,5 @@ internal static class ChangeEvaluator
                 if (x[i] != y[i]) { return false; }
             }
         }
-    }
-
-    private static int Fill(Stream stream, byte[] buffer)
-    {
-        var total = 0;
-        while (total < buffer.Length)
-        {
-            var n = stream.Read(buffer, total, buffer.Length - total);
-            if (n == 0) { break; }
-            total += n;
-        }
-        return total;
     }
 }

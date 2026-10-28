@@ -8,6 +8,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Xunit;
+using System.Threading.Tasks;
 
 namespace Corsinvest.VisualStudio.Agents.Tests;
 
@@ -38,11 +39,11 @@ public sealed class ChangeBaselinesTests : IDisposable
     }
 
     [Fact]
-    public void A_copy_has_the_content_the_file_had_and_keeps_its_name()
+    public async Task A_copy_has_the_content_the_file_had_and_keeps_its_name()
     {
         var file = Source("Program.cs", "class A { }");
 
-        var copy = _baselines.Capture("s1", file);
+        var copy = await _baselines.CaptureAsync("s1", file);
 
         Assert.True(copy.Owned);
         Assert.EndsWith("~Program.cs", copy.Path);
@@ -51,10 +52,10 @@ public sealed class ChangeBaselinesTests : IDisposable
     }
 
     [Fact]
-    public void A_copy_is_a_snapshot_that_later_edits_of_the_file_do_not_reach()
+    public async Task A_copy_is_a_snapshot_that_later_edits_of_the_file_do_not_reach()
     {
         var file = Source("a.txt", "before");
-        var copy = _baselines.Capture("s1", file);
+        var copy = await _baselines.CaptureAsync("s1", file);
 
         File.WriteAllText(file, "after");
 
@@ -62,24 +63,24 @@ public sealed class ChangeBaselinesTests : IDisposable
     }
 
     [Fact]
-    public void A_file_that_is_not_there_has_an_empty_baseline_and_no_copy()
+    public async Task A_file_that_is_not_there_has_an_empty_baseline_and_no_copy()
     {
-        var copy = _baselines.Capture("s1", Path.Combine(_scratch, "absent.txt"));
+        var copy = await _baselines.CaptureAsync("s1", Path.Combine(_scratch, "absent.txt"));
 
         Assert.True(copy.IsEmpty);
         Assert.False(Directory.Exists(_root));
     }
 
     [Fact]
-    public void Two_files_with_the_same_name_do_not_share_a_copy()
+    public async Task Two_files_with_the_same_name_do_not_share_a_copy()
     {
         Directory.CreateDirectory(Path.Combine(_scratch, "one"));
         Directory.CreateDirectory(Path.Combine(_scratch, "two"));
         var a = Source(Path.Combine("one", "x.txt"), "a");
         var b = Source(Path.Combine("two", "x.txt"), "b");
 
-        var copyA = _baselines.Capture("s1", a);
-        var copyB = _baselines.Capture("s1", b);
+        var copyA = await _baselines.CaptureAsync("s1", a);
+        var copyB = await _baselines.CaptureAsync("s1", b);
 
         Assert.NotEqual(copyA.Path, copyB.Path);
         Assert.Equal("a", File.ReadAllText(copyA.Path));
@@ -87,9 +88,9 @@ public sealed class ChangeBaselinesTests : IDisposable
     }
 
     [Fact]
-    public void Releasing_deletes_a_copy_it_owns()
+    public async Task Releasing_deletes_a_copy_it_owns()
     {
-        var copy = _baselines.Capture("s1", Source("a.txt", "x"));
+        var copy = await _baselines.CaptureAsync("s1", Source("a.txt", "x"));
 
         _baselines.Release(copy);
 

@@ -110,7 +110,7 @@ internal sealed partial class SessionChanges : IDisposable
             ReleaseAll(_set.PrunePending(PendingLifetime));
             if (_options.PrepareFile is not null) { await _options.PrepareFile(path).ConfigureAwait(false); }
             var sessionId = _set.SessionId;
-            var baseline = await Task.Run(() => _baselines.Capture(sessionId, path)).ConfigureAwait(false);
+            var baseline = await _baselines.CaptureAsync(sessionId, path).ConfigureAwait(false);
             _set.StorePending(edit.ToolUseId, path, baseline);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -193,14 +193,14 @@ internal sealed partial class SessionChanges : IDisposable
         foreach (var wait in edit.IsSubAgent ? new[] { 0 } : _options.PollMilliseconds)
         {
             if (wait > 0) { await Task.Delay(wait, _lifetime.Token).ConfigureAwait(false); }
-            var entry = await Task.Run(() => sessions.FindRecentDelta(sessionId, edit.TranscriptPath, path)).ConfigureAwait(false);
+            var entry = await sessions.FindRecentDeltaAsync(sessionId, edit.TranscriptPath, path).ConfigureAwait(false);
             if (entry is not null) { return ToFound(sessions, sessionId, entry); }
         }
 
         // No fresh record. The CLI writes one only the first time it tracks a file, so this file was
         // tracked in an earlier turn that this pane did not see (or the record is lost): the
         // history holds it, and the earliest record is the content from before the session's first edit.
-        var history = await Task.Run(() => sessions.ReadFileHistory(sessionId)).ConfigureAwait(false);
+        var history = await sessions.ReadFileHistoryAsync(sessionId).ConfigureAwait(false);
         if (history.TryGetValue(path, out var track)) { return ToFound(sessions, sessionId, track.Earliest); }
 
         _log.Warn($"[changes] no baseline for {path}: the CLI kept no copy of it, so it is listed without one");
@@ -218,7 +218,7 @@ internal sealed partial class SessionChanges : IDisposable
 
     private async Task AddRowAsync(string path, Found found, string toolUseId)
     {
-        var evaluation = await Task.Run(() => ChangeEvaluator.Evaluate(path, found.Baseline)).ConfigureAwait(false);
+        var evaluation = await ChangeEvaluator.EvaluateAsync(path, found.Baseline).ConfigureAwait(false);
         if (evaluation.Unchanged)
         {
             // Edited back to what it was, or created and removed again: nothing to review. The CLI
@@ -271,7 +271,7 @@ internal sealed partial class SessionChanges : IDisposable
     private async Task RefreshRowAsync(string path, string toolUseId)
     {
         if (!_set.TryGet(path, out var row)) { return; }
-        var evaluation = await Task.Run(() => ChangeEvaluator.Evaluate(path, row.Baseline)).ConfigureAwait(false);
+        var evaluation = await ChangeEvaluator.EvaluateAsync(path, row.Baseline).ConfigureAwait(false);
         if (evaluation.Unchanged)
         {
             var removed = _set.Remove(path);
@@ -320,21 +320,17 @@ internal sealed partial class SessionChanges : IDisposable
             _set.SetDisabled(null);
 
             var sessions = Sessions;
-            var rows = await Task.Run(() =>
+            var rows = new List<FileChange>();
+            var history = await sessions.ReadFileHistoryAsync(sessionId).ConfigureAwait(false);
+            foreach (var kv in history.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
             {
-                var found = new List<FileChange>();
-                var history = sessions.ReadFileHistory(sessionId);
-                foreach (var kv in history.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
-                {
-                    if (generation != Volatile.Read(ref _generation) || _disposed) { break; }
-                    var baseline = ToFound(sessions, sessionId, kv.Value.Earliest);
-                    var evaluation = ChangeEvaluator.Evaluate(kv.Key, baseline.Baseline);
-                    if (evaluation.Unchanged) { continue; }
-                    found.Add(NewRow(kv.Key, baseline, evaluation, null));
-                    if (found.Count > ChangeSet.MaxFiles) { break; }
-                }
-                return found;
-            }).ConfigureAwait(false);
+                if (generation != Volatile.Read(ref _generation) || _disposed) { break; }
+                var baseline = ToFound(sessions, sessionId, kv.Value.Earliest);
+                var evaluation = await ChangeEvaluator.EvaluateAsync(kv.Key, baseline.Baseline).ConfigureAwait(false);
+                if (evaluation.Unchanged) { continue; }
+                rows.Add(NewRow(kv.Key, baseline, evaluation, null));
+                if (rows.Count > ChangeSet.MaxFiles) { break; }
+            }
 
             foreach (var row in rows)
             {
@@ -364,6 +360,8 @@ internal sealed partial class SessionChanges : IDisposable
         return true;
     }
 
+    // Deleting has no async form. Only the copies this extension took are deleted (a sub-agent's, a file after Keep), a few
+    // small files, so a new chat or a closing pane does not wait for them in any way that matters.
     private void ReleaseAll(IEnumerable<BaselineRef> baselines)
     {
         if (baselines is null) { return; }
