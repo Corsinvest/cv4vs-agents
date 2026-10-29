@@ -74,6 +74,43 @@ internal sealed partial class IdeContextService
         return null;
     }
 
+    /// <summary>The window frames of an open document, in the order the shell lists them: none when it is not open, more than
+    /// one for a file in two windows (Window > New Window) or a designer with its code view. Matched the way the shell sees the
+    /// path. UI thread.</summary>
+    internal static List<IVsWindowFrame> FindDocumentFrames(string path)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var found = new List<IVsWindowFrame>();
+        foreach (var frame in DocumentFrames())
+        {
+            if (PathEquals(FrameMoniker(frame), path)) { found.Add(frame); }
+        }
+        return found;
+    }
+
+    /// <summary>Every open document's frames, by <see cref="FrameKey"/> of its path: for a caller that looks up many files and
+    /// should not walk the frames for each. UI thread.</summary>
+    internal static Dictionary<string, List<IVsWindowFrame>> OpenDocumentFrames()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        var frames = new Dictionary<string, List<IVsWindowFrame>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var frame in DocumentFrames())
+        {
+            var moniker = FrameMoniker(frame);
+            if (string.IsNullOrEmpty(moniker)) { continue; }
+            var key = FrameKey(moniker);
+            if (!frames.TryGetValue(key, out var list)) { frames[key] = list = new List<IVsWindowFrame>(); }
+            list.Add(frame);
+        }
+        return frames;
+    }
+
+    /// <summary>A path spelt the way <see cref="PathEquals"/> compares them: one separator, none at the end.</summary>
+    internal static string FrameKey(string path) => path.Replace('/', '\\').TrimEnd('\\');
+
+    /// <summary>The path of the document in a frame, as the shell spells it. UI thread.</summary>
+    internal static string DocumentMoniker(IVsWindowFrame frame) => FrameMoniker(frame);
+
     private static bool PathEquals(string a, string b)
         => !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b)
            && string.Equals(a.Replace('/', '\\').TrimEnd('\\'),

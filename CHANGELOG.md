@@ -8,6 +8,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **A list of the files Claude changed in the chat.** A chip beside the message box counts them;
+  its panel shows each one against how it was before Claude's first edit, with the lines added and
+  removed, and Open, Keep and Undo for the file or for all of them. Undo puts a file back as it
+  was, through the editor when it is open, so Ctrl+Z gives back what was there. It compares with the
+  copies Rewind restores from, and takes its own for a sub-agent's edits.
+- **The list also follows what a shell command changes.** A file rewritten by `sed -i`, a script or
+  `git checkout`, run through the Bash or the PowerShell tool, is listed against a snapshot of the
+  working tree taken just before the command, so Undo puts it back as git would check it out. It
+  needs the folder to be in a git repository, and says so in the panel when it is not. The
+  snapshots live in a private store under the extension's data folder: your repository's history,
+  index and objects are only read. *Track the files commands change* in Options turns it off.
+- **A file Claude changed can be reviewed in its own editor, one change at a time, with GitHub Copilot's review.** A file
+  that is open (or that you open from the Changes panel) shows the changes in place, with Copilot's own **Keep** and
+  **Undo** on each change and **Keep** and **Undo** for the whole file in the bar at the bottom; the bar also gets this
+  extension's previous and next file of the list. When the last change is settled the file leaves the list. It needs GitHub
+  Copilot in Visual Studio 18, signed in: without it nothing is drawn and Open shows the comparison window. *Review the
+  changes in the editor* in Options turns it off.
+- **Every change in one window, on Visual Studio 2026.** *Review all* in the Changes panel opens the
+  changes of all the listed files together in the editor's own multi-file difference window, each
+  file with how it was before on the left and the file itself on the right. A Visual Studio that
+  does not have the window does not show the button.
+- **A file you kept stays kept when you resume the chat.** After a restart of Visual Studio the
+  Changes list used to list again every file you had accepted with Keep, since the CLI's history
+  knows what Claude touched and not what you decided. The extension now remembers, for each chat,
+  how each kept file looked (a length and a hash, none of its content) and leaves it out unless it
+  has changed since.
+- **The Changes list reads a file in a legacy code page as the text it is.** A source file saved in
+  Windows-1251, Windows-1252 or another code page, with no byte-order mark, showed its letters as
+  replacement characters in the comparison window. The code page is now found from the content (with
+  the UTF.Unknown library) and both sides of a file are read in it. Undo still writes the bytes back
+  as they were.
 - **A question from Claude can show a preview of each choice.** When the options of a question
   come with a mockup, a code sample or a layout to compare, the one under the pointer or the
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
