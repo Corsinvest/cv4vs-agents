@@ -83,6 +83,9 @@ internal sealed partial class SessionChanges : IDisposable
     private readonly KeptLedger _kept;
     private readonly ClaudePaths _paths;
     private readonly string _workingDirectory;
+    // The working directory in the spelling the IDE has it and in the real one (see PaneRoot), asked of the disk once, off the thread
+    // that makes the pane.
+    private readonly Task<PaneRoot> _root;
     private readonly SessionChangesOptions _options;
     private readonly OutputWindowLogger _log;
     private readonly ChangeBaselines _baselines;
@@ -97,6 +100,7 @@ internal sealed partial class SessionChanges : IDisposable
     {
         _paths = paths;
         _workingDirectory = workingDirectory;
+        _root = Task.Run(() => PaneRoot.Of(workingDirectory));
         _options = options ?? new SessionChangesOptions();
         _log = log ?? OutputWindowLogger.Global;
         _baselines = _options.Baselines ?? ChangeBaselines.Default;
@@ -234,8 +238,14 @@ internal sealed partial class SessionChanges : IDisposable
     {
         if (_disposed || _bash is not null) { return; }
         var folder = Path.Combine(_options.SnapshotsRoot ?? AppPaths.SnapshotsFolder, Guid.NewGuid().ToString("N"));
-        _bash = BashTracker.StartAsync(_workingDirectory, folder, _set, _baselines, _log, _options.MaxRowsPerCommand,
-                                       path => RefreshRowAsync(path, null), _options.MaxBaselineBytes);
+        _bash = StartTrackerAsync(folder);
+    }
+
+    private async Task<BashTracker> StartTrackerAsync(string snapshotFolder)
+    {
+        var root = await _root.ConfigureAwait(false);
+        return await BashTracker.StartAsync(_workingDirectory, snapshotFolder, _set, _baselines, _log, _options.MaxRowsPerCommand,
+                                            path => RefreshRowAsync(path, null), _options.MaxBaselineBytes, root).ConfigureAwait(false);
     }
 
     /// <summary>Claude is about to work: take the first picture of the working tree now, in the background,
@@ -348,7 +358,8 @@ internal sealed partial class SessionChanges : IDisposable
         {
             // No tool call to pair the copy with: the hook after the edit could never claim it.
             if (!Active(edit) || string.IsNullOrEmpty(edit.ToolUseId)) { return; }
-            var path = ChangePaths.Normalize(edit.FilePath, string.IsNullOrEmpty(edit.Cwd) ? _workingDirectory : edit.Cwd);
+            var root = await _root.ConfigureAwait(false);
+            var path = ChangePaths.Normalize(edit.FilePath, string.IsNullOrEmpty(edit.Cwd) ? _workingDirectory : edit.Cwd, root);
             if (path is null || _set.TryGet(path, out _)) { return; }
             if (!edit.IsSubAgent && !_set.WantsCapture(path)) { return; }
 
@@ -377,7 +388,8 @@ internal sealed partial class SessionChanges : IDisposable
         try
         {
             if (!Active(edit)) { return; }
-            var path = ChangePaths.Normalize(edit.FilePath, string.IsNullOrEmpty(edit.Cwd) ? _workingDirectory : edit.Cwd);
+            var root = await _root.ConfigureAwait(false);
+            var path = ChangePaths.Normalize(edit.FilePath, string.IsNullOrEmpty(edit.Cwd) ? _workingDirectory : edit.Cwd, root);
             if (path is null) { return; }
 
             // One file at a time: two quick edits of a new file must not both go looking for its
@@ -452,20 +464,21 @@ internal sealed partial class SessionChanges : IDisposable
     private async Task<Found> FindCliBaselineAsync(HookEdit edit, string path)
     {
         var sessions = Sessions;
+        var root = await _root.ConfigureAwait(false);
         var sessionId = string.IsNullOrEmpty(edit.SessionId) ? _set.SessionId : edit.SessionId;
         // A sub-agent's edit has no record to wait for (measured: the CLI writes none), so it gets
         // one look, for a file the main agent tracked earlier, and no more.
         foreach (var wait in edit.IsSubAgent ? new[] { 0 } : _options.PollMilliseconds)
         {
             if (wait > 0) { await Task.Delay(wait, _lifetime.Token).ConfigureAwait(false); }
-            var entry = await sessions.FindRecentDeltaAsync(sessionId, edit.TranscriptPath, path).ConfigureAwait(false);
+            var entry = await sessions.FindRecentDeltaAsync(sessionId, edit.TranscriptPath, path, root).ConfigureAwait(false);
             if (entry is not null) { return ToFound(sessions, sessionId, entry); }
         }
 
         // No fresh record. The CLI writes one only the first time it tracks a file, so this file was
         // tracked in an earlier turn that this pane did not see (or the record is lost): the
         // history holds it, and the earliest record is the content from before the session's first edit.
-        var history = await sessions.ReadFileHistoryAsync(sessionId).ConfigureAwait(false);
+        var history = await sessions.ReadFileHistoryAsync(sessionId, root).ConfigureAwait(false);
         if (history.TryGetValue(path, out var track)) { return ToFound(sessions, sessionId, track.Earliest); }
 
         _log.Warn($"[changes] no baseline for {path}: the CLI kept no copy of it, so it is listed without one");
@@ -610,9 +623,10 @@ internal sealed partial class SessionChanges : IDisposable
             _set.SetDisabled(null);
 
             var sessions = Sessions;
+            var root = await _root.ConfigureAwait(false);
             var keptPaths = new List<string>();
             var rows = new List<FileChange>();
-            var history = await sessions.ReadFileHistoryAsync(sessionId).ConfigureAwait(false);
+            var history = await sessions.ReadFileHistoryAsync(sessionId, root).ConfigureAwait(false);
             foreach (var kv in history.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
             {
                 if (generation != Volatile.Read(ref _generation) || _disposed) { break; }
