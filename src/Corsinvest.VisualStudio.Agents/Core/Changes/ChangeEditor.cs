@@ -74,8 +74,9 @@ internal sealed class IdeChangeEditor : IChangeEditor
     public Task ShowDiffAsync(string key, string path, string before, string after, string leftLabel, string rightLabel)
         => IdeContextService.Instance.ShowDiffAsync(key, path, before, after, leftLabel, rightLabel);
 
+    // In the preview tab: going through the list one file after another should not leave a tab behind for each.
     public async Task OpenFileAsync(string path)
-        => await IdeContextService.Instance.OpenFileAsync(path, 0, 0, true);
+        => await IdeContextService.Instance.OpenFileAsync(path, 0, 0, true, preview: true);
 
     public Task<bool> ShowInPlaceAsync(ChangeSet set, string path)
         => Ide.Changes.ReviewRegistry.Instance.ShowAsync(set, path);

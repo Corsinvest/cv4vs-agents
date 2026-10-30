@@ -48,6 +48,10 @@ internal sealed class SessionChangesOptions
     /// <summary>What was kept in this session, remembered across a restart. Null = a ledger in the running extension's folder.</summary>
     public KeptLedger Kept { get; set; }
 
+    /// <summary>Whether Keep and Undo of one file go on to show the file that follows it in the list (the setting). Off by default
+    /// here, so that a test that does not look at it finds no second call on its editor.</summary>
+    public Func<bool> OpenNext { get; set; } = () => false;
+
     /// <summary>Where the git snapshots of the working tree go. Null = the running extension's folder.</summary>
     public string SnapshotsRoot { get; set; }
 
@@ -106,7 +110,7 @@ internal sealed partial class SessionChanges : IDisposable
         _baselines = _options.Baselines ?? ChangeBaselines.Default;
         _kept = _options.Kept ?? new KeptLedger(AppPaths.ChangesFolder, _log);
         Actions = new ChangeActions(_set, _baselines, _options.Editor ?? IdeChangeEditor.Instance, _log,
-                                    path => RefreshRowAsync(path, null), path => _kept.KeepAsync(path));
+                                    path => RefreshRowAsync(path, null), path => _kept.KeepAsync(path), _options.OpenNext);
         if (_baselines == ChangeBaselines.Default && Interlocked.Exchange(ref _swept, 1) == 0)
         {
             _ = Task.Run(() =>
@@ -131,6 +135,10 @@ internal sealed partial class SessionChanges : IDisposable
 
     /// <summary>Measure a listed file again, for whoever has just written it.</summary>
     public Task RemeasureAsync(string path) => RefreshRowAsync(path, null);
+
+    /// <summary>Measure a listed file again after the person did something to it in its editor (a change kept or undone, a save),
+    /// and when that took it out of the list, show the file after it, as Keep and Undo in the panel do (the setting).</summary>
+    public Task RemeasureAfterReviewAsync(string path) => Actions.SettleAsync(path, () => RefreshRowAsync(path, null));
 
     /// <summary>The row's baseline becomes <paramref name="bytes"/>, a copy of this extension's own: what a hunk kept in
     /// the editor turns the baseline into, so that it stays kept for the counts, for Open and for Undo. The copy the row had
@@ -178,7 +186,9 @@ internal sealed partial class SessionChanges : IDisposable
                 return null;
             }
             _baselines.Release(replaced);
-            await RefreshRowAsync(path, null).ConfigureAwait(false);
+            // The last change of a file kept in the editor makes the file its baseline, and the row goes with it: the person has
+            // finished with the file there.
+            await Actions.SettleAsync(path, () => RefreshRowAsync(path, null)).ConfigureAwait(false);
             return target;
         }
         finally

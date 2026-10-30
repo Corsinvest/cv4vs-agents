@@ -32,7 +32,7 @@ public sealed class SessionChangesTests : IDisposable
     private string KeptFolder => _baselinesRoot + "-kept";
 
     private SessionChanges Create(SessionFixture fx, Func<bool> checkpoints = null, int[] poll = null, Func<string, Task> prepare = null,
-                                  KeptLedger kept = null)
+                                  KeptLedger kept = null, IChangeEditor editor = null, Func<bool> openNext = null)
         => new(fx.Paths, fx.WorkingDirectory, new SessionChangesOptions
         {
             FileCheckpoints = checkpoints ?? (() => true),
@@ -40,7 +40,43 @@ public sealed class SessionChangesTests : IDisposable
             PrepareFile = prepare,
             Baselines = new ChangeBaselines(_baselinesRoot, OutputWindowLogger.Global),
             Kept = kept ?? new KeptLedger(KeptFolder, OutputWindowLogger.Global),
+            Editor = editor,
+            OpenNext = openNext ?? (() => false),
         }, OutputWindowLogger.Global);
+
+    // An editor that shows every file in place and says which: what Keep and Undo go on to is a file shown.
+    private sealed class ShowingEditor : IChangeEditor
+    {
+        public readonly System.Collections.Generic.List<string> Shown = new();
+
+        public Task<DocumentReplaceResult> ReplaceDocumentTextAsync(string path, string text) => Task.FromResult(DocumentReplaceResult.NotOpen);
+        public Task CloseDocumentAsync(string path) => Task.CompletedTask;
+        public Task<bool> IsDirtyAsync(string path) => Task.FromResult(false);
+        public Task ShowDiffAsync(string key, string path, string before, string after, string leftLabel, string rightLabel) => Task.CompletedTask;
+        public Task OpenFileAsync(string path) => Task.CompletedTask;
+        public Task EndReviewAsync(string path) => Task.CompletedTask;
+        public Task<bool> ShowAllAsync(ChangeSet set) => Task.FromResult(false);
+
+        public Task<bool> ShowInPlaceAsync(ChangeSet set, string path)
+        {
+            Shown.Add(path);
+            return Task.FromResult(true);
+        }
+    }
+
+    // Two files Claude changed, listed: a.txt and b.txt, each against a backup of how it was.
+    private async Task<SessionChanges> TwoListedAsync(SessionFixture fx, ShowingEditor editor)
+    {
+        fx.WriteBackup("a@v1", "a\nb\n");
+        fx.WriteBackup("b@v1", "x\n");
+        fx.WriteWork("a.txt", "a\nB\nc\n");
+        fx.WriteWork("b.txt", "x\ny\n");
+        var changes = Create(fx, editor: editor, openNext: () => true);
+        await changes.OnPostEditAsync(Hook(fx, "a.txt", "toolu_1"));
+        await changes.OnPostEditAsync(Hook(fx, "b.txt", "toolu_2"));
+        Assert.Equal(2, changes.Set.Count);
+        return changes;
+    }
 
     private static HookEdit Hook(SessionFixture fx, string file, string toolUseId, string agentId = null, string sessionId = null)
     {
@@ -667,5 +703,89 @@ public sealed class SessionChangesTests : IDisposable
         Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(30));
         var row = Assert.Single(changes.Set.Snapshot());
         Assert.False(row.Baseline.IsKnown);
+    }
+
+    // --- going on to the next file when the person has finished with one in its editor ----------------------
+
+    [Fact]
+    public async Task The_last_change_kept_in_the_editor_goes_on_to_the_next_file()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1), Jsonl.FileHistoryDelta("b.txt", "b@v1", 1));
+        var editor = new ShowingEditor();
+        using var changes = await TwoListedAsync(fx, editor);
+        var row = changes.Set.Snapshot().First(r => r.Path == Work(fx, "a.txt"));
+
+        // The first change of a.txt is kept: the row stays, with what is left of it, and nothing is shown.
+        Assert.NotNull(await changes.ReplaceBaselineAsync(row.Path, row.Serial, Encoding.UTF8.GetBytes("a\nB\n")));
+        Assert.Empty(editor.Shown);
+        Assert.Equal(2, changes.Set.Count);
+
+        // The second makes the baseline the file: a.txt leaves the list, and b.txt is what comes next.
+        Assert.NotNull(await changes.ReplaceBaselineAsync(row.Path, row.Serial, Encoding.UTF8.GetBytes("a\nB\nc\n")));
+
+        Assert.Equal(new[] { Work(fx, "b.txt") }, changes.Set.Snapshot().Select(r => r.Path));
+        Assert.Equal(new[] { Work(fx, "b.txt") }, editor.Shown);
+    }
+
+    [Fact]
+    public async Task A_file_that_still_differs_after_its_editor_saved_it_stays_listed_and_shows_nothing()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1), Jsonl.FileHistoryDelta("b.txt", "b@v1", 1));
+        var editor = new ShowingEditor();
+        using var changes = await TwoListedAsync(fx, editor);
+
+        await changes.RemeasureAfterReviewAsync(Work(fx, "a.txt"));
+
+        Assert.Equal(2, changes.Set.Count);
+        Assert.Empty(editor.Shown);
+    }
+
+    [Fact]
+    public async Task A_plain_remeasure_shows_nothing_even_when_it_takes_the_file_out_of_the_list()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1), Jsonl.FileHistoryDelta("b.txt", "b@v1", 1));
+        var editor = new ShowingEditor();
+        using var changes = await TwoListedAsync(fx, editor);
+        // Put back by hand, and measured by whoever else asks (the registry does, for a file it finds changed): not the person's click.
+        fx.WriteWork("a.txt", "a\nb\n");
+
+        await changes.RemeasureAsync(Work(fx, "a.txt"));
+
+        Assert.Equal(new[] { Work(fx, "b.txt") }, changes.Set.Snapshot().Select(r => r.Path));
+        Assert.Empty(editor.Shown);
+    }
+
+    [Fact]
+    public async Task A_file_put_back_in_its_editor_goes_on_to_the_next_file()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1), Jsonl.FileHistoryDelta("b.txt", "b@v1", 1));
+        var editor = new ShowingEditor();
+        using var changes = await TwoListedAsync(fx, editor);
+        fx.WriteWork("a.txt", "a\nb\n");
+
+        await changes.RemeasureAfterReviewAsync(Work(fx, "a.txt"));
+
+        Assert.Equal(new[] { Work(fx, "b.txt") }, changes.Set.Snapshot().Select(r => r.Path));
+        Assert.Equal(new[] { Work(fx, "b.txt") }, editor.Shown);
+    }
+
+    [Fact]
+    public async Task Nothing_follows_a_file_finished_with_in_its_editor_when_the_setting_is_off()
+    {
+        using var fx = Transcript(Jsonl.FileHistoryDelta("a.txt", "a@v1", 1), Jsonl.FileHistoryDelta("b.txt", "b@v1", 1));
+        var editor = new ShowingEditor();
+        fx.WriteBackup("a@v1", "a\n");
+        fx.WriteBackup("b@v1", "x\n");
+        fx.WriteWork("a.txt", "a\nb\n");
+        fx.WriteWork("b.txt", "x\ny\n");
+        using var changes = Create(fx, editor: editor);
+        await changes.OnPostEditAsync(Hook(fx, "a.txt", "toolu_1"));
+        await changes.OnPostEditAsync(Hook(fx, "b.txt", "toolu_2"));
+        fx.WriteWork("a.txt", "a\n");
+
+        await changes.RemeasureAfterReviewAsync(Work(fx, "a.txt"));
+
+        Assert.Equal(new[] { Work(fx, "b.txt") }, changes.Set.Snapshot().Select(r => r.Path));
+        Assert.Empty(editor.Shown);
     }
 }
