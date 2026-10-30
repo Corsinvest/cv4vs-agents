@@ -30,6 +30,9 @@ import type {
     RewindRequest,
     RewindResultNotification,
     RewindPointsNotification,
+    ChangedFilesNotification,
+    ChangedFilesActionResult,
+    ChangedFileRequest,
     SetRemoteControlAtStartupRequest,
     SetRemoteControlAtStartupResponse,
 } from './types';
@@ -123,3 +126,36 @@ export const SetRemoteControlAtStartupReq = new RequestType<
     SetRemoteControlAtStartupRequest,
     SetRemoteControlAtStartupResponse
 >(Msg.fromWebView.cli.setRemoteControlAtStartup, Msg.toWebView.cli.remoteControlAtStartupResult);
+
+/** The files Claude changed in this session. Asking is also what makes the host re-measure them
+ *  against the disk, so the panel asks each time it opens. */
+export const ChangedFilesReq = new RequestType<Record<string, never>, ChangedFilesNotification>(
+    Msg.fromWebView.changedFiles.get,
+    Msg.toWebView.changedFiles.list,
+);
+
+/** Accept a file as it is, or put it back as it was before Claude's first edit. All four actions
+ *  answer on one channel; the correlation id tells the calls apart. */
+export const KeepChangedFileReq = new RequestType<ChangedFileRequest, ChangedFilesActionResult>(
+    Msg.fromWebView.changedFiles.keep,
+    Msg.toWebView.changedFiles.actionResult,
+);
+export const UndoChangedFileReq = new RequestType<ChangedFileRequest, ChangedFilesActionResult>(
+    Msg.fromWebView.changedFiles.undo,
+    Msg.toWebView.changedFiles.actionResult,
+);
+export const KeepAllChangedFilesReq = new RequestType<
+    Record<string, never>,
+    ChangedFilesActionResult
+>(Msg.fromWebView.changedFiles.keepAll, Msg.toWebView.changedFiles.actionResult);
+export const UndoAllChangedFilesReq = new RequestType<
+    Record<string, never>,
+    ChangedFilesActionResult
+>(Msg.fromWebView.changedFiles.undoAll, Msg.toWebView.changedFiles.actionResult);
+
+/** Show every listed file's changes together, in the one window Visual Studio 18 has for it. Nothing
+ *  is changed: a failure comes back like the others, as a reason to show. */
+export const ReviewAllChangedFilesReq = new RequestType<
+    Record<string, never>,
+    ChangedFilesActionResult
+>(Msg.fromWebView.changedFiles.reviewAll, Msg.toWebView.changedFiles.actionResult);

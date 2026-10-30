@@ -26,6 +26,8 @@ internal sealed partial class WebViewMessageHandler
                                                      data["attachments"] as JArray,
                                                      BuildIdeContextBlock(p.Text ?? ""));
         client.SendPrompt(blocks, p.Uuid ?? "", p.Priority);
+        // Claude is about to work, and may run a command: have the first picture of the tree ready for it.
+        changes?.WarmUp();
     }
 
     /// <summary>The <c>&lt;ide_*&gt;</c> block sent ahead of the prompt. Composed here, not in the
@@ -79,9 +81,50 @@ internal sealed partial class WebViewMessageHandler
             RespondToPlan(toolUseId, input, response);
             return;
         }
+        // A shell command starts the moment the CLI has this answer. What the person changed in the editor
+        // while the question was open is theirs, not the command's, so the picture of the working tree
+        // that tells the two apart is brought up to date before the answer goes.
+        if (response.Allow && changes is { FollowsCommands: true } && (toolName == "Bash" || toolName == "PowerShell"))
+        {
+            _ = RespondAfterSnapshotAsync(toolUseId, response);
+            return;
+        }
+        Respond(toolUseId, response);
+    }
+
+    private void Respond(string toolUseId, ToolPermissionResponse response)
+    {
         // Correlate by tool_use_id so concurrent prompts each answer their own request.
         client.RespondToToolPermission(toolUseId, response);
         Ide.IdeContextService.Instance.CloseDiffFor(toolUseId);
+    }
+
+    /// <summary>Answer an allowed shell command once the Changes list has taken its "before". Always
+    /// answers: the CLI is waiting, and the snapshot only has to be as good as it can be in the time.
+    /// Nothing waits on this task, so every failure is logged here.</summary>
+    private async Task RespondAfterSnapshotAsync(string toolUseId, ToolPermissionResponse response)
+    {
+        try
+        {
+            using var letGo = new System.Threading.CancellationTokenSource();
+            try
+            {
+                // The snapshot bounds itself to AllowedWait; this is the net under it, a little longer.
+                await Task.WhenAny(changes.OnBashAllowedAsync(toolUseId, letGo.Token),
+                                   Task.Delay(Core.Changes.SessionChanges.AllowedWait + TimeSpan.FromSeconds(2)));
+            }
+            catch (Exception ex)
+            {
+                log.LogException("[changes] permission answer", ex);
+            }
+            // The answer lets the command go: a picture that finishes after it holds the command's writes.
+            letGo.Cancel();
+            Respond(toolUseId, response);
+        }
+        catch (Exception ex)
+        {
+            log.LogException("[changes] permission answer", ex);
+        }
     }
 
     private void HandleSetSendSelection(JObject data, int? id)

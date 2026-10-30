@@ -8,6 +8,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **A list of the files Claude changed in the chat.** A chip beside the message box counts them;
+  its panel shows each one against how it was before Claude's first edit, with the lines added and
+  removed, and Open, Keep and Undo for the file or for all of them. Undo puts a file back as it
+  was, through the editor when it is open, so Ctrl+Z gives back what was there. It compares with the
+  copies Rewind restores from, and takes its own for a sub-agent's edits.
+- **The list also follows what a shell command changes.** A file rewritten by `sed -i`, a script or
+  `git checkout`, run through the Bash or the PowerShell tool, is listed against a snapshot of the
+  working tree taken just before the command, so Undo puts it back as git would check it out. It
+  needs the folder to be in a git repository, and says so in the panel when it is not. The
+  snapshots live in a private store under the extension's data folder: your repository's history,
+  index and objects are only read. *Track the files commands change* in Options turns it off.
+- **A file Claude changed can be reviewed in its own editor, one change at a time, with GitHub Copilot's review.** A file
+  that is open (or that you open from the Changes panel) shows the changes in place, with Copilot's own **Keep** and
+  **Undo** on each change and **Keep** and **Undo** for the whole file in the bar at the bottom; the bar also gets this
+  extension's previous and next file of the list. When the last change is settled the file leaves the list. It needs GitHub
+  Copilot in Visual Studio 18, signed in: without it nothing is drawn and Open shows the comparison window. *Review the
+  changes in the editor* in Options turns it off.
+- **A changed file opens in the preview tab.** Open in the Changes panel, and the next file after Keep or Undo, open a file
+  that is not open yet in the tab the next one replaces, as a click in Solution Explorer does, so going through the list
+  does not leave a tab behind for each file. Typing in it keeps it, a file that is open already stays as it is, and with
+  Visual Studio's own setting for preview tabs off it opens as before.
+- **Keep and Undo go on to the next file.** After Keep or Undo on one file, in the panel or in the editor, the file that
+  follows it in the list opens the way Open opens it, and after the last one the first still listed does. Keep all and Undo
+  all open nothing, and neither does an Undo that could not be done. *Open the next changed file after Keep or Undo* in
+  Options turns it off.
+- **Every change in one window, on Visual Studio 2026.** *Review all* in the Changes panel opens the
+  changes of all the listed files together in the editor's own multi-file difference window, each
+  file with how it was before on the left and the file itself on the right. A Visual Studio that
+  does not have the window does not show the button.
+- **A file you kept stays kept when you resume the chat.** After a restart of Visual Studio the
+  Changes list used to list again every file you had accepted with Keep, since the CLI's history
+  knows what Claude touched and not what you decided. The extension now remembers, for each chat,
+  how each kept file looked (a length and a hash, none of its content) and leaves it out unless it
+  has changed since.
 - **A question from Claude can show a preview of each choice.** When the options of a question
   come with a mockup, a code sample or a layout to compare, the one under the pointer or the
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
@@ -35,6 +69,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   closes a web view whose parent window is destroyed, and for a pane born floating that parent is
   the floating window, which docking destroys. The pane now moves the browser onto the main window
   just before a floating window closes, so the conversation survives the dock.
+- **A solution opened through a junction showed its changed files as files outside the solution.** With the solution
+  opened as `C:\Users\you\Dev\repo` and `C:\Users\you\Dev` a junction to `D:\`, git and (from version 2.1.314) Claude
+  Code name a file `D:\repo\...`, which Visual Studio does not know as the document it has open. Open in the Changes list
+  opened a second copy as a miscellaneous file, the review in the editor found no tab, a file could be listed under both
+  names, and autosave before an edit missed the open document. A path under the working directory is now turned into
+  the name the solution was opened by, in the list and wherever the IDE looks a file up by path.
 
 ## [1.14.0] - 2026-10-12
 
