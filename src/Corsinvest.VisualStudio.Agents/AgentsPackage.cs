@@ -139,7 +139,18 @@ public sealed class AgentsPackage : AsyncPackage, IVsSolutionEvents, IVsSolution
     /// <summary>Folder of the open solution (or, in VS's "Open Folder" mode, the open folder
     /// itself), cached for synchronous reads. Null if neither is open. Keeps VS's original
     /// casing: normalize via IdeContextService for lock-file / cwd matching.</summary>
-    public string CurrentSolutionFolder { get; private set; }
+    public string CurrentSolutionFolder
+    {
+        get => _currentSolutionFolder;
+        // Its real path is worked out in the background as soon as it is known, so that a path asked about later is mapped.
+        private set
+        {
+            _currentSolutionFolder = value;
+            Ide.SolutionPaths.Warm(value);
+        }
+    }
+
+    private string _currentSolutionFolder;
 
     /// <summary>Ensure the given <c>settings.json</c> has <c>"diffTool": "auto"</c> so Claude uses
     /// the IDE diff instead of a terminal prompt. Idempotent: only fills the key if missing. Called
