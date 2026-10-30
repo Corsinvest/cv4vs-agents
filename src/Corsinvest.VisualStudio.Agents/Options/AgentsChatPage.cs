@@ -134,6 +134,11 @@ public class AgentsChatPage : AgentsOptionsPage
     public bool ReviewInEditor { get; set; } = true;
 
     [Category("Files")]
+    [DisplayName("Open the next changed file after Keep or Undo")]
+    [Description("After Keep or Undo on one file of the list of changed files, in the list or in the editor, show the file that follows it in the list, the way Open does, so that the changes can be gone through one file after another. After the last file it goes on with the first one still listed. Keep all and Undo all show nothing, and neither does an Undo that could not be done. Takes effect at once.")]
+    public bool OpenNextAfterReview { get; set; } = true;
+
+    [Category("Files")]
     [DisplayName("Send post-edit diagnostics to Claude (experimental)")]
     [Description("EXPERIMENTAL, off by default. After Claude edits a file, send back the new errors/warnings that edit introduced. Currently unreliable: Visual Studio only analyses files open in an editor, so the Error List is often still empty when we read it right after the edit, so Claude then gets nothing. Use the ide_get_diagnostics MCP tool instead, which works because it runs when the Error List has settled.")]
     public bool PostEditDiagnostics { get; set; } = false;

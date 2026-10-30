@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -25,6 +26,7 @@ public sealed class ChangeActionsTests : IDisposable
         public readonly List<string> Opened = new();
         public readonly List<Diff> Diffs = new();
         public bool InPlace;
+        public Exception ShowFails;
         public readonly List<string> ShownInPlace = new();
         public bool AllShown;
         public int AllAsked;
@@ -70,6 +72,7 @@ public sealed class ChangeActionsTests : IDisposable
 
         public Task<bool> ShowInPlaceAsync(ChangeSet set, string path)
         {
+            if (ShowFails is not null) { throw ShowFails; }
             ShownInPlace.Add(path);
             return Task.FromResult(InPlace);
         }
@@ -642,5 +645,229 @@ public sealed class ChangeActionsTests : IDisposable
 
         Assert.Empty(_editor.Opened);
         Assert.Empty(_editor.Diffs);
+    }
+
+    // --- going on to the next file after Keep and Undo ----------------------------------------------------
+
+    private ChangeActions Going(Func<bool> on = null)
+        => new(_set, _baselines, _editor, OutputWindowLogger.Global, openNext: on ?? (() => true));
+
+    // A listed file with a copy of how it was, so that Open shows it in its own editor and Undo has something to put back.
+    private string Listed(string name)
+    {
+        var file = Write(name, "new\n");
+        Row(file, BaselineRef.Cli(Write(name + ".backup@v1", "old\n")));
+        return file;
+    }
+
+    [Fact]
+    public async Task Keep_goes_on_to_the_file_after_it_in_the_list()
+    {
+        _editor.InPlace = true;
+        // Added out of order: the list is by path, and so is what comes next.
+        var c = Listed("c.txt");
+        var a = Listed("a.txt");
+        var b = Listed("b.txt");
+
+        await Going().KeepAsync(a);
+
+        Assert.Equal(new[] { b }, _editor.ShownInPlace);
+        Assert.Equal(new[] { b, c }, _set.Snapshot().Select(r => r.Path));
+    }
+
+    [Fact]
+    public async Task Keep_of_the_last_file_goes_on_to_the_first_one_left()
+    {
+        _editor.InPlace = true;
+        var a = Listed("a.txt");
+        Listed("b.txt");
+        var c = Listed("c.txt");
+
+        await Going().KeepAsync(c);
+
+        Assert.Equal(new[] { a }, _editor.ShownInPlace);
+    }
+
+    [Fact]
+    public async Task Keep_of_the_only_file_shows_nothing()
+    {
+        _editor.InPlace = true;
+        var only = Listed("a.txt");
+
+        await Going().KeepAsync(only);
+
+        Assert.Empty(_editor.ShownInPlace);
+        Assert.Empty(_editor.Opened);
+        Assert.Empty(_editor.Diffs);
+    }
+
+    [Fact]
+    public async Task Keep_of_a_file_that_is_not_listed_shows_nothing()
+    {
+        _editor.InPlace = true;
+        Listed("a.txt");
+        Listed("b.txt");
+
+        await Going().KeepAsync(Write("elsewhere.txt", "x\n"));
+
+        Assert.Empty(_editor.ShownInPlace);
+    }
+
+    [Fact]
+    public async Task Keep_and_Undo_show_nothing_when_the_setting_is_off_or_there_is_none()
+    {
+        _editor.InPlace = true;
+        var a = Listed("a.txt");
+        var b = Listed("b.txt");
+        Listed("c.txt");
+
+        await Going(() => false).KeepAsync(a);
+        Assert.Null(await Going(() => false).UndoAsync(b));
+        await _actions.KeepAsync(Listed("d.txt"));
+
+        Assert.Empty(_editor.ShownInPlace);
+    }
+
+    [Fact]
+    public async Task The_setting_is_read_at_each_click()
+    {
+        _editor.InPlace = true;
+        var on = false;
+        var actions = Going(() => on);
+        var a = Listed("a.txt");
+        var b = Listed("b.txt");
+        var c = Listed("c.txt");
+
+        await actions.KeepAsync(a);
+        Assert.Empty(_editor.ShownInPlace);
+
+        on = true;
+        await actions.KeepAsync(b);
+        Assert.Equal(new[] { c }, _editor.ShownInPlace);
+    }
+
+    [Fact]
+    public async Task Undo_goes_on_to_the_file_after_it()
+    {
+        _editor.InPlace = true;
+        var a = Listed("a.txt");
+        var b = Listed("b.txt");
+
+        var failure = await Going().UndoAsync(a);
+
+        Assert.Null(failure);
+        Assert.Equal("old\n", File.ReadAllText(a));
+        Assert.Equal(new[] { b }, _editor.ShownInPlace);
+    }
+
+    [Fact]
+    public async Task An_Undo_that_could_not_be_done_shows_nothing_so_the_failure_is_what_is_seen()
+    {
+        _editor.InPlace = true;
+        var a = Listed("a.txt");
+        Listed("b.txt");
+        // Changed since the list last looked: Undo refuses, and the row stays.
+        File.WriteAllText(a, "changed again\n");
+
+        var failure = await Going().UndoAsync(a);
+
+        Assert.NotNull(failure);
+        Assert.Empty(_editor.ShownInPlace);
+        Assert.Equal(2, _set.Count);
+    }
+
+    [Fact]
+    public async Task Keep_all_and_Undo_all_show_nothing()
+    {
+        _editor.InPlace = true;
+        Listed("a.txt");
+        Listed("b.txt");
+        Listed("c.txt");
+        var actions = Going();
+
+        await actions.KeepAllAsync();
+        Assert.Empty(_editor.ShownInPlace);
+
+        Listed("d.txt");
+        Listed("e.txt");
+        Assert.Empty(await actions.UndoAllAsync());
+
+        Assert.Empty(_editor.ShownInPlace);
+        Assert.Equal(0, _set.Count);
+    }
+
+    [Fact]
+    public async Task The_next_file_is_shown_the_way_Open_shows_it_in_the_comparison_window_when_it_cannot_be_drawn_in_place()
+    {
+        _editor.InPlace = false;
+        var a = Listed("a.txt");
+        var b = Listed("b.txt");
+
+        await Going().KeepAsync(a);
+
+        // Reading the two sides is real file I/O, which the Keep does not wait for.
+        Assert.True(SpinWait.SpinUntil(() => _editor.Diffs.Count > 0, TimeSpan.FromSeconds(10)));
+        Assert.Equal(new[] { b }, _editor.ShownInPlace);
+        var diff = Assert.Single(_editor.Diffs);
+        Assert.Equal(b, diff.Path);
+    }
+
+    [Fact]
+    public async Task A_next_file_that_cannot_be_shown_does_not_fail_the_keep()
+    {
+        _editor.ShowFails = new InvalidOperationException("no editor");
+        var a = Listed("a.txt");
+        var b = Listed("b.txt");
+
+        await Going().KeepAsync(a);
+
+        // The Keep is done, and the failure to show b went to the log, not to the person who clicked.
+        Assert.Equal(new[] { b }, _set.Snapshot().Select(r => r.Path));
+        Assert.Empty(_editor.ShownInPlace);
+    }
+
+    [Fact]
+    public async Task A_file_finished_with_in_its_editor_goes_on_to_the_next_when_it_has_left_the_list()
+    {
+        _editor.InPlace = true;
+        var a = Listed("a.txt");
+        var b = Listed("b.txt");
+
+        await Going().SettleAsync(a, () =>
+        {
+            _set.Remove(a);
+            return Task.CompletedTask;
+        });
+
+        Assert.Equal(new[] { b }, _editor.ShownInPlace);
+    }
+
+    [Fact]
+    public async Task A_file_that_is_still_listed_after_the_work_shows_nothing()
+    {
+        _editor.InPlace = true;
+        var a = Listed("a.txt");
+        Listed("b.txt");
+
+        await Going().SettleAsync(a, () => Task.CompletedTask);
+
+        Assert.Empty(_editor.ShownInPlace);
+        Assert.Equal(2, _set.Count);
+    }
+
+    [Fact]
+    public async Task A_file_finished_with_in_its_editor_shows_nothing_when_the_setting_is_off()
+    {
+        _editor.InPlace = true;
+        var a = Listed("a.txt");
+        Listed("b.txt");
+
+        await Going(() => false).SettleAsync(a, () =>
+        {
+            _set.Remove(a);
+            return Task.CompletedTask;
+        });
+
+        Assert.Empty(_editor.ShownInPlace);
     }
 }

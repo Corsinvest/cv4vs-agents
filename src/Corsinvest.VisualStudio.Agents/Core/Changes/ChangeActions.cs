@@ -39,8 +39,10 @@ internal sealed class ChangeFailure
 /// need it: a file that has moved is then still refused.</param>
 /// <param name="kept">Told of a file as it is when the person accepts it, so that it can be remembered across a restart of
 /// Visual Studio. Null in a test that does not need it.</param>
+/// <param name="openNext">Whether Keep and Undo of one file go on to show the file that follows it in the list (the setting), asked
+/// at each click. Null in a test that does not need it: never.</param>
 internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IChangeEditor editor, OutputWindowLogger log,
-                                    Func<string, Task> remeasure = null, Func<string, Task> kept = null)
+                                    Func<string, Task> remeasure = null, Func<string, Task> kept = null, Func<bool> openNext = null)
 {
     /// <summary>Show the file against how it was before Claude's first edit: in its own editor, with Copilot's review
     /// drawn in it, where that can be done (see <see cref="IChangeEditor.ShowInPlaceAsync"/>), and
@@ -92,10 +94,18 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
     /// not be done, which the panel then says. Nothing is changed by it.</summary>
     public Task<bool> ReviewAllAsync() => editor.ShowAllAsync(set);
 
-    /// <summary>Accept the file as it is. Never fails: there is nothing to write to it, and not being able to remember the
-    /// Keep is not a reason to refuse it. Only a listed path is remembered: the WebView names it, and a name is not a licence to
-    /// read any file.</summary>
+    /// <summary>Accept the file as it is, and go on to the file after it when the setting says so (see
+    /// <see cref="ShowNext"/>). Never fails: there is nothing to write to it, and not being able to remember the Keep is not a
+    /// reason to refuse it. Only a listed path is remembered: the WebView names it, and a name is not a licence to read any
+    /// file.</summary>
     public async Task KeepAsync(string path)
+    {
+        var next = NextToShow(path);
+        await KeepOneAsync(path).ConfigureAwait(false);
+        ShowNext(next);
+    }
+
+    private async Task KeepOneAsync(string path)
     {
         await editor.EndReviewAsync(path).ConfigureAwait(false);
         if (kept is not null && set.TryGet(path, out _))
@@ -106,9 +116,18 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
         Forget(path);
     }
 
-    /// <summary>Put the file back. Null on success, or what went wrong; the row stays on a failure,
-    /// so the person can see it did not happen.</summary>
+    /// <summary>Put the file back, and go on to the file after it when the setting says so (see <see cref="ShowNext"/>). Null on
+    /// success, or what went wrong; the row stays on a failure, so the person can see it did not happen, and nothing else is
+    /// shown.</summary>
     public async Task<ChangeFailure> UndoAsync(string path)
+    {
+        var next = NextToShow(path);
+        var failure = await UndoOneAsync(path).ConfigureAwait(false);
+        if (failure is null) { ShowNext(next); }
+        return failure;
+    }
+
+    private async Task<ChangeFailure> UndoOneAsync(string path)
     {
         if (!set.TryGet(path, out var row)) { return null; }
         var reason = await GuardAsync(row).ConfigureAwait(false);
@@ -128,22 +147,61 @@ internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IC
         return null;
     }
 
-    /// <summary>Keep every listed file.</summary>
+    /// <summary>Keep every listed file. Nothing is shown after it: there is no next file to go on to.</summary>
     public async Task KeepAllAsync()
     {
-        foreach (var row in set.Snapshot()) { await KeepAsync(row.Path).ConfigureAwait(false); }
+        foreach (var row in set.Snapshot()) { await KeepOneAsync(row.Path).ConfigureAwait(false); }
     }
 
-    /// <summary>Undo every listed file. One that cannot be restored does not stop the rest.</summary>
+    /// <summary>Undo every listed file. One that cannot be restored does not stop the rest. Nothing is shown after it.</summary>
     public async Task<IReadOnlyList<ChangeFailure>> UndoAllAsync()
     {
         var failed = new List<ChangeFailure>();
         foreach (var row in set.Snapshot())
         {
-            var failure = await UndoAsync(row.Path).ConfigureAwait(false);
+            var failure = await UndoOneAsync(row.Path).ConfigureAwait(false);
             if (failure is not null) { failed.Add(failure); }
         }
         return failed;
+    }
+
+    /// <summary>Run <paramref name="work"/>, which measures the file after the person has done something to it in its editor (a
+    /// change kept or undone, a save), and when that took the file out of the list, go on to the next one as Keep and Undo do: the
+    /// person has finished with it there, not in the panel.</summary>
+    public async Task SettleAsync(string path, Func<Task> work)
+    {
+        var next = NextToShow(path);
+        await work().ConfigureAwait(false);
+        if (next is not null && !set.TryGet(path, out _)) { ShowNext(next); }
+    }
+
+    // The file the list shows after this one, and the first when this is the last, so that going on never stops while there is
+    // something left to review. Null when the setting is off, or the file is the only one (or not listed at all). Worked out before
+    // the row goes: after it, "after this one" has no meaning.
+    private string NextToShow(string path)
+    {
+        if (openNext is null || !openNext()) { return null; }
+        var rows = set.Snapshot();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (!string.Equals(rows[i].Path, path, StringComparison.OrdinalIgnoreCase)) { continue; }
+            return rows.Count > 1 ? rows[(i + 1) % rows.Count].Path : null;
+        }
+        return null;
+    }
+
+    // Shown the way Open shows it, but not waited for: the review of a file takes a moment to be drawn, and the panel keeps its
+    // buttons off until the click is answered.
+    private void ShowNext(string next)
+    {
+        if (next is null) { return; }
+        _ = ShowAsync(next);
+    }
+
+    private async Task ShowAsync(string path)
+    {
+        try { await OpenAsync(path).ConfigureAwait(false); }
+        catch (Exception ex) { log.LogException("[changes] show the next file", ex); }
     }
 
     /// <summary>The row goes, its copy with it, and the next edit gets a fresh one.</summary>
