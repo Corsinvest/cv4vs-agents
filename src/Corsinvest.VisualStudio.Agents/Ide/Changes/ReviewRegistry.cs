@@ -291,7 +291,8 @@ internal sealed class ReviewRegistry : IVsRunningDocTableEvents
 
                 if (!opened)
                 {
-                    if (!await IdeContextService.Instance.OpenFileAsync(path, 0, 0, true)) { return false; }
+                    // In the preview tab, as Open opens a file that is not shown with its review (see IdeChangeEditor).
+                    if (!await IdeContextService.Instance.OpenFileAsync(path, 0, 0, true, preview: true)) { return false; }
                     opened = true;
                 }
 
