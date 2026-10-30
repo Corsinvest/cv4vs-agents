@@ -102,4 +102,41 @@ public sealed class ChangePathsTests : IDisposable
     {
         Assert.False(ChangePaths.Matches(Path.Combine(_root, "src", "a.cs"), Path.Combine("src", "b.cs"), null, _root));
     }
+
+    // The working directory is C:\Users\me\Dev\repo, a junction to D:\repo: Claude Code 2.1.314 and git name the files by D:\repo.
+    private static readonly PaneRoot Linked = new(@"C:\Users\me\Dev\repo", @"D:\repo");
+    private const string Logical = @"C:\Users\me\Dev\repo";
+
+    [Fact]
+    public void A_path_reported_by_the_real_folder_is_normalised_into_the_working_directorys_spelling()
+    {
+        Assert.Equal(@"C:\Users\me\Dev\repo\src\a.cs", ChangePaths.Normalize(@"D:\repo\src\a.cs", Logical, Linked));
+        Assert.Equal(@"C:\Users\me\Dev\repo\src\a.cs", ChangePaths.Normalize(@"src\a.cs", @"D:\repo", Linked));
+    }
+
+    [Fact]
+    public void Without_a_root_a_path_is_only_normalised()
+    {
+        Assert.Equal(@"D:\repo\src\a.cs", ChangePaths.Normalize(@"D:\repo\src\a.cs", Logical, null));
+    }
+
+    [Fact]
+    public void A_record_with_an_absolute_real_tracking_path_is_listed_under_the_link()
+    {
+        Assert.Equal(@"C:\Users\me\Dev\repo\b.cs", ChangePaths.Resolve(@"D:\repo\b.cs", null, Logical, Linked));
+    }
+
+    [Fact]
+    public void A_hook_in_the_real_spelling_matches_a_record_that_names_no_real_directory()
+    {
+        // No realParentDir to fall back on: only the working directory's spelling can say it is the same file.
+        Assert.True(ChangePaths.Matches(@"D:\repo\a.cs", "a.cs", null, Logical, Linked));
+        Assert.False(ChangePaths.Matches(@"D:\repo\a.cs", "a.cs", null, Logical));
+    }
+
+    [Fact]
+    public void A_hook_under_the_link_matches_a_record_the_cli_made_by_the_real_path()
+    {
+        Assert.True(ChangePaths.Matches(@"C:\Users\me\Dev\repo\a.cs", @"D:\repo\a.cs", null, Logical, Linked));
+    }
 }

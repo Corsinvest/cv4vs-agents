@@ -160,6 +160,22 @@ large downloads in `.gitignore`. A repository that uses Git LFS is the one excep
 writes": git's own LFS filter keeps its large files in a cache under `.git/lfs`, whatever asks it.
 Turn this off with **Track the files commands change** in [Options](/cv4vs-agents/options/).
 
+## A solution opened through a link
+
+A folder can be reached by two names: `C:\Users\you\Dev` may be a junction to `D:\`, or a drive may be a `subst` of
+another folder. Visual Studio keeps its documents under the name the solution was opened by, while git and, since
+version 2.1.314, Claude Code itself name a file by its real path. The list turns a path under the chat's working
+directory into the name the solution was opened by, so that a file is listed once, **Open** opens the document you
+already have (and not a second copy as a miscellaneous file, outside every project), and the review in the editor finds
+the tab. The same goes for the tools that open or save a file by the path Claude gives, such as `editor_open_file`, and
+for autosave before an edit.
+
+Only the working directory's own folder is mapped. A file outside it that happens to go through the same link keeps
+the path Claude gave. A session's transcript is still looked for under the folder the CLI names after the working
+directory: if the CLI files a chat under the real path and the extension looks under the other one, History cannot find
+it. Making the two project folders under `~/.claude/projects` one folder (a junction from one to the other) fixes
+that.
+
 ## What it does not cover
 
 - **What a command changes where git does not look.** A folder that is not in a git repository is

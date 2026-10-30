@@ -138,6 +138,7 @@
     <Compile Include="Ide\IdeContextService.cs" />
     <Compile Include="Ide\IdeContextService.Operations.cs" />
     <Compile Include="Ide\IdeContextService.Common.cs" />
+    <Compile Include="Ide\SolutionPaths.cs" />
     <Compile Include="Ide\EditorSelectionState.cs" />
     <Compile Include="Ide\SelectionGeometry.cs" />
     <Compile Include="Ide\IdeDiagnosticsTracker.cs" />
@@ -277,6 +278,7 @@
     <Compile Include="Core\Changes\ChangeEvaluator.cs" />
     <Compile Include="Core\Changes\ChangeModels.cs" />
     <Compile Include="Core\Changes\ChangePaths.cs" />
+    <Compile Include="Core\Changes\PaneRoot.cs" />
     <Compile Include="Core\Changes\ChangeSet.cs" />
     <Compile Include="Core\Changes\HookEdit.cs" />
     <Compile Include="Core\Changes\LineDiff.cs" />

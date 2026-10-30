@@ -61,6 +61,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   closes a web view whose parent window is destroyed, and for a pane born floating that parent is
   the floating window, which docking destroys. The pane now moves the browser onto the main window
   just before a floating window closes, so the conversation survives the dock.
+- **A solution opened through a junction showed its changed files as files outside the solution.** With the solution
+  opened as `C:\Users\you\Dev\repo` and `C:\Users\you\Dev` a junction to `D:\`, git and (from version 2.1.314) Claude
+  Code name a file `D:\repo\...`, which Visual Studio does not know as the document it has open. Open in the Changes list
+  opened a second copy as a miscellaneous file, the review in the editor found no tab, a file could be listed under both
+  names, and autosave before an edit missed the open document. A path under the working directory is now turned into
+  the name the solution was opened by, in the list and wherever the IDE looks a file up by path.
 
 ## [1.14.0] - 2026-10-12
 
