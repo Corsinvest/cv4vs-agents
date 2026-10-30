@@ -25,6 +25,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   extension's previous and next file of the list. When the last change is settled the file leaves the list. It needs GitHub
   Copilot in Visual Studio 18, signed in: without it nothing is drawn and Open shows the comparison window. *Review the
   changes in the editor* in Options turns it off.
+- **A changed file opens in the preview tab.** Open in the Changes panel, and the next file after Keep or Undo, open a file
+  that is not open yet in the tab the next one replaces, as a click in Solution Explorer does, so going through the list
+  does not leave a tab behind for each file. Typing in it keeps it, a file that is open already stays as it is, and with
+  Visual Studio's own setting for preview tabs off it opens as before.
+- **Keep and Undo go on to the next file.** After Keep or Undo on one file, in the panel or in the editor, the file that
+  follows it in the list opens the way Open opens it, and after the last one the first still listed does. Keep all and Undo
+  all open nothing, and neither does an Undo that could not be done. *Open the next changed file after Keep or Undo* in
+  Options turns it off.
 - **Every change in one window, on Visual Studio 2026.** *Review all* in the Changes panel opens the
   changes of all the listed files together in the editor's own multi-file difference window, each
   file with how it was before on the left and the file itself on the right. A Visual Studio that

@@ -611,7 +611,7 @@ internal sealed class CopilotReview
                 await Owner.RemeasureAsync(Path);
                 return;
             }
-            if (undone) { await Owner.RemeasureAsync(Path); }
+            if (undone) { await Owner.RemeasureAfterReviewAsync(Path); }
             else { await Owner.Actions.KeepAsync(Path); }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -791,7 +791,8 @@ internal sealed class CopilotReview
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync(alwaysYield: true);
             Interlocked.Exchange(ref _measureQueued, 0);
             if (_phase != Phase.Active) { return; }
-            await Owner.RemeasureAsync(Path);
+            // The last change kept or undone, or the file saved as it was: the person has finished with the file here.
+            await Owner.RemeasureAfterReviewAsync(Path);
         }).FileAndForget("CopilotReview.Measure");
     }
 

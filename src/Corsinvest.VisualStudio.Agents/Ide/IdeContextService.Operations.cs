@@ -1214,9 +1214,10 @@ internal sealed partial class IdeContextService
     /// <summary>Open a file in the editor. Optionally selects a range
     /// matching <paramref name="startText"/> through <paramref name="endText"/>
     /// (text-pattern selection: what the CLI uses to point at code
-    /// it's discussing).</summary>
+    /// it's discussing). With <paramref name="preview"/> the file opens in the preview tab, the one the next file opened that way
+    /// replaces, unless it is open already or Visual Studio's own setting for preview tabs is off.</summary>
     public async Task<bool> OpenFileAsync(
-        string filePath, int startLine, int endLine, bool activate)
+        string filePath, int startLine, int endLine, bool activate, bool preview = false)
     {
         // In the spelling the IDE has the file under: a path through the real folder of a linked solution would open a second copy,
         // as a miscellaneous file, beside the project item.
@@ -1226,7 +1227,9 @@ internal sealed partial class IdeContextService
         if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }
         try
         {
-            var window = dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
+            var window = preview
+                ? OpenInPreviewTab(filePath)
+                : dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
             if (activate) { window?.Activate(); }
             // Select whole lines. Line-based only: Claude reasons in line numbers (Read returns
             // "N: content"), so a text match would be awkward and ambiguous when a line repeats.
@@ -1244,6 +1247,20 @@ internal sealed partial class IdeContextService
             OutputWindowLogger.Global.LogException("Ide.OpenFile", ex);
             return false;
         }
+    }
+
+    // DTE's OpenFile always makes a tab of its own. A document opened inside this scope goes to the preview tab, as a file does that is
+    // clicked once in Solution Explorer.
+    private static EnvDTE.Window OpenInPreviewTab(string filePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        IVsWindowFrame frame;
+        using (new NewDocumentStateScope(__VSNEWDOCUMENTSTATE.NDS_Provisional, VSConstants.NewDocumentStateReason.Navigation))
+        {
+            VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, filePath, VSConstants.LOGVIEWID.Code_guid, out _, out _, out frame);
+        }
+        frame?.Show();
+        return frame is null ? null : VsShellUtilities.GetWindowObject(frame);
     }
 
 

@@ -49,6 +49,22 @@ and the next edit of that file is compared with how it is now.
 - If a file cannot be restored (it is locked, or open in a designer that cannot take the text) the
   row stays, with the reason, so you can see it did not happen. Undo all carries on with the rest.
 
+## Going on to the next file
+
+After **Keep** or **Undo** on one file, the file that follows it in the list opens the way **Open** opens it (in its own
+editor with the review, or in the comparison window), so the changes can be gone through one file after another. The list
+is by path, as the panel shows it, and after the last file it goes on with the first one still listed. It stops when
+nothing else is listed.
+
+- It happens for a click in the panel, for **Keep** and **Undo** in the bar at the bottom of the editor, and when the last
+  change of a file has been kept or undone one at a time, or the file saved as it was.
+- **Keep all** and **Undo all** open nothing, and neither does an **Undo** that could not be done: its reason stays in
+  view.
+- The file opens without waiting for the click to be answered, so a review that takes a moment to be drawn does not hold
+  the buttons.
+
+**Open the next changed file after Keep or Undo** (Options > Chat > Files) turns it off. It is read at each click.
+
 ## In the editor
 
 A listed file that is open in an editor shows its changes in place, in the editor's own window, with
@@ -56,8 +72,11 @@ A listed file that is open in an editor shows its changes in place, in the edito
 **Keep** and **Undo**, and a bar at the bottom of the window has **Keep** and **Undo** for the whole file. The
 review is Copilot's, not this extension's: it looks and behaves as it does when Copilot's agent has changed a
 file, and Copilot counts the Keep and Undo you press as its own review actions. **Open** in the panel does the
-same for a file that is not open yet. A file opened later, or changed by Claude while it was open, is
-switched when it appears.
+same for a file that is not open yet, in the **preview tab**: the one the next file opened that way replaces, so
+going through the list does not leave a tab behind for each file. Typing in it, or opening the file in any other
+way, keeps it. A file that is open already stays as it is, and with Visual Studio's own setting for preview tabs
+off (Tools > Options > Environment > Tabs and Windows) the file opens in a tab of its own. A file opened later, or
+changed by Claude while it was open, is switched when it appears.
 
 - **Keep** on a change accepts it as it is. It stops being a difference; nothing is written to the file.
 - **Undo** on a change puts back what was there before Claude's change, in that change only, and Copilot
@@ -217,5 +236,6 @@ that.
 
 **Track the files Claude changes** (Options > Chat > Files) switches the list off. It sits next to
 **Keep file checkpoints (Rewind)**, which it depends on. **Track the files commands change** switches
-off only the part that follows shell commands, and with it the snapshots. See
+off only the part that follows shell commands, and with it the snapshots. **Open the next changed file after
+Keep or Undo** turns off [going on to the next file](#going-on-to-the-next-file). See
 [Options](/cv4vs-agents/options/).
