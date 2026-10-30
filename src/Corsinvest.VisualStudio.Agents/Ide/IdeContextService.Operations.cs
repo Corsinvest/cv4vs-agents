@@ -1227,9 +1227,8 @@ internal sealed partial class IdeContextService
         if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }
         try
         {
-            var window = preview
-                ? OpenInPreviewTab(filePath)
-                : dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
+            var window = preview ? OpenInPreviewTab(filePath) : null;
+            window ??= dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
             if (activate) { window?.Activate(); }
             // Select whole lines. Line-based only: Claude reasons in line numbers (Read returns
             // "N: content"), so a text match would be awkward and ambiguous when a line repeats.
@@ -1250,17 +1249,26 @@ internal sealed partial class IdeContextService
     }
 
     // DTE's OpenFile always makes a tab of its own. A document opened inside this scope goes to the preview tab, as a file does that is
-    // clicked once in Solution Explorer.
+    // clicked once in Solution Explorer. Null when that did not work (the file's editor has no Code view, say): the caller opens it as
+    // it always did, so the file is shown either way.
     private static EnvDTE.Window OpenInPreviewTab(string filePath)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        IVsWindowFrame frame;
-        using (new NewDocumentStateScope(__VSNEWDOCUMENTSTATE.NDS_Provisional, VSConstants.NewDocumentStateReason.Navigation))
+        try
         {
-            VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, filePath, VSConstants.LOGVIEWID.Code_guid, out _, out _, out frame);
+            IVsWindowFrame frame;
+            using (new NewDocumentStateScope(__VSNEWDOCUMENTSTATE.NDS_Provisional, VSConstants.NewDocumentStateReason.Navigation))
+            {
+                VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, filePath, VSConstants.LOGVIEWID.Code_guid, out _, out _, out frame);
+            }
+            frame?.Show();
+            return frame is null ? null : VsShellUtilities.GetWindowObject(frame);
         }
-        frame?.Show();
-        return frame is null ? null : VsShellUtilities.GetWindowObject(frame);
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[ide] {filePath} could not be opened in the preview tab, opening it in a tab of its own: {ex.Message}");
+            return null;
+        }
     }
 
 
