@@ -1218,7 +1218,9 @@ internal sealed partial class IdeContextService
     public async Task<bool> OpenFileAsync(
         string filePath, int startLine, int endLine, bool activate)
     {
-        filePath = PathHelpers.FromFileUri(filePath);
+        // In the spelling the IDE has the file under: a path through the real folder of a linked solution would open a second copy,
+        // as a miscellaneous file, beside the project item.
+        filePath = SolutionPaths.ToLogical(PathHelpers.FromFileUri(filePath));
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) { return false; }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }

@@ -105,15 +105,14 @@ internal sealed partial class IdeContextService
         return frames;
     }
 
-    /// <summary>A path spelt the way <see cref="PathEquals"/> compares them: one separator, none at the end.</summary>
-    internal static string FrameKey(string path) => path.Replace('/', '\\').TrimEnd('\\');
+    /// <summary>A path spelt the way <see cref="PathEquals"/> compares them: one separator, none at the end, and in the spelling of
+    /// the solution folder when it was given in the real spelling of a folder that is a link (see <see cref="SolutionPaths"/>).</summary>
+    internal static string FrameKey(string path) => SolutionPaths.ToLogical(path.Replace('/', '\\').TrimEnd('\\'));
 
     /// <summary>The path of the document in a frame, as the shell spells it. UI thread.</summary>
     internal static string DocumentMoniker(IVsWindowFrame frame) => FrameMoniker(frame);
 
     private static bool PathEquals(string a, string b)
         => !string.IsNullOrEmpty(a) && !string.IsNullOrEmpty(b)
-           && string.Equals(a.Replace('/', '\\').TrimEnd('\\'),
-                            b.Replace('/', '\\').TrimEnd('\\'),
-                            StringComparison.OrdinalIgnoreCase);
+           && string.Equals(FrameKey(a), FrameKey(b), StringComparison.OrdinalIgnoreCase);
 }

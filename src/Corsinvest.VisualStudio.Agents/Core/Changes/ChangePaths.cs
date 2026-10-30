@@ -34,31 +34,42 @@ internal static class ChangePaths
         }
     }
 
-    /// <summary>The file a <c>file-history</c> record stands for.
+    /// <summary>As <see cref="Normalize(string, string)"/>, in the spelling of the pane's working directory: a path the CLI or git
+    /// reported through the real path of a linked folder comes out through the link, where the IDE has its documents.</summary>
+    public static string Normalize(string path, string baseDirectory, PaneRoot root)
+        => (root ?? PaneRoot.None).ToLogical(Normalize(path, baseDirectory));
+
+    /// <summary>The file a <c>file-history</c> record stands for, in the working directory's spelling (see <see cref="PaneRoot"/>).
     /// <para>The CLI shortens a path under the working directory to a relative one and also records
     /// the directory it really lives in (<c>realParentDir</c>, with links resolved). The relative
     /// spelling is what the tool calls use, so it wins; the resolved directory is the way out when the
     /// working directory is not the one the CLI used (a <c>cd</c> moved it) and the relative path points
     /// nowhere.</para></summary>
-    public static string Resolve(string trackingPath, string realParentDir, string baseDirectory)
+    public static string Resolve(string trackingPath, string realParentDir, string baseDirectory, PaneRoot root = null)
     {
         var viaTracking = Normalize(trackingPath, baseDirectory);
         var viaReal = ViaRealDirectory(trackingPath, realParentDir);
-        if (viaTracking is null) { return viaReal; }
-        if (viaReal is null || Path.IsPathRooted(trackingPath)) { return viaTracking; }
-
-        var parent = Path.GetDirectoryName(viaTracking);
-        return parent is not null && Directory.Exists(parent) ? viaTracking : viaReal;
+        string resolved;
+        if (viaTracking is null) { resolved = viaReal; }
+        else if (viaReal is null || Path.IsPathRooted(trackingPath)) { resolved = viaTracking; }
+        else
+        {
+            var parent = Path.GetDirectoryName(viaTracking);
+            resolved = parent is not null && Directory.Exists(parent) ? viaTracking : viaReal;
+        }
+        return (root ?? PaneRoot.None).ToLogical(resolved);
     }
 
     /// <summary>True when <paramref name="hookPath"/>, as a tool call spelled it, is the file the
-    /// record describes under either of its two spellings.</summary>
-    public static bool Matches(string hookPath, string trackingPath, string realParentDir, string baseDirectory)
+    /// record describes under either of its two spellings. The three paths are compared in the working directory's spelling, so
+    /// that a hook reporting the real path of a linked folder still finds a record made under the link, and the other way round.</summary>
+    public static bool Matches(string hookPath, string trackingPath, string realParentDir, string baseDirectory, PaneRoot root = null)
     {
-        var wanted = Normalize(hookPath, baseDirectory);
+        root ??= PaneRoot.None;
+        var wanted = root.ToLogical(Normalize(hookPath, baseDirectory));
         if (wanted is null) { return false; }
-        return Same(wanted, Normalize(trackingPath, baseDirectory))
-            || Same(wanted, ViaRealDirectory(trackingPath, realParentDir));
+        return Same(wanted, root.ToLogical(Normalize(trackingPath, baseDirectory)))
+            || Same(wanted, root.ToLogical(ViaRealDirectory(trackingPath, realParentDir)));
     }
 
     public static bool Same(string a, string b)

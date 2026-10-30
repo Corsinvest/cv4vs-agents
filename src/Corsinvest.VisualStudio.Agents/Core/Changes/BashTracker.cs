@@ -98,14 +98,16 @@ internal sealed class BashTracker : IDisposable
     private readonly int _maxRows;
     private readonly Func<string, Task> _refreshRow;
     private readonly long _maxBaselineBytes;
+    private readonly PaneRoot _root;
     private readonly ConcurrentDictionary<string, Call> _calls = new();
     private readonly CancellationTokenSource _lifetime = new();
     private long _snapshotMark = -1;
 
     private BashTracker(GitSnapshot git, RepoWatch watch, ChangeSet set, ChangeBaselines baselines, OutputWindowLogger log,
-                        int maxRows, Func<string, Task> refreshRow, long maxBaselineBytes)
+                        int maxRows, Func<string, Task> refreshRow, long maxBaselineBytes, PaneRoot root)
     {
         _maxBaselineBytes = maxBaselineBytes;
+        _root = root ?? PaneRoot.None;
         _git = git;
         _watch = watch;
         _set = set;
@@ -121,7 +123,7 @@ internal sealed class BashTracker : IDisposable
     /// once more, or puts it back, must show.</summary>
     public static async Task<BashTracker> StartAsync(string workingDirectory, string snapshotFolder, ChangeSet set,
                                                      ChangeBaselines baselines, OutputWindowLogger log, int? maxRows = null,
-                                                     Func<string, Task> refreshRow = null, long? maxBaselineBytes = null)
+                                                     Func<string, Task> refreshRow = null, long? maxBaselineBytes = null, PaneRoot root = null)
     {
         // Looks along PATH on disk: off the thread that asked.
         var exe = await Task.Run(GitExe.Resolve).ConfigureAwait(false);
@@ -166,7 +168,7 @@ internal sealed class BashTracker : IDisposable
         set.SetCommandsNote(null);
         // No picture yet: reading every file of a working tree is not for a chat that has done nothing.
         // See WarmUpAsync, and BeginAsync for the command that arrives first.
-        return new BashTracker(snapshot, watch, set, baselines, log, maxRows ?? DefaultMaxRows, refreshRow, maxBaselineBytes ?? DefaultMaxBaselineBytes);
+        return new BashTracker(snapshot, watch, set, baselines, log, maxRows ?? DefaultMaxRows, refreshRow, maxBaselineBytes ?? DefaultMaxBaselineBytes, root);
     }
 
     /// <summary>What the panel says for what git answered when it would not open the folder: "not a
@@ -185,6 +187,10 @@ internal sealed class BashTracker : IDisposable
 
     /// <summary>The root of the working tree being watched.</summary>
     public string TopLevel => _git.TopLevel;
+
+    // Git names the top of the working tree by its real path whatever it was started in, so a file of it is in the spelling of the
+    // working directory only after the pane root has turned it.
+    private string Absolute(string relativePath) => _root.ToLogical(_git.Absolute(relativePath));
 
     /// <summary>Take the first picture of the tree, if there is none yet. Called when Claude starts working,
     /// so it is there by the time the first command arrives; a command that arrives before it is done waits
@@ -279,7 +285,7 @@ internal sealed class BashTracker : IDisposable
         foreach (var change in rows)
         {
             if (_lifetime.IsCancellationRequested) { return; }
-            if (_set.IsFull && !_set.TryGet(_git.Absolute(change.RelativePath), out _))
+            if (_set.IsFull && !_set.TryGet(Absolute(change.RelativePath), out _))
             {
                 // No room for a file that is not listed: it would be read, compared and thrown away. One
                 // that is listed costs no room, and is still measured again.
@@ -297,7 +303,7 @@ internal sealed class BashTracker : IDisposable
         // there all along gets deleted by an Undo.
         if (before.Skips(change.RelativePath) || after.Skips(change.RelativePath)) { return; }
 
-        var path = _git.Absolute(change.RelativePath);
+        var path = Absolute(change.RelativePath);
         // Already listed (the edit tools changed it, or an earlier command did): the row keeps its baseline,
         // and its numbers move. A file put back to how it was leaves the list.
         if (_set.TryGet(path, out _))

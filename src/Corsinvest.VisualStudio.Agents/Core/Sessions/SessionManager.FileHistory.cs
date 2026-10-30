@@ -64,7 +64,7 @@ internal sealed partial class SessionManager
 
     /// <summary>Every file the CLI has backed up in a session, by absolute path. One pass over the
     /// transcript, so it is for a resume, not for each edit: see <see cref="FindRecentDelta"/>.</summary>
-    public async Task<Dictionary<string, FileHistoryTrack>> ReadFileHistoryAsync(string sessionId)
+    public async Task<Dictionary<string, FileHistoryTrack>> ReadFileHistoryAsync(string sessionId, PaneRoot root = null)
     {
         var tracks = new Dictionary<string, FileHistoryTrack>(StringComparer.OrdinalIgnoreCase);
         var path = FileFor(sessionId);
@@ -88,7 +88,7 @@ internal sealed partial class SessionManager
 
                 foreach (var entry in delta ? DeltaEntries(obj) : SnapshotEntries(obj))
                 {
-                    var key = ChangePaths.Resolve(entry.TrackingPath, entry.RealParentDir, workingDirectory);
+                    var key = ChangePaths.Resolve(entry.TrackingPath, entry.RealParentDir, workingDirectory, root);
                     if (key is null) { continue; }
                     if (!tracks.TryGetValue(key, out var track))
                     {
@@ -111,7 +111,7 @@ internal sealed partial class SessionManager
     /// Reads the transcript the hook named, not one derived from the session id: the CLI says where
     /// it is writing, and that cannot be wrong; the session id is only the fallback for a CLI that
     /// names none. Null when there is no such record yet.</summary>
-    public async Task<FileHistoryEntry> FindRecentDeltaAsync(string sessionId, string transcriptPath, string hookPath)
+    public async Task<FileHistoryEntry> FindRecentDeltaAsync(string sessionId, string transcriptPath, string hookPath, PaneRoot root = null)
     {
         try
         {
@@ -126,7 +126,7 @@ internal sealed partial class SessionManager
                 catch (Newtonsoft.Json.JsonException) { continue; }
                 foreach (var entry in DeltaEntries(obj))
                 {
-                    if (ChangePaths.Matches(hookPath, entry.TrackingPath, entry.RealParentDir, workingDirectory)) { return entry; }
+                    if (ChangePaths.Matches(hookPath, entry.TrackingPath, entry.RealParentDir, workingDirectory, root)) { return entry; }
                 }
             }
         }

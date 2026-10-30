@@ -35,6 +35,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   how each kept file looked (a length and a hash, none of its content) and leaves it out unless it
   has changed since.
 
+### Fixed
+
+- **A solution opened through a junction showed its changed files as files outside the solution.** With the solution
+  opened as `C:\Users\you\Dev\repo` and `C:\Users\you\Dev` a junction to `D:\`, git and (from version 2.1.314) Claude
+  Code name a file `D:\repo\...`, which Visual Studio does not know as the document it has open. Open in the Changes list
+  opened a second copy as a miscellaneous file, the review in the editor found no tab, a file could be listed under both
+  names, and autosave before an edit missed the open document. A path under the working directory is now turned into
+  the name the solution was opened by, in the list and wherever the IDE looks a file up by path.
+
 ## [1.15.0] - 2026-11-02
 
 A question from Claude can show a preview of each choice, the model picker switches Thinking and

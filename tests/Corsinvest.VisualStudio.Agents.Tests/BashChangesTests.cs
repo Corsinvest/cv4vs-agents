@@ -145,6 +145,29 @@ public sealed class BashChangesTests : IDisposable
     }
 
     [Fact]
+    public async Task A_working_directory_reached_through_a_junction_gets_its_rows_under_the_junction()
+    {
+        if (_repo is null) { return; }
+        _repo.Write("a.txt", "one\n");
+        _repo.Commit();
+        // Git names the top of a working tree by its real path whatever path it was started in, so the rows would be in a
+        // spelling the IDE does not have its documents under.
+        Directory.CreateDirectory(_scratch);
+        var link = Path.Combine(_scratch, "link");
+        using var junction = Junction.Create(link, _repo.Root);
+        using var changes = await StartedAsync(Create(link));
+
+        var call = Call(link);
+        await changes.OnBashBeginAsync(call);
+        Shell(link, "echo two>> a.txt");
+        await changes.OnBashEndAsync(call);
+
+        var row = Assert.Single(changes.Set.Snapshot());
+        Assert.Equal(Path.Combine(link, "a.txt"), row.Path, ignoreCase: true);
+        Assert.Equal(1, row.Added);
+    }
+
+    [Fact]
     public async Task A_command_that_creates_a_file_lists_it_as_added()
     {
         if (_repo is null) { return; }
