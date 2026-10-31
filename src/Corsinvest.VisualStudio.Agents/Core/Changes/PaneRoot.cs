@@ -63,7 +63,7 @@ internal sealed class PaneRoot
         if (path.Length < Real.Length || !path.StartsWith(Real, StringComparison.OrdinalIgnoreCase)) { return path; }
         if (path.Length == Real.Length) { return Logical; }
         // At a folder boundary only: D:\GitHub\repo-two is not under D:\GitHub\repo.
-        return path[Real.Length] is '\\' or '/' ? Logical + path.Substring(Real.Length) : path;
+        return path[Real.Length] is '\\' or '/' ? Logical + path[Real.Length..] : path;
     }
 
     private static string Plain(string path)
@@ -99,10 +99,10 @@ internal sealed class PaneRoot
     }
 
     // \\?\D:\x is how the API spells D:\x, and \\?\UNC\server\share\x is \\server\share\x.
-    private static string WithoutDevicePrefix(string path)
+    internal static string WithoutDevicePrefix(string path)
     {
-        if (path.StartsWith(@"\\?\UNC\", StringComparison.Ordinal)) { return @"\\" + path.Substring(8); }
-        return path.StartsWith(@"\\?\", StringComparison.Ordinal) ? path.Substring(4) : path;
+        if (path.StartsWith(@"\\?\UNC\", StringComparison.Ordinal)) { return @"\\" + path[8..]; }
+        return path.StartsWith(@"\\?\", StringComparison.Ordinal) ? path[4..] : path;
     }
 
     private const uint ShareAll = 0x7;            // read, write and delete: the folder is not held by being asked about

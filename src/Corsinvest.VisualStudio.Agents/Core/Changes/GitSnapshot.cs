@@ -323,7 +323,7 @@ internal sealed class GitSnapshot : IDisposable
             var header = parts[i];
             if (header.Length == 0 || header[0] != ':' || i + 1 >= parts.Length) { continue; }
 
-            var meta = header.Substring(1).Split(' ');
+            var meta = header[1..].Split(' ');
             if (meta.Length < 5 || meta[4].Length == 0) { continue; }
             changes.Add(new TreeChange
             {

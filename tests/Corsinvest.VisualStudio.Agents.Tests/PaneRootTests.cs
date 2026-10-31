@@ -159,4 +159,17 @@ public sealed class PaneRootTests : IDisposable
     {
         Assert.False(PaneRoot.Of(folder).IsLinked);
     }
+
+    // What the file system answers with: the device prefix is how the API spells a path, and goes.
+    [Theory]
+    [InlineData(@"\\?\D:\GitHub\repo", @"D:\GitHub\repo")]
+    [InlineData(@"\\?\D:\", @"D:\")]
+    [InlineData(@"\\?\UNC\server\share\repo", @"\\server\share\repo")]
+    [InlineData(@"\\?\UNC\s", @"\\s")]
+    [InlineData(@"D:\GitHub\repo", @"D:\GitHub\repo")]
+    [InlineData(@"\\server\share\repo", @"\\server\share\repo")]
+    public void The_device_prefix_of_a_path_is_dropped(string path, string expected)
+    {
+        Assert.Equal(expected, PaneRoot.WithoutDevicePrefix(path));
+    }
 }

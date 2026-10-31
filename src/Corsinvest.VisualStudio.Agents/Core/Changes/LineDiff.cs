@@ -155,13 +155,13 @@ internal static class LineDiff
         {
             if (text[i] != '\n') { continue; }
             var end = i > start && text[i - 1] == '\r' ? i - 1 : i;
-            lines.Add(text.Substring(start, end - start));
+            lines.Add(text[start..end]);
             start = i + 1;
         }
         if (start < text.Length)
         {
             var end = text[text.Length - 1] == '\r' ? text.Length - 1 : text.Length;
-            lines.Add(text.Substring(start, Math.Max(0, end - start)));
+            lines.Add(text[start..Math.Max(start, end)]);
         }
         return lines.ToArray();
     }

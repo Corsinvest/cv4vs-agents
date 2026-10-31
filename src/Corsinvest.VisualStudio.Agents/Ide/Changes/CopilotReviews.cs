@@ -95,5 +95,5 @@ internal static class CopilotReviews
         }
     }
 
-    private static string Short(string contract) => contract.Substring(contract.LastIndexOf('.') + 1);
+    private static string Short(string contract) => contract[(contract.LastIndexOf('.') + 1)..];
 }

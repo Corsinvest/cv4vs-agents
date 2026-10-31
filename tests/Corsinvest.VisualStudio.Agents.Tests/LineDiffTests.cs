@@ -137,4 +137,13 @@ public class LineDiffTests
         Assert.Empty(LineDiff.Lines(""));
         Assert.Empty(LineDiff.Lines(null));
     }
+
+    [Fact]
+    public void A_last_line_with_no_newline_is_a_line_and_loses_a_carriage_return_it_ends_with()
+    {
+        Assert.Equal(new[] { "a", "b" }, LineDiff.Lines("a\nb"));
+        Assert.Equal(new[] { "a", "b" }, LineDiff.Lines("a\nb\r"));
+        Assert.Equal(new[] { "a" }, LineDiff.Lines("a\r"));
+        Assert.Equal(new[] { "" }, LineDiff.Lines("\r"));
+    }
 }

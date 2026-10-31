@@ -181,7 +181,7 @@ internal sealed class BashTracker : IDisposable
         if (stderr.IndexOf("not a git repository", StringComparison.OrdinalIgnoreCase) >= 0) { return NoRepositoryNote; }
 
         var said = stderr.Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "";
-        if (said.Length > 120) { said = said.Substring(0, 120) + "..."; }
+        if (said.Length > 120) { said = said[..120] + "..."; }
         return "Files changed by running a command are not listed: git said " + said;
     }
 
