@@ -29,6 +29,7 @@
     <StartProgram Condition="'$(DevEnvDir)' != ''">$(DevEnvDir)devenv.exe</StartProgram>
     <StartArguments>/rootsuffix Exp</StartArguments>
     <LangVersion>latest</LangVersion>
+    <PolySharpVersion>1.16.0</PolySharpVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -108,6 +109,14 @@
          redirect, MissingMethodException at runtime; the package fails
          to load. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <!-- Source generator, build time only: nothing of it is referenced or shipped. .NET Framework 4.8 lacks the types some of
+         the C# language features need (System.Index and System.Range for x[a..], IsExternalInit for init and records, the
+         nullable attributes, ...), and LangVersion latest accepts the syntax regardless. It adds the missing ones to this
+         assembly (34 small internal types). It needs a compiler of Roslyn 4.3 or later (Visual Studio 2022 17.3). -->
+    <PackageReference Include="PolySharp" Version="$(PolySharpVersion)">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <!-- Mads Kristensen's helper toolkit. We use it for `toolkit:Themes.UseVsTheme="True"`
          which auto-applies the official VS WPF styling (TextBox, ListBox, Button,
          caret colors, foreground/background per theme) without us hand-picking
@@ -138,6 +147,7 @@
     <Compile Include="Ide\IdeContextService.cs" />
     <Compile Include="Ide\IdeContextService.Operations.cs" />
     <Compile Include="Ide\IdeContextService.Common.cs" />
+    <Compile Include="Ide\SolutionPaths.cs" />
     <Compile Include="Ide\EditorSelectionState.cs" />
     <Compile Include="Ide\SelectionGeometry.cs" />
     <Compile Include="Ide\IdeDiagnosticsTracker.cs" />
@@ -158,6 +168,11 @@
     <Compile Include="Ide\IdeNavigationService.Search.cs" />
     <Compile Include="Ide\IdeDiffViewer.cs" />
     <Compile Include="Ide\IdeDiffViewer.Listeners.cs" />
+    <Compile Include="Ide\Changes\CopilotReviews.cs" />
+    <Compile Include="Ide\Changes\CopilotReview.cs" />
+    <Compile Include="Ide\Changes\ReviewRegistry.cs" />
+    <Compile Include="Ide\Changes\FileNavigationCommands.cs" />
+    <Compile Include="Ide\Changes\MultiDiffReviewer.cs" />
     <Compile Include="Mcp\McpServerHost.cs" />
     <Compile Include="Mcp\McpServerHost.LockFile.cs" />
     <Compile Include="Mcp\McpTool.cs" />
@@ -265,6 +280,31 @@
     <Compile Include="Core\Panes\PaneEntry.cs" />
     <Compile Include="Core\Panes\PaneRegistry.cs" />
     <Compile Include="Core\Panes\PaneControlBase.cs" />
+    <Compile Include="Core\Changes\DiffSpike.cs" />
+    <Compile Include="Core\Changes\AsyncFile.cs" />
+    <Compile Include="Core\Changes\CopilotSpike.cs" />
+    <Compile Include="Core\Changes\ChangeBaselines.cs" />
+    <Compile Include="Core\Changes\ChangeEvaluator.cs" />
+    <Compile Include="Core\Changes\ChangeModels.cs" />
+    <Compile Include="Core\Changes\ChangePaths.cs" />
+    <Compile Include="Core\Changes\PaneRoot.cs" />
+    <Compile Include="Core\Changes\ChangeSet.cs" />
+    <Compile Include="Core\Changes\HookEdit.cs" />
+    <Compile Include="Core\Changes\LineDiff.cs" />
+    <Compile Include="Core\Changes\SessionChanges.cs" />
+    <Compile Include="Core\Changes\ChangeActions.cs" />
+    <Compile Include="Core\Changes\ChangeEditor.cs" />
+    <Compile Include="Core\Changes\ChangedFilesMapper.cs" />
+    <Compile Include="Core\Changes\BashTracker.cs" />
+    <Compile Include="Core\Changes\GitRunner.cs" />
+    <Compile Include="Core\Changes\GitSnapshot.cs" />
+    <Compile Include="Core\Changes\RepoWatch.cs" />
+    <Compile Include="Core\Changes\BaselineText.cs" />
+    <Compile Include="Core\Changes\CopilotReviewShape.cs" />
+    <Compile Include="Core\Changes\ReviewOwnership.cs" />
+    <Compile Include="Core\Changes\KeptLedger.cs" />
+    <Compile Include="Core\Changes\MultiDiffShape.cs" />
+    <Compile Include="Core\Changes\BaselineReview.cs" />
     <Compile Include="Core\Client\ClaudeInstall.cs" />
     <Compile Include="Core\Client\ClaudeUpdate.cs" />
     <Compile Include="Core\Client\ClientMessages.cs" />
@@ -362,6 +402,7 @@
     <Compile Include="Core\Sessions\SessionInfo.cs" />
     <Compile Include="Core\Sessions\SessionManager.cs" />
     <Compile Include="Core\Sessions\SessionManager.History.cs" />
+    <Compile Include="Core\Sessions\SessionManager.FileHistory.cs" />
     <Compile Include="Core\Sessions\SessionManager.Common.cs" />
     <Compile Include="Core\Plugins\PluginService.cs" />
     <Compile Include="Chat\Host\BridgeMessages.cs" />
@@ -376,6 +417,7 @@
     <Compile Include="Chat\Host\WebViewMessageHandler.Cli.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Open.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Chat.cs" />
+    <Compile Include="Chat\Host\WebViewMessageHandler.ChangedFiles.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Plugins.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Helpers.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Rewind.cs" />
@@ -586,6 +628,14 @@
     </ItemGroup>
     <Error Condition="!Exists('Chat\WebViewSrc\dist\index.html')" Text="WebView build produced no dist\index.html: the VSIX would ship without the chat UI." />
   </Target>
+  <!-- The WPF markup compile builds a copy of this project under another file name (<name>_<random>_wpftmp.csproj). NuGet's generated
+       files are named after this project, so the copy does not get them and the source generator does not run in it: the first
+       x[a..] in the code would stop that build with CS0518. The copy is given the generated props (they hold the package folder)
+       and the generator itself. -->
+  <Import Project="$(MSBuildProjectExtensionsPath)Corsinvest.VisualStudio.Agents.csproj.nuget.g.props" Condition="$(MSBuildProjectName.EndsWith('_wpftmp')) and Exists('$(MSBuildProjectExtensionsPath)Corsinvest.VisualStudio.Agents.csproj.nuget.g.props')" />
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('_wpftmp')) and '$(NuGetPackageRoot)' != ''">
+    <Analyzer Include="$(NuGetPackageRoot)\polysharp\$(PolySharpVersion)\analyzers\dotnet\cs\PolySharp.SourceGenerators.dll" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\VSSDK\Microsoft.VsSDK.targets" Condition="'$(VSToolsPath)' != ''" />
 </Project>

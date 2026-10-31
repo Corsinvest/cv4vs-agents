@@ -80,6 +80,10 @@ Things that break in ways the compiler won't tell you about:
 - **`Newtonsoft.Json` pinned to 13.0.1**: the version VS forces at runtime; a higher one throws
   `MissingMethodException`. Use `JsonExtensions.ToIndentedString`, not `JToken.ToString(Formatting)`.
 - **Target framework v4.8**, not 4.7.2, required by `Community.VisualStudio.Toolkit`.
+- **Language features that need runtime types work through PolySharp.** `x[a..]`, `x[^1]`, `init`, records,
+  `required` and the nullable attributes compile on net48 because PolySharp, a source generator that runs at
+  build time and ships nothing, adds the missing types to the assembly as `internal` ones. Do not hand-write
+  `System.Index`, `System.Range` or `IsExternalInit`. It needs Roslyn 4.3 (Visual Studio 2022 17.3).
 - **`bridge-messages.ts` is generated** from `Chat/Host/BridgeMessages.cs` by
   `WebViewSrc/tools/gen-bridge.mjs` (part of `npm run build`). The C# file is the single source of
   truth: never edit the `.ts`.
@@ -89,6 +93,12 @@ Things that break in ways the compiler won't tell you about:
   caches). Changing it moves the user's data.
 - **`.gitignore` excludes `[Dd]ebug/`** with an explicit exception for `Mcp/Tools/Debug/`. Renaming
   paths without updating it silently untracks those tools.
+- **A light-DOM component still sits inside its parent's shadow root.** `createRenderRoot() { return
+  this }` keeps it out of its own, but `CvPrompt` and almost every chat component render into a
+  shadow root, and the page's `bundle.css` does not reach into one: the Changes chip came out
+  unstyled, laid over the toolbar. Anything under the prompt takes its styles through `static
+  styles` (`ui/styles/shared.ts`). Try a new one in a harness with the element inside a shadow
+  root, not in the document: there it renders fine and proves nothing.
 
 ## Architecture notes
 
