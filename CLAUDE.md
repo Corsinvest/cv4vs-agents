@@ -80,6 +80,11 @@ Things that break in ways the compiler won't tell you about:
 - **`Newtonsoft.Json` pinned to 13.0.1**: the version VS forces at runtime; a higher one throws
   `MissingMethodException`. Use `JsonExtensions.ToIndentedString`, not `JToken.ToString(Formatting)`.
 - **Target framework v4.8**, not 4.7.2, required by `Community.VisualStudio.Toolkit`.
+- **PolySharp does not reach WPF's temporary copy of the project by itself.** The markup compile builds
+  `<name>_<random>_wpftmp.csproj`, which gets none of NuGet's generated files, so the generator does not run
+  there and a slice fails with CS0518 in that project only (the main compile is fine). The lines at the end of
+  the `.csproj` hand the copy the generator: keep them, with `PolySharpVersion`, which they share with the
+  package. PolySharp needs Roslyn 4.3 (Visual Studio 2022 17.3).
 - **`bridge-messages.ts` is generated** from `Chat/Host/BridgeMessages.cs` by
   `WebViewSrc/tools/gen-bridge.mjs` (part of `npm run build`). The C# file is the single source of
   truth: never edit the `.ts`.
@@ -179,8 +184,9 @@ editing:
   - A switch expression when every branch only yields a value; a `switch` statement when branches
     do work.
   - `nameof` instead of a string literal naming a member.
-  - net48 has no `System.Index`, `System.Range` or `IsExternalInit`: slices, `init` and readonly
-    record structs stay out.
+  - net48 has no `System.Index`, `System.Range` or `IsExternalInit`; PolySharp, a source generator that
+    runs at build time and ships nothing, adds them as `internal` types. So slices (`x[a..]`), `init` and
+    readonly record structs are fine on new and touched lines. Do not hand-write those types.
 
 ## Docs
 
