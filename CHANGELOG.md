@@ -13,6 +13,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
   is still the choice you pick.
 
+### Changed
+
+- **The power page says what keeps a long unattended turn running.** On a modern-standby laptop a
+  turn can still be suspended half-way through while the sleep timer is finite, on AC power too,
+  not only on battery. The page and the option now say so, and that setting Sleep to Never while
+  plugged in is what prevents it.
+
 ### Fixed
 
 - **Starting the debugger with two chats side by side could keep Visual Studio busy for good.**
