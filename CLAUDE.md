@@ -171,6 +171,16 @@ editing:
   - When converting a class, convert **every partial** of it: the compiler won't tell you that one
     file still logs untagged.
   - A catch returning a default on a user-facing path must `LogException` or `Warn`, never swallow.
+- **Modern C#, on new and touched lines.** Existing code is not rewritten for style: it buries
+  `git blame`.
+  - `is null` / `is not null`, not `== null` / `!= null`; `??`, `??=` and `?.` where they are shorter.
+  - `is T t` instead of `as T` plus a null check, or `is T` plus a cast; `is not` instead of
+    `!(x is T)`; relational, logical and property patterns instead of chains of `==` and `||`.
+  - A switch expression when every branch only yields a value; a `switch` statement when branches
+    do work.
+  - `nameof` instead of a string literal naming a member.
+  - net48 has no `System.Index`, `System.Range` or `IsExternalInit`: slices, `init` and readonly
+    record structs stay out.
 
 ## Docs
 

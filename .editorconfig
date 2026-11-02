@@ -44,6 +44,14 @@ dotnet_separate_import_directive_groups = false
 # var where the right-hand side already names the type: 279 of them, no exceptions.
 csharp_style_var_when_type_is_apparent = true:suggestion
 
+# Modern C# in the IDE, on suggestion: the build does not report these, and existing code stays.
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
+csharp_style_prefer_pattern_matching = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_prefer_not_pattern = true:suggestion
+csharp_style_prefer_switch_expression = true:suggestion
+
 [*.{js,ts,css,html}]
 indent_size = 2
 
