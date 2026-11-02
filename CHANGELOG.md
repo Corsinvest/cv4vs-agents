@@ -4,14 +4,29 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.15.0] - 2026-11-02
+
+A question from Claude can show a preview of each choice, the model picker switches Thinking and
+Fast mode, and a chat that is working is marked in its tab. A floating chat pane keeps the keys you
+type and survives being docked, and Visual Studio's Markdown preview no longer stays blank.
 
 ### Added
 
 - **A question from Claude can show a preview of each choice.** When the options of a question
   come with a mockup, a code sample or a layout to compare, the one under the pointer or the
   keyboard is shown beside the list, or under it in a narrow chat. It is there to read: the answer
-  is still the choice you pick.
+  is still the choice you pick. A question that takes several answers keeps the plain list.
+- **Thinking and Fast mode can be switched from the model picker.** Its footer has a switch for
+  each, beside Ultracode, running the same commands as the `/` menu, and it shows for Haiku too,
+  which keeps Thinking. The model badge shows the switches that are on as icons, named in its
+  tooltip, in place of the written "Ultracode".
+- **A chat pane that is working says so in its tab** (issue #248). A `●` before the caption, gone
+  once the turn and any background task have ended, so with many chats open the busy ones can be
+  told apart from the tab strip. A chat waiting for your answer to a permission shows none: it is
+  waiting on you, not working.
+- **`test_run` and `test_run_with_debugger` say which configuration they ran** (issue #199). The
+  result carries `configuration`, read before the run, as `build_solution` already does, so the
+  agent can confirm which build Test Explorer used.
 
 ### Changed
 
@@ -42,6 +57,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   closes a web view whose parent window is destroyed, and for a pane born floating that parent is
   the floating window, which docking destroys. The pane now moves the browser onto the main window
   just before a floating window closes, so the conversation survives the dock.
+- **Visual Studio's Markdown preview stayed blank when a chat had opened first** (issue #329). The
+  whole process shares one WebView2 runtime, and its loader path can be set only before anything
+  else uses it. Visual Studio sets it the first time one of its own WebView2 surfaces opens, so
+  when the chat came first that call failed, and the preview stayed blank until a restart. The chat
+  now lets Visual Studio set it first.
 
 ## [1.14.0] - 2026-10-12
 
