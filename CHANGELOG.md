@@ -4,6 +4,17 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+
+- **A list of the files Claude changed in the chat.** A chip beside the message box counts them;
+  its panel shows each one against how it was before Claude's first edit, with the lines added and
+  removed, and Open, Keep and Undo for the file or for all of them. Undo puts a file back as it
+  was, through the editor when it is open, so Ctrl+Z gives back what was there. It compares with the
+  copies Rewind restores from, and takes its own for a sub-agent's edits. Edits made by running a
+  command are not listed.
+
 ## [1.15.0] - 2026-11-02
 
 A question from Claude can show a preview of each choice, the model picker switches Thinking and
