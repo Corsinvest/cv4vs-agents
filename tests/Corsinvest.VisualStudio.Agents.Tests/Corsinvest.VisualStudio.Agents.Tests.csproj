@@ -32,6 +32,8 @@
          same Newtonsoft the extension will actually get. A higher one throws MissingMethodException
          in the IDE (CLAUDE.md), and a test passing against a version that never ships proves nothing. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <!-- What the extension's UTF.Unknown brings: the tests reference its built assembly, not the project, so its packages do not come with it. -->
+    <PackageReference Include="UTF.Unknown" Version="2.6.0" />
   </ItemGroup>
 
   <!--

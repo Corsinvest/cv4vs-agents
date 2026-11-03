@@ -108,6 +108,11 @@
          redirect, MissingMethodException at runtime; the package fails
          to load. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <!-- Which legacy code page a file without a byte-order mark and not UTF-8 is in (ChangeEvaluator.DetectLegacy).
+         2.6.0 on purpose: its only dependency is System.Text.Encoding.CodePages. From 2.7.0 on the netstandard2.0 build asks for
+         System.Memory 4.6.3, newer than the one Visual Studio binds. The library is MPL 1.1 / GPL 2.0 or later / LGPL 2.1 or later,
+         and is used here under the GPL 2.0 or later alternative, which GPL 3.0 includes. -->
+    <PackageReference Include="UTF.Unknown" Version="2.6.0" />
     <!-- Mads Kristensen's helper toolkit. We use it for `toolkit:Themes.UseVsTheme="True"`
          which auto-applies the official VS WPF styling (TextBox, ListBox, Button,
          caret colors, foreground/background per theme) without us hand-picking
@@ -158,6 +163,11 @@
     <Compile Include="Ide\IdeNavigationService.Search.cs" />
     <Compile Include="Ide\IdeDiffViewer.cs" />
     <Compile Include="Ide\IdeDiffViewer.Listeners.cs" />
+    <Compile Include="Ide\Changes\CopilotReviews.cs" />
+    <Compile Include="Ide\Changes\CopilotReview.cs" />
+    <Compile Include="Ide\Changes\ReviewRegistry.cs" />
+    <Compile Include="Ide\Changes\FileNavigationCommands.cs" />
+    <Compile Include="Ide\Changes\MultiDiffReviewer.cs" />
     <Compile Include="Mcp\McpServerHost.cs" />
     <Compile Include="Mcp\McpServerHost.LockFile.cs" />
     <Compile Include="Mcp\McpTool.cs" />
@@ -265,6 +275,30 @@
     <Compile Include="Core\Panes\PaneEntry.cs" />
     <Compile Include="Core\Panes\PaneRegistry.cs" />
     <Compile Include="Core\Panes\PaneControlBase.cs" />
+    <Compile Include="Core\Changes\DiffSpike.cs" />
+    <Compile Include="Core\Changes\AsyncFile.cs" />
+    <Compile Include="Core\Changes\CopilotSpike.cs" />
+    <Compile Include="Core\Changes\ChangeBaselines.cs" />
+    <Compile Include="Core\Changes\ChangeEvaluator.cs" />
+    <Compile Include="Core\Changes\ChangeModels.cs" />
+    <Compile Include="Core\Changes\ChangePaths.cs" />
+    <Compile Include="Core\Changes\ChangeSet.cs" />
+    <Compile Include="Core\Changes\HookEdit.cs" />
+    <Compile Include="Core\Changes\LineDiff.cs" />
+    <Compile Include="Core\Changes\SessionChanges.cs" />
+    <Compile Include="Core\Changes\ChangeActions.cs" />
+    <Compile Include="Core\Changes\ChangeEditor.cs" />
+    <Compile Include="Core\Changes\ChangedFilesMapper.cs" />
+    <Compile Include="Core\Changes\BashTracker.cs" />
+    <Compile Include="Core\Changes\GitRunner.cs" />
+    <Compile Include="Core\Changes\GitSnapshot.cs" />
+    <Compile Include="Core\Changes\RepoWatch.cs" />
+    <Compile Include="Core\Changes\BaselineText.cs" />
+    <Compile Include="Core\Changes\CopilotReviewShape.cs" />
+    <Compile Include="Core\Changes\ReviewOwnership.cs" />
+    <Compile Include="Core\Changes\KeptLedger.cs" />
+    <Compile Include="Core\Changes\MultiDiffShape.cs" />
+    <Compile Include="Core\Changes\BaselineReview.cs" />
     <Compile Include="Core\Client\ClaudeInstall.cs" />
     <Compile Include="Core\Client\ClaudeUpdate.cs" />
     <Compile Include="Core\Client\ClientMessages.cs" />
@@ -362,6 +396,7 @@
     <Compile Include="Core\Sessions\SessionInfo.cs" />
     <Compile Include="Core\Sessions\SessionManager.cs" />
     <Compile Include="Core\Sessions\SessionManager.History.cs" />
+    <Compile Include="Core\Sessions\SessionManager.FileHistory.cs" />
     <Compile Include="Core\Sessions\SessionManager.Common.cs" />
     <Compile Include="Core\Plugins\PluginService.cs" />
     <Compile Include="Chat\Host\BridgeMessages.cs" />
@@ -376,6 +411,7 @@
     <Compile Include="Chat\Host\WebViewMessageHandler.Cli.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Open.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Chat.cs" />
+    <Compile Include="Chat\Host\WebViewMessageHandler.ChangedFiles.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Plugins.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Helpers.cs" />
     <Compile Include="Chat\Host\WebViewMessageHandler.Rewind.cs" />
