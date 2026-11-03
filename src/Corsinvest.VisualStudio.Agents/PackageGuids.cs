@@ -42,6 +42,7 @@ internal static class PackageIds
     public const int SolutionAddReferenceToChatCommandId = 0x0212;
     public const int TabAddReferenceToChatCommandId = 0x0213;
     public const int UpdateClaudeCommandId = 0x0214;
+    public const int DiffSpikeCommandId = 0x0215;
 
     // Seeds the dynamic open-panes range, which grows with the number of open panes: its own
     // 0x0300 block, clear of the fixed ids above.

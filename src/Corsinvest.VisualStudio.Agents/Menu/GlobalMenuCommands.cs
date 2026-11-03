@@ -61,6 +61,12 @@ internal static class GlobalMenuCommands
         Add(svc, PackageIds.UsageCommandId, Core.Usage.UsageWindow.Open);
         Add(svc, PackageIds.ContextUsageCommandId, Core.Context.ContextWindow.Open);
         Add(svc, PackageIds.FileHistoryCommandId, Core.FileHistory.FileHistoryWindow.Open);
+#if DEBUG
+        // Debug builds only: the probe behind issue #247. Without a handler the entry stays
+        // invisible (DefaultInvisible in the .vsct), so a Release build never shows it.
+        Add(svc, PackageIds.DiffSpikeCommandId, Core.Changes.DiffSpike.Run).BeforeQueryStatus +=
+            (sender, _) => ((OleMenuCommand)sender).Visible = true;
+#endif
     }
 
     /// <summary>Open a GitHub issue form. The template name must match a file in
