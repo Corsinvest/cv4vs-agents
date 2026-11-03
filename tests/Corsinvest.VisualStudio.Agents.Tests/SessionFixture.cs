@@ -36,6 +36,36 @@ internal sealed class SessionFixture : IDisposable
 
     public SessionManager Manager() => new(Paths, WorkingDirectory, OutputWindowLogger.Global);
 
+    /// <summary>The transcript the fixture wrote.</summary>
+    public string TranscriptPath => Path.Combine(
+        Paths.ProjectsFolder, ClaudePaths.ProjectFolderName(WorkingDirectory), SessionId + ".jsonl");
+
+    /// <summary>Add records to the transcript, as the CLI does while a turn runs.</summary>
+    public void Append(params JObject[] lines)
+        => File.AppendAllText(
+            TranscriptPath,
+            string.Concat(lines.Select(l => l.ToString(Formatting.None) + "\n")),
+            new UTF8Encoding(false));
+
+    /// <summary>Put a copy where the CLI keeps them: <c>file-history/&lt;session&gt;/&lt;name&gt;</c>.</summary>
+    public string WriteBackup(string name, string content)
+    {
+        var folder = Path.Combine(Paths.FileHistoryFolder, SessionId);
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, name);
+        File.WriteAllText(path, content, new UTF8Encoding(false));
+        return path;
+    }
+
+    /// <summary>A file in the fixture's working directory, written with the given text.</summary>
+    public string WriteWork(string relativePath, string content)
+    {
+        var path = Path.Combine(WorkingDirectory, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        File.WriteAllText(path, content, new UTF8Encoding(false));
+        return path;
+    }
+
     /// <summary>Writes the lines as the CLI does: one compact JSON object per line, UTF-8, LF.</summary>
     public static SessionFixture Compact(IEnumerable<JObject> lines)
         => Write(lines, Formatting.None);
@@ -161,6 +191,40 @@ internal static class Jsonl
         ["type"] = "file-history-snapshot",
         ["messageId"] = messageId,
         ["snapshot"] = new JObject { ["trackedFileBackups"] = new JObject() },
+    };
+
+    /// <summary>The record the CLI writes the first time it tracks a file: the copy it took is the
+    /// file as it was before that edit. A null backup name means the file did not exist.</summary>
+    public static JObject FileHistoryDelta(string trackingPath, string backupFileName, int version,
+                                           string realParentDir = null, string snapshotMessageId = "u1") => new()
+    {
+        ["type"] = "file-history-delta",
+        ["messageId"] = Guid.NewGuid().ToString(),
+        ["snapshotMessageId"] = snapshotMessageId,
+        ["trackingPath"] = trackingPath,
+        ["backup"] = Backup(backupFileName, version, realParentDir),
+        ["timestamp"] = "2026-10-26T10:00:00.000Z",
+    };
+
+    /// <summary>A snapshot listing the files tracked so far, each with the copy taken for it.</summary>
+    public static JObject TrackedSnapshot(string messageId, params JProperty[] files) => new()
+    {
+        ["type"] = "file-history-snapshot",
+        ["messageId"] = messageId,
+        ["snapshot"] = new JObject { ["trackedFileBackups"] = new JObject(files) },
+        ["isSnapshotUpdate"] = false,
+    };
+
+    /// <summary>One entry of a snapshot's tracked files.</summary>
+    public static JProperty Tracked(string trackingPath, string backupFileName, int version, string realParentDir = null)
+        => new(trackingPath, Backup(backupFileName, version, realParentDir));
+
+    private static JObject Backup(string backupFileName, int version, string realParentDir) => new()
+    {
+        ["backupFileName"] = backupFileName is null ? JValue.CreateNull() : (JToken)backupFileName,
+        ["version"] = version,
+        ["backupTime"] = "2026-10-26T10:00:00.000Z",
+        ["realParentDir"] = realParentDir is null ? JValue.CreateNull() : (JToken)realParentDir,
     };
 
     /// <summary>A prompt sent while a turn was running, as the CLI records it once injected: an
