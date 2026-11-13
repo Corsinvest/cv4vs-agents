@@ -53,9 +53,9 @@ and the next edit of that file is compared with how it is now.
 ## Going on to the next file
 
 After **Keep** or **Undo** on one file, the file that follows it in the list opens the way **Open** opens it (in its own
-editor with the review, or in the comparison window), so the changes can be gone through one file after another. The list
-is by path, as the panel shows it, and after the last file it goes on with the first one still listed. It stops when
-nothing else is listed.
+editor with the review, in the comparison window, or as it is when Claude created it), so the changes can be gone through
+one file after another. The list is by path, as the panel shows it, and after the last file it goes on with the first one
+still listed. It stops when nothing else is listed.
 
 - It happens for a click in the panel, for **Keep** and **Undo** in the bar at the bottom of the editor, and when the last
   change of a file has been kept or undone one at a time, or the file saved as it was.
@@ -110,8 +110,8 @@ Claude's change; it mixes CRLF and LF line endings; it is read-only; its window 
 again when it changes.
 
 A file Claude **created** has no earlier text to show a difference against, and neither has one the list has no copy
-of from before: they are not reviewed, and **Open** opens them as they are, with no comparison. A created file is
-kept or undone whole, with the list's Keep and Undo; Undo deletes it.
+of from before: they are not reviewed, and **Open** opens them as they are, in the preview tab, with no comparison. A
+created file is kept or undone whole, with the list's Keep and Undo; Undo deletes it.
 
 A few things work differently there:
 
