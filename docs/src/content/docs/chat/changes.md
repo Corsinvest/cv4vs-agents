@@ -87,9 +87,12 @@ A file that cannot be reviewed this way is shown in the comparison window instea
 Copilot is already reviewing the file for its own agent; another difference (a Git diff) is already shown in it; the
 file, or its copy from before, is not plain UTF-8 or UTF-16 text; its byte-order mark is not what it was before
 Claude's change; it mixes CRLF and LF line endings; it is read-only; its window shows two languages in one file
-(Razor, for one); this Visual Studio's editor cannot show a difference in it; the list has no copy of the file
-from before; or Claude **created** the file, which has no earlier text to show a difference against (the list's Keep and
-Undo take it whole, and Undo deletes it). A file that was declined is tried again when it changes.
+(Razor, for one); or this Visual Studio's editor cannot show a difference in it. A file that was declined is tried
+again when it changes.
+
+A file Claude **created** has no earlier text to show a difference against, and neither has one the list has no copy
+of from before: they are not reviewed, and **Open** opens them as they are, with no comparison. A created file is
+kept or undone whole, with the list's Keep and Undo; Undo deletes it.
 
 A few things work differently there:
 
