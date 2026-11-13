@@ -58,6 +58,24 @@ internal static class AppPaths
     /// </summary>
     public static readonly string IconCacheFolder = Path.Combine(DataFolder, "icons");
 
+    /// <summary>Copies of files the extension keeps to compare against: what Claude was about to
+    /// change, or what a user kept. One folder per session. Written by Core/Changes, which also owns
+    /// deleting them; nothing here is the user's data, so a missing folder only means "no baseline".</summary>
+    public static readonly string BaselinesFolder = Path.Combine(DataFolder, "baselines");
+
+    /// <summary>The text a file held just before something in a review of it emptied it: the newest twenty, so that an Undo that goes
+    /// wrong in the editor costs nothing that cannot be got back.</summary>
+    public static readonly string RecoveryFolder = Path.Combine(DataFolder, "recovery");
+
+    /// <summary>What the person accepted with Keep in each chat, one small file per session, so that resuming the chat
+    /// does not list those files again. Written by Core/Changes (KeptLedger), which also sweeps it.</summary>
+    public static readonly string ChangesFolder = Path.Combine(DataFolder, "changes");
+
+    /// <summary>Private git indexes and object stores, one folder per open chat: the pictures of a
+    /// working tree that tell what a shell command changed. Deleted with the chat; what a crash leaves is
+    /// swept when the next chat starts.</summary>
+    public static readonly string SnapshotsFolder = Path.Combine(DataFolder, "snapshots");
+
     /// <summary>Where the per-project folders live. ProjectStore names what goes inside: it needs
     /// the root without going back through ProjectFolder, which delegates to it.</summary>
     public static readonly string ProjectsRoot = Path.Combine(DataFolder, "data", "projects");
