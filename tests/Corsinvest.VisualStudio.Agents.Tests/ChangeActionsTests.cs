@@ -545,6 +545,20 @@ public sealed class ChangeActionsTests : IDisposable
     }
 
     [Fact]
+    public async Task Open_of_a_created_file_does_not_ask_the_editor_to_draw_a_difference()
+    {
+        var created = Write("made.txt", "new\n");
+        Row(created, BaselineRef.Empty, ChangeState.Added);
+        _editor.InPlace = true;
+
+        await _actions.OpenAsync(created);
+
+        Assert.Empty(_editor.ShownInPlace);
+        Assert.Equal(new[] { created }, _editor.Opened);
+        Assert.Empty(_editor.Diffs);
+    }
+
+    [Fact]
     public async Task Open_of_a_created_file_opens_it_as_it_is_with_no_comparison()
     {
         var created = Write("made.txt", "new\n");
