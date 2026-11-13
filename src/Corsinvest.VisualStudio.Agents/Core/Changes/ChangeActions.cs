@@ -35,18 +35,21 @@ internal sealed class ChangeFailure
 internal sealed class ChangeActions(ChangeSet set, ChangeBaselines baselines, IChangeEditor editor, OutputWindowLogger log)
 {
     /// <summary>Show the file against how it was before Claude's first edit, read-only, in VS's
-    /// comparison window. A file with no baseline, or one that is not text, is opened instead.</summary>
+    /// comparison window. A file Claude created is opened instead, as is a file with no baseline or one that is not
+    /// text.</summary>
     public async Task OpenAsync(string path)
     {
         // Only a listed path: the WebView names it, and a name is not a licence to open any file.
         if (!set.TryGet(path, out var row)) { return; }
-        if (!row.Baseline.IsKnown)
+        // No copy from before, or nothing before it at all (Claude created it): a comparison with an empty side shows no
+        // more than the file itself.
+        if (!row.Baseline.IsKnown || row.Baseline.IsEmpty)
         {
             await editor.OpenFileAsync(path);
             return;
         }
 
-        var before = row.Baseline.IsEmpty ? "" : ChangeEvaluator.Decode(await AsyncFile.ReadAllBytesAsync(row.Baseline.Path).ConfigureAwait(false));
+        var before = ChangeEvaluator.Decode(await AsyncFile.ReadAllBytesAsync(row.Baseline.Path).ConfigureAwait(false));
         var current = await ReadCurrentTextAsync(path).ConfigureAwait(false);
 
         // A comparison of two walls of bytes says nothing; the file itself is the better answer.
