@@ -4,6 +4,22 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+
+- **A list of the files Claude changed in the chat.** A chip beside the message box counts them;
+  its panel shows each one against how it was before Claude's first edit, with the lines added and
+  removed, and Open, Keep and Undo for the file or for all of them. Undo puts a file back as it
+  was, through the editor when it is open, so Ctrl+Z gives back what was there. It compares with the
+  copies Rewind restores from, and takes its own for a sub-agent's edits.
+- **The list also follows what a shell command changes.** A file rewritten by `sed -i`, a script or
+  `git checkout`, run through the Bash or the PowerShell tool, is listed against a snapshot of the
+  working tree taken just before the command, so Undo puts it back as git would check it out. It
+  needs the folder to be in a git repository, and says so in the panel when it is not. The
+  snapshots live in a private store under the extension's data folder: your repository's history,
+  index and objects are only read. *Track the files commands change* in Options turns it off.
+
 ## [1.15.0] - 2026-11-02
 
 A question from Claude can show a preview of each choice, the model picker switches Thinking and
