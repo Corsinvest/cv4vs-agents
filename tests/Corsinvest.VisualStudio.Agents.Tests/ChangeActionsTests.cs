@@ -308,21 +308,30 @@ public sealed class ChangeActionsTests : IDisposable
     }
 
     [Fact]
-    public async Task Open_of_a_created_file_compares_with_nothing_and_of_a_deleted_one_with_nothing_left()
+    public async Task Open_of_a_created_file_opens_it_as_it_is_with_no_comparison()
     {
         var created = Write("made.txt", "new\n");
-        var baseline = Write("backup@v1", "was here\n");
-        var deleted = Path.Combine(_folder, "removed.txt");
         Row(created, BaselineRef.Empty, ChangeState.Added);
-        Row(deleted, BaselineRef.Cli(baseline), ChangeState.Deleted);
 
         await _actions.OpenAsync(created);
+
+        Assert.Equal(new[] { created }, _editor.Opened);
+        Assert.Empty(_editor.Diffs);
+    }
+
+    [Fact]
+    public async Task Open_of_a_deleted_file_compares_with_nothing_left()
+    {
+        var baseline = Write("backup@v1", "was here\n");
+        var deleted = Path.Combine(_folder, "removed.txt");
+        Row(deleted, BaselineRef.Cli(baseline), ChangeState.Deleted);
+
         await _actions.OpenAsync(deleted);
 
-        Assert.Equal("", _editor.Diffs[0].Before);
-        Assert.Equal("new\n", _editor.Diffs[0].After);
-        Assert.Equal("was here\n", _editor.Diffs[1].Before);
-        Assert.Equal("", _editor.Diffs[1].After);
+        var diff = Assert.Single(_editor.Diffs);
+        Assert.Equal("was here\n", diff.Before);
+        Assert.Equal("", diff.After);
+        Assert.Empty(_editor.Opened);
     }
 
     [Fact]

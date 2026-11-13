@@ -15,7 +15,8 @@ edit. Its badge is the number of files. Clicking it opens the panel:
 
 - **The file** (its name, and the folder it is in). Clicking it opens Visual Studio's own diff, the
   file as it was before Claude's first edit on the left and as it is now on the right, the same
-  viewer the chat uses to [review a change](/cv4vs-agents/chat/diff/). Nothing is written.
+  viewer the chat uses to [review a change](/cv4vs-agents/chat/diff/). Nothing is written. A file
+  Claude created has nothing before it to compare with, so it opens as it is, in its own editor.
 - **M, A or D**: modified, added (Claude created it) or deleted.
 - **+3 −1**: lines added and removed, counted between those two versions. A file that changed in
   every line shows an approximate figure, marked ≈; a binary file, or one too large to read, shows
