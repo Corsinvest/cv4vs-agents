@@ -356,6 +356,11 @@ internal sealed partial class ClaudeClient : IClaudeClient
     public const string DiagBaselineHookId = "cv_diag_baseline";
     public const string DiagCheckHookId = "cv_diag_check";
 
+    /// <summary>Callback ids of the hooks behind the Changes list: before an edit (a copy for the
+    /// cases the CLI's file history does not cover) and after it (the file joins the list).</summary>
+    public const string ChangesPreHookId = "cv_changes_pre";
+    public const string ChangesHookId = "cv_changes";
+
     private void SendInitializeHooks() =>
         // `initialize` carries the model catalogue + rich slash commands (→ ModelsReceived) and the
         // fast-mode state; get_settings adds the model + Model-menu toggles. Together they seed the UI
@@ -385,10 +390,12 @@ internal sealed partial class ClaudeClient : IClaudeClient
                     {
                         new { matcher = "Edit|Write|Read", hookCallbackIds = new[] { AutosaveHookId } },
                         new { matcher = "Edit|Write|MultiEdit", hookCallbackIds = new[] { DiagBaselineHookId } },
+                        new { matcher = "Edit|Write|MultiEdit|NotebookEdit", hookCallbackIds = new[] { ChangesPreHookId } },
                     },
                     PostToolUse = new[]
                     {
                         new { matcher = "Edit|Write|MultiEdit", hookCallbackIds = new[] { DiagCheckHookId } },
+                        new { matcher = "Edit|Write|MultiEdit|NotebookEdit", hookCallbackIds = new[] { ChangesHookId } },
                     },
                 },
                 sdkMcpServers = sdkServers,

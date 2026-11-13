@@ -50,6 +50,7 @@ import './cv-context-gauge';
 import './cv-ide-context-badge';
 import './cv-subagent-chip';
 import './cv-remote-chip';
+import './cv-changed-files-chip';
 import './cv-model-list';
 import './cv-model-selector';
 import './cv-permission-list';
@@ -1754,6 +1755,7 @@ export class CvPrompt extends LitElement implements CommandHost {
                              resizes (it absorbs the row's spare width), so anything past it moves
                              on every editor change. -->
                         <cv-remote-chip></cv-remote-chip>
+                        <cv-changed-files-chip></cv-changed-files-chip>
                         <cv-ide-context-badge></cv-ide-context-badge>
                     </div>
                     <div
