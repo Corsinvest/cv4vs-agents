@@ -4,7 +4,11 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.16.0] - 2026-11-16
+
+The `@` menu references a class or a method as well as a file, and file mentions in a sent message
+open the file. A minimized Visual Studio no longer comes back to the front by itself while a chat is
+open.
 
 ### Added
 
@@ -16,6 +20,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **File mentions in a sent message are links that open the file.** `@path` and `@path#L10-20` in
   your own messages are highlighted, and a click opens the file in Visual Studio with those lines
   selected. Names, packages (`@types/node`), agents and MCP resources stay plain text.
+
+### Fixed
+
+- **A minimized Visual Studio restored itself and took the focus every minute** (issue #353). It
+  happened only while a chat or terminal pane was open. The status bar's usage item checks once a
+  minute whether Visual Studio is in front, and the call it used to find the main window also
+  restores that window when it is minimized. It now reads the window without touching it.
 
 ## [1.15.0] - 2026-11-02
 
