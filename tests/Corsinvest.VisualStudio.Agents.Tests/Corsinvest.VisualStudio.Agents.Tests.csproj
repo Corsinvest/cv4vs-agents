@@ -32,6 +32,13 @@
          same Newtonsoft the extension will actually get. A higher one throws MissingMethodException
          in the IDE (CLAUDE.md), and a test passing against a version that never ships proves nothing. -->
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <!-- PolySharp's types in the extension are [Embedded], so this assembly cannot see them even
+         through InternalsVisibleTo: a test that sets an init property or builds a record from the
+         extension needs its own copy. Keep the version in step with PolySharpVersion there. -->
+    <PackageReference Include="PolySharp" Version="1.16.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <!--
