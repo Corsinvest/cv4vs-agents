@@ -61,7 +61,9 @@ neither touches the eye.
 
 - **Add reference to chat** writes `@path#L12-18` (or `@path` with no selection) on a line of its
   own. The CLI reads those lines from disk when the turn goes: whole lines, however much of them
-  you selected, and without edits you have not saved yet.
+  you selected, and without edits you have not saved yet. For a whole class or method you do not
+  need the editor at all: the composer's `@` menu, on its **Symbols** tab, writes the same token
+  for the member's declaration ([Mentions and attachments](/cv4vs-agents/chat/composer/#mentions-and-attachments)).
 - **Add selection to chat** writes the selected text itself, in a fenced block headed by the path
   and lines: exactly what is on screen, down to the character. Greyed out with no selection.
 

@@ -23,6 +23,10 @@ internal sealed partial class IdeNavigationService
         public string Name { get; set; }
         public string Kind { get; set; }  // Class/Method/Property/… (from the glyph); null if unknown
         public int Line { get; set; }     // 1-based; 0 when unknown
+        // The declaration's whole extent, 1-based; 0 when unknown. Not in nav_get_document_symbols'
+        // output: the `@` picker uses it to reference a member's lines.
+        public int StartLine { get; set; }
+        public int EndLine { get; set; }
         public DocSymbol[] Children { get; set; } = [];
     }
 
@@ -130,6 +134,21 @@ internal sealed partial class IdeNavigationService
         }
     }
 
+    /// <summary>The 1-based lines a declaration spans, for a NavigateTo hit (its name and
+    /// declaration line), and its label (<c>Container.Name</c>) from the outline. Null when the
+    /// file has no outline, no node there carries that name, or the node has no extent.</summary>
+    public async Task<(int Start, int End, string Label)?> GetSymbolExtentAsync(
+        string filePath, int line, string name, CancellationToken ct)
+    {
+        if (line <= 0) { return null; }
+        var outline = await GetDocumentSymbolsAsync(filePath, ct).ConfigureAwait(false);
+        if (!outline.Supported) { return null; }
+        var (node, parent) = DocSymbolExtent.FindWithParent(outline.Symbols, line, name);
+        return node is { StartLine: > 0 }
+            ? (node.StartLine, Math.Max(node.StartLine, node.EndLine), DocSymbolExtent.Label(parent?.Name, name))
+            : null;
+    }
+
     /// <summary>The file's nav-bar items, from whichever layer this language registers: the
     /// Features one first (C#/VB), then the editor one (F#, TypeScript). Null when neither
     /// answers, which is the only case that is really "not supported".</summary>
@@ -210,14 +229,21 @@ internal sealed partial class IdeNavigationService
             var loc = VsReflection.GetField(item, "Location");
             var inDoc = loc == null ? null : VsReflection.GetField(loc, "InDocumentInfo"); // nullable tuple
             var navSpan = inDoc == null ? null : VsReflection.GetField(inDoc, "Item2");    // navigationSpan
+            // The declaration's spans: Item1 on the Roslyn layer, Spans on the editor layer.
+            var extentSpans = inDoc == null
+                ? VsReflection.GetProp(item, "Spans")
+                : VsReflection.GetField(inDoc, "Item1");
             if (navSpan == null)
             {
                 var spans = VsReflection.GetProp(item, "Spans") as IEnumerable;
                 navSpan = spans?.Cast<object>().FirstOrDefault();
             }
+            int startLine = 0, endLine = 0;
             if (navSpan != null)
             {
-                line = OffsetToLine(sourceText, VsReflection.GetProp<int>(navSpan, "Start"));
+                var navStart = VsReflection.GetProp<int>(navSpan, "Start");
+                line = OffsetToLine(sourceText, navStart);
+                (startLine, endLine) = ExtentLines(extentSpans, navStart, sourceText);
             }
 
             // Glyph (enum) names the kind, e.g. "ClassPublic", "MethodProtected": strip the
@@ -233,9 +259,47 @@ internal sealed partial class IdeNavigationService
 
             return string.IsNullOrEmpty(name) && children.Length == 0
                 ? null
-                : new DocSymbol { Name = name ?? "", Kind = kind, Line = line, Children = children };
+                : new DocSymbol
+                {
+                    Name = name ?? "",
+                    Kind = kind,
+                    Line = line,
+                    StartLine = startLine,
+                    EndLine = endLine,
+                    Children = children,
+                };
         }
         catch { return null; }
+    }
+
+    /// <summary>1-based first and last line of the span that holds the navigation point (a partial
+    /// declaration can have several in one file); (0, 0) when none does or it is unreadable: a span
+    /// that does not contain the declaration is some other part of the type, not its extent.
+    /// Kept apart from <see cref="MapNavBarItem"/>'s catch: a missing extent must not drop the node
+    /// from the outline.</summary>
+    private static (int Start, int End) ExtentLines(object spans, int navStart, object sourceText)
+    {
+        try
+        {
+            if (spans is not IEnumerable list) { return (0, 0); }
+            object chosen = null;
+            foreach (var span in list)
+            {
+                var start = VsReflection.GetProp<int>(span, "Start");
+                var end = VsReflection.GetProp<int>(span, "End");
+                if (start <= navStart && navStart < end) { chosen = span; break; }
+            }
+            if (chosen is null) { return (0, 0); }
+            var s = VsReflection.GetProp<int>(chosen, "Start");
+            var e = VsReflection.GetProp<int>(chosen, "End");
+            // End is exclusive: the last character is at End - 1.
+            return (OffsetToLine(sourceText, s), OffsetToLine(sourceText, e > s ? e - 1 : s));
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Debug(() => $"[nav] extent unreadable: {ex.GetType().Name}");
+            return (0, 0);
+        }
     }
 
     /// <summary>A member by name, field or property: the Features layer declares Text/Glyph/

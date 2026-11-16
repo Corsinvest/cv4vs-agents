@@ -408,6 +408,13 @@ body.sticky-user .cv-exchange > cv-message[msg-role="user"]:first-child {
 .cv-file-link:hover {
     text-decoration: underline;
 }
+/* An `@` file mention in a sent prompt (cv-message's user bubble) is a plain file link: the link
+ * colour says it opens, a background only weighed on the bubble. It is focusable, so it needs a
+ * visible focus. */
+.cv-file-link.cv-mention-chip:focus-visible {
+    outline: 2px solid var(--colorStrokeFocus2);
+    outline-offset: 1px;
+}
 
 /* The chevron toggle is a .cv-icon-btn (base.css). Always visible on a row that has a body:
  * hidden until the row was hovered, as it was at first, a collapsed row gave no sign that it

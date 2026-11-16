@@ -269,6 +269,50 @@ export class CvPopoverList extends LitElement {
                 color: var(--colorNeutralForegroundOnBrand);
                 opacity: 0.85;
             }
+            /* Symbol row (cv-at-menu, Symbols tab): the container beside the name, greyed. */
+            .item-container {
+                margin-left: 6px;
+                flex-shrink: 1;
+                min-width: 0;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color: var(--colorNeutralForeground3);
+                font-size: var(--fontSizeBase200);
+            }
+            .row.selected .item-container {
+                color: var(--colorNeutralForegroundOnBrand);
+                opacity: 0.85;
+            }
+            /* Files | Symbols switch in the @ menu's header: native buttons, one costs nothing.
+               Drawn as Fluent tabs, the selected one underlined in the brand colour: a filled
+               button would read like the list's selected row, which is the brand colour too. */
+            .at-tabs {
+                display: inline-flex;
+                gap: 2px;
+            }
+            .at-tab {
+                padding: 2px 8px 4px;
+                border: none;
+                border-radius: var(--borderRadiusMedium) var(--borderRadiusMedium) 0 0;
+                background: transparent;
+                color: var(--colorNeutralForeground3);
+                font: inherit;
+                cursor: pointer;
+            }
+            .at-tab:hover {
+                background-color: var(--colorSubtleBackgroundHover);
+                color: var(--colorNeutralForeground2Hover);
+            }
+            .at-tab[aria-pressed='true'] {
+                color: var(--colorNeutralForeground1);
+                font-weight: var(--fontWeightSemibold);
+                box-shadow: inset 0 -2px 0 var(--colorBrandStroke1);
+            }
+            .at-tab:focus-visible {
+                outline: 2px solid var(--colorStrokeFocus2);
+                outline-offset: -2px;
+            }
             /* Inline toggle switch / effort slider (command trailing controls). */
             .toggle {
                 flex-shrink: 0;

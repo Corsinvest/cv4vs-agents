@@ -114,6 +114,35 @@ public class AtItemDto
     public bool IsDir { get; set; }
 }
 
+/// <summary>A symbol for the `@` picker's Symbols tab (symbol_suggestions): a NavigateTo hit.
+/// Line is the 1-based declaration line.</summary>
+public class SymbolItemDto
+{
+    public string Name { get; set; }
+    public string Kind { get; set; }
+    public string Container { get; set; }
+    public string Path { get; set; }
+    public int Line { get; set; }
+}
+
+/// <summary>The Symbols tab's rows (symbol_suggestions): wrapper over SymbolItemDto.</summary>
+public class GetSymbolSuggestionsResponse
+{
+    public SymbolItemDto[] Items { get; set; }
+    /// <summary>Why the search has no rows to show (unsupported, partial coverage, failure); null otherwise.</summary>
+    public string Unavailable { get; set; }
+}
+
+/// <summary>A picked symbol's 1-based extent (symbol_range); both equal the declaration line when
+/// the extent could not be read. Label is what the composer writes in parentheses after the token:
+/// <c>Container.Name</c> from the file's outline, or the bare name.</summary>
+public class ResolveSymbolRangeResponse
+{
+    public int StartLine { get; set; }
+    public int EndLine { get; set; }
+    public string Label { get; set; }
+}
+
 /// <summary>Lazily-fetched image bytes for a stripped chat image block (chat_image_data).</summary>
 public class GetImageResponse
 {

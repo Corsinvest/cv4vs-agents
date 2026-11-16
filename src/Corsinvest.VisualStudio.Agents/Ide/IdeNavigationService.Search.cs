@@ -93,7 +93,14 @@ internal sealed partial class IdeNavigationService
 
     /// <summary>Search for a symbol by name across the whole solution (VS "Navigate To").
     /// Multi-language; never throws (degrades to Supported=false).</summary>
-    public async Task<SearchResult> SearchWorkspaceAsync(string query, CancellationToken ct)
+    public Task<SearchResult> SearchWorkspaceAsync(string query, CancellationToken ct)
+        => SearchWorkspaceAsync(query, MaxHits, explainSkipped: true, ct);
+
+    /// <summary><paramref name="maxHits"/> caps what is collected (the search stops there).
+    /// <paramref name="explainSkipped"/> names the projects the search could not cover even when it
+    /// found something: that walks the solution through DTE on the UI thread, so a caller searching
+    /// on every pause in typing asks for it only when nothing was found.</summary>
+    public async Task<SearchResult> SearchWorkspaceAsync(string query, int maxHits, bool explainSkipped, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -139,7 +146,7 @@ internal sealed partial class IdeNavigationService
                 return new SearchResult { Supported = false, Reason = "No project in this solution provides NavigateTo search." };
             }
 
-            var collector = new HitCollector(MaxHits);
+            var collector = new HitCollector(maxHits);
             foreach (var pair in byService)
             {
                 ct.ThrowIfCancellationRequested();
@@ -151,13 +158,15 @@ internal sealed partial class IdeNavigationService
             var ordered = collector.Hits
                 .OrderBy(h => h.File, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(h => h.Line)
-                .Take(MaxHits)
+                .Take(maxHits)
                 .ToArray();
             return new SearchResult
             {
                 Supported = true,
                 Hits = ordered,
-                Reason = await SkippedReasonAsync(searchedNames).ConfigureAwait(false),
+                Reason = explainSkipped || ordered.Length == 0
+                    ? await SkippedReasonAsync(searchedNames).ConfigureAwait(false)
+                    : null,
             };
         }
         catch (OperationCanceledException) { throw; }

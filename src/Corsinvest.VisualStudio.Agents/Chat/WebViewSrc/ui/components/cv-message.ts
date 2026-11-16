@@ -11,7 +11,6 @@ import './cv-copy-btn';
 import './cv-attach-chip';
 import { renderMarkdown, renderMarkdownStreaming } from '../../core/markdown';
 import { stableMarkdownSplit } from '../../core/markdown-split';
-import { escapeHtml } from '../../core/html';
 import { bridge } from '../../core/bridge';
 import { Msg } from '../../core/bridge-messages';
 import { fetchChatImage, openChatDocument } from '../../core/lazy';
@@ -23,6 +22,7 @@ import { formatTokenCount } from '../helpers/format';
 import { displayPathUi } from '../paths';
 import { cleanMessageOnlyText } from '../../core/ide';
 import { renderSlashCommand } from '../../core/slash-commands';
+import { splitMentions } from '../../core/user-mentions';
 import { openLightbox } from '../../core/dialog-host';
 import { observeSize } from '../resize';
 import { EMPTY } from '../../core/types';
@@ -364,6 +364,38 @@ export class CvMessage extends LitElement {
         });
     };
 
+    /** A sent prompt as text and file links: each `@` mention the CLI attached opens that file,
+     *  at its lines, through the same click path as a file link in an answer. Lit templates, not
+     *  HTML strings: the prompt is the user's text and may hold anything. */
+    private _renderUserText(text: string) {
+        const lines = (t: string) =>
+            t.split('\n').map((part, i) => (i === 0 ? part : html`<br />${part}`));
+        return splitMentions(text).map((seg) =>
+            seg.kind === 'text'
+                ? lines(seg.text)
+                : html`<a
+                      class="cv-file-link cv-mention-chip"
+                      role="button"
+                      tabindex="0"
+                      data-file=${seg.path}
+                      data-line=${seg.startLine}
+                      data-line-end=${seg.endLine}
+                      data-tip=${`Open ${seg.path}`}
+                      >${seg.text}</a
+                  >`,
+        );
+    }
+
+    /** Enter or Space on a focused chip opens it, as a click would. */
+    private _onMentionKey = (e: KeyboardEvent): void => {
+        if (
+            (e.key === 'Enter' || e.key === ' ') &&
+            (e.target as HTMLElement | null)?.closest('a.cv-mention-chip')
+        ) {
+            this._onMdClick(e);
+        }
+    };
+
     private _onToggleExpand = (e: Event): void => {
         e.stopPropagation();
         const wasExpanded = this.expanded;
@@ -522,8 +554,12 @@ export class CvMessage extends LitElement {
                                 : nothing
                         }
                         <div class="cv-msg-body">
-                            <div class="md">
-                                ${unsafeHTML(escapeHtml(text).replace(/\n/g, '<br>'))}
+                            <div
+                                class="md"
+                                @click=${this._onMdClick}
+                                @keydown=${this._onMentionKey}
+                            >
+                                ${this._renderUserText(text)}
                             </div>
                         </div>
                         ${

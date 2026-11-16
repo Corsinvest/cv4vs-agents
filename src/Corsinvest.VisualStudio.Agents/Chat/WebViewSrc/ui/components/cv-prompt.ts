@@ -17,6 +17,7 @@ import type {
     Attachment,
     SubagentTask,
     AtItemDto,
+    SymbolItemDto,
     RateLimitNotification,
     NoticeNotification,
     NoticeDismissedDetail,
@@ -34,7 +35,13 @@ import type {
     SetViewModeNotification,
     ViewMode,
 } from '../../core/types';
-import { GetSuggestionsReq, SetRemoteControlAtStartupReq } from '../../core/request-types';
+import {
+    GetSuggestionsReq,
+    GetSymbolSuggestionsReq,
+    ResolveSymbolRangeReq,
+    SetRemoteControlAtStartupReq,
+} from '../../core/request-types';
+import { relPath, replaceIfUnchanged, symbolMention } from '../../core/path';
 import { markSent } from '../../core/sent-prompts';
 import { pendingPrompts, type PendingPrompt } from '../../core/pending-prompts';
 import { AtRequests } from '../../core/at-requests';
@@ -43,6 +50,7 @@ import type { ChatCommand, CommandHost } from '../../core/commands';
 import './cv-notice-stack';
 import type { CvNoticeStack } from './cv-notice-stack';
 import './cv-at-menu';
+import type { AtTab } from './cv-at-menu';
 import './cv-command-menu';
 import './cv-attach-menu';
 import './cv-attach-chip';
@@ -59,6 +67,8 @@ import { openLightbox, openPluginManagerDialog } from '../../core/dialog-host';
 import { openAttachment } from '../../core/lazy';
 
 const TEXTAREA_MAX_HEIGHT_PX = 160;
+// The @ menu's Symbols tab searches the whole solution: below this length it asks nothing.
+const SYMBOL_MIN_QUERY = 2;
 
 /** The file's lowercased extension including the leading dot, or '' if none. */
 function fileExt(name: string): string {
@@ -325,6 +335,13 @@ export class CvPrompt extends LitElement implements CommandHost {
     // Set when the host could not list the workspace; shown in place of "No matches".
     @state() private _atUnavailable: string | null = null;
     private readonly _atRequests = new AtRequests();
+    // The @ menu's Symbols tab. Its requests keep their own sequence: sharing the Files one would
+    // spend the opening's refresh, and the workspace would not be listed again.
+    @state() private _atTab: AtTab = 'files';
+    @state() private _symItems: SymbolItemDto[] = [];
+    @state() private _symUnavailable: string | null = null;
+    @state() private _symQuery = '';
+    private readonly _symRequests = new AtRequests();
     // Command palette (typing `/`, or the attach menu's "Slash command" item). `_cmdQuery` is the
     // text after `/` while typing; empty when opened from the menu.
     @state() private _cmdOpen = false;
@@ -672,14 +689,18 @@ export class CvPrompt extends LitElement implements CommandHost {
         if (!this._atOpen) {
             this._atOpen = true;
         }
-        // Debounce file-suggestions: 150ms pause avoids a request per keystroke.
+        // Debounce: a pause in typing, not a request per keystroke. Longer for symbols, where each
+        // request is a solution-wide search.
         if (this._atDebounce) {
             clearTimeout(this._atDebounce);
         }
-        this._atDebounce = setTimeout(() => {
-            this._atDebounce = undefined;
-            this._fetchSuggestions(query);
-        }, 150);
+        this._atDebounce = setTimeout(
+            () => {
+                this._atDebounce = undefined;
+                this._fetchSuggestions(query);
+            },
+            this._atTab === 'symbols' ? 200 : 150,
+        );
     };
 
     override willUpdate(changed: PropertyValues): void {
@@ -688,6 +709,12 @@ export class CvPrompt extends LitElement implements CommandHost {
         if (changed.has('_atOpen') && !this._atOpen) {
             this._atRequests.closed();
             this._atUnavailable = null;
+            // Every opening starts on Files, and no symbol answer of this one lands in the next.
+            this._symRequests.invalidate();
+            this._atTab = 'files';
+            this._symItems = [];
+            this._symUnavailable = null;
+            this._symQuery = '';
             if (this._atDebounce) {
                 clearTimeout(this._atDebounce);
                 this._atDebounce = undefined;
@@ -699,6 +726,10 @@ export class CvPrompt extends LitElement implements CommandHost {
      *  workspace; later ones filter that listing. Only the latest request's answer is applied, and
      *  only while the picker is still open. Rejection (timeout) is swallowed. */
     private _fetchSuggestions(query: string): void {
+        if (this._atTab === 'symbols') {
+            this._fetchSymbols(query);
+            return;
+        }
         const request = this._atRequests.next(this._atOpen);
         if (!request) {
             return;
@@ -715,6 +746,62 @@ export class CvPrompt extends LitElement implements CommandHost {
             .catch(() => {
                 /* timeout: leave current items */
             });
+    }
+
+    /** The Symbols tab's search. Under the minimum length nothing is asked: the list shows the hint.
+     *  Only the latest answer lands, and only while the menu is open on this tab. */
+    private _fetchSymbols(query: string): void {
+        this._symQuery = query;
+        if (query.trim().length < SYMBOL_MIN_QUERY) {
+            // A search still running for a longer query must not land under this one.
+            this._symRequests.invalidate();
+            this._symItems = [];
+            this._symUnavailable = null;
+            return;
+        }
+        const request = this._symRequests.next(this._atOpen);
+        if (!request) {
+            return;
+        }
+        bridge
+            .sendRequest(GetSymbolSuggestionsReq, { query })
+            .then((data) => {
+                if (
+                    !this._symRequests.isLatest(request.seq) ||
+                    !this._atOpen ||
+                    this._atTab !== 'symbols'
+                ) {
+                    return;
+                }
+                this._symItems = data?.items ?? [];
+                this._symUnavailable = data?.unavailable ?? null;
+            })
+            .catch(() => {
+                /* timeout: leave current items */
+            });
+    }
+
+    /** What the @ list says when it has no rows. */
+    private _atEmptyText(): string {
+        if (this._atTab === 'files') {
+            return this._atUnavailable ?? 'No matches';
+        }
+        if (this._symQuery.trim().length < SYMBOL_MIN_QUERY) {
+            return 'Type at least 2 characters to search symbols';
+        }
+        return this._symUnavailable ?? `No symbols match "${this._symQuery.trim()}"`;
+    }
+
+    /** Switch the @ menu's tab, keeping the typed query, and list it again from the new source. */
+    private _setAtTab(tab: AtTab): void {
+        if (tab === this._atTab) {
+            return;
+        }
+        this._atTab = tab;
+        const query = this._getAtQuery();
+        if (query !== null) {
+            this._fetchSuggestions(query);
+        }
     }
 
     /** Returns the chars typed after the last `/` token in the current text, or
@@ -883,6 +970,17 @@ export class CvPrompt extends LitElement implements CommandHost {
                 this._atItems = [];
                 return;
             }
+            if (
+                (e.key === 'ArrowLeft' || e.key === 'ArrowRight') &&
+                e.ctrlKey &&
+                !e.shiftKey &&
+                !e.altKey &&
+                !e.metaKey
+            ) {
+                e.preventDefault();
+                this._setAtTab(e.key === 'ArrowRight' ? 'symbols' : 'files');
+                return;
+            }
         }
         // Prompt history (shell-style ↑/↓): ↑ recalls an older prompt only from the
         // first visual line, ↓ goes forward only from the last one, so navigating a
@@ -940,9 +1038,56 @@ export class CvPrompt extends LitElement implements CommandHost {
     }
 
     private _onSelectAtLive = (e: CustomEvent<{ token: string; isDir: boolean }>): void => {
+        this._replaceAtToken(e.detail.token);
+    };
+
+    /** A symbol picked: the declaration line and the bare name go in at once, so a send, a key or
+     *  a slow host never finds the `@query` still there. The whole extent and the `Container.Name`
+     *  label arrive after, and replace that text only if it is still where it was written. */
+    private _onSelectSymbol = (e: CustomEvent<{ item: SymbolItemDto }>): void => {
+        const item = e.detail.item;
+        const rel = relPath(item.path, appState.workingDirectory) || item.path;
+        const written = symbolMention(rel, item.line, item.line, item.name);
+        const start = this._replaceAtToken(written);
+        if (start === null || item.line <= 0) {
+            return;
+        }
+        bridge
+            .sendRequest(ResolveSymbolRangeReq, {
+                path: item.path,
+                line: item.line,
+                name: item.name,
+            })
+            .then((r) => {
+                const better = symbolMention(
+                    rel,
+                    r?.startLine || item.line,
+                    r?.endLine || item.line,
+                    r?.label || item.name,
+                );
+                const ta = this._ta;
+                const next = ta ? replaceIfUnchanged(ta.value, start, written, better) : null;
+                if (ta && next !== null && better !== written) {
+                    // Keep the caret where the user left it, shifted by what changed before it.
+                    const caret = ta.selectionStart ?? next.length;
+                    const shift =
+                        caret >= start + written.length ? better.length - written.length : 0;
+                    ta.value = next;
+                    ta.setSelectionRange(caret + shift, caret + shift);
+                    this._autoResize();
+                }
+            })
+            .catch(() => {
+                /* the declaration line is already written */
+            });
+    };
+
+    /** Replace the `@query` token at the caret with `token` and close the menu. Returns where the
+     *  token was written, or null when there was no `@query` at the caret. */
+    private _replaceAtToken(token: string): number | null {
         const ta = this._ta;
         if (!ta) {
-            return;
+            return null;
         }
         // Replace the current `@xxx` token with the pick. Matched the same way _getAtQuery finds
         // it, from an `@` that STARTS a token, not the last `@` in the text: in "mario@rossi"
@@ -951,12 +1096,12 @@ export class CvPrompt extends LitElement implements CommandHost {
         const before = ta.value.slice(0, caret);
         const m = before.match(/(?:^|\s)@[^\s]*$/);
         if (!m) {
-            return;
+            return null;
         }
         // index points at the whitespace when there is one; the `@` is the char after it.
         const start = (m.index ?? 0) + (m[0].startsWith('@') ? 0 : 1);
-        ta.value = ta.value.slice(0, start) + e.detail.token + ta.value.slice(caret);
-        const newCaret = start + e.detail.token.length;
+        ta.value = ta.value.slice(0, start) + token + ta.value.slice(caret);
+        const newCaret = start + token.length;
         ta.setSelectionRange(newCaret, newCaret);
         this._hasText = ta.value.trim().length > 0;
         this._autoResize();
@@ -965,7 +1110,8 @@ export class CvPrompt extends LitElement implements CommandHost {
         this._atOpen = false;
         this._atItems = [];
         ta.focus({ preventScroll: true });
-    };
+        return start;
+    }
 
     private _micPrefix = '';
     private _micSuffix = '';
@@ -1713,9 +1859,13 @@ export class CvPrompt extends LitElement implements CommandHost {
                 <cv-at-menu
                     .anchor=${this._ta ?? null}
                     .items=${this._atItems}
-                    .emptyText=${this._atUnavailable ?? 'No matches'}
+                    .symbolItems=${this._symItems}
+                    .tab=${this._atTab}
+                    .emptyText=${this._atEmptyText()}
                     ?open=${this._atOpen}
                     @select-at=${this._onSelectAtLive}
+                    @select-symbol=${this._onSelectSymbol}
+                    @at-tab=${(e: CustomEvent<{ tab: AtTab }>) => this._setAtTab(e.detail.tab)}
                 ></cv-at-menu>
                 <cv-command-menu
                     .query=${this._cmdQuery}

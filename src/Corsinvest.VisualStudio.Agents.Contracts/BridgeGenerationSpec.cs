@@ -41,6 +41,13 @@ public class BridgeGenerationSpec : GenerationSpec
             .Member(x => nameof(x.RemoteControlAtStartup)).Null()
             .Member(x => nameof(x.RemoteControlAvailable)).Null();
         AddInterface<AtItemDto>();
+        // NavigateTo can leave kind and container unset. The container is VS's localized prose
+        // ("in Foo (project X)"): shown greyed in the row, never written into the prompt.
+        AddInterface<SymbolItemDto>()
+            .Member(x => nameof(x.Kind)).Null()
+            .Member(x => nameof(x.Container)).Null();
+        AddInterface<GetSymbolSuggestionsResponse>().Member(x => nameof(x.Unavailable)).Null();
+        AddInterface<ResolveSymbolRangeResponse>();
         AddInterface<GetImageResponse>();
         AddInterface<SubagentUsageDto>();
         AddInterface<SubagentStartedNotification>().Member(x => nameof(x.ToolUseId)).Null();
@@ -200,6 +207,8 @@ public class BridgeGenerationSpec : GenerationSpec
         AddInterface<IdeFileNotification>();
         // refresh rides only on the first request of an opening → optional.
         AddInterface<GetSuggestionsRequest>().Member(x => nameof(x.Refresh)).Optional();
+        AddInterface<GetSymbolSuggestionsRequest>();
+        AddInterface<ResolveSymbolRangeRequest>();
         // agentId/toolName omitted by openError() → optional.
         AddInterface<ToolOutputNotification>()
             .Member(x => nameof(x.AgentId)).Optional()

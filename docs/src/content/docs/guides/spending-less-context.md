@@ -104,6 +104,6 @@ that have nothing to do with tokens, but if you did turn it on, this is part of 
 
 - **Autosave before Claude reads/writes**: turning it *off* costs more, not less: Claude reads the
   stale file, then has to ask for the editor buffer separately.
-- **Respect `.gitignore` / Ignored patterns**: they filter the `@` picker's list. They make it
+- **Respect `.gitignore` / Ignored patterns**: they filter the `@` picker's Files tab. They make it
   harder to attach a huge generated file by accident, which is a guard-rail, not a dial.
 - **Keep file checkpoints (Rewind)**: copies files to disk. Costs disk space, never context.

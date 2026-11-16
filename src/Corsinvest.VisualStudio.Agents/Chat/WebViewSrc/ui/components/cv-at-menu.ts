@@ -5,20 +5,26 @@
 import { LitElement, html } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
 import { state as appState } from '../../core/state';
-import { iconUrl } from '../../core/icon-url';
+import { iconUrl, symbolIconUrl } from '../../core/icon-url';
 import { fileName, mentionToken, normPath, relPath } from '../../core/path';
-import type { AtItemDto } from '../../core/types';
+import type { AtItemDto, SymbolItemDto } from '../../core/types';
 import './cv-popover-list';
 import type { CvPopoverList } from './cv-popover-list';
 
+export type AtTab = 'files' | 'symbols';
+
 /**
- * Inline file-suggestion popover for `@` in `<cv-prompt>`. A thin wrapper over cv-popover-list: supplies
- * the (already-filtered) file items + a renderRow (icon + name + folder), and re-emits `select-at`.
- * Parent-controlled: cv-prompt drives `open` and forwards keys via moveSelection()/pickActive().
+ * Inline suggestion popover for `@` in `<cv-prompt>`, with two tabs: Files (the workspace listing)
+ * and Symbols (a NavigateTo search). A thin wrapper over cv-popover-list: supplies the rows of the
+ * current tab and a renderRow for each kind, and re-emits `select-at` (a file), `select-symbol` (a
+ * symbol) and `at-tab` (a tab clicked). Parent-controlled: cv-prompt drives `open` and `tab` and
+ * forwards keys via moveSelection()/pickActive().
  */
 @customElement('cv-at-menu')
 export class CvAtMenu extends LitElement {
     @property({ attribute: false }) items: AtItemDto[] = [];
+    @property({ attribute: false }) symbolItems: SymbolItemDto[] = [];
+    @property({ attribute: false }) tab: AtTab = 'files';
     @property({ attribute: false }) anchor: HTMLElement | null = null;
     @property({ type: Boolean, reflect: true }) open = false;
     // What the list says when it has no rows: "No matches", or why the host could not list the workspace.
@@ -87,12 +93,82 @@ export class CvAtMenu extends LitElement {
         );
     }
 
+    private _setTab(tab: AtTab): void {
+        if (tab !== this.tab) {
+            this.dispatchEvent(
+                new CustomEvent<{ tab: AtTab }>('at-tab', {
+                    detail: { tab },
+                    bubbles: true,
+                    composed: true,
+                }),
+            );
+        }
+    }
+
+    private _header() {
+        // mousedown is cancelled like the rows': taking focus from the textarea would close the menu.
+        const tab = (id: AtTab, label: string) => html`
+            <button
+                type="button"
+                class="at-tab"
+                aria-pressed=${this.tab === id ? 'true' : 'false'}
+                @mousedown=${(e: MouseEvent) => e.preventDefault()}
+                @click=${() => this._setTab(id)}
+            >
+                ${label}
+            </button>
+        `;
+        return html`
+            <span class="at-tabs" role="group" aria-label="Reference">
+                ${tab('files', 'Files')}${tab('symbols', 'Symbols')}
+            </span>
+            <span class="section-hint">Ctrl + ←/→</span>
+        `;
+    }
+
+    private _symbolTip(it: SymbolItemDto): string {
+        return `${relPath(it.path, appState.workingDirectory)}:${it.line}`;
+    }
+
     override render() {
         if (!this.open) {
             return html``;
         }
+        if (this.tab === 'symbols') {
+            return html`
+                <cv-popover-list
+                    .header=${this._header()}
+                    .items=${this.symbolItems}
+                    .emptyText=${this.emptyText}
+                    .rowTip=${(it: SymbolItemDto) => this._symbolTip(it)}
+                    .renderRow=${(it: SymbolItemDto) => html`
+                        <span class="item-icon">
+                            <img src=${symbolIconUrl(it.kind)} alt="" width="16" height="16" />
+                        </span>
+                        <span class="item-name">
+                            ${it.name}
+                            ${
+                                it.container
+                                    ? html`<span class="item-container">${it.container}</span>`
+                                    : ''
+                            }
+                        </span>
+                        <span class="item-dir">${fileName(it.path)}</span>
+                    `}
+                    @select=${(e: CustomEvent<{ item: SymbolItemDto }>) =>
+                        this.dispatchEvent(
+                            new CustomEvent<{ item: SymbolItemDto }>('select-symbol', {
+                                detail: { item: e.detail.item },
+                                bubbles: true,
+                                composed: true,
+                            }),
+                        )}
+                ></cv-popover-list>
+            `;
+        }
         return html`
             <cv-popover-list
+                .header=${this._header()}
                 .items=${this.items}
                 .emptyText=${this.emptyText}
                 .renderRow=${(it: AtItemDto) => html`

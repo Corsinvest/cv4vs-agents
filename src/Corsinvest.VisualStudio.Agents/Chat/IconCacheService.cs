@@ -73,11 +73,36 @@ internal static class IconCacheService
         return pngPath;
     }
 
+    // Icon keys of the `@` picker's symbol rows (WebView core/symbol-kind.ts), one per kind.
+    private const string SymbolPrefix = "symbol-";
+
+    /// <summary>The image Solution Explorer and Navigate To draw for a symbol kind, public flavour:
+    /// the row tells the kind apart, not its accessibility.</summary>
+    private static ImageMoniker SymbolMoniker(string kind) => kind switch
+    {
+        "class" => KnownMonikers.ClassPublic,
+        "struct" => KnownMonikers.StructurePublic,
+        "interface" => KnownMonikers.InterfacePublic,
+        "enum" => KnownMonikers.EnumerationPublic,
+        "enummember" => KnownMonikers.EnumerationItemPublic,
+        "method" => KnownMonikers.MethodPublic,
+        "operator" => KnownMonikers.OperatorPublic,
+        "property" => KnownMonikers.PropertyPublic,
+        "field" => KnownMonikers.FieldPublic,
+        "constant" => KnownMonikers.ConstantPublic,
+        "event" => KnownMonikers.EventPublic,
+        "delegate" => KnownMonikers.DelegatePublic,
+        "module" => KnownMonikers.ModulePublic,
+        "namespace" => KnownMonikers.Namespace,
+        _ => KnownMonikers.Type,
+    };
+
     private static ImageMoniker ResolveMoniker(string key)
     {
         ThreadHelper.ThrowIfNotOnUIThread();
         if (key == "folder") { return KnownMonikers.FolderClosed; }
         if (key == "file") { return KnownMonikers.Document; }
+        if (key.StartsWith(SymbolPrefix, StringComparison.Ordinal)) { return SymbolMoniker(key.Substring(SymbolPrefix.Length)); }
 
         if (Package.GetGlobalService(typeof(SVsImageService)) is not IVsImageService2 imageService) { return KnownMonikers.Document; }
 

@@ -86,6 +86,14 @@ internal sealed partial class WebViewMessageHandler(WebViewBridge bridge,
                 HandleGetSuggestions(data, id);
                 break;
 
+            case BridgeMessages.FromWebView.File.GetSymbolSuggestions:
+                HandleGetSymbolSuggestions(data, id);
+                break;
+
+            case BridgeMessages.FromWebView.File.ResolveSymbolRange:
+                HandleResolveSymbolRange(data, id);
+                break;
+
             case BridgeMessages.FromWebView.Open.ToolOutput:
                 HandleToolOutput(data, id);
                 break;
