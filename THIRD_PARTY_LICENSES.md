@@ -38,6 +38,7 @@ Redistributable runtime packages referenced by the VS package.
 | [Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json) | 13.0.1 | MIT |
 | [Microsoft.Web.WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) | 1.0.3912.50 | Microsoft Software License (redistributable) |
 | [Community.VisualStudio.Toolkit.17](https://github.com/VsixCommunity/Community.VisualStudio.Toolkit) | 17.0.551 | MIT |
+| [PolySharp](https://github.com/Sergio0694/PolySharp) | 1.16.0 | MIT |
 | [Microsoft.VisualStudio.SDK](https://github.com/microsoft/vs-sdk) | 17.0.31902.203 | Microsoft Software License |
 | Microsoft.Terminal.Wpf | (ships with Visual Studio) | Microsoft Software License |
 
@@ -45,6 +46,11 @@ The Visual Studio SDK and `Microsoft.Terminal.Wpf` assemblies are provided by
 the installed Visual Studio and are **not** bundled in the VSIX; they are listed
 for completeness. `claude.exe` (the Claude Code CLI) is likewise never bundled:
 the extension drives whatever the user installed.
+
+PolySharp is a build-time source generator and ships no assembly of its own. The
+small types it adds to the extension's own assembly, because .NET Framework 4.8
+lacks them (`System.Index` and `System.Range` for slicing, among others), are the
+.NET runtime's sources, which the .NET Foundation licenses under the MIT license.
 
 ---
 
