@@ -4,7 +4,6 @@
  */
 
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Shell.Interop;
 using System;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -24,16 +23,16 @@ internal static class Win32Focus
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
 
-    /// <summary>The VS main window handle, or IntPtr.Zero if unavailable. Read on the UI thread.</summary>
+    /// <summary>The VS main window handle, or IntPtr.Zero if unavailable. Read on the UI thread.
+    /// <para>Not IVsUIShell.GetDialogOwnerHwnd: that one readies the window to own a dialog, and a
+    /// minimized main window comes back restored and in front. Asked from the usage status tick, it
+    /// pulled a minimized VS up once a minute (#353).</para></summary>
     private static IntPtr MainWindowHandle()
     {
         ThreadHelper.ThrowIfNotOnUIThread();
-        if (Package.GetGlobalService(typeof(SVsUIShell)) is IVsUIShell shell
-            && shell.GetDialogOwnerHwnd(out var hwnd) == Microsoft.VisualStudio.VSConstants.S_OK)
-        {
-            return hwnd;
-        }
-        return IntPtr.Zero;
+        return System.Windows.Application.Current?.MainWindow is System.Windows.Window main
+            ? new System.Windows.Interop.WindowInteropHelper(main).Handle
+            : IntPtr.Zero;
     }
 
     /// <summary>True when the VS main window is the OS foreground window (the user is inside VS).
