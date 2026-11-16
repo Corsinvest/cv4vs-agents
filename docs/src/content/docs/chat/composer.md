@@ -61,10 +61,31 @@ Three rules worth knowing:
 
 ![The Add menu: Attach a file, Reference a workspace file, Slash command](../../../../images/chat/add-menu.png)
 
-- **`@` mentions**: inline file picker over the **whole** project tree: no depth limit, and the
-  filter matches the *path*, not just the file name, so `ui/comp` narrows before you type a name.
-  It lists folders too: picking one inserts `@folder/`. A path with a space is written `@"…"`.
-  Honours `.gitignore`, your own ignore patterns, and git's `core.excludesFile`.
+- **`@` mentions**: the `@` menu has two tabs, **Files** and **Symbols**. It always opens on
+  Files; switch with a click or **Ctrl+←/→**, and the text you typed stays. In a sent message each
+  file mention is a link: click it (or focus it and press Enter) to open the file in Visual Studio,
+  with its lines selected when the mention has a range.
+- **Files**: inline file picker over the **whole** project tree: no depth limit, and the filter
+  matches the *path*, not just the file name, so `ui/comp` narrows before you type a name. It lists
+  folders too: picking one inserts `@folder/`. A path with a space is written `@"…"`. Honours
+  `.gitignore`, your own ignore patterns, and git's `core.excludesFile`.
+
+  ![The @ menu on Files: folders and files of the whole tree, each file with its folder](../../../../images/chat/at-menu-files.png)
+
+- **Symbols**: from the second character it searches the solution the way **Navigate To** does:
+  classes, methods, properties, enums and the rest, each with its Visual Studio icon, its container
+  and its file; the exact name first, then names that start with what you typed, then the file you
+  are editing. Picking one writes `@path#Lstart-end (Container.Name)`: the token covers the
+  member's whole declaration, so Claude receives those lines and nothing else, and the name in
+  parentheses is plain text that says which member they are. It finds what Navigate To finds in the
+  solution: C#, VB, F#, TypeScript and JavaScript (their type libraries too, such as
+  `lib.dom.d.ts`), not C++. Where the whole declaration cannot be read (a TypeScript file not open
+  in an editor), the token points at the declaration line alone. The lines are taken when you
+  pick: if the file has unsaved changes, or you edit it before sending, they can differ from the
+  file on disk that Claude reads.
+
+  ![The @ menu on Symbols: methods matching the typed name, with their container and file](../../../../images/chat/at-menu-symbols.png)
+
 - **Attachments**: **Add** (+) → **Attach a file…**, drop files on the composer (from Explorer too;
   a dropped folder is skipped), or paste, files as well as image data. They become removable chips;
   clicking a chip before sending previews it. Images are sent as images, PDFs as documents, the rest

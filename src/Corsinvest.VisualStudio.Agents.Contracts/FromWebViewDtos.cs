@@ -74,6 +74,21 @@ public class GetSuggestionsRequest
     public bool Refresh { get; set; }
 }
 
+/// <summary>Query for the `@` picker's Symbols tab (get_symbol_suggestions).</summary>
+public class GetSymbolSuggestionsRequest
+{
+    public string Query { get; set; }
+}
+
+/// <summary>The extent of a picked symbol (resolve_symbol_range): the hit's file, declaration line
+/// (1-based) and name, as get_symbol_suggestions returned them.</summary>
+public class ResolveSymbolRangeRequest
+{
+    public string Path { get; set; }
+    public int Line { get; set; }
+    public string Name { get; set; }
+}
+
 /// <summary>Open a tool's full input/output in a temp doc (open_tool_output). which is
 /// "in"|"out"; agentId routes the lookup to a sub-agent transcript when set.</summary>
 public class ToolOutputNotification

@@ -64,6 +64,14 @@ export type { SlashCommandDto } from './generated/SlashCommandDto';
  *  Generated from C# (Contracts.AtItemDto) by TypeGen, re-exported here. */
 export type { AtItemDto } from './generated/AtItemDto';
 
+/** A NavigateTo hit for the @ picker's Symbols tab (`symbol_suggestions`), and the picked symbol's
+ *  extent (`symbol_range`). Generated from C# by TypeGen, re-exported here. */
+export type { SymbolItemDto } from './generated/SymbolItemDto';
+export type { GetSymbolSuggestionsRequest } from './generated/GetSymbolSuggestionsRequest';
+export type { GetSymbolSuggestionsResponse } from './generated/GetSymbolSuggestionsResponse';
+export type { ResolveSymbolRangeRequest } from './generated/ResolveSymbolRangeRequest';
+export type { ResolveSymbolRangeResponse } from './generated/ResolveSymbolRangeResponse';
+
 /** Lazily-fetched image bytes for a stripped chat image block (`chat_image_data`).
  *  Generated from C# (Contracts.ImageDataResponseDto) by TypeGen, re-exported here. */
 export type { GetImageResponse } from './generated/GetImageResponse';

@@ -30,4 +30,9 @@ export class AtRequests {
     closed(): void {
         this.listed = false;
     }
+
+    /** Make the request in flight stale without sending another: its answer no longer applies. */
+    invalidate(): void {
+        this.seq++;
+    }
 }

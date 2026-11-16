@@ -11,6 +11,9 @@ editor, with your own extensions and theme.
 No copy-pasting a path into Go-To-File, no hunting for the line. The reference the model already
 wrote *is* the navigation.
 
+Your own messages work the same way for what you mentioned: once sent, each `@path` or
+`@path#L12-18` in them is a link that opens the file, with those lines selected.
+
 ## What gets linked
 
 The **extension is the anchor**: it is the only part of a reference that says "this is a file" (a

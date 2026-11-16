@@ -16,6 +16,8 @@ export const Msg = {
         },
         file: {
             getSuggestions: 'get_file_suggestions',
+            getSymbolSuggestions: 'get_symbol_suggestions',
+            resolveSymbolRange: 'resolve_symbol_range',
         },
         cli: {
             sendPrompt: 'send_cli_prompt',
@@ -80,6 +82,8 @@ export const Msg = {
         },
         file: {
             suggestions: 'file_suggestions',
+            symbolSuggestions: 'symbol_suggestions',
+            symbolRange: 'symbol_range',
         },
         session: {
             rewindResult: 'rewind_result',

@@ -68,8 +68,8 @@ The page groups its settings in categories, in alphabetical order; the tables be
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
-| Respect `.gitignore` | bool | `true` | Also hide from the `@` picker what the workspace's `.gitignore` files (at every level inside it, none above it) and git's global excludes (`core.excludesFile`) match, inside a git repository or not. Off: only the Ignored patterns below apply. |
-| Ignored patterns | file path | shipped defaults | Extra rules hiding files from the `@` picker, written as a `.gitignore` and kept as one: the row shows where the file is and `…` opens it in the editor. Applied only where the workspace's own ignore rules say nothing, so they are the fallback for a project that ships none. The picker lists the whole workspace, with no limit on the number of files: the list is read when the `@` menu opens and filtered as you type. |
+| Respect `.gitignore` | bool | `true` | Also hide from the `@` picker's Files tab what the workspace's `.gitignore` files (at every level inside it, none above it) and git's global excludes (`core.excludesFile`) match, inside a git repository or not. Off: only the Ignored patterns below apply. |
+| Ignored patterns | file path | shipped defaults | Extra rules hiding files from the `@` picker's Files tab, written as a `.gitignore` and kept as one: the row shows where the file is and `…` opens it in the editor. Applied only where the workspace's own ignore rules say nothing, so they are the fallback for a project that ships none. The picker lists the whole workspace, with no limit on the number of files: the list is read when the `@` menu opens and filtered as you type. |
 
 ### Input
 

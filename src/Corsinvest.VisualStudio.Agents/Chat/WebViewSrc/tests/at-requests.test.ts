@@ -35,3 +35,11 @@ test('only the latest request is current', () => {
     assert.equal(r.isLatest(first.seq), false);
     assert.equal(r.isLatest(second.seq), true);
 });
+
+test('invalidate makes the request in flight stale', () => {
+    // A query shortened below the minimum sends nothing; the answer to the longer one must not land.
+    const r = new AtRequests();
+    const req = r.next(true)!;
+    r.invalidate();
+    assert.equal(r.isLatest(req.seq), false);
+});

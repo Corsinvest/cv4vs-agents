@@ -60,6 +60,33 @@ export function mentionToken(
     return target.includes(' ') ? `@"${target}"` : `@${target}`;
 }
 
+/** What the `@` picker writes for a symbol: the token for its lines, then `(label)` and a space. The
+ *  CLI's token ends at the space, so the label is plain prompt text: it tells the reader and the
+ *  model which member those lines are, and changes nothing about what gets attached. No line
+ *  (the host could not read one) gives the path alone. */
+export function symbolMention(
+    path: string,
+    startLine: number,
+    endLine: number,
+    label: string,
+): string {
+    const token = startLine > 0 ? mentionToken(path, startLine, endLine) : mentionToken(path);
+    return `${token} (${label}) `;
+}
+
+/** `text` with `expected` at `start` swapped for `replacement`, or null when `expected` is no longer
+ *  there: the user typed over it, deleted it, or moved what precedes it. */
+export function replaceIfUnchanged(
+    text: string,
+    start: number,
+    expected: string,
+    replacement: string,
+): string | null {
+    return text.slice(start, start + expected.length) === expected
+        ? text.slice(0, start) + replacement + text.slice(start + expected.length)
+        : null;
+}
+
 /**
  * The `@…` token for an absolute path the host sent: relative to the working directory when it is
  * inside it, absolute otherwise. A folder keeps its trailing slash, inside the quotes as the @ menu

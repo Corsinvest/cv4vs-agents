@@ -4,6 +4,19 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+
+- **The `@` menu references a class or a method, not only a file** (issue #356). A **Symbols** tab
+  beside **Files** (Ctrl+←/→ switches) searches the solution the way Navigate To does, and picking
+  a symbol writes `@path#Lstart-end (Container.Name)`: Claude receives the lines of that member's
+  declaration, without you opening the file to select them. Whatever Navigate To finds: C#, VB,
+  F#, TypeScript and JavaScript; not C++.
+- **File mentions in a sent message are links that open the file.** `@path` and `@path#L10-20` in
+  your own messages are highlighted, and a click opens the file in Visual Studio with those lines
+  selected. Names, packages (`@types/node`), agents and MCP resources stay plain text.
+
 ## [1.15.0] - 2026-11-02
 
 A question from Claude can show a preview of each choice, the model picker switches Thinking and

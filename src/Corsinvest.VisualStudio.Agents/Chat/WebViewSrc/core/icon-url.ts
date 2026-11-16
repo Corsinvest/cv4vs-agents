@@ -10,7 +10,14 @@
 // value we are told, because URLs are built on the first render, before any message from the
 // host could have arrived. Drift shows up as icons missing on the next run.
 
+import { symbolIconKey } from './symbol-kind';
+
 const ICON_HOST = 'https://cv4vs-icons.invalid';
+
+/** URL of the Visual Studio image for a symbol kind (class, method, …), from the same host. */
+export function symbolIconUrl(kind: string | null | undefined): string {
+    return `${ICON_HOST}/${symbolIconKey(kind)}.png`;
+}
 
 /**
  * URL of the icon that best represents the given path.

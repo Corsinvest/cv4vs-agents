@@ -80,8 +80,8 @@ by feature detection rather than by pinning a version.
 **Chat**: streaming replies, thinking blocks, collapsible tool output, inline diffs, clickable file
 references (`ClientEvents.cs:208` opens the file at that line), links to pull requests and issues
 shown short (`acme/widgets#312`, on GitHub, GitLab, Azure DevOps and Bitbucket, your own servers
-included), image attachments, and a composer with slash commands, an `@` file picker and prompt
-history. Any reply can be read aloud.
+included), image attachments, and a composer with slash commands, an `@` picker for files and for
+classes and methods, and prompt history. Any reply can be read aloud.
 
 Under the message box, a row for the turn itself: **model and effort** and **permission mode**,
 each a click away. Which model is answering, and what it may do without asking,

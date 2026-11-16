@@ -44,6 +44,8 @@ internal static class BridgeMessages
         public static class File
         {
             public const string GetSuggestions = "get_file_suggestions";
+            public const string GetSymbolSuggestions = "get_symbol_suggestions";
+            public const string ResolveSymbolRange = "resolve_symbol_range";
         }
 
         /// <summary>Control of the claude.exe CLI process.</summary>
@@ -161,6 +163,8 @@ internal static class BridgeMessages
         public static class File
         {
             public const string Suggestions = "file_suggestions";
+            public const string SymbolSuggestions = "symbol_suggestions";
+            public const string SymbolRange = "symbol_range";
         }
 
         /// <summary>Answer to a rewind request: the probe's verdict, or the outcome of a real one.</summary>

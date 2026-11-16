@@ -269,6 +269,10 @@ internal sealed partial class IdeContextService : IDisposable
     /// called on the UI thread.</summary>
     public EditorContext GetCurrentContext() => BuildContext(ActiveState(), includeText: true);
 
+    /// <summary>The active editor's file, without copying its selection: for a caller that asks on
+    /// every pause in typing (the `@` picker's symbol ranking). UI thread.</summary>
+    public string GetCurrentFilePath() => BuildContext(ActiveState(), includeText: false)?.FilePath;
+
     /// <summary>The tracked state to read from, attaching to the active view if we hold none, or
     /// hold a dead one. Closing a solution takes its editors with it, and a close from a view that
     /// was not the active one is ignored by design, so the field can point at a corpse. Dropping it

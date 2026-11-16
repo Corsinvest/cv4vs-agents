@@ -23,6 +23,10 @@ import type {
     StatsResponse,
     GetSuggestionsRequest,
     GetSuggestionsResponse,
+    GetSymbolSuggestionsRequest,
+    GetSymbolSuggestionsResponse,
+    ResolveSymbolRangeRequest,
+    ResolveSymbolRangeResponse,
     GetCompactSummaryRequest,
     GetCompactSummaryResponse,
     CancelPromptRequest,
@@ -93,6 +97,17 @@ export const GetSuggestionsReq = new RequestType<GetSuggestionsRequest, GetSugge
     Msg.fromWebView.file.getSuggestions,
     Msg.toWebView.file.suggestions,
 );
+
+export const GetSymbolSuggestionsReq = new RequestType<
+    GetSymbolSuggestionsRequest,
+    GetSymbolSuggestionsResponse
+>(Msg.fromWebView.file.getSymbolSuggestions, Msg.toWebView.file.symbolSuggestions);
+
+/** The picked symbol's extent; both lines equal the declaration line when it could not be read. */
+export const ResolveSymbolRangeReq = new RequestType<
+    ResolveSymbolRangeRequest,
+    ResolveSymbolRangeResponse
+>(Msg.fromWebView.file.resolveSymbolRange, Msg.toWebView.file.symbolRange);
 
 /** Restore the files to the CLI's snapshot before a user message, or, with `dryRun`, only ask
  *  whether it could. The probe is what tells a message with a checkpoint from one without. */
