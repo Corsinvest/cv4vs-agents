@@ -120,8 +120,9 @@ jobs:
       # through a global tool. Without it installed the Exec fails with 9009, ContinueOnError
       # swallows it, and codegen silently does not run -- so the staleness check below would
       # compare the committed files against themselves and always pass.
+      # Pinned: 8.x ships only a net11.0 build, which the runner cannot install (no DotnetToolSettings.xml for its SDK).
       - name: Install TypeGen
-        run: dotnet tool install -g dotnet-typegen
+        run: dotnet tool install -g dotnet-typegen --version 7.0.0
 
       - name: Restore
         run: msbuild cv4vs-agents.slnx -t:Restore -p:Configuration=Release -v:minimal
