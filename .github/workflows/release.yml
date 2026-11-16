@@ -44,8 +44,9 @@ jobs:
 
       # The Contracts project regenerates core/generated/*.ts from the C# DTOs during the build,
       # through a global tool the runners do not ship.
+      # Pinned: 8.x ships only a net11.0 build, which the runner cannot install (no DotnetToolSettings.xml for its SDK).
       - name: Install TypeGen
-        run: dotnet tool install -g dotnet-typegen
+        run: dotnet tool install -g dotnet-typegen --version 7.0.0
 
       # Version in Directory.Build.props is the single source of truth: VsixVersion derives from it,
       # and both the manifest and AssemblyInfo are generated, so nothing can disagree. The tag is
