@@ -4,6 +4,7 @@
  */
 
 using Corsinvest.VisualStudio.Agents.Chat.Host;
+using Corsinvest.VisualStudio.Agents.Core.Changes;
 using Corsinvest.VisualStudio.Agents.Core.Client;
 using Corsinvest.VisualStudio.Agents.Core.Panes;
 using Corsinvest.VisualStudio.Agents.Core.Sessions;
@@ -81,6 +82,7 @@ public partial class ChatPaneControl : PaneControlBase
     {
         _bridge?.Send(BridgeMessages.ToWebView.Chat.Cleared, null);
         SetSessionTitle(null); // fresh chat: no title until the first turn generates one
+        _changes?.BeginSession(null, resume: false);
         // Here rather than in OnProcessStarted alone: the respawn kills the old process with its
         // transport detached, so if the new one fails to start no event arrives at all and the
         // pane would read as busy until the watchdog.
@@ -109,6 +111,7 @@ public partial class ChatPaneControl : PaneControlBase
         // Two picks in a row are two reads in flight, finishing in whatever order the file sizes
         // decide rather than in click order.
         var generation = ++_loadGeneration;
+        _changes?.BeginSession(sessionId, resume: true);
         ThreadHelper.JoinableTaskFactory.RunAsync(async () =>
         {
             try
@@ -324,6 +327,7 @@ public partial class ChatPaneControl : PaneControlBase
     private ClaudeClient _client;
     private WebViewBridge _bridge;
     private WebViewMessageHandler _handler;
+    private SessionChanges _changes;
     // Session id we've already tried to auto-title, so we ask the CLI only once.
     private string _titledSessionId;
     private bool _initialized;
@@ -513,6 +517,7 @@ public partial class ChatPaneControl : PaneControlBase
         // pane, and would otherwise keep WebView's window-tracking hook (and WebView itself) alive.
         WebView.ReleaseWindowTracking();
         IdeContextService.Instance.ContextChanged -= OnEditorContextChanged;
+        _changes?.Dispose();
         _handler?.Dispose();
         // Detach the client events before disposing: an event still in flight (a final
         // stdout line as the process closes) would otherwise reach this disposed control.
@@ -723,6 +728,8 @@ public partial class ChatPaneControl : PaneControlBase
             SsePort = ssePort,
             Env = Entry.Profile.Env,
         });
+        // After the client has started: whether file history is on is read from its options.
+        _changes?.BeginSession(_startupSessionId, resume: restoreState);
         if (_pageReadyEarly) { OnPageReady(); }
 
         // A fork's forked-at message, or a prompt from the editor context menu. Not gated on
@@ -835,6 +842,11 @@ public partial class ChatPaneControl : PaneControlBase
             McpMessageHandler = json => Mcp.McpServerHost.Instance.ServeMcpMessageAsync(json)
         };
         AttachClientEvents(_client);
+        _changes = new SessionChanges(PaneClaudePaths, Entry.WorkingDirectory, new SessionChangesOptions
+        {
+            FileCheckpoints = () => _client is not null && _client.FileCheckpoints,
+            PrepareFile = SaveBeforeCopyAsync,
+        }, _log);
         _handler = new WebViewMessageHandler(_bridge, _client, Entry, _log);
         // The status bar reads usage from this pane's process instead of starting one of its own. Null
         // before init has answered, or when get_usage fails: an error must not read as "no limits".
