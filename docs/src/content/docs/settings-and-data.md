@@ -51,6 +51,8 @@ editor-prompts.json                 the editor's prompts before prompts.json: re
 picker-ignore.gitignore             extra `@` picker ignore rules, on top of the workspace's own
 WebView2/                           WebView2 user-data (chat UI cache/storage)
 icons/                              file-type icons rasterised from VS KnownMonikers
+baselines/<session-id>/             copies of files taken just before Claude changes them, for the Changes list
+snapshots/<id>/                     one private git store per open chat: the working tree before each shell command
 data/projects/<name>-<hash>/
     project.json                    the folder this data belongs to ({"path": "…"})
     workspace.json                  panes open for this solution (+ each pane's profile)
@@ -64,6 +66,14 @@ the CLI's project folder name: `project.json` records the path, because the hash
 back. `<config-id>` is the **profile's config directory** with every non-alphanumeric character
 replaced by `-` (`C--Users-jane--claude`), which is why stats are per (solution, profile) while
 `workspace.json` is per solution only: a pane's profile is recorded inside that JSON.
+
+`baselines/` and `snapshots/` hold **copies of your files**, which is what the
+[Changes list](/cv4vs-agents/chat/changes/) compares against and restores from: the first the files
+Claude is about to change that the CLI keeps no copy of, the second a git object store with the
+working tree as it was before a shell command (only what differs from your repository's own
+objects is stored there; your `.git` is read and not written, apart from the cache Git LFS keeps under `.git/lfs` when the repository uses it). Both are plain files readable by
+anything running as your user. They go when the chat closes, and what a crash leaves is swept after
+14 days, the next time a chat starts.
 
 `profiles.json` holds the environment variables you enter in the Profiles page,
 `ANTHROPIC_AUTH_TOKEN` among them. It is a plain file with no encryption, readable by anything
