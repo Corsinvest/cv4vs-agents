@@ -56,6 +56,14 @@ export const Msg = {
             marketplaceRemove: 'marketplace_remove',
             marketplaceRefresh: 'marketplace_refresh',
         },
+        changedFiles: {
+            get: 'get_changed_files',
+            open: 'open_changed_file',
+            keep: 'keep_changed_file',
+            undo: 'undo_changed_file',
+            keepAll: 'keep_all_changed_files',
+            undoAll: 'undo_all_changed_files',
+        },
         chat: {
             getImage: 'get_chat_image',
             openDocument: 'open_chat_document',
@@ -148,6 +156,11 @@ export const Msg = {
             escape: 'ui_escape',
             hostKey: 'ui_host_key',
             filesDropped: 'ui_files_dropped',
+        },
+        changedFiles: {
+            list: 'changed_files',
+            updated: 'changed_files_updated',
+            actionResult: 'changed_files_action_result',
         },
         plugins: {
             listResult: 'plugins_list_result',
