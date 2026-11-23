@@ -7,6 +7,7 @@ using Corsinvest.VisualStudio.Agents.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -28,6 +29,14 @@ internal sealed class NdjsonTransport : IDisposable
     // two NDJSON lines into one corrupt line. One write+flush at a time.
     private readonly object _writeLock = new();
     private Thread _readerThread;
+    // Lines parsed off stdout wait here; DispatchLoop hands them to LineReceived on its
+    // own thread. The reader must never run a handler inline: a handler that answers on
+    // stdin (control requests, hook callbacks) can block in a Flush while claude.exe is
+    // still busy writing its stdout — and if the handler ran on the reader thread, stdout
+    // stops being drained, claude.exe stays blocked, never gets back to reading stdin,
+    // and the Flush never completes. Both sides wait forever (VS freeze, #364).
+    private BlockingCollection<JObject> _incoming;
+    private Thread _dispatcherThread;
     private readonly IntPtr _hJob;
     private volatile bool _disposed;
 
@@ -117,8 +126,15 @@ internal sealed class NdjsonTransport : IDisposable
 
         _log.Info($"--- transport PID={_process.Id}");
 
+        // The queue exists before the reader can produce into it: ReadLoop's very first
+        // parsed line would otherwise race the field assignment and NRE inside the loop.
+        _incoming = new BlockingCollection<JObject>();
+
         _readerThread = new Thread(ReadLoop) { IsBackground = true, Name = "ClaudeNdjsonReader" };
         _readerThread.Start();
+
+        _dispatcherThread = new Thread(DispatchLoop) { IsBackground = true, Name = "ClaudeNdjsonDispatcher" };
+        _dispatcherThread.Start();
     }
 
     /// <summary>
@@ -179,7 +195,10 @@ internal sealed class NdjsonTransport : IDisposable
                     _log.Warn($"!!! transport parse error: {ex.Message}");
                     continue;
                 }
-                LineReceived?.Invoke(this, obj);
+                // Queue and move on: whatever a handler does (even answering on stdin)
+                // must not stall the drain of claude.exe's stdout.
+                try { _incoming.Add(obj); }
+                catch (InvalidOperationException) { break; /* completed on Dispose */ }
             }
             _log.Debug(() => "--- transport ReadLoop ended (stdout closed)");
         }
@@ -188,6 +207,34 @@ internal sealed class NdjsonTransport : IDisposable
             // Closed stdout on a disposed respawn is expected: don't log it as a fault.
             if (_disposed) { _log.Debug(() => $"--- transport read loop ended (disposed): {ex.GetType().Name}"); }
             else { _log.LogException("transport.ReadLoop", ex); }
+        }
+        finally
+        {
+            // No more lines will arrive: let DispatchLoop drain what's queued and then
+            // raise Exited, so handlers never see Exited before the last line.
+            try { _incoming?.CompleteAdding(); } catch { /* silent: already completed */ }
+        }
+    }
+
+    /// <summary>
+    /// Hands queued stdout lines to <see cref="LineReceived"/> in arrival order, on this
+    /// dedicated thread rather than the reader's — see the deadlock note on <see cref="_incoming"/>.
+    /// Runs the exit path after the queue is drained, preserving the old ordering where
+    /// Exited fired only once every line had been delivered.
+    /// </summary>
+    private void DispatchLoop()
+    {
+        try
+        {
+            foreach (var obj in _incoming.GetConsumingEnumerable())
+            {
+                try { LineReceived?.Invoke(this, obj); }
+                catch (Exception ex) { _log.LogException("transport.LineReceived handler", ex); }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogException("transport.DispatchLoop", ex);
         }
 
         int exitCode = -1;
