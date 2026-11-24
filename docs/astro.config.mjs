@@ -88,7 +88,7 @@ export default defineConfig({
             'claude/vs-code-differences',
           ],
         },
-        { label: 'Reference', items: ['options', 'settings-and-data', 'power', 'troubleshooting', 'architecture'] },
+        { label: 'Reference', items: ['glossary', 'options', 'settings-and-data', 'power', 'troubleshooting', 'architecture'] },
         { label: 'Project', items: ['diary'] },
         {
           label: 'Corsinvest',

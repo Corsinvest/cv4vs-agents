@@ -45,13 +45,13 @@ out of the conversation and puts its text and attachments back into the composer
 ## Stop
 
 **Stop**, and **Esc**, stop the turn and also drop the messages still waiting: whoever presses Stop
-wants Claude to stop, not to start on the next message. Their bubbles go with them.
+wants Claude to stop, not to start on the next message. They are removed from the conversation too.
 
 ## Attachments
 
 - A message with an **image** is read like any other.
 - A message with a **file** attached (text, PDF, anything that is not an image) waits for the end of
-  the turn, and says so under the bubble: *Sent after this turn*. Read earlier, Claude Code delivers
+  the turn, and says so under the message: *Sent after this turn*. Read earlier, Claude Code delivers
   the message without the file, so it is held back on purpose. A message without a file sent in the
   meantime is not held up by it.
 
