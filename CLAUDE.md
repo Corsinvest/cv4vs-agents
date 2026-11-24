@@ -117,6 +117,9 @@ editing:
 - SPDX header on every source file (`GPL-3.0-only`, Copyright Corsinvest Srl).
 - **Comments in English**, always, including in files whose prose is Italian. Only the non-obvious
   *why*, kept short; no narration of what the code already says. Applies to C#, TS and CSS.
+- **Refer to files and skills with relative Markdown links** (for a skill, its `SKILL.md`), never
+  `@path` or `#file:`: an `@` import loads the whole file into every session. Pages under `docs/`
+  and `marketplace-overview.md` keep their own link rules (see Docs).
 - **MCP tools are language-agnostic.** Roslyn per-document language services (via reflection) or
   language-agnostic APIs (`EnvDTE`, VS commands), never a C#/VB-only path (`SymbolFinder`,
   `Renamer`, `ICallHierarchyService`). Where a capability isn't available, feature-detect and return
