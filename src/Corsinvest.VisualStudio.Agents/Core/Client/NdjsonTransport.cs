@@ -7,6 +7,7 @@ using Corsinvest.VisualStudio.Agents.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -22,12 +23,14 @@ namespace Corsinvest.VisualStudio.Agents.Core.Client;
 internal sealed class NdjsonTransport : IDisposable
 {
     private Process _process;
-    private StreamWriter _stdin;
-    // Serializes stdin writes: MCP tool responses are served on a worker thread
-    // (HandleMcpMessage) and can race with the UI thread's writes, interleaving
-    // two NDJSON lines into one corrupt line. One write+flush at a time.
-    private readonly object _writeLock = new();
+    // Lines for stdin, drained by one writer thread. A write to the pipe blocks while claude.exe
+    // is not reading stdin, which it stops doing while its own stdout is full: a caller that wrote
+    // to the pipe itself, the reader thread answering a hook callback above all, would stop
+    // draining that stdout and deadlock both processes (#364). One consumer also keeps two lines
+    // from interleaving into one corrupt line.
+    private readonly BlockingCollection<string> _outgoing = new();
     private Thread _readerThread;
+    private Thread _writerThread;
     private readonly IntPtr _hJob;
     private volatile bool _disposed;
 
@@ -107,7 +110,7 @@ internal sealed class NdjsonTransport : IDisposable
         };
 
         _process.Start();
-        _stdin = new StreamWriter(_process.StandardInput.BaseStream, new UTF8Encoding(false)) { AutoFlush = false };
+        var stdin = new StreamWriter(_process.StandardInput.BaseStream, new UTF8Encoding(false)) { AutoFlush = false };
         _process.BeginErrorReadLine();
 
         if (_hJob != IntPtr.Zero)
@@ -117,12 +120,15 @@ internal sealed class NdjsonTransport : IDisposable
 
         _log.Info($"--- transport PID={_process.Id}");
 
+        _writerThread = new Thread(() => WriteLoop(stdin)) { IsBackground = true, Name = "ClaudeNdjsonWriter" };
+        _writerThread.Start();
         _readerThread = new Thread(ReadLoop) { IsBackground = true, Name = "ClaudeNdjsonReader" };
         _readerThread.Start();
     }
 
     /// <summary>
-    /// Serialise <paramref name="message"/> as a single NDJSON line on stdin.
+    /// Serialise <paramref name="message"/> as a single NDJSON line and queue it for stdin.
+    /// Never blocks on the pipe, so it is safe from the reader thread and the UI thread.
     /// Accepts any object: anonymous types, POCOs, or already-built JObjects.
     /// </summary>
     public void Write(object message)
@@ -131,27 +137,46 @@ internal sealed class NdjsonTransport : IDisposable
         {
             var json = JsonConvert.SerializeObject(message, Formatting.None);
             _log.Trace(() => $">>> stdin: {StringHelpers.Truncate(json, 500)}");
-            // Lock so a worker-thread MCP response and a UI-thread write can't
-            // interleave into one corrupt NDJSON line. The liveness check belongs
-            // INSIDE it: checked outside, Dispose() can null _stdin in between, and
-            // the write then dies in the catch below, silently, as far as the caller
-            // is concerned, leaving a SendControlRequestAsync to wait out its timeout
-            // instead of failing now.
-            lock (_writeLock)
+            // Checked here, not only in the writer: a line queued for a dead process is never
+            // sent, and the warning now is what tells a SendControlRequestAsync's caller why.
+            if (_disposed || !IsRunning || !_outgoing.TryAdd(json))
             {
-                var stdin = _stdin;
-                if (!IsRunning || stdin == null)
-                {
-                    _log.Warn("!!! transport.Write called but the process is gone");
-                    return;
-                }
-                stdin.WriteLine(json);
-                stdin.Flush();
+                _log.Warn("!!! transport.Write called but the process is gone");
             }
+        }
+        catch (InvalidOperationException)
+        {
+            // TryAdd after CompleteAdding: Dispose ran between the check and the add.
+            _log.Warn("!!! transport.Write called but the process is gone");
         }
         catch (Exception ex)
         {
             _log.LogException("transport.Write", ex);
+        }
+    }
+
+    private void WriteLoop(StreamWriter stdin)
+    {
+        try
+        {
+            foreach (var json in _outgoing.GetConsumingEnumerable())
+            {
+                stdin.WriteLine(json);
+                // Flush once the queue is empty: a burst of lines goes out in one pipe write.
+                if (_outgoing.Count == 0) { stdin.Flush(); }
+            }
+        }
+        catch (Exception ex)
+        {
+            // A broken pipe after Dispose killed the process is expected: don't log it as a fault.
+            if (_disposed) { _log.Debug(() => $"--- transport write loop ended (disposed): {ex.GetType().Name}"); }
+            else { _log.LogException("transport.WriteLoop", ex); }
+        }
+        finally
+        {
+            // Nothing will drain the queue any more: refuse new lines instead of piling them up.
+            _outgoing.CompleteAdding();
+            try { stdin.Close(); } catch { /* silent: cleanup */ }
         }
     }
 
@@ -208,14 +233,10 @@ internal sealed class NdjsonTransport : IDisposable
     {
         if (_disposed) { return; }
         _disposed = true;
-        // Under the write lock: a Write() already inside it holds a local copy of the
-        // stream and must be allowed to finish its line, rather than have it closed
-        // out from under it mid-flush.
-        lock (_writeLock)
-        {
-            try { _stdin?.Close(); } catch { /* silent: cleanup */ }
-            _stdin = null;
-        }
+        // No join on the writer: it may be blocked on a pipe claude.exe is not reading. The kill
+        // below breaks that pipe, the write fails and the writer closes stdin on its way out.
+        // Lines still queued are dropped, as the process they were for is going away.
+        _outgoing.CompleteAdding();
         try { if (_process?.HasExited == false) { _process.Kill(); } } catch { /* silent: cleanup */ }
         try { _process?.Dispose(); } catch { /* silent: cleanup */ }
         _process = null;
