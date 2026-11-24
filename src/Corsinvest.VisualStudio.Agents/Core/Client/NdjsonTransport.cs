@@ -187,7 +187,8 @@ internal sealed class NdjsonTransport : IDisposable
         // another thread, and reading the field here would NRE the moment the
         // process exits and ReadLine() returns. The local keeps this loop tied
         // to the process it was started for.
-        var reader = _process?.StandardOutput;
+        var process = _process;
+        var reader = process?.StandardOutput;
         if (reader == null) { return; }
         try
         {
@@ -204,7 +205,10 @@ internal sealed class NdjsonTransport : IDisposable
                     _log.Warn($"!!! transport parse error: {ex.Message}");
                     continue;
                 }
-                LineReceived?.Invoke(this, obj);
+                // Per line: a handler that throws must not end the loop, or nothing drains
+                // stdout again while the process lives on (#366).
+                try { LineReceived?.Invoke(this, obj); }
+                catch (Exception ex) { _log.LogException("transport.LineReceived", ex); }
             }
             _log.Debug(() => "--- transport ReadLoop ended (stdout closed)");
         }
@@ -215,8 +219,22 @@ internal sealed class NdjsonTransport : IDisposable
             else { _log.LogException("transport.ReadLoop", ex); }
         }
 
+        // The reader is gone for good, so a live process can only fill its stdout and stop
+        // reading stdin. Kill it: Exited below then tells the truth, and the writer blocked on
+        // that stdin fails and exits.
+        try
+        {
+            if (!_disposed && process.HasExited is false)
+            {
+                _log.Warn("!!! transport reader ended while claude.exe is alive: killing it");
+                process.Kill();
+                process.WaitForExit(2000);
+            }
+        }
+        catch (Exception ex) { _log.LogException("transport.ReadLoop kill", ex); }
+
         int exitCode = -1;
-        try { exitCode = _process?.ExitCode ?? -1; } catch { /* silent: process may already be gone */ }
+        try { exitCode = process.ExitCode; } catch { /* silent: process may already be gone */ }
         _log.Info($"--- transport exit code={exitCode} disposed={_disposed}");
 
         if (!_disposed) { Exited?.Invoke(this, (exitCode, false)); }
