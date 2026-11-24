@@ -4,6 +4,30 @@ All notable changes to cv4vs Agents will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.16.1] - 2026-11-24
+
+Visual Studio no longer freezes in the middle of a chat turn, and a chat no longer reports Claude
+Code as exited while it is still running. The documentation gains a glossary.
+
+### Fixed
+
+- **Visual Studio could freeze during a turn** (issue #364). Writing to Claude Code held a lock
+  for as long as the write took, and while Claude Code was busy writing its own output it stopped
+  reading what was sent to it. When the extension had to answer it at that moment, both sides
+  waited on each other, and Visual Studio joined them on the next usage refresh. Messages to Claude
+  Code are now queued and written by a thread of their own, so nothing waits on them.
+- **A chat could stop for good and say Claude Code had exited when it had not** (issue #366). An
+  error while handling one line of Claude Code's output ended the reading for the rest of the
+  session. Each line is now handled on its own: an error is logged and the reading goes on. If the
+  reading stops anyway, the process is ended, so the chat says what really happened and the next
+  message starts Claude Code again.
+
+### Changed
+
+- **The documentation has a [Glossary](https://corsinvest.github.io/cv4vs-agents/glossary/)**
+  (issue #362): turn, transcript, chip, tool row, composer, compaction and the other words the
+  pages use, each linking to the page that covers it.
+
 ## [1.16.0] - 2026-11-16
 
 The `@` menu references a class or a method as well as a file, and file mentions in a sent message
