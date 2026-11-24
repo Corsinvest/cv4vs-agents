@@ -3,7 +3,9 @@ title: The conversation
 description: Your messages, tool rows, view modes, diffs, thinking, compaction, how an answer is rendered and what becomes a link, notices, cost and time, read aloud, and how a long session stays light.
 ---
 
-What the transcript shows, and how much of it.
+What the transcript (the scrolling record of the conversation) shows, and how much of it. A
+**turn** is one exchange: your message and everything Claude does in reply, until it waits for
+you again. The other words these pages use are in the [Glossary](/cv4vs-agents/glossary/).
 
 ## Your messages
 
@@ -15,9 +17,9 @@ A long message is clipped to **Preview lines**, with **Show more** / **Show less
 message of yours gives, under it, how long ago it was sent, then **Copy message** and **Fork
 conversation from here** (see [Sessions](/cv4vs-agents/chat/sessions/#fork)).
 
-Chips on the bubble show what went with it: the editor file with its line or range
-(`Program.cs:183`, `Program.cs:35-48`), images, attached files. Clicking the file chip opens it at
-those lines; an image opens the lightbox, which has **Copy image**. A slash command is shown as you
+Chips (small labels under the text) show what was sent with the message: the editor file with
+its line or range (`Program.cs:183`, `Program.cs:35-48`), images, attached files. Clicking the
+file chip opens it at those lines; an image opens the lightbox, which has **Copy image**. A slash command is shown as you
 typed it.
 
 With **Sticky user messages** on, the message that opened the exchange stays pinned at the top
@@ -79,9 +81,9 @@ Kept in every mode: your answers to questions, plan decisions, the task list, an
 for your approval. In Focus and Hide tools an answered question starts closed, down to its header
 (`Question · Answered`); its chevron opens it.
 
-A fold opened while its run was still working closes again when the turn ends.
-
 ![The task list in the conversation](../../../../images/chat/todo-list.png)
+
+A fold opened while its run was still working closes again when the turn ends.
 
 ![Focus: a run of tool calls folded into one row](../../../../images/chat/focus-row.png)
 

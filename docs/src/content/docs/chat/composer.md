@@ -14,7 +14,7 @@ editor-context chip, then the model button, the permission button and the contex
   Shift+Enter for a newline. The placeholder names the keys in force, and so does the send button's
   tooltip.
 - **Write while it is still working**: the message is sent at once and Claude reads it when the
-  step in progress ends, in the same turn. Until then its bubble waits at the bottom of the
+  step in progress ends, in the same turn. Until then the message waits at the bottom of the
   conversation, paler than the others, with a cross that takes it back into the composer; see
   [Messages sent while Claude works](/cv4vs-agents/chat/queued-messages/).
 - **Notices** appear above the prompt: rate limits, a refused attachment, a turn that ended without
