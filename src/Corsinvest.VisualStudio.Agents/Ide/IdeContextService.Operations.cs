@@ -3,11 +3,14 @@
  * SPDX-License-Identifier: GPL-3.0-only
  */
 
+using Corsinvest.VisualStudio.Agents.Core.Changes;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Text;
+using Microsoft.VisualStudio.TextManager.Interop;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -1211,17 +1214,21 @@ internal sealed partial class IdeContextService
     /// <summary>Open a file in the editor. Optionally selects a range
     /// matching <paramref name="startText"/> through <paramref name="endText"/>
     /// (text-pattern selection: what the CLI uses to point at code
-    /// it's discussing).</summary>
+    /// it's discussing). With <paramref name="preview"/> the file opens in the preview tab, the one the next file opened that way
+    /// replaces, unless it is open already or Visual Studio's own setting for preview tabs is off.</summary>
     public async Task<bool> OpenFileAsync(
-        string filePath, int startLine, int endLine, bool activate)
+        string filePath, int startLine, int endLine, bool activate, bool preview = false)
     {
-        filePath = PathHelpers.FromFileUri(filePath);
+        // In the spelling the IDE has the file under: a path through the real folder of a linked solution would open a second copy,
+        // as a miscellaneous file, beside the project item.
+        filePath = SolutionPaths.ToLogical(PathHelpers.FromFileUri(filePath));
         if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) { return false; }
         await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
         if (Package.GetGlobalService(typeof(DTE)) is not DTE dte) { return false; }
         try
         {
-            var window = dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
+            var window = preview ? OpenInPreviewTab(filePath) : null;
+            window ??= dte.ItemOperations.OpenFile(filePath, EnvDTE.Constants.vsViewKindCode);
             if (activate) { window?.Activate(); }
             // Select whole lines. Line-based only: Claude reasons in line numbers (Read returns
             // "N: content"), so a text match would be awkward and ambiguous when a line repeats.
@@ -1241,6 +1248,108 @@ internal sealed partial class IdeContextService
         }
     }
 
+    // DTE's OpenFile always makes a tab of its own. A document opened inside this scope goes to the preview tab, as a file does that is
+    // clicked once in Solution Explorer. Null when that did not work (the file's editor has no Code view, say): the caller opens it as
+    // it always did, so the file is shown either way.
+    private static EnvDTE.Window OpenInPreviewTab(string filePath)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        try
+        {
+            IVsWindowFrame frame;
+            using (new NewDocumentStateScope(__VSNEWDOCUMENTSTATE.NDS_Provisional, VSConstants.NewDocumentStateReason.Navigation))
+            {
+                VsShellUtilities.OpenDocument(ServiceProvider.GlobalProvider, filePath, VSConstants.LOGVIEWID.Code_guid, out _, out _, out frame);
+            }
+            frame?.Show();
+            return frame is null ? null : VsShellUtilities.GetWindowObject(frame);
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.Warn($"[ide] {filePath} could not be opened in the preview tab, opening it in a tab of its own: {ex.Message}");
+            return null;
+        }
+    }
+
+
+    //  Restoring a file (the Changes list's Undo)
+
+    /// <summary>Put an open document's text back, as one edit in its buffer (Ctrl+Z gives back what
+    /// was there), then save it through the document's own doc-data so format-on-save and the like
+    /// run as they would for the user. <see cref="DocumentReplaceResult.NotOpen"/> is an ordinary
+    /// answer: the caller then writes the file on disk, where VS has no copy to disagree with.</summary>
+    public async Task<DocumentReplaceResult> ReplaceDocumentTextAsync(string filePath, string text)
+    {
+        filePath = PathHelpers.FromFileUri(filePath);
+        if (string.IsNullOrEmpty(filePath)) { return DocumentReplaceResult.NotOpen; }
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        try
+        {
+            foreach (var frame in DocumentFrames())
+            {
+                if (!PathEquals(FrameMoniker(frame), filePath)) { continue; }
+
+                var buffer = DocumentBuffer(frame);
+                if (buffer is null || buffer.IsReadOnly(0)) { return DocumentReplaceResult.Unsupported; }
+                using (var edit = buffer.CreateEdit())
+                {
+                    if (!edit.Replace(0, buffer.CurrentSnapshot.Length, text))
+                    {
+                        edit.Cancel();
+                        return DocumentReplaceResult.Unsupported;
+                    }
+                    edit.Apply();
+                }
+                return await SaveDocumentAsync(filePath) || !FrameDirty(frame)
+                    ? DocumentReplaceResult.Replaced
+                    : DocumentReplaceResult.ReplacedNotSaved;
+            }
+        }
+        catch (Exception ex)
+        {
+            OutputWindowLogger.Global.LogException("Ide.ReplaceDocumentText", ex);
+            return DocumentReplaceResult.Unsupported;
+        }
+        return DocumentReplaceResult.NotOpen;
+    }
+
+    /// <summary>Close every tab showing a file, without saving: used where the file is about to be
+    /// deleted, so a prompt to save it would be absurd. False when it was not open.</summary>
+    public async Task<bool> CloseDocumentAsync(string filePath)
+    {
+        filePath = PathHelpers.FromFileUri(filePath);
+        if (string.IsNullOrEmpty(filePath)) { return false; }
+        await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+        var closed = false;
+        try
+        {
+            foreach (var frame in DocumentFrames())
+            {
+                if (!PathEquals(FrameMoniker(frame), filePath)) { continue; }
+                frame.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave);
+                closed = true;
+            }
+        }
+        catch (Exception ex) { OutputWindowLogger.Global.LogException("Ide.CloseDocument", ex); }
+        return closed;
+    }
+
+    /// <summary>The text buffer behind a document window, or null when it is not a text document
+    /// (a designer, an image).</summary>
+    private ITextBuffer DocumentBuffer(IVsWindowFrame frame)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+        if (_editorAdapters is null) { return null; }
+        if (frame.GetProperty((int)__VSFPROPID.VSFPROPID_DocData, out var data) != VSConstants.S_OK) { return null; }
+
+        var vsBuffer = data as IVsTextBuffer;
+        if (vsBuffer is null && data is IVsTextBufferProvider provider
+            && provider.GetTextBuffer(out var lines) == VSConstants.S_OK)
+        {
+            vsBuffer = lines;
+        }
+        return vsBuffer is null ? null : _editorAdapters.GetDocumentBuffer(vsBuffer);
+    }
 
     //  Diff (used by both MCP openDiff and the WebView chat)
 
