@@ -178,7 +178,8 @@ internal sealed class ChangeSet
         lock (_gate)
         {
             var limit = DateTime.UtcNow - olderThan;
-            foreach (var key in _pending.Where(kv => kv.Value.AtUtc < limit).Select(kv => kv.Key).ToList())
+            // Inclusive: two reads of DateTime.UtcNow can return the same value, and a zero lifetime must still take every copy.
+            foreach (var key in _pending.Where(kv => kv.Value.AtUtc <= limit).Select(kv => kv.Key).ToList())
             {
                 released.Add(_pending[key].Baseline);
                 _pending.Remove(key);
