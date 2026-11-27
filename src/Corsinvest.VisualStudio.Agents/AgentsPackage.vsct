@@ -347,6 +347,16 @@
         <CommandFlag>IconIsMoniker</CommandFlag>
         <Strings><ButtonText>View output log</ButtonText></Strings>
       </Button>
+      <!-- Debug builds only: the probe behind issue #247. The handler is compiled in under DEBUG,
+           so a Release build never makes the entry visible. -->
+      <Button guid="guidAgentsCommandSet" id="DiffSpikeCommandId" priority="0x0300" type="Button">
+        <Parent guid="guidAgentsCommandSet" id="DeveloperGroup"/>
+        <Icon guid="ImageCatalogGuid" id="CompareFiles"/>
+        <CommandFlag>IconIsMoniker</CommandFlag>
+        <CommandFlag>DefaultInvisible</CommandFlag>
+        <CommandFlag>DynamicVisibility</CommandFlag>
+        <Strings><ButtonText>Diff spike (active document)</ButtonText></Strings>
+      </Button>
       <Button guid="guidAgentsCommandSet" id="StatisticsCommandId" priority="0x0100" type="Button">
         <Parent guid="guidAgentsCommandSet" id="AnalyticsGroup"/>
         <Icon guid="ImageCatalogGuid" id="Statistics"/>
@@ -490,6 +500,7 @@
       <IDSymbol name="SolutionAddReferenceToChatCommandId" value="0x0212" />
       <IDSymbol name="TabAddReferenceToChatCommandId" value="0x0213" />
       <IDSymbol name="UpdateClaudeCommandId" value="0x0214" />
+      <IDSymbol name="DiffSpikeCommandId" value="0x0215" />
       <!-- Seed of the open-panes dynamic range. Its own 0x03xx block: the range grows with the
            number of open panes and must not run into the fixed ids above. -->
       <IDSymbol name="ActiveSessionCommandId" value="0x0300" />
