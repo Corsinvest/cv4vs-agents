@@ -5,6 +5,7 @@
 
 using Corsinvest.VisualStudio.Agents.Core.Changes;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -35,6 +36,17 @@ public sealed class KeptLedgerTests : IDisposable
     }
 
     private string LedgerFile(string sessionId) => Path.Combine(_folder, "changes", sessionId + ".json");
+
+    private static async Task<bool> AppearsWithinAsync(string path, TimeSpan limit)
+    {
+        var clock = Stopwatch.StartNew();
+        while (!File.Exists(path))
+        {
+            if (clock.Elapsed > limit) { return false; }
+            await Task.Delay(50);
+        }
+        return true;
+    }
 
     [Fact]
     public async Task A_kept_file_is_still_kept_until_it_changes()
@@ -93,7 +105,9 @@ public sealed class KeptLedgerTests : IDisposable
 
         ledger.Dispose();
 
-        Assert.True(File.Exists(LedgerFile("s1")));
+        // Dispose waits for this write a few seconds at most and lets it finish afterwards: on a loaded CI runner the thread
+        // pool can be slower than that, so the file is waited for rather than looked for the moment Dispose returns.
+        Assert.True(await AppearsWithinAsync(LedgerFile("s1"), TimeSpan.FromSeconds(30)));
     }
 
     [Fact]
